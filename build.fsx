@@ -9,7 +9,7 @@ open Aardvark.Fake
 
 do Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 
-DefaultSetup.install ["src/__SOLUTION_NAME__.sln"]
+DefaultSetup.install ["src/Aardvark.OpcViewer.sln"]
 
 Target "Tests" (fun () ->
     Fake.NUnitSequential.NUnit (fun p -> { p with ToolPath = @"packages\NUnit.Runners\tools"
@@ -28,9 +28,7 @@ Target "Statistics" (fun () ->
 
 )
 
-#if DEBUG
-do System.Diagnostics.Debugger.Launch() |> ignore
-#endif
+
 
 
 entry()
