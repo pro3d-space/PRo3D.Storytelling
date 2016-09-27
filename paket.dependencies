@@ -11,6 +11,8 @@ nuget Aardvark.Application.WinForms.GL     ~> 2.1.6
 nuget Aardvark.SceneGraph                  ~> 2.1.6
 nuget Aardvark.Rendering.NanoVg            ~> 2.1.6
 
+nuget Fsunit
+nuget FParsec
 
 group Build
 content: none

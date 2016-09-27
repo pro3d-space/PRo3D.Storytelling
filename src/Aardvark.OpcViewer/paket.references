@@ -6,3 +6,6 @@ Aardvark.Base.Rendering
 Aardvark.Application.WinForms.GL
 Aardvark.SceneGraph
 Aardvark.Rendering.NanoVg
+
+Fsunit
+FParsec
