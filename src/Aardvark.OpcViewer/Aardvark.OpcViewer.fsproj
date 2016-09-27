@@ -79,6 +79,13 @@
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Xml.Serialization" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Test\Test.fsproj">
+      <Name>Test</Name>
+      <Project>{30eac7e9-36db-4c02-aaf5-7406dd50d974}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1')">
       <ItemGroup>

@@ -10,6 +10,7 @@ open Aardvark.Opc
 
 [<EntryPoint>]
 let main argv = 
+    Test.test2()
     Aardvark.Init()
 
 
@@ -107,7 +108,7 @@ let main argv =
                         DefaultSurfaces.trafo |> toEffect
                         DefaultSurfaces.constantColor C4f.White |> toEffect
                         DefaultSurfaces.diffuseTexture |> toEffect
-                        DefaultSurfaces.simpleLighting |> toEffect
+                        //DefaultSurfaces.simpleLighting |> toEffect
                     ]
             |> Sg.fillMode fillMode
             |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)

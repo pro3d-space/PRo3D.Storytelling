@@ -165,3 +165,4 @@ module PatchHierarchy =
             |> ofDoc
             |> QTree.map (PatchFileInfo.load dir >> Patch.load)
 
+

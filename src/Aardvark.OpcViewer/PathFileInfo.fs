@@ -144,3 +144,64 @@ module QTree =
             | Node(v,children) ->
                 Node(f v, children |> Array.map (map f))
 
+
+
+
+module Test =
+    open Aardvark.Base
+    open Aardvark.Base.Rendering
+
+    let inter = """
+    type IA =
+        abstract member B : unit -> int
+"""
+    let impl = """
+type A_() =
+    interface IA with
+        member x.B () = 2
+"""
+    let mkT = """A_() :> IA; """
+
+    let mk i =
+        impl.Replace("_", sprintf "_%d" i)
+
+    let mkC i =
+        mkT.Replace("_", sprintf "_%d" i)
+
+    let writeTestCase file = 
+        System.IO.File.AppendAllText(file,inter)
+        for i in 0 .. 5000 do
+            let impl = mk i
+            System.IO.File.AppendAllText(file,impl) 
+
+        System.IO.File.AppendAllText(file, "\nlet a = [|")
+        for i in 0 .. 1000 do 
+            let mker = mkC i
+            System.IO.File.AppendAllText(file, mker )
+        System.IO.File.AppendAllText(file, "|]")
+
+    let test2 () =
+        
+        let mutable l = 0
+        for u in Wahh.UHHH.a do
+            l <- u.B()
+
+        let sw = System.Diagnostics.Stopwatch()
+
+        let mutable jasdf = Unchecked.defaultof<_>
+
+        sw.Start()
+        for i in 0 .. 1000000 do
+            for u in Wahh.UHHH.a do
+                jasdf <- u
+        sw.Stop()
+        let a = sw.Elapsed.TotalMilliseconds
+        printfn "empty loop elapsed: %A" a
+
+        sw.Restart()
+        for i in 0 .. 1000000 do
+            for u in Wahh.UHHH.a do
+                l <- u.B()
+        sw.Stop()
+        printfn "complete loop took: %A" sw.Elapsed.TotalMilliseconds
+        printfn "%A µs" (sw.Elapsed.TotalMilliseconds - a)
