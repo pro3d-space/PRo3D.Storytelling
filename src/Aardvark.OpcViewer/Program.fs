@@ -7,16 +7,35 @@ open Aardvark.SceneGraph
 open Aardvark.Application
 open Aardvark.Application.WinForms
 open Aardvark.Opc
+open FShade
+//
+module Shader =
+    open FShade
+    open Aardvark.Base.Rendering
+    open Aardvark.Base.Rendering.Effects
+    
+    let LoDColor  (v : Vertex) =
+        fragment {
+            let c : V4d = uniform?LoDColor
+            return v.c * c
+        }
 
 [<EntryPoint>]
 let main argv = 
-    Test.test2()
+    //Test.test2()
     Aardvark.Init()
 
 
     use app = new OpenGlApplication()
     let win = app.CreateSimpleRenderWindow()
     win.Text <- "Aardvark rocks \\o/"
+
+    let bb = Box3d.Parse("[[-2490136.942562569, 2285877.560081598, -271419.972534080], [-2490134.569473011, 2285880.873850540, -271417.484781946]]")
+
+    let up = bb.Center.Normalized
+
+    let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero up
+    let view = initialView |> DefaultCameraController.control win.Mouse win.Keyboard win.Time
 
     let quadGeometry =
         IndexedGeometry(
@@ -29,11 +48,8 @@ let main argv =
                 ]
         )
        
-
-    let initialView = CameraView.lookAt (V3d(6,6,6)) V3d.Zero V3d.OOI
-    let view = initialView |> DefaultCameraController.control win.Mouse win.Keyboard win.Time
     let proj = win.Sizes |> Mod.map (fun s -> Frustum.perspective 60.0 0.1 100.0 (float s.X / float s.Y))
-
+    let preTransform = Trafo3d.Translation(-bb.Center)
 
     let hier = PatchHierarchy.load @"C:\Aardwork\MarsStuff\47181\OPC_000_000\Patches\patchhierarchy.xml"
     let da = PatchHierarchy.load @"C:\Aardwork\MarsStuff\47181\OPC_000_000\Patches\patchhierarchy.xml"
@@ -47,7 +63,7 @@ let main argv =
           for h in System.IO.Directory.GetDirectories(@"C:\Aardwork\MarsStuff\47191") do
             let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
             yield  PatchHierarchy.load p
-        ]
+        ] 
 
     let sg = 
         match hier with
@@ -80,7 +96,9 @@ let main argv =
                      |> Sg.trafo (Mod.constant patch.info.Local2Global)
         }
 
-    let g = patchHierarchies |> Seq.collect collect |> Sg.ofSeq
+    let g = patchHierarchies |> List.map (fun t -> PatchRendering.PatchLod.PatchNode(win.FramebufferSignature, PatchRendering.PatchLod.toRoseTree t) :> ISg) |> Sg.ofList
+    //let g = patchHierarchies |> Seq.map (NaivePatchLoD.toSg preTransform) |> Sg.ofSeq
+    //let g = patchHierarchies |> Seq.collect collect |> Sg.ofSeq
         
     let fillMode = Mod.init FillMode.Fill
 
@@ -92,31 +110,35 @@ let main argv =
         )
     ) |> ignore
 
-    let bb = Box3d.Parse("[[-2490136.942562569, 2285877.560081598, -271419.972534080], [-2490134.569473011, 2285880.873850540, -271417.484781946]]")
+    win.Keyboard.KeyDown(Keys.G).Values.Subscribe(fun _ -> 
+        for i in 0 .. 10 do
+            System.GC.Collect()
+        System.GC.WaitForFullGCComplete() |> ignore
 
-    let up = bb.Center.Normalized
 
-    let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero up
-    let view = initialView |> DefaultCameraController.control win.Mouse win.Keyboard win.Time
-
+        printfn "%A" ( app.Runtime.Context.MemoryUsage ) 
+    ) |> ignore
 
     let sg =
         g  
             //|> Sg.normalize
-            |> Sg.transform (Trafo3d.Translation(-bb.Center))
+            |> Sg.transform preTransform
             |> Sg.effect [
                         DefaultSurfaces.trafo |> toEffect
                         DefaultSurfaces.constantColor C4f.White |> toEffect
                         DefaultSurfaces.diffuseTexture |> toEffect
+                        Shader.LoDColor |> toEffect
                         //DefaultSurfaces.simpleLighting |> toEffect
                     ]
+            |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
             |> Sg.fillMode fillMode
             |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
             |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)
 
     
+    let cfg =  BackendConfiguration.Default 
     let task =
-        app.Runtime.CompileRender(win.FramebufferSignature, sg)
+        app.Runtime.CompileRender(win.FramebufferSignature, cfg, sg)
             |> DefaultOverlays.withStatistics
 
     win.RenderTask <- task

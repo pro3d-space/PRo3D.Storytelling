@@ -94,18 +94,37 @@ module private Aara =
         )
         resultIndices.ToArray()
 
+type Thunk<'a>(f : unit -> 'a) =    
+    let mutable value = None
+
+    member x.Value =
+        lock x (fun () -> 
+            match value with
+                | Some v -> v
+                | None -> 
+                    let r = f () 
+                    value <- Some r
+                    r
+        )
+
+    member x.Reset() =
+        lock x (fun () -> 
+            value <- None
+        )
 
 type Patch =
     {
-        geometry : Lazy<IndexedGeometry>
+        geometry : Thunk<IndexedGeometry>
+        level : int
         info : PatchFileInfo
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Patch =
-    let load (p : PatchFileInfo) =
+    let load (level : int) (p : PatchFileInfo) =
+        
         let geometry = 
-            lazy (
+            Thunk<_>(fun () -> 
                 let positions = Path.combine [p.BaseDir; p.Positions] |> fromFile<V3f>
                 let coordinates = Path.combine [p.BaseDir; (List.head p.Coordinates)] |> fromFile<V2f>
                 let normals = Path.combine [p.BaseDir; "Normals.aara"] |> fromFile<V3f>
@@ -123,7 +142,7 @@ module Patch =
                 )
             )
 
-        { geometry = geometry; info = p }
+        { geometry = geometry; level = level; info = p }
 
 
 
@@ -163,6 +182,570 @@ module PatchHierarchy =
         let dir = Path.GetDirectoryName(Path.GetDirectoryName fileName)
         XDocument.Load(fileName) 
             |> ofDoc
-            |> QTree.map (PatchFileInfo.load dir >> Patch.load)
+            |> QTree.mapLevel 0 (fun level p -> p |> PatchFileInfo.load dir |> Patch.load level)
 
 
+module NaivePatchLoD =
+    open Aardvark.Base
+    open Aardvark.SceneGraph
+    open Aardvark.Base.Incremental
+    open Aardvark.SceneGraph.Semantics
+
+    let colors =
+        [ 0, C4b.Green
+          1, C4b.Blue
+          2, C4b.Yellow
+          3, C4b.Red ] |> Map.ofList
+
+    let patch2Sg (depth : int) (patch : Patch) =
+        let tex = patch.info.Textures |> List.head 
+        let fullPath = Path.combine [patch.info.BaseDir; tex.fileName]
+        let fullPath = System.IO.Path.ChangeExtension(fullPath,".dds")
+        patch.geometry.Value
+            |> Sg.ofIndexedGeometry
+            |> Sg.uniform "LoDColor" (Mod.constant (Map.find depth colors))
+            |> Sg.diffuseFileTexture' fullPath true
+            |> Sg.trafo (Mod.constant patch.info.Local2Global)
+
+
+    let computeScreenSpaceArea (b : Box3d) (viewProj : Trafo3d) =
+        let viewSpacePoints =
+            b.ComputeCorners()
+                |> Array.map (fun v ->
+                    viewProj.Forward.TransformPosProj(v).XY
+                )
+
+        let poly = viewSpacePoints |> Polygon2d
+
+        let clipped = 
+            poly.ComputeConvexHullIndexPolygon().ToPolygon2d()//.ConvexClipped(Box2d(-V2d.II, V2d.II))
+
+        clipped.ComputeArea()
+
+
+    let toSg (preTrafo : Trafo3d) (s : QTree<Patch>) : ISg =
+        let rec mk d s =
+            match s with
+                | Node(p, children) ->
+                    let decider (scope : NaiveLod.LodScope) = 
+//                        let bb = p.info.
+//                        let mvp : Trafo3d = scope.ModelViewTrafo.GetValue()
+
+                        let bbT = p.info.GlobalBoundingBox.Transformed(preTrafo) //.Transformed(scope.trafo)
+                        let cam = scope.cameraPosition
+//                        let screenSpaceBox = 
+//                            bb.ComputeCorners() 
+//                            |> Array.map (fun p -> mvp.Forward.TransformPosProj(p))
+//                            |> Box3d
+                        let d = (bbT.Center - cam).Length 
+
+                        let area = computeScreenSpaceArea bbT (scope.ViewProjTrafo.GetValue())
+
+                        //printfn "d=%A" d
+                        area > 3.5
+                        //screenSpaceBox.SizeX < 0.3 && screenSpaceBox.SizeY < 0.3
+                    let self = patch2Sg
+                    NaiveLod.Sg.loD (patch2Sg d p) (children |> Array.map (mk (d+1)) |> Sg.ofSeq) decider
+                | Leaf v -> patch2Sg d v 
+        mk 0 s
+    
+
+module PatchRendering =
+    open System.Threading
+    open System.Threading.Tasks
+    open Aardvark.Base
+    open Aardvark.Base.Incremental
+    open Aardvark.Base.Rendering
+    open Aardvark.SceneGraph
+    open Aardvark.SceneGraph.Semantics
+
+    type ILodData =
+        abstract member BoundingBox : Box3d
+        abstract member Traverse : (LodDataNode -> (LodDataNode -> list<'a>) -> 'a) -> 'a
+        abstract member GetData : node : LodDataNode -> Async<Option<IndexedGeometry>>
+                  
+
+    type LodNode( data : ILodData, fboSig : IFramebufferSignature) =
+        interface ISg
+        member x.Data = data
+        member x.FboSig = fboSig
+
+    let disposeOnCancel<'a when 'a :> IDisposable> (f : unit -> 'a) : Async<'a> =
+        async {
+            let mutable call = None
+            let! _ = Async.OnCancel(fun () -> call |> Option.iter Disposable.dispose)
+            let r = f()
+            call <- Some (r :> IDisposable)
+            return r
+        }
+
+    type AsyncMod<'a>(inner : IMod<'a>) =
+        inherit Mod.AbstractMod<'a>()
+
+        let sem = new SemaphoreSlim(1)
+
+        override x.Mark() =
+            sem.Release() |> ignore
+            true
+
+        override x.Compute() =
+            inner.GetValue(x)
+
+        member x.GetValueAsync() =
+            async {
+                let! _ = Async.AwaitIAsyncResult (sem.WaitAsync())
+                return x.GetValue()
+            }
+
+    type RoseTree<'a> =
+        | Empty
+        | Leaf of 'a
+        | Node of 'a * list<RoseTree<'a>>
+
+    type Loady<'a, 'b>(tag : 'b, trigger : IAdaptiveObject, release : 'a -> unit, run : Async<'a>) =
+        let mutable task : Option<Task<'a>> = None
+        let mutable cancel = new CancellationTokenSource()
+
+        let run =  
+            async {
+                let! r = run
+                transact (fun () -> trigger.MarkOutdated())
+                return r
+            }
+
+        member x.Tag = tag
+
+        member x.Peek =
+            match task with
+                | Some t when t.IsCompleted -> Some t.Result
+                | _ -> None
+
+        member x.Start() =
+            match task with
+                | None ->
+                    let t = Async.StartAsTask(run, cancellationToken = cancel.Token)
+                    task <- Some t
+                | Some _ -> 
+                    ()
+
+        member x.Stop() =
+            match task with
+                | Some t ->
+                    if t.IsCanceled || t.IsFaulted then
+                        ()
+                    elif t.IsCompleted then
+                        release t.Result
+                    else
+                        t.ContinueWith (fun (t : Task<'a>) ->
+                            if t.IsFaulted then printfn "faulted"
+                            if t.IsCompleted then //&& not t.IsFaulted && not t.IsCanceled then
+                                release t.Result
+                        ) |> ignore
+                        //cancel.Cancel()
+
+                    //cancel.Dispose()
+                    task <- None
+                | _ ->
+                    ()
+                 
+    module Loady =
+        let start (tag : 'b) (trigger : IAdaptiveObject) (run : Async<'a>) =
+            let l = Loady(tag, trigger, (fun a -> (a :> IDisposable).Dispose()), run)
+            l.Start()
+            l
+
+//        let start' (tag : 'b) (trigger : IAdaptiveObject) (run : Async<'a>) =
+//            let l = Loady(tag, trigger, ignore, run)
+//            l.Start()
+//            l
+
+
+    module RoseTree =
+        open System.Collections.Generic
+
+        let rec traverse<'a, 'b> (equal : 'b -> 'a -> bool) (create : 'a -> 'b) (destroy : 'b -> unit) (ref : RoseTree<'b>) (t : RoseTree<'a>) : RoseTree<'b> =
+            let traverse = traverse equal create destroy
+
+            match ref, t with
+                | Empty, Empty -> 
+                    Empty
+
+                | Empty, Leaf v ->
+                    v |> create |> Leaf
+
+                | Empty, Node(v, children) ->
+                    let n = v |> create
+                    Node(n, children |> List.map (traverse Empty))
+
+                | Leaf v, Empty ->
+                    destroy v
+                    Empty
+
+                | Leaf l, Leaf r ->
+                    if equal l r then 
+                        Leaf l
+                    else 
+                        destroy l
+                        r |> create |> Leaf
+
+                | Leaf l, Node(r, children) ->
+                    if equal l r then
+                        Node(l, children |> List.map (traverse Empty))
+                    else
+                        destroy l
+                        let n = r |> create
+                        Node(n, children |> List.map (traverse Empty))
+
+                | Node(v,c), Empty ->
+                    destroy v
+                    c |> List.iter (fun c -> traverse c Empty |> ignore)
+                    Empty
+
+                | Node(v,c), Leaf r ->
+                    c |> List.iter (fun c -> traverse c Empty |> ignore)
+                    if equal v r then
+                        Leaf v
+                    else
+                        destroy v
+                        r |> create |> Leaf
+                                            
+                | Node(lv,lc), Node(rv,rc) ->
+                    if equal lv rv then
+                        Node(lv, List.map2 traverse lc rc)
+                    else
+                        destroy lv
+                        let nv = rv |> create
+                        Node(nv, List.map2 traverse lc rc)
+ 
+        let rec traverseDestroyInner<'a, 'b> (equal : 'b -> 'a -> bool) (create : 'a -> 'b) (destroy : 'b -> unit) (ref : RoseTree<'b>) (t : RoseTree<'a>) : RoseTree<'b> =
+            let traverse = traverseDestroyInner equal create destroy
+
+            match ref, t with
+                | Empty, Empty -> 
+                    Empty
+
+                | Empty, Leaf v ->
+                    v |> create |> Leaf
+
+                | Empty, Node(v, children) ->
+                    let n = v |> create
+                    Node(n, children |> List.map (traverse Empty))
+
+                | Leaf v, Empty ->
+                    destroy v
+                    Empty
+
+                | Leaf l, Leaf r ->
+                    if equal l r then 
+                        Leaf l
+                    else 
+                        destroy l
+                        r |> create |> Leaf
+
+                | Leaf l, Node(r, children) ->
+                    if equal l r then
+                        destroy l
+                        Node(l, children |> List.map (traverse Empty))
+                    else
+                        destroy l
+                        let n = r |> create
+                        Node(n, children |> List.map (traverse Empty))
+
+                | Node(v,c), Empty ->
+                    destroy v
+                    c |> List.iter (fun c -> traverse c Empty |> ignore)
+                    Empty
+
+                | Node(v,c), Leaf r ->
+                    c |> List.iter (fun c -> traverse c Empty |> ignore)
+                    if equal v r then
+                        Leaf (create r)
+                    else
+                        destroy v
+                        r |> create |> Leaf
+                                            
+                | Node(lv,lc), Node(rv,rc) ->
+                    if equal lv rv then
+                        Node(lv, List.map2 traverse lc rc)
+                    else
+                        destroy lv
+                        let nv = rv |> create
+                        Node(nv, List.map2 traverse lc rc)
+    
+    
+        let filter (godeeper : IAdaptiveObject -> 'a -> bool) (tree : IMod<RoseTree<'a>>) : IMod<RoseTree<'a>> =
+            Mod.custom (fun self ->
+                let rec traverse (t : RoseTree<'a>) =
+                    match t with
+                        | Empty -> Empty
+                        | Leaf v -> Leaf v
+                        | Node(v,children) ->
+                            if godeeper self v then
+                                Node(v,List.map traverse children)
+                            else
+                                Leaf v
+
+                let t = tree.GetValue self
+                traverse t
+            )
+            
+        let  mutable runningLoadies = 0
+
+        let mapAsync<'a,'b when 'b :> IDisposable and 'a : equality> (create : 'a -> Async<'b>) (tree : IMod<RoseTree<'a>>) : IMod<RoseTree<Option<'b>>> =
+            let current = ref Empty
+
+            let l = Mod.custom (fun self ->
+
+                let equal (l : Loady<'b,'a>) (r : 'a) =
+                    l.Tag = r
+                
+                let create (v : 'a) = 
+                    runningLoadies <- runningLoadies + 1
+                    Loady.start v self (create v)
+
+                let destroy (v : Loady<'b, 'a>) =
+                    runningLoadies <- runningLoadies - 1
+                    printfn "running loadies: %A" runningLoadies
+                    v.Stop()
+
+                let t = tree.GetValue self
+
+                let n = traverse equal create destroy !current t
+                current := n
+                n
+            )
+
+            let current = ref Empty
+            Mod.custom (fun self ->
+                    
+                let lt = l.GetValue(self)
+
+                let allReady (c : list<RoseTree<Loady<'b, 'a>>>) =
+                    c |> List.forall (fun t ->
+                        match t with
+                            | Empty -> true
+                            | Leaf v -> Option.isSome v.Peek
+                            | Node(v,_) -> Option.isSome v.Peek
+                    )
+
+                let rec peek (t : RoseTree<Loady<'b, 'a>>) =
+                    match t with
+                        | Empty -> Empty
+                        | Leaf l ->
+                            match l.Peek with
+                                | Some v -> Leaf (Some v)
+                                | None -> Empty
+                        | Node(v, children) ->
+                            match v.Peek with
+                                | Some v ->
+                                    if allReady children then
+                                        Node(None, List.map peek children)
+                                    else
+                                        Leaf(Some v)
+                                | None ->
+                                    Empty
+
+                peek lt
+
+            )
+
+        let flatten mapF (f : IMod<RoseTree<Option<'a>>>) =
+            let old = ref Empty
+            ASet.custom (fun self -> 
+                let current = f.GetValue self
+                let deltas = List<_>()
+                let create v = 
+                    match v with
+                        | Some v -> deltas.Add(Add (mapF v))
+                        | None -> ()
+                    v
+                let destroy v =
+                    match v with
+                        | Some v -> deltas.Add (Rem (mapF v))
+                        | None -> ()
+
+                let u = traverse (=) create destroy !old current
+                old := u
+                deltas |> CSharpList.toList
+            )
+
+        let rec map (f : 'a -> 'b) (t : RoseTree<'a>) =
+            match t with
+                | Empty -> Empty
+                | Leaf v -> Leaf (f v)
+                | Node(v,c) -> Node(f v, List.map (map f) c)   
+
+
+    module PatchLod =
+        open Aardvark.Base.Rendering
+        open Aardvark.Base.Ag
+        open Aardvark.SceneGraph
+        open Aardvark.SceneGraph.Semantics
+
+        let rec toRoseTree (p : QTree<'a>) =
+            match p with
+                | QTree.Leaf v -> Leaf v
+                | QTree.Node(v,children) -> Node(v,children |> Array.toList |> List.map toRoseTree)
+
+        type PatchNode(signature : IFramebufferSignature, p : RoseTree<Patch>) =
+            interface ISg
+            member x.Tree = p
+            member x.Signature = signature
+    
+
+        type RenderPatch =
+            {
+                geometry    : Thunk<IndexedGeometry>
+                info        : PatchFileInfo
+                level       : int
+                trafo       : IMod<Trafo3d>
+            }
+
+        open Aardvark.SceneGraph.Semantics.TrafoSemantics
+        [<Semantic>]
+        type PatchNodeSem() =
+            let computeScreenSpaceArea (b : Box3d) (viewProj : Trafo3d) =
+                let viewSpacePoints =
+                    b.ComputeCorners()
+                        |> Array.map (fun v ->
+                            viewProj.Forward.TransformPosProj(v).XY
+                        )
+
+                let poly = viewSpacePoints |> Polygon2d
+
+                let clipped = 
+                    poly.ComputeConvexHullIndexPolygon().ToPolygon2d()//.ConvexClipped(Box2d(-V2d.II, V2d.II))
+
+                clipped.ComputeArea()
+
+            let toRenderPatch (modelTrafoStack : list<IMod<Trafo3d>>) (p : Patch) =
+                {
+                    geometry    = p.geometry
+                    info        = p.info
+                    level       = p.level
+                    trafo       = flattenStack (Mod.constant p.info.Local2Global :: modelTrafoStack)
+                }
+
+            let colors =
+                [ 0, C4b.Green
+                  1, C4b.Blue
+                  2, C4b.Yellow
+                  3, C4b.Red ] |> Map.ofList
+
+            member x.RenderObjects(n : PatchNode) : aset<IRenderObject> =
+                let runtime = n.Runtime
+                let scope = Ag.getContext()
+                let trafoStack = n.ModelTrafoStack
+                let v = n.ViewTrafo
+                let p = n.ProjTrafo
+                let vp = v <*> p
+                let ro = RenderObject.ofScope scope
+
+                let godeeper (self : IAdaptiveObject) (p : RenderPatch) =
+                    let m = p.trafo.GetValue self
+                    let vp = vp.GetValue self
+                    let mvp = m * vp
+                    let area = computeScreenSpaceArea p.info.LocalBoundingBox mvp
+                    
+                    area > 3.5
+
+                let prepare (p : RenderPatch) : Async<IPreparedRenderObject> =   
+                    async {
+                        do! Async.SwitchToThreadPool()
+
+                        let self : ref<Option<IPreparedRenderObject>> = ref None
+                        let! _ = Async.OnCancel(fun () -> 
+                            match !self with
+                                | None -> ()
+                                | Some v -> 
+                                    v.Dispose()
+                                    p.geometry.Reset()
+                        )
+
+                        let g = p.geometry.Value
+                        let t = p.info.Textures |> List.head
+                        let fullPath = Path.combine [p.info.BaseDir; t.fileName]
+                        let fullPath = System.IO.Path.ChangeExtension(fullPath,".dds")
+                            
+                        let ro = RenderObject.Clone(ro)
+
+//                        let pos = g.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
+//                        let bounds = pos |> Array.filter (fun v -> v.AnyEqual(nanf) |> not) |> Array.map V3d |> Box3d
+//                        printfn "%A" bounds
+
+                        let prepareBuffer b = b :> IBuffer //runtime.PrepareBuffer b
+                        let prepareTexture t = t :> ITexture //runtime.PrepareTexture t
+
+                        let idx     = prepareBuffer(ArrayBuffer(g.IndexArray))
+                        let pos     = prepareBuffer(ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.Positions]))
+                        let tc      = prepareBuffer(ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.DiffuseColorCoordinates]))
+                        let tex     = prepareTexture(FileTexture(fullPath, true))
+                          
+                        ro.Indices <- BufferView(Mod.constant idx, typeof<int>) |> Some
+
+                        ro.VertexAttributes <- 
+                            AttributeProvider.ofList [ 
+                                DefaultSemantic.Positions, BufferView(Mod.constant pos, typeof<V3f>)
+                                DefaultSemantic.DiffuseColorCoordinates, BufferView(Mod.constant tc, typeof<V2f>)
+                            ]
+
+                        let old = ro.Uniforms
+                        ro.Uniforms <-
+                            let t = Mod.constant tex :> IMod
+                            { new IUniformProvider with
+                                member x.TryGetUniform(scope, sem) =
+                                    if sem = DefaultSemantic.DiffuseColorTexture then Some t
+                                    else
+                                        match string sem with
+                                            | "LoDColor" -> colors.[p.level] |> Mod.constant :> IMod |> Some
+                                            | "ModelTrafo" -> p.trafo :> IMod |> Some
+                                            | "ModelViewTrafo" -> p.trafo <*> v :> IMod |> Some
+                                            | "ModelViewProjTrafo" -> p.trafo <*> vp :> IMod |> Some
+                                            | "ModelTrafoInv" -> p.trafo |> inverse :> IMod |> Some
+                                            | "ModelViewTrafoInv" -> p.trafo <*> v |> inverse :> IMod |> Some
+                                            | "ModelViewProjTrafoInv" -> p.trafo <*> vp |> inverse :> IMod |> Some
+                                            | _ -> 
+                                                lock old (fun () -> old.TryGetUniform(scope, sem))
+
+                                member x.Dispose() =
+                                    old.Dispose()
+                            }
+
+                        let call =
+                            DrawCallInfo(
+                                FaceVertexCount = g.IndexArray.Length,
+                                InstanceCount = 1,
+                                FirstIndex = 0,
+                                FirstInstance = 0,
+                                BaseVertex = 0
+                            )
+
+                        ro.DrawCallInfos <- Mod.constant [call]
+                        ro.Mode <- Mod.constant g.Mode
+
+                        ro.Activate <- fun () -> 
+                            { new IDisposable with
+                                member x.Dispose() =
+                                    p.geometry.Reset()
+                                    self.Value.Value.Dispose()
+                            }
+
+                        let _ = Async.OnCancel(fun () -> 
+                                    match !self with
+                                        | None -> ()
+                                        | Some v -> 
+                                            v.Dispose()
+                                            p.geometry.Reset()
+                                )
+
+                        let prepared =  runtime.PrepareRenderObject(n.Signature, ro)
+                        self := Some prepared
+                        return prepared
+                }
+
+                n.Tree
+                    |> RoseTree.map (toRenderPatch trafoStack)
+                    |> Mod.constant
+                    |> RoseTree.filter godeeper
+                    |> RoseTree.mapAsync prepare
+                    |> RoseTree.flatten (fun a -> a :> IRenderObject)
