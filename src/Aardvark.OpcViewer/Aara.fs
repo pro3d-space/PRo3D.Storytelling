@@ -127,7 +127,10 @@ module Patch =
             Thunk<_>(fun () -> 
                 let positions = Path.combine [p.BaseDir; p.Positions] |> fromFile<V3f>
                 let coordinates = Path.combine [p.BaseDir; (List.head p.Coordinates)] |> fromFile<V2f>
-                let normals = Path.combine [p.BaseDir; "Normals.aara"] |> fromFile<V3f>
+
+                let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
+
+                //let normals = Path.combine [p.BaseDir; "Normals.aara"] |> fromFile<V3f>
                 let index = createIndex (positions.AsMatrix())
 
                 IndexedGeometry(
@@ -136,8 +139,8 @@ module Patch =
                     IndexedAttributes =
                         SymDict.ofList [
                             DefaultSemantic.Positions, positions.Data :> Array
-                            DefaultSemantic.DiffuseColorCoordinates, coordinates.Data :> Array
-                            DefaultSemantic.Normals, normals.Data :> Array
+                            DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
+                            //DefaultSemantic.Normals, normals.Data :> Array
                         ]
                 )
             )
@@ -156,8 +159,12 @@ module PatchHierarchy =
         let hierarchy = x.Descendants(xname "PatchHierarchy") |> Seq.head
         let rootPatch = hierarchy |> elem "RootPatch" |> xvalue
 
-        let map = hierarchy |> elem "SubPatchMap"
-        let items = map.Descendants(xname "item") |> Seq.toList
+        let map = hierarchy |> elem' "SubPatchMap"
+        let items = 
+            match map with
+                | Some subs -> subs.Descendants(xname "item") |> Seq.toList
+                | None -> []
+
         let children = 
             items |> List.map (fun e -> 
                 let key = elem "key" e |> xvalue
@@ -199,12 +206,25 @@ module NaivePatchLoD =
 
     let patch2Sg (depth : int) (patch : Patch) =
         let tex = patch.info.Textures |> List.head 
-        let fullPath = Path.combine [patch.info.BaseDir; tex.fileName]
-        let fullPath = System.IO.Path.ChangeExtension(fullPath,".dds")
+        let tiff = Path.combine [patch.info.BaseDir; tex.fileName]
+        //let fullPath = System.IO.Path.ChangeExtension(fullPath,".dds")
+
+        let extensions = [ ".dds"; ".tif"; ".tiff"]
+
+        let rec tryFindTex exts path =
+            match exts with
+                | x::xs -> 
+                    let cuzrrent = System.IO.Path.ChangeExtension(path,x)
+                    if File.Exists cuzrrent then cuzrrent else tryFindTex xs path
+                | [] -> failwithf "texture not found: %s" path
+
+
+        let textureImage = tryFindTex extensions tiff
+
         patch.geometry.Value
             |> Sg.ofIndexedGeometry
             |> Sg.uniform "LoDColor" (Mod.constant (Map.find depth colors))
-            |> Sg.diffuseFileTexture' fullPath true
+            |> Sg.diffuseFileTexture' textureImage true
             |> Sg.trafo (Mod.constant patch.info.Local2Global)
 
 
@@ -302,6 +322,14 @@ module PatchRendering =
         | Leaf of 'a
         | Node of 'a * list<RoseTree<'a>>
 
+    let mutable cancelledCnt = 0
+
+    type Task<'a> with
+        member x.PeekResult =
+            if x.Status = TaskStatus.RanToCompletion then Some (Some x.Result)
+            elif x.Status = TaskStatus.Canceled || x.Status = TaskStatus.Faulted then Some None
+            else None
+
     type Loady<'a, 'b>(tag : 'b, trigger : IAdaptiveObject, release : 'a -> unit, run : Async<'a>) =
         let mutable task : Option<Task<'a>> = None
         let mutable cancel = new CancellationTokenSource()
@@ -313,11 +341,12 @@ module PatchRendering =
                 return r
             }
 
+
         member x.Tag = tag
 
         member x.Peek =
             match task with
-                | Some t when t.IsCompleted -> Some t.Result
+                | Some t -> t.PeekResult |> Option.bind id
                 | _ -> None
 
         member x.Start() =
@@ -331,19 +360,20 @@ module PatchRendering =
         member x.Stop() =
             match task with
                 | Some t ->
-                    if t.IsCanceled || t.IsFaulted then
-                        ()
-                    elif t.IsCompleted then
-                        release t.Result
-                    else
-                        t.ContinueWith (fun (t : Task<'a>) ->
-                            if t.IsFaulted then printfn "faulted"
-                            if t.IsCompleted then //&& not t.IsFaulted && not t.IsCanceled then
-                                release t.Result
-                        ) |> ignore
-                        //cancel.Cancel()
+                    match t.PeekResult with
+                        | Some None ->
+                            () // cancelled
+                        | Some (Some r) ->
+                            release t.Result
+                        | None ->
+                            let afterCompleted =
+                                async {
+                                    let! r = Async.AwaitTask t
+                                    release r
+                                }
+                            Async.Start afterCompleted
+                            cancel.Cancel()
 
-                    //cancel.Dispose()
                     task <- None
                 | _ ->
                     ()
@@ -416,62 +446,6 @@ module PatchRendering =
                         destroy lv
                         let nv = rv |> create
                         Node(nv, List.map2 traverse lc rc)
- 
-        let rec traverseDestroyInner<'a, 'b> (equal : 'b -> 'a -> bool) (create : 'a -> 'b) (destroy : 'b -> unit) (ref : RoseTree<'b>) (t : RoseTree<'a>) : RoseTree<'b> =
-            let traverse = traverseDestroyInner equal create destroy
-
-            match ref, t with
-                | Empty, Empty -> 
-                    Empty
-
-                | Empty, Leaf v ->
-                    v |> create |> Leaf
-
-                | Empty, Node(v, children) ->
-                    let n = v |> create
-                    Node(n, children |> List.map (traverse Empty))
-
-                | Leaf v, Empty ->
-                    destroy v
-                    Empty
-
-                | Leaf l, Leaf r ->
-                    if equal l r then 
-                        Leaf l
-                    else 
-                        destroy l
-                        r |> create |> Leaf
-
-                | Leaf l, Node(r, children) ->
-                    if equal l r then
-                        destroy l
-                        Node(l, children |> List.map (traverse Empty))
-                    else
-                        destroy l
-                        let n = r |> create
-                        Node(n, children |> List.map (traverse Empty))
-
-                | Node(v,c), Empty ->
-                    destroy v
-                    c |> List.iter (fun c -> traverse c Empty |> ignore)
-                    Empty
-
-                | Node(v,c), Leaf r ->
-                    c |> List.iter (fun c -> traverse c Empty |> ignore)
-                    if equal v r then
-                        Leaf (create r)
-                    else
-                        destroy v
-                        r |> create |> Leaf
-                                            
-                | Node(lv,lc), Node(rv,rc) ->
-                    if equal lv rv then
-                        Node(lv, List.map2 traverse lc rc)
-                    else
-                        destroy lv
-                        let nv = rv |> create
-                        Node(nv, List.map2 traverse lc rc)
-    
     
         let filter (godeeper : IAdaptiveObject -> 'a -> bool) (tree : IMod<RoseTree<'a>>) : IMod<RoseTree<'a>> =
             Mod.custom (fun self ->
@@ -505,7 +479,7 @@ module PatchRendering =
 
                 let destroy (v : Loady<'b, 'a>) =
                     runningLoadies <- runningLoadies - 1
-                    printfn "running loadies: %A" runningLoadies
+                    //printfn "running loadies: %A" runningLoadies
                     v.Stop()
 
                 let t = tree.GetValue self
@@ -600,6 +574,24 @@ module PatchRendering =
                 level       : int
                 trafo       : IMod<Trafo3d>
             }
+            
+        type Prepared = { prepared : IPreparedRenderObject; d : IDisposable } with
+            member x.Dispose() = x.prepared.Dispose(); x.d.Dispose()
+            interface IDisposable with
+                member x.Dispose() = x.Dispose()
+
+        type PrepareObj(f : unit -> Prepared) =
+            let cts = System.Threading.Tasks.TaskCompletionSource()
+
+            member x.Run() =
+                let r = f ()
+                cts.SetResult(r)
+                ()
+
+            member x.Task = Async.AwaitTask cts.Task
+
+
+        let mutable preparedCnt = 0
 
         open Aardvark.SceneGraph.Semantics.TrafoSemantics
         [<Semantic>]
@@ -608,15 +600,17 @@ module PatchRendering =
                 let viewSpacePoints =
                     b.ComputeCorners()
                         |> Array.map (fun v ->
-                            viewProj.Forward.TransformPosProj(v).XY
+                            viewProj.Forward.TransformPosProj(v)
                         )
 
-                let poly = viewSpacePoints |> Polygon2d
+                let poly = viewSpacePoints |> Array.map Vec.xy |> Polygon2d
 
                 let clipped = 
                     poly.ComputeConvexHullIndexPolygon().ToPolygon2d()//.ConvexClipped(Box2d(-V2d.II, V2d.II))
-
-                clipped.ComputeArea()
+    
+                let bounds = Box3d(viewSpacePoints)
+                if Box3d(-V3d.III, V3d.III).Intersects(bounds) |> not then 0.0
+                else clipped.ComputeArea()
 
             let toRenderPatch (modelTrafoStack : list<IMod<Trafo3d>>) (p : Patch) =
                 {
@@ -630,7 +624,11 @@ module PatchRendering =
                 [ 0, C4b.Green
                   1, C4b.Blue
                   2, C4b.Yellow
-                  3, C4b.Red ] |> Map.ofList
+                  3, C4b.Red
+                  4, C4b.Red 
+                  5, C4b.Red 
+                  6, C4b.Red 
+                  7, C4b.Red  ] |> Map.ofList
 
             member x.RenderObjects(n : PatchNode) : aset<IRenderObject> =
                 let runtime = n.Runtime
@@ -649,23 +647,31 @@ module PatchRendering =
                     
                     area > 3.5
 
-                let prepare (p : RenderPatch) : Async<IPreparedRenderObject> =   
-                    async {
-                        do! Async.SwitchToThreadPool()
+                let queue = ConcurrentHashQueue<_>()
 
-                        let self : ref<Option<IPreparedRenderObject>> = ref None
-                        let! _ = Async.OnCancel(fun () -> 
-                            match !self with
-                                | None -> ()
-                                | Some v -> 
-                                    v.Dispose()
-                                    p.geometry.Reset()
-                        )
+                let preparePatch (p : RenderPatch) =
+//                        let! _ = Async.OnCancel(fun () -> 
+//                            match !self with
+//                                | None -> ()
+//                                | Some v -> 
+//                                    v.Dispose()
+//                                    p.geometry.Reset()
+//                        )
 
                         let g = p.geometry.Value
                         let t = p.info.Textures |> List.head
-                        let fullPath = Path.combine [p.info.BaseDir; t.fileName]
-                        let fullPath = System.IO.Path.ChangeExtension(fullPath,".dds")
+                        let sourcePath = Path.combine [p.info.BaseDir; t.fileName]
+                        let extensions = [ ".dds"; ".tif"; ".tiff"]
+
+                        let rec tryFindTex exts path =
+                            match exts with
+                                | x::xs -> 
+                                    let cuzrrent = System.IO.Path.ChangeExtension(path,x)
+                                    if File.Exists cuzrrent then cuzrrent else tryFindTex xs path
+                                | [] -> failwithf "texture not found: %s" path
+
+
+                        let fullPath = tryFindTex extensions sourcePath
                             
                         let ro = RenderObject.Clone(ro)
 
@@ -727,25 +733,50 @@ module PatchRendering =
                             { new IDisposable with
                                 member x.Dispose() =
                                     p.geometry.Reset()
-                                    self.Value.Value.Dispose()
                             }
 
-                        let _ = Async.OnCancel(fun () -> 
-                                    match !self with
-                                        | None -> ()
-                                        | Some v -> 
-                                            v.Dispose()
-                                            p.geometry.Reset()
-                                )
-
                         let prepared =  runtime.PrepareRenderObject(n.Signature, ro)
-                        self := Some prepared
-                        return prepared
-                }
+                        //self := Some prepared
+                        { prepared = prepared; d = { new IDisposable with member x.Dispose() = Interlocked.Decrement(&preparedCnt) |> ignore } }
+
+                let sem = new SemaphoreSlim(0)
+
+                let prepare (p : RenderPatch)  =   
+                    let self : ref<Option<_>> = ref None
+                    let p = PrepareObj((fun () -> let pr = preparePatch p in preparedCnt <- preparedCnt + 1; self := Some pr; pr))
+                    queue.Enqueue(p) |> ignore
+                    sem.Release() |> ignore
+                    async {
+                        let! _ = Async.OnCancel(fun () -> 
+                            printfn "cancelled something: %d" preparedCnt
+                            queue.Remove(p) |> ignore
+                            match !self with
+                                | Some v -> 
+                                    printfn "disposed due to cancelling"
+                                    v.Dispose()
+                                | _ -> ()
+                        )
+                        let! res = p.Task
+                        //self := Some res
+                        return res
+                    }
+
+
+                let runner =
+                    async {
+                        do! Async.SwitchToNewThread()
+                        
+                        while true do
+                            //use context = runtime.ContextLock
+                            sem.Wait()
+                            match queue.TryDequeue() with
+                                | (true,v) -> v.Run() |> ignore   
+                                | _ -> ()
+                    } |> Async.Start
 
                 n.Tree
                     |> RoseTree.map (toRenderPatch trafoStack)
                     |> Mod.constant
                     |> RoseTree.filter godeeper
                     |> RoseTree.mapAsync prepare
-                    |> RoseTree.flatten (fun a -> a :> IRenderObject)
+                    |> RoseTree.flatten (fun p -> p.prepared :> IRenderObject)

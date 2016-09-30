@@ -30,12 +30,17 @@ let main argv =
     let win = app.CreateSimpleRenderWindow()
     win.Text <- "Aardvark rocks \\o/"
 
-    let bb = Box3d.Parse("[[-2490136.942562569, 2285877.560081598, -271419.972534080], [-2490134.569473011, 2285880.873850540, -271417.484781946]]")
+    
+
+    let bbOld = Box3d.Parse("[[-2490136.942562569, 2285877.560081598, -271419.972534080], [-2490134.569473011, 2285880.873850540, -271417.484781946]]")
+    let bb = Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]")
 
     let up = bb.Center.Normalized
 
+    let speed = Mod.init 5.0
+
     let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero up
-    let view = initialView |> DefaultCameraController.control win.Mouse win.Keyboard win.Time
+    let view = initialView |> DefaultCameraController.controlWithSpeed speed win.Mouse win.Keyboard win.Time
 
     let quadGeometry =
         IndexedGeometry(
@@ -56,11 +61,15 @@ let main argv =
 
     let dirs = System.IO.Directory.GetDirectories(@"C:\Aardwork\MarsStuff\47181")
 
+    let surfaces = System.IO.Directory.GetDirectories(@"F:\JR_Export\OPCs\Surface","MSL_Mastcam_Sol_*")
+    let dirs = 
+        [
+            for surface in surfaces |> Seq.take 20  do 
+                yield! System.IO.Directory.GetDirectories(surface)
+        ] 
+
     let patchHierarchies =
         [ for h in dirs do
-            let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
-            yield  PatchHierarchy.load p
-          for h in System.IO.Directory.GetDirectories(@"C:\Aardwork\MarsStuff\47191") do
             let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
             yield  PatchHierarchy.load p
         ] 
@@ -119,6 +128,21 @@ let main argv =
         printfn "%A" ( app.Runtime.Context.MemoryUsage ) 
     ) |> ignore
 
+    win.Keyboard.KeyDown(Keys.PageDown).Values.Subscribe(fun _ -> 
+        transact (fun () -> 
+            speed.Value <- speed.Value / 2.0
+            printfn "speed: %A" speed.Value
+        )
+    ) |> ignore
+
+    win.Keyboard.KeyDown(Keys.PageUp).Values.Subscribe(fun _ -> 
+        transact (fun () -> 
+            speed.Value <- speed.Value * 2.0
+            printfn "speed: %A" speed.Value
+        )
+    ) |> ignore
+    
+
     let sg =
         g  
             //|> Sg.normalize
@@ -138,8 +162,10 @@ let main argv =
     
     let cfg =  BackendConfiguration.Default 
     let task =
-        app.Runtime.CompileRender(win.FramebufferSignature, cfg, sg)
-            |> DefaultOverlays.withStatistics
+        RenderTask.ofList [
+            app.Runtime.CompileClear(win.FramebufferSignature, Mod.constant C4f.Gray)
+            app.Runtime.CompileRender(win.FramebufferSignature, cfg, sg) |> DefaultOverlays.withStatistics
+        ]
 
     win.RenderTask <- task
     win.Run()
