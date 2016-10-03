@@ -12,6 +12,9 @@ open System.IO
 
 open System.Runtime.InteropServices
 open Aardvark.Base
+open Aardvark.Base.Incremental.Load
+open Aardvark.Rendering.GL
+open OpenTK.Graphics.OpenGL4
 
 [<AutoOpen>]
 module private Aara =
@@ -324,72 +327,6 @@ module PatchRendering =
 
     let mutable cancelledCnt = 0
 
-    type Task<'a> with
-        member x.PeekResult =
-            if x.Status = TaskStatus.RanToCompletion then Some (Some x.Result)
-            elif x.Status = TaskStatus.Canceled || x.Status = TaskStatus.Faulted then Some None
-            else None
-
-    type Loady<'a, 'b>(tag : 'b, trigger : IAdaptiveObject, release : 'a -> unit, run : Async<'a>) =
-        let mutable task : Option<Task<'a>> = None
-        let mutable cancel = new CancellationTokenSource()
-
-        let run =  
-            async {
-                let! r = run
-                transact (fun () -> trigger.MarkOutdated())
-                return r
-            }
-
-
-        member x.Tag = tag
-
-        member x.Peek =
-            match task with
-                | Some t -> t.PeekResult |> Option.bind id
-                | _ -> None
-
-        member x.Start() =
-            match task with
-                | None ->
-                    let t = Async.StartAsTask(run, cancellationToken = cancel.Token)
-                    task <- Some t
-                | Some _ -> 
-                    ()
-
-        member x.Stop() =
-            match task with
-                | Some t ->
-                    match t.PeekResult with
-                        | Some None ->
-                            () // cancelled
-                        | Some (Some r) ->
-                            release t.Result
-                        | None ->
-                            let afterCompleted =
-                                async {
-                                    let! r = Async.AwaitTask t
-                                    release r
-                                }
-                            Async.Start afterCompleted
-                            cancel.Cancel()
-
-                    task <- None
-                | _ ->
-                    ()
-                 
-    module Loady =
-        let start (tag : 'b) (trigger : IAdaptiveObject) (run : Async<'a>) =
-            let l = Loady(tag, trigger, (fun a -> (a :> IDisposable).Dispose()), run)
-            l.Start()
-            l
-
-//        let start' (tag : 'b) (trigger : IAdaptiveObject) (run : Async<'a>) =
-//            let l = Loady(tag, trigger, ignore, run)
-//            l.Start()
-//            l
-
-
     module RoseTree =
         open System.Collections.Generic
 
@@ -465,21 +402,23 @@ module PatchRendering =
             
         let  mutable runningLoadies = 0
 
-        let mapAsync<'a,'b when 'b :> IDisposable and 'a : equality> (create : 'a -> Async<'b>) (tree : IMod<RoseTree<'a>>) : IMod<RoseTree<Option<'b>>> =
+        let mapAsync<'a,'b when 'b :> IDisposable and 'a : equality> (create : 'a -> ILoadTask<'b>) (tree : IMod<RoseTree<'a>>) : IMod<RoseTree<Option<'b>>> =
             let current = ref Empty
 
             let l = Mod.custom (fun self ->
 
-                let equal (l : Loady<'b,'a>) (r : 'a) =
-                    l.Tag = r
+                let equal (l : ILoadTask<'b>) (r : 'a) =
+                    System.Object.Equals(l.Tag,r)
                 
                 let create (v : 'a) = 
                     runningLoadies <- runningLoadies + 1
-                    Loady.start v self (create v)
+                    let r = create v
+                    r.Tag <- v
+                    r.Start()
+                    r
 
-                let destroy (v : Loady<'b, 'a>) =
+                let destroy (v : ILoadTask<'b>) =
                     runningLoadies <- runningLoadies - 1
-                    //printfn "running loadies: %A" runningLoadies
                     v.Stop()
 
                 let t = tree.GetValue self
@@ -494,23 +433,23 @@ module PatchRendering =
                     
                 let lt = l.GetValue(self)
 
-                let allReady (c : list<RoseTree<Loady<'b, 'a>>>) =
+                let allReady (c : list<RoseTree<ILoadTask<'b>>>) =
                     c |> List.forall (fun t ->
                         match t with
                             | Empty -> true
-                            | Leaf v -> Option.isSome v.Peek
-                            | Node(v,_) -> Option.isSome v.Peek
+                            | Leaf v -> Option.isSome (v.GetValue(self))
+                            | Node(v,_) -> Option.isSome (v.GetValue(self))
                     )
 
-                let rec peek (t : RoseTree<Loady<'b, 'a>>) =
+                let rec peek (t : RoseTree<ILoadTask<'b>>) =
                     match t with
                         | Empty -> Empty
                         | Leaf l ->
-                            match l.Peek with
+                            match l.GetValue(self) with
                                 | Some v -> Leaf (Some v)
                                 | None -> Empty
                         | Node(v, children) ->
-                            match v.Peek with
+                            match v.GetValue(self) with
                                 | Some v ->
                                     if allReady children then
                                         Node(None, List.map peek children)
@@ -580,15 +519,15 @@ module PatchRendering =
             interface IDisposable with
                 member x.Dispose() = x.Dispose()
 
-        type PrepareObj(f : unit -> Prepared) =
-            let cts = System.Threading.Tasks.TaskCompletionSource()
-
-            member x.Run() =
-                let r = f ()
-                cts.SetResult(r)
-                ()
-
-            member x.Task = Async.AwaitTask cts.Task
+//        type PrepareObj(f : unit -> Prepared) =
+//            let cts = System.Threading.Tasks.TaskCompletionSource()
+//
+//            member x.Run() =
+//                let r = f ()
+//                cts.SetResult(r)
+//                ()
+//
+//            member x.Task = Async.AwaitTask cts.Task
 
 
         let mutable preparedCnt = 0
@@ -650,13 +589,8 @@ module PatchRendering =
                 let queue = ConcurrentHashQueue<_>()
 
                 let preparePatch (p : RenderPatch) =
-//                        let! _ = Async.OnCancel(fun () -> 
-//                            match !self with
-//                                | None -> ()
-//                                | Some v -> 
-//                                    v.Dispose()
-//                                    p.geometry.Reset()
-//                        )
+
+                        use ctx = runtime.ContextLock
 
                         let g = p.geometry.Value
                         let t = p.info.Textures |> List.head
@@ -674,10 +608,6 @@ module PatchRendering =
                         let fullPath = tryFindTex extensions sourcePath
                             
                         let ro = RenderObject.Clone(ro)
-
-//                        let pos = g.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
-//                        let bounds = pos |> Array.filter (fun v -> v.AnyEqual(nanf) |> not) |> Array.map V3d |> Box3d
-//                        printfn "%A" bounds
 
                         let prepareBuffer b = b :> IBuffer //runtime.PrepareBuffer b
                         let prepareTexture t = t :> ITexture //runtime.PrepareTexture t
@@ -736,43 +666,19 @@ module PatchRendering =
                             }
 
                         let prepared =  runtime.PrepareRenderObject(n.Signature, ro)
-                        //self := Some prepared
+                        GL.Sync()
+                        Interlocked.Increment(&preparedCnt) |> ignore
                         { prepared = prepared; d = { new IDisposable with member x.Dispose() = Interlocked.Decrement(&preparedCnt) |> ignore } }
 
-                let sem = new SemaphoreSlim(0)
+                let runner = new Load.Runner()
 
-                let prepare (p : RenderPatch)  =   
-                    let self : ref<Option<_>> = ref None
-                    let p = PrepareObj((fun () -> let pr = preparePatch p in preparedCnt <- preparedCnt + 1; self := Some pr; pr))
-                    queue.Enqueue(p) |> ignore
-                    sem.Release() |> ignore
-                    async {
-                        let! _ = Async.OnCancel(fun () -> 
-                            printfn "cancelled something: %d" preparedCnt
-                            queue.Remove(p) |> ignore
-                            match !self with
-                                | Some v -> 
-                                    printfn "disposed due to cancelling"
-                                    v.Dispose()
-                                | _ -> ()
-                        )
-                        let! res = p.Task
-                        //self := Some res
+                let prepare (patch : RenderPatch) =
+                    load {
+                        let res = preparePatch patch
+                        do! Load.disposeOnCancel res 
                         return res
-                    }
+                    } |> runner.Enqueue
 
-
-                let runner =
-                    async {
-                        do! Async.SwitchToNewThread()
-                        
-                        while true do
-                            //use context = runtime.ContextLock
-                            sem.Wait()
-                            match queue.TryDequeue() with
-                                | (true,v) -> v.Run() |> ignore   
-                                | _ -> ()
-                    } |> Async.Start
 
                 n.Tree
                     |> RoseTree.map (toRenderPatch trafoStack)

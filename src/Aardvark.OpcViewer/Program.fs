@@ -26,6 +26,8 @@ let main argv =
     Aardvark.Init()
 
 
+
+
     use app = new OpenGlApplication()
     let win = app.CreateSimpleRenderWindow()
     win.Text <- "Aardvark rocks \\o/"

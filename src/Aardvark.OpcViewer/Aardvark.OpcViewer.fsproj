@@ -64,6 +64,8 @@
   -->
   <ItemGroup>
     <Compile Include="PathFileInfo.fs" />
+    <Compile Include="Time.fs" />
+    <Compile Include="Proc.fs" />
     <Compile Include="Aara.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />
