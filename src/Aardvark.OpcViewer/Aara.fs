@@ -16,6 +16,8 @@ open Aardvark.Base.Incremental.Load
 open Aardvark.Rendering.GL
 open OpenTK.Graphics.OpenGL4
 
+open Examples.TextureLoaders
+
 [<AutoOpen>]
 module private Aara =
     let readerChars2String (f : Stream)  = 
@@ -98,58 +100,35 @@ module private Aara =
         Array.Resize(&arr, cnt)
         arr
 
-type Thunk<'a>(f : unit -> 'a) =    
-    let mutable value = None
-
-    member x.Value =
-        lock x (fun () -> 
-            match value with
-                | Some v -> v
-                | None -> 
-                    let r = f () 
-                    value <- Some r
-                    r
-        )
-
-    member x.Reset() =
-        lock x (fun () -> 
-            value <- None
-        )
-
 type Patch =
     {
-        geometry : Thunk<IndexedGeometry>
         level : int
         info : PatchFileInfo
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Patch =
-    let load (level : int) (p : PatchFileInfo) =
+    let ofInfo (level : int) (p : PatchFileInfo) = { level = level; info = p }
         
-        let geometry = 
-            Thunk<_>(fun () -> 
-                let positions = Path.combine [p.BaseDir; p.Positions] |> fromFile<V3f>
-                let coordinates = Path.combine [p.BaseDir; (List.head p.Coordinates)] |> fromFile<V2f>
+    let load (p : PatchFileInfo)  =
+        let positions = Path.combine [p.BaseDir; p.Positions] |> fromFile<V3f>
+        let coordinates = Path.combine [p.BaseDir; (List.head p.Coordinates)] |> fromFile<V2f>
 
-                let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
+        let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
 
-                //let normals = Path.combine [p.BaseDir; "Normals.aara"] |> fromFile<V3f>
-                let index = createIndex (positions.AsMatrix())
+        //let normals = Path.combine [p.BaseDir; "Normals.aara"] |> fromFile<V3f>
+        let index = createIndex (positions.AsMatrix())
 
-                IndexedGeometry(
-                    Mode = IndexedGeometryMode.TriangleList,
-                    IndexArray = index,
-                    IndexedAttributes =
-                        SymDict.ofList [
-                            DefaultSemantic.Positions, positions.Data :> Array
-                            DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
-                            //DefaultSemantic.Normals, normals.Data :> Array
-                        ]
-                )
-            )
-
-        { geometry = geometry; level = level; info = p }
+        IndexedGeometry(
+            Mode = IndexedGeometryMode.TriangleList,
+            IndexArray = index,
+            IndexedAttributes =
+                SymDict.ofList [
+                    DefaultSemantic.Positions, positions.Data :> Array
+                    DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
+                    //DefaultSemantic.Normals, normals.Data :> Array
+                ]
+        )
 
 
 
@@ -158,6 +137,8 @@ module PatchHierarchy =
     open XmlHelpers
     open System.Xml
     open System.Xml.Linq
+    open MBrace.FsPickler
+
 
     let private ofDoc (x : XDocument) =
         let hierarchy = x.Descendants(xname "PatchHierarchy") |> Seq.head
@@ -189,11 +170,26 @@ module PatchHierarchy =
 
         mkTree rootPatch
 
+    let binarySerializer = FsPickler.CreateBinarySerializer()
     let load (fileName : string) =
         let dir = Path.GetDirectoryName(Path.GetDirectoryName fileName)
-        XDocument.Load(fileName) 
-            |> ofDoc
-            |> QTree.mapLevel 0 (fun level p -> p |> PatchFileInfo.load dir |> Patch.load level)
+        let cachefile = Path.combine [dir; "hierarchy.cache" ]
+        if File.Exists cachefile then
+            Log.startTimed "loading from cache."
+            let r = File.readAllBytes cachefile |> binarySerializer.UnPickle
+            Log.stop()
+            r
+        else
+            Log.startTimed "loading from hierarchy"
+            let hierarchy = 
+                XDocument.Load(fileName) 
+                    |> ofDoc
+                    |> QTree.mapLevel 0 (fun level p -> p |> PatchFileInfo.load dir |> Patch.ofInfo level)
+            Log.startTimed "writing cache"
+            binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
+            Log.stop()
+            Log.stop()
+            hierarchy
 
 
 module NaivePatchLoD =
@@ -206,7 +202,9 @@ module NaivePatchLoD =
         [ 0, C4b.Green
           1, C4b.Blue
           2, C4b.Yellow
-          3, C4b.Red ] |> Map.ofList
+          3, C4b.Red
+          4, C4b.VRVisGreen
+          5, C4b.Yellow ] |> Map.ofList
 
     let patch2Sg (depth : int) (patch : Patch) =
         let tex = patch.info.Textures |> List.head 
@@ -228,7 +226,7 @@ module NaivePatchLoD =
         let ex = Path.GetExtension textureImage
         if ex = ".dds" then printfn "asdfasdasd"
 
-        patch.geometry.Value
+        Patch.load patch.info
             |> Sg.ofIndexedGeometry
             |> Sg.uniform "LoDColor" (Mod.constant (Map.find depth colors))
             |> Sg.diffuseFileTexture' textureImage true
@@ -251,30 +249,31 @@ module NaivePatchLoD =
 
 
     let toSg (preTrafo : Trafo3d) (s : QTree<Patch>) : ISg =
-        let rec mk d s =
-            match s with
-                | Node(p, children) ->
-                    let decider (scope : NaiveLod.LodScope) = 
-//                        let bb = p.info.
-//                        let mvp : Trafo3d = scope.ModelViewTrafo.GetValue()
-
-                        let bbT = p.info.GlobalBoundingBox.Transformed(preTrafo) //.Transformed(scope.trafo)
-                        let cam = scope.cameraPosition
-//                        let screenSpaceBox = 
-//                            bb.ComputeCorners() 
-//                            |> Array.map (fun p -> mvp.Forward.TransformPosProj(p))
-//                            |> Box3d
-                        let d = (bbT.Center - cam).Length 
-
-                        let area = computeScreenSpaceArea bbT (scope.ViewProjTrafo.GetValue())
-
-                        //printfn "d=%A" d
-                        area > 3.5
-                        //screenSpaceBox.SizeX < 0.3 && screenSpaceBox.SizeY < 0.3
-                    let self = patch2Sg
-                    NaiveLod.Sg.loD (patch2Sg d p) (children |> Array.map (mk (d+1)) |> Sg.ofSeq) decider
-                | Leaf v -> patch2Sg d v 
-        mk 0 s
+        failwith ""
+//        let rec mk d s =
+//            match s with
+//                | Node(p, children) ->
+//                    let decider (scope : NaiveLod.LodScope) = 
+////                        let bb = p.info.
+////                        let mvp : Trafo3d = scope.ModelViewTrafo.GetValue()
+//
+//                        let bbT = p.info.GlobalBoundingBox.Transformed(preTrafo) //.Transformed(scope.trafo)
+//                        let cam = scope.cameraPosition
+////                        let screenSpaceBox = 
+////                            bb.ComputeCorners() 
+////                            |> Array.map (fun p -> mvp.Forward.TransformPosProj(p))
+////                            |> Box3d
+//                        let d = (bbT.Center - cam).Length 
+//
+//                        let area = computeScreenSpaceArea bbT (scope.ViewProjTrafo.GetValue())
+//
+//                        //printfn "d=%A" d
+//                        area > 3.5
+//                        //screenSpaceBox.SizeX < 0.3 && screenSpaceBox.SizeY < 0.3
+//                    let self = patch2Sg
+//                    NaiveLod.Sg.loD (patch2Sg d p) (children |> Array.map (mk (d+1)) |> Sg.ofSeq) decider
+//                | Leaf v -> patch2Sg d v 
+        //mk 0 s
     
 
 module PatchRendering =
@@ -512,7 +511,6 @@ module PatchRendering =
 
         type RenderPatch =
             {
-                geometry    : Thunk<IndexedGeometry>
                 info        : PatchFileInfo
                 level       : int
                 trafo       : IMod<Trafo3d>
@@ -558,7 +556,6 @@ module PatchRendering =
 
             let toRenderPatch (modelTrafoStack : list<IMod<Trafo3d>>) (p : Patch) =
                 {
-                    geometry    = p.geometry
                     info        = p.info
                     level       = p.level
                     trafo       = flattenStack (Mod.constant p.info.Local2Global :: modelTrafoStack)
@@ -600,8 +597,7 @@ module PatchRendering =
 
                         
                         //use ctx = runtime.ContextLock
-
-                        let g = p.geometry.Value
+                        let g = Patch.load p.info
                         let t = p.info.Textures |> List.head
                         let sourcePath = Path.combine [p.info.BaseDir; t.fileName]
                         let extensions = [ ".dds"; ".tif"; ".tiff"]
@@ -615,16 +611,76 @@ module PatchRendering =
 
 
                         let fullPath = tryFindTex extensions sourcePath
+                        let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
+                        let tex = 
+                            match Path.GetExtension fullPath with
+                                | ".dds" -> 
+                                    let tex     = FileTexture(fullPath, config)
+                                    tex :> ITexture
+
+//                                    let createMipMaps = true
+//
+//                                    let mutable dimension = Unchecked.defaultof<_>
+//                                    let mutable textureHandle = 0u
+//
+//                                    Examples.TextureLoaders.ImageDDS.LoadFromDisk(fullPath,&textureHandle,&dimension)
+//                                    GL.Check "Load IL Image"
+//                                    GL.BindTexture(TextureTarget.Texture2D, textureHandle)
+//                                    GL.Check "Load IL Image"
+//                                    let mutable width = 0
+//                                    let mutable height = 0
+//                                    let mutable ifmt = 0
+//                                    let mutable maxLevel = 0
+//                                    GL.GetTexLevelParameter(TextureTarget.Texture2D, 0, GetTextureParameter.TextureWidth, &width)
+//                                    GL.GetTexLevelParameter(TextureTarget.Texture2D, 0, GetTextureParameter.TextureHeight, &height)
+//                                    GL.Check "Get Image Size"
+//                                    GL.GetTexParameterI(TextureTarget.Texture2D, GetTextureParameter.TextureInternalFormat, &ifmt)
+//                                    GL.GetTexParameterI(TextureTarget.Texture2D, GetTextureParameter.TextureMaxLevel, &maxLevel)
+//                                    GL.Check "Get Image properties"
+//
+//                                    let size = V3i(width, height, 1)
+//                                    let levels = maxLevel + 1
+//                                    let internalFormat = unbox<PixelInternalFormat> ifmt
+//                                    let fmt = unbox<TextureFormat> ifmt
+//
+//                                    let sizeInBytes = int64 <| ((InternalFormat.getSizeInBits internalFormat) * size.X * size.Y) / 8
+//                                    let sizeInBytes =  if createMipMaps then (sizeInBytes * 3L) / 2L else sizeInBytes
+//
+//                                    if createMipMaps && levels <= 1 then
+//                                        GL.GenerateMipmap(GenerateMipmapTarget.Texture2D)
+//
+//                                    GL.BindTexture(TextureTarget.Texture2D, 0)
+//                                    let glRuntime = runtime |> unbox<Aardvark.Rendering.GL.Runtime>
+//                                    
+//
+//                                    let dispose = 
+//                                        { new IDisposable with
+//                                            member x.Dispose() =
+//                                               use ctx = runtime.ContextLock
+//                                               GL.DeleteTexture(textureHandle)
+//                                        }
+//
+//                                    let t = Texture(
+//                                                glRuntime.Context,
+//                                                int textureHandle,
+//                                                TextureDimension.Texture2D,
+//                                                levels,
+//                                                1,
+//                                                size,
+//                                                1,
+//                                                fmt,
+//                                                sizeInBytes,
+//                                                false)
+//                                    t :> ITexture, dispose
+                                | _ -> 
+                                    FileTexture(fullPath, config) :> ITexture //, { new IDisposable with member x.Dispose() = () }
       
                         let ro = RenderObject.Clone(ro)
 
-                        let prepareBuffer b = b :> IBuffer //runtime.PrepareBuffer b
-                        let prepareTexture t = t :> ITexture //runtime.PrepareTexture t
 
-                        let idx     = prepareBuffer(ArrayBuffer(g.IndexArray))
-                        let pos     = prepareBuffer(ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.Positions]))
-                        let tc      = prepareBuffer(ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.DiffuseColorCoordinates]))
-                        let tex     = prepareTexture(FileTexture(fullPath, true))
+                        let idx     = ArrayBuffer(g.IndexArray) :> IBuffer
+                        let pos     = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.Positions]) :> IBuffer
+                        let tc      = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.DiffuseColorCoordinates]) :> IBuffer
                           
                         ro.Indices <- BufferView(Mod.constant idx, typeof<int>) |> Some
 
@@ -668,11 +724,6 @@ module PatchRendering =
                         ro.DrawCallInfos <- Mod.constant [call]
                         ro.Mode <- Mod.constant g.Mode
 
-                        ro.Activate <- fun () -> 
-                            { new IDisposable with
-                                member x.Dispose() =
-                                    p.geometry.Reset()
-                            }
 
                         let prepared =  runtime.PrepareRenderObject(n.Signature, ro)
                         GL.Sync()

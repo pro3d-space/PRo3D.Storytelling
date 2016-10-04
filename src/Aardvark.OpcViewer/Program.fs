@@ -9,6 +9,8 @@ open Aardvark.Application.WinForms
 open Aardvark.Opc
 open FShade
 open Aardvark.Base.Incremental.Load
+open OpenTK.Graphics.OpenGL4
+open Aardvark.Rendering.GL
 //
 module Shader =
     open FShade
@@ -26,6 +28,7 @@ let main argv =
     //Test.test2()
     Aardvark.Init()
 
+    
 
 
 
@@ -33,6 +36,43 @@ let main argv =
     let win = app.CreateSimpleRenderWindow()
     win.Text <- "Aardvark rocks \\o/"
 
+
+
+    let testLoaders extension (config : TextureParams) =
+        let sw = System.Diagnostics.Stopwatch()
+        use ctx = win.Runtime.ContextLock
+        let cnt = 20
+        let ddsFiles = System.IO.Directory.EnumerateFiles(@"D:\JR_Export\OPCs\Surface\Sol318id47191\OPC_001_001\Images\Image-0001", extension) |> Seq.toArray
+        
+        let out = Console.Out
+        Console.SetOut System.IO.TextWriter.Null
+        for fullPath in ddsFiles do
+            let fT = FileTexture(fullPath, config) :> ITexture
+            let tex = win.Runtime.PrepareTexture(fT)
+            win.Runtime.DeleteTexture(tex)
+        
+        for i in 0 .. cnt - 1 do
+            for fullPath in ddsFiles do
+                let fT = FileTexture(fullPath, config) :> ITexture
+                sw.Start()
+                let tex = win.Runtime.PrepareTexture(fT)
+                GL.Sync()
+                sw.Stop()
+                win.Runtime.DeleteTexture(tex)
+
+        Console.SetOut out
+
+        printfn "config (%s): %A -> %A" extension config (float sw.Elapsed.TotalMilliseconds / (float (ddsFiles.Length * cnt)))
+
+//    testLoaders "*.tif" { wantMipMaps = true; wantSrgb = false; wantCompressed = true }
+//    testLoaders "*.tif" { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
+//    testLoaders "*.dds" { wantMipMaps = true; wantSrgb = false; wantCompressed = true }
+//    testLoaders "*.dds" { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
+//
+//    System.Environment.Exit 0
+//    
+    
+    
     let runUploads (f : unit -> unit) =
         use r = win.Runtime.ContextLock
         f ()
@@ -68,10 +108,10 @@ let main argv =
 
     let dirs = System.IO.Directory.GetDirectories(@"C:\Aardwork\MarsStuff\47181")
 
-    let surfaces = System.IO.Directory.GetDirectories(@"F:\JR_Export\OPCs\Surface","MSL_Mastcam_Sol_*")
+    let surfaces = System.IO.Directory.GetDirectories(@"D:\JR_Export\OPCs\Surface")//,"MSL_Mastcam_Sol_*")
     let dirs = 
         [
-            for surface in surfaces   do 
+            for surface in surfaces do 
                 yield! System.IO.Directory.GetDirectories(surface)
         ] 
 
@@ -84,7 +124,7 @@ let main argv =
     let sg = 
         match hier with
             | Node(patch,_) ->
-                patch.geometry.Value
+                Patch.load patch.info
                     |> Sg.ofIndexedGeometry
                     //|> Sg.trafo (Mod.constant patch.info.Local2Global)
                     |> Sg.effect [
@@ -106,7 +146,7 @@ let main argv =
                    let fullPath = Path.combine [patch.info.BaseDir; tex.fileName]
                    let fullPath = System.IO.Path.ChangeExtension(fullPath,".dds")
                    yield 
-                    patch.geometry.Value
+                    Patch.load patch.info
                      |> Sg.ofIndexedGeometry
                      |> Sg.diffuseFileTexture' fullPath true
                      |> Sg.trafo (Mod.constant patch.info.Local2Global)
@@ -157,8 +197,8 @@ let main argv =
             |> Sg.effect [
                         DefaultSurfaces.trafo |> toEffect
                         DefaultSurfaces.constantColor C4f.White |> toEffect
-                        //DefaultSurfaces.diffuseTexture |> toEffect
-                        Shader.LoDColor |> toEffect
+                        DefaultSurfaces.diffuseTexture |> toEffect
+                        //Shader.LoDColor |> toEffect
                         //DefaultSurfaces.simpleLighting |> toEffect
                     ]
             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)

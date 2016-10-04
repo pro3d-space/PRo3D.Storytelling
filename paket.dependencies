@@ -13,6 +13,7 @@ nuget Aardvark.Rendering.NanoVg            ~> 2.4.2
 
 nuget Fsunit
 nuget FParsec
+nuget FsPickler ~> 3.1.0
 
 group Build
 content: none

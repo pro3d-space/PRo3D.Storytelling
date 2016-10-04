@@ -63,6 +63,7 @@
   </Target>
   -->
   <ItemGroup>
+    <Compile Include="LoadDDS.fs" />
     <Compile Include="PathFileInfo.fs" />
     <Compile Include="Time.fs" />
     <Compile Include="Proc.fs" />
@@ -83,6 +84,11 @@
     <Reference Include="System.Xml.Serialization" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\OpcSupport\OpcSupport.csproj">
+      <Name>OpcSupport</Name>
+      <Project>{83a9b79a-5b4e-429a-b602-d5d17e34c0bf}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\Test\Test.fsproj">
       <Name>Test</Name>
       <Project>{30eac7e9-36db-4c02-aaf5-7406dd50d974}</Project>
@@ -319,6 +325,44 @@
         <Reference Include="FSharp.Quotations.Evaluator">
           <HintPath>..\..\packages\FSharp.Quotations.Evaluator\lib\portable-net45+netcore45+MonoAndroid1+MonoTouch1\FSharp.Quotations.Evaluator.dll</HintPath>
           <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v3.5'">
+      <ItemGroup>
+        <Reference Include="FsPickler">
+          <HintPath>..\..\packages\FsPickler\lib\net35\FsPickler.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Runtime.Serialization">
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0')">
+      <ItemGroup>
+        <Reference Include="FsPickler">
+          <HintPath>..\..\packages\FsPickler\lib\net40\FsPickler.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Runtime.Serialization">
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1')">
+      <ItemGroup>
+        <Reference Include="FsPickler">
+          <HintPath>..\..\packages\FsPickler\lib\net45\FsPickler.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Runtime.Serialization">
           <Paket>True</Paket>
         </Reference>
       </ItemGroup>
