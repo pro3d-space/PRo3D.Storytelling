@@ -35,7 +35,7 @@ module private Aara =
         if typeof<'a>.Name <> typeName then failwith "wrong type"
     
         let result = Array.zeroCreate<'a> elementCount
-        let buffer = Array.zeroCreate<byte> (1 <<< 16)
+        let buffer = Array.zeroCreate<byte> (1 <<< 20)
 
         let gc = GCHandle.Alloc(result, GCHandleType.Pinned)
         try
@@ -64,17 +64,17 @@ module private Aara =
         use fs = File.OpenRead(s)
         loadFromStream<'a> fs
 
-    let isNan (v : V3f) = V3f.AnyEqual(nanf,v)
+    let inline isNan (v : V3f) = V3f.AnyEqual(nanf,v)
 
 
     let createIndex (vi : Matrix<V3f>) =
         let dx = vi.Info.DX
         let dy = vi.Info.DY
         let dxy = dx + dy
-        let resultIndices = System.Collections.Generic.List<int>()
-
+        let mutable arr = Array.zeroCreate (int (vi.SX - 1L) * int (vi.SY - 1L) * 6)
+        let mutable cnt = 0
+        
         vi.SubMatrix(V2l.Zero,vi.Size-V2l.II).ForeachXYIndex(fun x y index -> 
-
             let i00 = index
             let i10 = index + dy
             let i01 = index + dx
@@ -87,15 +87,16 @@ module private Aara =
 
             if p00 || p01 || p10 || p11 then ()
             else 
-                resultIndices.Add(int i00)
-                resultIndices.Add(int i10)
-                resultIndices.Add(int i11)
-
-                resultIndices.Add(int i00)
-                resultIndices.Add(int i11)
-                resultIndices.Add(int i01)
+                arr.[cnt + 0] <- (int i00)
+                arr.[cnt + 1] <- (int i10)
+                arr.[cnt + 2] <- (int i11)
+                arr.[cnt + 3] <- (int i00)
+                arr.[cnt + 4] <- (int i11)
+                arr.[cnt + 5] <- (int i01)
+                cnt <- cnt + 6
         )
-        resultIndices.ToArray()
+        Array.Resize(&arr, cnt)
+        arr
 
 type Thunk<'a>(f : unit -> 'a) =    
     let mutable value = None
@@ -223,6 +224,9 @@ module NaivePatchLoD =
 
 
         let textureImage = tryFindTex extensions tiff
+
+        let ex = Path.GetExtension textureImage
+        if ex = ".dds" then printfn "asdfasdasd"
 
         patch.geometry.Value
             |> Sg.ofIndexedGeometry
@@ -531,6 +535,7 @@ module PatchRendering =
 
 
         let mutable preparedCnt = 0
+        let mutable runner : Load.Runner = Unchecked.defaultof<_> 
 
         open Aardvark.SceneGraph.Semantics.TrafoSemantics
         [<Semantic>]
@@ -569,6 +574,9 @@ module PatchRendering =
                   6, C4b.Red 
                   7, C4b.Red  ] |> Map.ofList
 
+
+
+
             member x.RenderObjects(n : PatchNode) : aset<IRenderObject> =
                 let runtime = n.Runtime
                 let scope = Ag.getContext()
@@ -590,7 +598,8 @@ module PatchRendering =
 
                 let preparePatch (p : RenderPatch) =
 
-                        use ctx = runtime.ContextLock
+                        
+                        //use ctx = runtime.ContextLock
 
                         let g = p.geometry.Value
                         let t = p.info.Textures |> List.head
@@ -606,7 +615,7 @@ module PatchRendering =
 
 
                         let fullPath = tryFindTex extensions sourcePath
-                            
+      
                         let ro = RenderObject.Clone(ro)
 
                         let prepareBuffer b = b :> IBuffer //runtime.PrepareBuffer b
@@ -669,8 +678,6 @@ module PatchRendering =
                         GL.Sync()
                         Interlocked.Increment(&preparedCnt) |> ignore
                         { prepared = prepared; d = { new IDisposable with member x.Dispose() = Interlocked.Decrement(&preparedCnt) |> ignore } }
-
-                let runner = new Load.Runner()
 
                 let prepare (patch : RenderPatch) =
                     load {
