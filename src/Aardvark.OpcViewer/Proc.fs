@@ -1258,7 +1258,7 @@ module Load =
                 member x.Stop() = x.Stop()
                 member x.IsRunning = x.IsRunning
 
-        type Runner(threads : int, hack  : (unit -> unit) -> unit) =
+        type Runner(threads : int, getLock  : unit -> IDisposable) =
             let dirtyRunners = ConcurrentHashQueue<IRunner>()
             let sem = new SemaphoreSlim(0)
             let cancel = new CancellationTokenSource()
@@ -1268,26 +1268,28 @@ module Load =
 
             let mainLoop =
                 let token = cancel.Token
+                let runner () =
+                   use t = getLock ()
+                   while true do
+                    sem.Wait(token)
+                    match dirtyRunners.TryDequeue() with
+                        | (true, r) ->
+                            r.Step(Time.Now) |> ignore
+                        | _ ->
+                            ()
+
                 async {
                     try
                         do! Async.SwitchToNewThread()
-                        hack (fun () -> 
-                            while true do
-                                sem.Wait(token)
-                                match dirtyRunners.TryDequeue() with
-                                    | (true, r) ->
-                                        r.Step(Time.Now) |> ignore
-                                    | _ ->
-                                        ()
-                       )
+                        runner ()
                     with :? OperationCanceledException ->
                         Interlocked.Decrement(&remaining) |> ignore
                 }
 
             do for i in 1 .. threads do Async.Start mainLoop
 
-            new() = new Runner(1, fun f -> f ())
-
+            new() = new Runner(1, fun () -> { new IDisposable with member x.Dispose() = () } )
+            new(cnt) = new Runner(cnt, fun () -> { new IDisposable with member x.Dispose() = () } )
 
             member x.Enqueue (p : Load<'a>) : ILoadTask<'a> =
                 let mutable self = Unchecked.defaultof<_>
@@ -1367,7 +1369,7 @@ module Load =
     open System.Runtime.InteropServices
 
     let loadTest() =
-        use r = new Load.Runner(4, fun f -> f ())
+        use r = new Load.Runner(4)
         let mutable allocated = 0
 
         let myLoad (file : string) =

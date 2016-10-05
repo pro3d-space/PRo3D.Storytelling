@@ -73,11 +73,9 @@ let main argv =
 //    
     
     
-    let runUploads (f : unit -> unit) =
-        use r = win.Runtime.ContextLock
-        f ()
+    let getLock () = win.Runtime.ContextLock
 
-    PatchRendering.PatchLod.runner <- new Load.Runner(1,runUploads)
+    PatchRendering.PatchLod.runner <- new Load.Runner(1,getLock)
 
     let bbOld = Box3d.Parse("[[-2490136.942562569, 2285877.560081598, -271419.972534080], [-2490134.569473011, 2285880.873850540, -271417.484781946]]")
     let bb = Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]")
@@ -108,10 +106,10 @@ let main argv =
 
     let dirs = System.IO.Directory.GetDirectories(@"C:\Aardwork\MarsStuff\47181")
 
-    let surfaces = System.IO.Directory.GetDirectories(@"D:\JR_Export\OPCs\Surface")//,"MSL_Mastcam_Sol_*")
+    let surfaces = System.IO.Directory.GetDirectories(@"D:\JR_Export\OPCs\Surface","MSL_Mastcam_Sol_*")
     let dirs = 
         [
-            for surface in surfaces do 
+            for surface in surfaces |>Seq.take 1 do 
                 yield! System.IO.Directory.GetDirectories(surface)
         ] 
 
@@ -198,7 +196,7 @@ let main argv =
                         DefaultSurfaces.trafo |> toEffect
                         DefaultSurfaces.constantColor C4f.White |> toEffect
                         DefaultSurfaces.diffuseTexture |> toEffect
-                        //Shader.LoDColor |> toEffect
+                        Shader.LoDColor |> toEffect
                         //DefaultSurfaces.simpleLighting |> toEffect
                     ]
             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
@@ -207,7 +205,7 @@ let main argv =
             |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)
 
     
-    let cfg =  BackendConfiguration.Default 
+    let cfg =  { BackendConfiguration.Default  with useDebugOutput = true }
     let task =
         RenderTask.ofList [
             app.Runtime.CompileClear(win.FramebufferSignature, Mod.constant C4f.Gray)
