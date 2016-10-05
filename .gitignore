@@ -13,3 +13,5 @@ bin/Debug
 /.paket/paket.exe
 /legacy/Aardvark.Opc/.vs/Aardvark.Opc/v14/.suo
 /src/OpcSupport/bin/Release
+/src/Test/bin/Debug
+/src/OpcSupport/bin/Debug
