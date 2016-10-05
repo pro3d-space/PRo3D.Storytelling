@@ -109,7 +109,7 @@ let main argv =
     let surfaces = System.IO.Directory.GetDirectories(@"D:\JR_Export\OPCs\Surface","MSL_Mastcam_Sol_*")
     let dirs = 
         [
-            for surface in surfaces |>Seq.take 1 do 
+            for surface in surfaces do 
                 yield! System.IO.Directory.GetDirectories(surface)
         ] 
 
