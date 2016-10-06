@@ -63,7 +63,7 @@
   </Target>
   -->
   <ItemGroup>
-    <Compile Include="LoadDDS.fs" />
+    <Compile Include="CompressedImage.fs" />
     <Compile Include="PathFileInfo.fs" />
     <Compile Include="Time.fs" />
     <Compile Include="Proc.fs" />

@@ -11,6 +11,7 @@ open FShade
 open Aardvark.Base.Incremental.Load
 open OpenTK.Graphics.OpenGL4
 open Aardvark.Rendering.GL
+open System.IO
 //
 module Shader =
     open FShade
@@ -19,8 +20,10 @@ module Shader =
     
     let LoDColor  (v : Vertex) =
         fragment {
-            let c : V4d = uniform?LoDColor
-            return v.c * c
+            if uniform?LodVisEnabled then
+                let c : V4d = uniform?LoDColor
+                return v.c * c
+            else return v.c
         }
 
 [<EntryPoint>]
@@ -75,10 +78,12 @@ let main argv =
     
     let getLock () = win.Runtime.ContextLock
 
-    PatchRendering.PatchLod.runner <- new Load.Runner(1,getLock)
+    PatchRendering.PatchLod.runner <- new Load.Runner(4,getLock)
 
     let bbOld = Box3d.Parse("[[-2490136.942562569, 2285877.560081598, -271419.972534080], [-2490134.569473011, 2285880.873850540, -271417.484781946]]")
-    let bb = Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]")
+    let bb = Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") // mars
+
+    let bb = Box3d.Parse("[[16034.950038118, 222765.173562629, 802.291122034], [16037.049953225, 222767.420825919, 802.333067577]]") // tunnel
 
     let up = bb.Center.Normalized
 
@@ -98,26 +103,78 @@ let main argv =
                 ]
         )
        
-    let proj = win.Sizes |> Mod.map (fun s -> Frustum.perspective 60.0 0.1 100.0 (float s.X / float s.Y))
-    let preTransform = Trafo3d.Translation(-bb.Center)
+    let proj = win.Sizes |> Mod.map (fun s -> Frustum.perspective 60.0 1.0 10000.0 (float s.X / float s.Y))
+    let preTransform = Trafo3d.Translation(-bb.Center) * Trafo3d.FromOrthoNormalBasis(V3d.IOO, -V3d.OOI, V3d.OIO)
 
     let hier = PatchHierarchy.load @"C:\Aardwork\MarsStuff\47181\OPC_000_000\Patches\patchhierarchy.xml"
     let da = PatchHierarchy.load @"C:\Aardwork\MarsStuff\47181\OPC_000_000\Patches\patchhierarchy.xml"
 
     let dirs = System.IO.Directory.GetDirectories(@"C:\Aardwork\MarsStuff\47181")
 
-    let surfaces = System.IO.Directory.GetDirectories(@"D:\JR_Export\OPCs\Surface","MSL_Mastcam_Sol_*")
-    let dirs = 
-        [
-            for surface in surfaces do 
-                yield! System.IO.Directory.GetDirectories(surface)
-        ] 
+    let surfaces = System.IO.Directory.GetDirectories(@"D:\JR_Export\OPCs\Surface","MSL_Mastcam_Sol_*") // mars
+    let dirs = System.IO.Directory.GetDirectories(@"D:\perjen\2011_Bestandsaufnahme\OPC") // tunnel
+//    let dirs = 
+//        [
+//            for surface in surfaces  do 
+//                yield! System.IO.Directory.GetDirectories(surface)
+//        ] 
 
     let patchHierarchies =
         [ for h in dirs do
             let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
             yield  PatchHierarchy.load p
         ] 
+
+    let runtime = app.Runtime |> unbox<Aardvark.Rendering.GL.Runtime>
+
+    let mutable loadedTextures = 0
+
+    let loadTextures compressed (p : Patch) =
+        loadedTextures <- loadedTextures + 1
+        let t = p.info.Textures |> List.head
+        let sourcePath = Path.combine [p.info.BaseDir; t.fileName]
+        let extensions = [ ".texCache"; ".dds"; ".tif"; ".tiff"]
+
+        let rec tryFindTex exts path =
+            match exts with
+                | x::xs -> 
+                    let cuzrrent = System.IO.Path.ChangeExtension(path,x)
+                    if File.Exists cuzrrent then cuzrrent else tryFindTex xs path
+                | [] -> failwithf "texture not found: %s" path
+
+
+        let fullPath = tryFindTex extensions sourcePath
+        let cacheFileName = sprintf "%s.cache" fullPath
+        let cacheInfo = sprintf "%s.cacheInfo" fullPath
+        //if File.Exists cacheFileName then File.Delete cacheFileName
+
+        //CompressedImage.ensureCache runtime fullPath
+
+        let killTexture =  
+            if compressed then
+                CompressedImage.load runtime fullPath { wantMipMaps = true; wantSrgb = false; wantCompressed = false } true |> snd
+            else
+                let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
+                let t = FileTexture(fullPath,config) :> ITexture
+                let b = runtime.PrepareTexture(t)
+                
+                { new IDisposable with member x.Dispose() = runtime.DeleteTexture b }
+        killTexture.Dispose()
+
+
+    let testLoading compressed= 
+        loadedTextures <- 0
+        use ctx = runtime.Context.ResourceLock
+        let sw = System.Diagnostics.Stopwatch()
+        sw.Start()
+        let textures = patchHierarchies |> List.map (QTree.map (loadTextures compressed))
+        sw.Stop()
+        printfn "compressed=%A; took: %A, time per tex: %Ams" compressed sw.MicroTime (float sw.Elapsed.TotalMilliseconds / float loadedTextures)
+        ()
+
+    //testLoading true
+//    testLoading false
+//    System.Environment.Exit 0
 
     let sg = 
         match hier with
@@ -156,11 +213,19 @@ let main argv =
         
     let fillMode = Mod.init FillMode.Fill
 
+    let lodVisEnabled = Mod.init false
+
     win.Keyboard.KeyDown(Keys.X).Values.Subscribe(fun _ -> 
         transact (fun () -> 
             match fillMode.Value with
                 | FillMode.Fill -> fillMode.Value <- FillMode.Line
                 | _ -> fillMode.Value <- FillMode.Fill
+        )
+    ) |> ignore
+
+    win.Keyboard.KeyDown(Keys.L).Values.Subscribe(fun _ -> 
+        transact (fun () -> 
+            lodVisEnabled.Value <- lodVisEnabled.Value |> not
         )
     ) |> ignore
 
@@ -189,7 +254,7 @@ let main argv =
     
 
     let sg =
-        g  
+        g   
             //|> Sg.normalize
             |> Sg.transform preTransform
             |> Sg.effect [
@@ -200,7 +265,9 @@ let main argv =
                         //DefaultSurfaces.simpleLighting |> toEffect
                     ]
             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
+            |> Sg.uniform "LodVisEnabled" lodVisEnabled
             |> Sg.fillMode fillMode
+            |> Sg.cullMode (Mod.constant CullMode.None)
             |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
             |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)
 

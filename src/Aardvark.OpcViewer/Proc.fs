@@ -1237,8 +1237,13 @@ module Load =
                     true
                 else
                     let shouldMark = step t
-                    if shouldMark then transact (fun () -> this.MarkOutdated())
-                    shouldMark
+                    if refCount <= 0 then 
+                        kill()
+                        transact (fun () -> this.MarkOutdated())
+                        true
+                    else
+                        if shouldMark then transact (fun () -> this.MarkOutdated())
+                        false
 
             member x.IsRunning = 
                 refCount > 0

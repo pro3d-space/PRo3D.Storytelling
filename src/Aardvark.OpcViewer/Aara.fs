@@ -18,11 +18,6 @@ open Aardvark.Rendering.GL
 open OpenTK.Graphics.OpenGL4
 open FSharp.NativeInterop
 
-open Examples.TextureLoaders
-
-module NativeSupport =
-    [<DllImport("kernel32.dll", SetLastError=true)>]
-    extern bool ReadFile(Microsoft.Win32.SafeHandles.SafeFileHandle handle, IntPtr buffer, uint32 numBytesToRead, int* numBytesRead, IntPtr overlapped);
 
 
 [<AutoOpen>]
@@ -34,15 +29,7 @@ module private Aara =
         if cnt <> read then failwith ""
         System.Text.Encoding.Default.GetString target
 
-    let loadFromStream<'a when 'a : unmanaged> (f : Stream) =
-        let binaryReader = new BinaryReader(f,Text.Encoding.ASCII, true)
-        let typeName = readerChars2String f
-        let dimensions = f.ReadByte() |> int
-        let sizes = [| for d in 0 .. dimensions - 1 do yield binaryReader.ReadInt32() |]
-
-        let elementCount = sizes |> Array.fold ((*)) 1
-        if typeof<'a>.Name <> typeName then failwith "wrong type"
-    
+    let loadRaw<'a> (elementCount : int) (f : Stream)  =
         let result = Array.zeroCreate<'a> elementCount
         let buffer = Array.zeroCreate<byte> (1 <<< 22)
 
@@ -51,14 +38,32 @@ module private Aara =
             let mutable ptr = gc.AddrOfPinnedObject()
             let mutable remaining = sizeof<'a> * result.Length
             while remaining > 0 do
-        
                 let s = f.Read(buffer, 0, buffer.Length)
                 Marshal.Copy(buffer, 0, ptr, s)
                 ptr <- ptr + nativeint s
                 remaining <- remaining - s
         finally
             gc.Free()
+        result
 
+
+    let loadFromStream<'a when 'a : unmanaged> (f : Stream) =
+        let binaryReader = new BinaryReader(f,Text.Encoding.ASCII, true)
+        let typeName = readerChars2String f
+        let dimensions = f.ReadByte() |> int
+        let sizes = [| for d in 0 .. dimensions - 1 do yield binaryReader.ReadInt32() |]
+
+        let elementCount = sizes |> Array.fold ((*)) 1
+
+        
+        let result =
+            if typeof<'a>.Name = typeName then
+                loadRaw<'a> elementCount f
+            else
+                match typeName with
+                    | "V3d" -> f |> loadRaw<V3d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V3d>
+                    | "V2d" -> f |> loadRaw<V2d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V2d>
+                    | _ -> failwith ""
 
         let dim =
             match sizes with
@@ -68,6 +73,8 @@ module private Aara =
                 | _ -> failwith ""
 
         Volume<'a>(result, dim)
+
+
 
     let fromFile<'a when 'a : unmanaged> (s : string) =
         use fs = File.OpenRead(s)
@@ -182,9 +189,7 @@ module PatchHierarchy =
         let dir = Path.GetDirectoryName(Path.GetDirectoryName fileName)
         let cachefile = Path.combine [dir; "hierarchy.cache" ]
         if File.Exists cachefile then
-            Log.startTimed "loading from cache."
             let r = File.readAllBytes cachefile |> binarySerializer.UnPickle
-            Log.stop()
             r
         else
             Log.startTimed "loading from hierarchy"
@@ -500,9 +505,9 @@ module PatchRendering =
 
     module Statistics = 
 
-        type Stats = { loadedObjects : int; elapsed : TimeSpan }
+        type Stats = { loadedObjects : int; elapsed : MicroTime; elapsedCreate : MicroTime; prepareTexture : MicroTime; prepareBuffer : MicroTime }
 
-        let empty = { loadedObjects = 0; elapsed = TimeSpan.Zero }
+        let empty = { loadedObjects = 0; elapsed = MicroTime.Zero; elapsedCreate = MicroTime.Zero; prepareTexture = MicroTime.Zero; prepareBuffer = MicroTime.Zero }
         let lockObj = obj()
         let mutable stats = empty
         let mutable initialized = false
@@ -513,13 +518,15 @@ module PatchRendering =
                 while true do
                     System.Threading.Thread.Sleep 1000
                     let old = lock lockObj (fun () -> let r = stats in stats <- empty; r)
-                    printfn "Status: %A, resulting in %Ams per object" old (float old.elapsed.TotalMilliseconds / float old.loadedObjects)
-            } |> Async.Start
+                    printfn "Status: %A, resulting in %A per object (create %A, GPU buffers: %A, GPU textures: %A)" old  (old.elapsed / float old.loadedObjects) (old.elapsedCreate / float old.loadedObjects) (old.prepareBuffer / float old.loadedObjects) (old.prepareTexture / float old.loadedObjects)
+            } |> Async.Start 
 
-        let emitLoaded (timeSpan : TimeSpan) =  
+        let emitLoaded (timeSpan : MicroTime) (createTime : MicroTime) (buffers : MicroTime) (textures : MicroTime) =  
             if not initialized then initialized <- true; start() 
             lock lockObj (fun () -> 
-                stats <- { stats with loadedObjects = stats.loadedObjects + 1; elapsed = stats.elapsed + timeSpan }
+                stats <- { stats with loadedObjects = stats.loadedObjects + 1; 
+                                      elapsed = stats.elapsed + timeSpan; elapsedCreate = stats.elapsedCreate + createTime
+                                      prepareBuffer = stats.prepareBuffer + buffers; prepareTexture = textures }
             )
 
         
@@ -529,6 +536,7 @@ module PatchRendering =
         open Aardvark.Base.Ag
         open Aardvark.SceneGraph
         open Aardvark.SceneGraph.Semantics
+        open Aardvark.Base
 
         let rec toRoseTree (p : QTree<'a>) =
             match p with
@@ -593,18 +601,20 @@ module PatchRendering =
                     trafo       = flattenStack (Mod.constant p.info.Local2Global :: modelTrafoStack)
                 }
 
-            let colors =
-                [ 0, C4b.Green
-                  1, C4b.Blue
-                  2, C4b.Yellow
-                  3, C4b.Red
-                  4, C4b.Red 
-                  5, C4b.Red 
-                  6, C4b.Red 
-                  7, C4b.Red  ] |> Map.ofList
-
-
-
+            let hsv2rgb (h : float) (s : float) (v : float) =
+                let h = h % 360.0
+                let hi = floor ( h / 60.0 ) |> int
+                let f = h % 60.0
+                let p = v * (1.0-s)
+                let q = v * (1.0 - s * f)
+                let t = v * (1.0 - s * ( 1.0 - f ))
+                match hi with
+                    | 1 -> C3f(q,v,p)
+                    | 2 -> C3f(p,v,t)
+                    | 3 -> C3f(p,q,v)
+                    | 4 -> C3f(t,p,v)
+                    | 5 -> C3f(v,p,q)
+                    | _ -> C3f(v,t,p)
 
             member x.RenderObjects(n : PatchNode) : aset<IRenderObject> =
                 let runtime = n.Runtime
@@ -621,7 +631,10 @@ module PatchRendering =
                     let mvp = m * vp
                     let area = computeScreenSpaceArea p.info.LocalBoundingBox mvp
                     
-                    area > 3.5
+                    if p.level <= 1 then true
+                    else
+                        log area > log 0.8
+                    //area > 3.5
 
                 let queue = ConcurrentHashQueue<_>()
 
@@ -630,11 +643,13 @@ module PatchRendering =
                         let sw = System.Diagnostics.Stopwatch()
                         sw.Restart()
                         //use ctx = runtime.ContextLock
-
+                        let createTime = System.Diagnostics.Stopwatch()
+                        createTime.Start()
                         let g = Patch.load p.info
+                        createTime.Stop()
                         let t = p.info.Textures |> List.head
                         let sourcePath = Path.combine [p.info.BaseDir; t.fileName]
-                        let extensions = [ ".texCache"; ".tif"; ".tiff"]
+                        let extensions = [ ".dds"; ".tif"; ".tiff"]
 
                         let rec tryFindTex exts path =
                             match exts with
@@ -650,180 +665,37 @@ module PatchRendering =
                         let cacheInfo = sprintf "%s.cacheInfo" fullPath
                         //if File.Exists cacheFileName then File.Delete cacheFileName
 
-
-                        let loadAndCache () = 
-                            let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = true }
-                            let sourceTex = FileTexture(fullPath, config) :> ITexture
-                            let prepared = runtime.PrepareTexture(sourceTex)
-                            let handle = prepared.Handle |> unbox<int>
-                            GL.BindTexture(TextureTarget.Texture2D, handle)
-                            //let mutable internalF = 0
-                            //GL.GetTexParameterI(TextureTarget.Texture2D, GetTextureParameter.TextureInternalFormat, &internalF)
-                            //GL.Check "getTexP"
-                            let ifmt = unbox<PixelInternalFormat> prepared.Format
-                            let mipLevels =
-                                let mutable autoGen = 0
-                                GL.GetTexParameterI(TextureTarget.Texture2D, GetTextureParameter.GenerateMipmap, &autoGen)
-                                if autoGen = 1 then
-                                    let r = 1.0 + floor (log ( max (float prepared.Size.X) (float prepared.Size.Y)))
-                                    int r
-                                else
-                                    let mutable mipLevels = 0
-                                    GL.GetTexParameterI(TextureTarget.Texture2D, OpenTK.Graphics.OpenGL4.All.TextureImmutableLevels |> unbox, &mipLevels)
-                                    max 1 mipLevels
-
-                            let mipSizes = 
-                                [ 0 .. mipLevels - 1 ] 
-                                    |> List.map (fun l -> 
-                                        let mutable size = 0
-                                        GL.GetTexLevelParameter(TextureTarget.Texture2D,l,GetTextureParameter.TextureCompressedImageSize,&size)
-                                        size
-                                    )
-                            let totalSize = List.sum mipSizes
-                            let originalName = Path.GetFileName(fullPath)
-                            let cacheFileName = Path.Combine(Path.GetDirectoryName(fullPath), sprintf "%s.cache" originalName)
-                            printfn "caching to: %s" cacheFileName
-                            let cacheFileInfo = Path.Combine(Path.GetDirectoryName(fullPath), sprintf "%s.cacheInfo" originalName)
-                                    
-                            use infoFile = new System.IO.BinaryWriter(File.OpenWrite(cacheFileInfo))
-                            infoFile.Write(10)
-                            infoFile.Write(totalSize)
-                            infoFile.Write(prepared.Size.X)
-                            infoFile.Write(prepared.Size.Y)
-                            infoFile.Write(ifmt |> int)
-                            infoFile.Write(mipLevels)
-
-                            let basePtr = Marshal.AllocHGlobal(totalSize)
-                            let mutable ptr = basePtr
-                            let mutable level = 0
-                            let mutable offset = 0
-                            for size in mipSizes do
-                                infoFile.Write(offset)
-                                infoFile.Write(size)
-                                GL.GetCompressedTexImage(TextureTarget.Texture2D, level, ptr)
-                                ptr <- ptr + nativeint size
-                                offset <- offset + size
-                                level <- level + 1
-                            GL.Check "download compressed image failed"
-                            GL.BindTexture(TextureTarget.Texture2D, 0)
-
-                            use cacheFileStream = File.OpenWrite(cacheFileName)
-                            use ustream = new UnmanagedMemoryStream(basePtr |> NativePtr.ofNativeInt, int64 totalSize)
-                            ustream.CopyTo(cacheFileStream)
-                            cacheFileStream.Close()
-                            infoFile.Close()
-                            Marshal.FreeHGlobal(basePtr)
-                            GL.Sync()
-                            prepared :> ITexture, { new IDisposable with member x.Dispose() = () }
-
-                        let loadFromCache (infoFile : System.IO.BinaryReader) =
-                            let mutable totalSize = infoFile.ReadInt32()
-                            let width = infoFile.ReadInt32()
-                            let height = infoFile.ReadInt32()
-                            let format = infoFile.ReadInt32() |> unbox<PixelInternalFormat>
-                            let mips = infoFile.ReadInt32() 
-                            let offsets = [ for i in 0 .. mips - 1 do yield infoFile.ReadInt32(), infoFile.ReadInt32() ]
-                            infoFile.Close()
-
-//                                    use mapped = System.IO.MemoryMappedFiles.MemoryMappedFile.CreateFromFile(cacheFileName)
-//                                    let acc = mapped.CreateViewAccessor()
-//                                    let mutable sourcePtr = NativePtr.ofNativeInt 0n
-//                                    acc.SafeMemoryMappedViewHandle.AcquirePointer(&sourcePtr)
-                            use cacheStream = File.OpenRead(cacheFileName)
-                            let sourcePtr = Marshal.AllocHGlobal totalSize
-                            let mutable bytesRead = NativePtr.alloc 4 
-                            let ok = NativeSupport.ReadFile(cacheStream.SafeFileHandle,sourcePtr,uint32 totalSize,bytesRead,IntPtr.Zero)
-                            let read = NativePtr.read bytesRead 
-                            if read <> totalSize then failwith ""
-
-                            let handle = GL.GenTexture()
-                            let mutable level = 0
-                            for offset,size in offsets do
-                                let pbo = GL.GenBuffer()
-                                GL.BindBuffer(BufferTarget.PixelUnpackBuffer, pbo)
-                                GL.BufferStorage(BufferTarget.PixelUnpackBuffer, nativeint size, 0n, BufferStorageFlags.MapWriteBit)
-                                let ptr = GL.MapBuffer(BufferTarget.PixelUnpackBuffer, BufferAccess.WriteOnly)
-
-                                let actualSource = nativeint offset + sourcePtr
-
-                                Marshal.Copy(actualSource, ptr, size)
-                                GL.UnmapBuffer(BufferTarget.PixelUnpackBuffer) |> ignore
-
-                                GL.Check "copied to buffer"
-
-                                GL.BindTexture(TextureTarget.Texture2D, handle)
-                                GL.Check "compressedTexImage"
-                                GL.CompressedTexImage2D(TextureTarget.Texture2D, level, format, width, height, 0, size, 0n)
-                                GL.Check "compressedTexImage"
-                                GL.BindTexture(TextureTarget.Texture2D, 0)
-                                GL.BindBuffer(BufferTarget.PixelUnpackBuffer, 0)
-                                GL.DeleteBuffer(pbo)
-                                level <- level + 1
-
-                            Marshal.FreeHGlobal sourcePtr
-
-                            let dispose = 
-                                { new IDisposable with
-                                    member x.Dispose() =
-                                        use ctx = runtime.ContextLock
-                                        GL.DeleteTexture(handle)
-                                }
-
-                            let glRuntime = runtime |> unbox<Aardvark.Rendering.GL.Runtime>
-                                    
-                            GL.BindTexture(TextureTarget.Texture2D, handle)
-                            if config.wantMipMaps && mips <= 1 then
-                                GL.GenerateMipmap(GenerateMipmapTarget.Texture2D)
-                                let newSize = 4 * totalSize / 3
-                                //updateTexture t.Context t.SizeInBytes newSize
-                                totalSize <- newSize //t.SizeInBytes <- newSize
-                            else
-                                GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, [| 0 |])
-                                GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMaxLod, [| 0 |])
-                            GL.BindTexture(TextureTarget.Texture2D, 0)
-
-                            GL.Sync()
-
-                            let t = Texture(
-                                        glRuntime.Context,
-                                        handle,
-                                        TextureDimension.Texture2D,
-                                        mips,
-                                        1,
-                                        V3i(width,height,1),
-                                        1,
-                                        format |> unbox<TextureFormat>,
-                                        int64 totalSize,
-                                        false)
-                            t :> ITexture, dispose
-
+                        let prepareTexture = System.Diagnostics.Stopwatch()
+                        prepareTexture.Start()
                         let tex,killTexture = 
-                            FileTexture(fullPath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
-//                            match File.Exists cacheFileName with
-//                                | true  -> 
-//                                    use infoFile = new System.IO.BinaryReader(File.OpenRead(cacheInfo))
-//                                    let version = infoFile.ReadInt32()
-//                                    if version <> 10 then
-//                                        infoFile.Close()
-//                                        loadAndCache()
-//                                    else
-//                                        loadFromCache infoFile
-//                                | _ -> 
-//                                    loadAndCache ()
-      
+                            //FileTexture(fullPath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
+                            CompressedImage.load runtime fullPath config false
+                        //GL.Sync()
+                        prepareTexture.Stop()
+
                         let ro = RenderObject.Clone(ro)
 
+                        let prepareBuffer (a : ArrayBuffer) =
+                            runtime.PrepareBuffer(a) 
 
-                        let idx     = ArrayBuffer(g.IndexArray) :> IBuffer
-                        let pos     = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.Positions]) :> IBuffer
-                        let tc      = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.DiffuseColorCoordinates]) :> IBuffer
+                        let prepareBuffers = System.Diagnostics.Stopwatch()
+                        prepareBuffers.Start()
+
+                        let idx     = ArrayBuffer(g.IndexArray) 
+                                       |> prepareBuffer
+                        let pos     = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.Positions]) 
+                                       |> prepareBuffer
+                        let tc      = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.DiffuseColorCoordinates]) 
+                                       |> prepareBuffer
+                        //GL.Sync()
+                        prepareBuffers.Stop()
                           
-                        ro.Indices <- BufferView(Mod.constant idx, typeof<int>) |> Some
+                        ro.Indices <- BufferView(Mod.constant (idx :> IBuffer), typeof<int>) |> Some
 
                         ro.VertexAttributes <- 
                             AttributeProvider.ofList [ 
-                                DefaultSemantic.Positions, BufferView(Mod.constant pos, typeof<V3f>)
-                                DefaultSemantic.DiffuseColorCoordinates, BufferView(Mod.constant tc, typeof<V2f>)
+                                DefaultSemantic.Positions, BufferView(Mod.constant (pos :> IBuffer), typeof<V3f>)
+                                DefaultSemantic.DiffuseColorCoordinates, BufferView(Mod.constant (tc :> IBuffer), typeof<V2f>)
                             ]
 
                         let old = ro.Uniforms
@@ -834,7 +706,9 @@ module PatchRendering =
                                     if sem = DefaultSemantic.DiffuseColorTexture then Some t
                                     else
                                         match string sem with
-                                            | "LoDColor" -> colors.[p.level] |> Mod.constant :> IMod |> Some
+                                            | "LoDColor" -> 
+                                                let c = hsv2rgb ((float p.level / 10.0) * 270.0) 1.0 1.0
+                                                Mod.constant c :> IMod |> Some
                                             | "ModelTrafo" -> p.trafo :> IMod |> Some
                                             | "ModelViewTrafo" -> p.trafo <*> v :> IMod |> Some
                                             | "ModelViewProjTrafo" -> p.trafo <*> vp :> IMod |> Some
@@ -860,14 +734,21 @@ module PatchRendering =
                         ro.DrawCallInfos <- Mod.constant [call]
                         ro.Mode <- Mod.constant g.Mode
 
-                        ro.Activate <- fun () -> killTexture
+                        ro.Activate <- fun () -> 
+                            { new IDisposable with
+                                member x.Dispose() = 
+                                    killTexture.Dispose()
+                                    runtime.DeleteBuffer(idx)
+                                    runtime.DeleteBuffer(pos)
+                                    runtime.DeleteBuffer(tc)
+                            }
 
                         let prepared =  runtime.PrepareRenderObject(n.Signature, ro)
                         
                         GL.Sync()
 
                         sw.Stop()
-                        Statistics.emitLoaded sw.Elapsed
+                        Statistics.emitLoaded sw.MicroTime createTime.MicroTime prepareBuffers.MicroTime prepareTexture.MicroTime
 
                         Interlocked.Increment(&preparedCnt) |> ignore
                         { prepared = prepared; d = { new IDisposable with member x.Dispose() = Interlocked.Decrement(&preparedCnt) |> ignore } }
