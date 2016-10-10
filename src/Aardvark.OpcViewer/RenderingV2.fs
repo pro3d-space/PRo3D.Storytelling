@@ -75,7 +75,7 @@ module PatchLod =
                     prepareTime.Start()
 
                     let (g, elapsedIndex), createTime = timed (fun () -> 
-                            Patch.load n.BaseDir p.info )
+                            Patch.load n.BaseDir p.info)
 
                     let texturePath = Patch.extractTexture n.BaseDir p.info
 
