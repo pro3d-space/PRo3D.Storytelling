@@ -31,14 +31,9 @@ let main argv =
     //Test.test2()
     Aardvark.Init()
 
-    
-
-
-
     use app = new OpenGlApplication()
     let win = app.CreateSimpleRenderWindow()
-    win.Text <- "Aardvark rocks \\o/"
-
+    win.Text <- "Aardvark rocks OPCs \\o/"
 
 
     let testLoaders extension (config : TextureParams) =
@@ -78,7 +73,7 @@ let main argv =
     
     let getLock () = win.Runtime.ContextLock
 
-    PatchRendering.PatchLod.runner <- new Load.Runner(2,getLock)
+    let runner = new Load.Runner(2,getLock)
 
     let bbOld = Box3d.Parse("[[-2490136.942562569, 2285877.560081598, -271419.972534080], [-2490134.569473011, 2285880.873850540, -271417.484781946]]")
     let bb = Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") // mars
@@ -207,7 +202,7 @@ let main argv =
                      |> Sg.trafo (Mod.constant patch.info.Local2Global)
         }
 
-    let g = patchHierarchies |> List.map (fun t -> PatchRendering.PatchLod.PatchNode(win.FramebufferSignature, PatchRendering.PatchLod.toRoseTree t) :> ISg) |> Sg.ofList
+    let g = patchHierarchies |> List.map (Sg.patchLod win.FramebufferSignature runner << PatchLod.toRoseTree) |> Sg.ofList
     //let g = patchHierarchies |> Seq.map (NaivePatchLoD.toSg preTransform) |> Sg.ofSeq
     //let g = patchHierarchies |> Seq.collect collect |> Sg.ofSeq
         

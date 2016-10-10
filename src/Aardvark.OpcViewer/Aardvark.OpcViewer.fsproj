@@ -63,11 +63,15 @@
   </Target>
   -->
   <ItemGroup>
-    <Compile Include="CompressedImage.fs" />
+    <Compile Include="Staging\CompressedImage.fs" />
+    <Compile Include="Staging\Time.fs" />
+    <Compile Include="Staging\Proc.fs" />
+    <Compile Include="Staging\LoadProc.fs" />
+    <Compile Include="Staging\HiearchicalLoD.fs" />
     <Compile Include="PathFileInfo.fs" />
-    <Compile Include="Time.fs" />
-    <Compile Include="Proc.fs" />
     <Compile Include="Aara.fs" />
+    <Compile Include="RenderingV1.fs" />
+    <Compile Include="RenderingV2.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />
   </ItemGroup>
@@ -87,11 +91,6 @@
     <ProjectReference Include="..\OpcSupport\OpcSupport.csproj">
       <Name>OpcSupport</Name>
       <Project>{83a9b79a-5b4e-429a-b602-d5d17e34c0bf}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\Test\Test.fsproj">
-      <Name>Test</Name>
-      <Project>{30eac7e9-36db-4c02-aaf5-7406dd50d974}</Project>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>

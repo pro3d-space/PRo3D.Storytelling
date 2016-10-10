@@ -10,6 +10,7 @@ namespace Aardvark.Opc
 open System
 open System.Xml
 open System.Xml.Linq
+
 open Aardvark.Base
 
 module private XmlHelpers = 
@@ -70,9 +71,6 @@ module PatchFileInfo =
 
     [<AutoOpen>]
     module Parsers =
-        //open FParsec
-        //open FParsec.CharParsers
-
         let majority = function
             | "RowMajor" -> RowMajor
             | "ColumnMajor" -> ColumnMajor
