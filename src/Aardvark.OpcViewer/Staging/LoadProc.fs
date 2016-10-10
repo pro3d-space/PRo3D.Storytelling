@@ -225,7 +225,7 @@ module Load =
             member x.Stop() = x.Stop()
             member x.IsRunning = x.IsRunning
 
-    type Runner(threads : int, getLock  : unit -> IDisposable) =
+    type Runner(threads : int, getLock  : int -> IDisposable) =
         let dirtyRunners = ConcurrentHashQueue<IRunner>()
         let sem = new SemaphoreSlim(0)
         let cancel = new CancellationTokenSource()
@@ -233,17 +233,17 @@ module Load =
         [<VolatileField>]
         let mutable remaining = threads
 
-        let mainLoop =
+        let mainLoop id =
             let token = cancel.Token
             let runner () =
-                use t = getLock ()
+                use l = lock sem (fun () -> getLock id)
                 while true do
-                sem.Wait(token)
-                match dirtyRunners.TryDequeue() with
-                    | (true, r) ->
-                        r.Step(Time.Now) |> ignore
-                    | _ ->
-                        ()
+                    sem.Wait(token)
+                    match dirtyRunners.TryDequeue() with
+                        | (true, r) ->
+                            r.Step(Time.Now) |> ignore
+                        | _ ->
+                            ()
 
             async {
                 try
@@ -253,10 +253,10 @@ module Load =
                     Interlocked.Decrement(&remaining) |> ignore
             }
 
-        do for i in 1 .. threads do Async.Start mainLoop
+        do for i in 0 .. threads - 1 do Async.Start (mainLoop i)
 
-        new() = new Runner(1, fun () -> { new IDisposable with member x.Dispose() = () } )
-        new(cnt) = new Runner(cnt, fun () -> { new IDisposable with member x.Dispose() = () } )
+        new() = new Runner(1, fun i -> { new IDisposable with member x.Dispose() = () } )
+        new(cnt) = new Runner(cnt, fun i -> { new IDisposable with member x.Dispose() = () } )
 
         member x.Enqueue (p : Load<'a>) : ILoadTask<'a> =
             let mutable self = Unchecked.defaultof<_>
@@ -333,6 +333,20 @@ module ``Load Builder`` =
 
     let load = LoadBuilder() 
 
+
+[<AutoOpen>]
+module ``RuntimeLoad Extensions`` =
+    type IRuntime with
+        member x.CreateLoadRunner(threads : int) =
+            match x with
+                | :? Aardvark.Rendering.GL.Runtime as runtime -> 
+                    let loadContexts = Aardvark.Rendering.GL.ContextHandle.createContexts threads |> Array.ofList
+                    let getLock i = 
+                        let ctx = loadContexts.[i]
+                        runtime.Context.RenderingLock(ctx)
+
+                    new Load.Runner(2, getLock)
+                | _ -> failwith "cannot create load runner with non GL runtime."
 
 module Test =
 

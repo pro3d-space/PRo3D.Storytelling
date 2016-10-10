@@ -193,3 +193,10 @@ module RoseTree =
             | Empty -> Empty
             | Leaf v -> Leaf (f v)
             | Node(v,c) -> Node(f v, List.map (map f) c)   
+
+    let rec height tree =
+        match tree with
+            | Empty      -> 0
+            | Leaf _     -> 1
+            | Node(_,[]) -> 1
+            | Node(_,xs) -> (xs |> List.map height |> List.max) + 1

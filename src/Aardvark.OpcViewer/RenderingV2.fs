@@ -6,45 +6,11 @@ open System.Threading
 
 open Aardvark.Base
 open Aardvark.Base.Incremental
-open Aardvark.Rendering.SceneGraph.HierarchicalLoD
-open Aardvark.Rendering.GL
 open Aardvark.SceneGraph
+open Aardvark.Rendering.GL
+open Aardvark.Rendering.SceneGraph.HierarchicalLoD
 
 open OpenTK.Graphics.OpenGL4
-
-module Statistics = 
-
-    type Stats = { loadedObjects : int; elapsed : MicroTime; elapsedCreate : MicroTime; 
-                   prepareTexture : MicroTime; prepareBuffer : MicroTime
-                   elapsedIndex   : MicroTime }
-
-    let empty = { loadedObjects = 0; elapsed = MicroTime.Zero; elapsedCreate = MicroTime.Zero; prepareTexture = MicroTime.Zero; prepareBuffer = MicroTime.Zero; elapsedIndex = MicroTime.Zero }
-    let lockObj = obj()
-    let mutable stats = empty
-    let mutable initialized = false
-
-    let start () =
-        async {
-            do! Async.SwitchToNewThread()
-            while true do
-                System.Threading.Thread.Sleep 1000
-                let old = lock lockObj (fun () -> let r = stats in stats <- empty; r)
-                printfn "Status: %A, resulting in %A per object (create %A, GPU buffers: %A, GPU textures: %A)" old  (old.elapsed / float old.loadedObjects) (old.elapsedCreate / float old.loadedObjects) (old.prepareBuffer / float old.loadedObjects) (old.prepareTexture / float old.loadedObjects)
-        } |> Async.Start 
-
-    let emitLoaded (timeSpan : MicroTime) (createTime : MicroTime) (buffers : MicroTime) (textures : MicroTime) (elapsedIndex : MicroTime) =  
-        if not initialized then initialized <- true; start() 
-        lock lockObj (fun () -> 
-            stats <- { stats with 
-                        loadedObjects = stats.loadedObjects + 1
-                        elapsed       = stats.elapsed + timeSpan
-                        elapsedCreate = stats.elapsedCreate + createTime
-                        prepareBuffer = stats.prepareBuffer + buffers
-                        prepareTexture = textures 
-                        elapsedIndex   = stats.elapsedIndex + elapsedIndex
-                     }
-        )
-
 
 module PatchLod =
     open Aardvark.Base.Rendering
@@ -57,46 +23,27 @@ module PatchLod =
             | QTree.Leaf v -> Leaf v
             | QTree.Node(v,children) -> Node(v,children |> Array.toList |> List.map toRoseTree)
 
-    type PatchNode(signature : IFramebufferSignature, runner : Load.Runner, baseDir : string, p : RoseTree<Patch>) =
-        interface ISg
-        member x.Tree = p
-        member x.Signature = signature
-        member x.Runner = runner
-        member x.BaseDir = baseDir
-    
     type RenderPatch =
         {
             info        : PatchFileInfo
             level       : int
             trafo       : IMod<Trafo3d>
         }
-            
-    type Prepared = { prepared : IPreparedRenderObject; d : IDisposable } with
-        member x.Dispose() = x.prepared.Dispose(); x.d.Dispose()
-        interface IDisposable with
-            member x.Dispose() = x.Dispose()
 
+    type LodDecider = IAdaptiveObject -> IMod<Trafo3d> -> RenderPatch -> bool 
 
-    let mutable preparedCnt = 0
+    type PatchNode(signature : IFramebufferSignature, runner : Load.Runner, 
+                   baseDir : string, decider : LodDecider, p : RoseTree<Patch>) =
+        interface ISg
+        member x.Tree = p
+        member x.Signature = signature
+        member x.Runner = runner
+        member x.BaseDir = baseDir
+        member x.Decider = decider
+    
 
-    open Aardvark.SceneGraph.Semantics.TrafoSemantics
     [<Semantic>]
     type PatchNodeSem() =
-        let computeScreenSpaceArea (b : Box3d) (viewProj : Trafo3d) =
-            let viewSpacePoints =
-                b.ComputeCorners()
-                    |> Array.map (fun v ->
-                        viewProj.Forward.TransformPosProj(v)
-                    )
-
-            let poly = viewSpacePoints |> Array.map Vec.xy |> Polygon2d
-
-            let clipped = 
-                poly.ComputeConvexHullIndexPolygon().ToPolygon2d()//.ConvexClipped(Box2d(-V2d.II, V2d.II))
-    
-            let bounds = Box3d(viewSpacePoints)
-            if Box3d(-V3d.III, V3d.III).Intersects(bounds) |> not then 0.0
-            else clipped.ComputeArea()
 
         let toRenderPatch (modelTrafoStack : list<IMod<Trafo3d>>) (p : Patch) =
             {
@@ -105,85 +52,43 @@ module PatchLod =
                 trafo       = flattenStack (Mod.constant p.info.Local2Global :: modelTrafoStack)
             }
 
-        let hsv2rgb (h : float) (s : float) (v : float) =
-            let h = h % 360.0
-            let hi = floor ( h / 60.0 ) |> int
-            let f = h % 60.0
-            let p = v * (1.0-s)
-            let q = v * (1.0 - s * f)
-            let t = v * (1.0 - s * ( 1.0 - f ))
-            match hi with
-                | 1 -> C3f(q,v,p)
-                | 2 -> C3f(p,v,t)
-                | 3 -> C3f(p,q,v)
-                | 4 -> C3f(t,p,v)
-                | 5 -> C3f(v,p,q)
-                | _ -> C3f(v,t,p)
-
         member x.RenderObjects(n : PatchNode) : aset<IRenderObject> =
-            let runtime = n.Runtime
-            let scope = Ag.getContext()
-            let trafoStack = n.ModelTrafoStack
-            let v = n.ViewTrafo
-            let proj = n.ProjTrafo
-            let vp = n.ViewTrafo <*> n.ProjTrafo
-            let ro = RenderObject.ofScope scope
 
+            let height = n.Tree |> RoseTree.height
+
+            // Grab inherited attributes
+            let runtime        = n.Runtime
+            let scope          = Ag.getContext()
+            let trafoStack     = n.ModelTrafoStack
+            let v              = n.ViewTrafo
+            let proj           = n.ProjTrafo
+            let ro             = RenderObject.ofScope scope
+
+            // prepare data for lod metric
+            let vp   = n.ViewTrafo <*> n.ProjTrafo
             let godeeper (self : IAdaptiveObject) (p : RenderPatch) =
-                let m = p.trafo.GetValue self
-                let vp = vp.GetValue self
-                let mvp = m * vp
-                let area = computeScreenSpaceArea p.info.LocalBoundingBox mvp
-                    
-                if p.level <= 1 then true
-                else
-                    log area > log 0.8
-                //area > 3.5
-
-            let queue = ConcurrentHashQueue<_>()
+                n.Decider self vp p 
 
             let preparePatch (p : RenderPatch) =
 
                     let sw = System.Diagnostics.Stopwatch()
-                    sw.Restart()
-                    //use ctx = runtime.ContextLock
+                    sw.Start()
+
                     let createTime = System.Diagnostics.Stopwatch()
                     createTime.Start()
                     let g,elapsedIndex = Patch.load n.BaseDir p.info
                     createTime.Stop()
-                    let t = p.info.Textures |> List.head
-                    let sourcePath = Path.combine [n.BaseDir; "Images"; t.fileName]
-                    let extensions = [ ".dds"; ".tif"; ".tiff"]
 
-                    let rec tryFindTex exts path =
-                        match exts with
-                            | x::xs -> 
-                                let cuzrrent = System.IO.Path.ChangeExtension(path,x)
-                                if File.Exists cuzrrent then cuzrrent else tryFindTex xs path
-                            | [] -> failwithf "texture not found: %s" path
+                    let texturePath = Patch.extractTexture n.BaseDir p.info
 
-
-                    let fullPath = tryFindTex extensions sourcePath
-                    let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
-                    let cacheFileName = sprintf "%s.cache" fullPath
-                    let cacheInfo = sprintf "%s.cacheInfo" fullPath
-                    //if File.Exists cacheFileName then File.Delete cacheFileName
-
-                    let prepareTexture = System.Diagnostics.Stopwatch()
-                    prepareTexture.Start()
-                    let tex,killTexture = 
+                    let tex,onTextureDispose = 
+                        let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
                         //FileTexture(fullPath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
-                        CompressedImage.load runtime fullPath config false
-                    //GL.Sync()
-                    prepareTexture.Stop()
+                        CompressedImage.load runtime texturePath config false
 
                     let ro = RenderObject.Clone(ro)
 
-                    let prepareBuffer (a : ArrayBuffer) =
-                        runtime.PrepareBuffer(a) 
-
-                    let prepareBuffers = System.Diagnostics.Stopwatch()
-                    prepareBuffers.Start()
+                    let prepareBuffer (a : ArrayBuffer) = runtime.PrepareBuffer(a) 
 
                     let idx     = ArrayBuffer(g.IndexArray) 
                                     |> prepareBuffer
@@ -191,8 +96,6 @@ module PatchLod =
                                     |> prepareBuffer
                     let tc      = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.DiffuseColorCoordinates]) 
                                     |> prepareBuffer
-                    //GL.Sync()
-                    prepareBuffers.Stop()
                           
                     ro.Indices <- BufferView(Mod.constant (idx :> IBuffer), typeof<int>) |> Some
 
@@ -211,7 +114,11 @@ module PatchLod =
                                 else
                                     match string sem with
                                         | "LoDColor" -> 
-                                            let c = hsv2rgb ((float p.level / 10.0) * 270.0) 1.0 1.0
+                                            let min = 120.0
+                                            let size = -120.0
+                                            let factor = float p.level / (float height - 1.0)
+                                            let c = hsv2rgb 230.0 (1.0 - factor) 1.0
+                                            //let c = hsv2rgb (min + factor * size) 0.6 1.0
                                             Mod.constant c :> IMod |> Some
                                         | "ModelTrafo" -> p.trafo :> IMod |> Some
                                         | "ModelViewTrafo" -> p.trafo <*> v :> IMod |> Some
@@ -241,7 +148,7 @@ module PatchLod =
                     ro.Activate <- fun () -> 
                         { new IDisposable with
                             member x.Dispose() = 
-                                killTexture.Dispose()
+                                onTextureDispose.Dispose()
                                 runtime.DeleteBuffer(idx)
                                 runtime.DeleteBuffer(pos)
                                 runtime.DeleteBuffer(tc)
@@ -252,10 +159,9 @@ module PatchLod =
                     GL.Sync()
 
                     sw.Stop()
-                    Statistics.emitLoaded sw.MicroTime createTime.MicroTime prepareBuffers.MicroTime prepareTexture.MicroTime elapsedIndex
-
-                    Interlocked.Increment(&preparedCnt) |> ignore
-                    { prepared = prepared; d = { new IDisposable with member x.Dispose() = Interlocked.Decrement(&preparedCnt) |> ignore } }
+                    Statistics.emitLoaded sw.MicroTime createTime.MicroTime elapsedIndex
+                    prepared
+                    
 
             let prepare (patch : RenderPatch) =
                 load {
@@ -270,9 +176,11 @@ module PatchLod =
                 |> Mod.constant
                 |> RoseTree.filter godeeper
                 |> RoseTree.mapAsync prepare
-                |> RoseTree.flatten (fun p -> p.prepared :> IRenderObject)
+                |> RoseTree.flatten (fun p -> p :> IRenderObject)
 
 
 module Sg =
-    let patchLod (signature : IFramebufferSignature) (runner : Load.Runner) (baseDir : string) (p : RoseTree<Patch>) =
-        PatchLod.PatchNode(signature, runner, baseDir, p) :> ISg
+    open PatchLod
+
+    let patchLod (signature : IFramebufferSignature) (runner : Load.Runner) (baseDir : string) (decider : LodDecider) (p : RoseTree<Patch>) =
+        PatchNode(signature, runner, baseDir, decider, p) :> ISg

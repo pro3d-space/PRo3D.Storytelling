@@ -145,7 +145,7 @@ module CompressedImage =
                     GL.BindBuffer(BufferTarget.PixelUnpackBuffer, pbo)
                     GL.BufferStorage(BufferTarget.PixelUnpackBuffer, nativeint size, 0n, BufferStorageFlags.MapWriteBit)
                     let ptr = GL.MapBuffer(BufferTarget.PixelUnpackBuffer, BufferAccess.WriteOnly)
-
+                    GL.Check "map buffer"
                     let actualSource = nativeint offset + sourcePtr
 
                     Marshal.Copy(actualSource, ptr, size)

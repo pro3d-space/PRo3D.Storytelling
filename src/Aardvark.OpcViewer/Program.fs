@@ -22,30 +22,45 @@ module Shader =
         fragment {
             if uniform?LodVisEnabled then
                 let c : V4d = uniform?LoDColor
-                return v.c * c
+                let gamma = 1.0
+                let grayscale = 0.2126 * v.c.X ** gamma + 0.7152 * v.c.Y ** gamma  + 0.0722 * v.c.Z ** gamma 
+                return grayscale * c 
             else return v.c
         }
 
 type FileName = string
-type OpcViewer = { patchHierarchies : seq<FileName>; boundingBox : Box3d; preTransform : Trafo3d }
+type OpcViewer = { 
+    patchHierarchies : seq<FileName> 
+    boundingBox      : Box3d
+    preTransform     : Trafo3d 
+    near             : float
+    far              : float
+    speed            : float
+    lodDecider       : PatchLod.LodDecider
+}
 
 let mars = 
     { 
-      preTransform     = Trafo3d.Identity
-      patchHierarchies = 
-            System.IO.Directory.GetDirectories(@"D:\JR_Export\OPCs\Surface","MSL_Mastcam_Sol_*") 
-            |> Seq.collect System.IO.Directory.GetDirectories
-      boundingBox      = 
-        Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") 
+        preTransform     = Trafo3d.Identity
+        patchHierarchies = 
+              System.IO.Directory.GetDirectories(@"D:\JR_Export\OPCs\Surface","MSL_Mastcam_Sol_*") 
+              |> Seq.collect System.IO.Directory.GetDirectories
+        boundingBox      = Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") 
+        near             = 0.1
+        far              = 10000.0
+        speed            = 5.0
+        lodDecider       = DefaultMetrics.mars
     }
 
 let mola = 
     { 
       preTransform     = Trafo3d.Identity
-      patchHierarchies = 
-            System.IO.Directory.GetDirectories(@"D:\Mars_MGS_MOLA_DEM_mosaic_global_0.01") 
-      boundingBox      = 
-        Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") 
+      patchHierarchies = System.IO.Directory.GetDirectories(@"D:\Mars_MGS_MOLA_DEM_mosaic_global_0.01") 
+      boundingBox      = Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") 
+      near             = 100.0
+      far              = 100000000.0
+      speed            = 32768.0
+      lodDecider       = DefaultMetrics.mars
     }
 
 let perjen =
@@ -53,6 +68,10 @@ let perjen =
         preTransform     = Trafo3d.FromOrthoNormalBasis(V3d.IOO, -V3d.OOI, V3d.OIO)
         patchHierarchies = System.IO.Directory.GetDirectories(@"D:\perjen\2011_Bestandsaufnahme\OPC")
         boundingBox      = Box3d.Parse("[[16034.950038118, 222765.173562629, 802.291122034], [16037.049953225, 222767.420825919, 802.333067577]]")
+        near             = 0.1
+        far              = 10000.0
+        speed            = 5.0
+        lodDecider       = DefaultMetrics.tunnel
     }
 
 [<EntryPoint>]
@@ -64,29 +83,17 @@ let main argv =
     let win = app.CreateSimpleRenderWindow()
     win.Text <- "Aardvark rocks OPCs \\o/"
 
-    let speed = Mod.init 5.0
-
-    let getLock () = win.Runtime.ContextLock
-    let runner = new Load.Runner(2,getLock)
+    let runner = win.Runtime.CreateLoadRunner 2
 
     let scene = mola
+
     let bb = scene.boundingBox
+    let speed = Mod.init scene.speed
 
     let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
     let view = initialView |> DefaultCameraController.controlWithSpeed speed win.Mouse win.Keyboard win.Time
-
-    let quadGeometry =
-        IndexedGeometry(
-            Mode = IndexedGeometryMode.TriangleList,
-            IndexArray = ([|0;1;2; 0;2;3|] :> Array),
-            IndexedAttributes =
-                SymDict.ofList [
-                    DefaultSemantic.Positions, [| V3f.OOO; V3f.IOO; V3f.IIO; V3f.OIO |] :> Array
-                    DefaultSemantic.Colors, [| C4b.Red; C4b.Green; C4b.Blue; C4b.Yellow |] :> Array
-                ]
-        )
        
-    let proj = win.Sizes |> Mod.map (fun s -> Frustum.perspective 60.0 1.0 10000.0 (float s.X / float s.Y))
+    let proj = win.Sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))
     let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
 
     let patchHierarchies =
@@ -95,58 +102,8 @@ let main argv =
             yield PatchHierarchy.load p
         ] 
 
-    let runtime = app.Runtime |> unbox<Aardvark.Rendering.GL.Runtime>
 
-    let mutable loadedTextures = 0
-
-    let loadTextures (baseDir : string) (compressed : bool) (p : Patch) =
-        loadedTextures <- loadedTextures + 1
-        let t = p.info.Textures |> List.head
-        let sourcePath = Path.combine [baseDir; "Images"; t.fileName]
-        let extensions = [ ".texCache"; ".dds"; ".tif"; ".tiff"]
-
-        let rec tryFindTex exts path =
-            match exts with
-                | x::xs -> 
-                    let cuzrrent = System.IO.Path.ChangeExtension(path,x)
-                    if File.Exists cuzrrent then cuzrrent else tryFindTex xs path
-                | [] -> failwithf "texture not found: %s" path
-
-
-        let fullPath = tryFindTex extensions sourcePath
-        let cacheFileName = sprintf "%s.cache" fullPath
-        let cacheInfo = sprintf "%s.cacheInfo" fullPath
-        //if File.Exists cacheFileName then File.Delete cacheFileName
-
-        //CompressedImage.ensureCache runtime fullPath
-
-        let killTexture =  
-            if compressed then
-                CompressedImage.load runtime fullPath { wantMipMaps = true; wantSrgb = false; wantCompressed = false } true |> snd
-            else
-                let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
-                let t = FileTexture(fullPath,config) :> ITexture
-                let b = runtime.PrepareTexture(t)
-                
-                { new IDisposable with member x.Dispose() = runtime.DeleteTexture b }
-        killTexture.Dispose()
-
-
-    let testLoading compressed= 
-        loadedTextures <- 0
-        use ctx = runtime.Context.ResourceLock
-        let sw = System.Diagnostics.Stopwatch()
-        sw.Start()
-        let textures = patchHierarchies |> List.map (fun (dir,h) -> QTree.map (loadTextures dir compressed) h)
-        sw.Stop()
-        printfn "compressed=%A; took: %A, time per tex: %Ams" compressed sw.MicroTime (float sw.Elapsed.TotalMilliseconds / float loadedTextures)
-        ()
-
-    //testLoading true
-
-    let g = patchHierarchies |> List.map (fun (d,h) -> Sg.patchLod win.FramebufferSignature runner d (PatchLod.toRoseTree h)) |> Sg.ofList
-    //let g = patchHierarchies |> Seq.map (NaivePatchLoD.toSg preTransform) |> Sg.ofSeq
-    //let g = patchHierarchies |> Seq.collect collect |> Sg.ofSeq
+    let g = patchHierarchies |> List.map (fun (d,h) -> Sg.patchLod win.FramebufferSignature runner d scene.lodDecider (PatchLod.toRoseTree h)) |> Sg.ofList
         
     let fillMode = Mod.init FillMode.Fill
 
@@ -253,3 +210,53 @@ let main argv =
 //                     |> Sg.diffuseFileTexture' fullPath true
 //                     |> Sg.trafo (Mod.constant patch.info.Local2Global)
 //        }
+
+//
+//    let mutable loadedTextures = 0
+//
+//    let loadTextures (baseDir : string) (compressed : bool) (p : Patch) =
+//        loadedTextures <- loadedTextures + 1
+//        let t = p.info.Textures |> List.head
+//        let sourcePath = Path.combine [baseDir; "Images"; t.fileName]
+//        let extensions = [ ".texCache"; ".dds"; ".tif"; ".tiff"]
+//
+//        let rec tryFindTex exts path =
+//            match exts with
+//                | x::xs -> 
+//                    let cuzrrent = System.IO.Path.ChangeExtension(path,x)
+//                    if File.Exists cuzrrent then cuzrrent else tryFindTex xs path
+//                | [] -> failwithf "texture not found: %s" path
+//
+//
+//        let fullPath = tryFindTex extensions sourcePath
+//        let cacheFileName = sprintf "%s.cache" fullPath
+//        let cacheInfo = sprintf "%s.cacheInfo" fullPath
+//        //if File.Exists cacheFileName then File.Delete cacheFileName
+//
+//        //CompressedImage.ensureCache runtime fullPath
+//
+//        let killTexture =  
+//            if compressed then
+//                CompressedImage.load runtime fullPath { wantMipMaps = true; wantSrgb = false; wantCompressed = false } true |> snd
+//            else
+//                let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
+//                let t = FileTexture(fullPath,config) :> ITexture
+//                let b = runtime.PrepareTexture(t)
+//                
+//                { new IDisposable with member x.Dispose() = runtime.DeleteTexture b }
+//        killTexture.Dispose()
+//
+//
+//    let testLoading (runtime : IRuntime) compressed = 
+//        loadedTextures <- 0
+//        use ctx = runtime.ContextLock
+//        let sw = System.Diagnostics.Stopwatch()
+//        sw.Start()
+//        let textures = patchHierarchies |> List.map (fun (dir,h) -> QTree.map (loadTextures dir compressed) h)
+//        sw.Stop()
+//        printfn "compressed=%A; took: %A, time per tex: %Ams" compressed sw.MicroTime (float sw.Elapsed.TotalMilliseconds / float loadedTextures)
+//        ()
+//
+//    //testLoading true
+    //let g = patchHierarchies |> Seq.map (NaivePatchLoD.toSg preTransform) |> Sg.ofSeq
+    //let g = patchHierarchies |> Seq.collect collect |> Sg.ofSeq

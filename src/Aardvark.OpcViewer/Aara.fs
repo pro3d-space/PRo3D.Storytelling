@@ -140,6 +140,21 @@ module Patch =
                 ]
         ), sw.MicroTime
 
+    let extractTexture (baseDir : string) (patchInfo : PatchFileInfo) =
+        let t = patchInfo.Textures |> List.head
+        let sourcePath = Path.combine [ baseDir; "Images"; t.fileName]
+        let extensions = [ ".dds"; ".tif"; ".tiff"]
+
+        let rec tryFindTex exts path =
+            match exts with
+                | x::xs -> 
+                    let current = System.IO.Path.ChangeExtension(path,x)
+                    if File.Exists current then current else tryFindTex xs path
+                | [] -> failwithf "texture not found: %s" path
+
+
+        tryFindTex extensions sourcePath
+
 
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -149,6 +164,7 @@ module PatchHierarchy =
     open System.Xml.Linq
     open MBrace.FsPickler
 
+    let private binarySerializer = FsPickler.CreateBinarySerializer()
 
     let private ofDoc (x : XDocument) =
         let hierarchy = x.Descendants(xname "PatchHierarchy") |> Seq.head
@@ -180,7 +196,6 @@ module PatchHierarchy =
 
         mkTree rootPatch
 
-    let private binarySerializer = FsPickler.CreateBinarySerializer()
     let load (fileName : string) =
         let dir = Path.GetDirectoryName(Path.GetDirectoryName fileName)
         let cachefile = Path.combine [dir; "hierarchy.cache" ]

@@ -70,8 +70,10 @@
     <Compile Include="Staging\HiearchicalLoD.fs" />
     <Compile Include="PathFileInfo.fs" />
     <Compile Include="Aara.fs" />
+    <Compile Include="RenderUtilities.fs" />
     <Compile Include="RenderingV1.fs" />
     <Compile Include="RenderingV2.fs" />
+    <Compile Include="LoDMetrics.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />
   </ItemGroup>
