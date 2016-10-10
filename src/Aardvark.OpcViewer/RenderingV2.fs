@@ -81,7 +81,7 @@ module PatchLod =
 
                     let tex,onTextureDispose = 
                         let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
-                        let useFastTextures = false
+                        let useFastTextures = true
                         if useFastTextures then
                             CompressedImage.load runtime texturePath config false
                         else 
