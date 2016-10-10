@@ -133,6 +133,8 @@ module CompressedImage =
                 let read = NativePtr.read bytesRead 
                 if read <> totalSize then failwith ""
 
+                let runtime = runtime |> unbox<Aardvark.Rendering.GL.Runtime>
+
                 let handle = GL.GenTexture()
                 GL.BindTexture(TextureTarget.Texture2D, handle)
                 GL.TexParameterI(TextureTarget.Texture2D,TextureParameterName.TextureMaxLevel, [| mips - 1 |] )
@@ -173,7 +175,8 @@ module CompressedImage =
                 let dispose = 
                     { new IDisposable with
                         member x.Dispose() =
-                            use ctx = runtime.ContextLock
+                            use ctx = (runtime :> IRuntime).ContextLock
+                            Aardvark.Rendering.GL.TextureExtensions.removeTexture runtime.Context (int64 totalSize)
                             GL.DeleteTexture(handle)
                     }
 
@@ -196,6 +199,8 @@ module CompressedImage =
                     Texture(glRuntime.Context, handle, TextureDimension.Texture2D, mips,
                             1, V3i(width,height,1), 1, format |> unbox<TextureFormat>,
                             int64 totalSize, false)
+
+                Aardvark.Rendering.GL.TextureExtensions.addTexture runtime.Context (int64 totalSize)
 
                 Some ( t :> ITexture, dispose )
             else

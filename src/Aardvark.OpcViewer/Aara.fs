@@ -126,7 +126,6 @@ module Patch =
 
         let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
 
-        //let normals = Path.combine [p.BaseDir; "Normals.aara"] |> fromFile<V3f>
         let index = createIndex (positions.AsMatrix())
 
         IndexedGeometry(
@@ -136,7 +135,6 @@ module Patch =
                 SymDict.ofList [
                     DefaultSemantic.Positions, positions.Data :> Array
                     DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
-                    //DefaultSemantic.Normals, normals.Data :> Array
                 ]
         ), sw.MicroTime
 

@@ -85,7 +85,7 @@ let main argv =
 
     let runner = win.Runtime.CreateLoadRunner 2
 
-    let scene = mola
+    let scene = perjen
 
     let bb = scene.boundingBox
     let speed = Mod.init scene.speed
@@ -166,7 +166,7 @@ let main argv =
             |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)
 
     
-    let cfg =  { BackendConfiguration.Default  with useDebugOutput = true }
+    let cfg =  { BackendConfiguration.Default  with useDebugOutput = false }
     let task =
         RenderTask.ofList [
             app.Runtime.CompileClear(win.FramebufferSignature, Mod.constant C4f.Gray)
