@@ -340,10 +340,11 @@ module ``RuntimeLoad Extensions`` =
         member x.CreateLoadRunner(threads : int) =
             match x with
                 | :? Aardvark.Rendering.GL.Runtime as runtime -> 
-                    let loadContexts = Aardvark.Rendering.GL.ContextHandle.createContexts threads |> Array.ofList
+                    //let loadContexts = Aardvark.Rendering.GL.ContextHandle.createContexts threads |> Array.ofList
                     let getLock i = 
-                        let ctx = loadContexts.[i]
-                        runtime.Context.RenderingLock(ctx)
+                        runtime.Context.ResourceLock
+//                        let ctx = loadContexts.[i]
+//                        runtime.Context.RenderingLock(ctx)
 
                     new Load.Runner(2, getLock)
                 | _ -> failwith "cannot create load runner with non GL runtime."
