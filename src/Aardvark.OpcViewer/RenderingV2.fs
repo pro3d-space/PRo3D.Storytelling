@@ -14,9 +14,11 @@ open OpenTK.Graphics.OpenGL4
 
 module Statistics = 
 
-    type Stats = { loadedObjects : int; elapsed : MicroTime; elapsedCreate : MicroTime; prepareTexture : MicroTime; prepareBuffer : MicroTime }
+    type Stats = { loadedObjects : int; elapsed : MicroTime; elapsedCreate : MicroTime; 
+                   prepareTexture : MicroTime; prepareBuffer : MicroTime
+                   elapsedIndex   : MicroTime }
 
-    let empty = { loadedObjects = 0; elapsed = MicroTime.Zero; elapsedCreate = MicroTime.Zero; prepareTexture = MicroTime.Zero; prepareBuffer = MicroTime.Zero }
+    let empty = { loadedObjects = 0; elapsed = MicroTime.Zero; elapsedCreate = MicroTime.Zero; prepareTexture = MicroTime.Zero; prepareBuffer = MicroTime.Zero; elapsedIndex = MicroTime.Zero }
     let lockObj = obj()
     let mutable stats = empty
     let mutable initialized = false
@@ -30,7 +32,7 @@ module Statistics =
                 printfn "Status: %A, resulting in %A per object (create %A, GPU buffers: %A, GPU textures: %A)" old  (old.elapsed / float old.loadedObjects) (old.elapsedCreate / float old.loadedObjects) (old.prepareBuffer / float old.loadedObjects) (old.prepareTexture / float old.loadedObjects)
         } |> Async.Start 
 
-    let emitLoaded (timeSpan : MicroTime) (createTime : MicroTime) (buffers : MicroTime) (textures : MicroTime) =  
+    let emitLoaded (timeSpan : MicroTime) (createTime : MicroTime) (buffers : MicroTime) (textures : MicroTime) (elapsedIndex : MicroTime) =  
         if not initialized then initialized <- true; start() 
         lock lockObj (fun () -> 
             stats <- { stats with 
@@ -39,29 +41,29 @@ module Statistics =
                         elapsedCreate = stats.elapsedCreate + createTime
                         prepareBuffer = stats.prepareBuffer + buffers
                         prepareTexture = textures 
+                        elapsedIndex   = stats.elapsedIndex + elapsedIndex
                      }
         )
 
-        
 
 module PatchLod =
     open Aardvark.Base.Rendering
     open Aardvark.Base.Ag
     open Aardvark.SceneGraph.Semantics
-    open Aardvark.Base
+    open Aardvark.SceneGraph.Semantics.TrafoSemantics
 
     let rec toRoseTree (p : QTree<'a>) =
         match p with
             | QTree.Leaf v -> Leaf v
             | QTree.Node(v,children) -> Node(v,children |> Array.toList |> List.map toRoseTree)
 
-    type PatchNode(signature : IFramebufferSignature, runner : Load.Runner, p : RoseTree<Patch>) =
+    type PatchNode(signature : IFramebufferSignature, runner : Load.Runner, baseDir : string, p : RoseTree<Patch>) =
         interface ISg
         member x.Tree = p
         member x.Signature = signature
         member x.Runner = runner
+        member x.BaseDir = baseDir
     
-
     type RenderPatch =
         {
             info        : PatchFileInfo
@@ -147,10 +149,10 @@ module PatchLod =
                     //use ctx = runtime.ContextLock
                     let createTime = System.Diagnostics.Stopwatch()
                     createTime.Start()
-                    let g = Patch.load p.info
+                    let g,elapsedIndex = Patch.load n.BaseDir p.info
                     createTime.Stop()
                     let t = p.info.Textures |> List.head
-                    let sourcePath = Path.combine [p.info.BaseDir; t.fileName]
+                    let sourcePath = Path.combine [n.BaseDir; "Images"; t.fileName]
                     let extensions = [ ".dds"; ".tif"; ".tiff"]
 
                     let rec tryFindTex exts path =
@@ -250,7 +252,7 @@ module PatchLod =
                     GL.Sync()
 
                     sw.Stop()
-                    Statistics.emitLoaded sw.MicroTime createTime.MicroTime prepareBuffers.MicroTime prepareTexture.MicroTime
+                    Statistics.emitLoaded sw.MicroTime createTime.MicroTime prepareBuffers.MicroTime prepareTexture.MicroTime elapsedIndex
 
                     Interlocked.Increment(&preparedCnt) |> ignore
                     { prepared = prepared; d = { new IDisposable with member x.Dispose() = Interlocked.Decrement(&preparedCnt) |> ignore } }
@@ -272,5 +274,5 @@ module PatchLod =
 
 
 module Sg =
-    let patchLod (signature : IFramebufferSignature) (runner : Load.Runner) (p : RoseTree<Patch>) =
-        PatchLod.PatchNode(signature,runner,p) :> ISg
+    let patchLod (signature : IFramebufferSignature) (runner : Load.Runner) (baseDir : string) (p : RoseTree<Patch>) =
+        PatchLod.PatchNode(signature, runner, baseDir, p) :> ISg

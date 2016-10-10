@@ -42,8 +42,7 @@ type DiffuseColorCoordinates = string
 
 type PatchFileInfo =
     {
-        BaseDir             : string
-
+        Name                : string
         TagList             : list<string>
         GeometryType        : GeometryType
         QuadVertexSortOrder : VertexOrder
@@ -90,18 +89,18 @@ module PatchFileInfo =
                 | [|Int32 x; Int32 y|] -> V2i(x,y)
                 | _ -> failwithf "Could not parse: %A" s 
 
-    let private ofXDoc (doc : XDocument) (baseDir) (name : string) =
+    let private ofXDoc (doc : XDocument) (name : string) =
         let patch = doc.Descendants(xname "Aardvark").Descendants(xname "Patch") |> Seq.head
 
         let trafo (m : M44d) =
             Trafo3d(m, m.Inverse)
 
         let getTex xs = 
-            { fileName = Path.combine [baseDir; "Images"; prop "DiffuseColor1Texture" xs]
+            { fileName = prop "DiffuseColor1Texture" xs
               weights  = prop "DiffuseColor1Weights" xs }
 
         {
-            BaseDir             = Path.combine [baseDir; "Patches"; name]
+            Name                = name
             TagList             = patch |> elems "TagList" |> Seq.toList |> List.map xvalue   
 
             GeometryType        = patch |> prop "GeometryType"        |> geomtryType
@@ -127,9 +126,7 @@ module PatchFileInfo =
 
     let load (dir : string) (f : string) =
         let doc   = XDocument.Load (Path.combine [dir; "Patches"; f; "Patch.xml"])
-        ofXDoc doc dir f
-
-
+        ofXDoc doc f
 
 type QTree<'a> = Node of 'a * array<QTree<'a>>
                 | Leaf of 'a

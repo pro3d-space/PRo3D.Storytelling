@@ -10,15 +10,9 @@ namespace Aardvark.Opc
 
 open System
 open System.IO
-
 open System.Runtime.InteropServices
+
 open Aardvark.Base
-open Aardvark.Base.Incremental.Load
-open Aardvark.Rendering.GL
-open OpenTK.Graphics.OpenGL4
-open FSharp.NativeInterop
-
-
 
 [<AutoOpen>]
 module private Aara =
@@ -121,10 +115,14 @@ type Patch =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Patch =
     let ofInfo (level : int) (p : PatchFileInfo) = { level = level; info = p }
+
         
-    let load (p : PatchFileInfo)  =
-        let positions = Path.combine [p.BaseDir; p.Positions] |> fromFile<V3f>
-        let coordinates = Path.combine [p.BaseDir; (List.head p.Coordinates)] |> fromFile<V2f>
+    let load (baseDir : string) (p : PatchFileInfo)  =
+        let sw = System.Diagnostics.Stopwatch()
+        sw.Start()
+        let positions = Path.combine [baseDir; "Patches"; p.Name; p.Positions] |> fromFile<V3f>
+        let coordinates = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>
+        sw.Stop()
 
         let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
 
@@ -140,7 +138,7 @@ module Patch =
                     DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
                     //DefaultSemantic.Normals, normals.Data :> Array
                 ]
-        )
+        ), sw.MicroTime
 
 
 
@@ -188,7 +186,7 @@ module PatchHierarchy =
         let cachefile = Path.combine [dir; "hierarchy.cache" ]
         if File.Exists cachefile then
             let r = File.readAllBytes cachefile |> binarySerializer.UnPickle
-            r
+            dir, r
         else
             Log.startTimed "loading from hierarchy"
             let hierarchy = 
@@ -199,6 +197,6 @@ module PatchHierarchy =
             binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
             Log.stop()
             Log.stop()
-            hierarchy
+            dir, hierarchy
 
 

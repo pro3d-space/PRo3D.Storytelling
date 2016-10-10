@@ -17,9 +17,9 @@ module NaivePatchLoD =
           4, C4b.VRVisGreen
           5, C4b.Yellow ] |> Map.ofList
 
-    let patch2Sg (depth : int) (patch : Patch) =
+    let patch2Sg (baseDir : string) (depth : int) (patch : Patch) =
         let tex = patch.info.Textures |> List.head 
-        let tiff = Path.combine [patch.info.BaseDir; tex.fileName]
+        let tiff = Path.combine [baseDir; "Images"; tex.fileName]
 
         let extensions = [ ".dds"; ".tif"; ".tiff"]
 
@@ -35,7 +35,8 @@ module NaivePatchLoD =
         let ex = Path.GetExtension textureImage
         if ex = ".dds" then printfn "asdfasdasd"
 
-        Patch.load patch.info
+        Patch.load baseDir patch.info
+            |> fst
             |> Sg.ofIndexedGeometry
             |> Sg.uniform "LoDColor" (Mod.constant (Map.find depth colors))
             |> Sg.diffuseFileTexture' textureImage true
