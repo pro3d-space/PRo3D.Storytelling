@@ -73,3 +73,10 @@ module Utilitites =
             | 4 -> C4f(t,p,v)
             | 5 -> C4f(v,p,q)
             | _ -> C4f(v,t,p)
+
+    let timed f =
+        let sw = System.Diagnostics.Stopwatch()
+        sw.Start()
+        let r = f ()
+        sw.Stop()
+        r, sw.MicroTime

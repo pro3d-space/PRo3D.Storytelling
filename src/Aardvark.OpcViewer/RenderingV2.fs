@@ -71,20 +71,21 @@ module PatchLod =
 
             let preparePatch (p : RenderPatch) =
 
-                    let sw = System.Diagnostics.Stopwatch()
-                    sw.Start()
+                    let prepareTime = System.Diagnostics.Stopwatch()
+                    prepareTime.Start()
 
-                    let createTime = System.Diagnostics.Stopwatch()
-                    createTime.Start()
-                    let g,elapsedIndex = Patch.load n.BaseDir p.info
-                    createTime.Stop()
+                    let (g, elapsedIndex), createTime = timed (fun () -> 
+                            Patch.load n.BaseDir p.info )
 
                     let texturePath = Patch.extractTexture n.BaseDir p.info
 
                     let tex,onTextureDispose = 
                         let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
-                        //FileTexture(fullPath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
-                        CompressedImage.load runtime texturePath config false
+                        let useFastTextures = false
+                        if useFastTextures then
+                            CompressedImage.load runtime texturePath config false
+                        else 
+                            FileTexture(texturePath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
 
                     let ro = RenderObject.Clone(ro)
 
@@ -158,8 +159,8 @@ module PatchLod =
                         
                     GL.Sync()
 
-                    sw.Stop()
-                    Statistics.emitLoaded sw.MicroTime createTime.MicroTime elapsedIndex
+                    prepareTime.Stop()
+                    Statistics.emitLoaded prepareTime.MicroTime createTime elapsedIndex
                     prepared
                     
 
