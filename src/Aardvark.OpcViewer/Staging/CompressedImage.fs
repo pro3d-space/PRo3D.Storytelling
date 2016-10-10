@@ -181,19 +181,6 @@ module CompressedImage =
                     }
 
                 let glRuntime = runtime |> unbox<Aardvark.Rendering.GL.Runtime>
-                                    
-//                GL.BindTexture(TextureTarget.Texture2D, handle)
-//                if config.wantMipMaps && mips <= 1 then
-//                    GL.GenerateMipmap(GenerateMipmapTarget.Texture2D)
-//                    let newSize = 4 * totalSize / 3
-//                    //updateTexture t.Context t.SizeInBytes newSize
-//                    totalSize <- newSize 
-//                else
-//                    GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, [| 0 |])
-//                    GL.TexParameterI(TextureTarget.Texture2D, TextureParameterName.TextureMaxLod, [| 0 |])
-//                GL.BindTexture(TextureTarget.Texture2D, 0)
-
-                GL.Sync()
 
                 let t = 
                     Texture(glRuntime.Context, handle, TextureDimension.Texture2D, mips,

@@ -85,7 +85,7 @@ let main argv =
 
     let runner = win.Runtime.CreateLoadRunner 2
 
-    let scene = mars
+    let scene = mola
 
     let bb = scene.boundingBox
     let speed = Mod.init scene.speed
