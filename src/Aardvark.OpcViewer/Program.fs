@@ -38,7 +38,14 @@ module Viewer =
             ] 
 
 
-        let g = patchHierarchies |> List.map (fun (d,h) -> Sg.patchLod win.FramebufferSignature runner d scene.lodDecider scene.useCompressedTextures (PatchLod.toRoseTree h)) |> Sg.ofList
+        let g = 
+            patchHierarchies 
+            |> List.map (fun h -> 
+                    Sg.patchLod win.FramebufferSignature runner h.baseDir 
+                                scene.lodDecider scene.useCompressedTextures 
+                                (PatchLod.toRoseTree h.tree)
+               ) 
+            |> Sg.ofList
         
         let fillMode = Mod.init FillMode.Fill
 
@@ -115,12 +122,13 @@ module Viewer =
 
     open Configurations.Relative
 
+
     [<EntryPoint>]
     let main argv =
         match argv.ToLower() with
-            | [| "perjen" |] -> run perjen
-            | [| "mola" |] -> run mola
-            | [| "mars" |] -> run mars 
+            | [| "perjen" |] -> run ( perjen () )
+            | [| "mola" |] -> run ( mola () )
+            | [| "mars" |] -> run ( mars () )
             | _ -> 
                 printfn "wrong arguments: %A, synopsis: Aardvark.OpenViewer [perjen|mola|mars]" argv
                 System.Environment.Exit 1 

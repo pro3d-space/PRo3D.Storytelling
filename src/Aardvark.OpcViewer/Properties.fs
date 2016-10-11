@@ -39,10 +39,14 @@ module Configurations =
         lodDecider       : PatchLod.LodDecider
         useCompressedTextures : bool
     }
+
+    // JR_export: 142GB
+    // mola: 15.1GB
+    // 
     
     module HarriPc =
 
-        let mars = 
+        let mars () = 
             { 
                 useCompressedTextures = true
                 preTransform     = Trafo3d.Identity
@@ -56,7 +60,7 @@ module Configurations =
                 lodDecider       = DefaultMetrics.mars
             }
 
-        let mola = 
+        let mola () = 
             { 
               useCompressedTextures = false
               preTransform     = Trafo3d.Identity
@@ -68,7 +72,7 @@ module Configurations =
               lodDecider       = DefaultMetrics.mars
             }
 
-        let perjen =
+        let perjen () =
             { 
                 useCompressedTextures = true
                 preTransform     = Trafo3d.FromOrthoNormalBasis(V3d.IOO, -V3d.OOI, V3d.OIO)
@@ -82,7 +86,7 @@ module Configurations =
 
     module Relative =
 
-        let mars = 
+        let mars () = 
             { 
                 useCompressedTextures = true
                 preTransform     = Trafo3d.Identity
@@ -96,7 +100,7 @@ module Configurations =
                 lodDecider       = DefaultMetrics.mars
             }
 
-        let mola = 
+        let mola () = 
             let molaPrefix = @"..\..\..\..\JR_LandingSites\LandingSites\Surface\"
             { 
               useCompressedTextures = false
@@ -109,7 +113,7 @@ module Configurations =
               lodDecider       = DefaultMetrics.mars
             }
 
-        let perjen =
+        let perjen () =
             { 
                 useCompressedTextures = true
                 preTransform     = Trafo3d.FromOrthoNormalBasis(V3d.IOO, -V3d.OOI, V3d.OIO)

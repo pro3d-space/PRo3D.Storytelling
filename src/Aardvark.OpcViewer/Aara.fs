@@ -169,7 +169,11 @@ module Patch =
 
         tryFindTex extensions sourcePath
 
-
+type PatchHierarchy =
+    { 
+        baseDir : string
+        tree    : QTree<Patch>
+    }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module PatchHierarchy =
@@ -214,18 +218,17 @@ module PatchHierarchy =
         let dir = Path.GetDirectoryName(Path.GetDirectoryName fileName)
         let cachefile = Path.combine [dir; "hierarchy.cache" ]
         if File.Exists cachefile then
-            let r = File.readAllBytes cachefile |> binarySerializer.UnPickle
-            dir, r
+            { baseDir = dir; tree = File.readAllBytes cachefile |> binarySerializer.UnPickle }
         else
             Log.startTimed "loading from hierarchy"
             let hierarchy = 
                 XDocument.Load(fileName) 
                     |> ofDoc
-                    |> QTree.mapLevel 0 (fun level p -> p |> PatchFileInfo.load dir |> Patch.ofInfo level)
-            Log.startTimed "writing cache"
+                    |> QTree.mapLevel 0 (fun level p -> 
+                            p |> PatchFileInfo.load dir |> Patch.ofInfo level
+                       )
             binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
             Log.stop()
-            Log.stop()
-            dir, hierarchy
+            { baseDir = dir; tree = hierarchy }
 
 
