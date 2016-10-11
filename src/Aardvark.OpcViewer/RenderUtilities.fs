@@ -43,7 +43,7 @@ module Utilitites =
         let viewSpacePoints =
             b.ComputeCorners()
                 |> Array.map (fun v ->
-                    viewProj.Forward.TransformPosProj(v)
+                    viewProj.Forward.TransformPosProj v
                 )
 
         let poly = viewSpacePoints |> Array.map Vec.xy |> Polygon2d

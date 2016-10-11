@@ -215,8 +215,10 @@ module CompressedImage =
             d.Dispose()
 
     let load (runtime : IRuntime) (fullPath : string) (config : TextureParams) (overrideCache : bool) =
-        let cacheFileInfo = Path.Combine(Path.GetDirectoryName(fullPath), sprintf "%s.cacheInfo" fullPath)
-        let cacheFileName = Path.Combine(Path.GetDirectoryName(fullPath), sprintf "%s.cache" fullPath)
+
+        let fileName = Path.GetFileName(fullPath)
+        let cacheFileInfo = Path.Combine(Path.GetDirectoryName(fullPath), sprintf "%s.cacheInfo" fileName)
+        let cacheFileName = Path.Combine(Path.GetDirectoryName(fullPath), sprintf "%s.cache" fileName)
 
         if overrideCache then loadAndCache runtime fullPath 
         else

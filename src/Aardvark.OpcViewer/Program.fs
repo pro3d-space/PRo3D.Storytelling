@@ -38,7 +38,7 @@ module Viewer =
             ] 
 
 
-        let g = patchHierarchies |> List.map (fun (d,h) -> Sg.patchLod win.FramebufferSignature runner d scene.lodDecider (PatchLod.toRoseTree h)) |> Sg.ofList
+        let g = patchHierarchies |> List.map (fun (d,h) -> Sg.patchLod win.FramebufferSignature runner d scene.lodDecider scene.useCompressedTextures (PatchLod.toRoseTree h)) |> Sg.ofList
         
         let fillMode = Mod.init FillMode.Fill
 

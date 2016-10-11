@@ -33,13 +33,15 @@ module PatchLod =
     type LodDecider = IAdaptiveObject -> IMod<Trafo3d> -> RenderPatch -> bool 
 
     type PatchNode(signature : IFramebufferSignature, runner : Load.Runner, 
-                   baseDir : string, decider : LodDecider, p : RoseTree<Patch>) =
+                   baseDir : string, decider : LodDecider, 
+                   useCompressedTextures : bool, p : RoseTree<Patch>) =
         interface ISg
         member x.Tree = p
         member x.Signature = signature
         member x.Runner = runner
         member x.BaseDir = baseDir
         member x.Decider = decider
+        member x.UseCompressedTextures = useCompressedTextures
     
 
     [<Semantic>]
@@ -81,8 +83,7 @@ module PatchLod =
 
                     let tex,onTextureDispose = 
                         let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
-                        let useFastTextures = true
-                        if useFastTextures then
+                        if n.UseCompressedTextures then
                             CompressedImage.load runtime texturePath config false
                         else 
                             FileTexture(texturePath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
@@ -183,5 +184,5 @@ module PatchLod =
 module Sg =
     open PatchLod
 
-    let patchLod (signature : IFramebufferSignature) (runner : Load.Runner) (baseDir : string) (decider : LodDecider) (p : RoseTree<Patch>) =
-        PatchNode(signature, runner, baseDir, decider, p) :> ISg
+    let patchLod (signature : IFramebufferSignature) (runner : Load.Runner) (baseDir : string) (decider : LodDecider) (useCompressedTextures : bool) (p : RoseTree<Patch>) =
+        PatchNode(signature, runner, baseDir, decider, useCompressedTextures, p) :> ISg
