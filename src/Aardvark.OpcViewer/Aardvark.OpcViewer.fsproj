@@ -73,7 +73,8 @@
     <Compile Include="RenderUtilities.fs" />
     <Compile Include="RenderingV1.fs" />
     <Compile Include="RenderingV2.fs" />
-    <Compile Include="LoDMetrics.fs" />
+    <Compile Include="Shaders.fs" />
+    <Compile Include="Properties.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />
   </ItemGroup>
