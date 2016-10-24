@@ -10,6 +10,7 @@ Eto.Forms
 Eto.Forms              
 Eto.Platform.Wpf       
 Eto.Platform.Windows   
+Eto.Platform.Gtk 
 
 Fsunit
 FParsec

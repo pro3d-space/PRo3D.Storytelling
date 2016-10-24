@@ -2,7 +2,7 @@
 using Eto.Forms;
 using Eto.Drawing;
 
-namespace EtoApp1
+namespace Exomars.Viewer
 {
     public partial class MainForm
     {

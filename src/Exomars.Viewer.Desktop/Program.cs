@@ -9,7 +9,7 @@ namespace Exomars.Viewer.Desktop
         [STAThread]
         public static void Main(string[] args)
         {
-            new Application(Platform.Detect).Run(new MainForm());
+            new Application(new Eto.GtkSharp.Platform()).Run(new MainForm());
         }
     }
 }

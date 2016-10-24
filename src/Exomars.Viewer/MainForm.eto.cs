@@ -1,9 +1,10 @@
 ﻿using System;
 using Eto.Forms;
 using Eto.Drawing;
-using Aardvark.Rendering;
+using Aardvark.Rendering.GL;
+using Aardvark.Application.WinForms;
 
-namespace EtoApp1
+namespace Exomars.Viewer
 {
     partial class MainForm : Form
     {
@@ -12,6 +13,9 @@ namespace EtoApp1
         {
             Title = "My Eto Form";
             ClientSize = new Size(400, 350);
+
+            var app = new OpenGlApplication();
+            
 
             Content = new StackLayout
             {
