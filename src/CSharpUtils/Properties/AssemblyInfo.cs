@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("OpcSupport")]
+[assembly: AssemblyTitle("CSharpUtils")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("OpcSupport")]
+[assembly: AssemblyProduct("CSharpUtils")]
 [assembly: AssemblyCopyright("Copyright ©  2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("83a9b79a-5b4e-429a-b602-d5d17e34c0bf")]
+[assembly: Guid("64cde4e5-f90a-40c0-93b9-30b1ad02855c")]
 
 // Version information for an assembly consists of the following four values:
 //

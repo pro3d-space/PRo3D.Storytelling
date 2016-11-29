@@ -19,3 +19,7 @@ bin/Debug
 src\Aardvark.OpcViewer.psess
 
 /src/Aardvark.OpcViewer.psess
+/src/DGMViewer/bin/Debug
+/src/DGMViewer/bin/Release
+/src/CSharpUtils/bin/Debug
+/src/CSharpUtils/bin/Release

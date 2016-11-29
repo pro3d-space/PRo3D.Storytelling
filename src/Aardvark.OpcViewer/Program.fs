@@ -120,7 +120,7 @@ module Viewer =
         0
 
 
-    open Configurations.Relative
+    open Configurations.HarriPc
 
 
     [<EntryPoint>]
