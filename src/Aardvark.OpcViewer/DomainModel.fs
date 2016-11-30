@@ -1,9 +1,11 @@
 ﻿module DomainModel
 open Aardvark.Base
 
-
 //type Group<'a, 'b> =
 //    | Group of list<Group<'a, 'b>> * 'b * 'a
+
+
+    
 
 [<AutoOpen>]
 module Navigations = 
@@ -35,7 +37,7 @@ module Measurements =
 
     type MeasurementBase = {
         Id        : string
-        Trafo     : Trafo3d        
+        Trafo     : Trafo3d
     }
 
     type Measure = 
@@ -45,11 +47,16 @@ module Measurements =
         | Polygon of V3d list
         | DipAndStrike of V3d list
 
-    type Measurement = Measure * MeasurementBase * Viewpoint
+    type Measurement = {
+        Measure     : Measure
+        Base        : MeasurementBase
+        Viewpoint   : Viewpoint
+    }
 
     type MeasurementGroup =
         | Group of string * list<MeasurementGroup> * list<Measurement>
-    
+
+//Todo model SceneObjects
 [<AutoOpen>]
 module SceneObjects =  
     type SceneObject = int
@@ -76,7 +83,10 @@ module Surfaces =
         TriangleThreshold   : double
     }
 
-    type Surface = SurfaceAttributes * SurfaceRenderParameters
+    type Surface = {
+        Attributes       : SurfaceAttributes
+        RenderParameters : SurfaceRenderParameters
+    }
 
     type SurfaceGroup =
         | Group of string * list<SurfaceGroup> * list<Surface>
@@ -86,6 +96,37 @@ module Paths =
     type Trajectory = int
     type CameraPath = int
     type AnimationPath = int
+
+//todo expand ViewPlanner types
+[<AutoOpen>]
+module ViewPlanner = 
+    type Instrument = {
+        Id : string
+    }
+
+    type Rover = {
+        Id          : string
+        Instruments : list<Instrument>
+    }
+
+    type ViewPlan = {
+        Rover     : Rover
+        Trafo     : Trafo3d
+        Viewpoint : Viewpoint
+    }
+
+module ScaleBars = 
+    type Orientation = Up | Right
+
+    type Unit = Mm | Cm | M | Km
+
+    type ScaleBar = {
+        Length      : double
+        Unit        : Unit
+        Orientation : Orientation
+        Position    : V3d
+        Viewpoint   : Viewpoint
+    }
 
 [<AutoOpen>]
 module ViewConfig =
@@ -115,7 +156,11 @@ module ViewConfig =
         Up             : V3d
     }
 
-    type ViewConfig = Visual * Navigation * Data
+    type ViewConfig = {
+        Visual      : Visual
+        Navigation  : Navigation
+        Data        : Data
+    }
 
 [<AutoOpen>]
 module Scene =
@@ -125,6 +170,16 @@ module Scene =
         Measurements : MeasurementGroup      
         Bookmarks    : Bookmark list
         ViewConfig   : ViewConfig
+    }
+
+[<AutoOpen>]
+module Application = 
+    type InteractionMode = PickOrbitCenter | PickMeasurement | PlaceSceneObject | PlaceScaleBar | PlaceRover | MayaControl
+
+    type ApplicationState = {
+        NavigationMode : NavigationMode
+        InteractionMode : InteractionMode
+        CurrentScene : Scene
     }
     
 //Group<list<Measurement>, string>
