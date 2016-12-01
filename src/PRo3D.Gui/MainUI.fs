@@ -46,65 +46,42 @@ module TreeViewOps =
                 
 
 module Main =
-
-  type Model = int
-
-  let initial = 2
-
-//  let viewsurface
-//  let viewSurfaces (surfaces list) =
-//    surfaces |> List.map viewSurfance
-//  let viewScene (scene : Scene) = div [ ... viewSurfaces scene.surfaces ]
+  open TestModel 
 
   // Actions supported by the application
-  type Actions =
-    | Inc 
-    | OpenSettings 
+  type Actions = int    
 
-  let update (model: Model) action =
-    match action with
-        | Inc -> model+1, []
-        | _ -> model, []
+  module Tree =
+    let treeView attribs children = 
+        let attribs = attribs @ [ attribute "class" "treeview"; attribute "data-role" "treeview" ]
+        div attribs  [ ul [] children ]
 
-//    let model', action' =
-//      match action with
-//      | ChangeInput s ->
-//        { model with Input = s } , []
-//
-//    #if DEV_HMR
-//    // Update the model in storage
-//    window?storage <- model'
-//    #endif
-//
-//    model', action'
+    let leaf attribs children = li attribs [span [attribute "class" "leaf"] children]
+    let node attribs label children =
+        let attribs = attribs @ [attribute "class" "leaf"]
+        li [attribute "class" "node"]
+                [
+                    span attribs [label]
+                    span [attribute "class" "node-toggle"] []
+                    ul [] children
+                ]
 
-  /// Custom binding for inInput. This directly give the value
-  let inline onInput x = onEvent "oninput" (fun e -> x (unbox e?target?value))
-  /// View
-//  let view model =
-//    div
-//      []
-//      [
-//        label
-//          []
-//          [text "Enter aaaaaasdfasdf aaaurgeil abc: "]
-//        input
-//          [ onInput ChangeInput ]
-//        br []
-//        span
-//          []
-//          [text (sprintf "Hello %s" model.Input)]
-//      ]
-  let view model =
+  let update (model: Model) (action : Actions) = model, []
+
+  let viewSurface (surf: Surface) = 
+    Tree.leaf [] [text surf.Name]
+
+  let viewSurfaces surfaces =
+    surfaces |> List.map viewSurface |> Tree.node [] (text "Surfaces") 
+
+  let view (model : Model) =
     div [] [
-        button [ onMouseClick (fun _ -> Inc) ] [ text "abc" ]
-        model 
-            |> RoseTreeOps.mkTree string 
-            |> RoseTreeOps.map text 
-            |> TreeViewOps.fromTree
+        Tree.treeView [attribute "data-on-click" "tree_add_leaf_example_click"] [
+            Tree.node [] (text model.Scene.Name) [viewSurfaces model.Scene.Surfaces]
+        ]
     ]
 
   let start node () =
-    createApp initial view update
+    createApp Model.initial view update
     |> withStartNodeSelector node
     |> start renderer

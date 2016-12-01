@@ -16,21 +16,51 @@ module FableCompatToBeRemoved =
 
 module TestModel = 
 
+  type Opc = {
+    Name : string
+  }
+
+  type Surface = {
+    Name : string
+    IsActive : bool
+    IsVisible : bool
+    OPCs : Opc list
+  }
+
+  type Scene = {
+     Name     : string
+     Path     : string     
+     Surfaces : Surface list
+  }
+
   type Model =
-    { Input: string }
+    { Scene: Scene }
     
     static member initial =
-      #if DEV_HMR
-      // This section is used to maintain state between HMR
-      if isNotNull (unbox window?storage) then
-        unbox window?storage
-      else
-        let model = { Input = "" }
-        window?storage <- model
-        model
-      #else
-      { Input = "" }
-      #endif
+
+        let surfaces = [ 
+            {
+                Name = "surf 1" 
+                IsActive = true
+                IsVisible = true
+                OPCs = []
+            }
+            {
+                Name = "surf 2" 
+                IsActive = true
+                IsVisible = false
+                OPCs = []
+            }]
+
+        let scene = {
+            Name = "HarrysScene"
+            Path = "daham"
+            Surfaces = surfaces
+        }
+
+        {
+            Scene = scene
+        }
     
 
 //[<AutoOpen>]

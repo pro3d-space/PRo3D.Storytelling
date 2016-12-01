@@ -23,3 +23,6 @@ src\Aardvark.OpcViewer.psess
 /src/DGMViewer/bin/Release
 /src/CSharpUtils/bin/Debug
 /src/CSharpUtils/bin/Release
+**/node_modules
+**/out
+/src/Fable.UI/npm-debug.log
