@@ -57,9 +57,10 @@ module Main =
         div attribs  [ ul [] children ]
 
     let leaf attribs children = li attribs [span [attribute "class" "leaf"] children]
-    let node attribs label children =
+    let node attribs label (collapsed : bool) children  =
+        let nodeClass = if collapsed then "node collapsed" else "node"
         let attribs = attribs @ [attribute "class" "leaf"]
-        li [attribute "class" "node"]
+        li [attribute "class" nodeClass]
                 [
                     span attribs [label]
                     span [attribute "class" "node-toggle"] []
@@ -68,16 +69,31 @@ module Main =
 
   let update (model: Model) (action : Actions) = model, []
 
+  let viewOpc (opc: Opc) = 
+    Tree.leaf [] [text opc.Name]
+
+  let viewOpcs opcs = 
+    opcs |> List.map viewOpc
+
   let viewSurface (surf: Surface) = 
-    Tree.leaf [] [text surf.Name]
+    Tree.node [] (text surf.Name) true (viewOpcs surf.OPCs)
 
   let viewSurfaces surfaces =
-    surfaces |> List.map viewSurface |> Tree.node [] (text "Surfaces") 
+    surfaces |> List.map viewSurface |> Tree.node [] (text "Surfaces") true
+
+  let viewMeasurement (measurement : Measurement) = 
+    Tree.leaf [] [text measurement.Base.Id]
+
+  let viewMeasurements (rootGroup : MeasurementGroup) =
+    rootGroup.Measurements |> List.map viewMeasurement |> Tree.node [] (text rootGroup.Name) true
 
   let view (model : Model) =
     div [] [
         Tree.treeView [attribute "data-on-click" "tree_add_leaf_example_click"] [
-            Tree.node [] (text model.Scene.Name) [viewSurfaces model.Scene.Surfaces]
+            Tree.node [] (text model.Scene.Name) false [
+                    viewSurfaces model.Scene.Surfaces
+                    //viewMeasurements model.Scene.Measurements
+                ]             
         ]
     ]
 

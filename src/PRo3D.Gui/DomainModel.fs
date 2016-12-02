@@ -14,8 +14,37 @@ module FableCompatToBeRemoved =
 //type Group<'a, 'b> =
 //    | Group of list<Group<'a, 'b>> * 'b * 'a
 
-module TestModel = 
+[<AutoOpen>]
+module Measurements = 
+    type ProjectionMode = Linear | Viewpoint | Ortho
 
+    type MeasurementBase = {
+        Id        : string
+      //  Trafo     : Trafo3d
+    }
+
+//    type Measure = 
+//        | Point of V3d 
+//        | Line of V3d * V3d
+//        | Polyline of V3d list
+//        | Polygon of V3d list
+//        | DipAndStrike of V3d list
+
+    type Measurement = {
+       // Measure     : Measure
+        Base        : MeasurementBase
+        //Viewpoint   : Viewpoint
+    }
+
+    type MeasurementGroup = {
+        Name         : string
+        Measurements : Measurement list
+        Groups       : MeasurementGroup list
+    }
+        //| Group of string * list<MeasurementGroup> * list<Measurement>
+
+module TestModel = 
+ 
   type Opc = {
     Name : string
   }
@@ -28,9 +57,10 @@ module TestModel =
   }
 
   type Scene = {
-     Name     : string
-     Path     : string     
-     Surfaces : Surface list
+     Name        : string
+     Path        : string     
+     Surfaces    : Surface list
+     Measurements : MeasurementGroup
   }
 
   type Model =
@@ -38,28 +68,48 @@ module TestModel =
     
     static member initial =
 
+        let rootGroup = {
+            Name = "Measurements"
+            Measurements = [
+                            {
+                                Base = {Id = "Measreument 1"}
+                            }]
+            Groups = []
+        }
+
         let surfaces = [ 
             {
-                Name = "surf 1" 
+                Name = "surf 3" 
                 IsActive = true
                 IsVisible = true
-                OPCs = []
+                OPCs = [{
+                            Name = "OPC1"
+                        }
+                        {
+                            Name = "OPC2"
+                        }]
             }
             {
                 Name = "surf 2" 
                 IsActive = true
                 IsVisible = false
-                OPCs = []
+                OPCs = [{
+                            Name = "OPC3"
+                        }
+                        {
+                            Name = "OPC4"
+                        }]
             }]
 
         let scene = {
             Name = "HarrysScene"
             Path = "daham"
             Surfaces = surfaces
+            Measurements = rootGroup
         }
 
         {
-            Scene = scene
+            Scene = scene          
         }
     
 
