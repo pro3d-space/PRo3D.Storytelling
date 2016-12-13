@@ -1,33 +1,23 @@
-﻿namespace PRo3D.Gui
+﻿open System
 
-open Fable.Core
-open Fable.Import
-open Fable.Import.Browser
+open Aardvark.Fablish
+open System.Windows.Forms
 
-open Fable.Core.JsInterop
+[<EntryPoint;STAThread>]
+let main argv =
 
+    let app = PerformanceTest.app
+    let app = PRo3dTreeApp.app
+    let runWindow = true
 
-open Helpers
+    if runWindow then
+        let browser = Chromium.runControl "8083" app
+        use w = new Form()
+        w.Controls.Add browser
+        w.Width <- 800
+        w.Height <- 600
+        Application.Run(w) 
+    else
+        Fablish.runLocally "8083" app
 
-
-module Startup =
-    let contentNode = "#app"
-
-    #if DEV_HMR
-
-    type IModule =
-        abstract hot: obj with get, set
-
-    let [<Global>] [<Emit("module")>] Module : IModule = failwith "JS only"
-
-    let node = document.querySelector contentNode
-
-    if isNotNull Module.hot then
-        Module.hot?accept() |> ignore
-
-        Module.hot?dispose(fun _ ->
-        node.removeChild(node.firstChild) |> ignore
-        ) |> ignore
-    #endif
-
-    Main.start contentNode () |> ignore
+    0
