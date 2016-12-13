@@ -1,19 +1,23 @@
 source https://api.nuget.org/v3/index.json
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
+source https://vrvis.myget.org/F/aardvark/api/v3/index.json
 
 nuget Aardvark.Base                       
 nuget Aardvark.Base.Incremental           
 nuget Aardvark.Base.FSharp                
 nuget Aardvark.Base.Essentials            
 
-nuget Aardvark.Base.Rendering              ~> 2.5.6
-nuget Aardvark.Application.WinForms.GL     ~> 2.5.6
-nuget Aardvark.SceneGraph                  ~> 2.5.6
-nuget Aardvark.Rendering.NanoVg            ~> 2.5.6
+nuget Aardvark.Base.Rendering                ~> 2.6.2
+nuget Aardvark.Application.WinForms.GL    ~> 2.6.2
+nuget Aardvark.SceneGraph                      ~> 2.6.2
+nuget Aardvark.Rendering.NanoVg             ~> 2.6.2
+
+nuget Aardvark.UI.Fablish ~> 0.0.4
 
 nuget Fsunit    ~> 2.3.2
+
 nuget FParsec   ~> 1.0.2
-nuget FsPickler ~> 3.1.0
+nuget FsPickler ~> 3.2.0
 
 nuget Newtonsoft.Json ~> 7.0.1
 
