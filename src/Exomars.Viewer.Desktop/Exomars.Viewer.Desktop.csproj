@@ -34,12 +34,6 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Exomars.Viewer\Exomars.Viewer.csproj">
-      <Project>{5fbb3a68-d465-417c-8456-abf1935ac7ab}</Project>
-      <Name>Exomars.Viewer</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
