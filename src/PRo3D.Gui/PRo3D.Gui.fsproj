@@ -65,12 +65,12 @@
   <ItemGroup>
     <None Include="DomainModel.fs" />
     <None Include="MainUI.fs" />
-    <None Include="App.config" />
-    <None Include="paket.references" />
     <None Include="static\index.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <Compile Include="Program.fs" />
+    <None Include="paket.references" />
+    <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Aardvark.Cef">
