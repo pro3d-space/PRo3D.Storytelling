@@ -214,11 +214,28 @@ module PatchHierarchy =
 
         mkTree rootPatch
 
+
     let load (fileName : string) =
         let dir = Path.GetDirectoryName(Path.GetDirectoryName fileName)
         let cachefile = Path.combine [dir; "hierarchy.cache" ]
+        let loadAndCache () =
+            Log.startTimed "loading from hierarchy"
+            let hierarchy = 
+                XDocument.Load(fileName) 
+                    |> ofDoc
+                    |> QTree.mapLevel 0 (fun level p -> 
+                            p |> PatchFileInfo.load dir |> Patch.ofInfo level
+                        )
+            binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
+            Log.stop()
+            { baseDir = dir; tree = hierarchy }
+
         if File.Exists cachefile then
-            { baseDir = dir; tree = File.readAllBytes cachefile |> binarySerializer.UnPickle }
+            try
+                { baseDir = dir; tree = File.readAllBytes cachefile |> binarySerializer.UnPickle }
+            with e -> 
+                Log.warn "could not parse cache file. recomputing."
+                loadAndCache ()
         else
             Log.startTimed "loading from hierarchy"
             let hierarchy = 
