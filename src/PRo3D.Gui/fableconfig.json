@@ -1,6 +1,0 @@
-{
-  "module": "amd",
-  "sourceMaps": true,
-  "projFile": "./PRo3D.Gui.fsproj",
-  "outDir": "out"
-}

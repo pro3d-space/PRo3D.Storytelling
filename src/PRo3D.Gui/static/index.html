@@ -1,4 +1,4 @@
-<html>
+﻿<html>
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -28,7 +28,7 @@
 
 
 
-    <script>			
+    <script>
 
 		function allowDrop(ev) {
 			ev.preventDefault();
@@ -44,21 +44,22 @@
 			var data = ev.dataTransfer.getData("text");
 			ev.target.appendChild(document.getElementById(data));
 		}
-	
+
 
 		function blubber(event) {
 			console.log("asdf" + event);
 		};
-	
+
         $(document).ready(function() {
 			console.log("$(document).ready");
-	
+
+
 			var React = window.React;
 			var ReactDOM = window.ReactDOM;
-			
+
 			var connection = new WebSocket('ws://localhost:8083/ws');
-			
-			
+
+
 			var RendererComp = React.createClass({
 				setCode: function(code) {
 					this.setState({code : code});
@@ -68,23 +69,30 @@
 					{
 						return React.createElement('div',null,'initial content');
 					}
-					else 
+					else
 					{
 						return eval(this.state.code)
 					}
 				}
 			});
-			
+
 			var renderer = ReactDOM.render(React.createElement(RendererComp,null), document.getElementById('__root__'));
-               
+
 		     connection.onmessage = function (e) {
 		     	  console.log('message received.');
 		     	  renderer.setCode(e.data);
-				  renderer.render();
+		     	  renderer.render();
+
+		     	  $('.ui.dropdown')
+                   .dropdown();
+        	      $('.ui.accordion')
+                   .accordion();
+        	      $('.menu .item')
+                   .tab();
 		     };
 
 			function send(eventId,event)  {
-				if(event.target.value === undefined) 
+				if(event.target.value === undefined)
 				{
 					var msg = { id : 1, data : { eventId: eventId, eventValue : ""}};
 					connection.send(JSON.stringify(msg));
@@ -101,13 +109,13 @@
 			  var msg = { id : -1, data : "" }
 			  connection.send("This is Aardvark"); // Send the message 'Ping' to the server
 			};
-			
+
 			connection.onclose = function () {
 				console.log('server gone.');
 			};
-			
+
 			console.log("$(document).ready done. all set up.");
-  
+
 		});
 
     </script>
@@ -116,17 +124,10 @@
 </head>
 
 <body>
-    <div id="__root__" class="container">
+
+    <div id="__root__">
     </div>
-	
-	<!--
-	<div id="div1" ondrop="drop(event)" ondragover="allowDrop(event)"></div> 
 
-	<img id="drag1" src="http://image.flaticon.com/teams/new/1-freepik.jpg" draggable="true"
-	ondragstart="drag(event)" width="336" height="69"> 
-	-->
-
-  	
-	</body>
+</body>
 
 </html> 

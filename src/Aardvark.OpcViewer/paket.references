@@ -2,8 +2,6 @@ Aardvark.Base
 Aardvark.Base.Incremental
 Aardvark.Base.FSharp
 
-Aardvark.UI.Fablish
-
 Aardvark.Base.Rendering
 Aardvark.Application.WinForms.GL
 Aardvark.SceneGraph
@@ -12,3 +10,5 @@ Aardvark.Rendering.NanoVg
 Fsunit
 FParsec
 FsPickler
+
+Fablish
