@@ -47,6 +47,7 @@ let main argv =
     Chromium.init argv
     
     use splashScreen = SplashScreen.spawn()
+    Application.DoEvents()
 
     Aardvark.Base.Ag.initialize()
     Aardvark.Init()

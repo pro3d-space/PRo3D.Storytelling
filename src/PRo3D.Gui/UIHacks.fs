@@ -10,7 +10,8 @@ module SplashScreen =
         let load = new Form()
         load.FormBorderStyle <- FormBorderStyle.None
         let pic = new System.Windows.Forms.PictureBox()
-        pic.ImageLocation <- @"logo.png"
+        let img = Bitmap.FromFile("logo.png")
+        pic.Image <- img
         load.Name <- "Splash";
         pic.Dock <- DockStyle.Fill
         load.Controls.Add(pic)
