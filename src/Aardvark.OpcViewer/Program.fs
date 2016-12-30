@@ -11,24 +11,17 @@ open Aardvark.Application.WinForms
 
 module Viewer = 
 
-    let run (scene : OpcViewer) =
-
-        Aardvark.Base.Ag.initialize()
-        Aardvark.Init()
-
-        use app = new OpenGlApplication()
-        let win = app.CreateSimpleRenderWindow()
-        win.Text <- "Aardvark rocks OPCs \\o/"
-
-        let runner = win.Runtime.CreateLoadRunner 2
+    let createSceneGraph (ctrl : IRenderControl) (scene : OpcViewer)  = 
+    
+        let runner = ctrl.Runtime.CreateLoadRunner 2
 
         let bb = scene.boundingBox
         let speed = Mod.init scene.speed
 
         let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
-        let view = initialView |> DefaultCameraController.controlWithSpeed speed win.Mouse win.Keyboard win.Time
+        let view = initialView |> DefaultCameraController.controlWithSpeed speed ctrl.Mouse ctrl.Keyboard ctrl.Time
        
-        let proj = win.Sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))
+        let proj = ctrl.Sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))
         let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
 
         let patchHierarchies =
@@ -41,7 +34,7 @@ module Viewer =
         let g = 
             patchHierarchies 
             |> List.map (fun h -> 
-                    Sg.patchLod win.FramebufferSignature runner h.baseDir 
+                    Sg.patchLod ctrl.FramebufferSignature runner h.baseDir 
                                 scene.lodDecider scene.useCompressedTextures 
                                 (PatchLod.toRoseTree h.tree)
                ) 
@@ -51,7 +44,7 @@ module Viewer =
 
         let lodVisEnabled = Mod.init false
 
-        win.Keyboard.KeyDown(Keys.X).Values.Subscribe(fun _ -> 
+        ctrl.Keyboard.KeyDown(Keys.X).Values.Subscribe(fun _ -> 
             transact (fun () -> 
                 match fillMode.Value with
                     | FillMode.Fill -> fillMode.Value <- FillMode.Line
@@ -59,29 +52,29 @@ module Viewer =
             )
         ) |> ignore
 
-        win.Keyboard.KeyDown(Keys.L).Values.Subscribe(fun _ -> 
+        ctrl.Keyboard.KeyDown(Keys.L).Values.Subscribe(fun _ -> 
             transact (fun () -> 
                 lodVisEnabled.Value <- lodVisEnabled.Value |> not
             )
         ) |> ignore
 
-        win.Keyboard.KeyDown(Keys.G).Values.Subscribe(fun _ -> 
+        ctrl.Keyboard.KeyDown(Keys.G).Values.Subscribe(fun _ -> 
             for i in 0 .. 10 do
                 System.GC.Collect()
             System.GC.WaitForFullGCComplete() |> ignore
 
-
-            printfn "%A" ( app.Runtime.Context.MemoryUsage ) 
+            printf "fixme"
+            //printfn "%A" ( ctrl.Runtime.Context.MemoryUsage ) 
         ) |> ignore
 
-        win.Keyboard.KeyDown(Keys.PageDown).Values.Subscribe(fun _ -> 
+        ctrl.Keyboard.KeyDown(Keys.PageDown).Values.Subscribe(fun _ -> 
             transact (fun () -> 
                 speed.Value <- speed.Value / 2.0
                 printfn "speed: %A" speed.Value
             )
         ) |> ignore
 
-        win.Keyboard.KeyDown(Keys.PageUp).Values.Subscribe(fun _ -> 
+        ctrl.Keyboard.KeyDown(Keys.PageUp).Values.Subscribe(fun _ -> 
             transact (fun () -> 
                 speed.Value <- speed.Value * 2.0
                 printfn "speed: %A" speed.Value
@@ -107,6 +100,18 @@ module Viewer =
                 |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
                 |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)
 
+        sg
+
+    let run (scene : OpcViewer) =
+
+        Aardvark.Base.Ag.initialize()
+        Aardvark.Init()
+
+        use app = new OpenGlApplication()
+        let win = app.CreateSimpleRenderWindow()
+        win.Text <- "Aardvark rocks OPCs \\o/"
+
+        let sg = createSceneGraph win scene
     
         let cfg =  { BackendConfiguration.Default  with useDebugOutput = false }
         let task =

@@ -12,7 +12,7 @@ nuget Aardvark.Application.WinForms.GL    ~> 2.6.4
 nuget Aardvark.SceneGraph                 ~> 2.6.4
 nuget Aardvark.Rendering.NanoVg           ~> 2.6.4
 
-nuget Fablish ~> 1.1.1
+nuget Fablish ~> 1.2.0
 
 nuget Fsunit    ~> 2.3.2
 

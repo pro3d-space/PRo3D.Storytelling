@@ -15,16 +15,16 @@
     <link rel="stylesheet" href="https://cdn.rawgit.com/olton/Metro-UI-CSS/master/build/css/metro-icons.min.css" />
 
 
-	<script src="https://cdn.rawgit.com/olton/Metro-UI-CSS/master/build/js/metro.min.js"></script>
+    <script src="https://cdn.rawgit.com/olton/Metro-UI-CSS/master/build/js/metro.min.js"></script>
 
-	
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css">
-	<script src="https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js"></script>
-	
 
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.0/JSXTransformer.js"></script>
-	<script src="https://unpkg.com/react@15/dist/react.js"></script>
-	<script src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css">
+    <script src="https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js"></script>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.0/JSXTransformer.js"></script>
+    <script src="https://unpkg.com/react@15/dist/react.js"></script>
+    <script src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
 
 
 
@@ -32,20 +32,6 @@
 
         $(document).ready(function() {
 			console.log("$(document).ready");
-
-			function getNodePosition(node) {
-			    var top = left = 0;
-			    while (node) {
-			        if (node.tagName) {
-			            top = top + node.offsetTop;
-			            left = left + node.offsetLeft;
-			            node = node.offsetParent;
-			        } else {
-			            node = node.parentNode;
-			        }
-			    }
-			    return [top, left];
-			}
 
 			var React = window.React;
 			var ReactDOM = window.ReactDOM;
@@ -73,19 +59,19 @@
 
 		     connection.onmessage = function (e) {
                 console.log('message received.');
-                
+
                 var msg = JSON.parse(e.data);
-                
+
                 renderer.setCode(msg.dom);
                 renderer.render();
-                
+
                 console.log('rendered.');
                 var result = eval(msg.script)();
                 console.log('result was: ' + result);
-                
-                var msg = { id: 2, data: { eventId: "0", eventValue: JSON.stringify(result) } };
+
+                var msg = { id: 1, data: { eventId: msg.id, eventValue: JSON.stringify(result) } };
                 connection.send(JSON.stringify(msg));
-                
+
                 $('.ui.dropdown').dropdown();
                 $('.ui.accordion').accordion();
                 $('.menu .item').tab();

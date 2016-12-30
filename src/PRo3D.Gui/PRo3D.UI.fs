@@ -91,7 +91,7 @@ module PRo3dTreeApp =
             initial = TestModel.Model.initial
             update = update
             view = view
-            onRendered = Scripts.ignore
+            onRendered = OnRendered.ignore
         }
 
 module SurfacePropertiesApp =
@@ -180,7 +180,7 @@ module SurfacePropertiesApp =
         initial = TestModel.Model.initial.Surface
         update = update
         view = view
-        onRendered = Scripts.ignore
+        onRendered = OnRendered.ignore
     }
 
 module SideBarApp =
@@ -219,7 +219,7 @@ module SideBarApp =
         initial = initial
         update = update
         view = view
-        onRendered = Scripts.ignore
+        onRendered = OnRendered.ignore
     }
 
 module FullLayoutApp2 = 
@@ -273,7 +273,7 @@ module FullLayoutApp2 =
             initial = SideBarApp.initial
             update = update
             view = view
-            onRendered = Scripts.ignore
+            onRendered = OnRendered.ignore
         }
 
 module FullLayoutApp =
@@ -295,7 +295,8 @@ module FullLayoutApp =
                             "height"  => "90vh"                        
                             "width"   => "70%"
                             "border"  => "1px solid black"
-                            "background-color" => "#CCCCCC"]] []
+                            "background-color" => "#CCCCCC"]
+                     attribute "id" "renderControl"] []
                 
                 div [Style [//"display" , "block";
                             "float"   => "left";
@@ -312,11 +313,25 @@ module FullLayoutApp =
 //                        "border" ,  "1px solid black"]] [text "Footer"]
         ]
 
-    let app = 
+    let onRendered onRenderControlChanged model view =
         {
-            initial = SideBarApp.initial
-            update = update
-            view = view
-            onRendered = Scripts.ignore
+            clientSide = """() => { 
+                var rect = document.getElementById("renderControl").getBoundingClientRect();
+                return { bottom : rect.bottom.toFixed(), height : rect.height.toFixed(), left : rect.left.toFixed(), right : rect.right.toFixed(), top : rect.top.toFixed(), width : rect.width.toFixed() }; 
+            } """   
+            serverSide = fun (s : string) -> 
+                let rect = ClientRect.ofString s
+                printfn "clientRect: %A" rect
+                onRenderControlChanged rect
+                None
+        }
+        
+
+    let app onRenderControlChanged = 
+        {
+            initial    = SideBarApp.initial
+            update     = update
+            view       = view
+            onRendered = onRendered onRenderControlChanged
         }
 

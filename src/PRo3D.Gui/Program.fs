@@ -5,8 +5,11 @@ open Fable.Helpers.Virtualdom.Html
 open System.Windows.Forms
 
 open Aardvark.Base
+open Aardvark.Base.Rendering
 open Aardvark.Application
 open Aardvark.Application.WinForms
+open Aardvark.SceneGraph
+open Aardvark.Base.Incremental
 
 
 module TestApp =
@@ -33,7 +36,7 @@ module TestApp =
             initial = 0
             update = update 
             view = view
-            onRendered = Scripts.ignore
+            onRendered = OnRendered.ignore
         }
 
 [<EntryPoint;STAThread>]
@@ -44,28 +47,40 @@ let main argv =
     Aardvark.Base.Ag.initialize()
     Aardvark.Init()
 
-    use glApp = new OpenGlApplication()
-    use ctrl = new Aardvark.Application.WinForms.OpenGlRenderControl(glApp.Runtime)
+    use glApp  = new OpenGlApplication()
+    use ctrl   = new Aardvark.Application.WinForms.RenderControl()
+    let glCtrl = new Aardvark.Application.WinForms.OpenGlRenderControl(glApp.Runtime)
+    ctrl.Implementation <- glCtrl
+
+    let sg = Aardvark.Opc.Viewer.createSceneGraph ctrl (Aardvark.Opc.Configurations.Network.perjen())
+
+    ctrl.RenderTask <- 
+        RenderTask.ofList [
+            glApp.Runtime.CompileClear(ctrl.FramebufferSignature, Mod.constant C4f.Gray)
+            glApp.Runtime.CompileRender(ctrl.FramebufferSignature,sg)
+        ]
+
+    let onRenderControlRectChanged (c : Fablish.JavascriptInterop.ClientRect) =
+        let change () = 
+            ctrl.set_Location(Drawing.Point(int c.left, int c.top))
+            ctrl.Size <- Drawing.Size(int c.width,int c.height)
+        ctrl.Invoke(Action(change)) |> ignore
 
    // let app = TestApp.app
     let app = PRo3DGui.FullLayoutApp.app
 
     use w = new Form()
-    let browser = Chromium.runControl "8083" app
+    let browser = Chromium.runControl "8083" (app onRenderControlRectChanged)
 
     use panel = new Panel()
     panel.Controls.Add browser
     panel.Size <- Drawing.Size(200,200)
-
-    ctrl.Location <- Drawing.Point(150,150)
-    ctrl.Width <- 100
-    ctrl.Height <- 100
-    ctrl.TabIndex <- 2
+    panel.Dock <- DockStyle.Fill
 
     w.Controls.Add ctrl
     w.Controls.Add panel
-    w.Width <- 800
-    w.Height <- 600
+    w.Width <- 1280
+    w.Height <- 960
     ctrl.BringToFront()
 
     Application.Run(w) 

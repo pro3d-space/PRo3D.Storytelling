@@ -59,6 +59,13 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aardvark.OpcViewer\Aardvark.OpcViewer.fsproj">
+      <Name>Aardvark.OpcViewer</Name>
+      <Project>{3b784ce7-f853-449a-a860-8d735c2a3f74}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
   </PropertyGroup>

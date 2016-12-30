@@ -232,7 +232,10 @@ module PatchHierarchy =
 
         if File.Exists cachefile then
             try
-                { baseDir = dir; tree = File.readAllBytes cachefile |> binarySerializer.UnPickle }
+                Log.startTimed "loading from cache file"
+                let r = { baseDir = dir; tree = File.readAllBytes cachefile |> binarySerializer.UnPickle }
+                Log.stop()
+                r
             with e -> 
                 Log.warn "could not parse cache file. recomputing."
                 loadAndCache ()
