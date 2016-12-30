@@ -33,6 +33,7 @@ module TestApp =
             initial = 0
             update = update 
             view = view
+            onRendered = Scripts.ignore
         }
 
 [<EntryPoint;STAThread>]
