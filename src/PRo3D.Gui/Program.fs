@@ -47,7 +47,8 @@ let main argv =
     use glApp = new OpenGlApplication()
     use ctrl = new Aardvark.Application.WinForms.OpenGlRenderControl(glApp.Runtime)
 
-    let app = TestApp.app
+   // let app = TestApp.app
+    let app = PRo3DGui.FullLayoutApp.app
 
     use w = new Form()
     let browser = Chromium.runControl "8083" app
