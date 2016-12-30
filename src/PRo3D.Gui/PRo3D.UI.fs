@@ -201,15 +201,15 @@ module SideBarApp =
 
     let update (model : Model) (action : Action) =
         match action with
-            | SetTreeView a          -> model
-            | SetSurfaceProperties a -> model
+            | SetTreeView a          -> { model with FullModel = PRo3dTreeApp.update model.FullModel a }
+            | SetSurfaceProperties a -> { model with SurfaceProperties = SurfacePropertiesApp.update model.SurfaceProperties a }
 
     let view (model : Model) : DomNode<Action> = 
         div [] [
             div [Style [ "border"           , "1px solid black"
                          "height"           , "35vh"
                          "overflowY"        , "auto"
-                         "background-color" , "#eeeeee"]] [ PRo3dTreeApp.view initial.FullModel |> Html.map SetTreeView ]            
+                         "background-color" , "#eeeeee"]] [ PRo3dTreeApp.view model.FullModel |> Html.map SetTreeView ]            
             div [Style [ "border", "1px solid black";
                          "height", "55vh";
                          "overflowY", "auto"]] [SurfacePropertiesApp.view initial.SurfaceProperties |> Html.map SetSurfaceProperties]

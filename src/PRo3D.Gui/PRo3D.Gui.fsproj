@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="UIHacks.fs" />
     <Compile Include="TestModel.fs" />
     <Compile Include="PRo3D.UI.fs" />
     <Compile Include="Program.fs" />
@@ -57,6 +58,9 @@
     <None Include="paket.references" />
     <None Include="static\index.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="logo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>

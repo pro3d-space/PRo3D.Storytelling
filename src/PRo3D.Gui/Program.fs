@@ -1,4 +1,5 @@
-﻿open System
+﻿
+open System
 open Fablish
 open Fable.Helpers.Virtualdom
 open Fable.Helpers.Virtualdom.Html
@@ -11,6 +12,7 @@ open Aardvark.Application.WinForms
 open Aardvark.SceneGraph
 open Aardvark.Base.Incremental
 
+open PRo3DGui
 
 module TestApp =
 
@@ -43,6 +45,8 @@ module TestApp =
 let main argv =
     ChromiumUtilities.unpackCef()
     Chromium.init argv
+    
+    use splashScreen = SplashScreen.spawn()
 
     Aardvark.Base.Ag.initialize()
     Aardvark.Init()
@@ -52,7 +56,21 @@ let main argv =
     let glCtrl = new Aardvark.Application.WinForms.OpenGlRenderControl(glApp.Runtime)
     ctrl.Implementation <- glCtrl
 
-    let sg = Aardvark.Opc.Viewer.createSceneGraph ctrl (Aardvark.Opc.Configurations.Network.perjen())
+
+    let loader = 
+        async {
+            return Aardvark.Opc.Viewer.createSceneGraph ctrl (Aardvark.Opc.Configurations.Network.mola())
+        } |> Mod.async
+
+    let sg = 
+        adaptive {
+            let! loadedScene = loader
+            match loadedScene with
+                | Some l -> 
+                    return l
+                | None ->   
+                    return Sg.group' []
+        } |> Sg.dynamic
 
     ctrl.RenderTask <- 
         RenderTask.ofList [
@@ -60,28 +78,39 @@ let main argv =
             glApp.Runtime.CompileRender(ctrl.FramebufferSignature,sg)
         ]
 
+
+    use w = new Form()
+    let desiredSize = V2i(1280,960)
+    w.Width <- desiredSize.X
+    w.Height <- desiredSize.Y
+
     let onRenderControlRectChanged (c : Fablish.JavascriptInterop.ClientRect) =
         let change () = 
             ctrl.set_Location(Drawing.Point(int c.left, int c.top))
             ctrl.Size <- Drawing.Size(int c.width,int c.height)
+            w.FormBorderStyle <- FormBorderStyle.Sizable
+            w.Size <- Drawing.Size(desiredSize.X,desiredSize.Y)
+            splashScreen.Close()
+
         ctrl.Invoke(Action(change)) |> ignore
 
-   // let app = TestApp.app
     let app = PRo3DGui.FullLayoutApp.app
-
-    use w = new Form()
     let browser = Chromium.runControl "8083" (app onRenderControlRectChanged)
+
+
+    let style = w.FormBorderStyle
+    w.Load.Add(fun _ -> w.Size <- Drawing.Size(0,0))
+    w.FormBorderStyle <- FormBorderStyle.None
 
     use panel = new Panel()
     panel.Controls.Add browser
     panel.Size <- Drawing.Size(200,200)
     panel.Dock <- DockStyle.Fill
 
-
     w.Controls.Add ctrl
     w.Controls.Add panel
-    w.Width <- 1280
-    w.Height <- 960
+    w.Width <- desiredSize.X
+    w.Height <- desiredSize.Y
     ctrl.BringToFront()
 
     Application.Run(w) 
