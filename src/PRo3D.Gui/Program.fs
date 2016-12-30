@@ -77,6 +77,7 @@ let main argv =
     panel.Size <- Drawing.Size(200,200)
     panel.Dock <- DockStyle.Fill
 
+
     w.Controls.Add ctrl
     w.Controls.Add panel
     w.Width <- 1280
