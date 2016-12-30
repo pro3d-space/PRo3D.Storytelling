@@ -81,6 +81,7 @@ let main argv =
 
     use w = new Form()
     let desiredSize = V2i(1280,960)
+    let mutable initialized = false
     w.Width <- desiredSize.X
     w.Height <- desiredSize.Y
 
@@ -88,9 +89,11 @@ let main argv =
         let change () = 
             ctrl.set_Location(Drawing.Point(int c.left, int c.top))
             ctrl.Size <- Drawing.Size(int c.width,int c.height)
-            w.FormBorderStyle <- FormBorderStyle.Sizable
-            w.Size <- Drawing.Size(desiredSize.X,desiredSize.Y)
-            splashScreen.Close()
+            if not initialized then
+                w.FormBorderStyle <- FormBorderStyle.Sizable
+                w.Size <- Drawing.Size(desiredSize.X,desiredSize.Y)
+                splashScreen.Close()
+                initialized <- true
 
         ctrl.Invoke(Action(change)) |> ignore
 
