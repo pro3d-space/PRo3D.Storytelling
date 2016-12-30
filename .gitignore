@@ -26,3 +26,4 @@ src\Aardvark.OpcViewer.psess
 **/node_modules
 **/out
 /src/Fable.UI/npm-debug.log
+/src/PRo3D.DomainModel/bin/Release

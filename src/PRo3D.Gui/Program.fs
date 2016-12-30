@@ -40,6 +40,9 @@ let main argv =
     ChromiumUtilities.unpackCef()
     Chromium.init argv
 
+    Aardvark.Base.Ag.initialize()
+    Aardvark.Init()
+
     use glApp = new OpenGlApplication()
     use ctrl = new Aardvark.Application.WinForms.OpenGlRenderControl(glApp.Runtime)
 
