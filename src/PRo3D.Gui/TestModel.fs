@@ -14,22 +14,22 @@ module TestModel =
     }             
 
     type Trafo = {
-         Translation     : V3dApp2.Model
-         Rotation        : V3dApp2.Model
-         Scaling         : V3dApp2.Model
+         Translation     : Vector3d
+         Rotation        : Vector3d
+         Scaling         : Vector3d
     }  
 
     type Surface = {
         Id                  : Id
         Name                : string
-        IsActive            : ToggleApp.Model
-        IsVisible           : ToggleApp.Model
+        IsActive            : Toggle.Model
+        IsVisible           : Toggle.Model
         ShadingMode         : Choice.Model
         Texture             : Choice.Model
         Map                 : Choice.Model
         RenderMode          : Choice.Model
-        TriangleThreshold   : NumericApp.Model
-        Trafo               : TrafoApp2.Model
+        TriangleThreshold   : Numeric.Model
+        Trafo               : Transformation.Model
         OPCs                : OPC list
     }
           
@@ -80,15 +80,14 @@ module TestModel =
             selected = "wireframe"
           }
 
-          let visible : ToggleApp.Model = {
-            active = true
-            label  = "Is Visible"
+          let visible : Toggle.Model = {
+            isActive = true            
           }         
 
-          let trafo : TrafoApp2.Model = {
-             translation =  { x = NumericApp.initial; y= NumericApp.initial; z = NumericApp.initial }
-             rotation    =  { x = NumericApp.initial; y= NumericApp.initial; z = NumericApp.initial }
-             scale       =  { x = NumericApp.initial; y= NumericApp.initial; z = NumericApp.initial }
+          let trafo : Transformation.Model = {
+             translation =  { x = Numeric.initial; y= Numeric.initial; z = Numeric.initial }
+             rotation    =  { x = Numeric.initial; y= Numeric.initial; z = Numeric.initial }
+             scale       =  { x = Numeric.initial; y= Numeric.initial; z = Numeric.initial }
           }
 
           let surfaces = [
@@ -96,18 +95,16 @@ module TestModel =
                   Id                = Id.New()
                   Name              = "My favorite Surface" 
                   IsActive          = {
-                                        active = false
-                                        label  = "Is Active"
+                                        isActive = false                                      
                                       }         
                   IsVisible         = {
-                                        active = true
-                                        label  = "Is Visible"
+                                        isActive = true                                        
                                       }
                   ShadingMode       = shaderChoices
                   Texture           = texChoices
                   Map               = mapChoices
                   RenderMode        = modeChoices
-                  TriangleThreshold = NumericApp.initial
+                  TriangleThreshold = Numeric.initial
                   Trafo             = trafo
                   //AccTest           = acc
                   OPCs              = []

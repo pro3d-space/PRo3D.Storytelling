@@ -131,7 +131,7 @@ module Configurations =
             { 
                 useCompressedTextures = true
                 preTransform     = Trafo3d.FromOrthoNormalBasis(V3d.IOO, -V3d.OOI, V3d.OIO)
-                patchHierarchies = System.IO.Directory.GetDirectories(@"\\euclid\InOut\haaser\lod\perjen\2011_Bestandsaufnahme\OPC")
+                patchHierarchies = System.IO.Directory.GetDirectories(@"\\euclid\Assets\opc\perjen\2011_Bestandsaufnahme\OPC")
                 boundingBox      = Box3d.Parse("[[16034.950038118, 222765.173562629, 802.291122034], [16037.049953225, 222767.420825919, 802.333067577]]")
                 near             = 0.1
                 far              = 10000.0
@@ -144,7 +144,7 @@ module Configurations =
                 useCompressedTextures = true
                 preTransform     = Trafo3d.Identity
                 patchHierarchies = 
-                        System.IO.Directory.GetDirectories(@"\\euclid\InOut\haaser\lod\mastcam","MSL_Mastcam_Sol_*") 
+                        System.IO.Directory.GetDirectories(@"\\euclid\Assets\opc\mastcam","MSL_Mastcam_Sol_*") 
                         |> Seq.collect System.IO.Directory.GetDirectories
                 boundingBox      = Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") 
                 near             = 0.1
@@ -157,7 +157,7 @@ module Configurations =
             { 
                 useCompressedTextures = false
                 preTransform     = Trafo3d.Identity
-                patchHierarchies = System.IO.Directory.GetDirectories(@"\\euclid\InOut\haaser\lod\Mars_MGS_MOLA_DEM_mosaic_global_0.01") 
+                patchHierarchies = System.IO.Directory.GetDirectories(@"\\euclid\Assets\opc\Mars_MGS_MOLA_DEM_mosaic_global_0.01") 
                 boundingBox      = Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") 
                 near             = 100.0
                 far              = 100000000.0

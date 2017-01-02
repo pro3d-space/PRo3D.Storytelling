@@ -106,10 +106,10 @@ module SurfacePropertiesApp =
         | Set_Texture           of Choice.Action
         | Set_SetMap            of Choice.Action
         | Set_RenderMode        of Choice.Action
-        | Set_IsVisible         of ToggleApp.Action
-        | Set_IsActive          of ToggleApp.Action
-        | Set_TriangleThreshold of NumericApp.Action
-        | Set_Trafo             of TrafoApp2.Action
+        | Set_IsVisible         of Toggle.Action
+        | Set_IsActive          of Toggle.Action
+        | Set_TriangleThreshold of Numeric.Action
+        | Set_Trafo             of Transformation.Action
     
     let update (model : Model) (action : Action) =
         match action with
@@ -117,10 +117,10 @@ module SurfacePropertiesApp =
             | Set_Texture           a -> { model with Texture = Choice.update model.Texture a }
             | Set_SetMap            a -> { model with Map = Choice.update model.Map a }
             | Set_RenderMode        a -> { model with RenderMode = Choice.update model.RenderMode a }
-            | Set_IsVisible         a -> { model with IsVisible = ToggleApp.update model.IsVisible a }
-            | Set_IsActive          a -> { model with IsActive = ToggleApp.update model.IsActive a }
-            | Set_TriangleThreshold a -> { model with TriangleThreshold = NumericApp.update model.TriangleThreshold a }   
-            | Set_Trafo             a -> { model with Trafo = TrafoApp2.update model.Trafo a }   
+            | Set_IsVisible         a -> { model with IsVisible = Toggle.update model.IsVisible a }
+            | Set_IsActive          a -> { model with IsActive = Toggle.update model.IsActive a }
+            | Set_TriangleThreshold a -> { model with TriangleThreshold = Numeric.update model.TriangleThreshold a }   
+            | Set_Trafo             a -> { model with Trafo = Transformation.update model.Trafo a }   
     
     let collapsing = "collapsing"
     let view (model : Model) : DomNode<Action> =
@@ -134,11 +134,11 @@ module SurfacePropertiesApp =
                         ]
                         tr [] [
                             td [clazz collapsing] [text "Visiblity:"]; 
-                            td [clazz "right aligned"] [ToggleApp.view model.IsVisible |> Html.map Set_IsVisible]
+                            td [clazz "right aligned"] [Toggle.view model.IsVisible |> Html.map Set_IsVisible]
                         ]
                         tr [] [
                             td [clazz collapsing] [text "Active State:"]; 
-                            td [clazz "right aligned"] [ToggleApp.view model.IsActive |> Html.map Set_IsActive]
+                            td [clazz "right aligned"] [Toggle.view model.IsActive |> Html.map Set_IsActive]
                         ]
                         tr [] [
                             td [clazz collapsing] [text "Shading Mode:"]; 
@@ -158,7 +158,7 @@ module SurfacePropertiesApp =
                         ]                    
                         tr [] [
                             td [clazz collapsing] [text "TriangleThreshold:"];
-                            td [clazz "right aligned"] [NumericApp.view model.TriangleThreshold |> Html.map Set_TriangleThreshold]
+                            td [clazz "right aligned"] [Numeric.view model.TriangleThreshold |> Html.map Set_TriangleThreshold]
                         ]                                 
                     ]
                 ]
@@ -169,7 +169,7 @@ module SurfacePropertiesApp =
                         tbody [] [
                             tr [] [
                                 td [clazz collapsing] [text "Trafo:"];
-                                td [clazz "right aligned"] [TrafoApp2.view model.Trafo |> Html.map Set_Trafo]
+                                td [clazz "right aligned"] [Transformation.view model.Trafo |> Html.map Set_Trafo]
                             ]    
                         ]
                     ]

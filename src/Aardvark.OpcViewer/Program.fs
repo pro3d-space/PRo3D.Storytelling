@@ -125,7 +125,7 @@ module Viewer =
         0
 
 
-    open Configurations.HarriPc
+    open Configurations.Network
 
 
     [<EntryPoint>]
