@@ -223,21 +223,28 @@ module SideBarApp =
     }
 
 module FullLayoutApp2 = 
-    let container a c = div ([clazz "ui container"] @ a) c
+    let container a c = div ([clazz "ui container fluid"] @ a) c
+    let ribbonMargin = Style ["margin", "0px"]
+
+    let fileMenu() = button [clazz "ui labeled icon button"] [
+                        i [clazz "folder icon"] []
+                        text "Load Surface"]
 
     let ribbon() = 
-        div [Style [ "border", "0px solid #000000"; "height", "9vh"]] [
-            div [clazz "ui top attached tabular menu"] [
-                a [clazz "item active"; attribute "data-tab" "first"] [text "First"]
-                a [clazz "item"; attribute "data-tab" "second"] [text "Second"]
-                a [clazz "item"; attribute "data-tab" "third"] [text "Third"]
-            ]
-            div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "first"] [text "First"] 
-            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "second"] [text "Second"] 
-            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "third"] [text "Third"] 
+        div [Style ["height", "9vh"; "padding", "0px"]] [
+            div [clazz "ui top attached tabular menu"; ] [                
+                    a [clazz "item active"; attribute "data-tab" "first"] [text "File"]
+                    a [clazz "item"; attribute "data-tab" "second"] [text "Second"]
+                    a [clazz "item"; attribute "data-tab" "third"] [text "Third"]
+                    a [clazz "item"; attribute "data-tab" "fourth"] [text "Fourth"]
+                                
+            ]            
+            div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "first"; ribbonMargin] [fileMenu()] 
+            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "second"; ribbonMargin] [text "Second"] 
+            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "third"; ribbonMargin] [text "Third"]
+            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "fourth"; ribbonMargin] [text "Fourth"]
         ]
-
-
+            
     type Model = SideBarApp.Model
     type Action = Inc | Dec
     // interactive module reloading fablish....
@@ -284,15 +291,16 @@ module FullLayoutApp =
     type Model = SideBarApp.Model
     let update m a = SideBarApp.update m a
     let view m =
-        div [Style ["overflowY" => "hidden"] ] [
+        div [Style ["overflowY" => "hidden"
+                    "overflowX" => "hidden"] ] [
             div [Style ["clear"  => "both";
-                        "height" => "10vh"
+                        "height" => "12vh"
                         "border" => "0px solid black"]] [FullLayoutApp2.ribbon()]
 
             div [clazz "clearfix"] [
                 div [Style [//"display" , "block";
                             "float"   => "left"
-                            "height"  => "90vh"                        
+                            "height"  => "88vh"                        
                             "width"   => "70%"
                             "border"  => "1px solid black"
                             "background-color" => "#CCCCCC"]
@@ -301,7 +309,7 @@ module FullLayoutApp =
                 div [Style [//"display" , "block";
                             "float"   => "left";
                             "border"  => "0px solid black";
-                            "height"  => "90vh"
+                            "height"  => "88vh"
                             "width"   => "30%"
                            // "min-width"   => "400px"
                            // "max-width"   => "400px"
