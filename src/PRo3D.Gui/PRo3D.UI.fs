@@ -6,7 +6,9 @@ open Suave
 open Fablish
 open Fable.Helpers.Virtualdom
 open Fable.Helpers.Virtualdom.Html
-open TestModel
+open DomainModel
+
+open GuiExperiments
 
 module PRo3dTreeApp = 
     
@@ -44,7 +46,7 @@ module PRo3dTreeApp =
                     ]
             ]
 
-    let update (model: TestModel.Model) (action : Actions) = 
+    let update (env : Env<Actions>) (model: DomainModel.Model) (action : Actions) = 
         printfn "action: %A" action
         let expanded = model.UI.expanded
         let ui =
@@ -66,14 +68,25 @@ module PRo3dTreeApp =
                             failwith "drop without start"
         { model with UI = ui}
 
-    let viewSurface (surf: TestModel.Surface) = 
-        Tree.leaf surf.Id [] [text surf.Name]
+    let viewOpcs isExpanded (opcs : list<OPC>) =
+        [ for opc in opcs do
+            yield Tree.leaf opc.id [] [text opc.name]
+        ]
 
-    let viewSurfaces isExpanded (surfaces : TestModel.Surfaces) =
-        let surfaceViews = surfaces.Surfaces |> List.map viewSurface
+    let viewSurface isExpanded (surf: DomainModel.Surface) = 
+        div [] [
+            Tree.treeView [] [
+                Tree.node surf.Id isExpanded [] 
+                          (text surf.Name) 
+                          (viewOpcs isExpanded surf.OPCs)
+            ]
+        ]
+
+    let viewSurfaces isExpanded (surfaces : DomainModel.Surfaces) =
+        let surfaceViews = surfaces.Surfaces |> List.map (viewSurface isExpanded)
         Tree.node surfaces.Id isExpanded [] (text "Surfaces") surfaceViews
 
-    let view (model : TestModel.Model) : DomNode<Actions> =
+    let view (model : DomainModel.Model) : DomNode<Actions> =
         let isExpanded id = Set.contains id model.UI.expanded
         div [] [
             Tree.treeView [] [
@@ -84,14 +97,13 @@ module PRo3dTreeApp =
         ]
         //div [] (List.init 1000 (fun b -> button [] [Text "ABC"]))
     
-
-
-    let app =
+    let app : App<_,_,_> =
         {
-            initial = TestModel.Model.initial
+            initial = DomainModel.empty
             update = update
             view = view
             onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
         }
 
 module SurfacePropertiesApp =
@@ -99,7 +111,7 @@ module SurfacePropertiesApp =
     let column c = div [clazz "column"] c
     let row c = div [clazz "row"] c
 
-    type Model = TestModel.Surface
+    type Model = DomainModel.Surface
     
     type Action =
         | Set_ShadingMode       of Choice.Action
@@ -111,7 +123,7 @@ module SurfacePropertiesApp =
         | Set_TriangleThreshold of Numeric.Action
         | Set_Trafo             of Transformation.Action
     
-    let update (model : Model) (action : Action) =
+    let update (env: Env<Action>) (model : Model) (action : Action) =
         match action with
             | Set_ShadingMode       a -> { model with ShadingMode = Choice.update model.ShadingMode a }
             | Set_Texture           a -> { model with Texture = Choice.update model.Texture a }
@@ -119,8 +131,8 @@ module SurfacePropertiesApp =
             | Set_RenderMode        a -> { model with RenderMode = Choice.update model.RenderMode a }
             | Set_IsVisible         a -> { model with IsVisible = Toggle.update model.IsVisible a }
             | Set_IsActive          a -> { model with IsActive = Toggle.update model.IsActive a }
-            | Set_TriangleThreshold a -> { model with TriangleThreshold = Numeric.update model.TriangleThreshold a }   
-            | Set_Trafo             a -> { model with Trafo = Transformation.update model.Trafo a }   
+            | Set_TriangleThreshold a -> { model with TriangleThreshold = Numeric.update env model.TriangleThreshold a }   
+            | Set_Trafo             a -> { model with Trafo = Transformation.update env model.Trafo a }   
     
     let collapsing = "collapsing"
     let view (model : Model) : DomNode<Action> =
@@ -176,43 +188,58 @@ module SurfacePropertiesApp =
                 ]
         ]
 
-    let app = {
-        initial = TestModel.Model.initial.Surface
-        update = update
-        view = view
-        onRendered = OnRendered.ignore
-    }
+//    let app : App<_,_,_> = {
+//        initial = DomainModel.empty.Surface
+//        update = update
+//        view = view
+//        onRendered = OnRendered.ignore
+//        subscriptions = Subscriptions.none
+//    }
+
+
 
 module SideBarApp =
+
+
     type Model = {
-        FullModel         : TestModel.Model
-        SurfaceProperties : SurfacePropertiesApp.Model
+        DomainModel       : DomainModel.Model
+        SurfaceProperties : Option<SurfacePropertiesApp.Model>
     }
 
 
     let initial = {
-        FullModel         = TestModel.Model.initial
-        SurfaceProperties = TestModel.Model.initial.Surface
+        DomainModel       = DomainModel.empty
+        SurfaceProperties = None
     }
 
     type Action = 
         | SetTreeView          of PRo3dTreeApp.Actions
         | SetSurfaceProperties of SurfacePropertiesApp.Action
 
-    let update (model : Model) (action : Action) =
+    let update env (model : Model) (action : Action) =
         match action with
-            | SetTreeView a          -> { model with FullModel = PRo3dTreeApp.update model.FullModel a }
-            | SetSurfaceProperties a -> { model with SurfaceProperties = SurfacePropertiesApp.update model.SurfaceProperties a }
+            | SetTreeView a          -> { model with DomainModel = PRo3dTreeApp.update (env |> Env.map SetTreeView)  model.DomainModel a }
+            | SetSurfaceProperties a -> 
+                match model.SurfaceProperties with
+                    | Some props -> 
+                      { model with SurfaceProperties = SurfacePropertiesApp.update (env |> Env.map SetSurfaceProperties) props a |> Some }
+                    | None -> model
 
     let view (model : Model) : DomNode<Action> = 
+        let properties =
+            match model.SurfaceProperties with
+                    | Some s ->  [ SurfacePropertiesApp.view s |> Html.map SetSurfaceProperties]
+                    | _ -> []
         div [] [
-            div [Style [ "border"           , "1px solid black"
-                         "height"           , "35vh"
-                         "overflowY"        , "auto"
-                         "background-color" , "#eeeeee"]] [ PRo3dTreeApp.view model.FullModel |> Html.map SetTreeView ]            
-            div [Style [ "border", "1px solid black";
-                         "height", "55vh";
-                         "overflowY", "auto"]] [SurfacePropertiesApp.view initial.SurfaceProperties |> Html.map SetSurfaceProperties]
+            div [ Style [ "border"           , "1px solid black"
+                          "height"           , "35vh"
+                          "overflowY"        , "auto"
+                          "background-color" , "#eeeeee"]] [
+                  PRo3dTreeApp.view model.DomainModel |> Html.map SetTreeView 
+                ]            
+            
+
+            div [Style [ "border", "1px solid black"; "height", "55vh"; "overflowY", "auto"]] properties
         ]
 
     let app = {
@@ -220,90 +247,90 @@ module SideBarApp =
         update = update
         view = view
         onRendered = OnRendered.ignore
+        subscriptions = Subscriptions.none
     }
 
-module FullLayoutApp2 = 
+module Helpers = 
     let container a c = div ([clazz "ui container fluid"] @ a) c
     let ribbonMargin = Style ["margin", "0px"]
 
-    let fileMenu() = button [clazz "ui labeled icon button"] [
+    let fileMenu() = button [clazz "ui labeled icon button"; Callback( "onClick", "doit();") ] [
                         i [clazz "folder icon"] []
                         text "Load Surface"]
 
     let ribbon() = 
         div [Style ["height", "9vh"; "padding", "0px"]] [
             div [clazz "ui top attached tabular menu"; ] [                
-                    a [clazz "item active"; attribute "data-tab" "first"] [text "File"]
-                    a [clazz "item"; attribute "data-tab" "second"] [text "Second"]
+                    a [clazz "item"; attribute "data-tab" "first"] [text "File"]
+                    a [clazz "item active"; attribute "data-tab" "second"] [text "Home"]
                     a [clazz "item"; attribute "data-tab" "third"] [text "Third"]
                     a [clazz "item"; attribute "data-tab" "fourth"] [text "Fourth"]
                                 
             ]            
-            div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "first"; ribbonMargin] [fileMenu()] 
-            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "second"; ribbonMargin] [text "Second"] 
+            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "first"; ribbonMargin] [fileMenu()] 
+            div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "second"; ribbonMargin] [text "Second"] 
             div [clazz "ui bottom attached tab segment"; attribute "data-tab" "third"; ribbonMargin] [text "Third"]
             div [clazz "ui bottom attached tab segment"; attribute "data-tab" "fourth"; ribbonMargin] [text "Fourth"]
         ]
             
-    type Model = SideBarApp.Model
-    type Action = Inc | Dec
-    // interactive module reloading fablish....
 
-    let (=>) k v = attribute k v
 
-    let canvas()  = elem "div" [ Style [ "border", "1px solid #000000"] ] []
-    let update m a = SideBarApp.update m a
-    let view m = 
-        div [] [
-            table [Style [ "width", "100%"]] [
-                tbody[] [
-                    tr [] [ td [Style [ "border", "1px solid black"]] [ribbon()]]
-                    tr [] [ td [Style [ "border", "1px solid black"]] [                        
-                                table [clazz "ui table"; Style [ "width", "100%"]] [
-                                    tbody[] [
-                                        tr [] [
-                                            td [Style [ "border", "1px solid black"]] [
-                                                div [Style ["width","100%"]] [text "render window"]
-                                            ]
-                                            td [clazz "collapsing"; Style [ "border", "1px solid black"]] [SideBarApp.view m]
-                                        ]
-                                    ]
-
-                                ]
-                            ]
-                    ]
-                ]
-            ]                                   
+    let runModal innerview accept deny =
+        div [clazz "ui modal"] [
+            i [clazz "close icon"] []
+            div [clazz "header"] [text "Modal Title"]
+            div[clazz "content"] [
+                innerview
+            ]
+            div [clazz "actions"] [
+                div [clazz "ui button deny"; onMouseClick (fun _ -> deny)] [text "nope"]
+                div [clazz "ui button positive"; onMouseClick (fun _ -> accept)] [text "yes"]
+            ]
         ]
-    let app = 
-        {
-            initial = SideBarApp.initial
-            update = update
-            view = view
-            onRendered = OnRendered.ignore
-        }
 
 module FullLayoutApp =
     let container a c = div ([clazz "ui container"] @ a) c
 
     let (=>) k v = k,v
 
-    type Model = SideBarApp.Model
-    let update m a = SideBarApp.update m a
-    let view m =
+    type Model = { sidebar : SideBarApp.Model; importSurfaces : ImportDiscoverApp.Model }
+
+    type Action =
+        | SidebarAction of SideBarApp.Action
+        | ImportSurfacesAction of ImportDiscoverApp.Action
+        | LoadSurfaces of ImportDiscoverApp.Model
+        | Abort
+
+    let update e m a =
+        match a with
+            | SidebarAction a -> { m with sidebar = SideBarApp.update (e |> Env.map SidebarAction) m.sidebar a }
+            | ImportSurfacesAction a -> { m with importSurfaces = ImportDiscoverApp.update (e |> Env.map ImportSurfacesAction) m.importSurfaces a }
+            | LoadSurfaces surf ->  
+                let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.sidebar.DomainModel 
+                { m with importSurfaces = ImportDiscoverApp.initial; 
+                         sidebar = 
+                            { m.sidebar with 
+                                DomainModel = newDomainModel
+                                SurfaceProperties = Some newSurface
+                            } 
+                }
+            | Abort -> printfn "aborted thing"; m
+
+    let view (m : Model) =
         div [Style ["overflowY" => "hidden"
                     "overflowX" => "hidden"] ] [
             div [Style ["clear"  => "both";
                         "height" => "12vh"
-                        "border" => "0px solid black"]] [FullLayoutApp2.ribbon()]
+                        "border" => "0px solid black"]] [Helpers.ribbon()]
 
             div [clazz "clearfix"] [
                 div [Style [//"display" , "block";
                             "float"   => "left"
                             "height"  => "88vh"                        
                             "width"   => "70%"
+                            "opacity" => "0.0"
                             "border"  => "1px solid black"
-                            "background-color" => "#CCCCCC"]
+                            "background-color" => "#FFFFFF"]
                      attribute "id" "renderControl"] []
                 
                 div [Style [//"display" , "block";
@@ -313,17 +340,19 @@ module FullLayoutApp =
                             "width"   => "30%"
                            // "min-width"   => "400px"
                            // "max-width"   => "400px"
-                            ]] [SideBarApp.view m]
+                            ]] [SideBarApp.view m.sidebar |> Html.map SidebarAction]
             ]
+            Helpers.runModal (ImportDiscoverApp.view m.importSurfaces |> Html.map ImportSurfacesAction) (LoadSurfaces m.importSurfaces) Abort
 
 //            div [Style ["clear"  , "both";
-//                        "height", "20px"
+//                        "height", "4vh"
+//                        "width"   => "70%"
 //                        "border" ,  "1px solid black"]] [text "Footer"]
         ]
 
     let onRendered onRenderControlChanged model view =
         {
-            clientSide = """() => { 
+            clientSide = JsLambda """() => { 
                 var rect = document.getElementById("renderControl").getBoundingClientRect();
                 return { bottom : rect.bottom.toFixed(), height : rect.height.toFixed(), left : rect.left.toFixed(), right : rect.right.toFixed(), top : rect.top.toFixed(), width : rect.width.toFixed() }; 
             } """   
@@ -337,9 +366,10 @@ module FullLayoutApp =
 
     let app onRenderControlChanged = 
         {
-            initial    = SideBarApp.initial
+            initial    = { sidebar = SideBarApp.initial; importSurfaces = ImportDiscoverApp.app.initial }
             update     = update
             view       = view
             onRendered = onRendered onRenderControlChanged
+            subscriptions = Subscriptions.none
         }
 

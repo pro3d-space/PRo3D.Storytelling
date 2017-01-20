@@ -1,5 +1,4 @@
-﻿
-open System
+﻿open System
 open Fablish
 open Fable.Helpers.Virtualdom
 open Fable.Helpers.Virtualdom.Html
@@ -14,32 +13,6 @@ open Aardvark.Base.Incremental
 
 open PRo3DGui
 
-module TestApp =
-
-    type Model = int
-
-    type Action = Inc | Dec
-
-    let update (m : Model) (a : Action) =
-        match a with
-            | Inc -> m + 1
-            | Dec -> m - 1
-
-    let view (m : Model) : DomNode<Action> =
-        div [] [
-            text (sprintf "current content: %d" m)
-            br []
-            button [onMouseClick (fun dontCare -> Inc)] [text "increment"]
-            button [onMouseClick (fun dontCare -> Dec)] [text "decrement"]
-        ]
-
-    let app =
-        {
-            initial = 0
-            update = update 
-            view = view
-            onRendered = OnRendered.ignore
-        }
 
 [<EntryPoint;STAThread>]
 let main argv =
@@ -116,6 +89,7 @@ let main argv =
     w.Width <- desiredSize.X
     w.Height <- desiredSize.Y
     ctrl.BringToFront()
+    panel.BringToFront()
 
     Application.Run(w) 
 

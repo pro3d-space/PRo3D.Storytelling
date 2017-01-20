@@ -12,7 +12,7 @@ nuget Aardvark.Application.WinForms.GL    ~> 2.6.4
 nuget Aardvark.SceneGraph                 ~> 2.6.4
 nuget Aardvark.Rendering.NanoVg           ~> 2.6.4
 
-nuget Fablish ~> 1.2.4
+nuget Fablish ~> 1.7.0
 
 nuget Fsunit    ~> 2.3.2
 
@@ -30,6 +30,8 @@ nuget Eto.Platform.Gtk3      ~> 2.3.0
 nuget Eto.Platform.Mac       ~> 2.3.0
 nuget Eto.Serialization.Json ~> 2.3.0
 nuget GtkSharp 
+
+nuget Newtonsoft.Json
 
 group Build
 content: none

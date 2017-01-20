@@ -1,4 +1,4 @@
-﻿module Program
+﻿namespace GuiExperiments
 
 open System
 open Fablish
@@ -16,7 +16,7 @@ module PerformanceTest =
 
      type Action = Inc | Dec
 
-     let update (m : Model) (a : Action) =
+     let update env (m : Model) (a : Action) =
         match a with
             | Inc -> m + 1
             | Dec -> m - 1
@@ -33,6 +33,7 @@ module PerformanceTest =
             update = update
             view = view
             onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
         }
 
 module MetroTest =
@@ -48,7 +49,7 @@ module MetroTest =
     //    <button class="button">3</button>
     //</div>
 
-    let update m _ = m
+    let update env m _ = m
 
 
     let view (m : Model) =
@@ -66,6 +67,7 @@ module MetroTest =
             update = update
             view = view
             onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
         }
 
 
@@ -79,7 +81,7 @@ module TestApp =
 
     type Action = Inc | Dec
 
-    let update (m : Model) (a : Action) =
+    let update env (m : Model) (a : Action) =
         match a with
             | Inc -> m + 1
             | Dec -> m - 1
@@ -94,7 +96,7 @@ module TestApp =
 
     let onRendered model view =
         {
-            clientSide = """() => { 
+            clientSide = JsLambda """() => { 
                 var rect = document.getElementById("urdar").getBoundingClientRect();
                 return { bottom : rect.bottom.toFixed(), height : rect.height.toFixed(), left : rect.left.toFixed(), right : rect.right.toFixed(), top : rect.top.toFixed(), width : rect.width.toFixed() }; 
             } """   
@@ -107,6 +109,7 @@ module TestApp =
             update = update 
             view = view
             onRendered = onRendered
+            subscriptions = Subscriptions.none
         }
 
 
@@ -117,9 +120,9 @@ module ManyTestThings =
     type Action = 
         | Change of int * TestApp.Action
 
-    let update (model : Model) (a : Action) =
+    let update env (model : Model) (a : Action) =
         match a with
-            | Change(i,action) -> List.updateAt i (fun a -> TestApp.update a action) model
+            | Change(i,action) -> List.updateAt i (fun a -> TestApp.update env a action) model
 
     let view (model : Model) : DomNode<Action> =
         let inner = 
@@ -134,6 +137,7 @@ module ManyTestThings =
             update = update
             view = view
             onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
         }
 
 
@@ -143,7 +147,7 @@ module FileApp =
 
     type Message = Open | Accept | Deny 
 
-    let update (m : Model) (msg : Message) =
+    let update env (m : Model) (msg : Message) =
         match msg with
             | Open -> 
                 use dialog = new System.Windows.Forms.OpenFileDialog()
@@ -165,7 +169,7 @@ module FileApp =
         div [clazz "ui modal"] [
             i [clazz "close icon"] []
             div [clazz "header"] [text "Modal Title"]
-            div[clazz "image content"] [
+            div[clazz "content"] [
                 div [clazz "image"][text "image here"]
                 div [clazz "description"][button [clazz "ui button"; onMouseClick (fun _ -> Open)][text "add files"]]
                 div [][
@@ -192,6 +196,7 @@ module FileApp =
             update = update
             view = view
             onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
         }
 
 module Surfaces =
@@ -203,11 +208,11 @@ module Surfaces =
         }
     type Msg = Import of list<string> | FileAppMsg of FileApp.Message
 
-    let update model msg =
+    let update env model msg =
         match msg with
             | Import imported -> 
                 { importer = []; currentlyLoaded = model.currentlyLoaded @ imported }
-            | FileAppMsg a -> { model with importer = FileApp.update model.importer a }
+            | FileAppMsg a -> { model with importer = FileApp.update env model.importer a }
             | _ -> model
 
     let view m =
@@ -223,6 +228,7 @@ module Surfaces =
             update = update
             view = view
             onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
         }
 
 module CoolTest =
@@ -233,9 +239,9 @@ module CoolTest =
         | NumericAction of Numeric.Action
         | ToggleAction of Toggle.Action
 
-    let update (m : Model) (action : Action) =
+    let update env (m : Model) (action : Action) =
         match action with
-            | NumericAction a -> { m with numeric = Numeric.update m.numeric a }
+            | NumericAction a -> { m with numeric = Numeric.update env m.numeric a }
             | ToggleAction a -> { m with toggle = Toggle.update m.toggle a }
 
     let view (m : Model) : DomNode<Action> =
@@ -250,37 +256,130 @@ module CoolTest =
             view = view
             update = update
             onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
         }
 
-[<EntryPoint;STAThread>]
-let main argv =
-    printf "%A" System.Environment.CurrentDirectory
-    ChromiumUtilities.unpackCef()
-    Chromium.init argv
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Text = 
+    type Model = string
 
-    let app = PerformanceTest.app
+    type Action = 
+        | Change of string
 
-    let m : V3dApp.Model = {
-            components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
-            }
+    let update (model : Model) (action : Action) =
+        match action with
+            | Change x -> x
 
-    let app = {
-        initial = { isActive = true }
-        view = Toggle.view
-        update = Toggle.update
-        onRendered = OnRendered.ignore
-    }
-    let app = CoolTest.app
-    let runWindow = true        
+    let view (model : Model) : DomNode<Action> =
+        div [clazz "ui input fluid"] [
+            input [
+                //Style ["text-align","right"]
+                attribute "value" model
+                attribute "type" "text"; //attribute "placeholder" "numeric";
+                //attribute "size" "6"
+                onChange (fun s -> Change (unbox s))
+            ]
+    ]
 
-    if runWindow then
-        let browser = Chromium.runControl "8083" app
-        use w = new Form()
-        w.Controls.Add browser
-        w.Width <- 800
-        w.Height <- 600
-        Application.Run(w) 
-    else
-        Fablish.runLocally "8083" app
 
-    0
+module ImportDiscoverApp =
+    open PRo3DGui
+
+    type Path = string
+
+    type Model = PRo3DGui.DiscoveredSurfaces
+
+    type Action =
+        | SetPath       of Text.Action
+        | Discover      of Path
+        | SelectSurface of Path
+        | AddSurface    of Path
+        | Clear
+
+    let discover path = 
+        System.IO.Directory.EnumerateDirectories path |> Seq.map (fun a -> a.Replace(@"\", @"\\"))  |> Seq.toList
+
+
+
+    let update env (model : Model) (action : Action) =
+        match action with
+            | SetPath       a -> { model with currentPath = Text.update model.currentPath a}
+            | Discover      a -> { model with discoveredSurfaces = discover a }
+            | SelectSurface a -> { model with selectedSurface = match model.selectedSurface with 
+                                                                    | Some old when old = a -> None 
+                                                                    | _ -> Some a}
+            | _ -> model
+
+    let view (m : Model) : DomNode<Action> =
+        div [clazz "ui container"] [
+            div [clazz "ui list"] [
+                div [clazz "item"] [label [] [text "Surface Path:"]]
+                div [clazz "item"] [Text.view m.currentPath |> Html.map SetPath]
+                div [clazz "item"] [button [clazz "ui button"; onMouseClick (fun _ -> Discover m.currentPath)] [text "discover"]]
+            ]
+            div [Style[ "overflowY","auto"; "height", "200px"]] [
+                form [clazz "ui divided items"] [
+                    for s in m.discoveredSurfaces do
+                        let icon =  match m.selectedSurface with
+                                        | Some(x) -> if s.Equals x then "circular loading inverted icon folder" else "circular icon folder"
+                                        | None -> "circular icon folder"
+                        
+                        yield 
+                            div[clazz "item"; onMouseClick (fun _ -> SelectSurface s)] [
+                                i [clazz icon][]
+                                div[clazz "ui content"] [
+                                    div[Style ["fontweight", "bold"]; clazz "middle aligned content"][text (sprintf "%s" (System.IO.Path.GetFileName(s)))] 
+                                    div[clazz "middle aligned content"][text (sprintf "%s" s)] 
+                                ]
+                            ]                                    
+                ]
+            ]
+        ]
+        
+    let initial = 
+        { currentPath = @"E:\Aardwork\Exomars\_SCENES\Mars_Victoria_Crater\Surface\HiRISE" 
+          discoveredSurfaces = []
+          selectedSurface = None
+        }
+
+    let app =
+        {
+            initial = initial
+            update = update
+            view = view
+            onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
+        }
+module Program = 
+    [<EntryPoint;STAThread>]
+    let main argv =
+        ChromiumUtilities.unpackCef()
+        Chromium.init argv
+
+        let app = PerformanceTest.app
+
+        let m : V3dApp.Model = {
+                components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
+                }
+
+        let app = {
+            initial = { isActive = true }
+            view = Toggle.view
+            update = fun e -> Toggle.update
+            onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
+        }
+        let app = ImportDiscoverApp.app
+        let runWindow = true        
+
+        if runWindow then
+            let browser = Chromium.runControl "8083" app
+            use w = new Form()
+            w.Controls.Add browser
+            w.Width <- 800
+            w.Height <- 600
+            Application.Run(w) 
+        else
+            Fablish.RunLocally app
+
+        0

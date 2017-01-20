@@ -51,7 +51,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="UIHacks.fs" />
-    <Compile Include="TestModel.fs" />
+    <Compile Include="DomainModel.fs" />
     <Compile Include="PRo3D.UI.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
@@ -67,6 +67,11 @@
     <ProjectReference Include="..\Aardvark.OpcViewer\Aardvark.OpcViewer.fsproj">
       <Name>Aardvark.OpcViewer</Name>
       <Project>{3b784ce7-f853-449a-a860-8d735c2a3f74}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\GuiExperiments\GuiExperiments.fsproj">
+      <Name>GuiExperiments</Name>
+      <Project>{235d4180-085d-4bbc-8df0-d0c8b75af573}</Project>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>
