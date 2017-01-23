@@ -10,5 +10,7 @@ Aardvark.Rendering.NanoVg
 Fsunit
 FParsec
 FsPickler
+WindowsAPICodePack-Core
+WindowsAPICodePack-ShellExtensions
 
 Fablish

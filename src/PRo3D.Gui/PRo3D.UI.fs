@@ -10,12 +10,28 @@ open DomainModel
 
 open GuiExperiments
 
+
+module Serialization =
+    open MBrace.FsPickler
+    open System.IO
+    let binarySerializer = FsPickler.CreateBinarySerializer()
+
+    let saveProject (project : DomainModel.Model) (path:string)  = 
+        let arr = binarySerializer.Pickle project 
+        File.WriteAllBytes(path, arr);
+
+
+    let loadProject path = 
+        let arr = File.ReadAllBytes(path);
+        binarySerializer.UnPickle arr
+
 module PRo3dTreeApp = 
     
     open DomHelpers
 
     type Actions = 
         | Click of Id 
+        | Select of Id 
         | DragStart of Id   
         | Drop of Id
 
@@ -30,18 +46,20 @@ module PRo3dTreeApp =
                 div [ yield clazz "content"; ] children
 
             ]
-        let node id isExpanded attribs label children =
+        let node id isExpanded isSelected attribs label children =
             let item = 
                 i [ 
                     clazz (if isExpanded id then "large caret down icon" else "large caret right icon");  
                     onMouseClick (fun o -> Click id)
                     
                 ] []
+
+            let selected = if isSelected id then Style ["background-color", "dimgrey"; "color", "white"] else Style []
             div [ clazz "item";  ] [
                     item
                     div [ clazz "content"; ] [
-                        div [ clazz "header"] [ label ]
-                        div [ clazz "description"] [ label  ]
+                        div [ clazz "header noselect"; selected; onMouseClick (fun o -> Select id)] [ label ]
+                        div [ clazz "description noselect"] [ label  ]
                         div [ clazz "list" ] (if isExpanded id then children else [])
                     ]
             ]
@@ -55,10 +73,11 @@ module PRo3dTreeApp =
                     if Set.contains i model.UI.expanded 
                     then { model.UI with expanded = Set.remove i model.UI.expanded }
                     else { model.UI with expanded = Set.add i model.UI.expanded }
-
+                | Select id -> 
+                    printf "selected %d" id
+                    { model.UI with selected = Some id }
                 | DragStart id -> 
                     { model.UI with dragging = Some id }
-
                 | Drop id -> 
                     match model.UI.dragging with
                         | Some source -> 
@@ -73,26 +92,37 @@ module PRo3dTreeApp =
             yield Tree.leaf opc.id [] [text opc.name]
         ]
 
-    let viewSurface isExpanded (surf: DomainModel.Surface) = 
+    let viewSurface isExpanded isSelected (surf: DomainModel.Surface) = 
         div [] [
             Tree.treeView [] [
-                Tree.node surf.Id isExpanded [] 
+                Tree.node surf.Id 
+                          isExpanded
+                          isSelected 
+                          []
                           (text surf.Name) 
                           (viewOpcs isExpanded surf.OPCs)
             ]
         ]
 
-    let viewSurfaces isExpanded (surfaces : DomainModel.Surfaces) =
-        let surfaceViews = surfaces.Surfaces |> List.map (viewSurface isExpanded)
-        Tree.node surfaces.Id isExpanded [] (text "Surfaces") surfaceViews
+    let viewSurfaces isExpanded isSelected (surfaces : DomainModel.Surfaces) =
+        let surfaceViews = surfaces.Surfaces |> List.map (viewSurface isExpanded isSelected)
+        Tree.node surfaces.Id isExpanded isSelected [] (text "Surfaces") surfaceViews
+        
+
+    let viewMeasurements isExpanded isSelected (measurements : DomainModel.Measurement) = failwith "alalalalal"
+//        let sceneObjectViews = sceneObjects |> List.map (viewSurface isExpanded isSelected)
+//        Tree.node surfaces.Id isExpanded isSelected [] (text "Surfaces") surfaceViews
 
     let view (model : DomainModel.Model) : DomNode<Actions> =
         let isExpanded id = Set.contains id model.UI.expanded
+        let isSelected id = match model.UI.selected with
+                                | Some x -> x = id
+                                | None -> false            
         div [] [
             Tree.treeView [] [
-                Tree.node model.Scene.Id isExpanded [] 
+                Tree.node model.Scene.Id isExpanded isSelected [] 
                           (text model.Scene.Name) 
-                          [viewSurfaces isExpanded model.Scene.Surfaces]
+                          [viewSurfaces isExpanded isSelected model.Scene.Surfaces]
             ]
         ]
         //div [] (List.init 1000 (fun b -> button [] [Text "ABC"]))
@@ -106,100 +136,7 @@ module PRo3dTreeApp =
             subscriptions = Subscriptions.none
         }
 
-module SurfacePropertiesApp =
-    
-    let column c = div [clazz "column"] c
-    let row c = div [clazz "row"] c
-
-    type Model = DomainModel.Surface
-    
-    type Action =
-        | Set_ShadingMode       of Choice.Action
-        | Set_Texture           of Choice.Action
-        | Set_SetMap            of Choice.Action
-        | Set_RenderMode        of Choice.Action
-        | Set_IsVisible         of Toggle.Action
-        | Set_IsActive          of Toggle.Action
-        | Set_TriangleThreshold of Numeric.Action
-        | Set_Trafo             of Transformation.Action
-    
-    let update (env: Env<Action>) (model : Model) (action : Action) =
-        match action with
-            | Set_ShadingMode       a -> { model with ShadingMode = Choice.update model.ShadingMode a }
-            | Set_Texture           a -> { model with Texture = Choice.update model.Texture a }
-            | Set_SetMap            a -> { model with Map = Choice.update model.Map a }
-            | Set_RenderMode        a -> { model with RenderMode = Choice.update model.RenderMode a }
-            | Set_IsVisible         a -> { model with IsVisible = Toggle.update model.IsVisible a }
-            | Set_IsActive          a -> { model with IsActive = Toggle.update model.IsActive a }
-            | Set_TriangleThreshold a -> { model with TriangleThreshold = Numeric.update env model.TriangleThreshold a }   
-            | Set_Trafo             a -> { model with Trafo = Transformation.update env model.Trafo a }   
-    
-    let collapsing = "collapsing"
-    let view (model : Model) : DomNode<Action> =
-        div [] [
-            accordion "Surface Properties" "options" true [
-                table [clazz "ui celled striped table unstackable"] [
-                    tbody [] [
-                        tr [] [
-                            td [clazz collapsing] [text "Name:"]; 
-                            td [clazz "right aligned"] [text model.Name]
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Visiblity:"]; 
-                            td [clazz "right aligned"] [Toggle.view model.IsVisible |> Html.map Set_IsVisible]
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Active State:"]; 
-                            td [clazz "right aligned"] [Toggle.view model.IsActive |> Html.map Set_IsActive]
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Shading Mode:"]; 
-                            td [clazz "right aligned"] [Choice.view model.ShadingMode |> Html.map Set_ShadingMode] 
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Texture:"]; 
-                            td [clazz "right aligned"] [Choice.view model.Texture |> Html.map Set_Texture] 
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Map:"];
-                            td [clazz "right aligned"] [Choice.view model.Map |> Html.map Set_SetMap] 
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Render Mode:"];
-                            td [clazz "right aligned"] [Choice.view model.RenderMode |> Html.map Set_RenderMode] 
-                        ]                    
-                        tr [] [
-                            td [clazz collapsing] [text "TriangleThreshold:"];
-                            td [clazz "right aligned"] [Numeric.view model.TriangleThreshold |> Html.map Set_TriangleThreshold]
-                        ]                                 
-                    ]
-                ]
-            ]        
-
-            accordion "Transformation" "maximize" false [
-                table [clazz "ui celled striped table unstackable"] [
-                        tbody [] [
-                            tr [] [
-                                td [clazz collapsing] [text "Trafo:"];
-                                td [clazz "right aligned"] [Transformation.view model.Trafo |> Html.map Set_Trafo]
-                            ]    
-                        ]
-                    ]
-                ]
-        ]
-
-//    let app : App<_,_,_> = {
-//        initial = DomainModel.empty.Surface
-//        update = update
-//        view = view
-//        onRendered = OnRendered.ignore
-//        subscriptions = Subscriptions.none
-//    }
-
-
-
 module SideBarApp =
-
 
     type Model = {
         DomainModel       : DomainModel.Model
@@ -254,31 +191,57 @@ module Helpers =
     let container a c = div ([clazz "ui container fluid"] @ a) c
     let ribbonMargin = Style ["margin", "0px"]
 
-    let fileMenu() = button [clazz "ui labeled icon button"; Callback( "onClick", "doit();") ] [
-                        i [clazz "folder icon"] []
-                        text "Load Surface"]
+    let sceneMenu save load = 
+        div [clazz "ui buttons"] [
+            button [clazz "ui icon button"] [
+                    i [clazz "file outline icon"] []
+            ]
+            button [clazz "ui icon button"; onMouseClick (fun _ -> load)] [
+                    i [clazz "folder open icon"] []
+            ]
+            button [clazz "ui icon button"; onMouseClick (fun _ -> save)] [
+                    i [clazz "save icon"] []
+            ]
+            button [clazz "ui icon button"] [
+                    i [clazz "icons"] [
+                        i [clazz "save icon"] []
+                        i [clazz "corner arrow down icon"] []
+                    ]                            
+            ]
+        ]
 
-    let ribbon() = 
+    let fileRibbon save load= 
+        div [clazz "ui grid"][
+                div [clazz "ui two wide column "][sceneMenu save load]
+                div [clazz "ui four wide column "][
+                    div [clazz "ui buttons"] [
+                        button [clazz "ui labeled icon button"; Callback( "onClick", "doit();")] [
+                            i [clazz "folder icon"] [] 
+                            text "Add Surface"
+                        ]
+                    ]    
+            ]                                             
+        ]
+
+    let ribbon save load = 
         div [Style ["height", "9vh"; "padding", "0px"]] [
             div [clazz "ui top attached tabular menu"; ] [                
-                    a [clazz "item"; attribute "data-tab" "first"] [text "File"]
-                    a [clazz "item active"; attribute "data-tab" "second"] [text "Home"]
-                    a [clazz "item"; attribute "data-tab" "third"] [text "Third"]
-                    a [clazz "item"; attribute "data-tab" "fourth"] [text "Fourth"]
+                    a [clazz "item active"; attribute "data-tab" "first"] [text "File"]
+                    a [clazz "item"; attribute "data-tab" "second"] [text "Home"]
+                    a [clazz "item"; attribute "data-tab" "third"] [text "Measurements"]                    
+                    a [clazz "item"; attribute "data-tab" "fourth"] [text "Viewplanner"]         
                                 
             ]            
-            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "first"; ribbonMargin] [fileMenu()] 
-            div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "second"; ribbonMargin] [text "Second"] 
-            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "third"; ribbonMargin] [text "Third"]
-            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "fourth"; ribbonMargin] [text "Fourth"]
+            div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "first"; ribbonMargin] [fileRibbon save load] 
+            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "second"; ribbonMargin] [text "Navigation AddObject Place_Object"]
+            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "third"; ribbonMargin] [text "Measurements Ref_Planes Scalebar"]
+            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "fourth"; ribbonMargin] [text "Viewplanner"]
         ]
             
-
-
-    let runModal innerview accept deny =
+    let runModal innerview title accept deny=
         div [clazz "ui modal"] [
             i [clazz "close icon"] []
-            div [clazz "header"] [text "Modal Title"]
+            div [clazz "header"] [text title]
             div[clazz "content"] [
                 innerview
             ]
@@ -287,6 +250,42 @@ module Helpers =
                 div [clazz "ui button positive"; onMouseClick (fun _ -> accept)] [text "yes"]
             ]
         ]
+
+module DialogShizzle =
+    open System.Windows.Forms
+    open Microsoft.WindowsAPICodePack.Dialogs
+
+    let openFolder () =
+        let dialog = new CommonOpenFileDialog()
+        dialog.InitialDirectory <- "C:\\Users"
+        dialog.IsFolderPicker <- true
+        if dialog.ShowDialog() = CommonFileDialogResult.Ok then
+            Some dialog.FileName
+        else None
+
+
+    let openDialog (w : Form) =
+        let mutable r = Unchecked.defaultof<_>
+        w.Invoke(Action(fun _ -> 
+            let dialog = new OpenFileDialog()
+            if dialog.ShowDialog() = DialogResult.OK then
+                r <- Some dialog.FileName
+            else r <- None
+        )) |> ignore
+        r
+        
+
+    let saveDialog  (w : Form)  =
+        let mutable r = Unchecked.defaultof<_>
+        w.Invoke(Action(fun _ -> 
+            let dialog = new SaveFileDialog()
+            if dialog.ShowDialog() = DialogResult.OK then
+                r <- Some dialog.FileName
+            else r <- None
+        )) |> ignore
+        r
+        
+
 
 module FullLayoutApp =
     let container a c = div ([clazz "ui container"] @ a) c
@@ -299,9 +298,11 @@ module FullLayoutApp =
         | SidebarAction of SideBarApp.Action
         | ImportSurfacesAction of ImportDiscoverApp.Action
         | LoadSurfaces of ImportDiscoverApp.Model
+        | SaveProject
+        | LoadProject
         | Abort
 
-    let update e m a =
+    let update form e m a =
         match a with
             | SidebarAction a -> { m with sidebar = SideBarApp.update (e |> Env.map SidebarAction) m.sidebar a }
             | ImportSurfacesAction a -> { m with importSurfaces = ImportDiscoverApp.update (e |> Env.map ImportSurfacesAction) m.importSurfaces a }
@@ -314,6 +315,20 @@ module FullLayoutApp =
                                 SurfaceProperties = Some newSurface
                             } 
                 }
+            | SaveProject ->
+                let targetPath =
+                    match m.sidebar.DomainModel.Path with
+                        | Some path ->  Some path
+                        | None -> DialogShizzle.saveDialog form
+                targetPath |> Option.iter (Serialization.saveProject m.sidebar.DomainModel)
+                m
+            | LoadProject ->
+                match DialogShizzle.openDialog form with
+                    | None -> m
+                    | Some path -> 
+                        let loadedModel = Serialization.loadProject path
+                        { m with sidebar = { m.sidebar with DomainModel = loadedModel }}
+
             | Abort -> printfn "aborted thing"; m
 
     let view (m : Model) =
@@ -321,7 +336,7 @@ module FullLayoutApp =
                     "overflowX" => "hidden"] ] [
             div [Style ["clear"  => "both";
                         "height" => "12vh"
-                        "border" => "0px solid black"]] [Helpers.ribbon()]
+                        "border" => "0px solid black"]] [Helpers.ribbon SaveProject LoadProject]
 
             div [clazz "clearfix"] [
                 div [Style [//"display" , "block";
@@ -342,7 +357,7 @@ module FullLayoutApp =
                            // "max-width"   => "400px"
                             ]] [SideBarApp.view m.sidebar |> Html.map SidebarAction]
             ]
-            Helpers.runModal (ImportDiscoverApp.view m.importSurfaces |> Html.map ImportSurfacesAction) (LoadSurfaces m.importSurfaces) Abort
+            Helpers.runModal (ImportDiscoverApp.view m.importSurfaces |> Html.map ImportSurfacesAction) "Import Surface" (LoadSurfaces m.importSurfaces) Abort
 
 //            div [Style ["clear"  , "both";
 //                        "height", "4vh"
@@ -364,10 +379,10 @@ module FullLayoutApp =
         }
         
 
-    let app onRenderControlChanged = 
+    let app onRenderControlChanged form = 
         {
             initial    = { sidebar = SideBarApp.initial; importSurfaces = ImportDiscoverApp.app.initial }
-            update     = update
+            update     = update form
             view       = view
             onRendered = onRendered onRenderControlChanged
             subscriptions = Subscriptions.none

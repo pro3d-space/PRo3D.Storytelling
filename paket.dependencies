@@ -32,6 +32,8 @@ nuget Eto.Serialization.Json ~> 2.3.0
 nuget GtkSharp 
 
 nuget Newtonsoft.Json
+nuget WindowsAPICodePack-Core
+nuget WindowsAPICodePack-ShellExtensions
 
 group Build
 content: none

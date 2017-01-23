@@ -51,31 +51,7 @@ module TestModel =
 //        T     : double
 //    }
 //
-//[<AutoOpen>]
-//module Measurements = 
-//    type ProjectionMode = Linear | Viewpoint | Ortho
-//
-//    type MeasurementBase = {
-//        Id        : string
-//        Trafo     : Trafo3d
-//    }
-//
-//    type Measure = 
-//        | Point of V3d 
-//        | Line of V3d * V3d
-//        | Polyline of V3d list
-//        | Polygon of V3d list
-//        | DipAndStrike of V3d list
-//
-//    type Measurement = {
-//        Measure     : Measure
-//        Base        : MeasurementBase
-//        Viewpoint   : Viewpoint
-//    }
-//
-//    type MeasurementGroup =
-//        | Group of string * list<MeasurementGroup> * list<Measurement>
-//
+
 ////Todo model SceneObjects
 //[<AutoOpen>]
 //module SceneObjects =  

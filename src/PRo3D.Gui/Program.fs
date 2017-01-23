@@ -72,7 +72,7 @@ let main argv =
         ctrl.Invoke(Action(change)) |> ignore
 
     let app = PRo3DGui.FullLayoutApp.app
-    let browser = Chromium.runControl "8083" (app onRenderControlRectChanged)
+    let browser = Chromium.runControl "8083" (app onRenderControlRectChanged w)
 
 
     let style = w.FormBorderStyle

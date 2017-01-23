@@ -1,13 +1,11 @@
 ﻿namespace PRo3DGui
 
 open Fablish
+open Aardvark.Base
 
 module DomainModel = 
 
-
-
     let Id = ID()
-
     
     type OPC = {
         name : string
@@ -18,11 +16,22 @@ module DomainModel =
          Translation     : Vector3d
          Rotation        : Vector3d
          Scaling         : Vector3d
-    }  
+    }      
+
+    type Viewpoint = {
+        Position : V3d
+        LookAt   : V3d
+        Up       : V3d
+        Sky      : V3d
+    }
+
+    type Location = Imported | Remote
 
     type Surface = {
         Id                  : Id
         Name                : string
+        Location            : Location
+        Path                : string
         IsActive            : Toggle.Model
         IsVisible           : Toggle.Model
         ShadingMode         : Choice.Model
@@ -38,10 +47,35 @@ module DomainModel =
         Surfaces : list<Surface>
         Id       : Id
     }
+
+    
+    type ProjectionMode = Linear | Viewpoint | Ortho
+
+    type MeasurementBase = {
+        Id        : string
+        Trafo     : Trafo
+    }
+
+    type Measure = 
+        | Point of V3d 
+        | Line of V3d * V3d
+        | Polyline of V3d list
+        | Polygon of V3d list
+        | DipAndStrike of V3d list
+
+    type Measurement = {
+        Measure     : Measure
+        Base        : MeasurementBase
+        Viewpoint   : Viewpoint
+    }
+
+    type MeasurementGroup =
+        | Group of string * list<MeasurementGroup> * list<Measurement>
+
     
     type Scene = {
         Name     : string
-        Path     : string     
+        Path     : string
         Surfaces : Surfaces
         Id       : Id
     }
@@ -50,6 +84,9 @@ module DomainModel =
     module Scene =
         let addsurface (surf : Surface) (scene : Scene) = 
             { scene with Surfaces = { scene.Surfaces with Surfaces = surf :: scene.Surfaces.Surfaces  } }
+
+        let saveScene (path : string) (scene : Scene) =
+            failwith "not implemented"
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module Surface =
@@ -70,7 +107,12 @@ module DomainModel =
                                         scale = { x = Numeric.initial; y= Numeric.initial; z= Numeric.initial }
                                         }
                 OPCs                = []
+                Path                = ""
+                Location            = Location.Remote
             }
+
+        let addOpc (opc : OPC) (surf : Surface) =
+           { surf with OPCs = opc :: surf.OPCs }
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module OPC =
@@ -87,6 +129,8 @@ module DomainModel =
     type Model =
       { 
         Scene         : Scene
+        RecentScenes  : list<Scene>
+        Path          : Option<string>
         UI            : UIState
       }
 
@@ -99,77 +143,13 @@ module DomainModel =
               Id = Id.New()
           }
     
-      { Scene = scene; UI = { expanded = Set.ofList Id.All; dragging = None; selected = None };}              
-
+      { Scene = scene 
+        RecentScenes = []
+        Path = None
+        UI = { expanded = Set.ofList Id.All; dragging = None; selected = None }}              
 
     let addDiscoveredSurfaces (discovered : DiscoveredSurfaces) (model : Model) =
-        let newSurface = { Surface.defaultSurface () with  Name = System.IO.Path.GetFileName(discovered.currentPath); OPCs = OPC.fromPaths discovered.discoveredSurfaces }
-        { model with Scene = Scene.addsurface newSurface model.Scene; }, newSurface
-        
-//
-      
-//      static member initial =
-//    
-//          let shaderChoices : Choice.Model = {
-//            choices = ["Lamber"; "Phong"; "Oren"]
-//            selected = "Phong"
-//          }
-//
-//          let texChoices : Choice.Model = {
-//            choices = ["ortho"; "spectral"]
-//            selected = "ortho"
-//          }
-//
-//          let mapChoices : Choice.Model = {
-//            choices = ["Accuracy"; "Distance"]
-//            selected = "Distance"
-//          }
-//
-//          let modeChoices : Choice.Model = {
-//            choices = ["solid"; "wireframe"; "point"]
-//            selected = "wireframe"
-//          }
-//
-//          let visible : Toggle.Model = {
-//            isActive = true            
-//          }         
-//
-//          let trafo : Transformation.Model = {
-//             translation =  { x = Numeric.initial; y= Numeric.initial; z = Numeric.initial }
-//             rotation    =  { x = Numeric.initial; y= Numeric.initial; z = Numeric.initial }
-//             scale       =  { x = Numeric.initial; y= Numeric.initial; z = Numeric.initial }
-//          }
-//
-//          let surfaces = [
-//              {
-//                  Id                = Id.New()
-//                  Name              = "My favorite Surface" 
-//                  IsActive          = {
-//                                        isActive = false                                      
-//                                      }         
-//                  IsVisible         = {
-//                                        isActive = true                                        
-//                                      }
-//                  ShadingMode       = shaderChoices
-//                  Texture           = texChoices
-//                  Map               = mapChoices
-//                  RenderMode        = modeChoices
-//                  TriangleThreshold = Numeric.initial
-//                  Trafo             = trafo
-//                  //AccTest           = acc
-//                  OPCs              = []
-//              }]
-//    
-//          let scene = {
-//              Name = "HarrysScene"
-//              Path = "daham"
-//              Surfaces = { Surfaces = surfaces; Id = Id.New() }
-//              Id = Id.New()
-//          }
-//    
-//          {
-//              Scene = scene
-//              UI = { expanded = Set.ofList Id.All; dragging = None; selected = None }
-//              Surface = surfaces.Head
-//          }              
-//
+        let newSurface = { Surface.defaultSurface () with 
+                                Name = System.IO.Path.GetFileName(discovered.currentPath) 
+                                OPCs = OPC.fromPaths discovered.discoveredSurfaces }
+        { model with Scene = Scene.addsurface newSurface model.Scene; }, newSurface       
