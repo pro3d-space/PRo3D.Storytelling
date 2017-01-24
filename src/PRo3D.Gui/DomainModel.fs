@@ -130,8 +130,7 @@ module DomainModel =
     }
     
     type Model = { 
-        Scene         : Scene
-        RecentScenes  : list<Scene>
+        Scene         : Scene        
         Path          : Option<string>
         UI            : UIState
     } with
@@ -147,8 +146,7 @@ module DomainModel =
               Id = Id.New()
           }
     
-      { Scene = scene 
-        RecentScenes = []
+      { Scene = scene         
         Path = None
         UI = { expanded = Set.ofList Id.All; dragging = None; selected = None }}              
 

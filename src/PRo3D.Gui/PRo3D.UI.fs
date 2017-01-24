@@ -138,27 +138,30 @@ module PRo3dTreeApp =
             subscriptions = Subscriptions.none
         }
 
-module SideBarApp =
 
-    type Model = {
+type FullModel = {
         DomainModel       : DomainModel.Model
+        importSurfaces    : ImportDiscoverApp.Model 
         SurfaceProperties : Option<SurfacePropertiesApp.Model>
     } with
         static member DomainModel_ =
-            (fun m -> m.DomainModel), (fun dm m -> { m with DomainModel = dm })
+            (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
 
-
-
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module FullModel = 
     let initial = {
         DomainModel       = DomainModel.empty
+        importSurfaces    = ImportDiscoverApp.app.initial
         SurfaceProperties = None
     }
 
+module SideBarApp =
+   
     type Action = 
         | SetTreeView          of PRo3dTreeApp.Actions
         | SetSurfaceProperties of SurfacePropertiesApp.Action
 
-    let update env (model : Model) (action : Action) =
+    let update env (model : FullModel) (action : Action) =
         match action with
             | SetTreeView a          -> { model with DomainModel = PRo3dTreeApp.update (env |> Env.map SetTreeView)  model.DomainModel a }
             | SetSurfaceProperties a -> 
@@ -167,7 +170,7 @@ module SideBarApp =
                       { model with SurfaceProperties = SurfacePropertiesApp.update (env |> Env.map SetSurfaceProperties) props a |> Some }
                     | None -> model
 
-    let view (model : Model) : DomNode<Action> = 
+    let view (model : FullModel) : DomNode<Action> = 
         let properties =
             match model.SurfaceProperties with
                     | Some s ->  [ SurfacePropertiesApp.view s |> Html.map SetSurfaceProperties]
@@ -185,7 +188,7 @@ module SideBarApp =
         ]
 
     let app = {
-        initial = initial
+        initial = FullModel.initial
         update = update
         view = view
         onRendered = OnRendered.ignore
@@ -290,17 +293,13 @@ module DialogShizzle =
         )) |> ignore
         r
         
+
+
 module FullLayoutApp =
+    
     let container a c = div ([clazz "ui container"] @ a) c
 
-    let (=>) k v = k,v
-
-    type Model = { 
-        sidebar : SideBarApp.Model;
-        importSurfaces : ImportDiscoverApp.Model 
-    } with
-        static member sidebar_ =
-            (fun m -> m.sidebar), (fun s m -> { m with sidebar = s })
+    let (=>) k v = k,v    
 
     type Action =
         | SidebarAction of SideBarApp.Action
@@ -310,38 +309,32 @@ module FullLayoutApp =
         | LoadProject
         | Abort
 
-    let update form e m a =
+    let update form e (m : FullModel) a =
         match a with
-            | SidebarAction a -> { m with sidebar = SideBarApp.update (e |> Env.map SidebarAction) m.sidebar a }
+            | SidebarAction a -> SideBarApp.update (e |> Env.map SidebarAction) m a
             | ImportSurfacesAction a -> { m with importSurfaces = ImportDiscoverApp.update (e |> Env.map ImportSurfacesAction) m.importSurfaces a }
             | LoadSurfaces surf ->  
-                let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.sidebar.DomainModel 
-                { m with importSurfaces = ImportDiscoverApp.initial; 
-                         sidebar = 
-                            { m.sidebar with 
-                                DomainModel = newDomainModel
-                                SurfaceProperties = Some newSurface
-                            } 
-                }
+                let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.DomainModel 
+                { m with importSurfaces = ImportDiscoverApp.initial; DomainModel = newDomainModel; SurfaceProperties = Some newSurface }
             | SaveProject ->
-               // let lens_ = Model.sidebar_ >-> SideBarApp.Model.DomainModel_
+                let path_ = FullModel.DomainModel_ >-> DomainModel.Model.Scene_ >-> Scene.Path_
               
                 let targetPath =
-                    match m.sidebar.DomainModel.Path with
+                    match m.DomainModel.Path with
                         | Some path ->  Some path
                         | None -> DialogShizzle.saveDialog form
-                targetPath |> Option.iter (Serialization.saveProject m.sidebar.DomainModel)
-                m         
+                
+                targetPath |> Option.iter (Serialization.saveProject m.DomainModel)
+                Optic.set path_ ("hilfe options") m         
             | LoadProject ->
                 match DialogShizzle.openDialog form with
                     | None -> m
                     | Some path -> 
                         let loadedModel = Serialization.loadProject path
-                        { m with sidebar = { m.sidebar with DomainModel = loadedModel }}
-
+                        { m with DomainModel =  loadedModel }
             | Abort -> printfn "aborted thing"; m
 
-    let view (m : Model) =
+    let view (m : FullModel) =
         div [Style ["overflowY" => "hidden"
                     "overflowX" => "hidden"] ] [
             div [Style ["clear"  => "both";
@@ -365,7 +358,7 @@ module FullLayoutApp =
                             "width"   => "30%"
                            // "min-width"   => "400px"
                            // "max-width"   => "400px"
-                            ]] [SideBarApp.view m.sidebar |> Html.map SidebarAction]
+                            ]] [SideBarApp.view m |> Html.map SidebarAction]
             ]
             Helpers.runModal (ImportDiscoverApp.view m.importSurfaces |> Html.map ImportSurfacesAction) "Import Surface" (LoadSurfaces m.importSurfaces) Abort
 
@@ -391,7 +384,7 @@ module FullLayoutApp =
 
     let app onRenderControlChanged form = 
         {
-            initial    = { sidebar = SideBarApp.initial; importSurfaces = ImportDiscoverApp.app.initial }
+            initial    = FullModel.initial
             update     = update form
             view       = view
             onRendered = onRendered onRenderControlChanged
