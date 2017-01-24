@@ -2,6 +2,7 @@
 
 open Fablish
 open Aardvark.Base
+open Aether
 
 module DomainModel = 
 
@@ -47,7 +48,6 @@ module DomainModel =
         Surfaces : list<Surface>
         Id       : Id
     }
-
     
     type ProjectionMode = Linear | Viewpoint | Ortho
 
@@ -77,8 +77,11 @@ module DomainModel =
         Name     : string
         Path     : string
         Surfaces : Surfaces
-        Id       : Id
-    }
+        Id       : Id        
+    } with
+      static member Path_ =
+            (fun scene -> scene.Path), (fun path (scene : Scene) -> { scene with Path = path})
+            
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module Scene =
@@ -126,13 +129,14 @@ module DomainModel =
         selected : Option<Id>
     }
     
-    type Model =
-      { 
+    type Model = { 
         Scene         : Scene
         RecentScenes  : list<Scene>
         Path          : Option<string>
         UI            : UIState
-      }
+    } with
+        static member Scene_ =
+            (fun m -> m.Scene), (fun scene m -> { m with Scene = scene})
 
     let empty = 
       let scene = 

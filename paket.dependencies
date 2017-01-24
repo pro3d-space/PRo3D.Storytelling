@@ -34,6 +34,7 @@ nuget GtkSharp
 nuget Newtonsoft.Json
 nuget WindowsAPICodePack-Core
 nuget WindowsAPICodePack-ShellExtensions
+nuget Aether
 
 group Build
 content: none

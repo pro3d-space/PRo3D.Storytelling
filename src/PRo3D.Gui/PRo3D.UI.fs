@@ -7,6 +7,8 @@ open Fablish
 open Fable.Helpers.Virtualdom
 open Fable.Helpers.Virtualdom.Html
 open DomainModel
+open Aether
+open Aether.Operators
 
 open GuiExperiments
 
@@ -54,7 +56,7 @@ module PRo3dTreeApp =
                     
                 ] []
 
-            let selected = if isSelected id then Style ["background-color", "dimgrey"; "color", "white"] else Style []
+            let selected = if isSelected id then Style ["text-decoration", "underline"] else Style []
             div [ clazz "item";  ] [
                     item
                     div [ clazz "content"; ] [
@@ -141,7 +143,10 @@ module SideBarApp =
     type Model = {
         DomainModel       : DomainModel.Model
         SurfaceProperties : Option<SurfacePropertiesApp.Model>
-    }
+    } with
+        static member DomainModel_ =
+            (fun m -> m.DomainModel), (fun dm m -> { m with DomainModel = dm })
+
 
 
     let initial = {
@@ -285,14 +290,17 @@ module DialogShizzle =
         )) |> ignore
         r
         
-
-
 module FullLayoutApp =
     let container a c = div ([clazz "ui container"] @ a) c
 
     let (=>) k v = k,v
 
-    type Model = { sidebar : SideBarApp.Model; importSurfaces : ImportDiscoverApp.Model }
+    type Model = { 
+        sidebar : SideBarApp.Model;
+        importSurfaces : ImportDiscoverApp.Model 
+    } with
+        static member sidebar_ =
+            (fun m -> m.sidebar), (fun s m -> { m with sidebar = s })
 
     type Action =
         | SidebarAction of SideBarApp.Action
@@ -316,12 +324,14 @@ module FullLayoutApp =
                             } 
                 }
             | SaveProject ->
+               // let lens_ = Model.sidebar_ >-> SideBarApp.Model.DomainModel_
+              
                 let targetPath =
                     match m.sidebar.DomainModel.Path with
                         | Some path ->  Some path
                         | None -> DialogShizzle.saveDialog form
                 targetPath |> Option.iter (Serialization.saveProject m.sidebar.DomainModel)
-                m
+                m         
             | LoadProject ->
                 match DialogShizzle.openDialog form with
                     | None -> m
