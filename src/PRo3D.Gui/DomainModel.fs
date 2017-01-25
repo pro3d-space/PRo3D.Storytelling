@@ -130,9 +130,10 @@ module DomainModel =
     }
     
     type Model = { 
-        Scene         : Scene        
-        Path          : Option<string>
-        UI            : UIState
+        Scene             : Scene        
+        SurfaceProperties : Option<Surface>
+        Path              : Option<string>
+        UI                : UIState
     } with
         static member Scene_ =
             (fun m -> m.Scene), (fun scene m -> { m with Scene = scene})
@@ -149,6 +150,7 @@ module DomainModel =
     
       { Scene = scene         
         Path = None
+        SurfaceProperties = None
         UI = { expanded = Set.ofList Id.All; dragging = None; selected = None }}              
 
     let addDiscoveredSurfaces (discovered : DiscoveredSurfaces) (model : Model) =

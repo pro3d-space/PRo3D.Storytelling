@@ -1,6 +1,7 @@
 ﻿namespace PRo3DGui
 
 open System
+open System.IO
 open Suave
 
 open Fablish
@@ -141,8 +142,8 @@ module PRo3dTreeApp =
 
 type FullModel = {
         DomainModel       : DomainModel.Model
-        importSurfaces    : ImportDiscoverApp.Model 
-        SurfaceProperties : Option<SurfacePropertiesApp.Model>
+        importSurfaces    : ImportDiscoverApp.Model         
+        SurfaceProperties : Option<Surface>
     } with
         static member DomainModel_ =
             (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
@@ -151,7 +152,7 @@ type FullModel = {
 module FullModel = 
     let initial = {
         DomainModel       = DomainModel.empty
-        importSurfaces    = ImportDiscoverApp.app.initial
+        importSurfaces    = ImportDiscoverApp.app.initial        
         SurfaceProperties = None
     }
 
@@ -162,10 +163,11 @@ module SideBarApp =
         | SetSurfaceProperties of SurfacePropertiesApp.Action
 
     let update env (model : FullModel) (action : Action) =
+        
         match action with
             | SetTreeView a          -> { model with DomainModel = PRo3dTreeApp.update (env |> Env.map SetTreeView)  model.DomainModel a }
             | SetSurfaceProperties a -> 
-                match model.SurfaceProperties with
+                match model.DomainModel.SurfaceProperties with
                     | Some props -> 
                       { model with SurfaceProperties = SurfacePropertiesApp.update (env |> Env.map SetSurfaceProperties) props a |> Some }
                     | None -> model
@@ -319,6 +321,7 @@ module FullLayoutApp =
                         | None -> model
 
          targetPath |> Option.iter (Serialization.saveProject newmodel.DomainModel)
+         Serialization.saveProject newmodel.DomainModel "./last"
          newmodel 
                  
     let update form e (m : FullModel) a =
@@ -397,10 +400,20 @@ module FullLayoutApp =
                 None
         }
         
+    let fileExists path =
+        if File.Exists(path) then
+            Some path
+        else
+            None
+
+    let loadLastScene =
+        match fileExists "./last" with
+            | Some p -> Serialization.loadProject p
+            | None   -> DomainModel.empty
 
     let app onRenderControlChanged form = 
         {
-            initial    = FullModel.initial
+            initial    = { FullModel.initial with DomainModel = loadLastScene }
             update     = update form
             view       = view
             onRendered = onRendered onRenderControlChanged
