@@ -74,13 +74,13 @@ module DomainModel =
 
     
     type Scene = {
-        Name     : string
-        Path     : string
+        Name     : string        
         Surfaces : Surfaces
         Id       : Id        
-    } with
-      static member Path_ =
-            (fun scene -> scene.Path), (fun path (scene : Scene) -> { scene with Path = path})
+    } 
+//    with
+//      static member Path_ =
+//            (fun scene -> scene.Path), (fun path (scene : Scene) -> { scene with Path = path})
             
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -136,12 +136,13 @@ module DomainModel =
     } with
         static member Scene_ =
             (fun m -> m.Scene), (fun scene m -> { m with Scene = scene})
+        static member Path_ =
+            (fun m -> m.Path), (fun path (m:Model) -> { m with Path = path})
 
     let empty = 
       let scene = 
           {
-              Name = "New Scene"
-              Path = "undefined"
+              Name = "New Scene"              
               Surfaces = { Surfaces = []; Id = Id.New() }
               Id = Id.New()
           }

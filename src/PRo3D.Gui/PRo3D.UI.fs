@@ -306,9 +306,21 @@ module FullLayoutApp =
         | ImportSurfacesAction of ImportDiscoverApp.Action
         | LoadSurfaces of ImportDiscoverApp.Model
         | SaveProject
+        | SaveAsProject
         | LoadProject
         | Abort
 
+
+    let saveAndUpdate model targetPath = 
+         let path_ = FullModel.DomainModel_ >-> DomainModel.Model.Path_
+         let newmodel = 
+                    match targetPath with
+                        | Some p -> Optic.set path_ targetPath model
+                        | None -> model
+
+         targetPath |> Option.iter (Serialization.saveProject newmodel.DomainModel)
+         newmodel 
+                 
     let update form e (m : FullModel) a =
         match a with
             | SidebarAction a -> SideBarApp.update (e |> Env.map SidebarAction) m a
@@ -317,15 +329,19 @@ module FullLayoutApp =
                 let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.DomainModel 
                 { m with importSurfaces = ImportDiscoverApp.initial; DomainModel = newDomainModel; SurfaceProperties = Some newSurface }
             | SaveProject ->
-                let path_ = FullModel.DomainModel_ >-> DomainModel.Model.Scene_ >-> Scene.Path_
+                let path_ = FullModel.DomainModel_ >-> DomainModel.Model.Path_
               
                 let targetPath =
                     match m.DomainModel.Path with
                         | Some path ->  Some path
-                        | None -> DialogShizzle.saveDialog form
+                        | None -> DialogShizzle.saveDialog form                            
                 
-                targetPath |> Option.iter (Serialization.saveProject m.DomainModel)
-                Optic.set path_ ("hilfe options") m         
+                saveAndUpdate m targetPath
+            | SaveAsProject ->
+                let path_ = FullModel.DomainModel_ >-> DomainModel.Model.Path_
+                let targetPath = DialogShizzle.saveDialog form
+
+                saveAndUpdate m targetPath      
             | LoadProject ->
                 match DialogShizzle.openDialog form with
                     | None -> m
