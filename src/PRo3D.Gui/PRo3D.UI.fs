@@ -13,7 +13,6 @@ open Aether.Operators
 
 open GuiExperiments
 
-
 module Serialization =
     open MBrace.FsPickler
     open System.IO
@@ -76,8 +75,7 @@ module PRo3dTreeApp =
                     if Set.contains i model.UI.expanded 
                     then { model.UI with expanded = Set.remove i model.UI.expanded }
                     else { model.UI with expanded = Set.add i model.UI.expanded }
-                | Select id -> 
-                    printf "selected %d" id
+                | Select id ->                     
                     { model.UI with selected = Some id }
                 | DragStart id -> 
                     { model.UI with dragging = Some id }
@@ -115,6 +113,13 @@ module PRo3dTreeApp =
     let viewMeasurements isExpanded isSelected (measurements : DomainModel.Measurement) = failwith "alalalalal"
 //        let sceneObjectViews = sceneObjects |> List.map (viewSurface isExpanded isSelected)
 //        Tree.node surfaces.Id isExpanded isSelected [] (text "Surfaces") surfaceViews
+    
+    let (^) l r = sprintf "%s%s" l r
+
+    let sceneLabel (model : Model) =
+        match model.Path with
+            | Some _ -> model.Scene.Name 
+            | None   -> model.Scene.Name ^ "*"
 
     let view (model : DomainModel.Model) : DomNode<Actions> =
         let isExpanded id = Set.contains id model.UI.expanded
@@ -124,7 +129,7 @@ module PRo3dTreeApp =
         div [] [
             Tree.treeView [] [
                 Tree.node model.Scene.Id isExpanded isSelected [] 
-                          (text model.Scene.Name) 
+                          (text (sceneLabel model))
                           [viewSurfaces isExpanded isSelected model.Scene.Surfaces]
             ]
         ]
@@ -138,7 +143,6 @@ module PRo3dTreeApp =
             onRendered = OnRendered.ignore
             subscriptions = Subscriptions.none
         }
-
 
 type FullModel = {
         DomainModel       : DomainModel.Model
@@ -185,7 +189,6 @@ module SideBarApp =
                   PRo3dTreeApp.view model.DomainModel |> Html.map SetTreeView 
                 ]            
             
-
             div [Style [ "border", "1px solid black"; "height", "55vh"; "overflowY", "auto"]] properties
         ]
 
@@ -295,8 +298,6 @@ module DialogShizzle =
         )) |> ignore
         r
         
-
-
 module FullLayoutApp =
     
     let container a c = div ([clazz "ui container"] @ a) c
