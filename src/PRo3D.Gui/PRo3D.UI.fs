@@ -46,7 +46,6 @@ module PRo3dTreeApp =
             div [ yield clazz "item"; yield onMouseClick (fun o -> Click id);  ] [
                 i [ yield clazz "file icon"; ] []
                 div [ yield clazz "content"; ] children
-
             ]
         let node id isExpanded isSelected attribs label children =
             let item = 
@@ -125,7 +124,7 @@ module PRo3dTreeApp =
         let isExpanded id = Set.contains id model.UI.expanded
         let isSelected id = match model.UI.selected with
                                 | Some x -> x = id
-                                | None -> false            
+                                | None -> false
         div [] [
             Tree.treeView [] [
                 Tree.node model.Scene.Id isExpanded isSelected [] 
@@ -147,7 +146,7 @@ module PRo3dTreeApp =
 type FullModel = {
         DomainModel       : DomainModel.Model
         importSurfaces    : ImportDiscoverApp.Model         
-        SurfaceProperties : Option<Surface>
+        Properties        : Properties
     } with
         static member DomainModel_ =
             (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
@@ -157,39 +156,32 @@ module FullModel =
     let initial = {
         DomainModel       = DomainModel.empty
         importSurfaces    = ImportDiscoverApp.app.initial        
-        SurfaceProperties = None
+        Properties        = SceneProperties (Scene.empty)
     }
 
 module SideBarApp =
    
     type Action = 
         | SetTreeView          of PRo3dTreeApp.Actions
-        | SetSurfaceProperties of SurfacePropertiesApp.Action
+        | SetProperties        of PropertiesApp.Action
+
 
     let update env (model : FullModel) (action : Action) =
         
         match action with
-            | SetTreeView a          -> { model with DomainModel = PRo3dTreeApp.update (env |> Env.map SetTreeView)  model.DomainModel a }
-            | SetSurfaceProperties a -> 
-                match model.DomainModel.SurfaceProperties with
-                    | Some props -> 
-                      { model with SurfaceProperties = SurfacePropertiesApp.update (env |> Env.map SetSurfaceProperties) props a |> Some }
-                    | None -> model
+            | SetTreeView a   -> { model with DomainModel = PRo3dTreeApp.update (env |> Env.map SetTreeView)  model.DomainModel a }
+            | SetProperties a ->  model
 
     let view (model : FullModel) : DomNode<Action> = 
-        let properties =
-            match model.SurfaceProperties with
-                    | Some s ->  [ SurfacePropertiesApp.view s |> Html.map SetSurfaceProperties]
-                    | _ -> []
+        
         div [] [
             div [ Style [ "border"           , "1px solid black"
                           "height"           , "35vh"
                           "overflowY"        , "auto"
                           "background-color" , "#eeeeee"]] [
                   PRo3dTreeApp.view model.DomainModel |> Html.map SetTreeView 
-                ]            
-            
-            div [Style [ "border", "1px solid black"; "height", "55vh"; "overflowY", "auto"]] properties
+            ]
+            PropertiesApp.view model.Properties |> Html.map SetProperties
         ]
 
     let app = {
@@ -313,7 +305,6 @@ module FullLayoutApp =
         | LoadProject
         | Abort
 
-
     let saveAndUpdate model targetPath = 
          let path_ = FullModel.DomainModel_ >-> DomainModel.Model.Path_
          let newmodel = 
@@ -327,19 +318,20 @@ module FullLayoutApp =
                  
     let update form e (m : FullModel) a =
         match a with
-            | SidebarAction a -> SideBarApp.update (e |> Env.map SidebarAction) m a
-            | ImportSurfacesAction a -> { m with importSurfaces = ImportDiscoverApp.update (e |> Env.map ImportSurfacesAction) m.importSurfaces a }
+            | SidebarAction a -> 
+                SideBarApp.update (e |> Env.map SidebarAction) m a
+            | ImportSurfacesAction a -> 
+                { m with importSurfaces = ImportDiscoverApp.update (e |> Env.map ImportSurfacesAction) m.importSurfaces a }
             | LoadSurfaces surf ->  
-                let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.DomainModel 
-                { m with importSurfaces = ImportDiscoverApp.initial; DomainModel = newDomainModel; SurfaceProperties = Some newSurface }
+                let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.DomainModel
+                { m with importSurfaces = ImportDiscoverApp.initial; DomainModel = newDomainModel; Properties = SurfaceProperties newSurface }
             | SaveProject ->
                 let path_ = FullModel.DomainModel_ >-> DomainModel.Model.Path_
-              
                 let targetPath =
                     match m.DomainModel.Path with
                         | Some path ->  Some path
-                        | None -> DialogShizzle.saveDialog form                            
-                
+                        | None -> DialogShizzle.saveDialog form                
+
                 saveAndUpdate m targetPath
             | SaveAsProject ->
                 let path_ = FullModel.DomainModel_ >-> DomainModel.Model.Path_
@@ -352,7 +344,7 @@ module FullLayoutApp =
                     | Some path -> 
                         let loadedModel = Serialization.loadProject path
                         { m with DomainModel =  loadedModel }
-            | Abort -> printfn "aborted thing"; m
+            | Abort -> printfn "aborting everything"; m
 
     let view (m : FullModel) =
         div [Style ["overflowY" => "hidden"

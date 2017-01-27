@@ -76,7 +76,7 @@ module DomainModel =
     type Scene = {
         Name     : string        
         Surfaces : Surfaces
-        Id       : Id        
+        Id       : Id
     } 
 //    with
 //      static member Path_ =
@@ -89,7 +89,14 @@ module DomainModel =
             { scene with Surfaces = { scene.Surfaces with Surfaces = surf :: scene.Surfaces.Surfaces  } }
 
         let saveScene (path : string) (scene : Scene) =
-            failwith "not implemented"
+            failwith "not implemented"        
+
+        let empty =
+            {
+                Name = "empty"
+                Surfaces = { Surfaces = []; Id = Id.New() }
+                Id = Id.New()
+            }
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module Surface =
@@ -130,8 +137,7 @@ module DomainModel =
     }
     
     type Model = { 
-        Scene             : Scene        
-        SurfaceProperties : Option<Surface>
+        Scene             : Scene                
         Path              : Option<string>
         UI                : UIState
     } with
@@ -150,7 +156,7 @@ module DomainModel =
     
       { Scene = scene         
         Path = None
-        SurfaceProperties = None
+   //     SurfaceProperties = None
         UI = { expanded = Set.ofList Id.All; dragging = None; selected = None }}              
 
     let addDiscoveredSurfaces (discovered : DiscoveredSurfaces) (model : Model) =
