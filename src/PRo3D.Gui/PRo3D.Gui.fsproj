@@ -55,6 +55,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="UIHacks.fs" />
     <Compile Include="DomainModel.fs" />
+    <Compile Include="Commons.fs" />
     <Compile Include="PRo3D.UI.Properties.fs" />
     <Compile Include="PRo3D.UI.fs" />
     <Compile Include="Program.fs" />

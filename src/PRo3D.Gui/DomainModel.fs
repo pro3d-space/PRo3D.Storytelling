@@ -130,10 +130,15 @@ module DomainModel =
         let fromPaths (paths : list<string>) : list<OPC> =
             paths |> List.map (fun p ->  { name = p; id = Id.New() } )
 
+    type Properties =
+        | SurfaceProperties of Surface
+        | SceneProperties of Scene
+        | NoProperties
+
     type UIState = {
         expanded : Set<Id>
         dragging : Option<int>
-        selected : Option<Id>
+        selected : Properties
     }
     
     type Model = { 
@@ -157,7 +162,7 @@ module DomainModel =
       { Scene = scene         
         Path = None
    //     SurfaceProperties = None
-        UI = { expanded = Set.ofList Id.All; dragging = None; selected = None }}              
+        UI = { expanded = Set.ofList Id.All; dragging = None; selected = NoProperties }}              
 
     let addDiscoveredSurfaces (discovered : DiscoveredSurfaces) (model : Model) =
         let newSurface = { Surface.defaultSurface () with 

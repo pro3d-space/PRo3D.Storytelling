@@ -13,27 +13,29 @@ open Aether.Operators
 
 open GuiExperiments
 
-module Serialization =
-    open MBrace.FsPickler
-    open System.IO
-    let binarySerializer = FsPickler.CreateBinarySerializer()
+type FullModel = {
+        DomainModel       : DomainModel.Model
+        importSurfaces    : ImportDiscoverApp.Model         
+        Properties        : Properties
+    } with
+        static member DomainModel_ =
+            (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
 
-    let saveProject (project : DomainModel.Model) (path:string)  = 
-        let arr = binarySerializer.Pickle project 
-        File.WriteAllBytes(path, arr);
-
-
-    let loadProject path = 
-        let arr = File.ReadAllBytes(path);
-        binarySerializer.UnPickle arr
-
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module FullModel = 
+    let initial = {
+        DomainModel       = DomainModel.empty
+        importSurfaces    = ImportDiscoverApp.app.initial        
+        Properties        = SceneProperties (Scene.empty)
+    }
+   
 module PRo3dTreeApp = 
     
     open DomHelpers
 
     type Actions = 
         | Click of Id 
-        | Select of Id 
+        | Select of Properties 
         | DragStart of Id   
         | Drop of Id
 
@@ -47,7 +49,7 @@ module PRo3dTreeApp =
                 i [ yield clazz "file icon"; ] []
                 div [ yield clazz "content"; ] children
             ]
-        let node id isExpanded isSelected attribs label children =
+        let node id isExpanded isSelected attribs label children (prop : Properties) =
             let item = 
                 i [ 
                     clazz (if isExpanded id then "large caret down icon" else "large caret right icon");  
@@ -59,7 +61,7 @@ module PRo3dTreeApp =
             div [ clazz "item";  ] [
                     item
                     div [ clazz "content"; ] [
-                        div [ clazz "header noselect"; selected; onMouseClick (fun o -> Select id)] [ label ]
+                        div [ clazz "header noselect"; selected; onMouseClick (fun o -> Select prop)] [ label ]
                         div [ clazz "description noselect"] [ label  ]
                         div [ clazz "list" ] (if isExpanded id then children else [])
                     ]
@@ -74,8 +76,8 @@ module PRo3dTreeApp =
                     if Set.contains i model.UI.expanded 
                     then { model.UI with expanded = Set.remove i model.UI.expanded }
                     else { model.UI with expanded = Set.add i model.UI.expanded }
-                | Select id ->                     
-                    { model.UI with selected = Some id }
+                | Select p ->                     
+                    { model.UI with selected = p }
                 | DragStart id -> 
                     { model.UI with dragging = Some id }
                 | Drop id -> 
@@ -101,12 +103,13 @@ module PRo3dTreeApp =
                           []
                           (text surf.Name) 
                           (viewOpcs isExpanded surf.OPCs)
+                          (SurfaceProperties surf)
             ]
         ]
 
     let viewSurfaces isExpanded isSelected (surfaces : DomainModel.Surfaces) =
         let surfaceViews = surfaces.Surfaces |> List.map (viewSurface isExpanded isSelected)
-        Tree.node surfaces.Id isExpanded isSelected [] (text "Surfaces") surfaceViews
+        Tree.node surfaces.Id isExpanded isSelected [] (text "Surfaces") surfaceViews NoProperties
         
 
     let viewMeasurements isExpanded isSelected (measurements : DomainModel.Measurement) = failwith "alalalalal"
@@ -123,16 +126,17 @@ module PRo3dTreeApp =
     let view (model : DomainModel.Model) : DomNode<Actions> =
         let isExpanded id = Set.contains id model.UI.expanded
         let isSelected id = match model.UI.selected with
-                                | Some x -> x = id
-                                | None -> false
+                                | SceneProperties p -> p.Id = id
+                                | SurfaceProperties p -> p.Id = id
+                                | NoProperties -> false
         div [] [
             Tree.treeView [] [
                 Tree.node model.Scene.Id isExpanded isSelected [] 
                           (text (sceneLabel model))
                           [viewSurfaces isExpanded isSelected model.Scene.Surfaces]
+                          (SceneProperties model.Scene)
             ]
-        ]
-        //div [] (List.init 1000 (fun b -> button [] [Text "ABC"]))
+        ]        
     
     let app : App<_,_,_> =
         {
@@ -142,22 +146,6 @@ module PRo3dTreeApp =
             onRendered = OnRendered.ignore
             subscriptions = Subscriptions.none
         }
-
-type FullModel = {
-        DomainModel       : DomainModel.Model
-        importSurfaces    : ImportDiscoverApp.Model         
-        Properties        : Properties
-    } with
-        static member DomainModel_ =
-            (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module FullModel = 
-    let initial = {
-        DomainModel       = DomainModel.empty
-        importSurfaces    = ImportDiscoverApp.app.initial        
-        Properties        = SceneProperties (Scene.empty)
-    }
 
 module SideBarApp =
    
@@ -181,7 +169,7 @@ module SideBarApp =
                           "background-color" , "#eeeeee"]] [
                   PRo3dTreeApp.view model.DomainModel |> Html.map SetTreeView 
             ]
-            PropertiesApp.view model.Properties |> Html.map SetProperties
+            PropertiesApp.view model.DomainModel.UI.selected |> Html.map SetProperties
         ]
 
     let app = {
@@ -191,105 +179,7 @@ module SideBarApp =
         onRendered = OnRendered.ignore
         subscriptions = Subscriptions.none
     }
-
-module Helpers = 
-    let container a c = div ([clazz "ui container fluid"] @ a) c
-    let ribbonMargin = Style ["margin", "0px"]
-
-    let sceneMenu save load = 
-        div [clazz "ui buttons"] [
-            button [clazz "ui icon button"] [
-                    i [clazz "file outline icon"] []
-            ]
-            button [clazz "ui icon button"; onMouseClick (fun _ -> load)] [
-                    i [clazz "folder open icon"] []
-            ]
-            button [clazz "ui icon button"; onMouseClick (fun _ -> save)] [
-                    i [clazz "save icon"] []
-            ]
-            button [clazz "ui icon button"] [
-                    i [clazz "icons"] [
-                        i [clazz "save icon"] []
-                        i [clazz "corner arrow down icon"] []
-                    ]                            
-            ]
-        ]
-
-    let fileRibbon save load= 
-        div [clazz "ui grid"][
-                div [clazz "ui two wide column "][sceneMenu save load]
-                div [clazz "ui four wide column "][
-                    div [clazz "ui buttons"] [
-                        button [clazz "ui labeled icon button"; Callback( "onClick", "doit();")] [
-                            i [clazz "folder icon"] [] 
-                            text "Add Surface"
-                        ]
-                    ]    
-            ]                                             
-        ]
-
-    let ribbon save load = 
-        div [Style ["height", "9vh"; "padding", "0px"]] [
-            div [clazz "ui top attached tabular menu"; ] [                
-                    a [clazz "item active"; attribute "data-tab" "first"] [text "File"]
-                    a [clazz "item"; attribute "data-tab" "second"] [text "Home"]
-                    a [clazz "item"; attribute "data-tab" "third"] [text "Measurements"]                    
-                    a [clazz "item"; attribute "data-tab" "fourth"] [text "Viewplanner"]         
-                                
-            ]            
-            div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "first"; ribbonMargin] [fileRibbon save load] 
-            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "second"; ribbonMargin] [text "Navigation AddObject Place_Object"]
-            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "third"; ribbonMargin] [text "Measurements Ref_Planes Scalebar"]
-            div [clazz "ui bottom attached tab segment"; attribute "data-tab" "fourth"; ribbonMargin] [text "Viewplanner"]
-        ]
-            
-    let runModal innerview title accept deny=
-        div [clazz "ui modal"] [
-            i [clazz "close icon"] []
-            div [clazz "header"] [text title]
-            div[clazz "content"] [
-                innerview
-            ]
-            div [clazz "actions"] [
-                div [clazz "ui button deny"; onMouseClick (fun _ -> deny)] [text "nope"]
-                div [clazz "ui button positive"; onMouseClick (fun _ -> accept)] [text "yes"]
-            ]
-        ]
-
-module DialogShizzle =
-    open System.Windows.Forms
-    open Microsoft.WindowsAPICodePack.Dialogs
-
-    let openFolder () =
-        let dialog = new CommonOpenFileDialog()
-        dialog.InitialDirectory <- "C:\\Users"
-        dialog.IsFolderPicker <- true
-        if dialog.ShowDialog() = CommonFileDialogResult.Ok then
-            Some dialog.FileName
-        else None
-
-
-    let openDialog (w : Form) =
-        let mutable r = Unchecked.defaultof<_>
-        w.Invoke(Action(fun _ -> 
-            let dialog = new OpenFileDialog()
-            if dialog.ShowDialog() = DialogResult.OK then
-                r <- Some dialog.FileName
-            else r <- None
-        )) |> ignore
-        r
-        
-
-    let saveDialog  (w : Form)  =
-        let mutable r = Unchecked.defaultof<_>
-        w.Invoke(Action(fun _ -> 
-            let dialog = new SaveFileDialog()
-            if dialog.ShowDialog() = DialogResult.OK then
-                r <- Some dialog.FileName
-            else r <- None
-        )) |> ignore
-        r
-        
+     
 module FullLayoutApp =
     
     let container a c = div ([clazz "ui container"] @ a) c
@@ -367,9 +257,7 @@ module FullLayoutApp =
                             "float"   => "left";
                             "border"  => "0px solid black";
                             "height"  => "88vh"
-                            "width"   => "30%"
-                           // "min-width"   => "400px"
-                           // "max-width"   => "400px"
+                            "width"   => "30%"                   
                             ]] [SideBarApp.view m |> Html.map SidebarAction]
             ]
             Helpers.runModal (ImportDiscoverApp.view m.importSurfaces |> Html.map ImportSurfacesAction) "Import Surface" (LoadSurfaces m.importSurfaces) Abort

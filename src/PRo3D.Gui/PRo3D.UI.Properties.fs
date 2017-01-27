@@ -7,8 +7,6 @@ open DomainModel
 
 open GuiExperiments
 
-
-
 module ScenePropertiesApp =
     type Model = DomainModel.Scene
 
@@ -104,11 +102,6 @@ module SurfacePropertiesApp =
                 ]
         ]
 
-type Properties =
-    | SurfaceProperties of Surface
-    | SceneProperties of Scene
-    | NoProperty
-
 module PropertiesApp = 
     type Model = Properties
 
@@ -122,7 +115,7 @@ module PropertiesApp =
                 SurfacePropertiesApp.update (env |> Env.map SetSurfaceProperties) p a |> SurfaceProperties
             | (SetSceneProperties a, SceneProperties p) -> 
                 ScenePropertiesApp.update (env |> Env.map SetSceneProperties) p a |> SceneProperties
-            | (_ , NoProperty) -> model
+            | (_ , NoProperties) -> model
             | _ -> failwith "encountered invalid property"
 
     let view (model : Model) : DomNode<Action> =
@@ -130,6 +123,6 @@ module PropertiesApp =
             match model with
                 | SurfaceProperties s -> [ SurfacePropertiesApp.view s |> Html.map SetSurfaceProperties]
                 | SceneProperties   s -> [ ScenePropertiesApp.view s |> Html.map SetSceneProperties]
-                | NoProperty          -> []
+                | NoProperties          -> []
 
         div [Style [ "border", "1px solid black"; "height", "55vh"; "overflowY", "auto"]] properties
