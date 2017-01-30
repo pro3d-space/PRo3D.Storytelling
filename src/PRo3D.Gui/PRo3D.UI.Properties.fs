@@ -4,6 +4,8 @@ open Fablish
 open Fable.Helpers.Virtualdom
 open Fable.Helpers.Virtualdom.Html
 open DomainModel
+open Aether
+open Aether.Operators
 
 open GuiExperiments
 
@@ -110,26 +112,28 @@ module SurfacePropertiesApp =
         ]
 
 module PropertiesApp = 
-    type Model = Properties
+    type Model = DomainModel.Model
 
     type Action =
         | SetSurfaceProperties of SurfacePropertiesApp.Action
         | SetSceneProperties   of ScenePropertiesApp.Action
 
     let update (env: Env<Action>) (model : Model) (action : Action) =
-        match (action, model ) with
-            | (SetSurfaceProperties a, SurfaceProperties p) -> 
-                SurfacePropertiesApp.update (env |> Env.map SetSurfaceProperties) p a |> SurfaceProperties
-            | (SetSceneProperties a, SceneProperties p) -> 
-                ScenePropertiesApp.update (env |> Env.map SetSceneProperties) p a |> SceneProperties
-            | (_ , NoProperties) -> model
-            | _ -> failwith "encountered invalid property"
+        let m = Optic.get Model.select_ model
+        match (m, action) with            
+                | (SurfaceProperties p, SetSurfaceProperties a) ->
+                        Optic.set Model.select_ (SurfacePropertiesApp.update (env |> Env.map SetSurfaceProperties) p a |> SurfaceProperties) model
+                | (SceneProperties p, SetSceneProperties a) -> 
+                        Optic.set Model.select_ (ScenePropertiesApp.update (env |> Env.map SetSceneProperties) p a |> SceneProperties) model
+                | (NoProperties, _) -> Optic.set Model.select_ m model
+                | _ -> failwith "invalid property action combination"
 
     let view (model : Model) : DomNode<Action> =
+        let m = Optic.get Model.select_ model
         let properties = 
-            match model with
+            match m with
                 | SurfaceProperties s -> [ SurfacePropertiesApp.view s |> Html.map SetSurfaceProperties]
                 | SceneProperties   s -> [ ScenePropertiesApp.view s |> Html.map SetSceneProperties]
-                | NoProperties          -> []
+                | NoProperties        -> []
 
         div [Style [ "border", "1px solid black"; "height", "55vh"; "overflowY", "auto"]] properties

@@ -12,20 +12,6 @@ open Aether
 open Aether.Operators
 
 open GuiExperiments
-
-type FullModel = {
-        DomainModel       : DomainModel.Model
-        importSurfaces    : ImportDiscoverApp.Model               
-    } with
-        static member DomainModel_ =
-            (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module FullModel = 
-    let initial = {
-        DomainModel       = DomainModel.empty
-        importSurfaces    = ImportDiscoverApp.app.initial               
-    }
    
 module PRo3dTreeApp = 
     
@@ -33,9 +19,10 @@ module PRo3dTreeApp =
 
     type Actions = 
         | Click of Id 
-        | Select of Properties 
+        | Select of Properties
         | DragStart of Id   
         | Drop of Id
+        | SetProperties of PropertiesApp.Action
 
     module Tree =        
 
@@ -90,6 +77,10 @@ module PRo3dTreeApp =
                             model.UI
                         | None -> 
                             failwith "drop without start"
+                | SetProperties a ->                    
+                    let m = PropertiesApp.update (env |> Env.map SetProperties) (model) a
+                    m.UI
+                    
         { model with UI = ui}
 
     let viewOpcs isExpanded (opcs : list<OPC>) =
@@ -130,14 +121,23 @@ module PRo3dTreeApp =
                                 | SceneProperties p -> p.Id = id
                                 | SurfaceProperties p -> p.Id = id
                                 | NoProperties -> false
-        div [] [
-            Tree.treeView [] [
-                Tree.node model.Scene.Id isExpanded isSelected []                           
-                          (text (sprintf "%s (id:%d)" (sceneLabel model) model.Scene.Id))
-                          [viewSurfaces isExpanded isSelected model.Scene.Surfaces]
-                          (SceneProperties model.Scene)
-            ]
-        ]        
+        div[] [
+            div [ Style [ "border"           , "1px solid black"
+                          "height"           , "35vh"
+                          "overflowY"        , "auto"
+                          "backgroundColor" , "#eeeeee"]] [
+            
+                div [] [
+                    Tree.treeView [] [
+                        Tree.node model.Scene.Id isExpanded isSelected []                           
+                                  (text (sprintf "%s (id:%d)" (sceneLabel model) model.Scene.Id))
+                                  [viewSurfaces isExpanded isSelected model.Scene.Surfaces]
+                                  (SceneProperties model.Scene)
+                    ]
+                ]
+            ] 
+            PropertiesApp.view model |> Html.map SetProperties
+        ]
     
     let app : App<_,_,_> =
         {
@@ -148,41 +148,40 @@ module PRo3dTreeApp =
             subscriptions = Subscriptions.none
         }
 
-module SideBarApp =
-   
-    type Action = 
-        | SetTreeView          of PRo3dTreeApp.Actions
-        | SetProperties        of PropertiesApp.Action
-
-
-    let update env (model : FullModel) (action : Action) =
-        let selected_ = FullModel.DomainModel_ >-> DomainModel.Model.UI_ >-> UIState.selected_
-
-        match action with
-            | SetTreeView a   -> { model with DomainModel = PRo3dTreeApp.update (env |> Env.map SetTreeView)  model.DomainModel a }            
-            | SetProperties a -> 
-                let p = PropertiesApp.update (env |> Env.map SetProperties) (Optic.get selected_ model) a
-                Optic.set selected_ p model
-
-    let view (model : FullModel) : DomNode<Action> = 
-        
-        div [] [
-            div [ Style [ "border"           , "1px solid black"
-                          "height"           , "35vh"
-                          "overflowY"        , "auto"
-                          "backgroundColor" , "#eeeeee"]] [
-                  PRo3dTreeApp.view model.DomainModel |> Html.map SetTreeView 
-            ]
-            PropertiesApp.view model.DomainModel.UI.selected |> Html.map SetProperties
-        ]
-
-    let app = {
-        initial = FullModel.initial
-        update = update
-        view = view
-        onRendered = OnRendered.ignore
-        subscriptions = Subscriptions.none
-    }
+//module SideBarApp =
+//   
+//    type Action = 
+//        | SetTreeView          of PRo3dTreeApp.Actions
+//        | SetProperties        of PropertiesApp.Action
+//
+//
+//    let update env (model : FullModel) (action : Action) =
+//        let selected_ = FullModel.DomainModel_ >-> DomainModel.Model.UI_ >-> UIState.selected_
+//
+//        match action with
+//            | SetTreeView a   -> { model with DomainModel = PRo3dTreeApp.update (env |> Env.map SetTreeView)  model.DomainModel a }            
+//            | SetProperties a -> 
+//                let p = PropertiesApp.update (env |> Env.map SetProperties) (model.DomainModel.UI.selected) a
+//                Optic.set selected_ p model
+//
+//    let view (model : FullModel) : DomNode<Action> =         
+//        div [] [
+//            div [ Style [ "border"           , "1px solid black"
+//                          "height"           , "35vh"
+//                          "overflowY"        , "auto"
+//                          "backgroundColor" , "#eeeeee"]] [
+//                  PRo3dTreeApp.view model.DomainModel |> Html.map SetTreeView 
+//            ]
+//            PropertiesApp.view model.DomainModel.UI.selected |> Html.map SetProperties
+//        ]
+//
+//    let app = {
+//        initial = FullModel.initial
+//        update = update
+//        view = view
+//        onRendered = OnRendered.ignore
+//        subscriptions = Subscriptions.none
+//    }
      
 module FullLayoutApp =
     
@@ -191,7 +190,7 @@ module FullLayoutApp =
     let (=>) k v = k,v    
 
     type Action =
-        | SidebarAction of SideBarApp.Action
+        | TreeAction of PRo3dTreeApp.Actions
         | ImportSurfacesAction of ImportDiscoverApp.Action
         | LoadSurfaces of ImportDiscoverApp.Model
         | NewProject
@@ -213,16 +212,15 @@ module FullLayoutApp =
                  
     let update form e (m : FullModel) a =
         match a with
-            | SidebarAction a -> 
-                SideBarApp.update (e |> Env.map SidebarAction) m a
+            | TreeAction a -> 
+                { m with DomainModel = PRo3dTreeApp.update (e |> Env.map TreeAction) m.DomainModel a }
             | ImportSurfacesAction a -> 
                 { m with importSurfaces = ImportDiscoverApp.update (e |> Env.map ImportSurfacesAction) m.importSurfaces a }
             | LoadSurfaces surf ->                  
-                let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.DomainModel                
-                let selected_ = FullModel.DomainModel_ >-> DomainModel.Model.UI_ >-> UIState.selected_                
+                let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.DomainModel                             
                 let newM = { m with importSurfaces = ImportDiscoverApp.initial; DomainModel = newDomainModel; }
 
-                Optic.set selected_ (SurfaceProperties newSurface) newM
+                Optic.set FullModel.Selected_ (SurfaceProperties newSurface) newM
             | NewProject -> FullModel.initial
             | SaveProject ->                
                 let targetPath =
@@ -265,7 +263,7 @@ module FullLayoutApp =
                             "border"  => "0px solid black";
                             "height"  => "88vh"
                             "width"   => "30%"                   
-                            ]] [SideBarApp.view m |> Html.map SidebarAction]
+                            ]] [PRo3dTreeApp.view m.DomainModel |> Html.map TreeAction]
             ]
             Helpers.runModal (ImportDiscoverApp.view m.importSurfaces |> Html.map ImportSurfacesAction) "Import Surface" (LoadSurfaces m.importSurfaces) Abort
 

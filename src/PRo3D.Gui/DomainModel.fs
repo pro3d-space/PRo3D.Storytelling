@@ -3,6 +3,8 @@
 open Fablish
 open Aardvark.Base
 open Aether
+open Aether.Operators
+open GuiExperiments
 
 module DomainModel = 
 
@@ -132,7 +134,7 @@ module DomainModel =
 
     type Properties =
         | SurfaceProperties of Surface
-        | SceneProperties of Scene
+        | SceneProperties of Scene        
         | NoProperties
 
     type UIState = {
@@ -154,6 +156,8 @@ module DomainModel =
             (fun m -> m.Path), (fun path (m:Model) -> { m with Path = path})
         static member UI_ =
             (fun m -> m.UI), (fun ui m -> { m with UI = ui})
+        static member select_ =
+             Model.UI_ >-> UIState.selected_
 
     let empty = 
       let scene = 
@@ -166,7 +170,7 @@ module DomainModel =
       { Scene = scene         
         Path = None
    //     SurfaceProperties = None
-        UI = { expanded = Set.ofList Id.All; dragging = None; selected = NoProperties }}              
+        UI = { expanded = Set.ofList Id.All; dragging = None; selected = NoProperties }}
 
     let addDiscoveredSurfaces (discovered : DiscoveredSurfaces) (model : Model) =
         let newSurface = { Surface.defaultSurface () with 
@@ -174,3 +178,18 @@ module DomainModel =
                                 Name = System.IO.Path.GetFileName(discovered.currentPath) 
                                 OPCs = OPC.fromPaths discovered.discoveredSurfaces }
         { model with Scene = Scene.addsurface newSurface model.Scene; }, newSurface       
+
+    type FullModel = {
+        DomainModel       : Model
+        importSurfaces    : ImportDiscoverApp.Model               
+    } with
+        static member DomainModel_ =
+            (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
+        static member Selected_ = FullModel.DomainModel_ >-> Model.UI_ >-> UIState.selected_
+
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module FullModel = 
+        let initial = {
+            DomainModel       = empty
+            importSurfaces    = ImportDiscoverApp.app.initial               
+        }
