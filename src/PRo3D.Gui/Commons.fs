@@ -29,10 +29,10 @@ module Helpers =
     let container a c = div ([clazz "ui container fluid"] @ a) c
     let ribbonMargin = Style ["margin", "0px"]
 
-    let sceneMenu save load = 
+    let sceneMenu create save load = 
         div [clazz "ui buttons"] [
             button [clazz "ui icon button"] [
-                    i [clazz "file outline icon"] []
+                    i [clazz "file outline icon"; onMouseClick (fun _ -> create)] []
             ]
             button [clazz "ui icon button"; onMouseClick (fun _ -> load)] [
                     i [clazz "folder open icon"] []
@@ -48,9 +48,9 @@ module Helpers =
             ]
         ]
 
-    let fileRibbon save load= 
+    let fileRibbon create save load= 
         div [clazz "ui grid"][
-                div [clazz "ui two wide column "][sceneMenu save load]
+                div [clazz "ui two wide column "][sceneMenu create save load]
                 div [clazz "ui four wide column "][
                     div [clazz "ui buttons"] [
                         button [clazz "ui labeled icon button"; Callback( "onClick", "doit();")] [
@@ -61,7 +61,7 @@ module Helpers =
             ]                                             
         ]
 
-    let ribbon save load = 
+    let ribbon create save load = 
         div [Style ["height", "9vh"; "padding", "0px"]] [
             div [clazz "ui top attached tabular menu"; ] [                
                     a [clazz "item active"; attribute "data-tab" "first"] [text "File"]
@@ -70,7 +70,7 @@ module Helpers =
                     a [clazz "item"; attribute "data-tab" "fourth"] [text "Viewplanner"]         
                                 
             ]            
-            div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "first"; ribbonMargin] [fileRibbon save load] 
+            div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "first"; ribbonMargin] [fileRibbon create save load] 
             div [clazz "ui bottom attached tab segment"; attribute "data-tab" "second"; ribbonMargin] [text "Navigation AddObject Place_Object"]
             div [clazz "ui bottom attached tab segment"; attribute "data-tab" "third"; ribbonMargin] [text "Measurements Ref_Planes Scalebar"]
             div [clazz "ui bottom attached tab segment"; attribute "data-tab" "fourth"; ribbonMargin] [text "Viewplanner"]

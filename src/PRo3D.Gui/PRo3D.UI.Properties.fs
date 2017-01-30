@@ -15,7 +15,7 @@ module ScenePropertiesApp =
 
     let update (env: Env<Action>) (model : Model) (action : Action) =
         match action with
-            | Set_Name n -> { model with Name = Text.update model.Name n }
+            | Set_Name n ->{ model with Name = Text.update env model.Name n }
 
     let view (model : Model) : DomNode<Action> =
         div [clazz "Segment"] [Text.view model.Name |> Html.map Set_Name]
@@ -28,6 +28,7 @@ module SurfacePropertiesApp =
     type Model = DomainModel.Surface
     
     type Action =
+        | Set_Name              of Text.Action
         | Set_ShadingMode       of Choice.Action
         | Set_Texture           of Choice.Action
         | Set_SetMap            of Choice.Action
@@ -38,13 +39,14 @@ module SurfacePropertiesApp =
         | Set_Trafo             of Transformation.Action
     
     let update (env: Env<Action>) (model : Model) (action : Action) =
-        match action with
-            | Set_ShadingMode       a -> { model with ShadingMode = Choice.update model.ShadingMode a }
-            | Set_Texture           a -> { model with Texture = Choice.update model.Texture a }
-            | Set_SetMap            a -> { model with Map = Choice.update model.Map a }
-            | Set_RenderMode        a -> { model with RenderMode = Choice.update model.RenderMode a }
-            | Set_IsVisible         a -> { model with IsVisible = Toggle.update model.IsVisible a }
-            | Set_IsActive          a -> { model with IsActive = Toggle.update model.IsActive a }
+        match action with            
+            | Set_Name              a -> { model with Name = Text.update env model.Name a }
+            | Set_ShadingMode       a -> { model with ShadingMode = Choice.update env model.ShadingMode a }
+            | Set_Texture           a -> { model with Texture = Choice.update env model.Texture a }
+            | Set_SetMap            a -> { model with Map = Choice.update env model.Map a }
+            | Set_RenderMode        a -> { model with RenderMode = Choice.update env model.RenderMode a }
+            | Set_IsVisible         a -> { model with IsVisible = Toggle.update env model.IsVisible a }
+            | Set_IsActive          a -> { model with IsActive = Toggle.update env model.IsActive a }
             | Set_TriangleThreshold a -> { model with TriangleThreshold = Numeric.update env model.TriangleThreshold a }   
             | Set_Trafo             a -> { model with Trafo = Transformation.update env model.Trafo a }   
     
@@ -55,8 +57,13 @@ module SurfacePropertiesApp =
                 table [clazz "ui celled striped table unstackable"] [
                     tbody [] [
                         tr [] [
+                            td [clazz collapsing] [text "Id:"]; 
+                            td [clazz "right aligned"] [(Text (sprintf "%d" model.Id))]
+                        ]
+
+                        tr [] [
                             td [clazz collapsing] [text "Name:"]; 
-                            td [clazz "right aligned"] [text model.Name]
+                            td [clazz "right aligned"] [Text.view model.Name |> Html.map Set_Name]
                         ]
                         tr [] [
                             td [clazz collapsing] [text "Visiblity:"]; 

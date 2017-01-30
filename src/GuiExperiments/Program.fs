@@ -75,7 +75,6 @@ open Fable.Helpers.Virtualdom
 open Fable.Helpers.Virtualdom.Html
 
 module TestApp =
-
     
     type Model = int
 
@@ -112,7 +111,6 @@ module TestApp =
             subscriptions = Subscriptions.none
         }
 
-
 module ManyTestThings =
 
     type Model = list<TestApp.Model>
@@ -139,7 +137,6 @@ module ManyTestThings =
             onRendered = OnRendered.ignore
             subscriptions = Subscriptions.none
         }
-
 
 module FileApp =
     
@@ -212,8 +209,7 @@ module Surfaces =
         match msg with
             | Import imported -> 
                 { importer = []; currentlyLoaded = model.currentlyLoaded @ imported }
-            | FileAppMsg a -> { model with importer = FileApp.update env model.importer a }
-            | _ -> model
+            | FileAppMsg a -> { model with importer = FileApp.update env model.importer a }            
 
     let view m =
         div [] [
@@ -242,7 +238,7 @@ module CoolTest =
     let update env (m : Model) (action : Action) =
         match action with
             | NumericAction a -> { m with numeric = Numeric.update env m.numeric a }
-            | ToggleAction a -> { m with toggle = Toggle.update m.toggle a }
+            | ToggleAction a -> { m with toggle = Toggle.update env m.toggle a }
 
     let view (m : Model) : DomNode<Action> =
         div [] [
@@ -264,22 +260,92 @@ module Text =
     type Model = string
 
     type Action = 
-        | Change of string
+        | Change of Model
 
-    let update (model : Model) (action : Action) =
+    let update env (model : Model) (action : Action) =
         match action with
             | Change x -> x
 
     let view (model : Model) : DomNode<Action> =
         div [clazz "ui input fluid"] [
             input [
-                //Style ["text-align","right"]
+                Style ["textAlign","right"]
                 attribute "value" model
                 attribute "type" "text"; //attribute "placeholder" "numeric";
                 //attribute "size" "6"
                 onChange (fun s -> Change (unbox s))
             ]
     ]
+    
+    let app = {
+        initial = "empty"
+        update = update
+        view = view
+        onRendered = OnRendered.ignore
+        subscriptions = Subscriptions.none
+    }
+
+//[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+//module Toggle = 
+//    type Model = Toggle
+//
+//    type Action = 
+//        | Toggle
+//    
+//    let update env (model : Model) (action : Action) =
+//        match action with
+//            | Toggle -> { model with isActive = not model.isActive }
+//
+//    let view (model : Model) : DomNode<Action> =         
+//        let active = if model.isActive then "ui defaultChecked toggle checkbox" else "ui toggle checkbox"
+//        let active' = if model.isActive then "checked" else ""
+//        div [clazz active] [
+//            input [attribute "type" "checkbox"; attribute "defaultChecked" active'; onMouseClick(fun _ -> Toggle)]
+//            label [] [text ""]
+//            
+//        ]     
+//        
+//    let initial = { isActive = false }
+//    
+//    let app = {
+//        initial = initial
+//        update = update
+//        view = view
+//        subscriptions = Subscriptions.none
+//        onRendered = OnRendered.ignore
+//    }     
+//
+//[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+//module Choice = 
+//    open DomHelpers
+//
+//    type Model = Choice
+//
+//    type Action = Select of string    
+//
+//    let update env (model : Model) (action : Action) =
+//        match action with
+//            | Select x -> { model with selected = x }
+//  
+//    let view<'a when 'a : equality> (model : Model) : DomNode<Action> =
+//        let onChangeEvt o = o |> unbox |> Select
+//        
+//        select [clazz "ui dropdown"; attribute "defaultValue" model.selected; onChange onChangeEvt] [
+//            for case in model.choices do yield option [] [text (sprintf "%s" case)]
+//       ]  
+//
+//    let initial = {
+//        choices = ["Lamber"; "Phong"; "Oren"]
+//        selected = "Phong";
+//    }
+//
+//    let app = {
+//        initial = initial
+//        update = update
+//        view = view
+//        subscriptions = Subscriptions.none
+//        onRendered = OnRendered.ignore
+//    }  
 
 
 module ImportDiscoverApp =
@@ -303,7 +369,7 @@ module ImportDiscoverApp =
 
     let update env (model : Model) (action : Action) =
         match action with
-            | SetPath       a -> { model with currentPath = Text.update model.currentPath a}
+            | SetPath       a -> { model with currentPath =  Text.update env model.currentPath a}
             | Discover      a -> { model with discoveredSurfaces = discover a }
             | SelectSurface a -> { model with selectedSurface = match model.selectedSurface with 
                                                                     | Some old when old = a -> None 
@@ -337,7 +403,7 @@ module ImportDiscoverApp =
         ]
         
     let initial = 
-        { currentPath = @"E:\Aardwork\Exomars\_SCENES\Mars_Victoria_Crater\Surface\HiRISE" 
+        { currentPath = ""
           discoveredSurfaces = []
           selectedSurface = None
         }
@@ -350,6 +416,7 @@ module ImportDiscoverApp =
             onRendered = OnRendered.ignore
             subscriptions = Subscriptions.none
         }
+
 module Program = 
     [<EntryPoint;STAThread>]
     let main argv =
@@ -362,14 +429,14 @@ module Program =
                 components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
                 }
 
-        let app = {
-            initial = { isActive = true }
-            view = Toggle.view
-            update = fun e -> Toggle.update
-            onRendered = OnRendered.ignore
-            subscriptions = Subscriptions.none
-        }
-        let app = ImportDiscoverApp.app
+//        let app = {
+//            initial = { isActive = true }
+//            view = Toggle.view
+//            update = fun e -> Toggle.update
+//            onRendered = OnRendered.ignore
+//            subscriptions = Subscriptions.none
+//        }
+        let app = Text.app
         let runWindow = true        
 
         if runWindow then

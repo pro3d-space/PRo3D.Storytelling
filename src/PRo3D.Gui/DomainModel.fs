@@ -105,8 +105,8 @@ module DomainModel =
             {
                 Id                  = Id.New()
                 Name                = "default"
-                IsActive            = { isActive = false}
-                IsVisible           = { isActive = true}
+                IsActive            = { isActive = true}
+                IsVisible           = { isActive = false}
                 ShadingMode         = { choices = ["1";"2";"3"]; selected = "1" }
                 Texture             = { choices = ["1";"2";"3"]; selected = "1" }
                 Map                 = { choices = ["1";"2";"3"]; selected = "1" }
@@ -137,9 +137,11 @@ module DomainModel =
 
     type UIState = {
         expanded : Set<Id>
-        dragging : Option<int>
+        dragging : Option<Id>
         selected : Properties
-    }
+    } with
+        static member selected_ =
+            (fun m -> m.selected), (fun sel (m : UIState) -> { m with selected = sel})
     
     type Model = { 
         Scene             : Scene                
@@ -150,11 +152,13 @@ module DomainModel =
             (fun m -> m.Scene), (fun scene m -> { m with Scene = scene})
         static member Path_ =
             (fun m -> m.Path), (fun path (m:Model) -> { m with Path = path})
+        static member UI_ =
+            (fun m -> m.UI), (fun ui m -> { m with UI = ui})
 
     let empty = 
       let scene = 
           {
-              Name = "New Scene"              
+              Name = "New Scene"
               Surfaces = { Surfaces = []; Id = Id.New() }
               Id = Id.New()
           }
@@ -166,6 +170,7 @@ module DomainModel =
 
     let addDiscoveredSurfaces (discovered : DiscoveredSurfaces) (model : Model) =
         let newSurface = { Surface.defaultSurface () with 
+                                Id   = Id.New()
                                 Name = System.IO.Path.GetFileName(discovered.currentPath) 
                                 OPCs = OPC.fromPaths discovered.discoveredSurfaces }
         { model with Scene = Scene.addsurface newSurface model.Scene; }, newSurface       

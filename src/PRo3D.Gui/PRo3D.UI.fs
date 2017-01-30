@@ -15,8 +15,7 @@ open GuiExperiments
 
 type FullModel = {
         DomainModel       : DomainModel.Model
-        importSurfaces    : ImportDiscoverApp.Model         
-        Properties        : Properties
+        importSurfaces    : ImportDiscoverApp.Model               
     } with
         static member DomainModel_ =
             (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
@@ -25,8 +24,7 @@ type FullModel = {
 module FullModel = 
     let initial = {
         DomainModel       = DomainModel.empty
-        importSurfaces    = ImportDiscoverApp.app.initial        
-        Properties        = SceneProperties (Scene.empty)
+        importSurfaces    = ImportDiscoverApp.app.initial               
     }
    
 module PRo3dTreeApp = 
@@ -56,12 +54,17 @@ module PRo3dTreeApp =
                     onMouseClick (fun o -> Click id)
                     
                 ] []
-
-            let selected = if isSelected id then Style ["text-decoration", "underline"] else Style []
+                        
+            let style = if isSelected id then [("textDecoration", "underline")] else []
+            let style  = 
+                match prop with
+                    | SurfaceProperties p -> if not p.IsVisible.isActive then ("color", "grey") :: style else style
+                    | _ -> style            
+             
             div [ clazz "item";  ] [
                     item
                     div [ clazz "content"; ] [
-                        div [ clazz "header noselect"; selected; onMouseClick (fun o -> Select prop)] [ label ]
+                        div [ clazz "header noselect"; Style style; onMouseClick (fun o -> Select prop)] [ label ]
                         div [ clazz "description noselect"] [ label  ]
                         div [ clazz "list" ] (if isExpanded id then children else [])
                     ]
@@ -101,7 +104,7 @@ module PRo3dTreeApp =
                           isExpanded
                           isSelected 
                           []
-                          (text surf.Name) 
+                          (text (sprintf "%s (id:%d)" surf.Name surf.Id))
                           (viewOpcs isExpanded surf.OPCs)
                           (SurfaceProperties surf)
             ]
@@ -113,8 +116,6 @@ module PRo3dTreeApp =
         
 
     let viewMeasurements isExpanded isSelected (measurements : DomainModel.Measurement) = failwith "alalalalal"
-//        let sceneObjectViews = sceneObjects |> List.map (viewSurface isExpanded isSelected)
-//        Tree.node surfaces.Id isExpanded isSelected [] (text "Surfaces") surfaceViews
     
     let (^) l r = sprintf "%s%s" l r
 
@@ -131,8 +132,8 @@ module PRo3dTreeApp =
                                 | NoProperties -> false
         div [] [
             Tree.treeView [] [
-                Tree.node model.Scene.Id isExpanded isSelected [] 
-                          (text (sceneLabel model))
+                Tree.node model.Scene.Id isExpanded isSelected []                           
+                          (text (sprintf "%s (id:%d)" (sceneLabel model) model.Scene.Id))
                           [viewSurfaces isExpanded isSelected model.Scene.Surfaces]
                           (SceneProperties model.Scene)
             ]
@@ -155,10 +156,13 @@ module SideBarApp =
 
 
     let update env (model : FullModel) (action : Action) =
-        
+        let selected_ = FullModel.DomainModel_ >-> DomainModel.Model.UI_ >-> UIState.selected_
+
         match action with
-            | SetTreeView a   -> { model with DomainModel = PRo3dTreeApp.update (env |> Env.map SetTreeView)  model.DomainModel a }
-            | SetProperties a ->  model
+            | SetTreeView a   -> { model with DomainModel = PRo3dTreeApp.update (env |> Env.map SetTreeView)  model.DomainModel a }            
+            | SetProperties a -> 
+                let p = PropertiesApp.update (env |> Env.map SetProperties) (Optic.get selected_ model) a
+                Optic.set selected_ p model
 
     let view (model : FullModel) : DomNode<Action> = 
         
@@ -166,7 +170,7 @@ module SideBarApp =
             div [ Style [ "border"           , "1px solid black"
                           "height"           , "35vh"
                           "overflowY"        , "auto"
-                          "background-color" , "#eeeeee"]] [
+                          "backgroundColor" , "#eeeeee"]] [
                   PRo3dTreeApp.view model.DomainModel |> Html.map SetTreeView 
             ]
             PropertiesApp.view model.DomainModel.UI.selected |> Html.map SetProperties
@@ -190,6 +194,7 @@ module FullLayoutApp =
         | SidebarAction of SideBarApp.Action
         | ImportSurfacesAction of ImportDiscoverApp.Action
         | LoadSurfaces of ImportDiscoverApp.Model
+        | NewProject
         | SaveProject
         | SaveAsProject
         | LoadProject
@@ -212,19 +217,21 @@ module FullLayoutApp =
                 SideBarApp.update (e |> Env.map SidebarAction) m a
             | ImportSurfacesAction a -> 
                 { m with importSurfaces = ImportDiscoverApp.update (e |> Env.map ImportSurfacesAction) m.importSurfaces a }
-            | LoadSurfaces surf ->  
-                let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.DomainModel
-                { m with importSurfaces = ImportDiscoverApp.initial; DomainModel = newDomainModel; Properties = SurfaceProperties newSurface }
-            | SaveProject ->
-                let path_ = FullModel.DomainModel_ >-> DomainModel.Model.Path_
+            | LoadSurfaces surf ->                  
+                let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.DomainModel                
+                let selected_ = FullModel.DomainModel_ >-> DomainModel.Model.UI_ >-> UIState.selected_                
+                let newM = { m with importSurfaces = ImportDiscoverApp.initial; DomainModel = newDomainModel; }
+
+                Optic.set selected_ (SurfaceProperties newSurface) newM
+            | NewProject -> FullModel.initial
+            | SaveProject ->                
                 let targetPath =
                     match m.DomainModel.Path with
                         | Some path ->  Some path
                         | None -> DialogShizzle.saveDialog form                
 
                 saveAndUpdate m targetPath
-            | SaveAsProject ->
-                let path_ = FullModel.DomainModel_ >-> DomainModel.Model.Path_
+            | SaveAsProject ->                
                 let targetPath = DialogShizzle.saveDialog form
 
                 saveAndUpdate m targetPath      
@@ -241,7 +248,7 @@ module FullLayoutApp =
                     "overflowX" => "hidden"] ] [
             div [Style ["clear"  => "both";
                         "height" => "12vh"
-                        "border" => "0px solid black"]] [Helpers.ribbon SaveProject LoadProject]
+                        "border" => "0px solid black"]] [Helpers.ribbon NewProject SaveProject LoadProject]
 
             div [clazz "clearfix"] [
                 div [Style [//"display" , "block";
@@ -250,7 +257,7 @@ module FullLayoutApp =
                             "width"   => "70%"
                             "opacity" => "0.0"
                             "border"  => "1px solid black"
-                            "background-color" => "#FFFFFF"]
+                            "backgroundColor" => "#FFFFFF"]
                      attribute "id" "renderControl"] []
                 
                 div [Style [//"display" , "block";
