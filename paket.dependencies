@@ -7,12 +7,14 @@ nuget Aardvark.Base.Incremental
 nuget Aardvark.Base.FSharp                
 nuget Aardvark.Base.Essentials            
 
-nuget Aardvark.Base.Rendering             ~> 2.6.4
-nuget Aardvark.Application.WinForms.GL    ~> 2.6.4
-nuget Aardvark.SceneGraph                 ~> 2.6.4
-nuget Aardvark.Rendering.NanoVg           ~> 2.6.4
+nuget Aardvark.Base.Rendering             ~> 2.7.2
+nuget Aardvark.Application.WinForms.GL    ~> 2.7.2
+nuget Aardvark.SceneGraph                 ~> 2.7.2
+nuget Aardvark.Rendering.NanoVg           ~> 2.7.2
 
 nuget Fablish ~> 1.7.9
+
+nuget Aardvark.ImmutableSceneGraph ~> 0.0.6
 
 nuget Fsunit    ~> 2.3.2
 

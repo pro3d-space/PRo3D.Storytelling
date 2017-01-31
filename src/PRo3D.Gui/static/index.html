@@ -78,9 +78,11 @@
                 renderer.render();
 
                 console.log('rendered.');
-                var result = eval(msg.script)();
-                console.log('result was: ' + result);
-
+                var result = "";
+                if (msg.script != "") {
+                    result = eval(msg.script)();
+                    console.log('result was: ' + result);
+                }
                 var msg = { id: 1, data: { eventId: msg.id, eventValue: JSON.stringify(result) } };
                 connection.send(JSON.stringify(msg));
 
@@ -118,7 +120,7 @@
 
             connection.onopen = function () {
               var msg = { id : -1, data : "" }
-              connection.send("This is Aardvark"); // Send the message 'Ping' to the server
+              connection.send("This is Fablish"); // Send the message 'Ping' to the server
             };
 
             connection.onclose = function () {
@@ -167,14 +169,14 @@
                 $('.ui.modal').modal('show');
             }
 
-        });       
+        });
 
     </script>
 </head>
 
-<body>
+<body style="background-color: transparent">
     <div id="__root__">
-    </div> 
+    </div>
 </body>
 
 </html> 

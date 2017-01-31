@@ -12,6 +12,11 @@ open Aardvark.Rendering.SceneGraph.HierarchicalLoD
 
 open OpenTK.Graphics.OpenGL4
 
+[<AutoOpen>]
+module Helpers =
+    let (<*>) (a : IMod<Trafo3d>) (b : IMod<Trafo3d>) = Mod.map2 (*) a b
+    let inverse (m : IMod<Trafo3d>) = m |> Mod.map (fun t -> t.Inverse)
+
 module PatchLod =
     open Aardvark.Base.Rendering
     open Aardvark.Base.Ag
@@ -67,7 +72,7 @@ module PatchLod =
             let ro             = RenderObject.ofScope scope
 
             // prepare data for lod metric
-            let vp   = n.ViewTrafo <*> n.ProjTrafo
+            let vp   = Mod.map2 (*) n.ViewTrafo n.ProjTrafo
             let godeeper (self : IAdaptiveObject) (p : RenderPatch) =
                 n.Decider self vp p 
 

@@ -58,6 +58,7 @@
     <Compile Include="Commons.fs" />
     <Compile Include="PRo3D.UI.Properties.fs" />
     <Compile Include="PRo3D.UI.fs" />
+    <Compile Include="Old.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />
@@ -216,6 +217,33 @@
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1')">
       <ItemGroup>
+        <Reference Include="Aardvark.Cef.Process">
+          <HintPath>..\..\packages\Aardvark.Cef\lib\net45\Aardvark.Cef.Process.exe</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="Aardvark.Cef">
+          <HintPath>..\..\packages\Aardvark.Cef\lib\net45\Aardvark.Cef.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1')">
+      <ItemGroup>
+        <Reference Include="Aardvark.ImmutableSceneGraph">
+          <HintPath>..\..\packages\Aardvark.ImmutableSceneGraph\lib\net45\Aardvark.ImmutableSceneGraph.exe</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1')">
+      <ItemGroup>
         <Reference Include="Aardvark.Rendering.GL">
           <HintPath>..\..\packages\Aardvark.Rendering.GL\lib\net45\Aardvark.Rendering.GL.dll</HintPath>
           <Private>True</Private>
@@ -286,6 +314,17 @@
       <ItemGroup>
         <Reference Include="Xilium.CefGlue">
           <HintPath>..\..\packages\Another.Unofficial.Xilium.CefGlue\lib\net40\Xilium.CefGlue.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1')">
+      <ItemGroup>
+        <Reference Include="CefGlue.UnpackNativeDependencies">
+          <HintPath>..\..\packages\Another.Unofficial.Xilium.CefGlue.UnpackNativeDependencies\lib\net45\CefGlue.UnpackNativeDependencies.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
