@@ -57,31 +57,33 @@ module PRo3dTreeApp =
                     ]
             ]
 
-    let update (env : Env<Actions>) (model: DomainModel.Model) (action : Actions) = 
+    let update (env : Env<Actions>) (model: DomainModel.DomainModel) (action : Actions) = 
         printfn "action: %A" action
         let expanded = model.UI.expanded
-        let ui =
-            match action with
-                | Click i -> 
-                    if Set.contains i model.UI.expanded 
-                    then { model.UI with expanded = Set.remove i model.UI.expanded }
-                    else { model.UI with expanded = Set.add i model.UI.expanded }
-                | Select p ->                     
-                    { model.UI with selected = p }
-                | DragStart id -> 
-                    { model.UI with dragging = Some id }
-                | Drop id -> 
-                    match model.UI.dragging with
-                        | Some source -> 
-                            printfn "dragged: %d to %d" source id
-                            model.UI
-                        | None -> 
-                            failwith "drop without start"
-                | SetProperties a ->                    
-                    let m = PropertiesApp.update (env |> Env.map SetProperties) (model) a
-                    m.UI
-                    
-        { model with UI = ui}
+        match action with
+            | Click i -> 
+                let ui = if Set.contains i model.UI.expanded 
+                            then { model.UI with expanded = Set.remove i model.UI.expanded }
+                            else { model.UI with expanded = Set.add i model.UI.expanded }
+                { model with UI = ui }
+            | Select p ->                     
+                let blub = { model with UI = { model.UI with selected = p }}
+//                match p with
+//                    | SurfaceProperties sa -> PropertiesApp.update (env |> Env.map SetProperties) blub (PropertiesApp.Action.SetSurfaceProperties sa)
+//                    | SetProperties sa ->  PropertiesApp.update (env |> Env.map SetProperties) blub p
+                blub
+            | DragStart id -> 
+                { model with UI = { model.UI with dragging = Some id }}
+            | Drop id -> 
+                match model.UI.dragging with
+                    | Some source -> 
+                        printfn "dragged: %d to %d" source id
+                        model
+                    | None -> 
+                        failwith "drop without start"
+            | SetProperties a ->                    
+                PropertiesApp.update (env |> Env.map SetProperties) (model) a
+               
 
     let viewOpcs isExpanded (opcs : list<OPC>) =
         [ for opc in opcs do
@@ -95,7 +97,7 @@ module PRo3dTreeApp =
                           isExpanded
                           isSelected 
                           []
-                          (text (sprintf "%s (id:%d)" surf.Name surf.Id))
+                          (text (sprintf "%s" surf.Name))
                           (viewOpcs isExpanded surf.OPCs)
                           (SurfaceProperties surf)
             ]
@@ -110,12 +112,12 @@ module PRo3dTreeApp =
     
     let (^) l r = sprintf "%s%s" l r
 
-    let sceneLabel (model : Model) =
+    let sceneLabel (model : DomainModel) =
         match model.Path with
             | Some _ -> model.Scene.Name 
             | None   -> model.Scene.Name ^ "*"
 
-    let view (model : DomainModel.Model) : DomNode<Actions> =
+    let view (model : DomainModel.DomainModel) : DomNode<Actions> =
         let isExpanded id = Set.contains id model.UI.expanded
         let isSelected id = match model.UI.selected with
                                 | SceneProperties p -> p.Id = id
@@ -130,7 +132,7 @@ module PRo3dTreeApp =
                 div [] [
                     Tree.treeView [] [
                         Tree.node model.Scene.Id isExpanded isSelected []                           
-                                  (text (sprintf "%s (id:%d)" (sceneLabel model) model.Scene.Id))
+                                  (text (sprintf "%s" (sceneLabel model)))
                                   [viewSurfaces isExpanded isSelected model.Scene.Surfaces]
                                   (SceneProperties model.Scene)
                     ]
@@ -200,7 +202,7 @@ module FullLayoutApp =
         | Abort
 
     let saveAndUpdate model targetPath = 
-         let path_ = FullModel.DomainModel_ >-> DomainModel.Model.Path_
+         let path_ = FullModel.DomainModel_ >-> DomainModel.DomainModel.Path_
          let newmodel = 
                     match targetPath with
                         | Some p -> Optic.set path_ targetPath model

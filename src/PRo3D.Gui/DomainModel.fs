@@ -140,24 +140,25 @@ module DomainModel =
     type UIState = {
         expanded : Set<Id>
         dragging : Option<Id>
-        selected : Properties
+        selected : Properties        
     } with
         static member selected_ =
             (fun m -> m.selected), (fun sel (m : UIState) -> { m with selected = sel})
     
-    type Model = { 
-        Scene             : Scene                
+    type DomainModel = { 
+        Scene             : Scene
         Path              : Option<string>
         UI                : UIState
+   //     SelectedLense     : Lens<DomainModel, Properties>
     } with
         static member Scene_ =
             (fun m -> m.Scene), (fun scene m -> { m with Scene = scene})
         static member Path_ =
-            (fun m -> m.Path), (fun path (m:Model) -> { m with Path = path})
+            (fun m -> m.Path), (fun path (m:DomainModel) -> { m with Path = path})
         static member UI_ =
             (fun m -> m.UI), (fun ui m -> { m with UI = ui})
         static member select_ =
-             Model.UI_ >-> UIState.selected_
+             DomainModel.UI_ >-> UIState.selected_
 
     let empty = 
       let scene = 
@@ -168,11 +169,11 @@ module DomainModel =
           }
     
       { Scene = scene         
-        Path = None
-   //     SurfaceProperties = None
-        UI = { expanded = Set.ofList Id.All; dragging = None; selected = NoProperties }}
+        Path = None   
+        UI = { expanded = Set.ofList Id.All; dragging = None; selected = NoProperties }
+        }
 
-    let addDiscoveredSurfaces (discovered : DiscoveredSurfaces) (model : Model) =
+    let addDiscoveredSurfaces (discovered : DiscoveredSurfaces) (model : DomainModel) =
         let newSurface = { Surface.defaultSurface () with 
                                 Id   = Id.New()
                                 Name = System.IO.Path.GetFileName(discovered.currentPath) 
@@ -180,12 +181,12 @@ module DomainModel =
         { model with Scene = Scene.addsurface newSurface model.Scene; }, newSurface       
 
     type FullModel = {
-        DomainModel       : Model
+        DomainModel       : DomainModel
         importSurfaces    : ImportDiscoverApp.Model               
     } with
         static member DomainModel_ =
             (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
-        static member Selected_ = FullModel.DomainModel_ >-> Model.UI_ >-> UIState.selected_
+        static member Selected_ = FullModel.DomainModel_ >-> DomainModel.UI_ >-> UIState.selected_
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module FullModel = 

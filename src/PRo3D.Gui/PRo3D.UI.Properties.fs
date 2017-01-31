@@ -111,20 +111,37 @@ module SurfacePropertiesApp =
                 ]
         ]
 
+module List =
+    let rec updateIf (p : 'a -> bool) (f : 'a -> 'a) (xs : list<'a>) = 
+        match xs with
+            | x :: xs ->
+                if(p x) then (f x) :: updateIf p f xs
+                else x :: updateIf p f xs
+            | [] -> []
+    
 module PropertiesApp = 
-    type Model = DomainModel.Model
+    type Model = DomainModel.DomainModel
 
     type Action =
         | SetSurfaceProperties of SurfacePropertiesApp.Action
         | SetSceneProperties   of ScenePropertiesApp.Action
 
+    let inline (<==) (m, l) v = Optic.set l v m
+
     let update (env: Env<Action>) (model : Model) (action : Action) =
         let m = Optic.get Model.select_ model
         match (m, action) with            
                 | (SurfaceProperties p, SetSurfaceProperties a) ->
-                        Optic.set Model.select_ (SurfacePropertiesApp.update (env |> Env.map SetSurfaceProperties) p a |> SurfaceProperties) model
+                        let surf'     = SurfacePropertiesApp.update (env |> Env.map SetSurfaceProperties) p a
+                        let surfaces' = List.updateIf (fun (x : Surface) -> x.Id = surf'.Id) (fun x -> surf') model.Scene.Surfaces.Surfaces
+                                                
+                        let model = (model, Model.select_) <== SurfaceProperties surf'
+                        { model with Scene = { model.Scene with Surfaces = { model.Scene.Surfaces with Surfaces = surfaces' }}}
                 | (SceneProperties p, SetSceneProperties a) -> 
-                        Optic.set Model.select_ (ScenePropertiesApp.update (env |> Env.map SetSceneProperties) p a |> SceneProperties) model
+                        let scene = ScenePropertiesApp.update (env |> Env.map SetSceneProperties) p a
+                        let model = (model, Model.select_) <== SceneProperties scene
+                        { model with Scene = scene }
+                        
                 | (NoProperties, _) -> Optic.set Model.select_ m model
                 | _ -> failwith "invalid property action combination"
 

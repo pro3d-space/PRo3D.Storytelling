@@ -16,7 +16,7 @@ module Serialization =
     open System.IO
     let binarySerializer = FsPickler.CreateBinarySerializer()
 
-    let saveProject (project : DomainModel.Model) (path:string)  = 
+    let saveProject (project : DomainModel.DomainModel) (path:string)  = 
         let arr = binarySerializer.Pickle project 
         File.WriteAllBytes(path, arr);
 

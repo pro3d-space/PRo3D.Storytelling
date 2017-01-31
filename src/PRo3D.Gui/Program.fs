@@ -33,7 +33,7 @@ let main argv =
 
     let loader = 
         async {
-            return Aardvark.Opc.Viewer.createSceneGraph ctrl (Aardvark.Opc.Configurations.OrtiPc.mars())
+            return Aardvark.Opc.Viewer.createSceneGraph ctrl (Aardvark.Opc.Configurations.Network.mars())
         } |> Mod.async
 
     let sg = 
