@@ -33,6 +33,7 @@ module DomainModel =
     type Surface = {
         Id                  : Id
         Name                : string
+        Description         : string
         Location            : Location
         Path                : string
         IsActive            : Toggle.Model
@@ -76,9 +77,10 @@ module DomainModel =
 
     
     type Scene = {
-        Name     : string        
-        Surfaces : Surfaces
-        Id       : Id
+        Name        : string        
+        Description : string
+        Surfaces    : Surfaces
+        Id          : Id
     } 
 //    with
 //      static member Path_ =
@@ -96,6 +98,7 @@ module DomainModel =
         let empty =
             {
                 Name = "empty"
+                Description = ""
                 Surfaces = { Surfaces = []; Id = Id.New() }
                 Id = Id.New()
             }
@@ -107,12 +110,13 @@ module DomainModel =
             {
                 Id                  = Id.New()
                 Name                = "default"
+                Description         = ""
                 IsActive            = { isActive = true}
                 IsVisible           = { isActive = false}
-                ShadingMode         = { choices = ["1";"2";"3"]; selected = "1" }
-                Texture             = { choices = ["1";"2";"3"]; selected = "1" }
-                Map                 = { choices = ["1";"2";"3"]; selected = "1" }
-                RenderMode          = { choices = ["1";"2";"3"]; selected = "1" }
+                ShadingMode         = { choices = ["lambert";"oren nayar";"footprint"]; selected = "oren nayar" }
+                Texture             = { choices = ["ortho";"height"]; selected = "ortho" }
+                Map                 = { choices = ["none";"accuracy";"distance"]; selected = "none" }
+                RenderMode          = { choices = ["solid";"wireframe";"point"]; selected = "solid" }
                 TriangleThreshold   = Numeric.initial
                 Trafo               = { translation = { x = Numeric.initial; y= Numeric.initial; z= Numeric.initial }
                                         rotation = { x = Numeric.initial; y= Numeric.initial; z= Numeric.initial }
@@ -164,6 +168,7 @@ module DomainModel =
       let scene = 
           {
               Name = "New Scene"
+              Description ="(no description)"
               Surfaces = { Surfaces = []; Id = Id.New() }
               Id = Id.New()
           }

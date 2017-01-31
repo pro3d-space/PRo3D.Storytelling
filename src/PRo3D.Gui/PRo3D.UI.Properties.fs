@@ -12,15 +12,20 @@ open GuiExperiments
 module ScenePropertiesApp =
     type Model = DomainModel.Scene
 
-    type Action =
+    type Action = 
         | Set_Name of Text.Action
+        | Set_Desc of Text.Action
 
     let update (env: Env<Action>) (model : Model) (action : Action) =
         match action with
             | Set_Name n ->{ model with Name = Text.update env model.Name n }
+            | Set_Desc n ->{ model with Description = Text.update env model.Description n }
 
     let view (model : Model) : DomNode<Action> =
-        div [clazz "Segment"] [Text.view model.Name |> Html.map Set_Name]
+        div[] [
+            div [clazz "Segment"] [Text.view model.Name |> Html.map Set_Name]
+            div [clazz "Segment"] [Text.view model.Description |> Html.map Set_Desc]
+        ]
 
 module SurfacePropertiesApp =
     

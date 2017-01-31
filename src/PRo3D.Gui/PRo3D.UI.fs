@@ -34,7 +34,7 @@ module PRo3dTreeApp =
                 i [ yield clazz "file icon"; ] []
                 div [ yield clazz "content"; ] children
             ]
-        let node id isExpanded isSelected attribs label children (prop : Properties) =
+        let node id isExpanded isSelected attribs label desc children (prop : Properties) =
             let item = 
                 i [ 
                     clazz (if isExpanded id then "large caret down icon" else "large caret right icon");  
@@ -52,7 +52,7 @@ module PRo3dTreeApp =
                     item
                     div [ clazz "content"; ] [
                         div [ clazz "header noselect"; Style style; onMouseClick (fun o -> Select prop)] [ label ]
-                        div [ clazz "description noselect"] [ label  ]
+                        div [ clazz "description noselect"] [ desc  ]
                         div [ clazz "list" ] (if isExpanded id then children else [])
                     ]
             ]
@@ -98,6 +98,7 @@ module PRo3dTreeApp =
                           isSelected 
                           []
                           (text (sprintf "%s" surf.Name))
+                          (text (sprintf "%s" surf.Description))
                           (viewOpcs isExpanded surf.OPCs)
                           (SurfaceProperties surf)
             ]
@@ -105,7 +106,7 @@ module PRo3dTreeApp =
 
     let viewSurfaces isExpanded isSelected (surfaces : DomainModel.Surfaces) =
         let surfaceViews = surfaces.Surfaces |> List.map (viewSurface isExpanded isSelected)
-        Tree.node surfaces.Id isExpanded isSelected [] (text "Surfaces") surfaceViews NoProperties
+        Tree.node surfaces.Id isExpanded isSelected [] (text "Surfaces") (text (sprintf "Count: %d" surfaces.Surfaces.Length)) surfaceViews NoProperties
         
 
     let viewMeasurements isExpanded isSelected (measurements : DomainModel.Measurement) = failwith "alalalalal"
@@ -133,6 +134,7 @@ module PRo3dTreeApp =
                     Tree.treeView [] [
                         Tree.node model.Scene.Id isExpanded isSelected []                           
                                   (text (sprintf "%s" (sceneLabel model)))
+                                  (text (sprintf "%s" (model.Scene.Description)))
                                   [viewSurfaces isExpanded isSelected model.Scene.Surfaces]
                                   (SceneProperties model.Scene)
                     ]
