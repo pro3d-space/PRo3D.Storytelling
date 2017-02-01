@@ -59,6 +59,7 @@
     <Compile Include="PRo3D.UI.Properties.fs" />
     <Compile Include="PRo3D.UI.fs" />
     <Compile Include="Old.fs" />
+    <Compile Include="Viewer.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />

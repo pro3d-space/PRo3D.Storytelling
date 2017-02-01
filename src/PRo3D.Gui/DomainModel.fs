@@ -193,6 +193,11 @@ module DomainModel =
             (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
         static member Selected_ = FullModel.DomainModel_ >-> DomainModel.UI_ >-> UIState.selected_
 
+        member x.ToMod(reuseCache : Aardvark.Base.Incremental.ReuseCache) = { _original = x }
+
+    and MFullModel = { mutable _original : FullModel } with
+        member x.Apply(arg0 : FullModel,cache : Aardvark.Base.Incremental.ReuseCache) = ()
+
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module FullModel = 
         let initial = {

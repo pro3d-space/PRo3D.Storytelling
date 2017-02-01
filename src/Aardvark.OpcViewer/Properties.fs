@@ -173,10 +173,10 @@ module Configurations =
             { 
                 useCompressedTextures = false
                 preTransform     = Trafo3d.Identity
-                patchHierarchies = System.IO.Directory.GetDirectories(@"\\euclid\Assets\opc\Mars_MGS_MOLA_DEM_mosaic_global_0.01") 
+                patchHierarchies = System.IO.Directory.GetDirectories(@"\\euclid\Assets\opc\Mars_MGS_MOLA_DEM_mosaic_global_0.01")
                 boundingBox      = Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") 
-                near             = 100.0
-                far              = 100000000.0
+                near             = 80.0
+                far              = 200000000.0
                 speed            = 32768.0
                 lodDecider       = DefaultMetrics.mars
             }

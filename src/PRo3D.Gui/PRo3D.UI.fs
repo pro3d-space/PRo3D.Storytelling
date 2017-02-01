@@ -259,7 +259,7 @@ module FullLayoutApp =
                             "width"   => "70%"
                             "opacity" => "0.0"
                             "border"  => "1px solid black"
-                            "backgroundColor" => "#FFFFFF"]
+                            "backgroundColor" => "transparent"]
                      attribute "id" "renderControl"] []
                 
                 div [Style [//"display" , "block";
@@ -276,19 +276,6 @@ module FullLayoutApp =
 //                        "width"   => "70%"
 //                        "border" ,  "1px solid black"]] [text "Footer"]
         ]
-
-    let onRendered onRenderControlChanged model view =
-        {
-            clientSide = JsLambda """() => { 
-                var rect = document.getElementById("renderControl").getBoundingClientRect();
-                return { bottom : rect.bottom.toFixed(), height : rect.height.toFixed(), left : rect.left.toFixed(), right : rect.right.toFixed(), top : rect.top.toFixed(), width : rect.width.toFixed() }; 
-            } """   
-            serverSide = fun (s : string) -> 
-                let rect = ClientRect.ofString s
-                printfn "clientRect: %A" rect
-                onRenderControlChanged rect
-                None
-        }
         
     let fileExists path =
         if File.Exists(path) then
@@ -306,7 +293,7 @@ module FullLayoutApp =
             initial    = { FullModel.initial with DomainModel = loadLastScene }
             update     = update form
             view       = view
-            onRendered = onRendered onRenderControlChanged
+            onRendered = OnRendered.ignore
             subscriptions = Subscriptions.none
         }
 

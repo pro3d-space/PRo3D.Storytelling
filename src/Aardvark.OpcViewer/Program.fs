@@ -11,17 +11,17 @@ open Aardvark.Application.WinForms
 
 module Viewer = 
 
-    let createSceneGraph (ctrl : IRenderControl) (scene : OpcViewer)  = 
+    let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcViewer)  = 
     
-        let runner = ctrl.Runtime.CreateLoadRunner 2
+        let runner = runtime.CreateLoadRunner 2
 
         let bb = scene.boundingBox
         let speed = Mod.init scene.speed
 
         let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
-        let view = initialView |> DefaultCameraController.controlWithSpeed speed ctrl.Mouse ctrl.Keyboard ctrl.Time
+        let view = initialView |> DefaultCameraController.controlWithSpeed speed mouse keyboard time
        
-        let proj = ctrl.Sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))
+        let proj = sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))
         let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
 
         let patchHierarchies =
@@ -34,7 +34,7 @@ module Viewer =
         let g = 
             patchHierarchies 
             |> List.map (fun h -> 
-                    Sg.patchLod ctrl.FramebufferSignature runner h.baseDir 
+                    Sg.patchLod signature runner h.baseDir 
                                 scene.lodDecider scene.useCompressedTextures 
                                 (PatchLod.toRoseTree h.tree)
                ) 
@@ -44,7 +44,7 @@ module Viewer =
 
         let lodVisEnabled = Mod.init false
 
-        ctrl.Keyboard.KeyDown(Keys.X).Values.Subscribe(fun _ -> 
+        keyboard.KeyDown(Keys.X).Values.Subscribe(fun _ -> 
             transact (fun () -> 
                 match fillMode.Value with
                     | FillMode.Fill -> fillMode.Value <- FillMode.Line
@@ -52,13 +52,13 @@ module Viewer =
             )
         ) |> ignore
 
-        ctrl.Keyboard.KeyDown(Keys.L).Values.Subscribe(fun _ -> 
+        keyboard.KeyDown(Keys.L).Values.Subscribe(fun _ -> 
             transact (fun () -> 
                 lodVisEnabled.Value <- lodVisEnabled.Value |> not
             )
         ) |> ignore
 
-        ctrl.Keyboard.KeyDown(Keys.G).Values.Subscribe(fun _ -> 
+        keyboard.KeyDown(Keys.G).Values.Subscribe(fun _ -> 
             for i in 0 .. 10 do
                 System.GC.Collect()
             System.GC.WaitForFullGCComplete() |> ignore
@@ -67,24 +67,30 @@ module Viewer =
             //printfn "%A" ( ctrl.Runtime.Context.MemoryUsage ) 
         ) |> ignore
 
-        ctrl.Keyboard.KeyDown(Keys.PageDown).Values.Subscribe(fun _ -> 
+        keyboard.KeyDown(Keys.PageDown).Values.Subscribe(fun _ -> 
             transact (fun () -> 
                 speed.Value <- speed.Value / 2.0
                 printfn "speed: %A" speed.Value
             )
         ) |> ignore
 
-        ctrl.Keyboard.KeyDown(Keys.PageUp).Values.Subscribe(fun _ -> 
+        keyboard.KeyDown(Keys.PageUp).Values.Subscribe(fun _ -> 
             transact (fun () -> 
                 speed.Value <- speed.Value * 2.0
                 printfn "speed: %A" speed.Value
             )
         ) |> ignore
     
-
-        let sg =
+        let box = 
+            Sg.wireBox' C4b.White  ( Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") )
+             |> Sg.effect [
+                DefaultSurfaces.trafo |> toEffect
+                DefaultSurfaces.constantColor C4f.White |> toEffect
+             ]
+        let sg =        
             g   
                 //|> Sg.normalize
+                |> Sg.andAlso (box)
                 |> Sg.transform preTransform
                 |> Sg.effect [
                             DefaultSurfaces.trafo |> toEffect
@@ -111,7 +117,7 @@ module Viewer =
         let win = app.CreateSimpleRenderWindow()
         win.Text <- "Aardvark rocks OPCs \\o/"
 
-        let sg = createSceneGraph win scene
+        let sg = createSceneGraph win.Runtime win.Sizes win.Mouse win.Keyboard win.FramebufferSignature win.Time scene
     
         let cfg =  { BackendConfiguration.Default  with useDebugOutput = false }
         let task =

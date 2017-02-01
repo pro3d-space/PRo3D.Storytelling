@@ -1,4 +1,5 @@
-﻿
+﻿namespace PRo3DGui
+
 open System
 open System.Windows.Forms
 
@@ -61,123 +62,124 @@ module Shader =
             return browserSampler.SampleLevel(v.tc, 0.0) + V4d(1.5,0.5,0.5,1.0)
         }
 
+module Program =
 
-[<EntryPoint;STAThread>]
-let main argv = 
-    Chromium.init()
+    [<EntryPoint;STAThread>]
+    let main argv = 
+        Chromium.init()
 
-    use splashScreen = SplashScreen.spawn()
-    Application.DoEvents()
+        use splashScreen = SplashScreen.spawn()
+        Application.DoEvents()
 
-    Ag.initialize()
-    Aardvark.Init()
+        Ag.initialize()
+        Aardvark.Init()
 
-    use app = new OpenGlApplication()
-    use win = app.CreateSimpleRenderWindow()
-    win.Text <- "Aardvark rocks media \\o/"
-    win.Load.Add(fun _ -> win.Size <- V2i(0,0))
-    win.FormBorderStyle <- FormBorderStyle.None
-    let mutable started = false
+        use app = new OpenGlApplication()
+        use win = app.CreateSimpleRenderWindow()
+        win.Text <- "Aardvark rocks media \\o/"
+        win.Load.Add(fun _ -> win.Size <- V2i(0,0))
+        win.FormBorderStyle <- FormBorderStyle.None
+        let mutable started = false
 
-    let desiredSize = V2i(800,600)
+        let desiredSize = V2i(1280,960)
 
-    use client = new Browser(win.FramebufferSignature,win.Time,app.Runtime, true, win.Sizes)
+        use client = new Browser(win.FramebufferSignature,win.Time,app.Runtime, true, win.Sizes)
 
-    let mutable lastSize = 256 * V2i.II
-    let renderControlViewport =
-        adaptive {
-            let! (size,version) = client.Size, client.Version
-            let vp = client.GetViewport "renderControl"
-            match vp with
-                | Some vp ->
-                    lastSize <- vp.Size
+        let mutable lastSize = 256 * V2i.II
+        let renderControlViewport =
+            adaptive {
+                let! (size,version) = client.Size, client.Version
+                let vp = client.GetViewport "renderControl"
+                match vp with
+                    | Some vp ->
+                        lastSize <- vp.Size
 
-                    if not started then
-                        started <- true
-                        let fixup () = win.BeginInvoke(Action(fun _ -> win.FormBorderStyle <- FormBorderStyle.Sizable; (win :> System.Windows.Forms.Form).Size <- Drawing.Size(desiredSize.X, desiredSize.Y); splashScreen.Close())) |> ignore
-                        if win.IsHandleCreated then
-                            fixup()
-                        else win.HandleCreated.Add(fun _ -> fixup())
+                        if not started then
+                            started <- true
+                            let fixup () = win.BeginInvoke(Action(fun _ -> win.FormBorderStyle <- FormBorderStyle.Sizable; (win :> System.Windows.Forms.Form).Size <- Drawing.Size(desiredSize.X, desiredSize.Y); splashScreen.Close())) |> ignore
+                            if win.IsHandleCreated then
+                                fixup()
+                            else win.HandleCreated.Add(fun _ -> fixup())
 
-                    let vp2 = Box2i(V2i(vp.Min.X, size.Y - vp.Max.Y), V2i(vp.Max.X, size.Y - vp.Min.Y))
-                    return vp2
+                        let vp2 = Box2i(V2i(vp.Min.X, size.Y - vp.Max.Y), V2i(vp.Max.X, size.Y - vp.Min.Y))
+                        return vp2
 
-                | None ->
-                    return Box2i(V2i.OO,lastSize)
-        }
+                    | None ->
+                        return Box2i(V2i.OO,lastSize)
+            }
 
-    let renderRect = renderControlViewport |> Mod.map (fun s -> Box2i.FromMinAndSize(V2i(s.Min.X,win.Size.Y - s.Max.Y),s.Size))
-    let cameraView = 
-        CameraView.lookAt (V3d(6.0, 6.0, 6.0)) V3d.Zero V3d.OOI
-            //|> DefaultCameraController.control win.Mouse win.Keyboard win.Time
-            |> Mod.constant 
+        let renderRect = renderControlViewport |> Mod.map (fun s -> Box2i.FromMinAndSize(V2i(s.Min.X,win.Size.Y - s.Max.Y),s.Size))
+        let cameraView = 
+            CameraView.lookAt (V3d(6.0, 6.0, 6.0)) V3d.Zero V3d.OOI
+                //|> DefaultCameraController.control win.Mouse win.Keyboard win.Time
+                |> Mod.constant 
 
-    let frustum = 
-        renderControlViewport
-            |> Mod.map (fun b -> let s = b.Size in Frustum.perspective 60.0 0.1 100.0 (float s.X / float s.Y))
+        let frustum = 
+            renderControlViewport
+                |> Mod.map (fun b -> let s = b.Size in Frustum.perspective 60.0 0.1 100.0 (float s.X / float s.Y))
 
 
-    let camera = Mod.map2 Camera.create cameraView frustum
+        let camera = Mod.map2 Camera.create cameraView frustum
 
-    let sg, shutdown =
-        let three3dInstance, fablishResult = SingleMultiView.createApp win.Keyboard win.Mouse renderRect camera
-        let res = client.LoadUrlAsync fablishResult.localUrl
-        three3dInstance.sg, fablishResult.shutdown
+        let sg, shutdown =
+            let three3dInstance, fablishResult = Viewer.createApp win win.Runtime (renderControlViewport |> Mod.map (fun a -> a.Size)) win.Mouse win.Keyboard win.FramebufferSignature win.Time renderRect camera
+            let res = client.LoadUrlAsync fablishResult.localUrl
+            three3dInstance.sg, fablishResult.shutdown
 
-    let fullscreenBrowser =
-        Sg.fullScreenQuad
-            |> Sg.diffuseTexture client.Texture 
-            |> Sg.effect [
-                Shader.fullScreen |> toEffect
-               ]
-            |> Sg.blendMode (Mod.constant BlendMode.Blend)
-            |> Sg.pass (RenderPass.after "gui" RenderPassOrder.Arbitrary RenderPass.main)
+        let fullscreenBrowser =
+            Sg.fullScreenQuad
+                |> Sg.diffuseTexture client.Texture 
+                |> Sg.effect [
+                    Shader.fullScreen |> toEffect
+                   ]
+                |> Sg.blendMode (Mod.constant BlendMode.Blend)
+                |> Sg.pass (RenderPass.after "gui" RenderPassOrder.Arbitrary RenderPass.main)
     
 
-    let scene =
-        Sg.box' C4b.White Box3d.Unit
-            |> Sg.effect [
-                DefaultSurfaces.trafo          |> toEffect           
-                DefaultSurfaces.constantColor C4f.Blue |> toEffect  
-                ]
-            |> Sg.viewTrafo (Mod.map CameraView.viewTrafo cameraView)
-            |> Sg.projTrafo (Mod.map Frustum.projTrafo frustum)
+        let scene =
+            Sg.box' C4b.White Box3d.Unit
+                |> Sg.effect [
+                    DefaultSurfaces.trafo          |> toEffect           
+                    DefaultSurfaces.constantColor C4f.Blue |> toEffect  
+                    ]
+                |> Sg.viewTrafo (Mod.map CameraView.viewTrafo cameraView)
+                |> Sg.projTrafo (Mod.map Frustum.projTrafo frustum)
 
 
 
-    let sceneTask = 
-        RenderTask.ofList [
-            app.Runtime.CompileClear(win.FramebufferSignature, Mod.constant C4f.Green)
-            app.Runtime.CompileRender(win.FramebufferSignature, sg)
-        ]
-    let sceneSize = renderControlViewport |> Mod.map (fun box -> box.Size )
-    let renderContent = RenderTask.renderToColor sceneSize sceneTask
+        let sceneTask = 
+            RenderTask.ofList [
+                app.Runtime.CompileClear(win.FramebufferSignature, Mod.constant C4f.Green)
+                app.Runtime.CompileRender(win.FramebufferSignature, sg)
+            ]
+        let sceneSize = renderControlViewport |> Mod.map (fun box -> box.Size )
+        let renderContent = RenderTask.renderToColor sceneSize sceneTask
 
-    let renderOverlay =
-        Sg.fullScreenQuad
-            |> Sg.diffuseTexture renderContent 
-            |> Sg.effect [
-                Shader.overlay |> toEffect
-               ]
-            |> Sg.uniform "TextureOffset" (renderControlViewport |> Mod.map (fun box -> box.Min ))
+        let renderOverlay =
+            Sg.fullScreenQuad
+                |> Sg.diffuseTexture renderContent 
+                |> Sg.effect [
+                    Shader.overlay |> toEffect
+                   ]
+                |> Sg.uniform "TextureOffset" (renderControlViewport |> Mod.map (fun box -> box.Min ))
 
 
-    let composite = Sg.ofSeq [renderOverlay; fullscreenBrowser] |> Sg.depthTest (Mod.constant DepthTestMode.None)
+        let composite = Sg.ofSeq [renderOverlay; fullscreenBrowser] |> Sg.depthTest (Mod.constant DepthTestMode.None)
     
-    client.SetFocus true
-    client.Mouse.Use(win.Mouse) |> ignore
-    client.Keyboard.Use(win.Keyboard) |> ignore
+        client.SetFocus true
+        client.Mouse.Use(win.Mouse) |> ignore
+        client.Keyboard.Use(win.Keyboard) |> ignore
 
-    let task =
-        RenderTask.ofList [
-            app.Runtime.CompileRender(win.FramebufferSignature, composite)
-        ]
+        let task =
+            RenderTask.ofList [
+                app.Runtime.CompileRender(win.FramebufferSignature, composite)
+            ]
 
     
-    win.RenderTask <- task
+        win.RenderTask <- task
     
-    win.Run()
+        win.Run()
 
-    shutdown()
-    Chromium.shutdown()
-    0
+        shutdown()
+        Chromium.shutdown()
+        0
