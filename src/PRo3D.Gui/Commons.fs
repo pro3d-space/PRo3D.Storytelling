@@ -60,14 +60,14 @@ module Helpers =
                     ]    
             ]                                             
         ]
-
+    
     let ribbon create save load = 
-        div [Style ["height", "9vh"; "padding", "0px"]] [
+        div [Style ["height", "9vh"; "padding", "0px"; "backgroundColor","ffffff"]] [
             div [clazz "ui top attached tabular menu"; ] [                
-                    a [clazz "item active"; attribute "data-tab" "first"] [text "File"]
+                    a [clazz "item active"; attribute "data-tab" "first" ] [text "File"]
                     a [clazz "item"; attribute "data-tab" "second"] [text "Home"]
                     a [clazz "item"; attribute "data-tab" "third"] [text "Measurements"]                    
-                    a [clazz "item"; attribute "data-tab" "fourth"] [text "Viewplanner"]         
+                    a [clazz "item"; attribute "data-tab" "fourth"] [text "Viewplanner"]
                                 
             ]            
             div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "first"; ribbonMargin] [fileRibbon create save load] 

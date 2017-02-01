@@ -124,7 +124,7 @@ module PRo3dTreeApp =
                                 | SceneProperties p -> p.Id = id
                                 | SurfaceProperties p -> p.Id = id
                                 | NoProperties -> false
-        div[] [
+        div[Style ["backgroundColor", "ffffff"]] [
             div [ Style [ "border"           , "1px solid black"
                           "height"           , "35vh"
                           "overflowY"        , "auto"
