@@ -14,7 +14,7 @@ nuget Aardvark.Rendering.NanoVg           ~> 2.7.2
 
 nuget Fablish ~> 1.7.9
 
-nuget Aardvark.ImmutableSceneGraph ~> 0.0.6
+nuget Aardvark.ImmutableSceneGraph ~> 0.0.8
 
 nuget Fsunit    ~> 2.3.2
 
