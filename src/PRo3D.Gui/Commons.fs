@@ -21,7 +21,7 @@ module Serialization =
         File.WriteAllBytes(path, arr);
 
 
-    let loadProject path = 
+    let loadProject path : DomainModel.DomainModel = 
         let arr = File.ReadAllBytes(path);
         binarySerializer.UnPickle arr
 
@@ -60,6 +60,24 @@ module Helpers =
                     ]    
             ]                                             
         ]
+
+    let radioRibbon () = 
+        div [clazz "ui form"] [
+            div [clazz "inline fields"] [
+                div [clazz "field"] [
+                    input [attribute "type" "radio"; attribute "name" "interaction"; attribute "checked" "checked"]
+                    label [][text "Mode1"]
+                ]
+                div [clazz "field"] [
+                    input [attribute "type" "radio"; attribute "name" "interaction";]
+                    label [][text "Mode2"]
+                ]
+                div [clazz "field"] [
+                    input [attribute "type" "radio"; attribute "name" "interaction";]
+                    label [][text "Mode3"]
+                ]
+            ]
+        ]
     
     let ribbon create save load = 
         div [Style ["height", "9vh"; "padding", "0px"; "backgroundColor","ffffff"]] [
@@ -70,7 +88,10 @@ module Helpers =
                     a [clazz "item"; attribute "data-tab" "fourth"] [text "Viewplanner"]
                                 
             ]            
-            div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "first"; ribbonMargin] [fileRibbon create save load] 
+            div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "first"; ribbonMargin] [
+                fileRibbon create save load;
+                //radioRibbon()
+            ] 
             div [clazz "ui bottom attached tab segment"; attribute "data-tab" "second"; ribbonMargin] [text "Navigation AddObject Place_Object"]
             div [clazz "ui bottom attached tab segment"; attribute "data-tab" "third"; ribbonMargin] [text "Measurements Ref_Planes Scalebar"]
             div [clazz "ui bottom attached tab segment"; attribute "data-tab" "fourth"; ribbonMargin] [text "Viewplanner"]

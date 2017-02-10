@@ -151,41 +151,6 @@ module PRo3dTreeApp =
             onRendered = OnRendered.ignore
             subscriptions = Subscriptions.none
         }
-
-//module SideBarApp =
-//   
-//    type Action = 
-//        | SetTreeView          of PRo3dTreeApp.Actions
-//        | SetProperties        of PropertiesApp.Action
-//
-//
-//    let update env (model : FullModel) (action : Action) =
-//        let selected_ = FullModel.DomainModel_ >-> DomainModel.Model.UI_ >-> UIState.selected_
-//
-//        match action with
-//            | SetTreeView a   -> { model with DomainModel = PRo3dTreeApp.update (env |> Env.map SetTreeView)  model.DomainModel a }            
-//            | SetProperties a -> 
-//                let p = PropertiesApp.update (env |> Env.map SetProperties) (model.DomainModel.UI.selected) a
-//                Optic.set selected_ p model
-//
-//    let view (model : FullModel) : DomNode<Action> =         
-//        div [] [
-//            div [ Style [ "border"           , "1px solid black"
-//                          "height"           , "35vh"
-//                          "overflowY"        , "auto"
-//                          "backgroundColor" , "#eeeeee"]] [
-//                  PRo3dTreeApp.view model.DomainModel |> Html.map SetTreeView 
-//            ]
-//            PropertiesApp.view model.DomainModel.UI.selected |> Html.map SetProperties
-//        ]
-//
-//    let app = {
-//        initial = FullModel.initial
-//        update = update
-//        view = view
-//        onRendered = OnRendered.ignore
-//        subscriptions = Subscriptions.none
-//    }
      
 module FullLayoutApp =
     
@@ -285,7 +250,13 @@ module FullLayoutApp =
 
     let loadLastScene =
         match fileExists "./last" with
-            | Some p -> Serialization.loadProject p
+            | Some p ->
+                try 
+                    Serialization.loadProject p
+                with e ->
+                    Aardvark.Base.Log.warn "could not restore %A. using empty scene" p
+                    File.Delete p
+                    DomainModel.empty
             | None   -> DomainModel.empty
 
     let app onRenderControlChanged form = 

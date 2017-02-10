@@ -436,7 +436,7 @@ module Program =
 //            onRendered = OnRendered.ignore
 //            subscriptions = Subscriptions.none
 //        }
-        let app = Text.app
+        let app = ImportDiscoverApp.app
         let runWindow = true        
 
         if runWindow then

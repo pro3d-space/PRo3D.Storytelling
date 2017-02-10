@@ -76,7 +76,7 @@ module Program =
 
         use app = new OpenGlApplication()
         use win = app.CreateSimpleRenderWindow()
-        win.Text <- "Aardvark rocks media \\o/"
+        win.Text <- "PRo3D.Viewer"
         win.Load.Add(fun _ -> win.Size <- V2i(0,0))
         win.FormBorderStyle <- FormBorderStyle.None
         let mutable started = false
@@ -147,7 +147,7 @@ module Program =
 
         let sceneTask = 
             RenderTask.ofList [
-                app.Runtime.CompileClear(win.FramebufferSignature, Mod.constant C4f.Green)
+                app.Runtime.CompileClear(win.FramebufferSignature, Mod.constant C4f.Gray20)
                 app.Runtime.CompileRender(win.FramebufferSignature, sg)
             ]
         let sceneSize = renderControlViewport |> Mod.map (fun box -> box.Size )

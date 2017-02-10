@@ -185,10 +185,12 @@ module DomainModel =
                                 OPCs = OPC.fromPaths discovered.discoveredSurfaces }
         { model with Scene = Scene.addsurface newSurface model.Scene; }, newSurface       
 
+    open Aardvark.Base.Incremental
+
     type FullModel = {
         DomainModel       : DomainModel
         importSurfaces    : ImportDiscoverApp.Model    
-        composedTest : Scratch.DomainTypes2.Generated.ComposedTest.Model           
+        composedTest : Scratch.DomainTypes2.Generated.ComposedTest.Model                   
     } with
         static member DomainModel_ =
             (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
@@ -198,14 +200,20 @@ module DomainModel =
             { 
                 _original = x 
                 composedTest = x.composedTest.ToMod(reuseCache)
+                path = Mod.init x.DomainModel.Path
+                surfaces = Mod.init x.DomainModel.Scene.Surfaces.Surfaces
             }
 
     and MFullModel = { 
-        mutable _original : FullModel 
+        mutable _original : FullModel
+        path : ModRef<Option<string>>
+        surfaces : ModRef<list<Surface>>
         composedTest : Scratch.DomainTypes2.Generated.ComposedTest.MModel
     } with
         member x.Apply(arg0 : FullModel,cache : Aardvark.Base.Incremental.ReuseCache) = 
             x.composedTest.Apply(arg0.composedTest,cache)
+            x.path.Value <- arg0.DomainModel.Path
+            x.surfaces.Value <- arg0.DomainModel.Scene.Surfaces.Surfaces
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module FullModel = 

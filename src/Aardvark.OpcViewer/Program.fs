@@ -11,19 +11,14 @@ open Aardvark.Application.WinForms
 
 module Viewer = 
 
-    let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcViewer)  = 
-    
+
+    let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcViewer)  =
+
         let runner = runtime.CreateLoadRunner 2
 
         let bb = scene.boundingBox
-        let speed = Mod.init scene.speed
-
-        let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
-        let view = initialView |> DefaultCameraController.controlWithSpeed speed mouse keyboard time
-       
-        let proj = sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))
         let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
-
+    
         let patchHierarchies =
             [ for h in scene.patchHierarchies do
                 let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
@@ -40,9 +35,65 @@ module Viewer =
                ) 
             |> Sg.ofList
         
-        let fillMode = Mod.init FillMode.Fill
 
         let lodVisEnabled = Mod.init false
+
+        let box = 
+            Sg.wireBox' C4b.White  ( Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") )
+             |> Sg.effect [
+                DefaultSurfaces.trafo |> toEffect
+                DefaultSurfaces.constantColor C4f.White |> toEffect
+             ]
+        let sg =        
+            g   
+                |> Sg.andAlso (box)
+                |> Sg.transform preTransform
+                |> Sg.effect [
+                            DefaultSurfaces.trafo |> toEffect
+                            DefaultSurfaces.constantColor C4f.White |> toEffect
+                            DefaultSurfaces.diffuseTexture |> toEffect
+                            Shader.LoDColor |> toEffect
+                            //DefaultSurfaces.simpleLighting |> toEffect
+                        ]
+                |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
+                |> Sg.uniform "LodVisEnabled" lodVisEnabled
+                |> Sg.cullMode (Mod.constant CullMode.None)
+
+        sg
+
+    let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcViewer)  = 
+    
+        let runner = runtime.CreateLoadRunner 2
+
+        let bb = scene.boundingBox
+        let speed = Mod.init scene.speed
+
+        let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
+
+        let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
+        let view = initialView |> DefaultCameraController.controlWithSpeed speed mouse keyboard time
+       
+        let proj = sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))
+
+        let fillMode = Mod.init FillMode.Fill
+        let lodVisEnabled = Mod.init false
+
+    
+        let patchHierarchies =
+            [ for h in scene.patchHierarchies do
+                let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
+                yield PatchHierarchy.load p
+            ] 
+
+
+        let g = 
+            patchHierarchies 
+            |> List.map (fun h -> 
+                    Sg.patchLod signature runner h.baseDir 
+                                scene.lodDecider scene.useCompressedTextures 
+                                (PatchLod.toRoseTree h.tree)
+               ) 
+            |> Sg.ofList
 
         keyboard.KeyDown(Keys.X).Values.Subscribe(fun _ -> 
             transact (fun () -> 
