@@ -5,6 +5,7 @@ open System
 open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.SceneGraph
+open System.Windows.Forms
 
 open Scratch
 open Fablish
@@ -17,48 +18,64 @@ module Viewer =
     open SharedModel
     open Aardvark.ImmutableSceneGraph
     open Aardvark.Elmish
+    open Aardvark.Base.Rendering
 
     
     //[Style ["width", "100%"; "height", "100%"; "background-color", "transparent"]; attribute "id" "renderControl"] 
 
-    let view3D (cam : IMod<Camera>) (nativeSg : ISg) m= 
+    type Action = Gui of FullLayoutApp.Action | ThreeD of Scratch.ComposedTestApp.Action
+
+    let oldView (cam : IMod<Camera>) (nativeSg : ISg) m= 
         Aardvark.ImmutableSceneGraph.Conv<_>((fun _ -> nativeSg),Scene.group[]) :> ISg<_>
         //m.mscene  |> TranslateController.viewScene cam |> Scene.map Translate
+
+    let view3D (m : DomainModel.MFullModel) =
+        Scratch.ComposedTestApp.view m.composedTest 
+        |> Scene.effect [DefaultSurfaces.trafo |> toEffect; DefaultSurfaces.vertexColor |> toEffect; DefaultSurfaces.simpleLighting |> toEffect ]
+        |> Scene.map ThreeD
+
+    let update (f : Form) e (m : DomainModel.FullModel) (msg : Action) =
+        match msg with
+            | Gui msg -> FullLayoutApp.update f (Env.map Gui e) m msg
+            | ThreeD a -> { m with composedTest = Scratch.ComposedTestApp.update (Env.map ThreeD) m.composedTest a }
 
     let createApp form runtime sizes mouse keyboard signature time viewport camera =
 
         let app = FullLayoutApp.app ignore form
         let initial = app.initial
-        let composed = ComposedApp.ofUpdate initial app.update 
+        let composed = ComposedApp.ofUpdate initial (update form)
 
-        let loader = 
-            async {
-                return Aardvark.Opc.Viewer.createSceneGraph runtime sizes mouse keyboard signature time (Aardvark.Opc.Configurations.Network.mola())
-            } |> Mod.async
+//        let loader = 
+//            async {
+//                return Aardvark.Opc.Viewer.createSceneGraph runtime sizes mouse keyboard signature time (Aardvark.Opc.Configurations.Network.mola())
+//            } |> Mod.async
+//
+//        let sg = 
+//            adaptive {
+//                let! loadedScene = loader
+//                match loadedScene with
+//                    | Some l -> 
+//                        return l
+//                    | None ->   
+//                        return Sg.group' []
+//            } |> Sg.dynamic
 
-        let sg = 
-            adaptive {
-                let! loadedScene = loader
-                match loadedScene with
-                    | Some l -> 
-                        return l
-                    | None ->   
-                        return Sg.group' []
-            } |> Sg.dynamic
 
-        let three3dApp : App<DomainModel.FullModel,DomainModel.MFullModel,_,ISg<FullLayoutApp.Action>>  = {
+        let three3dApp : App<DomainModel.FullModel,DomainModel.MFullModel,Action,ISg<Action>>  = {
             initial = initial
-            update = app.update
-            view = view3D camera sg
+            update = update form
+            view = view3D
             ofPickMsg = fun _ _ -> []
             subscriptions = Subscriptions.none
         }
 
+
+
         let viewApp  = 
             {
                 initial = initial 
-                update = app.update
-                view = app.view
+                update = update form
+                view = app.view >> Html.map Gui
                 subscriptions = Fablish.CommonTypes.Subscriptions.none
                 onRendered = OnRendered.ignore
             }

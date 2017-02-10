@@ -187,20 +187,30 @@ module DomainModel =
 
     type FullModel = {
         DomainModel       : DomainModel
-        importSurfaces    : ImportDiscoverApp.Model               
+        importSurfaces    : ImportDiscoverApp.Model    
+        composedTest : Scratch.DomainTypes2.Generated.ComposedTest.Model           
     } with
         static member DomainModel_ =
             (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
         static member Selected_ = FullModel.DomainModel_ >-> DomainModel.UI_ >-> UIState.selected_
 
-        member x.ToMod(reuseCache : Aardvark.Base.Incremental.ReuseCache) = { _original = x }
+        member x.ToMod(reuseCache : Aardvark.Base.Incremental.ReuseCache) = 
+            { 
+                _original = x 
+                composedTest = x.composedTest.ToMod(reuseCache)
+            }
 
-    and MFullModel = { mutable _original : FullModel } with
-        member x.Apply(arg0 : FullModel,cache : Aardvark.Base.Incremental.ReuseCache) = ()
+    and MFullModel = { 
+        mutable _original : FullModel 
+        composedTest : Scratch.DomainTypes2.Generated.ComposedTest.MModel
+    } with
+        member x.Apply(arg0 : FullModel,cache : Aardvark.Base.Incremental.ReuseCache) = 
+            x.composedTest.Apply(arg0.composedTest,cache)
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module FullModel = 
         let initial = {
             DomainModel       = empty
-            importSurfaces    = ImportDiscoverApp.app.initial               
+            importSurfaces    = ImportDiscoverApp.app.initial   
+            composedTest      = Scratch.ComposedTestApp.initial            
         }

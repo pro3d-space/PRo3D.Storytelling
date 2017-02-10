@@ -122,7 +122,7 @@ module Program =
         let camera = Mod.map2 Camera.create cameraView frustum
 
         let sg, shutdown =
-            let three3dInstance, fablishResult = Viewer.createApp win win.Runtime (renderControlViewport |> Mod.map (fun a -> a.Size)) win.Mouse win.Keyboard win.FramebufferSignature win.Time renderRect camera
+            let three3dInstance, fablishResult = Viewer.createApp win win.Runtime (renderControlViewport |> Mod.map (fun a -> printfn "%A" a; a.Size)) win.Mouse win.Keyboard win.FramebufferSignature win.Time renderRect camera
             let res = client.LoadUrlAsync fablishResult.localUrl
             three3dInstance.sg, fablishResult.shutdown
 
@@ -144,8 +144,6 @@ module Program =
                     ]
                 |> Sg.viewTrafo (Mod.map CameraView.viewTrafo cameraView)
                 |> Sg.projTrafo (Mod.map Frustum.projTrafo frustum)
-
-
 
         let sceneTask = 
             RenderTask.ofList [
