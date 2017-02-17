@@ -465,7 +465,7 @@ module ImportDiscoverAppLaura =
          
     let addToList (listan:list<Path>) (element:string) = element::listan
     let addToList1 (listan:list<SurfaceToLoad>) (element:SurfaceToLoad) = element::listan
-    let mergeLists a b = List.concat [b; a]
+    let mergeLists a b =  b @ a
 
     let rec removeFromList list index  =
         match index, list with
@@ -516,6 +516,7 @@ module ImportDiscoverAppLaura =
             | _ -> 
                 model
 
+
     let view (m : Model) : DomNode<Action> =
         div [clazz "ui container"] [
             div [clazz "ui list"] [
@@ -537,7 +538,7 @@ module ImportDiscoverAppLaura =
                 form [clazz "ui divided items"] [
                     for s in m.surfacesToLoad do
                         let icon =  match m.selectedSurface with
-                                        | Some(x) -> if s.surfaceName.Equals x then "circular loading inverted icon folder" else "circular icon folder"
+                                        | Some(x) -> if s.surfaceName.Equals x then "circular red icon folder" else "circular icon folder"
                                         | None -> "circular icon folder"
                         
                         yield 
