@@ -5,7 +5,7 @@ open Fablish
 
 open System.Windows.Forms
 
-
+open System.Collections.Generic
 
 module PerformanceTest = 
 
@@ -262,6 +262,7 @@ module Text =
     type Action = 
         | Change of Model
 
+
     let update env (model : Model) (action : Action) =
         match action with
             | Change x -> x
@@ -406,6 +407,10 @@ module ImportDiscoverApp =
         { currentPath = ""
           discoveredSurfaces = []
           selectedSurface = None
+          searchPath = []
+          emptySurfaceName = ""
+          opcPath = ""
+          surfacesToLoad = []
         }
 
     let app =
@@ -417,13 +422,145 @@ module ImportDiscoverApp =
             subscriptions = Subscriptions.none
         }
 
+
+module ImportDiscoverAppLaura =
+    open PRo3DGui
+
+//    type System.Collections.Generic.List<'T> with
+//          member this.RemoveAtUnordered(index:int) =
+//            this.[index] <- this.[this.Count-1]
+//            this.RemoveAt(this.Count-1)
+//          member this.RemoveUnordered(item:'T) =
+//            let index = this.IndexOf(item)
+//            if index <> - 1 then this.RemoveAtUnordered(index)
+
+
+    type Path = string
+
+    type Model = PRo3DGui.DiscoveredSurfaces
+
+    type Action =
+        | SetPath               of Text.Action
+        | SetEmptySurfaceName   of Text.Action
+        | SetOPCPath            of Text.Action
+        | SearchPath            of Path
+        | Discover              of Path
+        | SelectSurface         of Path
+        | AddSurface            of Path
+        | DeleteSurface         of Path
+        | Clear
+
+    let newSurfaceToLoad path = {surfaceName = path; opcPaths = []; maxTriangleSize = infinity}
+
+    let discover path = 
+        System.IO.Directory.EnumerateDirectories path 
+            |> Seq.map (fun a -> a.Replace(@"\", @"\\")) 
+            |> Seq.toList 
+    let convert list =
+         list 
+            |> Seq.map(fun a -> newSurfaceToLoad a) 
+            |> Seq.toList 
+         
+    let addToList (listan:list<Path>) (element:string) = element::listan
+    let addToList1 (listan:list<SurfaceToLoad>) (element:SurfaceToLoad) = element::listan
+    let mergeLists a b = List.concat [b; a]
+
+    let rec removeFromList index list =
+        match index, list with
+            | 0, x::xs -> xs
+            | index, x::xs -> x::removeFromList (index - 1) xs
+            | index, [] -> failwith "index out of range"
+
+    //let removeItem (path:string) (l:ResizeArray<_>) = l.Remove(path) |> ignore
+                    
+
+    let update env (model : Model) (action : Action) =
+        match action with
+            | SetPath       a -> { model with currentPath =  Text.update env model.currentPath a}
+            | Discover      a -> { model with surfacesToLoad = discover a
+                                                                |> convert
+                                                                |> mergeLists model.surfacesToLoad }
+            | SelectSurface a -> { model with selectedSurface = match model.selectedSurface with 
+                                                                    | Some old when old = a -> None 
+                                                                    | _ -> Some a}
+            | SearchPath    a -> {model with searchPath =   use dialog = new System.Windows.Forms.OpenFileDialog()
+                                                            dialog.FileName <- "(Selecting Directory - Filename will be ignored)"
+                                                            let r = dialog.ShowDialog()
+                                                            if r = DialogResult.OK then                               
+                                                                (System.IO.Path.GetDirectoryName(dialog.FileName) |> discover ) 
+                                                            else [] }
+            | SetEmptySurfaceName       a -> { model with emptySurfaceName =  Text.update env model.emptySurfaceName a}
+            | SetOPCPath                a -> { model with opcPath =  Text.update env model.opcPath a}
+            | AddSurface  a -> {model with surfacesToLoad = newSurfaceToLoad a |> addToList1 model.surfacesToLoad }
+            | DeleteSurface  a -> {model with surfacesToLoad = removeFromList (List.findIndex (fun elem -> model.selectedSurface.Value.Equals a) model.surfacesToLoad) model.surfacesToLoad}
+            | _ -> model
+
+    let view (m : Model) : DomNode<Action> =
+        div [clazz "ui container"] [
+            div [clazz "ui list"] [
+                div [clazz "item"] [label [] [text "Surface Path:"]]
+                div [clazz "item"] [Text.view m.currentPath |> Html.map SetPath]
+                div [clazz "ui button"; onMouseClick (fun _ -> SearchPath m.currentPath)] [text "..."]
+                div [clazz "ui button"; onMouseClick (fun _ -> Discover m.currentPath)] [text "discover"]
+
+                div [clazz "item"] [label [] [text "Empty Surface Name:"]]
+                div [clazz "item"] [Text.view m.emptySurfaceName |> Html.map SetEmptySurfaceName]
+                div [clazz "ui button"; onMouseClick (fun _ -> AddSurface m.emptySurfaceName)] [text "create"]
+
+                div [clazz "item"] [label [] [text "OPC Path:"]]
+                div [clazz "item"] [Text.view m.opcPath |> Html.map SetOPCPath]
+                div [clazz "ui button"; onMouseClick (fun _ -> AddSurface m.opcPath)] [text "create"]
+                    
+            ]
+            div [Style[ "overflowY","auto"; "height", "200px"]] [
+                form [clazz "ui divided items"] [
+                    for s in m.surfacesToLoad do
+                        let icon =  match m.selectedSurface with
+                                        | Some(x) -> if s.surfaceName.Equals x then "circular loading inverted icon folder" else "circular icon folder"
+                                        | None -> "circular icon folder"
+                        
+                        yield 
+                            div[clazz "item"; onMouseClick (fun _ -> SelectSurface s.surfaceName)] [
+                                i [clazz icon][]
+                                div[clazz "ui content"] [
+                                    div[Style ["fontweight", "bold"]; clazz "middle aligned content"][text (sprintf "%s" (System.IO.Path.GetFileName(s.surfaceName)))] 
+                                    div[clazz "middle aligned content"][text (sprintf "%s" s.surfaceName)] 
+                                ]
+                            ]                                    
+                ]
+            ]
+            div [clazz "ui button"; onMouseClick (fun _ -> DeleteSurface m.selectedSurface.Value)] [text "delete"]
+        ]
+        
+    let initial = 
+        { currentPath = ""
+          discoveredSurfaces = []
+          selectedSurface = None
+          searchPath = []
+          emptySurfaceName = ""
+          opcPath = ""
+          surfacesToLoad = []
+        }
+
+    let app =
+        {
+            initial = initial
+            update = update
+            view = view
+            onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
+        }
+
+       
+
 module Program = 
     [<EntryPoint;STAThread>]
+
     let main argv =
         ChromiumUtilities.unpackCef()
         Chromium.init argv
 
-        let app = PerformanceTest.app
+        let app = ImportDiscoverAppLaura.app //PerformanceTest.app // FileApp.app //
 
         let m : V3dApp.Model = {
                 components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
@@ -436,13 +573,14 @@ module Program =
 //            onRendered = OnRendered.ignore
 //            subscriptions = Subscriptions.none
 //        }
-        let app = ImportDiscoverApp.app
+        //let app = Text.app
         let runWindow = true        
 
         if runWindow then
             let browser = Chromium.runControl "8083" app
             use w = new Form()
             w.Controls.Add browser
+            w.Text <- "Add New Surface (OPC)"
             w.Width <- 800
             w.Height <- 600
             Application.Run(w) 
