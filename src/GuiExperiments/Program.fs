@@ -548,7 +548,7 @@ module ImportDiscoverAppLaura =
                                 ]
                             ]                                    
                 ]
-            ]
+            ]       
             div [clazz "ui button"; onMouseClick (fun _ -> DeleteSurface m.selectedSurface.Value)] [text "delete"]
         ]
         
