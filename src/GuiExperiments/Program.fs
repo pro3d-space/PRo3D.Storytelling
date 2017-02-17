@@ -271,7 +271,7 @@ module Text =
         div [clazz "ui input fluid"] [
             input [
                 Style ["textAlign","right"]
-                attribute "value" model
+                attribute "value" (model.Replace("\\","\\\\"))
                 attribute "type" "text"; //attribute "placeholder" "numeric";
                 //attribute "size" "6"
                 onChange (fun s -> Change (unbox s))
@@ -438,7 +438,7 @@ module ImportDiscoverAppLaura =
     type Path = string
 
     type Model = PRo3DGui.DiscoveredSurfaces
-
+     
     type Action =
         | SetPath               of Text.Action
         | SetEmptySurfaceName   of Text.Action
@@ -453,9 +453,11 @@ module ImportDiscoverAppLaura =
     let newSurfaceToLoad path = {surfaceName = path; opcPaths = []; maxTriangleSize = infinity}
 
     let discover path = 
-        System.IO.Directory.EnumerateDirectories path 
-            |> Seq.map (fun a -> a.Replace(@"\", @"\\")) 
-            |> Seq.toList 
+        if System.IO.Directory.Exists path then
+            System.IO.Directory.EnumerateDirectories path 
+                |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
+                |> Seq.toList 
+        else []
     let convert list =
          list 
             |> Seq.map(fun a -> newSurfaceToLoad a) 
@@ -465,16 +467,31 @@ module ImportDiscoverAppLaura =
     let addToList1 (listan:list<SurfaceToLoad>) (element:SurfaceToLoad) = element::listan
     let mergeLists a b = List.concat [b; a]
 
-    let rec removeFromList index list =
+    let rec removeFromList list index  =
         match index, list with
             | 0, x::xs -> xs
-            | index, x::xs -> x::removeFromList (index - 1) xs
+            | index, x::xs -> x::removeFromList xs (index - 1)
             | index, [] -> failwith "index out of range"
+
+
 
     //let removeItem (path:string) (l:ResizeArray<_>) = l.Remove(path) |> ignore
                     
+    let askPaths (f : System.Windows.Forms.Form) =
+        let mutable paths = []
+        let r = f.Invoke(Action(fun _ -> 
+            use dialog = new System.Windows.Forms.OpenFileDialog()
+            dialog.FileName <- "(Selecting Directory - Filename will be ignored)"
+            let r = dialog.ShowDialog()
+            if r = DialogResult.OK then                               
+                paths <- System.IO.Path.GetDirectoryName dialog.FileName |> discover 
+            else 
+                paths <- []
+        )) 
+        paths
+        
 
-    let update env (model : Model) (action : Action) =
+    let update (f : System.Windows.Forms.Form) env (model : Model) (action : Action) =
         match action with
             | SetPath       a -> { model with currentPath =  Text.update env model.currentPath a}
             | Discover      a -> { model with surfacesToLoad = discover a
@@ -483,17 +500,20 @@ module ImportDiscoverAppLaura =
             | SelectSurface a -> { model with selectedSurface = match model.selectedSurface with 
                                                                     | Some old when old = a -> None 
                                                                     | _ -> Some a}
-            | SearchPath    a -> {model with searchPath =   use dialog = new System.Windows.Forms.OpenFileDialog()
-                                                            dialog.FileName <- "(Selecting Directory - Filename will be ignored)"
-                                                            let r = dialog.ShowDialog()
-                                                            if r = DialogResult.OK then                               
-                                                                (System.IO.Path.GetDirectoryName(dialog.FileName) |> discover ) 
-                                                            else [] }
+            | SearchPath    a -> {model with searchPath = askPaths f }
             | SetEmptySurfaceName       a -> { model with emptySurfaceName =  Text.update env model.emptySurfaceName a}
             | SetOPCPath                a -> { model with opcPath =  Text.update env model.opcPath a}
             | AddSurface  a -> {model with surfacesToLoad = newSurfaceToLoad a |> addToList1 model.surfacesToLoad }
-            | DeleteSurface  a -> {model with surfacesToLoad = removeFromList (List.findIndex (fun elem -> model.selectedSurface.Value.Equals a) model.surfacesToLoad) model.surfacesToLoad}
-            | _ -> model
+            | DeleteSurface  a -> 
+                { model with 
+                      surfacesToLoad =
+                        match model.selectedSurface with
+                            | Some s -> model.surfacesToLoad |> List.choose (fun e -> if e.surfaceName = s then None else Some e)
+                            | None -> model.surfacesToLoad
+
+                }
+            | _ -> 
+                model
 
     let view (m : Model) : DomNode<Action> =
         div [clazz "ui container"] [
@@ -542,10 +562,10 @@ module ImportDiscoverAppLaura =
           surfacesToLoad = []
         }
 
-    let app =
+    let app f =
         {
             initial = initial
-            update = update
+            update = update f
             view = view
             onRendered = OnRendered.ignore
             subscriptions = Subscriptions.none
@@ -560,11 +580,13 @@ module Program =
         ChromiumUtilities.unpackCef()
         Chromium.init argv
 
-        let app = ImportDiscoverAppLaura.app //PerformanceTest.app // FileApp.app //
+        use w = new Form()
+        let app = ImportDiscoverAppLaura.app w //PerformanceTest.app // FileApp.app //
 
         let m : V3dApp.Model = {
                 components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
                 }
+
 
 //        let app = {
 //            initial = { isActive = true }
@@ -578,7 +600,6 @@ module Program =
 
         if runWindow then
             let browser = Chromium.runControl "8083" app
-            use w = new Form()
             w.Controls.Add browser
             w.Text <- "Add New Surface (OPC)"
             w.Width <- 800
