@@ -621,7 +621,7 @@ module ImportDiscoverAppLaura =
                             ]                                    
                 ]
             ]       
-            div [clazz "ui button"; onMouseClick (fun _ -> DeleteSurface m.selectedSurface.Value.surfaceName)] [text "delete"]
+            div [clazz "ui button"; onMouseClick (fun _ -> if m.selectedSurface.IsNone then DeleteSurface "" else DeleteSurface m.selectedSurface.Value.surfaceName)] [text "delete"]
 
             div [clazz "item"] [label [] [text "Surface Details:"]]
 
@@ -652,8 +652,8 @@ module ImportDiscoverAppLaura =
                 ]
             ] 
             
-            div [clazz "ui button"; onMouseClick (fun _ -> DeleteOPC m.selectedOPC.Value)] [text "delete"]
-            div [clazz "ui button"; onMouseClick (fun _ -> DeleteSurface m.selectedSurface.Value.surfaceName)] [text "update"]    
+            div [clazz "ui button"; onMouseClick (fun _ -> if m.selectedSurface.IsNone then DeleteOPC "" else DeleteOPC m.selectedOPC.Value)] [text "delete"]
+            //div [clazz "ui button"; onMouseClick (fun _ -> DeleteSurface m.selectedSurface)] [text "update"]    
             
             div [clazz "item"] [label [] [text "Add OPC Path:"]]
             div [clazz "item"] [Text.view m.fromOPCPath |> Html.map SetOPC]
