@@ -3,7 +3,7 @@
 
 type Path = string
 
-type SurfaceToLoad = {
+type SurfaceInfo = {
     surfaceName     : string
     opcPaths        : list<Path>
     maxTriangleSize : float
@@ -11,9 +11,13 @@ type SurfaceToLoad = {
 type DiscoveredSurfaces = { 
     currentPath        : string
     searchPath         : list<Path> 
-    selectedSurface    : Option<Path>
+    selectedSurface    : Option<SurfaceInfo>
     discoveredSurfaces : list<Path> 
     emptySurfaceName   : string
     opcPath            : string
-    surfacesToLoad     : list<SurfaceToLoad>
+    surfacesInfo       : list<SurfaceInfo>
+    surfaceName        : string
+    maxTriangleSize    : string
+    selectedOPC        : Option<Path>
+    fromOPCPath        : string
 }
