@@ -350,78 +350,81 @@ module Text =
 //    }  
 
 
-//module ImportDiscoverApp =
-//    open PRo3DGui
-//
-//    type Path = string
-//
-//    type Model = PRo3DGui.DiscoveredSurfaces
-//
-//    type Action =
-//        | SetPath       of Text.Action
-//        | Discover      of Path
-//        | SelectSurface of SurfaceToLoad
-//        | AddSurface    of Path
-//        | Clear
-//
-//    let discover path = 
-//        System.IO.Directory.EnumerateDirectories path |> Seq.map (fun a -> a.Replace(@"\", @"\\"))  |> Seq.toList
-//
-//
-//
-//    let update env (model : Model) (action : Action) =
-//        match action with
-//            | SetPath       a -> { model with currentPath =  Text.update env model.currentPath a}
-//            | Discover      a -> { model with discoveredSurfaces = discover a }
-//            | SelectSurface a -> { model with selectedSurface = match model.selectedSurface with 
-//                                                                    | Some old when old = a -> None 
-//                                                                    | _ -> Some a}
-//            | _ -> model
-//
-//    let view (m : Model) : DomNode<Action> =
-//        div [clazz "ui container"] [
-//            div [clazz "ui list"] [
-//                div [clazz "item"] [label [] [text "Surface Path:"]]
-//                div [clazz "item"] [Text.view m.currentPath |> Html.map SetPath]
-//                div [clazz "item"] [button [clazz "ui button"; onMouseClick (fun _ -> Discover m.currentPath)] [text "discover"]]
-//            ]
-//            div [Style[ "overflowY","auto"; "height", "200px"]] [
-//                form [clazz "ui divided items"] [
-//                    for s in m.discoveredSurfaces do
-//                        let icon =  match m.selectedSurface with
-//                                        | Some(x) -> if s.Equals x then "circular loading inverted icon folder" else "circular icon folder"
-//                                        | None -> "circular icon folder"
-//                        
-//                        yield 
-//                            div[clazz "item"; onMouseClick (fun _ -> SelectSurface s)] [
-//                                i [clazz icon][]
-//                                div[clazz "ui content"] [
-//                                    div[Style ["fontweight", "bold"]; clazz "middle aligned content"][text (sprintf "%s" (System.IO.Path.GetFileName(s)))] 
-//                                    div[clazz "middle aligned content"][text (sprintf "%s" s)] 
-//                                ]
-//                            ]                                    
-//                ]
-//            ]
-//        ]
-//        
-//    let initial = 
-//        { currentPath = ""
-//          discoveredSurfaces = []
-//          selectedSurface = None
-//          searchPath = []
-//          emptySurfaceName = ""
-//          opcPath = ""
-//          surfacesToLoad = []
-//        }
-//
-//    let app =
-//        {
-//            initial = initial
-//            update = update
-//            view = view
-//            onRendered = OnRendered.ignore
-//            subscriptions = Subscriptions.none
-//        }
+module ImportDiscoverApp =
+    open PRo3DGui
+
+    type Path = string
+
+    type Model = PRo3DGui.DiscoveredSurfaces
+
+    type Action =
+        | SetPath       of Text.Action
+        | Discover      of Path
+        | SelectSurface of Path
+        | AddSurface    of Path
+        | Clear
+
+    let discover path = 
+        System.IO.Directory.EnumerateDirectories path |> Seq.map (fun a -> a.Replace(@"\", @"\\"))  |> Seq.toList
+
+
+
+    let update env (model : Model) (action : Action) =
+        match action with
+            | SetPath       a -> { model with currentPath =  Text.update env model.currentPath a}
+            | Discover      a -> { model with discoveredSurfaces = discover a }
+            | SelectSurface a -> model
+            | _ -> model
+
+    let view (m : Model) : DomNode<Action> =
+        div [clazz "ui container"] [
+            div [clazz "ui list"] [
+                div [clazz "item"] [label [] [text "Surface Path:"]]
+                div [clazz "item"] [Text.view m.currentPath |> Html.map SetPath]
+                div [clazz "item"] [button [clazz "ui button"; onMouseClick (fun _ -> Discover m.currentPath)] [text "discover"]]
+            ]
+            div [Style[ "overflowY","auto"; "height", "200px"]] [
+                form [clazz "ui divided items"] [
+                    for s in m.discoveredSurfaces do
+                        let icon =  match m.selectedSurface with
+                                        | Some(x) -> if s.Equals x then "circular loading inverted icon folder" else "circular icon folder"
+                                        | None -> "circular icon folder"
+                        
+                        yield 
+                            div[clazz "item"; onMouseClick (fun _ -> SelectSurface s)] [
+                                i [clazz icon][]
+                                div[clazz "ui content"] [
+                                    div[Style ["fontweight", "bold"]; clazz "middle aligned content"][text (sprintf "%s" (System.IO.Path.GetFileName(s)))] 
+                                    div[clazz "middle aligned content"][text (sprintf "%s" s)] 
+                                ]
+                            ]                                    
+                ]
+            ]
+        ]
+        
+    let initial = 
+        { currentPath = ""
+          discoveredSurfaces = []
+          selectedSurface = None
+          selectedSurface2 = ""
+          searchPath = []
+          emptySurfaceName = ""
+          opcPath = ""
+          surfacesInfo = []
+          surfaceName = ""
+          maxTriangleSize = ""
+          selectedOPC = None
+          fromOPCPath = ""
+        }
+
+    let app =
+        {
+            initial = initial
+            update = update
+            view = view
+            onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
+        }
 
 
 module ImportDiscoverAppLaura =
@@ -668,6 +671,7 @@ module ImportDiscoverAppLaura =
         { currentPath = ""
           discoveredSurfaces = []
           selectedSurface = None
+          selectedSurface2 = ""
           searchPath = []
           emptySurfaceName = ""
           opcPath = ""
