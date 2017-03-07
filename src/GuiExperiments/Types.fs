@@ -8,11 +8,13 @@ type SurfaceInfo = {
     opcPaths        : list<Path>
     maxTriangleSize : float
 }
+
 type DiscoveredSurfaces = { 
     currentPath        : string
     searchPath         : list<Path> 
-    selectedSurface    : Option<SurfaceInfo>
-    selectedSurface2    : Path
+    selectedSurface    : Option<Path>
+    selectedSurface1   : Option<SurfaceInfo>
+    //selectedSurface2   : Path
     discoveredSurfaces : list<Path> 
     emptySurfaceName   : string
     opcPath            : string
@@ -21,4 +23,8 @@ type DiscoveredSurfaces = {
     maxTriangleSize    : string
     selectedOPC        : Option<Path>
     fromOPCPath        : string
+    test               : string
 }
+
+
+
