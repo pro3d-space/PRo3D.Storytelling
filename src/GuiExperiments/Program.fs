@@ -350,84 +350,146 @@ module Text =
 //    }  
 
 
-//module ImportDiscoverApp =
-//    open PRo3DGui
-//
-//    type Path = string
-//
-//    type Model = PRo3DGui.DiscoveredSurfaces
-//
-//    type Action =
-//        | SetPath       of Text.Action
-//        | Discover      of Path
-//        | SelectSurface of SurfaceToLoad
-//        | AddSurface    of Path
-//        | Clear
-//
-//    let discover path = 
-//        System.IO.Directory.EnumerateDirectories path |> Seq.map (fun a -> a.Replace(@"\", @"\\"))  |> Seq.toList
-//
-//
-//
-//    let update env (model : Model) (action : Action) =
-//        match action with
-//            | SetPath       a -> { model with currentPath =  Text.update env model.currentPath a}
-//            | Discover      a -> { model with discoveredSurfaces = discover a }
-//            | SelectSurface a -> { model with selectedSurface = match model.selectedSurface with 
-//                                                                    | Some old when old = a -> None 
-//                                                                    | _ -> Some a}
-//            | _ -> model
-//
-//    let view (m : Model) : DomNode<Action> =
-//        div [clazz "ui container"] [
-//            div [clazz "ui list"] [
-//                div [clazz "item"] [label [] [text "Surface Path:"]]
-//                div [clazz "item"] [Text.view m.currentPath |> Html.map SetPath]
-//                div [clazz "item"] [button [clazz "ui button"; onMouseClick (fun _ -> Discover m.currentPath)] [text "discover"]]
-//            ]
-//            div [Style[ "overflowY","auto"; "height", "200px"]] [
-//                form [clazz "ui divided items"] [
-//                    for s in m.discoveredSurfaces do
-//                        let icon =  match m.selectedSurface with
-//                                        | Some(x) -> if s.Equals x then "circular loading inverted icon folder" else "circular icon folder"
-//                                        | None -> "circular icon folder"
-//                        
-//                        yield 
-//                            div[clazz "item"; onMouseClick (fun _ -> SelectSurface s)] [
-//                                i [clazz icon][]
-//                                div[clazz "ui content"] [
-//                                    div[Style ["fontweight", "bold"]; clazz "middle aligned content"][text (sprintf "%s" (System.IO.Path.GetFileName(s)))] 
-//                                    div[clazz "middle aligned content"][text (sprintf "%s" s)] 
-//                                ]
-//                            ]                                    
-//                ]
-//            ]
-//        ]
-//        
-//    let initial = 
-//        { currentPath = ""
-//          discoveredSurfaces = []
-//          selectedSurface = None
-//          searchPath = []
-//          emptySurfaceName = ""
-//          opcPath = ""
-//          surfacesToLoad = []
-//        }
-//
-//    let app =
-//        {
-//            initial = initial
-//            update = update
-//            view = view
-//            onRendered = OnRendered.ignore
-//            subscriptions = Subscriptions.none
-//        }
+module ImportDiscoverApp =
+    open PRo3DGui
+
+    type Path = string
+
+    type Model = PRo3DGui.DiscoveredSurfaces
+
+    type Action =
+        | SetPath       of Text.Action
+        | Discover      of Path
+        | SelectSurface of Path
+        | AddSurface    of Path
+        | Clear
+
+    let discover path = 
+        System.IO.Directory.EnumerateDirectories path |> Seq.map (fun a -> a.Replace(@"\", @"\\"))  |> Seq.toList
+
+
+
+    let update env (model : Model) (action : Action) =
+        match action with
+            | SetPath       a -> { model with currentPath =  Text.update env model.currentPath a}
+            | Discover      a -> { model with discoveredSurfaces = discover a }
+            | SelectSurface a -> { model with selectedSurface = match model.selectedSurface with 
+                                                                    | Some old when old = a -> None 
+                                                                    | _ -> Some a}
+            | _ -> model
+
+    let view (m : Model) : DomNode<Action> =
+        div [clazz "ui container"] [
+            div [clazz "ui list"] [
+                div [clazz "item"] [label [] [text "Surface Path:"]]
+                div [clazz "item"] [Text.view m.currentPath |> Html.map SetPath]
+                div [clazz "item"] [button [clazz "ui button"; onMouseClick (fun _ -> Discover m.currentPath)] [text "discover"]]
+            ]
+            div [Style[ "overflowY","auto"; "height", "200px"]] [
+                form [clazz "ui divided items"] [
+                    for s in m.discoveredSurfaces do
+                        let icon =  match m.selectedSurface with
+                                        | Some(x) -> if s.Equals x then "circular loading inverted icon folder" else "circular icon folder"
+                                        | None -> "circular icon folder"
+                        
+                        yield 
+                            div[clazz "item"; onMouseClick (fun _ -> SelectSurface s)] [
+                                i [clazz icon][]
+                                div[clazz "ui content"] [
+                                    div[Style ["fontweight", "bold"]; clazz "middle aligned content"][text (sprintf "%s" (System.IO.Path.GetFileName(s)))] 
+                                    div[clazz "middle aligned content"][text (sprintf "%s" s)] 
+                                ]
+                            ]                                    
+                ]
+            ]
+        ]
+        
+    let initial = 
+        { currentPath = ""
+          discoveredSurfaces = []
+          selectedSurface = None
+          selectedSurface1 = None
+          searchPath = []
+          emptySurfaceName = ""
+          opcPath = ""
+          surfacesInfo = []
+          surfaceName = ""
+          maxTriangleSize = ""
+          selectedOPC = None
+          fromOPCPath = ""
+          test = ""
+        }
+
+    let app =
+        {
+            initial = initial
+            update = update
+            view = view
+            onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
+        }
+
+module DialogUtils =
+    open System.Windows.Forms
+    open Microsoft.WindowsAPICodePack.Dialogs
+
+    let openFolder =
+        let mutable path = ""
+        let dialog = new Microsoft.WindowsAPICodePack.Dialogs.CommonOpenFileDialog()
+        dialog.InitialDirectory <- "C:\\Users"
+        dialog.IsFolderPicker <- true
+        if dialog.ShowDialog() = CommonFileDialogResult.Ok then
+            path <- System.IO.Path.GetDirectoryName dialog.FileName
+        else path <- ""
+        path
+
+module ListUtils = 
+
+    let addToList (listan:list<string>) (element:string) = element::listan
+    let mergeLists a b =  b @ a
+
+    let rec removeFromList list index  =
+        match index, list with
+            | 0, x::xs -> xs
+            | index, x::xs -> x::removeFromList xs (index - 1)
+            | index, [] -> failwith "index out of range"
+
+
+module OPCFileUtils =
+    
+    // checks if "path" is a valid opc folder
+    let isOPCPath (path : string) = 
+        let imagePath = Path.combine [path; "images"]
+        let patchPath = Path.combine [path; "patches"]
+        let dirsExist = (System.IO.Directory.Exists imagePath) && (System.IO.Directory.Exists patchPath)
+        let storageExists = System.IO.File.Exists(patchPath + "\\patchhierarchy.xml")
+        if dirsExist && storageExists then
+            true
+        else false
+
+    // checks if "path" is a valid surface folder
+    let isSurfaceFolder (path : string) =
+        let mutable isValid = false
+        let subfolders = System.IO.Directory.GetDirectories(path)
+        for s in subfolders do
+            isValid <- (isOPCPath(s) || isValid)
+        isValid
+            
+        
+    // returns all valid OPCs in "path"
+    let getOPCPaths path = 
+        if System.IO.Directory.Exists path then
+            System.IO.Directory.GetDirectories(path)
+                |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
+                |> Seq.toList 
+        else []
+
 
 
 module ImportDiscoverAppLaura =
     open PRo3DGui
-
-
+   
+    
     type Path = string
 
     type Model = PRo3DGui.DiscoveredSurfaces
@@ -438,6 +500,7 @@ module ImportDiscoverAppLaura =
         | SetOPCPath            of Text.Action
         | SearchPath            of Path
         | Discover              of Path
+        | OpenFolder           
         | SelectSurface         of SurfaceInfo
         | AddSurface            of Path
         | AddOPCasSurface       of Path
@@ -450,92 +513,60 @@ module ImportDiscoverAppLaura =
         | SetOPC                of Text.Action
         | AddOPC                of Path
         | Import                of list<SurfaceInfo>
-        | Cancel                of list<SurfaceInfo>
+        //| Cancel                of list<SurfaceInfo>
         | Clear
 
    
+    
+    // new surfaceInfo from path 
+    let newSurfaceInfo (path :  Path) =  {surfaceName = path; opcPaths = OPCFileUtils.getOPCPaths path; maxTriangleSize = infinity}
 
-    let isOPCPath (path : string) = 
-        let imagePath = Path.combine [path; "images"]
-        let patchPath = Path.combine [path; "patches"]
-        let dirsExist = (System.IO.Directory.Exists imagePath) && (System.IO.Directory.Exists patchPath)
-        let storageExists = System.IO.File.Exists(patchPath + "\\patchhierarchy.xml")
-        if dirsExist && storageExists then
-            true
-        else false
-
-    let getOPCPath path = 
-        if System.IO.Directory.Exists path then
-            System.IO.Directory.GetDirectories(path)
-                |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
-                |> Seq.toList 
-        else []
-       
-    let newSurfaceInfo (path :  Path) =  {surfaceName = path; opcPaths = getOPCPath path; maxTriangleSize = infinity}
-
+    // new surfaceInfo
     let updateSurfaceInfo (name : string) (opcs : list<Path>) (maxTS : float) = 
         {surfaceName = name
          opcPaths = opcs
          maxTriangleSize = maxTS
          }
-
+    
+    // returns all valid surface folder in "path"
     let discover path = 
         if System.IO.Directory.Exists path then
             System.IO.Directory.EnumerateDirectories path 
                 |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
+                |> Seq.filter (fun a -> OPCFileUtils.isSurfaceFolder a)
                 |> Seq.toList 
         else []
-
+    
+    // generates new SurfaceInfos from path list
     let convert list =
          list 
             |> Seq.map(fun a -> newSurfaceInfo a) 
             |> Seq.toList 
-         
-    let addToList (listan:list<Path>) (element:string) = element::listan
+    
     let addToList1 (listan:list<SurfaceInfo>) (element:SurfaceInfo) = element::listan
-    let mergeLists a b =  b @ a
-
-    let rec removeFromList list index  =
-        match index, list with
-            | 0, x::xs -> xs
-            | index, x::xs -> x::removeFromList xs (index - 1)
-            | index, [] -> failwith "index out of range"
 
 
-                    
-    let askPaths (f : System.Windows.Forms.Form) =
-        let mutable paths = []
-        let r = f.Invoke(Action(fun _ -> 
-            use dialog = new System.Windows.Forms.OpenFileDialog()
-            dialog.FileName <- "(Selecting Directory - Filename will be ignored)"
-            let r = dialog.ShowDialog()
-            if r = DialogResult.OK then                               
-                paths <- System.IO.Path.GetDirectoryName dialog.FileName |> discover 
-            else 
-                paths <- []
-        )) 
-        paths
-
-    let updateSurfaceName (m : Model) = 
-        match m.selectedSurface with
-            | Some s -> System.IO.Path.GetFileName(m.selectedSurface.Value.surfaceName)
+    let updateSurfaceName (m : Model) (n : string)= 
+        match m.selectedSurface1 with
+            | Some s -> if n.IsEmptyOrNull() then System.IO.Path.GetFileName(m.selectedSurface1.Value.surfaceName) else n
             | None -> "" 
 
 
     let updateTriangleSize (m : Model) = 
         match m.selectedSurface with
-            | Some s -> (m.selectedSurface.Value.maxTriangleSize).ToString()
+            | Some s -> (m.selectedSurface1.Value.maxTriangleSize).ToString()
             | None -> "Double.PositiveInfinity" 
         
     let deleteOPCPath (m : Model)= 
         match m.selectedOPC with
-            | Some s -> m.selectedSurface.Value.opcPaths |> List.choose (fun e -> if e = s then None else Some e)
+            | Some s -> m.selectedSurface1.Value.opcPaths |> List.choose (fun e -> if e = s then None else Some e)
             | None -> [] 
 
     let addOPCPath (m : Model)= 
-        if (isOPCPath m.fromOPCPath) then addToList m.selectedSurface.Value.opcPaths m.fromOPCPath 
-                                        else m.selectedSurface.Value.opcPaths
-
+        if (OPCFileUtils.isOPCPath m.fromOPCPath) then ListUtils.addToList m.selectedSurface1.Value.opcPaths m.fromOPCPath 
+                                        else m.selectedSurface1.Value.opcPaths
+    
+    // checks if surface already exists in surfaceInfo list
     let isExistingSurfaces (m : Model) (p : Path) = m.surfacesInfo 
                                                         |> Seq.map (fun e -> System.IO.Path.GetFileName(e.surfaceName)) 
                                                         |> Seq.contains(System.IO.Path.GetFileName(p))
@@ -547,72 +578,86 @@ module ImportDiscoverAppLaura =
             | SetPath       a -> { model with currentPath =  Text.update env model.currentPath a}
             | Discover      a -> { model with surfacesInfo = discover a
                                                                 |> convert
-                                                                |> mergeLists model.surfacesInfo }
-            | SelectSurface a -> { model with selectedSurface = match model.selectedSurface with 
+                                                                |> ListUtils.mergeLists model.surfacesInfo }
+            | OpenFolder    -> { model with surfacesInfo = DialogUtils.openFolder
+                                                                |> discover
+                                                                |> convert
+                                                                |> ListUtils.mergeLists model.surfacesInfo }
+            | SelectSurface a -> { model with selectedSurface1 = match model.selectedSurface1 with 
                                                                     | Some old when old = a -> None 
                                                                     | _ -> Some a}
-            | SearchPath    a -> {model with searchPath = askPaths f }
+            | SearchPath    a -> {model with searchPath = model.searchPath}
+           // | SearchPath    a -> {model with surfacesInfo = openFolder |> convert |> mergeLists model.surfacesInfo}
             | SetEmptySurfaceName       a -> { model with emptySurfaceName =  Text.update env model.emptySurfaceName a}
             | SetOPCPath                a -> { model with opcPath =  Text.update env model.opcPath a}
             | AddSurface  a -> {model with surfacesInfo = if a.ToString().IsEmpty() then model.surfacesInfo 
                                                                                     else if isExistingSurfaces model a then model.surfacesInfo 
                                                                                                                         else newSurfaceInfo a |> addToList1 model.surfacesInfo }
-            | AddOPCasSurface a -> {model with surfacesInfo = if not(isOPCPath a) then model.surfacesInfo 
+            | AddOPCasSurface a -> {model with surfacesInfo = if not(OPCFileUtils.isOPCPath a) then model.surfacesInfo 
                                                                                     else if isExistingSurfaces model a then model.surfacesInfo 
                                                                                                                         else newSurfaceInfo a |> addToList1 model.surfacesInfo }
             | DeleteSurface  a -> 
                 { model with 
                       surfacesInfo =
-                        match model.selectedSurface with
+                        match model.selectedSurface1 with
                             | Some s -> model.surfacesInfo |> List.choose (fun e -> if e.surfaceName = s.surfaceName then None else Some e)
                             | None -> model.surfacesInfo
 
                 }
             | ShowSurfaceName   a -> {model with surfaceName =  Text.update env model.surfaceName a}
+//            | ShowSurfaceName   a -> {model with selectedSurface1.surfaceName =  match model.selectedSurface1.Value.surfaceName with
+//                                                                | Some -> Text.update env model.selectedSurface1.Value.surfaceName a
+//                                                                | None -> "" }    
             | ShowTriangleSize a -> { model with maxTriangleSize = Text.update env model.maxTriangleSize a}
             | SelectOPC a -> { model with selectedOPC = match model.selectedOPC with 
                                                                     | Some old when old = a -> None 
                                                                     | _ -> Some a}
-            | DeleteOPC  a -> { model with selectedSurface = match model.selectedSurface with
-                                                                | Some s -> Some <| updateSurfaceInfo model.selectedSurface.Value.surfaceName (deleteOPCPath model) model.selectedSurface.Value.maxTriangleSize
-                                                                | None -> model.selectedSurface }                          
+            | DeleteOPC  a -> { model with selectedSurface1 = match model.selectedSurface1 with
+                                                                | Some s -> Some <| updateSurfaceInfo model.selectedSurface1.Value.surfaceName (deleteOPCPath model) model.selectedSurface1.Value.maxTriangleSize
+                                                                | None -> model.selectedSurface1 }                          
             | UpdateSurface a -> { model with surfacesInfo =
-                                                match model.selectedSurface with
+                                                match model.selectedSurface1 with
                                                     | Some s -> model.surfacesInfo |> List.choose (fun e -> if e.surfaceName = s.surfaceName then None else Some e)
                                                     | None -> model.surfacesInfo }
             | SetOPC a -> { model with fromOPCPath =  Text.update env model.fromOPCPath a}
-            | AddOPC a -> { model with selectedSurface =  match model.selectedSurface with
-                                                                | Some s -> Some <| updateSurfaceInfo model.selectedSurface.Value.surfaceName (addOPCPath model) model.selectedSurface.Value.maxTriangleSize
-                                                                | None -> model.selectedSurface }    
+            | AddOPC a -> { model with selectedSurface1 =  match model.selectedSurface1 with
+                                                                | Some s -> Some <| updateSurfaceInfo model.selectedSurface1.Value.surfaceName (addOPCPath model) model.selectedSurface1.Value.maxTriangleSize
+                                                                | None -> model.selectedSurface1 } 
+            | Clear -> model
             | _ -> model
 
 
     let view (m : Model) : DomNode<Action> =
         div [clazz "ui container"] [
             div [clazz "ui list"] [
+                // surface path
                 div [clazz "item"] [label [] [text "Surface Path:"]]
                 div [clazz "item"] [Text.view m.currentPath |> Html.map SetPath]
-                div [clazz "ui button"; onMouseClick (fun _ -> SearchPath m.currentPath)] [text "..."]
+                //div [clazz "ui button"; onMouseClick (fun _ -> Discover OpenDialog.openFolder)] [text "..."]
+                div [clazz "ui button"; onMouseClick (fun _ -> OpenFolder)] [text "..."]
                 div [clazz "ui button"; onMouseClick (fun _ -> Discover m.currentPath)] [text "discover"]
 
+                // empty surface
                 div [clazz "item"] [label [] [text "Empty Surface Name:"]]
                 div [clazz "item"] [Text.view m.emptySurfaceName |> Html.map SetEmptySurfaceName]
                 div [clazz "ui button"; onMouseClick (fun _ -> AddSurface m.emptySurfaceName)] [text "create"]
 
+                // surface from OPC
                 div [clazz "item"] [label [] [text "Surface from OPC Path:"]]
                 div [clazz "item"] [Text.view m.opcPath |> Html.map SetOPCPath]
                 div [clazz "ui button"; onMouseClick (fun _ -> AddOPCasSurface m.opcPath)] [text "create"]
                     
             ]
-            div [Style[ "overflowY","auto"; "height", "200px"]] [
+            // Surfaces List
+            div [Style["overflowY","auto"; "height", "200px"]] [
                 form [clazz "ui divided items"] [
                     for s in m.surfacesInfo do
-                        let icon =  match m.selectedSurface with
+                        let icon =  match m.selectedSurface1 with
                                         | Some(x) -> if s.surfaceName.Equals x.surfaceName then "circular red icon folder" else "circular icon folder"
                                         | None -> "circular icon folder"
 
                         yield 
-                            div[clazz "item"; onMouseClick (fun _ -> SelectSurface s)] [
+                            div[clazz "item"; onMouseClick (fun _ -> SelectSurface s )] [
                                 i [clazz icon][]
                                 div[clazz "ui content"] [
                                     div[Style ["fontweight", "bold"]; clazz "middle aligned content"][text (sprintf "%s" (System.IO.Path.GetFileName(s.surfaceName)))] 
@@ -621,20 +666,23 @@ module ImportDiscoverAppLaura =
                             ]                                    
                 ]
             ]       
-            div [clazz "ui button"; onMouseClick (fun _ -> if m.selectedSurface.IsNone then DeleteSurface "" else DeleteSurface m.selectedSurface.Value.surfaceName)] [text "delete"]
+            div [clazz "ui button"; onMouseClick (fun _ -> if m.selectedSurface1.IsNone then DeleteSurface "" else DeleteSurface m.selectedSurface1.Value.surfaceName)] [text "delete"]
 
+            // Surfaces Details
             div [clazz "item"] [label [] [text "Surface Details:"]]
 
             div [clazz "item"] [label [] [text "Name:"]]
-            div [clazz "item"] [Text.view (updateSurfaceName m) |> Html.map ShowSurfaceName]
+            div [clazz "item"] [Text.view (if m.selectedSurface1.IsSome then m.selectedSurface1.Value.surfaceName else "" ) |> Html.map ShowSurfaceName]
+            //div [clazz "item"] [Text.view (updateSurfaceName m m.surfaceName) |> Html.map ShowSurfaceName]
 
             div [clazz "item"] [label [] [text "MaxTriangleSize:"]]
             div [clazz "item"] [Text.view (updateTriangleSize m) |> Html.map ShowTriangleSize]
 
+            // OPC list
             div [Style[ "overflowY","auto"; "height", "200px"]] [
                 form [clazz "ui divided items"] [
-                    let opcPath = match m.selectedSurface with
-                                                | Some s -> m.selectedSurface.Value.opcPaths
+                    let opcPath = match m.selectedSurface1 with
+                                                | Some s -> m.selectedSurface1.Value.opcPaths
                                                 | None -> [] 
                     for o in opcPath do
                         let icon =  match m.selectedOPC with
@@ -652,15 +700,16 @@ module ImportDiscoverAppLaura =
                 ]
             ] 
             
-            div [clazz "ui button"; onMouseClick (fun _ -> if m.selectedSurface.IsNone then DeleteOPC "" else DeleteOPC m.selectedOPC.Value)] [text "delete"]
+            div [clazz "ui button"; onMouseClick (fun _ -> if m.selectedSurface1.IsNone then DeleteOPC "" else DeleteOPC m.selectedOPC.Value)] [text "delete"]
             //div [clazz "ui button"; onMouseClick (fun _ -> DeleteSurface m.selectedSurface)] [text "update"]    
             
+            // Add new OPC
             div [clazz "item"] [label [] [text "Add OPC Path:"]]
             div [clazz "item"] [Text.view m.fromOPCPath |> Html.map SetOPC]
             div [clazz "ui button"; onMouseClick (fun _ -> SearchPath m.fromOPCPath)] [text "..."]
             div [clazz "ui button"; onMouseClick (fun _ -> AddOPC m.fromOPCPath)] [text "add"]  
         
-            div [clazz "ui button"; onMouseClick (fun _ -> Cancel m.surfacesInfo)] [text "Cancel"]
+            div [clazz "ui button deny"; onMouseClick (fun _ -> Clear)] [text "Cancel"]
             div [clazz "ui button"; onMouseClick (fun _ -> Import m.surfacesInfo)] [text "Import"]  
         ]
         
@@ -668,6 +717,7 @@ module ImportDiscoverAppLaura =
         { currentPath = ""
           discoveredSurfaces = []
           selectedSurface = None
+          selectedSurface1 = None
           searchPath = []
           emptySurfaceName = ""
           opcPath = ""
@@ -676,6 +726,7 @@ module ImportDiscoverAppLaura =
           maxTriangleSize = ""
           selectedOPC = None
           fromOPCPath = ""
+          test = ""
         }
 
     let app f =
@@ -697,7 +748,7 @@ module Program =
         Chromium.init argv
 
         use w = new Form()
-        let app = ImportDiscoverAppLaura.app w //PerformanceTest.app // FileApp.app //
+        let app =  ImportDiscoverAppLaura.app w //PerformanceTest.app //FileApp.app // 
 
         let m : V3dApp.Model = {
                 components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
