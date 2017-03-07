@@ -47,20 +47,6 @@ module Helpers =
                     ]                            
             ]
         ]
-
-    let fileRibbon create save load= 
-        div [clazz "ui grid"][
-                div [clazz "ui two wide column "][sceneMenu create save load]
-                div [clazz "ui four wide column "][
-                    div [clazz "ui buttons"] [
-                        button [clazz "ui labeled icon button"; Callback( "onClick", "doit();")] [
-                            i [clazz "folder icon"] [] 
-                            text "Add Surface"
-                        ]
-                    ]    
-            ]                                             
-        ]
-
     let radioRibbon () = 
         div [clazz "ui form"] [
             div [clazz "inline fields"] [
@@ -77,8 +63,26 @@ module Helpers =
                     label [][text "Mode3"]
                 ]
             ]
-        ]
+        ]    
     
+    let fileRibbon create save load= 
+        table [clazz "ui table"][
+            tbody [] [
+                 tr [] [
+                    td [clazz "collapsing"; Style["padding","0px 5px 0px 0px"]] [sceneMenu create save load]
+                    td [clazz "collapsing"; Style["padding","0px 5px 0px 0px"]] [
+                          div [clazz "ui buttons"] [
+                                button [clazz "ui labeled icon button"; Callback( "onClick", "doit();")] [
+                                    i [clazz "folder icon"][]
+                                    text "Add Surface"]
+                               
+                          ]                        
+                    ]
+                    td[] []
+                 ]
+            ]
+        ]
+                      
     let ribbon create save load = 
         div [Style ["height", "9vh"; "padding", "0px"; "backgroundColor","ffffff"]] [
             div [clazz "ui top attached tabular menu"; ] [                
@@ -90,7 +94,7 @@ module Helpers =
             ]            
             div [clazz "ui bottom attached tab segment active"; attribute "data-tab" "first"; ribbonMargin] [
                 fileRibbon create save load;
-                //radioRibbon()
+               
             ] 
             div [clazz "ui bottom attached tab segment"; attribute "data-tab" "second"; ribbonMargin] [text "Navigation AddObject Place_Object"]
             div [clazz "ui bottom attached tab segment"; attribute "data-tab" "third"; ribbonMargin] [text "Measurements Ref_Planes Scalebar"]
