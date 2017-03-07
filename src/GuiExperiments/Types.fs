@@ -14,6 +14,7 @@ type DiscoveredSurfaces = {
     searchPath         : list<Path> 
     selectedSurface    : Option<Path>
     selectedSurface1   : Option<SurfaceInfo>
+    //selectedSurface2   : Path
     discoveredSurfaces : list<Path> 
     emptySurfaceName   : string
     opcPath            : string

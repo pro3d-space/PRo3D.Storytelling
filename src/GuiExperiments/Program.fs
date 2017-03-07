@@ -446,6 +446,7 @@ module DialogUtils =
 module ListUtils = 
 
     let addToList (listan:list<string>) (element:string) = element::listan
+
     let mergeLists a b =  b @ a
 
     let rec removeFromList list index  =
@@ -577,10 +578,12 @@ module ImportDiscoverAppLaura =
         match action with
             | SetPath       a -> { model with currentPath =  Text.update env model.currentPath a}
             | Discover      a -> { model with surfacesInfo = discover a
+                                                                |> Seq.filter (fun a -> not(isExistingSurfaces model a))
                                                                 |> convert
                                                                 |> ListUtils.mergeLists model.surfacesInfo }
             | OpenFolder    -> { model with surfacesInfo = DialogUtils.openFolder
                                                                 |> discover
+                                                                |> Seq.filter (fun a -> not(isExistingSurfaces model a))
                                                                 |> convert
                                                                 |> ListUtils.mergeLists model.surfacesInfo }
             | SelectSurface a -> { model with selectedSurface1 = match model.selectedSurface1 with 

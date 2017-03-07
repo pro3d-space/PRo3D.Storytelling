@@ -64,8 +64,8 @@ module Viewer =
 
     let view3D (runtime : IRuntime) (signature : IFramebufferSignature) (frustum : IMod<Frustum>) (m : DomainModel.MFullModel) =
         Scene.group [
-            Scratch.ComposedTestApp.view frustum m.composedTest 
-            //Scene.ofSg (nativeSceneGraph runtime signature m.surfaces)
+            //Scratch.ComposedTestApp.view frustum m.composedTest 
+            Scene.ofSg (nativeSceneGraph runtime signature m.surfaces)
         ]
         |> Scene.effect [DefaultSurfaces.trafo |> toEffect; DefaultSurfaces.vertexColor |> toEffect; DefaultSurfaces.simpleLighting |> toEffect ]
         |> Scene.map ThreeD
