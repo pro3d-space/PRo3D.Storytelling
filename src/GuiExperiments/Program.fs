@@ -433,15 +433,27 @@ module DialogUtils =
     open System.Windows.Forms
     open Microsoft.WindowsAPICodePack.Dialogs
 
-    let openFolder =
-        let mutable path = ""
-        let dialog = new Microsoft.WindowsAPICodePack.Dialogs.CommonOpenFileDialog()
-        dialog.InitialDirectory <- "C:\\Users"
-        dialog.IsFolderPicker <- true
-        if dialog.ShowDialog() = CommonFileDialogResult.Ok then
-            path <- System.IO.Path.GetDirectoryName dialog.FileName
-        else path <- ""
-        path
+//    let openFolder =
+//        let mutable path = ""
+//        let dialog = new Microsoft.WindowsAPICodePack.Dialogs.CommonOpenFileDialog()
+//        dialog.InitialDirectory <- "C:\\Users"
+//        dialog.IsFolderPicker <- true
+//        if dialog.ShowDialog() = CommonFileDialogResult.Ok then
+//            path <- System.IO.Path.GetDirectoryName dialog.FileName
+//        else path <- ""
+//        path
+
+    let openFolder (w : Form) =
+        let mutable r = Unchecked.defaultof<_>
+        w.Invoke(Action(fun _ -> 
+            let dialog = new CommonOpenFileDialog()
+            dialog.InitialDirectory <- "C:\\Users"
+            dialog.IsFolderPicker <- true
+            if dialog.ShowDialog() = CommonFileDialogResult.Ok then
+                r <- dialog.FileName
+            else r <- ""
+        )) |> ignore
+        r
 
 module ListUtils = 
 
@@ -501,16 +513,17 @@ module ImportDiscoverAppLaura =
         | SetOPCPath            of Text.Action
         | SearchPath            of Path
         | Discover              of Path
-        | OpenFolder           
+        | OpenFolder      
+        | OpenOPCFolder      
         | SelectSurface         of SurfaceInfo
         | AddSurface            of Path
-        | AddOPCasSurface       of Path
+        | AddOPCAsSurface       of Path
         | DeleteSurface         of Path
         | ShowSurfaceName       of Text.Action
         | ShowTriangleSize      of Text.Action
         | SelectOPC             of Path
         | DeleteOPC             of Path
-        | UpdateSurface         of SurfaceInfo
+        | UpdateSurface         of Option<SurfaceInfo>
         | SetOPC                of Text.Action
         | AddOPC                of Path
         | Import                of list<SurfaceInfo>
@@ -563,16 +576,20 @@ module ImportDiscoverAppLaura =
             | Some s -> m.selectedSurface1.Value.opcPaths |> List.choose (fun e -> if e = s then None else Some e)
             | None -> [] 
 
-    let addOPCPath (m : Model)= 
-        if (OPCFileUtils.isOPCPath m.fromOPCPath) then ListUtils.addToList m.selectedSurface1.Value.opcPaths m.fromOPCPath 
-                                        else m.selectedSurface1.Value.opcPaths
     
     // checks if surface already exists in surfaceInfo list
     let isExistingSurfaces (m : Model) (p : Path) = m.surfacesInfo 
                                                         |> Seq.map (fun e -> System.IO.Path.GetFileName(e.surfaceName)) 
                                                         |> Seq.contains(System.IO.Path.GetFileName(p))
-        
-                                 
+
+    // checks if opc already exists in surfaceInfo
+    let isExistingOPC (m : Model) (p : Path) =  m.selectedSurface1.Value.opcPaths 
+                                                    |> Seq.contains(System.IO.Path.GetFileName(p))
+                                                                    
+    // adds valid opc path to selected surface
+    let addOPCPath (m : Model)= 
+        if (OPCFileUtils.isOPCPath m.fromOPCPath) && not(isExistingOPC m m.fromOPCPath) then ListUtils.addToList m.selectedSurface1.Value.opcPaths m.fromOPCPath 
+                                        else m.selectedSurface1.Value.opcPaths
 
     let update (f : System.Windows.Forms.Form) env (model : Model) (action : Action) =
         match action with
@@ -581,7 +598,7 @@ module ImportDiscoverAppLaura =
                                                                 |> Seq.filter (fun a -> not(isExistingSurfaces model a))
                                                                 |> convert
                                                                 |> ListUtils.mergeLists model.surfacesInfo }
-            | OpenFolder    -> { model with surfacesInfo = DialogUtils.openFolder
+            | OpenFolder    -> { model with surfacesInfo = DialogUtils.openFolder f
                                                                 |> discover
                                                                 |> Seq.filter (fun a -> not(isExistingSurfaces model a))
                                                                 |> convert
@@ -594,20 +611,23 @@ module ImportDiscoverAppLaura =
             | SetEmptySurfaceName       a -> { model with emptySurfaceName =  Text.update env model.emptySurfaceName a}
             | SetOPCPath                a -> { model with opcPath =  Text.update env model.opcPath a}
             | AddSurface  a -> {model with surfacesInfo = if a.ToString().IsEmpty() then model.surfacesInfo 
-                                                                                    else if isExistingSurfaces model a then model.surfacesInfo 
-                                                                                                                        else newSurfaceInfo a |> addToList1 model.surfacesInfo }
-            | AddOPCasSurface a -> {model with surfacesInfo = if not(OPCFileUtils.isOPCPath a) then model.surfacesInfo 
-                                                                                    else if isExistingSurfaces model a then model.surfacesInfo 
-                                                                                                                        else newSurfaceInfo a |> addToList1 model.surfacesInfo }
+                                                            else if isExistingSurfaces model a then model.surfacesInfo 
+                                                                                                else newSurfaceInfo a |> addToList1 model.surfacesInfo }
+//            | OpenOPCFolder -> {model with surfacesInfo = if not(OPCFileUtils.isOPCPath (DialogUtils.openFolder f)) then model.surfacesInfo 
+//                                                                else if isExistingSurfaces model a then model.surfacesInfo 
+//                                                                                                    else newSurfaceInfo a |> addToList1 model.surfacesInfo }
+            | AddOPCAsSurface a -> {model with surfacesInfo = if not(OPCFileUtils.isOPCPath a) then model.surfacesInfo 
+                                                                else if isExistingSurfaces model a then model.surfacesInfo 
+                                                                                                    else newSurfaceInfo a |> addToList1 model.surfacesInfo }
             | DeleteSurface  a -> 
-                { model with 
-                      surfacesInfo =
-                        match model.selectedSurface1 with
-                            | Some s -> model.surfacesInfo |> List.choose (fun e -> if e.surfaceName = s.surfaceName then None else Some e)
-                            | None -> model.surfacesInfo
+                        { model with 
+                              surfacesInfo =
+                                match model.selectedSurface1 with
+                                    | Some s -> model.surfacesInfo |> List.choose (fun e -> if e.surfaceName = s.surfaceName then None else Some e)
+                                    | None -> model.surfacesInfo
 
-                }
-            | ShowSurfaceName   a -> {model with surfaceName =  Text.update env model.surfaceName a}
+                        }
+            | ShowSurfaceName   a -> {model with surfaceName =  Text.update env (System.IO.Path.GetFileName(model.surfaceName)) a}
 //            | ShowSurfaceName   a -> {model with selectedSurface1.surfaceName =  match model.selectedSurface1.Value.surfaceName with
 //                                                                | Some -> Text.update env model.selectedSurface1.Value.surfaceName a
 //                                                                | None -> "" }    
@@ -620,12 +640,13 @@ module ImportDiscoverAppLaura =
                                                                 | None -> model.selectedSurface1 }                          
             | UpdateSurface a -> { model with surfacesInfo =
                                                 match model.selectedSurface1 with
-                                                    | Some s -> model.surfacesInfo |> List.choose (fun e -> if e.surfaceName = s.surfaceName then None else Some e)
+                                                    | Some s -> model.surfacesInfo |> List.choose (fun e -> if e.surfaceName = s.surfaceName then Some (updateSurfaceInfo s.surfaceName s.opcPaths s.maxTriangleSize) else Some e)
                                                     | None -> model.surfacesInfo }
             | SetOPC a -> { model with fromOPCPath =  Text.update env model.fromOPCPath a}
             | AddOPC a -> { model with selectedSurface1 =  match model.selectedSurface1 with
                                                                 | Some s -> Some <| updateSurfaceInfo model.selectedSurface1.Value.surfaceName (addOPCPath model) model.selectedSurface1.Value.maxTriangleSize
                                                                 | None -> model.selectedSurface1 } 
+           
             | Clear -> model
             | _ -> model
 
@@ -636,8 +657,7 @@ module ImportDiscoverAppLaura =
                 // surface path
                 div [clazz "item"] [label [] [text "Surface Path:"]]
                 div [clazz "item"] [Text.view m.currentPath |> Html.map SetPath]
-                //div [clazz "ui button"; onMouseClick (fun _ -> Discover OpenDialog.openFolder)] [text "..."]
-                div [clazz "ui button"; onMouseClick (fun _ -> OpenFolder)] [text "..."]
+                div [clazz "ui button"; onMouseClick (fun _ -> OpenFolder )] [text "..."]
                 div [clazz "ui button"; onMouseClick (fun _ -> Discover m.currentPath)] [text "discover"]
 
                 // empty surface
@@ -648,7 +668,8 @@ module ImportDiscoverAppLaura =
                 // surface from OPC
                 div [clazz "item"] [label [] [text "Surface from OPC Path:"]]
                 div [clazz "item"] [Text.view m.opcPath |> Html.map SetOPCPath]
-                div [clazz "ui button"; onMouseClick (fun _ -> AddOPCasSurface m.opcPath)] [text "create"]
+                div [clazz "ui button"; onMouseClick (fun _ -> OpenOPCFolder )] [text "..."]
+                div [clazz "ui button"; onMouseClick (fun _ -> AddOPCAsSurface m.opcPath)] [text "create"]
                     
             ]
             // Surfaces List
@@ -704,7 +725,7 @@ module ImportDiscoverAppLaura =
             ] 
             
             div [clazz "ui button"; onMouseClick (fun _ -> if m.selectedSurface1.IsNone then DeleteOPC "" else DeleteOPC m.selectedOPC.Value)] [text "delete"]
-            //div [clazz "ui button"; onMouseClick (fun _ -> DeleteSurface m.selectedSurface)] [text "update"]    
+            div [clazz "ui button"; onMouseClick (fun _ -> UpdateSurface m.selectedSurface1 )] [text "update"]    
             
             // Add new OPC
             div [clazz "item"] [label [] [text "Add OPC Path:"]]
