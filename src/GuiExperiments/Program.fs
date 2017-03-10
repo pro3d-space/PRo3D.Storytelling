@@ -435,7 +435,7 @@ module DialogUtils =
         let mutable r = Unchecked.defaultof<_>
         w.Invoke(Action(fun _ -> 
             let dialog = new CommonOpenFileDialog()
-            dialog.InitialDirectory <- "C:\\Users"
+          //  dialog.InitialDirectory <- "C:\\Users"
             dialog.IsFolderPicker <- true
             if dialog.ShowDialog() = CommonFileDialogResult.Ok then
                 r <- dialog.FileName
@@ -586,50 +586,67 @@ module ImportDiscoverAppLaura =
 
     let update (f : System.Windows.Forms.Form) env (model : Model) (action : Action) =
         match action with
-            | SetPath       a -> { model with currentPath =  Text.update env model.currentPath a}
-            | Discover      a -> { model with surfaceInfos = OPCFileUtils.discover a
+            | SetPath a             -> { model with currentPath =  Text.update env model.currentPath a}
+            | Discover a            -> { model with surfaceInfos = OPCFileUtils.discover a
                                                                 |> Seq.filter (fun a -> not(isExistingSurface model a))
                                                                 |> SurfaceInfoUtils.convert
                                                                 |> ListUtils.mergeLists model.surfaceInfos }
-            | OpenFolder    -> let path = DialogUtils.openFolder f                               
-                               { model with currentPath = path }
-            | SelectSurface  a ->  let selected = getSelected model a
-                                   { model with selectedSurface1 = selected; surfaceName = selected.Value.surfaceName; maxTriangleSize = selected.Value.maxTriangleSize.ToString() }                         
-            | SetEmptySurfaceName       a -> { model with emptySurfaceName =  Text.update env model.emptySurfaceName a}
-            | SetOPCPath                a -> { model with opcPath =  Text.update env model.opcPath a}
-            | AddSurface  a -> {model with surfaceInfos = if a.ToString().IsEmpty() then model.surfaceInfos 
-                                                            else if isExistingSurface model a then model.surfaceInfos 
-                                                                                                else SurfaceInfoUtils.newSurfaceInfo a |> SurfaceInfoUtils.addToList1 model.surfaceInfos }
-            | OpenOPCFolder -> let path = DialogUtils.openFolder f                               
-                               { model with opcPath = path }
-            | AddOPCAsSurface a -> {model with surfaceInfos = if not(OPCFileUtils.isOPCPath a) then model.surfaceInfos 
-                                                                else if isExistingSurface model a then model.surfaceInfos 
-                                                                                                    else SurfaceInfoUtils.newSurfaceInfo a |> SurfaceInfoUtils.addToList1 model.surfaceInfos }
-            | DeleteSurface  a -> 
-                        { model with 
-                              surfaceInfos =
-                                match model.selectedSurface1 with
-                                    | Some s -> model.surfaceInfos |> List.choose (fun e -> if e.surfaceName = s.surfaceName then None else Some e)
-                                    | None -> model.surfaceInfos
-                        }
-            | ShowSurfaceName   a -> {model with surfaceName =  Text.update env model.surfaceName a}
-            | ShowTriangleSize a -> { model with maxTriangleSize = Text.update env model.maxTriangleSize a}
-            | SelectOPC a -> { model with selectedOPC = match model.selectedOPC with 
+            | OpenFolder            -> { model with currentPath = DialogUtils.openFolder f }
+            | SelectSurface a       -> let selected = getSelected model a
+                                       { model with selectedSurface1 = selected; 
+                                                    surfaceName = selected.Value.surfaceName; 
+                                                    maxTriangleSize = selected.Value.maxTriangleSize.ToString() }
+            | SetEmptySurfaceName a -> { model with emptySurfaceName =  Text.update env model.emptySurfaceName a}
+            | SetOPCPath a          -> { model with opcPath =  Text.update env model.opcPath a}
+            | AddSurface a          -> { model with surfaceInfos = 
+                                                    if a.ToString().IsEmpty() then model.surfaceInfos 
+                                                    else if isExistingSurface model a then model.surfaceInfos 
+                                                    else SurfaceInfoUtils.newSurfaceInfo a |> SurfaceInfoUtils.addToList1 model.surfaceInfos }
+            | OpenOPCFolder         -> { model with opcPath = DialogUtils.openFolder f }
+            | AddOPCAsSurface a     -> { model with surfaceInfos = 
+                                                    if not(OPCFileUtils.isOPCPath a) then model.surfaceInfos 
+                                                    else if isExistingSurface model a then model.surfaceInfos 
+                                                    else SurfaceInfoUtils.newSurfaceInfo a |> SurfaceInfoUtils.addToList1 model.surfaceInfos }
+            | DeleteSurface a       -> { model with surfaceInfos =
+                                                        match model.selectedSurface1 with
+                                                            | Some s -> model.surfaceInfos 
+                                                                        |> List.choose (fun e -> if e.surfaceName = s.surfaceName then None else Some e)
+                                                            | None -> model.surfaceInfos}
+            | ShowSurfaceName a     -> { model with surfaceName =  Text.update env model.surfaceName a}
+            | ShowTriangleSize a    -> { model with maxTriangleSize = Text.update env model.maxTriangleSize a}
+            | SelectOPC a           -> { model with selectedOPC = match model.selectedOPC with 
                                                                     | Some old when old = a -> None 
                                                                     | _ -> Some a}
-            | DeleteOPC  a -> { model with selectedSurface1 = match model.selectedSurface1 with
-                                                                | Some s -> Some <| SurfaceInfoUtils.updateSurfaceInfo model.selectedSurface1.Value.surfaceName model.selectedSurface1.Value.surfacePath (deleteOPCPath model) model.selectedSurface1.Value.maxTriangleSize
-                                                                | None -> model.selectedSurface1 }                          
-            | UpdateSurface a -> { model with surfaceInfos =
-                                                match model.selectedSurface1 with
-                                                    | Some s -> model.surfaceInfos |> List.choose (fun e -> if e.surfaceName = s.surfaceName then Some (SurfaceInfoUtils.updateSurfaceInfo model.surfaceName s.surfacePath s.opcPaths (float model.maxTriangleSize)) else Some e)
-                                                    | None -> model.surfaceInfos }
-            | SetOPC a -> { model with fromOPCPath =  Text.update env model.fromOPCPath a}
-            | OpenAddOPCFolder -> let path = DialogUtils.openFolder f                               
-                                  { model with fromOPCPath = path }
-            | AddOPC a -> { model with selectedSurface1 =  match model.selectedSurface1 with
-                                                                | Some s -> Some <| SurfaceInfoUtils.updateSurfaceInfo model.selectedSurface1.Value.surfaceName model.selectedSurface1.Value.surfacePath (addOPCPath model) model.selectedSurface1.Value.maxTriangleSize
-                                                                | None -> model.selectedSurface1 } 
+            | DeleteOPC a           -> { model with selectedSurface1 = 
+                                                        match model.selectedSurface1 with
+                                                            | Some s -> Some <| SurfaceInfoUtils.updateSurfaceInfo
+                                                                                    model.selectedSurface1.Value.surfaceName
+                                                                                    model.selectedSurface1.Value.surfacePath
+                                                                                    (deleteOPCPath model)
+                                                                                    model.selectedSurface1.Value.maxTriangleSize
+                                                            | None -> model.selectedSurface1 }                          
+            | UpdateSurface a       -> { model with surfaceInfos =
+                                                        match model.selectedSurface1 with
+                                                            | Some s -> model.surfaceInfos 
+                                                                        |> List.choose (fun e -> if e.surfaceName = s.surfaceName 
+                                                                                                 then Some (SurfaceInfoUtils.updateSurfaceInfo 
+                                                                                                                model.surfaceName 
+                                                                                                                s.surfacePath 
+                                                                                                                s.opcPaths 
+                                                                                                                (float model.maxTriangleSize)) 
+                                                                                                 else Some e)
+                                                            | None -> model.surfaceInfos }
+            | SetOPC a              -> { model with fromOPCPath =  Text.update env model.fromOPCPath a}
+            | OpenAddOPCFolder      -> let path = DialogUtils.openFolder f                               
+                                       { model with fromOPCPath = path }
+            | AddOPC a              -> { model with selectedSurface1 =  
+                                                        match model.selectedSurface1 with
+                                                            | Some s -> Some <| SurfaceInfoUtils.updateSurfaceInfo
+                                                                                        model.selectedSurface1.Value.surfaceName 
+                                                                                        model.selectedSurface1.Value.surfacePath 
+                                                                                        (addOPCPath model) 
+                                                                                        model.selectedSurface1.Value.maxTriangleSize
+                                                            | None -> model.selectedSurface1 } 
             | Clear -> model
             | _ -> model
 
@@ -656,7 +673,7 @@ module ImportDiscoverAppLaura =
                     
             ]
             // Surfaces List
-            div [Style["overflowY","auto"; "height", "200px"]] [
+            div [Style["overflowY","auto"; "maxHeight", "200px"]] [
                 form [clazz "ui divided items"] [
                     for s in m.surfaceInfos do
                         let icon =  match m.selectedSurface1 with
@@ -672,7 +689,8 @@ module ImportDiscoverAppLaura =
                                 ]
                             ]                                    
                 ]
-            ]       
+            ]
+            
             div [clazz "ui button"; onMouseClick (fun _ -> if m.selectedSurface1.IsNone then DeleteSurface "" else DeleteSurface m.selectedSurface1.Value.surfaceName)] [text "delete"]
 
             // Surfaces Details
@@ -754,9 +772,9 @@ module Program =
         use w = new Form()
         let app =  ImportDiscoverAppLaura.app w //PerformanceTest.app //FileApp.app // 
 
-        let m : V3dApp.Model = {
-                components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
-                }
+//        let m : V3dApp.Model = {
+//                components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
+//                }
 
 
 //        let app = {
