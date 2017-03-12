@@ -1,13 +1,24 @@
 ﻿namespace PRo3DGui
 
+open Aardvark.Base
+
 open Fablish
 open Fable.Helpers.Virtualdom
 open Fable.Helpers.Virtualdom.Html
+
 open DomainModel
+
 open Aether
 open Aether.Operators
 
 open GuiExperiments
+
+module Html =
+    let ofC4b (c : C4b) = sprintf "rgb(%i,%i,%i)" c.R c.G c.B
+
+    let table rows = table [clazz "ui celled striped table unstackable"] [ tbody [] rows ]
+
+    let row k v =  tr [] [ td [clazz "collapsing"] [text k]; td [clazz "right aligned"] v ]
 
 module ScenePropertiesApp =
     type Model = DomainModel.Scene
@@ -61,59 +72,25 @@ module SurfacePropertiesApp =
     let view (model : Model) : DomNode<Action> =
         div [] [
             accordion "Surface Properties" "options" true [
-                table [clazz "ui celled striped table unstackable"] [
-                    tbody [] [
-                        tr [] [
-                            td [clazz collapsing] [text "Id:"]; 
-                            td [clazz "right aligned"] [(Text (sprintf "%d" model.Id))]
-                        ]
-
-                        tr [] [
-                            td [clazz collapsing] [text "Name:"]; 
-                            td [clazz "right aligned"] [Text.view model.Name |> Html.map Set_Name]
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Visiblity:"]; 
-                            td [clazz "right aligned"] [Toggle.view model.IsVisible |> Html.map Set_IsVisible]
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Active State:"]; 
-                            td [clazz "right aligned"] [Toggle.view model.IsActive |> Html.map Set_IsActive]
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Shading Mode:"]; 
-                            td [clazz "right aligned"] [Choice.view model.ShadingMode |> Html.map Set_ShadingMode] 
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Texture:"]; 
-                            td [clazz "right aligned"] [Choice.view model.Texture |> Html.map Set_Texture] 
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Map:"];
-                            td [clazz "right aligned"] [Choice.view model.Map |> Html.map Set_SetMap] 
-                        ]
-                        tr [] [
-                            td [clazz collapsing] [text "Render Mode:"];
-                            td [clazz "right aligned"] [Choice.view model.RenderMode |> Html.map Set_RenderMode] 
-                        ]                    
-                        tr [] [
-                            td [clazz collapsing] [text "TriangleThreshold:"];
-                            td [clazz "right aligned"] [Numeric.view model.TriangleThreshold |> Html.map Set_TriangleThreshold]
-                        ]                                 
-                    ]
-                ]
+                Html.table [                    
+                    Html.row "Id:"                  [Text (sprintf "%d" model.Id)]
+                    Html.row "Name:"                [Text.view model.Name                   |> Html.map Set_Name]
+                    Html.row "Visiblity:"           [Toggle.view model.IsVisible            |> Html.map Set_IsVisible]
+                    Html.row "Active State:"        [Toggle.view model.IsActive             |> Html.map Set_IsActive]
+                    Html.row "Shading Mode:"        [Choice.view model.ShadingMode          |> Html.map Set_ShadingMode]
+                    Html.row "Texture:"             [Choice.view model.Texture              |> Html.map Set_Texture]
+                    Html.row "Map:"                 [Choice.view model.Map                  |> Html.map Set_SetMap]
+                    Html.row "Texture:"             [Choice.view model.Texture              |> Html.map Set_Texture]
+                    Html.row "Render Mode:"         [Choice.view model.RenderMode           |> Html.map Set_RenderMode]
+                    Html.row "Triangle Threshold:"  [Numeric.view model.TriangleThreshold   |> Html.map Set_TriangleThreshold]                                                                   
+                ]                
             ]        
 
             accordion "Transformation" "maximize" false [
-                table [clazz "ui celled striped table unstackable"] [
-                        tbody [] [
-                            tr [] [
-                                td [clazz collapsing] [text "Trafo:"];
-                                td [clazz "right aligned"] [Transformation.view model.Trafo |> Html.map Set_Trafo]
-                            ]    
-                        ]
-                    ]
+                Html.table [        
+                    Html.row "Trafo:" [Transformation.view model.Trafo |> Html.map Set_Trafo]                    
                 ]
+            ]                
         ]
 
 module List =
