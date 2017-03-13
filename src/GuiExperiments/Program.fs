@@ -742,7 +742,32 @@ module ImportDiscoverAppLaura =
             subscriptions = Subscriptions.none
         }
 
-       
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module ToggleButton = 
+    type Model = Toggle
+
+    type Action = 
+        | Toggle
+    
+    let update env (model : Model) (action : Action) =
+        match action with
+            | Toggle -> { model with isActive = not model.isActive }
+
+    let view (model : Model) : DomNode<Action> =         
+     //   let active = if model.isActive then "ui defaultChecked toggle checkbox" else "ui toggle checkbox"
+        let active' = if model.isActive then "green" else "red"
+        div [clazz "ui toggle button"; onMouseClick (fun _ -> Toggle)] [text "toggle"]
+        
+    let initial = { isActive = false }
+    
+    let app = {
+        initial = initial
+        update = update
+        view = view
+        subscriptions = Subscriptions.none
+        onRendered = OnRendered.ignore
+    }     
+
 
 module Program = 
     [<EntryPoint;STAThread>]
@@ -752,7 +777,7 @@ module Program =
         Chromium.init argv
 
         use w = new Form()
-        let app =  ImportDiscoverAppLaura.app w //PerformanceTest.app //FileApp.app // 
+        let app =  ImportDiscoverAppLaura.app w //ToggleButton.app //PerformanceTest.app //FileApp.app // 
 
         let m : V3dApp.Model = {
                 components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
