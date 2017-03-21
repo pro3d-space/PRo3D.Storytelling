@@ -214,13 +214,13 @@ module FullLayoutApp =
         div [Style ["overflowY" => "hidden"
                     "overflowX" => "hidden"] ] [
             div [Style ["clear"  => "both";
-                        "height" => "12vh"
+                        "height" => "12%"
                         "border" => "0px solid black"]] [Helpers.ribbon NewProject SaveProject LoadProject]
 
             div [clazz "clearfix"] [
                 div [Style [//"display" , "block";
                             "float"   => "left"
-                            "height"  => "88vh"                        
+                            "height"  => "88%"                        
                             "width"   => "70%"
                             "opacity" => "0.0"
                             "border"  => "1px solid black"
@@ -230,7 +230,7 @@ module FullLayoutApp =
                 div [Style [//"display" , "block";
                             "float"   => "left";
                             "border"  => "0px solid black";
-                            "height"  => "88vh"
+                            "height"  => "88%"
                             "width"   => "30%"                   
                             ]] [PRo3dTreeApp.view m.DomainModel |> Html.map TreeAction]
             ]

@@ -27,7 +27,7 @@ module Serialization =
 
 module Helpers = 
     let container a c = div ([clazz "ui container fluid"] @ a) c
-    let ribbonMargin = Style ["margin", "0px"]
+    let ribbonMargin = Style ["margin", "0px"; "padding", "3px"]
 
     let sceneMenu create save load = 
         div [clazz "ui buttons"] [

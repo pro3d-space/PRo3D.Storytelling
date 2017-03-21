@@ -598,8 +598,8 @@ module ImportDiscoverAppLaura =
                                                                     | Some s -> selected.Value.surfaceName
                                                                     | None -> ""
                                                     maxTriangleSize = match selected with  
-                                                                    | Some s -> selected.Value.maxTriangleSize.ToString()
-                                                                    | None -> "" }
+                                                                        | Some s -> selected.Value.maxTriangleSize.ToString()
+                                                                        | None -> "" }
             | SetEmptySurfaceName a -> { model with emptySurfaceName =  Text.update env model.emptySurfaceName a}
             | SetOPCPath a          -> { model with opcPath =  Text.update env model.opcPath a}
             | AddSurface a          -> { model with surfaceInfos = 
@@ -677,7 +677,7 @@ module ImportDiscoverAppLaura =
                     
             ]
             // Surfaces List
-            div [Style["overflowY","auto"; "maxHeight", "200px"]] [
+            div [Style["overflowY","auto"; "height", "200px"]] [
                 form [clazz "ui divided items"] [
                     for s in m.surfaceInfos do
                         let icon =  match m.selectedSurface1 with
