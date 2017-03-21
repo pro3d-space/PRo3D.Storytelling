@@ -154,6 +154,12 @@ module PRo3dTreeApp =
      
 module FullLayoutApp =
     
+    open Aardvark.Base
+    open Aardvark.Rendering
+    open Aardvark.Base.Rendering
+    open Aardvark.SceneGraph
+    open Aardvark.Base.Incremental
+
     let container a c = div ([clazz "ui container"] @ a) c
 
     let (=>) k v = k,v    
@@ -162,6 +168,7 @@ module FullLayoutApp =
         | TreeAction of PRo3dTreeApp.Actions
         | ImportSurfacesAction of ImportDiscoverApp.Action
         | LoadSurfaces of ImportDiscoverApp.Model
+        | ActivateSurface of ImportDiscoverApp.Model * ISg * Frustum * CameraView
         | NewProject
         | SaveProject
         | SaveAsProject
@@ -179,17 +186,32 @@ module FullLayoutApp =
          Serialization.saveProject newmodel.DomainModel "./last"
          newmodel 
                  
-    let update form e (m : FullModel) a =
+    let update (runtime : IRuntime) (signature : IFramebufferSignature) form (e : Env<Action>) (m : FullModel) a =
         match a with
             | TreeAction a -> 
                 { m with DomainModel = PRo3dTreeApp.update (e |> Env.map TreeAction) m.DomainModel a }
             | ImportSurfacesAction a -> 
                 { m with importSurfaces = ImportDiscoverApp.update (e |> Env.map ImportSurfacesAction) m.importSurfaces a }
-            | LoadSurfaces surf ->                  
+            | ActivateSurface(surf,sg, frustum, cameraView) -> 
                 let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.DomainModel                             
                 let newM = { m with importSurfaces = ImportDiscoverApp.initial; DomainModel = newDomainModel; }
 
-                Optic.set FullModel.Selected_ (SurfaceProperties newSurface) newM
+                let m = Optic.set FullModel.Selected_ (SurfaceProperties newSurface) newM
+                { m with renderSurfaces = PSet.add sg m.renderSurfaces; camera = { m.camera with camera = cameraView }}
+            | LoadSurfaces surf ->       
+                async {    
+                    let config = Aardvark.Opc.Configurations.Network.testSurf()
+                    let opcs = OPC.fromPaths surf.discoveredSurfaces
+                    let sg = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature {config with patchHierarchies = opcs |> List.map (fun a -> a.name)}       
+                    
+                    let scene = config
+                    let bb = config.boundingBox
+                    let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
+                    let proj = Frustum.perspective 60.0 scene.near scene.far 1.0
+                    
+                    return ActivateSurface(surf,sg,proj,initialView)
+                } |> Cmd.Cmd |> e.run
+                m
             | NewProject -> FullModel.initial
             | SaveProject ->                
                 let targetPath =
@@ -250,7 +272,7 @@ module FullLayoutApp =
 
     let loadLastScene =
         match fileExists "./last" with
-            | Some p ->
+            | Some p when false ->
                 try 
                     Serialization.loadProject p
                 with e ->
@@ -259,10 +281,10 @@ module FullLayoutApp =
                     DomainModel.empty
             | None   -> DomainModel.empty
 
-    let app onRenderControlChanged form = 
+    let app runtime signature onRenderControlChanged form = 
         {
             initial    = { FullModel.initial with DomainModel = loadLastScene }
-            update     = update form
+            update     = update runtime signature form
             view       = view
             onRendered = OnRendered.ignore
             subscriptions = Subscriptions.none
