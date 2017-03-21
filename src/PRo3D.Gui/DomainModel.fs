@@ -194,6 +194,7 @@ module DomainModel =
         importSurfaces    : ImportDiscoverApp.Model    
         composedTest : Scratch.DomainTypes2.Generated.ComposedTest.Model               
 
+        loadedSurfaceIds : Set<string>
         camera         : Scratch.DomainTypes.Generated.Camera.Model
         nearFar        : NearFar
         renderSurfaces : pset<Aardvark.SceneGraph.ISg>    
@@ -240,4 +241,5 @@ module DomainModel =
             renderSurfaces = PSet.empty
             camera = Scratch.FreeFlyCameraApp.initial
             nearFar = { near = 0.1; far = 1000000.0 }
+            loadedSurfaceIds = Set.empty
         }

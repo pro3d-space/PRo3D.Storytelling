@@ -198,28 +198,32 @@ module FullLayoutApp =
                 let newM = { m with importSurfaces = ImportDiscoverApp.initial; DomainModel = newDomainModel; }
 
                 let m = Optic.set FullModel.Selected_ (SurfaceProperties newSurface) newM
-                { m with renderSurfaces = PSet.add sg m.renderSurfaces; camera = { m.camera with camera = cameraView }}
+                { m with renderSurfaces = PSet.add sg m.renderSurfaces; camera = { m.camera with camera = cameraView }; loadedSurfaceIds = Set.add surf.currentPath m.loadedSurfaceIds}
             | LoadSurfaces surf ->  
-                printfn "load surfaces"    
+                printfn "load surfaces: %A" surf    
                 let opcs = OPC.fromPaths surf.discoveredSurfaces
                 match opcs with
                     | [] -> 
                         printfn "wtf. imported empty surf. no good"
                         m
-                    | _ -> 
-                        async {    
-                            let config = Aardvark.Opc.Configurations.Network.testSurf()
-                            let opcs = OPC.fromPaths surf.discoveredSurfaces
-                            let sg = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature {config with patchHierarchies = opcs |> List.map (fun a -> a.name)}       
+                    | opcs  -> 
+                        if Set.contains surf.currentPath m.loadedSurfaceIds then
+                            Log.warn "tried to double load surf. investigate!"
+                            m
+                        else
+                            async {    
+                                let config = Aardvark.Opc.Configurations.Network.testSurf()
+                                let opcs = OPC.fromPaths surf.discoveredSurfaces
+                                let sg = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature {config with patchHierarchies = opcs |> List.map (fun a -> a.name)}       
                     
-                            let scene = config
-                            let bb = config.boundingBox
-                            let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
-                            let proj = Frustum.perspective 60.0 scene.near scene.far 1.0
+                                let scene = config
+                                let bb = config.boundingBox
+                                let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
+                                let proj = Frustum.perspective 60.0 scene.near scene.far 1.0
                     
-                            return ActivateSurface(surf,sg,proj,initialView)
-                        } |> Cmd.Cmd |> e.run
-                        m
+                                return ActivateSurface(surf,sg,proj,initialView)
+                            } |> Cmd.Cmd |> e.run
+                            m
             | NewProject -> FullModel.initial
             | SaveProject ->                
                 let targetPath =
