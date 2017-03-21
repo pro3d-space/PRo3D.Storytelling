@@ -180,3 +180,19 @@ module Configurations =
                 speed            = 32768.0
                 lodDecider       = DefaultMetrics.mars
             }
+
+
+
+        let testSurf () = 
+            { 
+                useCompressedTextures = true
+                preTransform     = Trafo3d.Identity
+                patchHierarchies = 
+                        System.IO.Directory.GetDirectories(@"\\euclid\Assets\opc\mastcam\","MSL_Mastcam_Sol_107_id_46992") 
+                        |> Seq.collect System.IO.Directory.GetDirectories
+                boundingBox      = Box3d.Parse("[[-2490165.052869780, 2285846.454951702, -271376.741140408], [-2490140.981372352, 2285877.000650112, -271365.128791433]]") 
+                near             = 0.1
+                far              = 10000.0
+                speed            = 5.0
+                lodDecider       = DefaultMetrics.mars
+            }

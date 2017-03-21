@@ -187,10 +187,17 @@ module DomainModel =
 
     open Aardvark.Base.Incremental
 
+    type NearFar = { near : float; far : float }
+
     type FullModel = {
         DomainModel       : DomainModel
         importSurfaces    : ImportDiscoverApp.Model    
-        composedTest : Scratch.DomainTypes2.Generated.ComposedTest.Model                   
+        composedTest : Scratch.DomainTypes2.Generated.ComposedTest.Model               
+
+        loadedSurfaceIds : Set<string>
+        camera         : Scratch.DomainTypes.Generated.Camera.Model
+        nearFar        : NearFar
+        renderSurfaces : pset<Aardvark.SceneGraph.ISg>    
     } with
         static member DomainModel_ =
             (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
@@ -202,6 +209,9 @@ module DomainModel =
                 composedTest = x.composedTest.ToMod(reuseCache)
                 path = Mod.init x.DomainModel.Path
                 surfaces = Mod.init x.DomainModel.Scene.Surfaces.Surfaces
+                renderSurfaces = ResetSet(x.renderSurfaces)
+                camera = x.camera.ToMod(reuseCache)
+                nearFar = Mod.init x.nearFar
             }
 
     and MFullModel = { 
@@ -209,11 +219,18 @@ module DomainModel =
         path : ModRef<Option<string>>
         surfaces : ModRef<list<Surface>>
         composedTest : Scratch.DomainTypes2.Generated.ComposedTest.MModel
+
+        camera         : Scratch.DomainTypes.Generated.Camera.MModel
+        nearFar : ModRef<NearFar>
+        renderSurfaces : ResetSet<Aardvark.SceneGraph.ISg>
     } with
         member x.Apply(arg0 : FullModel,cache : Aardvark.Base.Incremental.ReuseCache) = 
             x.composedTest.Apply(arg0.composedTest,cache)
             x.path.Value <- arg0.DomainModel.Path
             x.surfaces.Value <- arg0.DomainModel.Scene.Surfaces.Surfaces
+            x.renderSurfaces.Update(arg0.renderSurfaces)
+            x.camera.Apply(arg0.camera,cache)
+            x.nearFar.Value <- arg0.nearFar
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module FullModel = 
@@ -221,4 +238,8 @@ module DomainModel =
             DomainModel       = empty
             importSurfaces    = ImportDiscoverApp.app.initial   
             composedTest      = Scratch.ComposedTestApp.initial            
+            renderSurfaces = PSet.empty
+            camera = Scratch.FreeFlyCameraApp.initial
+            nearFar = { near = 0.1; far = 1000000.0 }
+            loadedSurfaceIds = Set.empty
         }
