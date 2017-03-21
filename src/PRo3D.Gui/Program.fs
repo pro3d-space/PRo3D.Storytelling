@@ -114,6 +114,7 @@ module Program =
                 //|> DefaultCameraController.control win.Mouse win.Keyboard win.Time
                 |> Mod.constant 
 
+        
         let frustum = 
             renderControlViewport
                 |> Mod.map (fun b -> let s = b.Size in Frustum.perspective 60.0 0.01 1000000.0 (float s.X / float s.Y))

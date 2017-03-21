@@ -84,7 +84,7 @@ module Viewer =
         let app = FullLayoutApp.app runtime signature ignore form
         let initial = app.initial
         let composed = ComposedApp.ofUpdate initial (update runtime signature form)
-
+        
 
         let frustum = sizes |> Mod.map (fun (s : V2i) -> Frustum.perspective 60.0 0.1 10.0 (float s.X / float s.Y))
 
