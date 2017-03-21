@@ -159,7 +159,6 @@ module FileApp =
 
     let openModalButton =
         div [] [
-            
             button [Callback( "onClick", "doit();")] [text "JD"]
         ]
     

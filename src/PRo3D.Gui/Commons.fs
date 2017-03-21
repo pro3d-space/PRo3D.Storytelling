@@ -17,13 +17,16 @@ module Serialization =
     let binarySerializer = FsPickler.CreateBinarySerializer()
 
     let saveProject (project : DomainModel.DomainModel) (path:string)  = 
+        let project = { project with HackId = PRo3DGui.DomainModel.Id.New() }
         let arr = binarySerializer.Pickle project 
         File.WriteAllBytes(path, arr);
 
 
     let loadProject path : DomainModel.DomainModel = 
         let arr = File.ReadAllBytes(path);
-        binarySerializer.UnPickle arr
+        let m = binarySerializer.UnPickle arr
+        PRo3DGui.DomainModel.Id <- Fablish.Utils.Ids.ID(m.HackId)
+        m
 
 module Helpers = 
     let container a c = div ([clazz "ui container fluid"] @ a) c
@@ -109,8 +112,8 @@ module Helpers =
                 innerview
             ]
             div [clazz "actions"] [
-                div [clazz "ui button deny"; onMouseClick (fun _ -> deny)] [text "nope"]
-                div [clazz "ui button positive"; onMouseClick (fun _ -> accept)] [text "yes"]
+                div [clazz "ui button deny"; onMouseClick (fun _ -> deny())] [text "nope"]
+                div [clazz "ui button positive"; onMouseClick (fun _ -> accept())] [text "yes"]
             ]
         ]
 

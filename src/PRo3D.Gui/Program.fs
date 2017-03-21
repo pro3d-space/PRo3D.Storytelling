@@ -54,7 +54,7 @@ module Shader =
                 let color = browserSampler.[pixel]
                 return color
             else
-                return V4d(0.0,0.0,0.0,0.0)
+                return V4d(1.0,1.0,1.0,1.0)
         }
 
     let overlay2 (v : Effects.Vertex) =

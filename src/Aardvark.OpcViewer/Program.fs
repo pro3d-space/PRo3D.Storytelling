@@ -18,6 +18,7 @@ module Viewer =
         let runner = 
             match hackRunner with
                 | None -> 
+                    printfn "create runner"
                     let  r = runtime.CreateLoadRunner 2
                     hackRunner <- Some (r)
                     r

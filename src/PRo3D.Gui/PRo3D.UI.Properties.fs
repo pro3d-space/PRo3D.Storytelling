@@ -115,10 +115,10 @@ module PropertiesApp =
         match (m, action) with            
                 | (SurfaceProperties p, SetSurfaceProperties a) ->
                         let surf'     = SurfacePropertiesApp.update (env |> Env.map SetSurfaceProperties) p a
-                        let surfaces' = List.updateIf (fun (x : Surface) -> x.Id = surf'.Id) (fun x -> surf') model.Scene.Surfaces.Surfaces
+                        let surfaces' = List.updateIf (fun (x : Surface) -> x.Id = surf'.Id) (fun x -> surf') model.Scene.Surfaces.Surfaces.AsList
                                                 
                         let model = (model, Model.select_) <== SurfaceProperties surf'
-                        { model with Scene = { model.Scene with Surfaces = { model.Scene.Surfaces with Surfaces = surfaces' }}}
+                        { model with Scene = { model.Scene with Surfaces = { model.Scene.Surfaces with Surfaces = PSet.ofList surfaces' }}}
                 | (SceneProperties p, SetSceneProperties a) -> 
                         let scene = ScenePropertiesApp.update (env |> Env.map SetSceneProperties) p a
                         let model = (model, Model.select_) <== SceneProperties scene

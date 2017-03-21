@@ -1,18 +1,21 @@
 ﻿namespace PRo3DGui
 
+open Aardvark.Base.Incremental
 open Fablish
 open Aardvark.Base
 open Aether
 open Aether.Operators
 open GuiExperiments
 
+
 module DomainModel = 
 
-    let Id = ID()
+    let mutable Id = ID()
     
     type OPC = {
         name : string
         id   : Id
+        path : Path
     }             
 
     type Trafo = {
@@ -45,12 +48,26 @@ module DomainModel =
         TriangleThreshold   : Numeric.Model
         Trafo               : Transformation.Model
         OPCs                : OPC list
-    }
+    } with
+        member x.ToMod(cache : ReuseCache) : MSurface =
+            {
+                IsVisible = Mod.init x.IsActive.isActive
+            }
+    and MSurface = {
+        IsVisible : ModRef<bool>
+    } with
+        member x.Apply(a : Surface, cache : ReuseCache) =
+            x.IsVisible.Value <- a.IsVisible.isActive
           
     type Surfaces = { 
-        Surfaces : list<Surface>
+        Surfaces : pset<Surface>
         Id       : Id
     }
+    and MSurfaces = {
+        MSurfaces : ResetSet<Surface>
+    } with 
+        member x.Apply(s : Surfaces, cache : ReuseCache) =
+            x.MSurfaces.Update(s.Surfaces)
     
     type ProjectionMode = Linear | Viewpoint | Ortho
 
@@ -82,6 +99,8 @@ module DomainModel =
         Surfaces    : Surfaces
         Id          : Id
     } 
+
+
 //    with
 //      static member Path_ =
 //            (fun scene -> scene.Path), (fun path (scene : Scene) -> { scene with Path = path})
@@ -90,7 +109,7 @@ module DomainModel =
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module Scene =
         let addsurface (surf : Surface) (scene : Scene) = 
-            { scene with Surfaces = { scene.Surfaces with Surfaces = surf :: scene.Surfaces.Surfaces  } }
+            { scene with Surfaces = { scene.Surfaces with Surfaces = PSet.add surf scene.Surfaces.Surfaces  } }
 
         let saveScene (path : string) (scene : Scene) =
             failwith "not implemented"        
@@ -99,7 +118,7 @@ module DomainModel =
             {
                 Name = "empty"
                 Description = ""
-                Surfaces = { Surfaces = []; Id = Id.New() }
+                Surfaces = { Surfaces = PSet.empty; Id = Id.New() }
                 Id = Id.New()
             }
 
@@ -112,7 +131,7 @@ module DomainModel =
                 Name                = "default"
                 Description         = ""
                 IsActive            = { isActive = true}
-                IsVisible           = { isActive = false}
+                IsVisible           = { isActive = true}
                 ShadingMode         = { choices = ["lambert";"oren nayar";"footprint"]; selected = "oren nayar" }
                 Texture             = { choices = ["ortho";"height"]; selected = "ortho" }
                 Map                 = { choices = ["none";"accuracy";"distance"]; selected = "none" }
@@ -133,8 +152,8 @@ module DomainModel =
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module OPC =
 
-        let fromPaths (paths : list<string>) : list<OPC> =
-            paths |> List.map (fun p ->  { name = p; id = Id.New() } )
+        let fromPaths (opcPaths : list<string>) : list<OPC> =
+            opcPaths |> List.map (fun p ->  { name = System.IO.Path.GetFileName p; id = Id.New(); path = p } )
 
     type Properties =
         | SurfaceProperties of Surface
@@ -153,6 +172,8 @@ module DomainModel =
         Scene             : Scene
         Path              : Option<string>
         UI                : UIState
+
+        HackId            : int
    //     SelectedLense     : Lens<DomainModel, Properties>
     } with
         static member Scene_ =
@@ -164,26 +185,35 @@ module DomainModel =
         static member select_ =
              DomainModel.UI_ >-> UIState.selected_
 
+
     let empty = 
       let scene = 
           {
               Name = "New Scene"
               Description ="(no description)"
-              Surfaces = { Surfaces = []; Id = Id.New() }
+              Surfaces = { Surfaces = PSet.empty; Id = Id.New() }
               Id = Id.New()
           }
     
       { Scene = scene         
         Path = None   
         UI = { expanded = Set.ofList Id.All; dragging = None; selected = NoProperties }
+        HackId = 0 
         }
 
-    let addDiscoveredSurfaces (discovered : DiscoveredSurfaces) (model : DomainModel) =
-        let newSurface = { Surface.defaultSurface () with 
-                                Id   = Id.New()
-                                Name = System.IO.Path.GetFileName(discovered.currentPath) 
-                                OPCs = OPC.fromPaths discovered.discoveredSurfaces }
-        { model with Scene = Scene.addsurface newSurface model.Scene; }, newSurface       
+    let addDiscoveredSurfaces (surfaces : list<Path>) (model : DomainModel) =
+        let mutable model = model
+        let mutable addedSurfaces = []
+        for s in surfaces do
+            let opcs = ImportDiscoverApp.discover s
+            let newSurface = { Surface.defaultSurface () with 
+                                    Id   = Id.New()
+                                    Path = s
+                                    Name = System.IO.Path.GetFileName s
+                                    OPCs = OPC.fromPaths opcs }
+            addedSurfaces <- newSurface :: addedSurfaces
+            model <- { model with Scene = Scene.addsurface newSurface model.Scene; }
+        model, addedSurfaces
 
     open Aardvark.Base.Incremental
 
@@ -193,6 +223,8 @@ module DomainModel =
         DomainModel       : DomainModel
         importSurfaces    : ImportDiscoverApp.Model    
         composedTest : Scratch.DomainTypes2.Generated.ComposedTest.Model               
+
+        pendingSurfaces : list<Surface>
 
         loadedSurfaceIds : Set<string>
         camera         : Scratch.DomainTypes.Generated.Camera.Model
@@ -208,7 +240,7 @@ module DomainModel =
                 _original = x 
                 composedTest = x.composedTest.ToMod(reuseCache)
                 path = Mod.init x.DomainModel.Path
-                surfaces = Mod.init x.DomainModel.Scene.Surfaces.Surfaces
+
                 renderSurfaces = ResetSet(x.renderSurfaces)
                 camera = x.camera.ToMod(reuseCache)
                 nearFar = Mod.init x.nearFar
@@ -217,7 +249,6 @@ module DomainModel =
     and MFullModel = { 
         mutable _original : FullModel
         path : ModRef<Option<string>>
-        surfaces : ModRef<list<Surface>>
         composedTest : Scratch.DomainTypes2.Generated.ComposedTest.MModel
 
         camera         : Scratch.DomainTypes.Generated.Camera.MModel
@@ -227,7 +258,6 @@ module DomainModel =
         member x.Apply(arg0 : FullModel,cache : Aardvark.Base.Incremental.ReuseCache) = 
             x.composedTest.Apply(arg0.composedTest,cache)
             x.path.Value <- arg0.DomainModel.Path
-            x.surfaces.Value <- arg0.DomainModel.Scene.Surfaces.Surfaces
             x.renderSurfaces.Update(arg0.renderSurfaces)
             x.camera.Apply(arg0.camera,cache)
             x.nearFar.Value <- arg0.nearFar
@@ -242,4 +272,6 @@ module DomainModel =
             camera = Scratch.FreeFlyCameraApp.initial
             nearFar = { near = 0.1; far = 1000000.0 }
             loadedSurfaceIds = Set.empty
+
+            pendingSurfaces = []
         }

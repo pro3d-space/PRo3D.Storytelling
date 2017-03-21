@@ -67,6 +67,8 @@ module Viewer =
             //Scratch.ComposedTestApp.view frustum m.composedTest 
             //Scene.ofSg (nativeSceneGraph runtime signature m.surfaces)
             Scene.ofSg (Sg.set m.renderSurfaces)
+
+            // renderMeasurements (gets kdtrees and enabled states, priority)
         ]
         |> Scene.effect [DefaultSurfaces.trafo |> toEffect; DefaultSurfaces.vertexColor |> toEffect; DefaultSurfaces.simpleLighting |> toEffect ]
         |> Scene.camera (Mod.map2 Camera.create m.camera.mcamera frustum) 
@@ -84,6 +86,8 @@ module Viewer =
         let app = FullLayoutApp.app runtime signature ignore form
         let initial = app.initial
         let composed = ComposedApp.ofUpdate initial (update runtime signature form)
+
+        composed.Update(Gui(FullLayoutApp.LoadSurfaces initial.pendingSurfaces)) |> ignore
         
 
         let frustum = sizes |> Mod.map (fun (s : V2i) -> Frustum.perspective 60.0 0.1 10.0 (float s.X / float s.Y))

@@ -1,7 +1,6 @@
 ﻿namespace PRo3DGui
 
 open System
-open System.IO
 open Suave
 
 open Fablish
@@ -51,7 +50,7 @@ module PRo3dTreeApp =
             div [ clazz "item";  ] [
                     item
                     div [ clazz "content"; ] [
-                        div [ clazz "header noselect"; Style style; onMouseClick (fun o -> Select prop)] [ label ]
+                        div [ clazz "header noselect"; Style (("fontSize", "13pt") :: style); onMouseClick (fun o -> Select prop)] [ label ]
                         div [ clazz "description noselect"] [ desc  ]
                         div [ clazz "list" ] (if isExpanded id then children else [])
                     ]
@@ -105,8 +104,8 @@ module PRo3dTreeApp =
         ]
 
     let viewSurfaces isExpanded isSelected (surfaces : DomainModel.Surfaces) =
-        let surfaceViews = surfaces.Surfaces |> List.map (viewSurface isExpanded isSelected)
-        Tree.node surfaces.Id isExpanded isSelected [] (text "Surfaces") (text (sprintf "Count: %d" surfaces.Surfaces.Length)) surfaceViews NoProperties
+        let surfaceViews = surfaces.Surfaces.AsList |> List.map (viewSurface isExpanded isSelected)
+        Tree.node surfaces.Id isExpanded isSelected [] (text "Surfaces") (text "") surfaceViews NoProperties
         
 
     let viewMeasurements isExpanded isSelected (measurements : DomainModel.Measurement) = failwith "alalalalal"
@@ -128,6 +127,7 @@ module PRo3dTreeApp =
             div [ Style [ "border"           , "1px solid black"
                           "height"           , "35vh"
                           "overflowY"        , "auto"
+                          "overflowX"        , "hidden"
                           "backgroundColor" , "#eeeeee"]] [
             
                 div [] [
@@ -166,9 +166,11 @@ module FullLayoutApp =
 
     type Action =
         | TreeAction of PRo3dTreeApp.Actions
-        | ImportSurfacesAction of ImportDiscoverApp.Action
-        | LoadSurfaces of ImportDiscoverApp.Model
-        | ActivateSurface of ImportDiscoverApp.Model * ISg * Frustum * CameraView
+        | ImportSurfacesAction  of ImportDiscoverApp.Action
+        | AddDiscoveredSurfaces of ImportDiscoverApp.Model
+        | LoadSurfaces          of list<Surface>
+        | ActivateSurfaces      of list<Path * ISg * Surface> * Frustum * CameraView
+        | FinishedLoading       of list<Surface>
         | NewProject
         | SaveProject
         | SaveAsProject
@@ -185,6 +187,39 @@ module FullLayoutApp =
          targetPath |> Option.iter (Serialization.saveProject newmodel.DomainModel)
          Serialization.saveProject newmodel.DomainModel "./last"
          newmodel 
+
+
+    let loadSurface (runtime : IRuntime) (signature : IFramebufferSignature) (e : Env<Action>) (surface : Surface) =
+        async {    
+            let config = Aardvark.Opc.Configurations.Network.testSurf()
+            let sg = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature {config with patchHierarchies = surface.OPCs |> List.map (fun a -> a.path)} //opcs |> List.map (fun a -> a.name)}       
+                    
+            // extract boundingbox from data and drop config.bbb
+            // create kdtree
+            let scene = config
+            let bb = config.boundingBox
+            let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
+            let proj = Frustum.perspective 60.0 scene.near scene.far 1.0
+                    
+            return ActivateSurfaces([surface.Path,sg,surface],proj,initialView)
+        }
+
+    let loadSurfaces (runtime : IRuntime) (signature : IFramebufferSignature) (e : Env<Action>) (surfaces : list<Surface>) =
+        printfn "load surfaces: %A" surfaces    
+        async {    
+            for s in surfaces do
+                if String.IsNullOrEmpty s.Path then 
+                    Log.warn "skipping empty surface."
+                else
+                    let mre = new System.Threading.ManualResetEventSlim(false)
+                    async {
+                        let! a = loadSurface runtime signature e s
+                        mre.Set()
+                        return a
+                    } |> Cmd.Cmd |> e.run
+                    mre.Wait()
+            return FinishedLoading surfaces
+        } |> Cmd.Cmd |> e.run
                  
     let update (runtime : IRuntime) (signature : IFramebufferSignature) form (e : Env<Action>) (m : FullModel) a =
         match a with
@@ -192,38 +227,30 @@ module FullLayoutApp =
                 { m with DomainModel = PRo3dTreeApp.update (e |> Env.map TreeAction) m.DomainModel a }
             | ImportSurfacesAction a -> 
                 { m with importSurfaces = ImportDiscoverApp.update (e |> Env.map ImportSurfacesAction) m.importSurfaces a }
-            | ActivateSurface(surf,sg, frustum, cameraView) -> 
+            | ActivateSurfaces(pathAndSgs, frustum, cameraView) -> 
                 printfn "activate surface"  
-                let newDomainModel,newSurface =  DomainModel.addDiscoveredSurfaces surf m.DomainModel                             
-                let newM = { m with importSurfaces = ImportDiscoverApp.initial; DomainModel = newDomainModel; }
-
-                let m = Optic.set FullModel.Selected_ (SurfaceProperties newSurface) newM
-                { m with renderSurfaces = PSet.add sg m.renderSurfaces; camera = { m.camera with camera = cameraView }; loadedSurfaceIds = Set.add surf.currentPath m.loadedSurfaceIds}
-            | LoadSurfaces surf ->  
-                printfn "load surfaces: %A" surf    
-                let opcs = OPC.fromPaths surf.discoveredSurfaces
-                match opcs with
-                    | [] -> 
-                        printfn "wtf. imported empty surf. no good"
+                match pathAndSgs with
+                    | [] -> m
+                    | (_,_,surface)::xs ->
+                        let mutable m = Optic.set FullModel.Selected_ (SurfaceProperties surface) m
+                        for (path,sg,_) in pathAndSgs do
+                            m <- { m with renderSurfaces = PSet.add sg m.renderSurfaces; camera = { m.camera with camera = cameraView }; loadedSurfaceIds = Set.add path m.loadedSurfaceIds}
                         m
-                    | opcs  -> 
-                        if Set.contains surf.currentPath m.loadedSurfaceIds then
-                            Log.warn "tried to double load surf. investigate!"
-                            m
-                        else
-                            async {    
-                                let config = Aardvark.Opc.Configurations.Network.testSurf()
-                                let opcs = OPC.fromPaths surf.discoveredSurfaces
-                                let sg = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature {config with patchHierarchies = opcs |> List.map (fun a -> a.name)}       
-                    
-                                let scene = config
-                                let bb = config.boundingBox
-                                let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
-                                let proj = Frustum.perspective 60.0 scene.near scene.far 1.0
-                    
-                                return ActivateSurface(surf,sg,proj,initialView)
-                            } |> Cmd.Cmd |> e.run
-                            m
+            | AddDiscoveredSurfaces discoverModel -> 
+                if String.IsNullOrEmpty discoverModel.currentPath || List.isEmpty discoverModel.discoveredSurfaces then
+                    m 
+                else
+                    let newDomainModel, addedSurfaces =  DomainModel.addDiscoveredSurfaces [discoverModel.currentPath] m.DomainModel                             
+                    let newM = { m with importSurfaces = ImportDiscoverApp.initial; DomainModel = newDomainModel; }
+                    loadSurfaces runtime signature e addedSurfaces
+                    newM
+                
+            | LoadSurfaces surfaces ->  
+                loadSurfaces runtime signature e surfaces
+                m
+            | FinishedLoading surfaces -> 
+                Log.info "finished loading surfaces: %A" surfaces
+                m
             | NewProject -> FullModel.initial
             | SaveProject ->                
                 let targetPath =
@@ -265,10 +292,11 @@ module FullLayoutApp =
                             "float"   => "left";
                             "border"  => "0px solid black";
                             "height"  => "88%"
-                            "width"   => "30%"                   
+                            "width"   => "30%"      
+                            "overflowX"        , "none"             
                             ]] [PRo3dTreeApp.view m.DomainModel |> Html.map TreeAction]
             ]
-            Helpers.runModal (ImportDiscoverApp.view m.importSurfaces |> Html.map ImportSurfacesAction) "Import Surface" (LoadSurfaces m.importSurfaces) Abort
+            Helpers.runModal (ImportDiscoverApp.view m.importSurfaces |> Html.map ImportSurfacesAction) "Import Surface" (fun _ -> printfn "doing that"; AddDiscoveredSurfaces m.importSurfaces) (fun _ -> Abort)
 
 //            div [Style ["clear"  , "both";
 //                        "height", "4vh"
@@ -277,25 +305,26 @@ module FullLayoutApp =
         ]
         
     let fileExists path =
-        if File.Exists(path) then
+        if System.IO.File.Exists(path) then
             Some path
         else
             None
 
-    let loadLastScene =
+    let loadLastScene () =
         match fileExists "./last" with
-            | Some p when false ->
+            | Some p  ->
                 try 
                     Serialization.loadProject p
                 with e ->
                     Aardvark.Base.Log.warn "could not restore %A. using empty scene" p
-                    File.Delete p
+                    System.IO.File.Delete p
                     DomainModel.empty
-            | None   -> DomainModel.empty
+            | _   -> DomainModel.empty
 
     let app runtime signature onRenderControlChanged form = 
+        let domainModel = loadLastScene()
         {
-            initial    = { FullModel.initial with DomainModel = loadLastScene }
+            initial    = { FullModel.initial with DomainModel = domainModel; pendingSurfaces = domainModel.Scene.Surfaces.Surfaces |> PSet.toList }
             update     = update runtime signature form
             view       = view
             onRendered = OnRendered.ignore
