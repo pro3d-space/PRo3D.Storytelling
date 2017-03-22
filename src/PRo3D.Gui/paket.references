@@ -8,6 +8,7 @@ Aardvark.SceneGraph
 Aardvark.Rendering.NanoVg
 
 Aardvark.VRVis.Geometry
+Aardvark.VRVis.Base
 
 Fsunit
 FParsec

@@ -1214,7 +1214,7 @@ module RibbonToggleButtons =
         
         Html.Layout.horizontal[
             Html.Layout.boxH [ 
-                button [clazz (icon model.isNavigationActive); onMouseClick (fun _ -> ToggleNavigation)] [ //Style style;
+                button [clazz (icon model.isNavigationActive); Style [ "verticalAlign", "middle"]; onMouseClick (fun _ -> ToggleNavigation)] [ //Style style;
                     i [clazz "rocket icon"][]
                 ] 
             ]
