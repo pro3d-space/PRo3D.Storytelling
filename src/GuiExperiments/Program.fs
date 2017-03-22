@@ -1182,14 +1182,14 @@ module RibbonToggleButtons =
     let update env (model : Model) (action : Action) =
         match action with
             | ToggleNavigation  -> { model with isNavigationActive = not model.isNavigationActive;
-                                                isMeasurementsActive =  model.isNavigationActive;
-                                                isViewPlannerActive = model.isNavigationActive }
+                                                isMeasurementsActive =  false;
+                                                isViewPlannerActive = false }
             | ToggleMeasurements  -> { model with isMeasurementsActive = not model.isMeasurementsActive;
-                                                  isNavigationActive = model.isMeasurementsActive;
-                                                  isViewPlannerActive = model.isMeasurementsActive }
+                                                  isNavigationActive = false;
+                                                  isViewPlannerActive = false }
             | ToggleViewPlanner  -> { model with isViewPlannerActive = not model.isViewPlannerActive;
-                                                 isNavigationActive = model.isViewPlannerActive;
-                                                 isMeasurementsActive = model.isViewPlannerActive }
+                                                 isNavigationActive = false;
+                                                 isMeasurementsActive = false }
 
     let view (model : Model) : DomNode<Action> =  
         let style (a:bool) = if a then [("color", "pink")] else [("color", "grey")]   
