@@ -8,6 +8,23 @@ open System.Windows.Forms
 open System.Collections.Generic
 open Aardvark.Base
 
+module Html =
+    open Fable.Helpers.Virtualdom
+    open Fable.Helpers.Virtualdom.Html
+
+    let ofC4b (c : C4b) = sprintf "rgb(%i,%i,%i)" c.R c.G c.B
+
+    let table rows = table [clazz "ui celled striped table unstackable"] [ tbody [] rows ]
+
+    let row k v = tr [] [ td [clazz "collapsing"] [text k]; td [clazz "right aligned"] v ]
+
+    module Layout =
+        let boxH ch = td [clazz "collapsing"; Style["padding","0px 5px 0px 0px"]] ch
+
+        let horizontal ch = Tags.table [clazz "ui table"; Style ["backgroundColor","transparent" ]] [ tbody [] [ tr [] ch ] ]
+
+        let finish() = td[] []
+
 module PerformanceTest = 
 
     open Fable.Helpers.Virtualdom
@@ -1193,18 +1210,26 @@ module RibbonToggleButtons =
 
     let view (model : Model) : DomNode<Action> =  
         let style (a:bool) = if a then [("color", "pink")] else [("color", "grey")]   
-        let icon (a:bool) = if a then "ui pink labeled icon button" else "ui labeled icon button"
+        let icon (a:bool) = if a then "ui icon circular button orange" else "ui icon circular button"
         
-        div [clazz "ui buttons"] [
-            button [clazz (icon model.isNavigationActive); onMouseClick (fun _ -> ToggleNavigation)] [ //Style style;
-                i [clazz "rocket icon"][]
-                text "Navigation"] 
-            button [clazz (icon model.isMeasurementsActive); onMouseClick (fun _ -> ToggleMeasurements)] [ //Style style;
-                i [clazz "rocket icon"][]
-                text "Measurements"]
-            button [clazz (icon model.isViewPlannerActive); onMouseClick (fun _ -> ToggleViewPlanner)] [ //Style style;
-                i [clazz "rocket icon"][]
-                text "ViewPlanner"]
+        Html.Layout.horizontal[
+            Html.Layout.boxH [ 
+                button [clazz (icon model.isNavigationActive); onMouseClick (fun _ -> ToggleNavigation)] [ //Style style;
+                    i [clazz "rocket icon"][]
+                ] 
+            ]
+            Html.Layout.boxH [ 
+                button [clazz (icon model.isMeasurementsActive); onMouseClick (fun _ -> ToggleMeasurements)] [ //Style style;
+                    i [clazz "rocket icon"][]
+                ] 
+            ]
+            Html.Layout.boxH [ 
+                button [clazz (icon model.isViewPlannerActive); onMouseClick (fun _ -> ToggleViewPlanner)] [ //Style style;
+                    i [clazz "rocket icon"][]
+                ] 
+            ]     
+            
+            Html.Layout.finish()      
         ]
 
         
