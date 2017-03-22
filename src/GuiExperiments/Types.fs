@@ -1,6 +1,5 @@
 ﻿namespace PRo3DGui
 
-
 type Path = string
 
 type SurfaceInfo = {
@@ -25,5 +24,18 @@ type DiscoveredSurfaces = {
     fromOPCPath        : string
 }
 
+type SurfaceDetails = {
+    surfaceInfo         : SurfaceInfo
+    surfaceName         : string
+    maxTriangleSize     : string
+    selectedOPC         : Option<Path>
+    fromOPCPath         : string
+}
+
+type RibbonToggles = {
+    isNavigationActive    : bool
+    isMeasurementsActive  : bool
+    isViewPlannerActive   : bool
+    }
 
 

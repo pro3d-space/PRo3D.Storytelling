@@ -525,6 +525,372 @@ module SurfaceInfoUtils =
     let addToList1 (listan:list<SurfaceInfo>) (element:SurfaceInfo) = element::listan
 
 
+module SurfaceListApp =
+    open PRo3DGui
+   
+    type Path = string
+
+    type Model = PRo3DGui.DiscoveredSurfaces
+     
+    type Action =
+        | SetPath               of Text.Action
+        | SetEmptySurfaceName   of Text.Action
+        | SetOPCPath            of Text.Action
+        | Discover              of Path
+        | OpenFolder      
+        | OpenOPCFolder      
+       // | OpenAddOPCFolder
+        | SelectSurface         of SurfaceInfo
+        | AddSurface            of Path
+        | AddOPCAsSurface       of Path
+        | DeleteSurface         of Path
+//        | ShowSurfaceName       of Text.Action
+//        | ShowTriangleSize      of Text.Action
+//        | SelectOPC             of Path
+//        | DeleteOPC             of Path
+//        | UpdateSurface         of Option<SurfaceInfo>
+//        | SetOPC                of Text.Action
+//        | AddOPC                of Path
+ //       | Import                of list<SurfaceInfo>
+        //| Cancel                of list<SurfaceInfo>
+        //| Clear
+
+    
+   // checks if surface already exists in surfaceInfo list
+    let isExistingSurface (m : Model) (p : Path) = m.surfaceInfos 
+                                                        |> Seq.map (fun e -> e.surfacePath) 
+                                                        |> Seq.contains(p.Replace(@"\", @"\\\\"))
+
+                                                                    
+    // returns selected surface
+    let getSelected (m : Model) (a : SurfaceInfo) = match m.selectedSurface1 with 
+                                                    | Some old when old = a -> None 
+                                                    | _ -> Some a
+
+    let update (f : System.Windows.Forms.Form) env (model : Model) (action : Action) =
+        match action with
+            | SetPath a             -> { model with currentPath =  Text.update env model.currentPath a}
+            | Discover a            -> { model with surfaceInfos = OPCFileUtils.discover a
+                                                                |> Seq.filter (fun a -> not(isExistingSurface model a))
+                                                                |> SurfaceInfoUtils.convert
+                                                                |> ListUtils.mergeLists model.surfaceInfos }
+            | OpenFolder            -> { model with currentPath = DialogUtils.openFolder f }
+            | SelectSurface a       -> let selected = getSelected model a
+                                       { model with selectedSurface1 = selected; 
+                                                    surfaceName = match selected with  
+                                                                    | Some s -> selected.Value.surfaceName
+                                                                    | None -> ""
+                                                    maxTriangleSize = match selected with  
+                                                                        | Some s -> selected.Value.maxTriangleSize.ToString()
+                                                                        | None -> "" }
+            | SetEmptySurfaceName a -> { model with emptySurfaceName =  Text.update env model.emptySurfaceName a}
+            | SetOPCPath a          -> { model with opcPath =  Text.update env model.opcPath a}
+            | AddSurface a          -> { model with surfaceInfos = 
+                                                    if a.ToString().IsEmpty() then model.surfaceInfos 
+                                                    else if isExistingSurface model a then model.surfaceInfos 
+                                                    else SurfaceInfoUtils.newSurfaceInfo a |> SurfaceInfoUtils.addToList1 model.surfaceInfos }
+            | OpenOPCFolder         -> { model with opcPath = DialogUtils.openFolder f }
+            | AddOPCAsSurface a     -> { model with surfaceInfos = 
+                                                    if not(OPCFileUtils.isOPCPath a) then model.surfaceInfos 
+                                                    else if isExistingSurface model a then model.surfaceInfos 
+                                                    else SurfaceInfoUtils.newSurfaceInfo a |> SurfaceInfoUtils.addToList1 model.surfaceInfos }
+            | DeleteSurface a       -> { model with surfaceInfos =
+                                                        match model.selectedSurface1 with
+                                                            | Some s -> model.surfaceInfos 
+                                                                        |> List.choose (fun e -> if e.surfaceName = s.surfaceName then None else Some e)
+                                                            | None -> model.surfaceInfos}
+//            | ShowSurfaceName a     -> { model with surfaceName =  Text.update env model.surfaceName a}
+//            | ShowTriangleSize a    -> { model with maxTriangleSize = Text.update env model.maxTriangleSize a}
+//            | SelectOPC a           -> { model with selectedOPC = match model.selectedOPC with 
+//                                                                    | Some old when old = a -> None 
+//                                                                    | _ -> Some a}
+//            | DeleteOPC a           -> { model with selectedSurface1 = 
+//                                                        match model.selectedSurface1 with
+//                                                            | Some s -> Some <| SurfaceInfoUtils.updateSurfaceInfo
+//                                                                                    model.selectedSurface1.Value.surfaceName
+//                                                                                    model.selectedSurface1.Value.surfacePath
+//                                                                                    (deleteOPCPath model)
+//                                                                                    model.selectedSurface1.Value.maxTriangleSize
+//                                                            | None -> model.selectedSurface1 }                          
+//            | UpdateSurface a       -> { model with surfaceInfos =
+//                                                        match model.selectedSurface1 with
+//                                                            | Some s -> model.surfaceInfos 
+//                                                                        |> List.choose (fun e -> if e.surfaceName = s.surfaceName 
+//                                                                                                 then Some (SurfaceInfoUtils.updateSurfaceInfo 
+//                                                                                                                model.surfaceName 
+//                                                                                                                s.surfacePath 
+//                                                                                                                s.opcPaths 
+//                                                                                                                (float model.maxTriangleSize)) 
+//                                                                                                 else Some e)
+//                                                            | None -> model.surfaceInfos }
+//            | SetOPC a              -> { model with fromOPCPath =  Text.update env model.fromOPCPath a}
+//            | OpenAddOPCFolder      -> let path = DialogUtils.openFolder f                               
+//                                       { model with fromOPCPath = path }
+//            | AddOPC a              -> { model with selectedSurface1 =  
+//                                                        match model.selectedSurface1 with
+//                                                            | Some s -> Some <| SurfaceInfoUtils.updateSurfaceInfo
+//                                                                                        model.selectedSurface1.Value.surfaceName 
+//                                                                                        model.selectedSurface1.Value.surfacePath 
+//                                                                                        (addOPCPath model) 
+//                                                                                        model.selectedSurface1.Value.maxTriangleSize
+//                                                            | None -> model.selectedSurface1 } 
+//            | Clear -> model
+            | _ -> model
+
+
+    let view (m : Model) : DomNode<Action> =
+        div [clazz "ui container"] [
+            div [clazz "ui list"] [
+                // surface path
+                div [clazz "item"] [label [] [text "Surface Path:"]]
+                div [clazz "item"] [Text.view m.currentPath |> Html.map SetPath]
+                div [clazz "ui button"; onMouseClick (fun _ -> OpenFolder )] [text "..."]
+                div [clazz "ui button"; onMouseClick (fun _ -> Discover m.currentPath)] [text "discover"]
+
+                // empty surface
+                div [clazz "item"] [label [] [text "Empty Surface Name:"]]
+                div [clazz "item"] [Text.view m.emptySurfaceName |> Html.map SetEmptySurfaceName]
+                div [clazz "ui button"; onMouseClick (fun _ -> AddSurface m.emptySurfaceName)] [text "create"]
+
+                // surface from OPC
+                div [clazz "item"] [label [] [text "Surface from OPC Path:"]]
+                div [clazz "item"] [Text.view m.opcPath |> Html.map SetOPCPath]
+                div [clazz "ui button"; onMouseClick (fun _ -> OpenOPCFolder )] [text "..."]
+                div [clazz "ui button"; onMouseClick (fun _ -> AddOPCAsSurface m.opcPath)] [text "create"]
+                    
+            ]
+            // Surfaces List
+            div [Style["overflowY","auto"; "maxHeight", "200px"]] [
+                form [clazz "ui divided items"] [
+                    for s in m.surfaceInfos do
+                        let icon =  match m.selectedSurface1 with
+                                        | Some(x) -> if s.surfaceName.Equals x.surfaceName then "circular red icon folder" else "circular icon folder"
+                                        | None -> "circular icon folder"
+
+                        yield 
+                            div[clazz "item"; onMouseClick (fun _ -> SelectSurface s )] [
+                                i [clazz icon][]
+                                div[clazz "ui content"] [
+                                    div[Style ["fontweight", "bold"]; clazz "middle aligned content"][text (sprintf "%s" s.surfaceName)] 
+                                    div[clazz "middle aligned content"][text (sprintf "%s" s.surfacePath)] 
+                                ]
+                            ]                                    
+                ]
+            ]
+            
+            div [clazz "ui button"; onMouseClick (fun _ -> if m.selectedSurface1.IsNone then DeleteSurface "" else DeleteSurface m.selectedSurface1.Value.surfaceName)] [text "delete"]
+        
+//            div [clazz "ui button deny"; onMouseClick (fun _ -> Clear)] [text "Cancel"]
+//            div [clazz "ui button"; onMouseClick (fun _ -> Import m.surfaceInfos)] [text "Import"]  
+        ]
+        
+    let initial = 
+        { currentPath = ""
+          discoveredSurfaces = []
+          selectedSurface = None
+          selectedSurface1 = None
+          emptySurfaceName = ""
+          opcPath = ""
+          surfaceInfos = []
+          surfaceName = ""
+          maxTriangleSize = ""
+          selectedOPC = None
+          fromOPCPath = ""
+        }
+
+    let app f =
+        {
+            initial = initial
+            update = update f
+            view = view
+            onRendered = OnRendered.ignore
+            subscriptions = Subscriptions.none
+        }
+
+
+//module SurfaceDetailsApp =
+//    open PRo3DGui
+//   
+//    
+//    type Path = string
+//
+//    type Model = PRo3DGui.SurfaceDetails
+//     
+//    type Action =
+//        | OpenAddOPCFolder
+//        | ShowSurfaceName       of Text.Action
+//        | ShowTriangleSize      of Text.Action
+//        | SelectOPC             of Path
+//        | DeleteOPC             of Path
+//        | UpdateSurface         of Option<SurfaceInfo>
+//        | SetOPC                of Text.Action
+//        | AddOPC                of Path
+//
+//    // deletes selected opc path from list 
+//    let deleteOPCPath (m : Model)= 
+//        match m.selectedOPC with
+//            | Some s -> m.surfaceInfo.opcPaths |> List.choose (fun e -> if e = s then None else Some e)
+//            | None -> [] 
+//
+//    
+//   // checks if surface already exists in surfaceInfo list
+////    let isExistingSurface (m : Model) (p : Path) = m.surfaceInfos 
+////                                                        |> Seq.map (fun e -> e.surfacePath) 
+////                                                        |> Seq.contains(p.Replace(@"\", @"\\\\"))
+//
+//    // checks if opc already exists in surfaceInfo
+//    let isExistingOPC (m : Model) (p : Path) =  m.surfaceInfo.opcPaths 
+//                                                    |> Seq.contains(p)
+//                                                                    
+//    // adds valid opc path to selected surface
+////    let addOPCPath (m : Model)= 
+////        let path = m.fromOPCPath.Replace(@"\", @"\\\\")
+////        if (OPCFileUtils.isOPCPath path) && not(isExistingOPC m path) then ListUtils.addToList m.selectedSurface1.Value.opcPaths path
+////                                        else m.selectedSurface1.Value.opcPaths
+//
+//    let update (f : System.Windows.Forms.Form) env (model : Model) (action : Action) =
+//        match action with
+//            | ShowSurfaceName a     -> { model with surfaceName =  Text.update env model.surfaceName a}
+//            | ShowTriangleSize a    -> { model with maxTriangleSize = Text.update env model.maxTriangleSize a}
+//            | SelectOPC a           -> { model with selectedOPC = match model.selectedOPC with 
+//                                                                    | Some old when old = a -> None 
+//                                                                    | _ -> Some a}
+//            | DeleteOPC a           -> { model with selectedSurface1 = 
+//                                                        match model.selectedSurface1 with
+//                                                            | Some s -> Some <| SurfaceInfoUtils.updateSurfaceInfo
+//                                                                                    model.selectedSurface1.Value.surfaceName
+//                                                                                    model.selectedSurface1.Value.surfacePath
+//                                                                                    (deleteOPCPath model)
+//                                                                                    model.selectedSurface1.Value.maxTriangleSize
+//                                                            | None -> model.selectedSurface1 }                          
+//            | UpdateSurface a       -> { model with surfaceInfos =
+//                                                        match model.selectedSurface1 with
+//                                                            | Some s -> model.surfaceInfos 
+//                                                                        |> List.choose (fun e -> if e.surfaceName = s.surfaceName 
+//                                                                                                 then Some (SurfaceInfoUtils.updateSurfaceInfo 
+//                                                                                                                model.surfaceName 
+//                                                                                                                s.surfacePath 
+//                                                                                                                s.opcPaths 
+//                                                                                                                (float model.maxTriangleSize)) 
+//                                                                                                 else Some e)
+//                                                            | None -> model.surfaceInfos }
+//            | SetOPC a              -> { model with fromOPCPath =  Text.update env model.fromOPCPath a}
+//            | OpenAddOPCFolder      -> let path = DialogUtils.openFolder f                               
+//                                       { model with fromOPCPath = path }
+//            | AddOPC a              -> { model with selectedSurface1 =  
+//                                                        match model.selectedSurface1 with
+//                                                            | Some s -> Some <| SurfaceInfoUtils.updateSurfaceInfo
+//                                                                                        model.selectedSurface1.Value.surfaceName 
+//                                                                                        model.selectedSurface1.Value.surfacePath 
+//                                                                                        (addOPCPath model) 
+//                                                                                        model.selectedSurface1.Value.maxTriangleSize
+//                                                            | None -> model.selectedSurface1 } 
+//            //| Clear -> model
+//            | _ -> model
+//
+//
+//    let view (m : Model) : DomNode<Action> =
+//        div [clazz "ui container"] [
+//            // Surfaces Details
+//            div [clazz "item"] [label [] [text "Surface Details:"]]
+//
+//            div [clazz "item"] [label [] [text "Name:"]]
+//            div [clazz "item"] [Text.view m.surfaceName |> Html.map ShowSurfaceName]
+//
+//            div [clazz "item"] [label [] [text "MaxTriangleSize:"]]
+//            div [clazz "item"] [Text.view m.maxTriangleSize |> Html.map ShowTriangleSize]
+//
+//            // OPC list
+//            div [Style[ "overflowY","auto"; "height", "200px"]] [
+//                form [clazz "ui divided items"] [
+//                    let opcPath = match m.selectedSurface1 with
+//                                                | Some s -> m.selectedSurface1.Value.opcPaths
+//                                                | None -> [] 
+//                    for o in opcPath do
+//                        let icon =  match m.selectedOPC with
+//                                        | Some(x) -> if o.Equals x then "circular red icon folder" else "circular icon folder"
+//                                        | None -> "circular icon folder"
+//
+//                        
+//                        yield 
+//                            div[clazz "item"; onMouseClick (fun _ -> SelectOPC o)] [
+//                                i [clazz icon][]
+//                                div[clazz "ui content"] [
+//                                    div[clazz "middle aligned content"][text (sprintf "%s" o)] 
+//                                ]
+//                            ]                                    
+//                ]
+//            ] 
+//            
+//            div [clazz "ui button"; onMouseClick (fun _ -> if m.selectedSurface1.IsNone then DeleteOPC "" else DeleteOPC m.selectedOPC.Value)] [text "delete"]
+//            div [clazz "ui button"; onMouseClick (fun _ -> UpdateSurface m.selectedSurface1 )] [text "update"]    
+//            
+//            // Add new OPC
+//            div [clazz "item"] [label [] [text "Add OPC Path:"]]
+//            div [clazz "item"] [Text.view m.fromOPCPath |> Html.map SetOPC]
+//            div [clazz "ui button"; onMouseClick (fun _ -> OpenAddOPCFolder)] [text "..."]
+//            div [clazz "ui button"; onMouseClick (fun _ -> AddOPC m.fromOPCPath)] [text "add"]  
+//        
+////            div [clazz "ui button deny"; onMouseClick (fun _ -> Clear)] [text "Cancel"]
+////            div [clazz "ui button"; onMouseClick (fun _ -> Import m.surfaceInfos)] [text "Import"]  
+//        ]
+//        
+//    let initial = 
+//        { currentPath = ""
+//          discoveredSurfaces = []
+//          selectedSurface = None
+//          selectedSurface1 = None
+//          emptySurfaceName = ""
+//          opcPath = ""
+//          surfaceInfos = []
+//          surfaceName = ""
+//          maxTriangleSize = ""
+//          selectedOPC = None
+//          fromOPCPath = ""
+//        }
+//
+//    let app f =
+//        {
+//            initial = initial
+//            update = update f
+//            view = view
+//            onRendered = OnRendered.ignore
+//            subscriptions = Subscriptions.none
+//        }
+//
+//module ImportSurfaceApp = 
+//    open PRo3DGui
+//   
+//    type Path = string
+//
+//    type Model = PRo3DGui.DiscoveredSurfaces
+//
+//    type Action =
+//        | SetSurfaceList    of SurfaceListApp.Action
+//        | SetSurfaceDetails of SurfaceDetailsApp.Action
+//        | Import            of list<SurfaceInfo>
+//        | Cancel            of list<SurfaceInfo>
+//
+//    //let inline (<==) (m, l) v = Optic.set l v m
+//
+//    let update (env: Env<Action>) (model : Model) (action : Action) =
+//        match action with
+//            | SetSurfaceList a -> 
+//                { model with DomainModel = SurfaceListApp.update (e |> Env.map TreeAction) m.DomainModel a }
+//            | SetSurfaceDetails a -> 
+//                { model with importSurfaces = ImportDiscoverApp.update (e |> Env.map ImportSurfacesAction) m.importSurfaces a }
+//            | _ -> failwith "invalid property action combination"
+//            
+//
+//    let view (m : Model) : DomNode<Action> =
+//        div [clazz "ui container"] [
+//
+//            div [clazz "ui button deny"; onMouseClick (fun _ -> Clear)] [text "Cancel"]
+//            div [clazz "ui button"; onMouseClick (fun _ -> Import m.surfaceInfos)] [text "Import"]  
+//        ]
+
+
+
 module ImportDiscoverAppLaura =
     open PRo3DGui
    
@@ -763,24 +1129,91 @@ module ImportDiscoverAppLaura =
             onRendered = OnRendered.ignore
             subscriptions = Subscriptions.none
         }
+        
+//[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+//module RibbonToggleButtons = 
+//    type Model = Toggle
+//
+//    type Action = 
+//        | Toggle
+//
+//        
+//    let update env (model : Model) (action : Action) =
+//        match action with
+//            | Toggle -> { model with isActive = not model.isActive }
+//
+//    let view (model : Model) : DomNode<Action> =  
+//        let style = if model.isActive then [("color", "pink")] else [("color", "grey")]   
+//        let icon = if model.isActive then "ui pink labeled icon button" else "ui labeled icon button"
+//        
+//        div [clazz "ui buttons"] [
+//            button [clazz icon; onMouseClick (fun _ -> Toggle)] [ //Style style;
+//                i [clazz "rocket icon"][]
+//                text "Navigation"] 
+//            button [clazz icon; onMouseClick (fun _ -> Toggle)] [ //Style style;
+//                i [clazz "rocket icon"][]
+//                text "Measurements"]
+//            button [clazz icon; onMouseClick (fun _ -> Toggle)] [ //Style style;
+//                i [clazz "rocket icon"][]
+//                text "ViewPlanner"]
+//        ]
+//
+//        
+//    let initial = { isActive = false }
+//    
+//    let app = {
+//        initial = initial
+//        update = update
+//        view = view
+//        subscriptions = Subscriptions.none
+//        onRendered = OnRendered.ignore
+//    }     
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module ToggleButton = 
-    type Model = Toggle
+module RibbonToggleButtons = 
+    open PRo3DGui
+    type Model = PRo3DGui.RibbonToggles
 
     type Action = 
-        | Toggle
-    
+        | ToggleNavigation      
+        | ToggleMeasurements    
+        | ToggleViewPlanner     
+
+        
     let update env (model : Model) (action : Action) =
         match action with
-            | Toggle -> { model with isActive = not model.isActive }
+            | ToggleNavigation  -> { model with isNavigationActive = not model.isNavigationActive;
+                                                isMeasurementsActive =  model.isNavigationActive;
+                                                isViewPlannerActive = model.isNavigationActive }
+            | ToggleMeasurements  -> { model with isMeasurementsActive = not model.isMeasurementsActive;
+                                                  isNavigationActive = model.isMeasurementsActive;
+                                                  isViewPlannerActive = model.isMeasurementsActive }
+            | ToggleViewPlanner  -> { model with isViewPlannerActive = not model.isViewPlannerActive;
+                                                 isNavigationActive = model.isViewPlannerActive;
+                                                 isMeasurementsActive = model.isViewPlannerActive }
 
-    let view (model : Model) : DomNode<Action> =         
-     //   let active = if model.isActive then "ui defaultChecked toggle checkbox" else "ui toggle checkbox"
-        let active' = if model.isActive then "green" else "red"
-        div [clazz "ui toggle button"; onMouseClick (fun _ -> Toggle)] [text "toggle"]
+    let view (model : Model) : DomNode<Action> =  
+        let style (a:bool) = if a then [("color", "pink")] else [("color", "grey")]   
+        let icon (a:bool) = if a then "ui pink labeled icon button" else "ui labeled icon button"
         
-    let initial = { isActive = false }
+        div [clazz "ui buttons"] [
+            button [clazz (icon model.isNavigationActive); onMouseClick (fun _ -> ToggleNavigation)] [ //Style style;
+                i [clazz "rocket icon"][]
+                text "Navigation"] 
+            button [clazz (icon model.isMeasurementsActive); onMouseClick (fun _ -> ToggleMeasurements)] [ //Style style;
+                i [clazz "rocket icon"][]
+                text "Measurements"]
+            button [clazz (icon model.isViewPlannerActive); onMouseClick (fun _ -> ToggleViewPlanner)] [ //Style style;
+                i [clazz "rocket icon"][]
+                text "ViewPlanner"]
+        ]
+
+        
+    let initial = { 
+        isNavigationActive = true
+        isMeasurementsActive = false
+        isViewPlannerActive = false
+     }
     
     let app = {
         initial = initial
@@ -790,7 +1223,6 @@ module ToggleButton =
         onRendered = OnRendered.ignore
     }     
 
-
 module Program = 
     [<EntryPoint;STAThread>]
 
@@ -799,7 +1231,7 @@ module Program =
         Chromium.init argv
 
         use w = new Form()
-        let app =  ImportDiscoverAppLaura.app w //ToggleButton.app //PerformanceTest.app //FileApp.app // 
+        let app =  RibbonToggleButtons.app //ImportDiscoverAppLaura.app w //PerformanceTest.app //FileApp.app // 
 
 //        let m : V3dApp.Model = {
 //                components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
