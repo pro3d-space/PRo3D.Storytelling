@@ -11,13 +11,22 @@ open Aardvark.Application.WinForms
 
 module Viewer = 
 
+    let mutable hackRunner = None
 
     let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcViewer)  =
 
-        let runner = runtime.CreateLoadRunner 2
+        let runner = 
+            match hackRunner with
+                | None -> 
+                    let  r = runtime.CreateLoadRunner 2
+                    hackRunner <- Some (r)
+                    r
+                | Some h -> h
+
 
         let bb = scene.boundingBox
         let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
+
     
         let patchHierarchies =
             [ for h in scene.patchHierarchies do
@@ -58,6 +67,7 @@ module Viewer =
                 |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                 |> Sg.uniform "LodVisEnabled" lodVisEnabled
                 |> Sg.cullMode (Mod.constant CullMode.None)
+                
 
         sg
 
@@ -187,14 +197,15 @@ module Viewer =
 
     [<EntryPoint>]
     let main argv =
-        match argv.ToLower() with
-            | [| "perjen" |] -> run ( perjen () )
-            | [| "mola" |] -> run ( mola () )
-            | [| "mars" |] -> run ( mars () )
-            | _ -> 
-                printfn "wrong arguments: %A, synopsis: Aardvark.OpenViewer [perjen|mola|mars]" argv
-                System.Environment.Exit 1 
-                0
+        run ( Configurations.Network.testSurf () )
+//        match argv.ToLower() with
+//            | [| "perjen" |] -> run ( perjen () )
+//            | [| "mola" |] -> run ( mola () )
+//            | [| "mars" |] -> run ( mars () )
+//            | _ -> 
+//                printfn "wrong arguments: %A, synopsis: Aardvark.OpenViewer [perjen|mola|mars]" argv
+//                System.Environment.Exit 1 
+//                0
 
 
 //    System.Environment.Exit 0

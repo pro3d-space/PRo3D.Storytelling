@@ -114,15 +114,16 @@ module Program =
                 //|> DefaultCameraController.control win.Mouse win.Keyboard win.Time
                 |> Mod.constant 
 
+        
         let frustum = 
             renderControlViewport
-                |> Mod.map (fun b -> let s = b.Size in Frustum.perspective 60.0 0.1 100.0 (float s.X / float s.Y))
+                |> Mod.map (fun b -> let s = b.Size in Frustum.perspective 60.0 0.01 1000000.0 (float s.X / float s.Y))
 
 
         let camera = Mod.map2 Camera.create cameraView frustum
 
         let sg, shutdown =
-            let three3dInstance, fablishResult = Viewer.createApp win win.Runtime (renderControlViewport |> Mod.map (fun a -> printfn "%A" a; a.Size)) win.Mouse win.Keyboard win.FramebufferSignature win.Time renderRect camera
+            let three3dInstance, fablishResult = Viewer.createApp win win.Runtime (renderControlViewport |> Mod.map (fun a -> a.Size)) win.Mouse win.Keyboard win.FramebufferSignature win.Time renderRect camera
             let res = client.LoadUrlAsync fablishResult.localUrl
             three3dInstance.sg, fablishResult.shutdown
 
