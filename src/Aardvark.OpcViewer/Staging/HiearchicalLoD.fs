@@ -93,7 +93,7 @@ module RoseTree =
                     let nv = rv |> create
                     Node(nv, List.map2 traverse lc rc)
     
-    let filter (godeeper : IAdaptiveObject -> 'a -> bool) (tree : IMod<RoseTree<'a>>) : IMod<RoseTree<'a>> =
+    let filter (godeeper : AdaptiveToken -> 'a -> bool) (tree : IMod<RoseTree<'a>>) : IMod<RoseTree<'a>> =
         Mod.custom (fun self ->
             let rec traverse (t : RoseTree<'a>) =
                 match t with
@@ -170,7 +170,7 @@ module RoseTree =
 
     let flatten mapF (f : IMod<RoseTree<Option<'a>>>) =
         let old = ref Empty
-        ASet.custom (fun self -> 
+        ASet.custom (fun self state -> 
             let current = f.GetValue self
             let deltas = List<_>()
             let create v = 
@@ -185,7 +185,7 @@ module RoseTree =
 
             let u = traverse (=) create destroy !old current
             old := u
-            deltas |> CSharpList.toList
+            deltas |> HDeltaSet.ofSeq
         )
 
     let rec map (f : 'a -> 'b) (t : RoseTree<'a>) =

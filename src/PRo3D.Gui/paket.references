@@ -7,8 +7,6 @@ Aardvark.Application.WinForms.GL
 Aardvark.SceneGraph
 Aardvark.Rendering.NanoVg
 
-Aardvark.VRVis.Geometry
-Aardvark.VRVis.Base
 
 Fsunit
 FParsec
@@ -18,4 +16,3 @@ WindowsAPICodePack-ShellExtensions
 Aether
 
 Fablish
-Aardvark.ImmutableSceneGraph

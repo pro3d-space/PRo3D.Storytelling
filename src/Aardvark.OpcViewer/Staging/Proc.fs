@@ -23,7 +23,7 @@ type IObservable =
 
 [<AbstractClass>]
 type Pattern() =
-    abstract member Relevant : PersistentHashSet<IObservable>
+    abstract member Relevant : hset<IObservable>
     abstract member MatchUntyped : ProcState<'s> * IObservable * obj -> Option<obj>
     abstract member DependsOnTime : bool
 
@@ -48,7 +48,7 @@ module Pattern =
         static member Instance = instance
 
         override x.DependsOnTime = false
-        override x.Relevant = PersistentHashSet.empty
+        override x.Relevant = HSet.empty
         override x.Match(_,_,_) = None
 
     type private Obs<'a>(inner : IObservable<'a>) =
@@ -106,7 +106,7 @@ module Pattern =
         static member Instance = instance
         
         override x.DependsOnTime = true
-        override x.Relevant = PersistentHashSet.empty
+        override x.Relevant = HSet.empty
         override x.Match(s,source,_) = 
             if isNull source then Some s.time
             else None
@@ -118,7 +118,7 @@ module Pattern =
         static member Instance = instance
 
         override x.DependsOnTime = false
-        override x.Relevant = PersistentHashSet.empty
+        override x.Relevant = HSet.empty
         override x.Match(_,_,_) = Some ()
 
     let time = TimePattern.Instance
@@ -127,7 +127,7 @@ module Pattern =
 
     let next (source : IObservable<'a>) =
         let source = Obs(source) :> IObservable
-        let set = PersistentHashSet.singleton source
+        let set = HSet.ofList [source]
         { new Pattern<'a>() with
             member x.DependsOnTime = false
             member x.Relevant = set
@@ -141,7 +141,7 @@ module Pattern =
 
     let ofMod (source : IMod<'a>) =
         let source = M(source) :> IObservable
-        let set = PersistentHashSet.singleton source
+        let set = HSet.ofList [source]
         { new Pattern<'a>() with
             member x.DependsOnTime = false
             member x.Relevant = set
@@ -155,7 +155,7 @@ module Pattern =
 
     let ofTask (t : System.Threading.Tasks.Task<'a>) =
         let source = T(t) :> IObservable
-        let set = PersistentHashSet.singleton source
+        let set = HSet.ofList [source]
         { new Pattern<'a>() with
             member x.DependsOnTime = false
             member x.Relevant = set
@@ -189,7 +189,7 @@ module Pattern =
 
     let rec any (patterns : list<Pattern<'a>>) =
         let dt = patterns |> List.exists (fun p -> p.DependsOnTime)
-        let relevant = patterns |> List.map (fun p -> p.Relevant) |> PersistentHashSet.unionMany
+        let relevant = patterns |> List.map (fun p -> p.Relevant) |> HSet.unionMany
         { new Pattern<'a>() with
             member x.DependsOnTime = dt
             member x.Relevant = relevant
@@ -220,7 +220,7 @@ module Pattern =
 
     let par (l : Pattern) (r : Pattern) =
         let dt = l.DependsOnTime || r.DependsOnTime
-        let rel = PersistentHashSet.union l.Relevant r.Relevant
+        let rel = HSet.union l.Relevant r.Relevant
         { new Pattern<Option<obj> * Option<obj>>() with
             member x.DependsOnTime = dt
             member x.Relevant = rel
@@ -236,7 +236,7 @@ module Pattern =
             | [] -> AnyPattern.Instance |> map (fun _ -> [])
             | [p] -> p |> map' (fun v -> [Some v])
             | many ->
-                let rel = many |> List.map (fun p -> p.Relevant) |> PersistentHashSet.unionMany
+                let rel = many |> List.map (fun p -> p.Relevant) |> HSet.unionMany
                 let dt = many |> List.exists (fun p -> p.DependsOnTime)
 
                 { new Pattern<list<Option<obj>>>() with
@@ -252,7 +252,7 @@ module Pattern =
 
     let rec any' (patterns : list<Pattern>) =
         let dt = patterns |> List.exists (fun p -> p.DependsOnTime)
-        let relevant = patterns |> List.map (fun p -> p.Relevant) |> PersistentHashSet.unionMany
+        let relevant = patterns |> List.map (fun p -> p.Relevant) |> HSet.unionMany
         { new Pattern<int * obj>() with
             member x.DependsOnTime = dt
             member x.Relevant = relevant
@@ -633,8 +633,8 @@ module Proc =
                     let added, removed =
                         match pending, newPending with
                             | Some (o,_), Some (n,_) ->
-                                let added = n.Relevant |> Seq.filter (fun v -> PersistentHashSet.contains v o.Relevant |> not) |> Seq.toList
-                                let removed = o.Relevant |> Seq.filter (fun v -> PersistentHashSet.contains v n.Relevant |> not) |> Seq.toList
+                                let added = n.Relevant |> Seq.filter (fun v -> HSet.contains v o.Relevant |> not) |> Seq.toList
+                                let removed = o.Relevant |> Seq.filter (fun v -> HSet.contains v n.Relevant |> not) |> Seq.toList
                                 added, removed
 
                             | None, Some (n,_) ->
@@ -704,7 +704,7 @@ module Proc =
 //            System.Threading.Tasks.Task.Factory.StartNew (fun () -> run 0 TimeSpan.Zero) |> ignore
 //            sw.Start()
 
-        override x.Compute() =
+        override x.Compute(token : AdaptiveToken) =
             let now = adjustTime Time.Now
             step now
             

@@ -116,8 +116,8 @@ module Load =
                         let added, removed =
                             match pending, newPending with
                                 | Some (o,_), Some (n,_) ->
-                                    let added = n.Relevant |> Seq.filter (fun v -> PersistentHashSet.contains v o.Relevant |> not) |> Seq.toList
-                                    let removed = o.Relevant |> Seq.filter (fun v -> PersistentHashSet.contains v n.Relevant |> not) |> Seq.toList
+                                    let added = n.Relevant |> Seq.filter (fun v -> HSet.contains v o.Relevant |> not) |> Seq.toList
+                                    let removed = o.Relevant |> Seq.filter (fun v -> HSet.contains v n.Relevant |> not) |> Seq.toList
                                     added, removed
 
                                 | None, Some (n,_) ->
@@ -210,7 +210,7 @@ module Load =
         member x.IsRunning = 
             refCount > 0
 
-        override x.Compute() =
+        override x.Compute(token) =
             result
 
         interface IRunner with

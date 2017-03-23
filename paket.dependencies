@@ -4,22 +4,20 @@ source https://api.nuget.org/v3/index.json
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://vrvis.myget.org/F/aardvark/api/v3/index.json
 
-nuget Aardvark.Base                       < 3.0.0  
-nuget Aardvark.Base.Incremental           
-nuget Aardvark.Base.FSharp                
-nuget Aardvark.Base.Essentials            
 
-nuget Aardvark.Base.Rendering             ~> 2.7.2
-nuget Aardvark.Application.WinForms.GL    ~> 2.7.2
-nuget Aardvark.SceneGraph                 ~> 2.7.2
-nuget Aardvark.Rendering.NanoVg           ~> 2.7.2
+nuget Aardvark.Base.Rendering             ~> 3.1.0
+nuget Aardvark.Application.WinForms.GL    ~> 3.1.0
+nuget Aardvark.SceneGraph                 ~> 3.1.0
+nuget Aardvark.Rendering.NanoVg           ~> 3.1.0
 
-nuget Aardvark.VRVis.Geometry
-nuget Aardvark.VRVis.Base
+nuget Aardvark.Base                  ~> 3.0.0    
+nuget Aardvark.Base.Incremental      ~> 3.0.0     
+nuget Aardvark.Base.FSharp           ~> 3.0.0     
+nuget Aardvark.Base.Essentials       ~> 3.0.0     
 
-nuget Fablish ~> 1.7.13
 
-nuget Aardvark.ImmutableSceneGraph ~> 0.0.14
+
+nuget Fablish ~> 2.0.0
 
 nuget Fsunit    ~> 2.3.2
 

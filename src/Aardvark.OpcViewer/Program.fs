@@ -7,7 +7,8 @@ open Aardvark.Base.Rendering
 open Aardvark.Base.Incremental
 open Aardvark.Rendering.NanoVg
 open Aardvark.SceneGraph
-open Aardvark.VRVis
+open Aardvark.Base.Geometry
+
 open Aardvark.Application
 open Aardvark.Application.WinForms
 
@@ -40,31 +41,36 @@ module Viewer =
 
         Log.startTimed "Creating KdTree"
 
-        let patch2KdTree (h : PatchHierarchy) (patch : Patch) : Aardvark.VRVis.ConcreteKdIntersectionTree =
-            let geometry, time = Patch.load h.baseDir patch.info
-            let intersectable = IntersectableTriangleSet(unbox geometry.IndexArray, unbox geometry.IndexedAttributes.[DefaultSemantic.Positions])
-            let kdTree = KdIntersectionTree(intersectable,KdIntersectionTree.BuildFlags.FastBuild ||| KdIntersectionTree.BuildFlags.NoMultithreading ||| KdIntersectionTree.BuildFlags.Hierarchical, splitPlaneEpsilon=0.5)
-            ConcreteKdIntersectionTree(kdTree,patch.info.Local2Global)
+//        let patch2KdTree (h : PatchHierarchy) (patch : Patch) : KdTree<Triangle3d> =
+//            let geometry, time = Patch.load h.baseDir patch.info
+//
+//            let indexArray = unbox geometry.IndexArray
+//            [| for i in 0 .. 3 .. arr.Length -1 do
+//            |]
+//
+//            let intersectable = IntersectableTriangleSet(unbox geometry.IndexArray, unbox geometry.IndexedAttributes.[DefaultSemantic.Positions])
+//            let kdTree = KdIntersectionTree(intersectable,KdIntersectionTree.BuildFlags.FastBuild ||| KdIntersectionTree.BuildFlags.NoMultithreading ||| KdIntersectionTree.BuildFlags.Hierarchical, splitPlaneEpsilon=0.5)
+//            ConcreteKdIntersectionTree(kdTree,patch.info.Local2Global)
+//
+//        let opcTrees =
+//            [| for h in patchHierarchies do
+//                yield! h.tree |> QTree.getLeaves |> Seq.map (fun p -> lazy patch2KdTree h p)
+//            |] 
 
-        let opcTrees =
-            [| for h in patchHierarchies do
-                yield! h.tree |> QTree.getLeaves |> Seq.map (fun p -> lazy patch2KdTree h p)
-            |] 
-
-        let totalKdTrees = opcTrees.Length
-        Log.line "creating %d kdTrees" totalKdTrees
-
-        let kdTrees = 
-            opcTrees 
-                |> Array.Parallel.mapi (fun i e ->
-                    Log.start "creating kdtree #%d of %d" i totalKdTrees
-                    let r = e.Value
-                    Log.stop()
-                    r
-                )
-
-
-        let overallTree = KdTreeSet(kdTrees)
+//        let totalKdTrees = opcTrees.Length
+//        Log.line "creating %d kdTrees" totalKdTrees
+//
+//        let kdTrees = 
+//            opcTrees 
+//                |> Array.Parallel.mapi (fun i e ->
+//                    Log.start "creating kdtree #%d of %d" i totalKdTrees
+//                    let r = e.Value
+//                    Log.stop()
+//                    r
+//                )
+//
+//
+//        let overallTree = KdTreeSet(kdTrees)
 
         Log.stop()
 
@@ -103,7 +109,7 @@ module Viewer =
                 |> Sg.cullMode (Mod.constant CullMode.None)
                 
 
-        sg, overallTree
+        sg, 1
 
     let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcViewer)  = 
     
@@ -232,15 +238,15 @@ module Viewer =
 
     [<EntryPoint>]
     let main argv =
-        run ( Configurations.Network.testSurf () )
-//        match argv.ToLower() with
-//            | [| "perjen" |] -> run ( perjen () )
-//            | [| "mola" |] -> run ( mola () )
-//            | [| "mars" |] -> run ( mars () )
-//            | _ -> 
-//                printfn "wrong arguments: %A, synopsis: Aardvark.OpenViewer [perjen|mola|mars]" argv
-//                System.Environment.Exit 1 
-//                0
+        //run ( Configurations.Network.testSurf () )
+        match argv.ToLower() with
+            | [| "perjen" |] -> run ( perjen () )
+            | [| "mola" |] -> run ( mola () )
+            | [| "mars" |] -> run ( mars () )
+            | _ -> 
+                printfn "wrong arguments: %A, synopsis: Aardvark.OpenViewer [perjen|mola|mars]" argv
+                System.Environment.Exit 1 
+                0
 
 
 //    System.Environment.Exit 0
