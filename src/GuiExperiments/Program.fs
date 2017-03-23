@@ -1208,28 +1208,39 @@ module RibbonToggleButtons =
                                                  isNavigationActive = false;
                                                  isMeasurementsActive = false }
 
+//    let view (model : Model) : DomNode<Action> =  
+//        let style (active:bool) = if active then [("color", "pink")] else [("color", "grey")]   
+//        let buttonstyle = [("width", "100px"); ("height", "100px"); ("lineheight", "50px")]
+//        let iconstyle =  [("width", "100px"); ("height", "60px"); ("position", "absolute"); ("left", "0px"); ("top", "2px")]
+//        let textstyle =  [("position", "absolute"); ("left", "10px"); ("top", "60px")]
+//        let icon (active:bool) = if active then "ui pink labeled icon button" else "ui labeled icon button"
+//        
+//        div [clazz "ui buttons"] [
+//            button [clazz (icon model.isNavigationActive); Style buttonstyle; onMouseClick (fun _ -> ToggleNavigation)] [ 
+//                i [clazz "huge rocket icon"; Style iconstyle][]
+//                Text "Navigation"] 
+//            button [clazz (icon model.isMeasurementsActive); Style buttonstyle; onMouseClick (fun _ -> ToggleMeasurements)] [ 
+//                i [clazz "huge rocket icon"; Style iconstyle][]
+//                text "Measurements"]
+//            button [clazz (icon model.isViewPlannerActive); Style buttonstyle; onMouseClick (fun _ -> ToggleViewPlanner)] [ 
+//                i [clazz "huge rocket icon"; Style iconstyle][]
+//                text "ViewPlanner"]
+//        ]
+
     let view (model : Model) : DomNode<Action> =  
-        let style (a:bool) = if a then [("color", "pink")] else [("color", "grey")]   
-        let icon (a:bool) = if a then "ui icon circular button orange" else "ui icon circular button"
+        let buttonstyle = [("width", "110px"); ("height", "110px")] //; ("vertical-align", "text-bottom")
+        let icon (active:bool) = if active then "ui pink icon button" else "ui icon button"
         
-        Html.Layout.horizontal[
-            Html.Layout.boxH [ 
-                button [clazz (icon model.isNavigationActive); onMouseClick (fun _ -> ToggleNavigation)] [ //Style style;
-                    i [clazz "rocket icon"][]
-                ] 
-            ]
-            Html.Layout.boxH [ 
-                button [clazz (icon model.isMeasurementsActive); onMouseClick (fun _ -> ToggleMeasurements)] [ //Style style;
-                    i [clazz "rocket icon"][]
-                ] 
-            ]
-            Html.Layout.boxH [ 
-                button [clazz (icon model.isViewPlannerActive); onMouseClick (fun _ -> ToggleViewPlanner)] [ //Style style;
-                    i [clazz "rocket icon"][]
-                ] 
-            ]     
-            
-            Html.Layout.finish()      
+        div [clazz "ui container"] [
+            button [clazz (icon model.isNavigationActive); Style buttonstyle; onMouseClick (fun _ -> ToggleNavigation)] [ 
+                i [clazz "huge rocket icon"][]
+                Text "Navigation"] 
+            button [clazz (icon model.isMeasurementsActive); Style buttonstyle; onMouseClick (fun _ -> ToggleMeasurements)] [ 
+                i [clazz "huge rocket icon"][]
+                text "Measurements"]
+            button [clazz (icon model.isViewPlannerActive); Style buttonstyle; onMouseClick (fun _ -> ToggleViewPlanner)] [ 
+                i [clazz "huge rocket icon"][]
+                text "ViewPlanner"]
         ]
 
         
