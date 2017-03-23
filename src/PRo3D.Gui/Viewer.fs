@@ -62,11 +62,21 @@ module Viewer =
         Aardvark.ImmutableSceneGraph.Conv<_>((fun _ -> nativeSg),Scene.group[]) :> ISg<_>
         //m.mscene  |> TranslateController.viewScene cam |> Scene.map Translate
 
+    let doKdTreeIntersection (m : DomainModel.MFullModel) (t : Trafo3d) (r : Ray3d) : Option<double> = 
+        
+        printf "kdtRees: %A" (m._original.kdTrees |> PSet.toList)
+        printfn "do intersection with : %A" r
+        //m._original.
+
+        None
+
     let view3D (runtime : IRuntime) (signature : IFramebufferSignature) (frustum : IMod<Frustum>) (m : DomainModel.MFullModel) =
         Scene.group [
             //Scratch.ComposedTestApp.view frustum m.composedTest 
             //Scene.ofSg (nativeSceneGraph runtime signature m.surfaces)
             Scene.ofSg (Sg.set m.renderSurfaces)
+
+            Scene.pick' [on Mouse.move (fun world -> printfn "do draing on world: %A" world; FreeFlyCameraApp.PickPoint world)] (Primitives.CustomPick (doKdTreeIntersection m))
 
             // renderMeasurements (gets kdtrees and enabled states, priority)
         ]

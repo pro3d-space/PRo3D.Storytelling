@@ -1,11 +1,13 @@
 ﻿namespace Aardvark.Opc
 
 open System
+open System.Linq
 open Aardvark.Base
 open Aardvark.Base.Rendering
 open Aardvark.Base.Incremental
 open Aardvark.Rendering.NanoVg
 open Aardvark.SceneGraph
+open Aardvark.VRVis
 open Aardvark.Application
 open Aardvark.Application.WinForms
 
@@ -34,6 +36,37 @@ module Viewer =
                 let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
                 yield PatchHierarchy.load p
             ] 
+
+
+        Log.startTimed "Creating KdTree"
+
+        let patch2KdTree (h : PatchHierarchy) (patch : Patch) : Aardvark.VRVis.ConcreteKdIntersectionTree =
+            let geometry, time = Patch.load h.baseDir patch.info
+            let intersectable = IntersectableTriangleSet(unbox geometry.IndexArray, unbox geometry.IndexedAttributes.[DefaultSemantic.Positions])
+            let kdTree = KdIntersectionTree(intersectable,KdIntersectionTree.BuildFlags.FastBuild ||| KdIntersectionTree.BuildFlags.NoMultithreading ||| KdIntersectionTree.BuildFlags.Hierarchical, splitPlaneEpsilon=0.5)
+            ConcreteKdIntersectionTree(kdTree,patch.info.Local2Global)
+
+        let opcTrees =
+            [| for h in patchHierarchies do
+                yield! h.tree |> QTree.getLeaves |> Seq.map (fun p -> lazy patch2KdTree h p)
+            |] 
+
+        let totalKdTrees = opcTrees.Length
+        Log.line "creating %d kdTrees" totalKdTrees
+
+        let kdTrees = 
+            opcTrees 
+                |> Array.Parallel.mapi (fun i e ->
+                    Log.start "creating kdtree #%d of %d" i totalKdTrees
+                    let r = e.Value
+                    Log.stop()
+                    r
+                )
+
+
+        let overallTree = KdTreeSet(kdTrees)
+
+        Log.stop()
 
 
         let g = 
@@ -70,7 +103,7 @@ module Viewer =
                 |> Sg.cullMode (Mod.constant CullMode.None)
                 
 
-        sg
+        sg, overallTree
 
     let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcViewer)  = 
     
@@ -95,6 +128,7 @@ module Viewer =
                 let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
                 yield PatchHierarchy.load p
             ] 
+
 
 
         let g = 

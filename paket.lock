@@ -106,6 +106,14 @@ NUGET
       Aardvark.Base (>= 2.1.0)
       Aardvark.Base.FSharp (>= 2.1.0)
       Aardvark.Base.Incremental (>= 2.1.0)
+  remote: https://vrvis.myget.org/F/aardvark
+  specs:
+    Aardvark.VRVis.Base (2.4.7)
+      Aardvark.Base (>= 2.4.5 < 2.5.0)
+      Aardvark.Base.Essentials (>= 2.4.5 < 2.5.0)
+    Aardvark.VRVis.Geometry (2.4.7)
+      Aardvark.Base.Rendering (>= 2.7.5)
+      Aardvark.VRVis.Base (>= 2.4.7)
   remote: http://api.nuget.org/v3/index.json
   specs:
     Aether (8.1.2)

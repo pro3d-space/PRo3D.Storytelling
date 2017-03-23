@@ -144,3 +144,8 @@ module QTree =
             | Leaf v -> Leaf (f l v)
             | Node(v,children) ->
                 Node(f l v, children |> Array.map (mapLevel (l + 1) f))
+
+    let rec getLeaves (tree : QTree<'a>) =
+        match tree with
+            | Leaf v -> Seq.singleton v
+            | Node(v,children) -> children |> Seq.collect getLeaves

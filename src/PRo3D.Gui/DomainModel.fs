@@ -230,6 +230,7 @@ module DomainModel =
         camera         : Scratch.DomainTypes.Generated.Camera.Model
         nearFar        : NearFar
         renderSurfaces : pset<Aardvark.SceneGraph.ISg>    
+        kdTrees        : pset<Aardvark.VRVis.KdTreeSet>
     } with
         static member DomainModel_ =
             (fun fm -> fm.DomainModel), (fun dm fm -> { fm with DomainModel = dm})
@@ -256,6 +257,7 @@ module DomainModel =
         renderSurfaces : ResetSet<Aardvark.SceneGraph.ISg>
     } with
         member x.Apply(arg0 : FullModel,cache : Aardvark.Base.Incremental.ReuseCache) = 
+            x._original <- arg0
             x.composedTest.Apply(arg0.composedTest,cache)
             x.path.Value <- arg0.DomainModel.Path
             x.renderSurfaces.Update(arg0.renderSurfaces)
@@ -274,4 +276,5 @@ module DomainModel =
             loadedSurfaceIds = Set.empty
 
             pendingSurfaces = []
+            kdTrees = PSet.empty
         }

@@ -169,7 +169,7 @@ module FullLayoutApp =
         | ImportSurfacesAction  of ImportDiscoverApp.Action
         | AddDiscoveredSurfaces of ImportDiscoverApp.Model
         | LoadSurfaces          of list<Surface>
-        | ActivateSurfaces      of list<Path * ISg * Surface> * Frustum * CameraView
+        | ActivateSurfaces      of list<Path * ISg * Aardvark.VRVis.KdTreeSet * Surface> * Frustum * CameraView
         | FinishedLoading       of list<Surface>
         | NewProject
         | SaveProject
@@ -192,7 +192,7 @@ module FullLayoutApp =
     let loadSurface (runtime : IRuntime) (signature : IFramebufferSignature) (e : Env<Action>) (surface : Surface) =
         async {    
             let config = Aardvark.Opc.Configurations.Network.testSurf()
-            let sg = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature {config with patchHierarchies = surface.OPCs |> List.map (fun a -> a.path)} //opcs |> List.map (fun a -> a.name)}       
+            let sg,kdtree = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature {config with patchHierarchies = surface.OPCs |> List.map (fun a -> a.path)} //opcs |> List.map (fun a -> a.name)}       
                     
             // extract boundingbox from data and drop config.bbb
             // create kdtree
@@ -201,7 +201,7 @@ module FullLayoutApp =
             let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
             let proj = Frustum.perspective 60.0 scene.near scene.far 1.0
                     
-            return ActivateSurfaces([surface.Path,sg,surface],proj,initialView)
+            return ActivateSurfaces([surface.Path,sg,kdtree,surface],proj,initialView)
         }
 
     let loadSurfaces (runtime : IRuntime) (signature : IFramebufferSignature) (e : Env<Action>) (surfaces : list<Surface>) =
@@ -231,10 +231,13 @@ module FullLayoutApp =
                 printfn "activate surface"  
                 match pathAndSgs with
                     | [] -> m
-                    | (_,_,surface)::xs ->
+                    | (_,_,_,surface)::xs ->
                         let mutable m = Optic.set FullModel.Selected_ (SurfaceProperties surface) m
-                        for (path,sg,_) in pathAndSgs do
-                            m <- { m with renderSurfaces = PSet.add sg m.renderSurfaces; camera = { m.camera with camera = cameraView }; loadedSurfaceIds = Set.add path m.loadedSurfaceIds}
+                        for (path,sg,kdTree,_) in pathAndSgs do
+                            m <- { m with renderSurfaces = PSet.add sg m.renderSurfaces; 
+                                          camera = { m.camera with camera = cameraView }; 
+                                          kdTrees = PSet.add kdTree m.kdTrees
+                                          loadedSurfaceIds = Set.add path m.loadedSurfaceIds}
                         m
             | AddDiscoveredSurfaces discoverModel -> 
                 if String.IsNullOrEmpty discoverModel.currentPath || List.isEmpty discoverModel.discoveredSurfaces then
