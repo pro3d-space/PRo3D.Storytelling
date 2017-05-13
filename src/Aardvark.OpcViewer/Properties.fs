@@ -29,7 +29,7 @@ module DefaultMetrics =
 module Configurations =
 
     type FileName = string
-    type OpcViewer = { 
+    type OpcScene = { 
         patchHierarchies : seq<FileName> 
         boundingBox      : Box3d
         preTransform     : Trafo3d 

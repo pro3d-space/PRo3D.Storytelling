@@ -16,7 +16,7 @@ module Viewer =
 
     let mutable hackRunner = None
 
-    let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcViewer)  =
+    let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene)  =
 
         let runner = 
             match hackRunner with
@@ -111,7 +111,7 @@ module Viewer =
 
         sg, 1
 
-    let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcViewer)  = 
+    let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcScene)  = 
     
         let runner = runtime.CreateLoadRunner 2
 
@@ -210,7 +210,7 @@ module Viewer =
 
         sg
 
-    let run (scene : OpcViewer) =
+    let run (scene : OpcScene) =
 
         Aardvark.Base.Ag.initialize()
         Aardvark.Init()
@@ -225,7 +225,7 @@ module Viewer =
         let task =
             RenderTask.ofList [
                 app.Runtime.CompileClear(win.FramebufferSignature, Mod.constant C4f.Gray)
-                app.Runtime.CompileRender(win.FramebufferSignature, cfg, sg) |> DefaultOverlays.withStatistics
+                app.Runtime.CompileRender(win.FramebufferSignature, cfg, sg)  |> DefaultOverlays.withStatistics
             ]
 
         win.RenderTask <- task

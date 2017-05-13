@@ -14,6 +14,8 @@ open System.Runtime.InteropServices
 
 open Aardvark.Base
 
+open Aardvark.Opc
+
 [<AutoOpen>]
 module private Aara =
 
