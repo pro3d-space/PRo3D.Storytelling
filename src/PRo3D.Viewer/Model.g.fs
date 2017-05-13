@@ -1,27 +1,30 @@
-namespace KitchenSink
+namespace PRo3D
 
 open System
 open Aardvark.Base
 open Aardvark.Base.Incremental
-open KitchenSink
+open PRo3D
 
 [<AutoOpen>]
 module Mutable =
 
     [<StructuredFormatDisplay("{AsString}")>]
-    type MModel private(__initial : KitchenSink.Model) =
+    type MModel private(__initial : PRo3D.Model) =
         let mutable __current = __initial
-        let _value = ResetMod(__initial.value)
         let _cameraModel = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.cameraModel)
+        let _importOpcs = ResetMod(__initial.importOpcs)
+        let _surfaces = ResetSet(__initial.surfaces)
         
-        member x.value = _value :> IMod<_>
         member x.cameraModel = _cameraModel
+        member x.importOpcs = _importOpcs :> IMod<_>
+        member x.surfaces = _surfaces :> aset<_>
         
-        member x.Update(__model : KitchenSink.Model) =
+        member x.Update(__model : PRo3D.Model) =
             if not (Object.ReferenceEquals(__model, __current)) then
                 __current <- __model
-                _value.Update(__model.value)
                 _cameraModel.Update(__model.cameraModel)
+                _importOpcs.Update(__model.importOpcs)
+                _surfaces.Update(__model.surfaces)
         
         static member Create(initial) = MModel(initial)
         
@@ -31,8 +34,9 @@ module Mutable =
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module MModel =
-        let inline value (m : MModel) = m.value
         let inline cameraModel (m : MModel) = m.cameraModel
+        let inline importOpcs (m : MModel) = m.importOpcs
+        let inline surfaces (m : MModel) = m.surfaces
     
     
     
@@ -41,15 +45,21 @@ module Mutable =
     module Model =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
-            let value =
-                { new Lens<KitchenSink.Model, Microsoft.FSharp.Core.float>() with
-                    override x.Get(r) = r.value
-                    override x.Set(r,v) = { r with value = v }
-                    override x.Update(r,f) = { r with value = f r.value }
-                }
             let cameraModel =
-                { new Lens<KitchenSink.Model, Aardvark.UI.Primitives.CameraControllerState>() with
+                { new Lens<PRo3D.Model, Aardvark.UI.Primitives.CameraControllerState>() with
                     override x.Get(r) = r.cameraModel
                     override x.Set(r,v) = { r with cameraModel = v }
                     override x.Update(r,f) = { r with cameraModel = f r.cameraModel }
+                }
+            let importOpcs =
+                { new Lens<PRo3D.Model, Microsoft.FSharp.Collections.list<Microsoft.FSharp.Core.string>>() with
+                    override x.Get(r) = r.importOpcs
+                    override x.Set(r,v) = { r with importOpcs = v }
+                    override x.Update(r,f) = { r with importOpcs = f r.importOpcs }
+                }
+            let surfaces =
+                { new Lens<PRo3D.Model, Aardvark.Base.hset<Aardvark.SceneGraph.ISg>>() with
+                    override x.Get(r) = r.surfaces
+                    override x.Set(r,v) = { r with surfaces = v }
+                    override x.Update(r,f) = { r with surfaces = f r.surfaces }
                 }

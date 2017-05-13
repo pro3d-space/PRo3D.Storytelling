@@ -52,6 +52,7 @@
     <Compile Include="Types.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
+    <None Include="paket.references" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>

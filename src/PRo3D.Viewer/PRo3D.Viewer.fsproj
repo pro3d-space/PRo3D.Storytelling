@@ -56,15 +56,30 @@
     </Otherwise>
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <PropertyGroup>
+        <__paket__TurboJpegWrapper_targets>TurboJpegWrapper</__paket__TurboJpegWrapper_targets>
+      </PropertyGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <PropertyGroup>
+        <__paket__Aardvark_Compiler_DomainTypes_targets>Aardvark.Compiler.DomainTypes</__paket__Aardvark_Compiler_DomainTypes_targets>
+      </PropertyGroup>
+    </When>
+  </Choose>
   <ItemGroup>
-    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Model.fs" />
-    <Compile Include="KitchenSink.fs" />
-    <None Include="App.config" />
+    <Compile Include="Viewer.fs" />
     <Compile Include="Program.fs" />
+    <None Include="App.config" />
+    <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -605,6 +620,39 @@
       </ItemGroup>
     </When>
   </Choose>
-  <Import Project="..\..\packages\Aardvark.Compiler.DomainTypes.MSBuild\build\Aardvark.Compiler.DomainTypes.targets" Condition="Exists('..\..\packages\Aardvark.Compiler.DomainTypes.MSBuild\build\Aardvark.Compiler.DomainTypes.targets')" Label="Paket" />
-  <Import Project="..\..\packages\TurboJpegWrapper\build\TurboJpegWrapper.targets" Condition="Exists('..\..\packages\TurboJpegWrapper\build\TurboJpegWrapper.targets')" Label="Paket" />
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
+        <Reference Include="Microsoft.WindowsAPICodePack">
+          <HintPath>..\..\packages\WindowsAPICodePack-Core\lib\Microsoft.WindowsAPICodePack.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
+        <Reference Include="Microsoft.WindowsAPICodePack.Shell">
+          <HintPath>..\..\packages\WindowsAPICodePack-Shell\lib\Microsoft.WindowsAPICodePack.Shell.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
+        <Reference Include="Microsoft.WindowsAPICodePack.ShellExtensions">
+          <HintPath>..\..\packages\WindowsAPICodePack-ShellExtensions\lib\Microsoft.WindowsAPICodePack.ShellExtensions.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Import Project="..\..\packages\Aardvark.Compiler.DomainTypes.MSBuild\build\$(__paket__Aardvark_Compiler_DomainTypes_targets).targets" Condition="Exists('..\..\packages\Aardvark.Compiler.DomainTypes.MSBuild\build\$(__paket__Aardvark_Compiler_DomainTypes_targets).targets')" Label="Paket" />
+  <Import Project="..\..\packages\TurboJpegWrapper\build\$(__paket__TurboJpegWrapper_targets).targets" Condition="Exists('..\..\packages\TurboJpegWrapper\build\$(__paket__TurboJpegWrapper_targets).targets')" Label="Paket" />
 </Project>

@@ -7,7 +7,7 @@ open Aardvark.Base
 open Aardvark.Application.WinForms
 open Aardvark.UI
 
-[<EntryPoint>]
+[<EntryPoint;STAThread>]
 let main argv = 
     Xilium.CefGlue.ChromiumUtilities.unpackCef()
     Aardvark.UI.Chromium.init argv
@@ -17,13 +17,19 @@ let main argv =
     use app = new OpenGlApplication()
     let runtime = app.Runtime    
 
-    let a = KitchenSink.KitchenSinkApp.start()
+    use form = new Form(Width = 1024, Height = 768)
+    let signature =
+        runtime.CreateFramebufferSignature [
+            DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba8; samples = 1 }
+            DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
+        ]
+
+    let a = PRo3D.Viewer.start form runtime signature
 
     WebPart.startServer 4321 [ 
         MutableApp.toWebPart runtime a
     ]  
 
-    use form = new Form(Width = 1024, Height = 768)
     use ctrl = new AardvarkCefBrowser()
     ctrl.Dock <- DockStyle.Fill
     form.Controls.Add ctrl
