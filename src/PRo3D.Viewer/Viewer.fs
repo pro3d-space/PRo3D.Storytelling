@@ -60,7 +60,7 @@ module Viewer =
                     | [] -> m
                     | paths ->
                         Log.line "Patch hierarchies: %A" paths
-                        let scene = { Aardvark.Opc.Configurations.Network.mars() with patchHierarchies = paths }  
+                        let scene = { Aardvark.Opc.Configurations.Empty.mars() with patchHierarchies = paths }  
                         Log.start "importing: %A" scene
                         let sg,_ = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
                         Log.stop "did it"

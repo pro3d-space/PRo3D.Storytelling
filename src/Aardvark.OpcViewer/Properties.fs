@@ -141,6 +141,20 @@ module Configurations =
                 lodDecider       = DefaultMetrics.tunnel
             }
 
+    module Empty = 
+         let mars () = 
+            { 
+                useCompressedTextures = true
+                preTransform     = Trafo3d.Identity
+                patchHierarchies = []
+                boundingBox      = Box3d.Parse("[[-2490136.401072104, 2285878.413405098, -271417.754880811], [-2490134.590369504, 2285880.810397286, -271414.202594255]]")
+                near             = 0.1
+                far              = 10000.0
+                speed            = 5.0
+                lodDecider       = DefaultMetrics.mars
+            }
+        
+
     module Network =
     
         let perjen () =
