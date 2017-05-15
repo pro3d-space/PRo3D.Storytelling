@@ -87,15 +87,15 @@ module Viewer =
 
         let lodVisEnabled = Mod.init false
 
-        let box = 
-            Sg.wireBox' C4b.White  ( Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") )
-             |> Sg.effect [
-                DefaultSurfaces.trafo |> toEffect
-                DefaultSurfaces.constantColor C4f.White |> toEffect
-             ]
+        //let box = 
+        //    Sg.wireBox' C4b.White  ( Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") )
+        //     |> Sg.effect [
+        //        DefaultSurfaces.trafo |> toEffect
+        //        DefaultSurfaces.constantColor C4f.White |> toEffect
+        //     ]
         let sg =        
             g   
-                |> Sg.andAlso (box)
+               // |> Sg.andAlso (box)
                 |> Sg.transform preTransform
                 |> Sg.effect [
                             DefaultSurfaces.trafo |> toEffect

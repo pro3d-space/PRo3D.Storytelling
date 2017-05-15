@@ -10,6 +10,19 @@ open Aardvark.Application
 open Aardvark.Opc
 open Aardvark.SceneGraph
 
+//[<DomainType>]
+//type Surface = {    
+    
+//    bb : Box3d
+
+//    [<TreatAsValue>]
+//    sg : ISg
+//}
+
+//module Surface = 
+//    let mk sg bb =
+//        { sg = sg; bb = bb}
+    
 
 [<DomainType>]
 type Model = { 
@@ -19,5 +32,6 @@ type Model = {
     importOpcs : list<string>
 
     surfaces   : hset<ISg>
+    bbs        : hset<Box3d>
 }
 

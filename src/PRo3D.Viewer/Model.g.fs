@@ -14,10 +14,12 @@ module Mutable =
         let _cameraModel = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.cameraModel)
         let _importOpcs = ResetMod(__initial.importOpcs)
         let _surfaces = ResetSet(__initial.surfaces)
+        let _bbs = ResetSet(__initial.bbs)
         
         member x.cameraModel = _cameraModel
         member x.importOpcs = _importOpcs :> IMod<_>
         member x.surfaces = _surfaces :> aset<_>
+        member x.bbs = _bbs :> aset<_>
         
         member x.Update(__model : PRo3D.Model) =
             if not (Object.ReferenceEquals(__model, __current)) then
@@ -25,6 +27,7 @@ module Mutable =
                 _cameraModel.Update(__model.cameraModel)
                 _importOpcs.Update(__model.importOpcs)
                 _surfaces.Update(__model.surfaces)
+                _bbs.Update(__model.bbs)
         
         static member Create(initial) = MModel(initial)
         
@@ -37,6 +40,7 @@ module Mutable =
         let inline cameraModel (m : MModel) = m.cameraModel
         let inline importOpcs (m : MModel) = m.importOpcs
         let inline surfaces (m : MModel) = m.surfaces
+        let inline bbs (m : MModel) = m.bbs
     
     
     
@@ -62,4 +66,10 @@ module Mutable =
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
+                }
+            let bbs =
+                { new Lens<PRo3D.Model, Aardvark.Base.hset<Aardvark.Base.Box3d>>() with
+                    override x.Get(r) = r.bbs
+                    override x.Set(r,v) = { r with bbs = v }
+                    override x.Update(r,f) = { r with bbs = f r.bbs }
                 }

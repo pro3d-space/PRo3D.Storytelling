@@ -39,10 +39,13 @@ module DialogUtils =
         r
 
 module Viewer =
+    open Aardvark.Opc
+    open Aardvark.Opc    
 
     type Message =
         | CameraMessage of CameraController.Message
         | OpenSurface 
+        | QuickLoad
         | AddSg of ISg
 
     let initial =
@@ -50,7 +53,19 @@ module Viewer =
             cameraModel = CameraController.initial
             importOpcs = []
             surfaces = HSet.empty
+            bbs = HSet.empty
         }
+
+    let loadHierarchies scene (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =
+        Log.start "importing: %A" scene
+        let sg,_ = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
+        Log.stop "did it"
+
+        //let hierarchies = scene.patchHierarchies |> Seq.map PatchHierarchy.load |> Seq.map (fun p -> p.tree |> QTree.height)
+
+        let bb = scene.boundingBox
+        let view = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
+        { m with surfaces = HSet.add sg m.surfaces; bbs = HSet.add bb m.bbs; cameraModel = { CameraController.initial with view = view  } }
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =
         match msg with
@@ -61,13 +76,10 @@ module Viewer =
                     | paths ->
                         Log.line "Patch hierarchies: %A" paths
                         let scene = { Aardvark.Opc.Configurations.Empty.mars() with patchHierarchies = paths }  
-                        Log.start "importing: %A" scene
-                        let sg,_ = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
-                        Log.stop "did it"
-                        let bb = scene.boundingBox
-                        let view = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
-                        { m with surfaces = HSet.add sg m.surfaces; cameraModel = { CameraController.initial with view = view  } }
+                        loadHierarchies scene runtime signature m                        
             | AddSg sg -> { m with surfaces = HSet.add sg m.surfaces }
+            | QuickLoad -> loadHierarchies (Aardvark.Opc.Configurations.Empty.mars()) runtime signature m
+                
 
     let scene (m : MModel) =
         let opcs =
@@ -81,7 +93,7 @@ module Viewer =
 
         let renderControl = 
                 CameraController.controlledControl m.cameraModel CameraMessage (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant) 
-                    (AttributeMap.ofList [ attribute "style" "width:100%; height: 100%"; ]) (scene m)
+                    (AttributeMap.ofList [ attribute "style" "width:70%; height: 100%; float:left"; ]) (scene m)
 
         let openSurface =
             [ text "browse"] |> button [ 
@@ -89,11 +101,21 @@ module Viewer =
                 onClick (fun _ -> OpenSurface)
              ] 
 
-        body [] [
+        body [style "background: #1B1C1E"] [
             require Html.semui (
                 Html.SemUi.adornerMenu [
                     "Open Surface", [openSurface]
-                ] renderControl
+                ](
+                    div [][
+                        renderControl
+                        div [style "width:29%; height: 100%; float:right;"] [
+                            div [clazz "ui buttons inverted"] [
+                                 button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
+                                    i [clazz "folder outline icon"] [] ]
+                            ]
+                        ]
+                    ]
+                )
             )
         ]
 
