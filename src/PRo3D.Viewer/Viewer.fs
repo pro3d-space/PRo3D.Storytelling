@@ -41,19 +41,20 @@ module DialogUtils =
 module Viewer =
     open Aardvark.Opc
     open Aardvark.Opc    
+    open Aardvark.SceneGraph.SgPrimitives.Sg
 
     type Message =
         | CameraMessage of CameraController.Message
         | OpenSurface 
         | QuickLoad
         | AddSg of ISg
+        | PickSurface of SceneHit
 
     let initial =
         {
             cameraModel = CameraController.initial
             importOpcs = []
-            surfaces = HSet.empty
-            bbs = HSet.empty
+            surfaces = HSet.empty           
         }
 
     let loadHierarchies scene (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =
@@ -65,7 +66,7 @@ module Viewer =
 
         let bb = scene.boundingBox
         let view = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
-        { m with surfaces = HSet.add sg m.surfaces; bbs = HSet.add bb m.bbs; cameraModel = { CameraController.initial with view = view  } }
+        { m with surfaces = HSet.add (Surface.mk sg bb) m.surfaces; cameraModel = { CameraController.initial with view = view  } }
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =
         match msg with
@@ -75,17 +76,38 @@ module Viewer =
                     | [] -> m
                     | paths ->
                         Log.line "Patch hierarchies: %A" paths
-                        let scene = { Aardvark.Opc.Configurations.Empty.mars() with patchHierarchies = paths }  
+                        let scene = { Aardvark.Opc.Configurations.Empty.mars() with patchHierarchies = paths }
                         loadHierarchies scene runtime signature m                        
-            | AddSg sg -> { m with surfaces = HSet.add sg m.surfaces }
+            | AddSg sg -> { m with surfaces = HSet.add  (Surface.mk sg Box3d.Invalid) m.surfaces }
             | QuickLoad -> loadHierarchies (Aardvark.Opc.Configurations.Empty.mars()) runtime signature m
+            | PickSurface p -> 
+                Log.error "picked bb at %A" (p.globalRay.Ray.Ray.Direction, p.globalRay.Ray.Ray.Origin)
+                m
                 
-
     let scene (m : MModel) =
         let opcs =
             aset {
                 for surface in m.surfaces do
-                    yield surface |> Sg.noEvents
+
+                    let createSg (bb : Box3d) sg =    
+                        let box = bb.Translated(bb.Center.Negated)
+                        sg |> Sg.noEvents |> Sg.andAlso (wireBox' C4b.VRVisGreen box 
+                                                           // |> Sg.noEvents 
+                                                            |> Sg.shader {
+                                                                    do! DefaultSurfaces.trafo
+                                                                    do! DefaultSurfaces.vertexColor 
+                                                               } |> Sg.noEvents
+                                                        ) 
+                        |> Sg.pickable (PickShape.Box box) 
+
+                    let sg = 
+                        Mod.map2 createSg surface.globalBB surface.sceneGraph
+                        |> Sg.dynamic
+                        |> Sg.withEvents [
+                                Sg.onMouseDownEvt (fun sceneHit -> PickSurface sceneHit)
+                            ]
+
+                    yield sg
             }
         opcs |> Sg.set
 

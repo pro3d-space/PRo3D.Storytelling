@@ -146,8 +146,8 @@ module Configurations =
             { 
                 useCompressedTextures = true
                 preTransform     = Trafo3d.Identity
-                patchHierarchies = [@"D:\_WORK\Aardwork\Exomars\_Scenes\MSL_Mastcam_Sol318\Surface\47181\OPC_000_000"]
-                boundingBox      = Box3d.Parse("[[-2490136.401072104, 2285878.413405098, -271417.754880811], [-2490134.590369504, 2285880.810397286, -271414.202594255]]")
+                patchHierarchies = [@"E:\Aardwork\Exomars\_SCENES\cd - Copy\Surface\Cape_Desire_RGB\OPC_000_000"]
+                boundingBox      = Box3d.Parse("[[3376372.058677169, -325173.566694686, -121309.194857123], [3376385.170513898, -325152.282144333, -121288.943956908]]")
                 near             = 0.1
                 far              = 10000.0
                 speed            = 5.0
