@@ -95,7 +95,7 @@ module Viewer =
                 |> Seq.concat
                 |> Box3d.ofSeq
        
-        let view = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
+        let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
         { m with surfaces = HSet.add (Surface.mk sg bb) m.surfaces; cameraModel = { CameraController.initial with view = view  } }
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =
@@ -120,15 +120,15 @@ module Viewer =
                 for surface in m.surfaces do
 
                     let createSg (bb : Box3d) sg =    
-                        let box = bb.Translated(bb.Center.Negated)
-                        sg |> Sg.noEvents |> Sg.andAlso (wireBox' C4b.VRVisGreen box 
+                   //     let box = bb.Translated(bb.Center.Negated)
+                        sg |> Sg.noEvents |> Sg.andAlso (wireBox' C4b.VRVisGreen bb 
                                                            // |> Sg.noEvents 
                                                             |> Sg.shader {
-                                                                    do! DefaultSurfaces.trafo
+                                                                    do! Shader.stableTrafo
                                                                     do! DefaultSurfaces.vertexColor 
                                                                } |> Sg.noEvents
                                                         ) 
-                        |> Sg.pickable (PickShape.Box box) 
+                        |> Sg.pickable (PickShape.Box bb) 
 
                     let sg = 
                         Mod.map2 createSg surface.globalBB surface.sceneGraph

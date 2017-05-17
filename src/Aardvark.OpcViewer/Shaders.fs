@@ -17,3 +17,18 @@ module Shader =
                 return grayscale * c 
             else return v.c
         }
+
+    let stableTrafo (v : Vertex) =
+        vertex {
+            let vp = uniform.ModelViewTrafo * v.pos
+            let wp = uniform.ModelTrafo * v.pos
+            return {
+                pos = uniform.ProjTrafo * vp
+                wp = wp
+                n = uniform.NormalMatrix * v.n
+                b = uniform.NormalMatrix * v.b
+                t = uniform.NormalMatrix * v.t
+                c = v.c
+                tc = v.tc 
+            }
+        } 

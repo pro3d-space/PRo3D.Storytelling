@@ -13,6 +13,8 @@ open Aardvark.Application
 open Aardvark.Application.WinForms
 
 module Viewer = 
+    open Aardvark.Base.Rendering.Effects
+    open FShade
 
     let mutable hackRunner = None
 
@@ -29,8 +31,8 @@ module Viewer =
 
 
         let bb = scene.boundingBox
-        let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
-
+      //  let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
+        let preTransform = scene.preTransform
     
         let patchHierarchies =
             [ for h in scene.patchHierarchies do
@@ -77,10 +79,11 @@ module Viewer =
 
         let g = 
             patchHierarchies 
-            |> List.map (fun h -> 
-                    Sg.patchLod signature runner h.baseDir 
-                                scene.lodDecider scene.useCompressedTextures                                 
-                                (PatchLod.toRoseTree h.tree)
+            |> List.map (fun h ->                     
+                    let sg = Sg.patchLod signature runner h.baseDir 
+                                    scene.lodDecider scene.useCompressedTextures                                 
+                                    (PatchLod.toRoseTree h.tree)
+                    sg
                ) 
             |> Sg.ofList
         
@@ -93,12 +96,14 @@ module Viewer =
         //        DefaultSurfaces.trafo |> toEffect
         //        DefaultSurfaces.constantColor C4f.White |> toEffect
         //     ]
+        
+
         let sg =        
             g   
                // |> Sg.andAlso (box)
                 |> Sg.transform preTransform
                 |> Sg.effect [
-                            DefaultSurfaces.trafo |> toEffect
+                            Shader.stableTrafo |> toEffect
                             DefaultSurfaces.constantColor C4f.White |> toEffect
                             DefaultSurfaces.diffuseTexture |> toEffect
                             Shader.LoDColor |> toEffect
