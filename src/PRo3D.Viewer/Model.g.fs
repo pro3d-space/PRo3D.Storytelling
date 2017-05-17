@@ -80,7 +80,6 @@ module Mutable =
                 _cameraModel.Update(__model.cameraModel)
                 _importOpcs.Update(__model.importOpcs)
                 _surfaces.Update(__model.surfaces)
-                _surface.Update(__model.surface)
         
         static member Create(initial) = MModel(initial)
         
@@ -118,10 +117,4 @@ module Mutable =
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
-                }
-            let surface =
-                { new Lens<PRo3D.Model, PRo3D.Surface>() with
-                    override x.Get(r) = r.surface
-                    override x.Set(r,v) = { r with surface = v }
-                    override x.Update(r,f) = { r with surface = f r.surface }
                 }

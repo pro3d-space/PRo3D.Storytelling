@@ -38,6 +38,21 @@ module DialogUtils =
         )) |> ignore
         r
 
+module Box3d =
+    let extendBy (box:Box3d) (b:Box3d) =
+        box.ExtendBy(b)
+        box
+
+    let ofSeq (bs:seq<Box3d>) =
+        let box = 
+            match bs |> Seq.tryHead with
+                | Some b -> b
+                | None -> Box3d.Invalid
+                    
+        for b in bs do
+            box.ExtendBy(b)
+        box
+
 module Viewer =
     open Aardvark.Opc
     open Aardvark.Opc    
@@ -56,15 +71,30 @@ module Viewer =
             importOpcs = []
             surfaces = HSet.empty           
         }
+    
+    
 
     let loadHierarchies scene (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =
         Log.start "importing: %A" scene
-        let sg,_ = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
+        let sg,_,hierarchies = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
         Log.stop "did it"
-
         //let hierarchies = scene.patchHierarchies |> Seq.map PatchHierarchy.load |> Seq.map (fun p -> p.tree |> QTree.height)
+        
+        //let bb = 
+        //    hierarchies
+        //        |> List.map(
+        //            fun d -> match d.tree with
+        //                        | Node (a,_) -> a.info.GlobalBoundingBox
+        //                        | Leaf a -> a.info.GlobalBoundingBox) 
+        //        |> Box3d.ofSeq
 
-        let bb = scene.boundingBox
+        let bb = 
+            hierarchies
+                |> List.map(fun d -> d.tree |> QTree.getLeaves)                  
+                |> Seq.map (fun p -> p |> Seq.map(fun d -> d.info.GlobalBoundingBox)) 
+                |> Seq.concat
+                |> Box3d.ofSeq
+       
         let view = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
         { m with surfaces = HSet.add (Surface.mk sg bb) m.surfaces; cameraModel = { CameraController.initial with view = view  } }
 

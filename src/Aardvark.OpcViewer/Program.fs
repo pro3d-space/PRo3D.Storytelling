@@ -79,7 +79,7 @@ module Viewer =
             patchHierarchies 
             |> List.map (fun h -> 
                     Sg.patchLod signature runner h.baseDir 
-                                scene.lodDecider scene.useCompressedTextures 
+                                scene.lodDecider scene.useCompressedTextures                                 
                                 (PatchLod.toRoseTree h.tree)
                ) 
             |> Sg.ofList
@@ -109,7 +109,7 @@ module Viewer =
                 |> Sg.cullMode (Mod.constant CullMode.None)
                 
 
-        sg, 1
+        sg, 1, patchHierarchies
 
     let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcScene)  = 
     
