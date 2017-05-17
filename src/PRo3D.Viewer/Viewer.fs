@@ -19,24 +19,64 @@ open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Rendering.Text
 
+open MBrace.FsPickler
+open System.IO
+
 open PRo3D
+
+module Serialization =
+    
+    let binarySerializer = FsPickler.CreateBinarySerializer()
+
+    let save path (d : 'a) =    
+        let arr = binarySerializer.Pickle d     
+        File.WriteAllBytes(path, arr);
+        d
+
+    let loadAs<'a> path : 'a =
+        let arr = File.ReadAllBytes(path)
+        binarySerializer.UnPickle arr
+        
 
 module DialogUtils =
     open System.Windows.Forms
-    open Microsoft.WindowsAPICodePack.Dialogs
+    open Microsoft.WindowsAPICodePack.Dialogs    
 
-    let openFolder (w : Form) =
+    let saveDialog  (w : Form)  =
+        let mutable r = Unchecked.defaultof<_>
+        w.Invoke(Action(fun _ -> 
+            let dialog = new SaveFileDialog()
+            if dialog.ShowDialog() = DialogResult.OK then
+                r <- Some dialog.FileName
+            else r <- None
+        )) |> ignore
+        r
+    
+    let openDialog (w : Form) =
+        let mutable r = Unchecked.defaultof<_>
+        w.Invoke(Action(fun _ -> 
+            let dialog = new OpenFileDialog()
+            if dialog.ShowDialog() = DialogResult.OK then
+                r <- Some dialog.FileName
+            else r <- None
+        )) |> ignore
+        r
+
+    let openDialog2 (w : Form)(isFolder : bool)(isMulti : bool) =
         let mutable r = []
         w.Invoke(Action(fun _ -> 
             let dialog = new CommonOpenFileDialog()
-            dialog.Multiselect <- true
+            dialog.Multiselect <- isMulti
           //  dialog.InitialDirectory <- "C:\\Users"
-            dialog.IsFolderPicker <- true
+            dialog.IsFolderPicker <- isFolder
             if dialog.ShowDialog() = CommonFileDialogResult.Ok then
                 r <- dialog.FileNames |> Seq.toList
             else r <- []
         )) |> ignore
         r
+      
+    let openFolders (w : Form) =
+        openDialog2 w true true
 
 module Box3d =
     let extendBy (box:Box3d) (b:Box3d) =
@@ -54,7 +94,6 @@ module Box3d =
         box
 
 module Viewer =
-    open Aardvark.Opc
     open Aardvark.Opc    
     open Aardvark.SceneGraph.SgPrimitives.Sg
 
@@ -64,17 +103,24 @@ module Viewer =
         | QuickLoad
         | AddSg of ISg
         | PickSurface of SceneHit
+        | SaveScene
+        | OpenScene
+        | NewScene
 
     let initial =
-        {
-            cameraModel = CameraController.initial
-            importOpcs = []
-            surfaces = HSet.empty           
+        {           
+            surfaces = HSet.empty                       
+            scene = {
+                    importOpcs = []
+                    cameraModel = CameraController.initial            
+                    interaction = InteractionMode.PickOrbitCenter
+            }
         }
     
     
 
-    let loadHierarchies scene (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =
+    let loadHierarchies (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (computeView : bool) =
+        let scene = { Aardvark.Opc.Configurations.Empty.mars() with patchHierarchies = m.scene.importOpcs }
         Log.start "importing: %A" scene
         let sg,_,hierarchies = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
         Log.stop "did it"
@@ -94,25 +140,43 @@ module Viewer =
                 |> Seq.map (fun p -> p |> Seq.map(fun d -> d.info.GlobalBoundingBox)) 
                 |> Seq.concat
                 |> Box3d.ofSeq
-       
-        let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
-        { m with surfaces = HSet.add (Surface.mk sg bb) m.surfaces; cameraModel = { CameraController.initial with view = view  } }
+        
+        let cam = 
+            if computeView then
+                let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
+                { CameraController.initial with view = view }
+            else 
+                m.scene.cameraModel
+               
+        { m with surfaces = HSet.add (Surface.mk sg bb) m.surfaces; scene = { m.scene with cameraModel = cam }}
 
-    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =
+    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =        
         match msg with
-            | CameraMessage msg -> { m with cameraModel = CameraController.update m.cameraModel msg }
+            | CameraMessage msg -> { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
             | OpenSurface -> 
-                match  DialogUtils.openFolder w with
+                match DialogUtils.openFolders w with
                     | [] -> m
                     | paths ->
                         Log.line "Patch hierarchies: %A" paths
-                        let scene = { Aardvark.Opc.Configurations.Empty.mars() with patchHierarchies = paths }
-                        loadHierarchies scene runtime signature m                        
+                        let m = { m with scene = { m.scene with importOpcs = paths }}
+                        loadHierarchies runtime signature m true                      
             | AddSg sg -> { m with surfaces = HSet.add  (Surface.mk sg Box3d.Invalid) m.surfaces }
-            | QuickLoad -> loadHierarchies (Aardvark.Opc.Configurations.Empty.mars()) runtime signature m
+            | QuickLoad -> loadHierarchies runtime signature { m with scene = { m.scene with importOpcs = [@"D:\_WORK\Aardwork\Exomars\_Scenes\Dingo_Gap_2\Surface\MSL_Mastcam_Sol_529_id_47596\OPC_000_000"]}} true
             | PickSurface p -> 
                 Log.error "picked bb at %A" (p.globalRay.Ray.Ray.Direction, p.globalRay.Ray.Ray.Origin)
                 m
+            | SaveScene -> 
+                match DialogUtils.saveDialog w with
+                    | None -> m
+                    | Some p -> {m with scene = Serialization.save p m.scene}
+            | OpenScene ->
+                match DialogUtils.openDialog w with
+                    | None -> m
+                    | Some path -> 
+                        let s = Serialization.loadAs<Scene> path
+                        loadHierarchies runtime signature { m with scene = s } false
+            | NewScene -> initial
+            | _ -> m
                 
     let scene (m : MModel) =
         let opcs =
@@ -144,8 +208,27 @@ module Viewer =
     let view (m : MModel) =
 
         let renderControl = 
-                CameraController.controlledControl m.cameraModel CameraMessage (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant) 
+                CameraController.controlledControl m.scene.cameraModel CameraMessage (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant) 
                     (AttributeMap.ofList [ attribute "style" "width:70%; height: 100%; float:left"; ]) (scene m)
+
+        let interactTools =
+            div [clazz "ui buttons inverted"] [
+                button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
+                            i [clazz "large rocket icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
+                            i [clazz "large rocket icon"] [] ]
+            ]
+
+        let sceneTools =
+            div [clazz "ui buttons inverted"] [
+                button [clazz "ui icon button"; onMouseClick (fun _ -> SaveScene)] [
+                            i [clazz "save icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> OpenScene)] [
+                            i [clazz "folder outline icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> NewScene)] [
+                            i [clazz "file outline icon"] [] ]
+            ]
+            
 
         let openSurface =
             [ text "browse"] |> button [ 
@@ -156,15 +239,15 @@ module Viewer =
         body [style "background: #1B1C1E"] [
             require Html.semui (
                 Html.SemUi.adornerMenu [
-                    "Open Surface", [openSurface]
+                    "Interactions", [interactTools]
+                    "Scene", [sceneTools]
+                    "Add Surface", [openSurface]
+                    
                 ](
-                    div [][
+                    div [style "background: #1B1C1E"][
                         renderControl
-                        div [style "width:29%; height: 100%; float:right;"] [
-                            div [clazz "ui buttons inverted"] [
-                                 button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
-                                    i [clazz "folder outline icon"] [] ]
-                            ]
+                        div [style "width:29%; height: 100%; float:right; background: #1B1C1E"] [
+                            text "STufF here"
                         ]
                     ]
                 )
