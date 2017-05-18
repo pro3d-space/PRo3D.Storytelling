@@ -13,10 +13,12 @@ module Mutable =
         let mutable __current = __initial
         let _guid = ResetMod(__initial.guid)
         let _globalBB = ResetMod(__initial.globalBB)
+        let _name = ResetMod(__initial.name)
         let _sceneGraph = ResetMod(__initial.sceneGraph)
         
         member x.guid = _guid :> IMod<_>
         member x.globalBB = _globalBB :> IMod<_>
+        member x.name = _name :> IMod<_>
         member x.sceneGraph = _sceneGraph :> IMod<_>
         
         member x.Update(__model : PRo3D.Surface) =
@@ -24,6 +26,7 @@ module Mutable =
                 __current <- __model
                 _guid.Update(__model.guid)
                 _globalBB.Update(__model.globalBB)
+                _name.Update(__model.name)
                 _sceneGraph.Update(__model.sceneGraph)
         
         static member Create(initial) = MSurface(initial)
@@ -36,6 +39,7 @@ module Mutable =
     module MSurface =
         let inline guid (m : MSurface) = m.guid
         let inline globalBB (m : MSurface) = m.globalBB
+        let inline name (m : MSurface) = m.name
         let inline sceneGraph (m : MSurface) = m.sceneGraph
     
     
@@ -56,6 +60,12 @@ module Mutable =
                     override x.Get(r) = r.globalBB
                     override x.Set(r,v) = { r with globalBB = v }
                     override x.Update(r,f) = { r with globalBB = f r.globalBB }
+                }
+            let name =
+                { new Lens<PRo3D.Surface, Microsoft.FSharp.Core.string>() with
+                    override x.Get(r) = r.name
+                    override x.Set(r,v) = { r with name = v }
+                    override x.Update(r,f) = { r with name = f r.name }
                 }
             let sceneGraph =
                 { new Lens<PRo3D.Surface, Aardvark.SceneGraph.ISg>() with
@@ -122,7 +132,7 @@ module Mutable =
     type MModel private(__initial : PRo3D.Model) =
         let mutable __current = __initial
         let _scene = MScene.Create(__initial.scene)
-        let _surfaces = ResetMapSet((fun v -> v.guid :> obj), __initial.surfaces, MSurface.Create, fun (m,i) -> m.Update(i))
+        let _surfaces = ResetMapSet((fun (v : PRo3D.Surface) -> v.guid :> obj), __initial.surfaces, MSurface.Create, fun (m,i) -> m.Update(i))
         
         member x.scene = _scene
         member x.surfaces = _surfaces :> aset<_>

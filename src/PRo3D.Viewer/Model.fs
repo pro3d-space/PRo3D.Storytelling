@@ -19,13 +19,14 @@ type Surface = {
     [<PrimaryKey>]
     guid : System.Guid
     globalBB : Box3d   
+    name : string
     sceneGraph : ISg
 }
 
 module Surface =     
 
     let mk sg bb =
-        { guid = System.Guid.NewGuid(); sceneGraph = sg; globalBB = bb}
+        { guid = System.Guid.NewGuid(); sceneGraph = sg; globalBB = bb; name = String.Empty }
 
 [<DomainType>] 
 type Scene = {

@@ -236,7 +236,7 @@ module Viewer =
                 onClick (fun _ -> OpenSurface)
              ] 
 
-        body [style "background: #1B1C1E"] [
+        body [clazz "inverted segment"; style "background: #1B1C1E"] [
             require Html.semui (
                 Html.SemUi.adornerMenu [
                     "Interactions", [interactTools]
@@ -246,8 +246,19 @@ module Viewer =
                 ](
                     div [style "background: #1B1C1E"][
                         renderControl
-                        div [style "width:29%; height: 100%; float:right; background: #1B1C1E"] [
-                            text "STufF here"
+                        div [style "width:29%; height: 100%; float:right"] [
+                            div [clazz "ui inverted segment"] [
+                                Incremental.div 
+                                    (AttributeMap.ofList [clazz "ui divided list inverted"]) (
+                                        alist {
+                                            for s in (m.surfaces |> AList.ofASet) do
+                                                 yield div [clazz "item"] [
+                                                    i [clazz "medium File Outline middle aligned icon"][]                                             
+                                                    text (s.guid.ToString())
+                                                 ]   
+                                        }
+                                )
+                            ]
                         ]
                     ]
                 )
