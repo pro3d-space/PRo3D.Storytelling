@@ -4,11 +4,11 @@ source https://api.nuget.org/v3/index.json
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://vrvis.myget.org/F/aardvark/api/v3/index.json
 
-nuget Aardvark.Base.Rendering              ~> 3.1.2
-nuget Aardvark.Application.WinForms.GL     ~> 3.1.2
-nuget Aardvark.SceneGraph                  ~> 3.1.2
-nuget Aardvark.Rendering.NanoVg            ~> 3.1.2
-nuget Aardvark.Rendering.Text              ~> 3.1.2
+nuget Aardvark.Base.Rendering              ~> 3.1.5
+nuget Aardvark.Application.WinForms.GL     ~> 3.1.5
+nuget Aardvark.SceneGraph                  ~> 3.1.5
+nuget Aardvark.Rendering.NanoVg            ~> 3.1.5
+nuget Aardvark.Rendering.Text              ~> 3.1.5
 
 nuget Aardvark.Base                  ~> 3.0.16    
 nuget Aardvark.Base.Incremental      ~> 3.0.16     
@@ -18,16 +18,19 @@ nuget Aardvark.Base.Essentials       ~> 3.0.16
 nuget Aardvark.Compiler.DomainTypes         ~> 0.1.7
 nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 0.1.7
 
+nuget Aardvark.VRVis.Geometry ~> 3.0.0
+nuget Aardvark.VRVis.Base     ~> 3.0.0
+
 nuget Fsunit    ~> 2.3.2
 nuget FParsec   ~> 1.0.2
 nuget FsPickler       ~> 3.2.0
 nuget FsPickler.Json  ~> 3.2.0
 
-nuget Aardvark.UI            ~> 3.3.0
-nuget Aardvark.UI.Primitives ~> 3.3.0
-nuget Aardvark.Service       ~> 3.3.0
-nuget Aardvark.Cef.WinForms  ~> 3.3.0
-nuget Aardvark.Cef           ~> 3.3.0
+nuget Aardvark.UI            ~> 3.3.3
+nuget Aardvark.UI.Primitives ~> 3.3.3
+nuget Aardvark.Service       ~> 3.3.3
+nuget Aardvark.Cef.WinForms  ~> 3.3.3
+nuget Aardvark.Cef           ~> 3.3.3
 
 nuget Newtonsoft.Json ~> 9.0.1
 nuget Aether

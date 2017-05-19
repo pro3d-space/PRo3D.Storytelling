@@ -342,6 +342,28 @@
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
       <ItemGroup>
+        <Reference Include="Aardvark.VRVis.Base">
+          <HintPath>..\..\packages\Aardvark.VRVis.Base\lib\net45\Aardvark.VRVis.Base.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
+        <Reference Include="Aardvark.VRVis.Geometry">
+          <HintPath>..\..\packages\Aardvark.VRVis.Geometry\lib\net45\Aardvark.VRVis.Geometry.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
         <Reference Include="Xilium.CefGlue">
           <HintPath>..\..\packages\Another.Unofficial.Xilium.CefGlue\lib\net40\Xilium.CefGlue.dll</HintPath>
           <Private>True</Private>
@@ -614,6 +636,17 @@
       <ItemGroup>
         <Reference Include="TurboJpegWrapper">
           <HintPath>..\..\packages\TurboJpegWrapper\lib\net35\TurboJpegWrapper.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
+        <Reference Include="LibTessDotNet">
+          <HintPath>..\..\packages\Unofficial.LibTessDotNet\lib\net45\LibTessDotNet.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>

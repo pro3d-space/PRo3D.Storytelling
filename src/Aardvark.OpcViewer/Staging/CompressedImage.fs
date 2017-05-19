@@ -184,7 +184,7 @@ module CompressedImage =
 
                 let t = 
                     Texture(glRuntime.Context, handle, TextureDimension.Texture2D, mips,
-                            1, V3i(width,height,1), 1, format |> unbox<TextureFormat>,
+                            1, V3i(width,height,1), None, format |> unbox<TextureFormat>,
                             int64 totalSize, false)
 
                 Aardvark.Rendering.GL.TextureExtensions.addTexture runtime.Context (int64 totalSize)

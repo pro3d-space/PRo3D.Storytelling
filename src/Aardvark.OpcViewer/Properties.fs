@@ -13,7 +13,7 @@ module DefaultMetrics =
         let mvp = m * vp
         let area = computeScreenSpaceArea p.info.LocalBoundingBox mvp
 
-        area > 3.5
+        area > 1.5
 
     let tunnel (self : AdaptiveToken)  (vp : IMod<Trafo3d>)  (p : RenderPatch) =
         let m = p.trafo.GetValue self

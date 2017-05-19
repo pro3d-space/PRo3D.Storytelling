@@ -8,6 +8,7 @@ open Aardvark.Base.Incremental
 open Aardvark.Rendering.NanoVg
 open Aardvark.SceneGraph
 open Aardvark.Base.Geometry
+open Aardvark.VRVis
 
 open Aardvark.Application
 open Aardvark.Application.WinForms
@@ -42,37 +43,23 @@ module Viewer =
 
 
         Log.startTimed "Creating KdTree"
-
-//        let patch2KdTree (h : PatchHierarchy) (patch : Patch) : KdTree<Triangle3d> =
-//            let geometry, time = Patch.load h.baseDir patch.info
-//
-//            let indexArray = unbox geometry.IndexArray
-//            [| for i in 0 .. 3 .. arr.Length -1 do
-//            |]
-//
-//            let intersectable = IntersectableTriangleSet(unbox geometry.IndexArray, unbox geometry.IndexedAttributes.[DefaultSemantic.Positions])
-//            let kdTree = KdIntersectionTree(intersectable,KdIntersectionTree.BuildFlags.FastBuild ||| KdIntersectionTree.BuildFlags.NoMultithreading ||| KdIntersectionTree.BuildFlags.Hierarchical, splitPlaneEpsilon=0.5)
-//            ConcreteKdIntersectionTree(kdTree,patch.info.Local2Global)
-//
-//        let opcTrees =
-//            [| for h in patchHierarchies do
-//                yield! h.tree |> QTree.getLeaves |> Seq.map (fun p -> lazy patch2KdTree h p)
-//            |] 
-
-//        let totalKdTrees = opcTrees.Length
-//        Log.line "creating %d kdTrees" totalKdTrees
-//
-//        let kdTrees = 
-//            opcTrees 
-//                |> Array.Parallel.mapi (fun i e ->
-//                    Log.start "creating kdtree #%d of %d" i totalKdTrees
-//                    let r = e.Value
-//                    Log.stop()
-//                    r
-//                )
-//
-//
-//        let overallTree = KdTreeSet(kdTrees)
+        let patch2KdTree (h : PatchHierarchy) : ConcreteKdIntersectionTree =
+                        
+            let rootpatch = h.tree |> QTree.getRoot 
+            
+            let fileName = sprintf "%s-0.aakd" rootpatch.info.Name
+            
+            let path = Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]
+            
+            match System.IO.File.Exists(path) with
+                | true -> 
+                     use b = new Aardvark.VRVis.BinaryReadingCoder(System.IO.File.OpenRead(path))
+                     let mutable treeOida = Unchecked.defaultof<KdIntersectionTree>
+                     b.CodeT(&treeOida)
+                     ConcreteKdIntersectionTree(treeOida, Trafo3d.Identity)
+                | false ->
+                     Log.warn "could not find kdtree"       
+                     ConcreteKdIntersectionTree()
 
         Log.stop()
 

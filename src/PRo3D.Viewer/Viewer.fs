@@ -78,6 +78,9 @@ module DialogUtils =
     let openFolders (w : Form) =
         openDialog2 w true true
 
+    let openFolder (w : Form) =
+        openDialog2 w true false
+
 module Box3d =
     let extendBy (box:Box3d) (b:Box3d) =
         box.ExtendBy(b)
@@ -99,7 +102,7 @@ module Viewer =
 
     type Message =
         | CameraMessage of CameraController.Message
-        | OpenSurface 
+        | ImportSurface 
         | QuickLoad
         | AddSg of ISg
         | PickSurface of SceneHit
@@ -110,30 +113,23 @@ module Viewer =
     let initial =
         {           
             surfaces = HSet.empty                       
-            scene = {
-                    importOpcs = []
+            scene = {                   
                     cameraModel = CameraController.initial            
                     interaction = InteractionMode.PickOrbitCenter
+                    surfaces = []
             }
         }
     
     
 
     let loadHierarchies (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (computeView : bool) =
-        let scene = { Aardvark.Opc.Configurations.Empty.mars() with patchHierarchies = m.scene.importOpcs }
+        let hierarchies = m.scene.surfaces |> List.map(fun x -> OpcUtils.getOPCPaths x.importPath) |> List.concat 
+        let scene = { Aardvark.Opc.Configurations.Empty.mars() with patchHierarchies = hierarchies }
+
         Log.start "importing: %A" scene
         let sg,_,hierarchies = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
         Log.stop "did it"
-        //let hierarchies = scene.patchHierarchies |> Seq.map PatchHierarchy.load |> Seq.map (fun p -> p.tree |> QTree.height)
-        
-        //let bb = 
-        //    hierarchies
-        //        |> List.map(
-        //            fun d -> match d.tree with
-        //                        | Node (a,_) -> a.info.GlobalBoundingBox
-        //                        | Leaf a -> a.info.GlobalBoundingBox) 
-        //        |> Box3d.ofSeq
-
+ 
         let bb = 
             hierarchies
                 |> List.map(fun d -> d.tree |> QTree.getLeaves)                  
@@ -147,21 +143,27 @@ module Viewer =
                 { CameraController.initial with view = view }
             else 
                 m.scene.cameraModel
-               
-        { m with surfaces = HSet.add (Surface.mk sg bb) m.surfaces; scene = { m.scene with cameraModel = cam }}
+        m      
+       // { m with surfaces = HSet.add (Surface.loaded s sg bb) m.surfaces; scene = { m.scene with surfaces = s::m.scene.surfaces; cameraModel = cam }}
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =        
         match msg with
             | CameraMessage msg -> { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
-            | OpenSurface -> 
-                match DialogUtils.openFolders w with
+            | ImportSurface -> 
+                match DialogUtils.openFolder w with
                     | [] -> m
                     | paths ->
-                        Log.line "Patch hierarchies: %A" paths
-                        let m = { m with scene = { m.scene with importOpcs = paths }}
-                        loadHierarchies runtime signature m true                      
-            | AddSg sg -> { m with surfaces = HSet.add  (Surface.mk sg Box3d.Invalid) m.surfaces }
-            | QuickLoad -> loadHierarchies runtime signature { m with scene = { m.scene with importOpcs = [@"D:\_WORK\Aardwork\Exomars\_Scenes\Dingo_Gap_2\Surface\MSL_Mastcam_Sol_529_id_47596\OPC_000_000"]}} true
+                        let path = paths.Head
+                        if (path |> OpcUtils.isSurfaceFolder) then
+                            let s = Surface.mk (Path.GetDirectoryName path) (OpcUtils.getOPCPaths path)                           
+                            m //loadHierarchies runtime signature s m true
+                        else
+                            Log.error "path %s does not point to surface folder" path
+                            m            
+            | QuickLoad -> 
+                let surface = Surface.mk "QuickSurface" [@"E:\Aardwork\Exomars\_SCENES\cd - Copy\Surface\Cape_Desire_RGB\OPC_000_000"]
+                //loadHierarchies runtime signature surface m true
+                m
             | PickSurface p -> 
                 Log.error "picked bb at %A" (p.globalRay.Ray.Ray.Direction, p.globalRay.Ray.Ray.Origin)
                 m
@@ -174,7 +176,10 @@ module Viewer =
                     | None -> m
                     | Some path -> 
                         let s = Serialization.loadAs<Scene> path
-                        loadHierarchies runtime signature { m with scene = s } false
+                        let m = { m with scene = s }
+
+                        //loadHierarchies runtime signature m false
+                        m
             | NewScene -> initial
             | _ -> m
                 
@@ -233,37 +238,62 @@ module Viewer =
         let openSurface =
             [ text "browse"] |> button [ 
                 clazz "ui button"
-                onClick (fun _ -> OpenSurface)
+                onClick (fun _ -> ImportSurface)
              ] 
-
-        body [clazz "inverted segment"; style "background: #1B1C1E"] [
-            require Html.semui (
-                Html.SemUi.adornerMenu [
-                    "Interactions", [interactTools]
-                    "Scene", [sceneTools]
-                    "Add Surface", [openSurface]
-                    
-                ](
-                    div [style "background: #1B1C1E"][
-                        renderControl
-                        div [style "width:29%; height: 100%; float:right"] [
-                            div [clazz "ui inverted segment"] [
+      
+        require Html.semui (
+            body [] [                               
+                    Html.SemUi.adornerMenu [
+                        "Interactions", [interactTools]
+                        "Scene", [sceneTools]
+                        "Add Surface", [openSurface]
+                    ](
+                        div [clazz "pusher"] [                            
+                            renderControl
+                            div [style "width: 30%; height: 100%; float:right; background: #1B1C1E"] [
                                 Incremental.div 
-                                    (AttributeMap.ofList [clazz "ui divided list inverted"]) (
+                                    (AttributeMap.ofList [clazz "ui divided list inverted segment"]) (
                                         alist {
                                             for s in (m.surfaces |> AList.ofASet) do
-                                                 yield div [clazz "item"] [
-                                                    i [clazz "medium File Outline middle aligned icon"][]                                             
-                                                    text (s.guid.ToString())
-                                                 ]   
+                                                    yield div [clazz "item"] [
+                                                        i [clazz "medium File Outline middle aligned icon"][]                                             
+                                                        text (s.guid.ToString())
+                                                    ]
                                         }
-                                )
+                                )      
                             ]
                         ]
-                    ]
-                )
-            )
-        ]
+                    )
+                 //   ]
+            
+            
+
+                //require Html.semui (
+                //    Html.SemUi.adornerMenu [
+                //        "Interactions", [interactTools]
+                //        "Scene", [sceneTools]
+                //        "Add Surface", [openSurface]
+                    
+                //    ](
+                //        div [][
+                //            renderControl
+                //            div [style "width: 29%; height: 100%; float:right; background: #1B1C1E"] [                           
+                //                Incremental.div 
+                //                    (AttributeMap.ofList [clazz "ui divided list inverted"]) (
+                //                        alist {
+                //                            for s in (m.surfaces |> AList.ofASet) do
+                //                                    yield div [clazz "item"] [
+                //                                        i [clazz "medium File Outline middle aligned icon"][]                                             
+                //                                        text (s.guid.ToString())
+                //                                    ]   
+                //                        }
+                //                )                            
+                //            ]
+                //        ]
+                //    )
+                //)
+            ]
+        )
 
 
     let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) = 

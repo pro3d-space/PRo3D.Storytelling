@@ -13,6 +13,9 @@ Aardvark.UI.Primitives
 Aardvark.Service      
 Aardvark.Cef.WinForms
 
+Aardvark.VRVis.Base
+Aardvark.VRVis.Geometry
+
 Aardvark.Compiler.DomainTypes        
 Aardvark.Compiler.DomainTypes.MSBuild
 

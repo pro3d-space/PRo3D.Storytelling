@@ -149,3 +149,8 @@ module QTree =
         match tree with
             | Leaf v -> Seq.singleton v
             | Node(v,children) -> children |> Seq.collect getLeaves
+
+    let getRoot (tree : QTree<'a>) =
+        match tree with
+            | Leaf v -> v
+            | Node(v,_) -> v
