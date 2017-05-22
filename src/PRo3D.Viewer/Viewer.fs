@@ -90,7 +90,7 @@ module Box3d =
         let box = 
             match bs |> Seq.tryHead with
                 | Some b -> b
-                | None -> Box3d.Invalid
+                | None -> failwith "box sequence must not be empty"
                     
         for b in bs do
             box.ExtendBy(b)
@@ -120,32 +120,57 @@ module Viewer =
             }
         }
     
-    
+    let checkBB (bb:Box3d) = 
+        if(bb.IsInvalid) then 
+            failwith (sprintf "invalid bounding box %s" (bb.ToString()))
+        else bb
 
-    let loadHierarchies (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (computeView : bool) =
-        let hierarchies = m.scene.surfaces |> List.map(fun x -> OpcUtils.getOPCPaths x.importPath) |> List.concat 
-        let scene = { Aardvark.Opc.Configurations.Empty.mars() with patchHierarchies = hierarchies }
-
-        Log.start "importing: %A" scene
-        let sg,_,hierarchies = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
-        Log.stop "did it"
- 
-        let bb = 
-            hierarchies
+    let computeBB (hierarchies : list<PatchHierarchy>) =
+         hierarchies
                 |> List.map(fun d -> d.tree |> QTree.getLeaves)                  
-                |> Seq.map (fun p -> p |> Seq.map(fun d -> d.info.GlobalBoundingBox)) 
+                |> Seq.map (fun p -> p |> Seq.map(fun d -> checkBB d.info.GlobalBoundingBox)) 
                 |> Seq.concat
                 |> Box3d.ofSeq
-        
-        let cam = 
-            if computeView then
-                let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
-                { CameraController.initial with view = view }
-            else 
-                m.scene.cameraModel
-        m      
-       // { m with surfaces = HSet.add (Surface.loaded s sg bb) m.surfaces; scene = { m.scene with surfaces = s::m.scene.surfaces; cameraModel = cam }}
 
+    let computeBBfromRoots (hierarchies : list<PatchHierarchy>) =
+         hierarchies
+                |> List.map(fun d -> d.tree |> QTree.getRoot)                  
+                |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)                                
+                |> Box3d.ofSeq    
+
+    let lookAtData m = 
+        let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
+        let cam = 
+            let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
+            { CameraController.initial with view = view }            
+
+        { m with scene = { m.scene with cameraModel = cam }}
+
+    let importSurface (runtime : IRuntime) (signature: IFramebufferSignature) (surface : Surface) (m : Model) =
+        
+        Log.start "importing: %A" surface.importPath        
+        let import = { Configurations.Empty.mars() with patchHierarchies = surface.opcPaths }                           
+        let sg,_,hierarchies = Viewer.createPlainSceneGraph runtime signature import
+        Log.stop "did it"
+              
+        let surfaceImp = Surface.mkImported surface sg (hierarchies |> computeBB)
+                
+        { m with 
+                scene       = { m.scene with surfaces = surface::m.scene.surfaces }
+                surfaces    = HSet.add surfaceImp m.surfaces }
+
+    let loadSurfaces (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
+        
+        let surfs = 
+            s.surfaces 
+                |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths })
+                |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d)
+                |> List.zip s.surfaces
+                |> List.map (fun (surf, (sg,_,hierarchies)) -> Surface.mkImported surf sg (hierarchies |> computeBB))
+                |> HSet.ofList
+
+        { m with scene = s; surfaces = surfs }
+    
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =        
         match msg with
             | CameraMessage msg -> { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
@@ -155,15 +180,16 @@ module Viewer =
                     | paths ->
                         let path = paths.Head
                         if (path |> OpcUtils.isSurfaceFolder) then
-                            let s = Surface.mk (Path.GetDirectoryName path) (OpcUtils.getOPCPaths path)                           
-                            m //loadHierarchies runtime signature s m true
+                            let s = Surface.mk path
+                            importSurface runtime signature s m |> lookAtData
+
                         else
                             Log.error "path %s does not point to surface folder" path
                             m            
             | QuickLoad -> 
-                let surface = Surface.mk "QuickSurface" [@"E:\Aardwork\Exomars\_SCENES\cd - Copy\Surface\Cape_Desire_RGB\OPC_000_000"]
-                //loadHierarchies runtime signature surface m true
-                m
+                let surface = Surface.mk (@"E:\Aardwork\Exomars\_SCENES\cd - Copy\Surface\Cape_Desire_RGB")
+                let m = importSurface runtime signature surface m 
+                m |> lookAtData
             | PickSurface p -> 
                 Log.error "picked bb at %A" (p.globalRay.Ray.Ray.Direction, p.globalRay.Ray.Ray.Origin)
                 m
@@ -178,8 +204,7 @@ module Viewer =
                         let s = Serialization.loadAs<Scene> path
                         let m = { m with scene = s }
 
-                        //loadHierarchies runtime signature m false
-                        m
+                        loadSurfaces runtime signature s m
             | NewScene -> initial
             | _ -> m
                 
@@ -257,7 +282,7 @@ module Viewer =
                                             for s in (m.surfaces |> AList.ofASet) do
                                                     yield div [clazz "item"] [
                                                         i [clazz "medium File Outline middle aligned icon"][]                                             
-                                                        text (s.guid.ToString())
+                                                        Incremental.text s.name
                                                     ]
                                         }
                                 )      

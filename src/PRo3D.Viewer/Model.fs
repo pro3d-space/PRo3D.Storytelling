@@ -13,50 +13,6 @@ open Aardvark.SceneGraph
 type NavigationMode = FreeFly = 0 | ArcBall = 1
 type InteractionMode = PickOrbitCenter = 0 | Draw = 1 | PlaceObject = 2
 
-[<DomainType>]
-type Surface = {    
-    
-    [<PrimaryKey>]
-    guid : System.Guid
-    
-    name : string
-    importPath : string
-    opcPaths : list<string>
-
-    globalBB : Box3d   
-    sceneGraph : ISg
-}
-
-module Surface =     
-
-    let mk name opcs = {
-        guid = Guid.NewGuid()
-        name = name
-        importPath = String.Empty
-        opcPaths = opcs
-
-        globalBB = Box3d.Invalid
-        sceneGraph = Sg.group []
-    }
-
-    let loaded s sg bb = {
-        s with sceneGraph = sg; globalBB = bb
-    }
-
-[<DomainType>] 
-type Scene = {
-    cameraModel : CameraControllerState    
-    interaction : InteractionMode
-    surfaces : list<Surface>
-}
-
-[<DomainType>]
-type Model = { 
-   
-    scene : Scene
-    surfaces   : hset<Surface>        
-}
-
 module OpcUtils =
     
     /// checks if "path" is a valid opc folder
@@ -80,6 +36,8 @@ module OpcUtils =
         
     /// returns all valid OPCs in "path"
     let getOPCPaths path = 
+        if path = String.Empty then failwith "encountered empty opcpath"
+
         if isOPCPath path then
            [path.Replace(@"\", @"\\\\")]
         elif System.IO.Directory.Exists path then
@@ -97,3 +55,48 @@ module OpcUtils =
                 |> Seq.filter (fun a -> isSurfaceFolder a)
                 |> Seq.toList 
         else []
+
+[<DomainType>]
+type Surface = {    
+    
+    [<PrimaryKey>]
+    guid : System.Guid
+    
+    name : string
+    importPath : string
+    opcPaths : list<string>
+
+    globalBB : Box3d   
+    sceneGraph : ISg
+}
+
+module Surface =         
+
+    let mk path = {
+        guid = Guid.NewGuid()
+        name = IO.Path.GetFileName path
+        importPath = path
+        opcPaths = OpcUtils.getOPCPaths path
+
+        globalBB = Box3d.Invalid
+        sceneGraph = Sg.group []
+    }
+
+    let mkImported s sg bb = {
+        s with sceneGraph = sg; globalBB = bb
+    }
+
+[<DomainType>] 
+type Scene = {
+    cameraModel : CameraControllerState    
+    interaction : InteractionMode
+    surfaces : list<Surface>
+}
+
+[<DomainType>]
+type Model = { 
+   
+    scene : Scene
+    surfaces   : hset<Surface>        
+}
+
