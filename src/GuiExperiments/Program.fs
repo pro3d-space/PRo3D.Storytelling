@@ -650,8 +650,7 @@ module SurfaceListApp =
 //                                                                                        (addOPCPath model) 
 //                                                                                        model.selectedSurface1.Value.maxTriangleSize
 //                                                            | None -> model.selectedSurface1 } 
-//            | Clear -> model
-            | _ -> model
+//            | Clear -> model            
 
 
     let view (m : Model) : DomNode<Action> =

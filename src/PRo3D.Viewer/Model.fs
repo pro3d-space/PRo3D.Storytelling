@@ -9,6 +9,7 @@ open Aardvark.UI.Primitives
 open Aardvark.Application
 open Aardvark.Opc
 open Aardvark.SceneGraph
+open Aardvark.VRVis
 
 type NavigationMode = FreeFly = 0 | ArcBall = 1
 type InteractionMode = PickOrbitCenter = 0 | Draw = 1 | PlaceObject = 2
@@ -68,24 +69,9 @@ type Surface = {
 
     globalBB : Box3d   
     sceneGraph : ISg
+    kdTree : KdTreeSet
 }
-
-module Surface =         
-
-    let mk path = {
-        guid = Guid.NewGuid()
-        name = IO.Path.GetFileName path
-        importPath = path
-        opcPaths = OpcUtils.getOPCPaths path
-
-        globalBB = Box3d.Invalid
-        sceneGraph = Sg.group []
-    }
-
-    let mkImported s sg bb = {
-        s with sceneGraph = sg; globalBB = bb
-    }
-
+  
 [<DomainType>] 
 type Scene = {
     cameraModel : CameraControllerState    
@@ -98,5 +84,8 @@ type Model = {
    
     scene : Scene
     surfaces   : hset<Surface>        
+
+    draw    : bool 
+    hoverPosition : option<Trafo3d>
 }
 

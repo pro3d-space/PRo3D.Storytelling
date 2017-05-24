@@ -19,7 +19,7 @@ module Viewer =
 
     let mutable hackRunner = None
 
-    let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene)  =
+    let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene) createKdTrees  =
 
         let runner = 
             match hackRunner with
@@ -60,6 +60,28 @@ module Viewer =
                 | false ->
                      Log.warn "could not find kdtree"       
                      ConcreteKdIntersectionTree()
+        
+        let opcTrees =
+            [| for h in patchHierarchies do
+              //  yield! h.tree |> QTree.getLeaves |> Seq.map (fun p -> lazy patch2KdTree h p)    
+               if createKdTrees then   
+                 yield patch2KdTree h 
+               else yield ConcreteKdIntersectionTree()
+            |] 
+
+        let totalKdTrees = opcTrees.Length
+        Log.line "creating %d kdTrees" totalKdTrees
+
+        let kdTrees = 
+            opcTrees 
+                |> Array.Parallel.mapi (fun i e ->
+                    Log.start "creating kdtree #%d of %d" i totalKdTrees
+                    let r = e
+                    Log.stop()
+                    r
+                )
+
+        let overallTree = KdTreeSet(kdTrees)
 
         Log.stop()
 
@@ -101,7 +123,7 @@ module Viewer =
                 |> Sg.cullMode (Mod.constant CullMode.None)
                 
 
-        sg, 1, patchHierarchies
+        sg, patchHierarchies, overallTree
 
     let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcScene)  = 
     

@@ -17,6 +17,7 @@ module Mutable =
         let _opcPaths = ResetMod(__initial.opcPaths)
         let _globalBB = ResetMod(__initial.globalBB)
         let _sceneGraph = ResetMod(__initial.sceneGraph)
+        let _kdTree = ResetMod(__initial.kdTree)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
@@ -24,6 +25,7 @@ module Mutable =
         member x.opcPaths = _opcPaths :> IMod<_>
         member x.globalBB = _globalBB :> IMod<_>
         member x.sceneGraph = _sceneGraph :> IMod<_>
+        member x.kdTree = _kdTree :> IMod<_>
         
         member x.Update(__model : PRo3D.Surface) =
             if not (Object.ReferenceEquals(__model, __current)) then
@@ -34,6 +36,7 @@ module Mutable =
                 _opcPaths.Update(__model.opcPaths)
                 _globalBB.Update(__model.globalBB)
                 _sceneGraph.Update(__model.sceneGraph)
+                _kdTree.Update(__model.kdTree)
         
         static member Create(initial) = MSurface(initial)
         
@@ -49,6 +52,7 @@ module Mutable =
         let inline opcPaths (m : MSurface) = m.opcPaths
         let inline globalBB (m : MSurface) = m.globalBB
         let inline sceneGraph (m : MSurface) = m.sceneGraph
+        let inline kdTree (m : MSurface) = m.kdTree
     
     
     
@@ -92,6 +96,12 @@ module Mutable =
                     override x.Get(r) = r.sceneGraph
                     override x.Set(r,v) = { r with sceneGraph = v }
                     override x.Update(r,f) = { r with sceneGraph = f r.sceneGraph }
+                }
+            let kdTree =
+                { new Lens<PRo3D.Surface, Aardvark.VRVis.KdTreeSet>() with
+                    override x.Get(r) = r.kdTree
+                    override x.Set(r,v) = { r with kdTree = v }
+                    override x.Update(r,f) = { r with kdTree = f r.kdTree }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
     type MScene private(__initial : PRo3D.Scene) =
@@ -153,15 +163,21 @@ module Mutable =
         let mutable __current = __initial
         let _scene = MScene.Create(__initial.scene)
         let _surfaces = ResetMapSet((fun (v : PRo3D.Surface) -> v.guid :> obj), __initial.surfaces, MSurface.Create, fun (m,i) -> m.Update(i))
+        let _draw = ResetMod(__initial.draw)
+        let _hoverPosition = ResetMod(__initial.hoverPosition)
         
         member x.scene = _scene
         member x.surfaces = _surfaces :> aset<_>
+        member x.draw = _draw :> IMod<_>
+        member x.hoverPosition = _hoverPosition :> IMod<_>
         
         member x.Update(__model : PRo3D.Model) =
             if not (Object.ReferenceEquals(__model, __current)) then
                 __current <- __model
                 _scene.Update(__model.scene)
                 _surfaces.Update(__model.surfaces)
+                _draw.Update(__model.draw)
+                _hoverPosition.Update(__model.hoverPosition)
         
         static member Create(initial) = MModel(initial)
         
@@ -173,6 +189,8 @@ module Mutable =
     module MModel =
         let inline scene (m : MModel) = m.scene
         let inline surfaces (m : MModel) = m.surfaces
+        let inline draw (m : MModel) = m.draw
+        let inline hoverPosition (m : MModel) = m.hoverPosition
     
     
     
@@ -192,4 +210,16 @@ module Mutable =
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
+                }
+            let draw =
+                { new Lens<PRo3D.Model, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.draw
+                    override x.Set(r,v) = { r with draw = v }
+                    override x.Update(r,f) = { r with draw = f r.draw }
+                }
+            let hoverPosition =
+                { new Lens<PRo3D.Model, Microsoft.FSharp.Core.option<Aardvark.Base.Trafo3d>>() with
+                    override x.Get(r) = r.hoverPosition
+                    override x.Set(r,v) = { r with hoverPosition = v }
+                    override x.Update(r,f) = { r with hoverPosition = f r.hoverPosition }
                 }

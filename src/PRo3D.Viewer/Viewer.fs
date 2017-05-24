@@ -10,116 +10,37 @@ open Aardvark.Base.Geometry
 open Aardvark.Base.Incremental
 open Aardvark.Base.Incremental.Operators
 open Aardvark.Base.Rendering
-open Aardvark.Application
-open Aardvark.Application.WinForms
-open System.Collections.Generic
-open System.Collections.Concurrent
 open Aardvark.SceneGraph
 open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Rendering.Text
 
+open Aardvark.Opc    
+open Aardvark.SceneGraph.SgPrimitives.Sg
+open Aardvark.VRVis
+
 open MBrace.FsPickler
 open System.IO
-
 open PRo3D
 
-module Serialization =
-    
-    let binarySerializer = FsPickler.CreateBinarySerializer()
 
-    let save path (d : 'a) =    
-        let arr = binarySerializer.Pickle d     
-        File.WriteAllBytes(path, arr);
-        d
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]        
+module Surface =
+    let mk path = {
+        guid = Guid.NewGuid()
+        name = IO.Path.GetFileName path
+        importPath = path
+        opcPaths = OpcUtils.getOPCPaths path
 
-    let loadAs<'a> path : 'a =
-        let arr = File.ReadAllBytes(path)
-        binarySerializer.UnPickle arr
-        
+        globalBB = Box3d.Invalid
+        sceneGraph = Sg.group []
+        kdTree = KdTreeSet()
+    }
 
-module DialogUtils =
-    open System.Windows.Forms
-    open Microsoft.WindowsAPICodePack.Dialogs    
+    let mkImported s sg bb kd = {
+        s with sceneGraph = sg; globalBB = bb; kdTree = kd
+    }
 
-    let saveDialog  (w : Form)  =
-        let mutable r = Unchecked.defaultof<_>
-        w.Invoke(Action(fun _ -> 
-            let dialog = new SaveFileDialog()
-            if dialog.ShowDialog() = DialogResult.OK then
-                r <- Some dialog.FileName
-            else r <- None
-        )) |> ignore
-        r
-    
-    let openDialog (w : Form) =
-        let mutable r = Unchecked.defaultof<_>
-        w.Invoke(Action(fun _ -> 
-            let dialog = new OpenFileDialog()
-            if dialog.ShowDialog() = DialogResult.OK then
-                r <- Some dialog.FileName
-            else r <- None
-        )) |> ignore
-        r
-
-    let openDialog2 (w : Form)(isFolder : bool)(isMulti : bool) =
-        let mutable r = []
-        w.Invoke(Action(fun _ -> 
-            let dialog = new CommonOpenFileDialog()
-            dialog.Multiselect <- isMulti
-          //  dialog.InitialDirectory <- "C:\\Users"
-            dialog.IsFolderPicker <- isFolder
-            if dialog.ShowDialog() = CommonFileDialogResult.Ok then
-                r <- dialog.FileNames |> Seq.toList
-            else r <- []
-        )) |> ignore
-        r
-      
-    let openFolders (w : Form) =
-        openDialog2 w true true
-
-    let openFolder (w : Form) =
-        openDialog2 w true false
-
-module Box3d =
-    let extendBy (box:Box3d) (b:Box3d) =
-        box.ExtendBy(b)
-        box
-
-    let ofSeq (bs:seq<Box3d>) =
-        let box = 
-            match bs |> Seq.tryHead with
-                | Some b -> b
-                | None -> failwith "box sequence must not be empty"
-                    
-        for b in bs do
-            box.ExtendBy(b)
-        box
-
-module Viewer =
-    open Aardvark.Opc    
-    open Aardvark.SceneGraph.SgPrimitives.Sg
-
-    type Message =
-        | CameraMessage of CameraController.Message
-        | ImportSurface 
-        | QuickLoad
-        | AddSg of ISg
-        | PickSurface of SceneHit
-        | SaveScene
-        | OpenScene
-        | NewScene
-
-    let initial =
-        {           
-            surfaces = HSet.empty                       
-            scene = {                   
-                    cameraModel = CameraController.initial            
-                    interaction = InteractionMode.PickOrbitCenter
-                    surfaces = []
-            }
-        }
-    
     let checkBB (bb:Box3d) = 
         if(bb.IsInvalid) then 
             failwith (sprintf "invalid bounding box %s" (bb.ToString()))
@@ -136,8 +57,62 @@ module Viewer =
          hierarchies
                 |> List.map(fun d -> d.tree |> QTree.getRoot)                  
                 |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)                                
-                |> Box3d.ofSeq    
+                |> Box3d.ofSeq
 
+    let import (runtime : IRuntime) (signature: IFramebufferSignature) (surface : Surface) (m : Model) =
+        
+        Log.start "importing: %A" surface.importPath        
+        let import = { Configurations.Empty.mars() with patchHierarchies = surface.opcPaths }                           
+        let sg, hierarchies, kdtree = Viewer.createPlainSceneGraph runtime signature import true
+        Log.stop "did it"
+              
+        let surfaceImp = mkImported surface sg (hierarchies |> computeBB) kdtree
+                
+        { m with 
+                scene       = { m.scene with surfaces = surface::m.scene.surfaces }
+                surfaces    = HSet.add surfaceImp m.surfaces }
+
+    let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
+        
+        let surfs = 
+            s.surfaces 
+                |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths })
+                |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
+                |> List.zip s.surfaces
+                |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> mkImported surf sg (hierarchies |> computeBB) kdtree)
+                |> HSet.ofList
+
+        { m with scene = s; surfaces = surfs }
+
+
+    
+module Viewer =
+   
+    type Message =
+        | CameraMessage of CameraController.Message
+        | ImportSurface 
+        | QuickLoad
+        | AddSg of ISg
+        | PickSurface of SceneHit
+        | SaveScene
+        | OpenScene
+        | NewScene
+        | KeyDown of key : Aardvark.Application.Keys
+        | KeyUp of key : Aardvark.Application.Keys
+
+    let initial =
+        {           
+            surfaces = HSet.empty                       
+            scene = {                   
+                    cameraModel = CameraController.initial            
+                    interaction = InteractionMode.PickOrbitCenter
+                    surfaces = []
+            }
+
+            draw = false
+            hoverPosition = None
+        }
+            
     let lookAtData m = 
         let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
         let cam = 
@@ -145,67 +120,66 @@ module Viewer =
             { CameraController.initial with view = view }            
 
         { m with scene = { m.scene with cameraModel = cam }}
-
-    let importSurface (runtime : IRuntime) (signature: IFramebufferSignature) (surface : Surface) (m : Model) =
         
-        Log.start "importing: %A" surface.importPath        
-        let import = { Configurations.Empty.mars() with patchHierarchies = surface.opcPaths }                           
-        let sg,_,hierarchies = Viewer.createPlainSceneGraph runtime signature import
-        Log.stop "did it"
-              
-        let surfaceImp = Surface.mkImported surface sg (hierarchies |> computeBB)
-                
-        { m with 
-                scene       = { m.scene with surfaces = surface::m.scene.surfaces }
-                surfaces    = HSet.add surfaceImp m.surfaces }
+    let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) : Option<double> = 
+        match m.surfaces |> HSet.map (fun d -> d.kdTree) |> HSet.toSeq |> Seq.tryHead with 
+            | Some kd ->                    
+                let kdi = kd |> KdIntersectionTree
+                let mutable hit = ObjectRayHit.MaxRange
+                let objFilter  a b = true
+                let hitFilter a b c d = false
+                if kdi.Intersect(r, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
+                    Some hit.RayHit.T
+                else
+                    None
+            | None -> None
 
-    let loadSurfaces (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
-        
-        let surfs = 
-            s.surfaces 
-                |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths })
-                |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d)
-                |> List.zip s.surfaces
-                |> List.map (fun (surf, (sg,_,hierarchies)) -> Surface.mkImported surf sg (hierarchies |> computeBB))
-                |> HSet.ofList
-
-        { m with scene = s; surfaces = surfs }
-    
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =        
-        match msg with
-            | CameraMessage msg -> { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
-            | ImportSurface -> 
-                match DialogUtils.openFolder w with
+        match msg, m.draw with
+            | CameraMessage msg, false -> { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
+            | ImportSurface, _ -> 
+                match Dialogs.openFolder w with
                     | [] -> m
                     | paths ->
                         let path = paths.Head
                         if (path |> OpcUtils.isSurfaceFolder) then
                             let s = Surface.mk path
-                            importSurface runtime signature s m |> lookAtData
-
+                            Surface.import runtime signature s m |> lookAtData
                         else
                             Log.error "path %s does not point to surface folder" path
                             m            
-            | QuickLoad -> 
+            | QuickLoad, _ -> 
                 let surface = Surface.mk (@"E:\Aardwork\Exomars\_SCENES\cd - Copy\Surface\Cape_Desire_RGB")
-                let m = importSurface runtime signature surface m 
+                let m = Surface.import runtime signature surface m 
                 m |> lookAtData
-            | PickSurface p -> 
-                Log.error "picked bb at %A" (p.globalRay.Ray.Ray.Direction, p.globalRay.Ray.Ray.Origin)
-                m
-            | SaveScene -> 
-                match DialogUtils.saveDialog w with
+            | PickSurface p, true ->                 
+                let fray = p.globalRay.Ray
+                let r = fray.Ray
+                
+                match doKdTreeIntersection m Trafo3d.Identity fray with
+                    | Some t -> 
+                        let hit = r.GetPointOnRay(t)
+                        Log.warn "hitihtihtihtithi %A" hit
+                        { m with hoverPosition = Some (Trafo3d.Translation hit)}
+                    | None -> 
+                        Log.error ("nooo hit")
+                        m
+
+            | SaveScene, _ -> 
+                match Dialogs.saveDialog w with
                     | None -> m
                     | Some p -> {m with scene = Serialization.save p m.scene}
-            | OpenScene ->
-                match DialogUtils.openDialog w with
+            | OpenScene, _ ->
+                match Dialogs.openDialog w with
                     | None -> m
                     | Some path -> 
                         let s = Serialization.loadAs<Scene> path
                         let m = { m with scene = s }
 
-                        loadSurfaces runtime signature s m
-            | NewScene -> initial
+                        Surface.load runtime signature s m
+            | NewScene, _ -> { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
+            | KeyDown Aardvark.Application.Keys.LeftCtrl, _ -> { m with draw = true }
+            | KeyUp Aardvark.Application.Keys.LeftCtrl, _ -> { m with draw = false}
             | _ -> m
                 
     let scene (m : MModel) =
@@ -213,10 +187,8 @@ module Viewer =
             aset {
                 for surface in m.surfaces do
 
-                    let createSg (bb : Box3d) sg =    
-                   //     let box = bb.Translated(bb.Center.Negated)
-                        sg |> Sg.noEvents |> Sg.andAlso (wireBox' C4b.VRVisGreen bb 
-                                                           // |> Sg.noEvents 
+                    let createSg (bb : Box3d) sg =                       
+                        sg |> Sg.noEvents |> Sg.andAlso (wireBox' C4b.VRVisGreen bb                                                            
                                                             |> Sg.shader {
                                                                     do! Shader.stableTrafo
                                                                     do! DefaultSurfaces.vertexColor 
@@ -235,11 +207,38 @@ module Viewer =
             }
         opcs |> Sg.set
 
+    let mkISg color size trafo : ISg<Message> =         
+        Sg.sphere 5 color size 
+                |> Sg.shader {
+                    do! Shader.stableTrafo
+                    do! DefaultSurfaces.vertexColor
+                    do! DefaultSurfaces.simpleLighting
+                }
+                |> Sg.noEvents
+                |> Sg.trafo(trafo)
+
     let view (m : MModel) =
 
         let renderControl = 
                 CameraController.controlledControl m.scene.cameraModel CameraMessage (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant) 
-                    (AttributeMap.ofList [ attribute "style" "width:70%; height: 100%; float:left"; ]) (scene m)
+                    (AttributeMap.ofList [ 
+                            onKeyDown (KeyDown)
+                            onKeyUp (KeyUp)
+                            attribute "style" "width:70%; height: 100%; float:left"; ]) 
+                    (
+                        let trafo = 
+                            m.hoverPosition 
+                                |> Mod.map (function o -> match o with 
+                                                            | Some t-> t
+                                                            | None -> Trafo3d.Scale(V3d.Zero))
+
+                        let brush = mkISg (Mod.constant C4b.Red) (Mod.constant 0.05) trafo
+
+                        [(scene m); brush]
+                            |> Sg.ofList
+                         //   |> Sg.fillMode (Mod.constant FillMode.Fill)
+                         //   |> Sg.cullMode (Mod.constant CullMode.None)      
+                    )
 
         let interactTools =
             div [clazz "ui buttons inverted"] [
@@ -259,7 +258,6 @@ module Viewer =
                             i [clazz "file outline icon"] [] ]
             ]
             
-
         let openSurface =
             [ text "browse"] |> button [ 
                 clazz "ui button"

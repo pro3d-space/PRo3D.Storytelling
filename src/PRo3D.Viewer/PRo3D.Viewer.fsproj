@@ -72,6 +72,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="Model.fs" />
+    <Compile Include="Utilities.fs" />
     <Compile Include="Viewer.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
