@@ -26,19 +26,19 @@ open PRo3D
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]        
 module Surface =
-    let mk path = {
+    let mk path = {        
         guid = Guid.NewGuid()
         name = IO.Path.GetFileName path
         importPath = path
-        opcPaths = OpcUtils.getOPCPaths path
-
-        globalBB = Box3d.Invalid
-        sceneGraph = Sg.group []
-        kdTree = KdTreeSet()
+        opcPaths = OpcUtils.getOPCPaths path      
     }
 
-    let mkImported s sg bb kd = {
-        s with sceneGraph = sg; globalBB = bb; kdTree = kd
+    let toSg (s:Surface) sg bb kd = {
+        surface = s
+       // guid = Guid.NewGuid()
+        sceneGraph = sg
+        globalBB = bb
+        kdTree = kd
     }
 
     let checkBB (bb:Box3d) = 
@@ -66,7 +66,7 @@ module Surface =
         let sg, hierarchies, kdtree = Viewer.createPlainSceneGraph runtime signature import true
         Log.stop "did it"
               
-        let surfaceImp = mkImported surface sg (hierarchies |> computeBB) kdtree
+        let surfaceImp = toSg surface sg (hierarchies |> computeBB) kdtree
                 
         { m with 
                 scene       = { m.scene with surfaces = surface::m.scene.surfaces }
@@ -76,13 +76,34 @@ module Surface =
         
         let surfs = 
             s.surfaces 
+                |> List.map (fun d -> { d with guid = Guid.NewGuid() })
                 |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths })
                 |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
                 |> List.zip s.surfaces
-                |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> mkImported surf sg (hierarchies |> computeBB) kdtree)
+                |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> toSg surf sg (hierarchies |> computeBB) kdtree)
                 |> HSet.ofList
 
         { m with scene = s; surfaces = surfs }
+
+    let fileExists path =
+        if System.IO.File.Exists(path) then
+            Some path
+        else
+            None
+
+    let loadLastScene m runtime signature =
+        match fileExists "./last" with
+            | Some path  ->
+                try 
+                    let s = Serialization.loadAs<Scene> path
+                    { m with scene = s }
+                    load runtime signature s m
+
+                with e ->
+                    Aardvark.Base.Log.warn "could not restore %A. using empty scene" p
+                    System.IO.File.Delete path
+                    m
+            | _ -> m
 
 
     
@@ -99,20 +120,7 @@ module Viewer =
         | NewScene
         | KeyDown of key : Aardvark.Application.Keys
         | KeyUp of key : Aardvark.Application.Keys
-
-    let initial =
-        {           
-            surfaces = HSet.empty                       
-            scene = {                   
-                    cameraModel = CameraController.initial            
-                    interaction = InteractionMode.PickOrbitCenter
-                    surfaces = []
-            }
-
-            draw = false
-            hoverPosition = None
-        }
-            
+                
     let lookAtData m = 
         let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
         let cam = 
@@ -120,6 +128,12 @@ module Viewer =
             { CameraController.initial with view = view }            
 
         { m with scene = { m.scene with cameraModel = cam }}
+    
+    let loadScene path m runtime signature =
+        let s = Serialization.loadAs<Scene> path
+        let m = { m with scene = s }
+
+        Surface.load runtime signature s m
         
     let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) : Option<double> = 
         match m.surfaces |> HSet.map (fun d -> d.kdTree) |> HSet.toSeq |> Seq.tryHead with 
@@ -149,9 +163,10 @@ module Viewer =
                             Log.error "path %s does not point to surface folder" path
                             m            
             | QuickLoad, _ -> 
-                let surface = Surface.mk (@"E:\Aardwork\Exomars\_SCENES\cd - Copy\Surface\Cape_Desire_RGB")
-                let m = Surface.import runtime signature surface m 
-                m |> lookAtData
+                //let surface = Surface.mk (@"E:\Aardwork\Exomars\_SCENES\cd - Copy\Surface\Cape_Desire_RGB")
+                //let m = Surface.import runtime signature surface m 
+                //m |> lookAtData
+                loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
             | PickSurface p, true ->                 
                 let fray = p.globalRay.Ray
                 let r = fray.Ray
@@ -168,15 +183,13 @@ module Viewer =
             | SaveScene, _ -> 
                 match Dialogs.saveDialog w with
                     | None -> m
-                    | Some p -> {m with scene = Serialization.save p m.scene}
+                    | Some p -> 
+                        Serialization.save "./last" m.scene |> ignore
+                        {m with scene = Serialization.save p m.scene}
             | OpenScene, _ ->
                 match Dialogs.openDialog w with
                     | None -> m
-                    | Some path -> 
-                        let s = Serialization.loadAs<Scene> path
-                        let m = { m with scene = s }
-
-                        Surface.load runtime signature s m
+                    | Some path -> loadScene path m runtime signature
             | NewScene, _ -> { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
             | KeyDown Aardvark.Application.Keys.LeftCtrl, _ -> { m with draw = true }
             | KeyUp Aardvark.Application.Keys.LeftCtrl, _ -> { m with draw = false}
@@ -280,7 +293,7 @@ module Viewer =
                                             for s in (m.surfaces |> AList.ofASet) do
                                                     yield div [clazz "item"] [
                                                         i [clazz "medium File Outline middle aligned icon"][]                                             
-                                                        Incremental.text s.name
+                                                        Incremental.text s.surface.name
                                                     ]
                                         }
                                 )      
@@ -333,10 +346,13 @@ module Viewer =
         ThreadPool.empty
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) =
+        let m = Model.initial        
+        let m = Surface.loadLastScene m runtime signature
+
         App.start {
             unpersist = Unpersist.instance
             threads = pool runtime signature
             view = view
             update = update w runtime signature
-            initial = initial
+            initial = m
         }

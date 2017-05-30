@@ -15,17 +15,11 @@ module Mutable =
         let _name = ResetMod(__initial.name)
         let _importPath = ResetMod(__initial.importPath)
         let _opcPaths = ResetMod(__initial.opcPaths)
-        let _globalBB = ResetMod(__initial.globalBB)
-        let _sceneGraph = ResetMod(__initial.sceneGraph)
-        let _kdTree = ResetMod(__initial.kdTree)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
         member x.importPath = _importPath :> IMod<_>
         member x.opcPaths = _opcPaths :> IMod<_>
-        member x.globalBB = _globalBB :> IMod<_>
-        member x.sceneGraph = _sceneGraph :> IMod<_>
-        member x.kdTree = _kdTree :> IMod<_>
         
         member x.Update(__model : PRo3D.Surface) =
             if not (Object.ReferenceEquals(__model, __current)) then
@@ -34,9 +28,6 @@ module Mutable =
                 _name.Update(__model.name)
                 _importPath.Update(__model.importPath)
                 _opcPaths.Update(__model.opcPaths)
-                _globalBB.Update(__model.globalBB)
-                _sceneGraph.Update(__model.sceneGraph)
-                _kdTree.Update(__model.kdTree)
         
         static member Create(initial) = MSurface(initial)
         
@@ -50,9 +41,6 @@ module Mutable =
         let inline name (m : MSurface) = m.name
         let inline importPath (m : MSurface) = m.importPath
         let inline opcPaths (m : MSurface) = m.opcPaths
-        let inline globalBB (m : MSurface) = m.globalBB
-        let inline sceneGraph (m : MSurface) = m.sceneGraph
-        let inline kdTree (m : MSurface) = m.kdTree
     
     
     
@@ -85,20 +73,67 @@ module Mutable =
                     override x.Set(r,v) = { r with opcPaths = v }
                     override x.Update(r,f) = { r with opcPaths = f r.opcPaths }
                 }
+    [<StructuredFormatDisplay("{AsString}")>]
+    type MSgSurface private(__initial : PRo3D.SgSurface) =
+        let mutable __current = __initial
+        let _surface = MSurface.Create(__initial.surface)
+        let _globalBB = ResetMod(__initial.globalBB)
+        let _sceneGraph = ResetMod(__initial.sceneGraph)
+        let _kdTree = ResetMod(__initial.kdTree)
+        
+        member x.surface = _surface
+        member x.globalBB = _globalBB :> IMod<_>
+        member x.sceneGraph = _sceneGraph :> IMod<_>
+        member x.kdTree = _kdTree :> IMod<_>
+        
+        member x.Update(__model : PRo3D.SgSurface) =
+            if not (Object.ReferenceEquals(__model, __current)) then
+                __current <- __model
+                _surface.Update(__model.surface)
+                _globalBB.Update(__model.globalBB)
+                _sceneGraph.Update(__model.sceneGraph)
+                _kdTree.Update(__model.kdTree)
+        
+        static member Create(initial) = MSgSurface(initial)
+        
+        override x.ToString() = __current.ToString()
+        member private x.AsString = sprintf "%A" __current
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module MSgSurface =
+        let inline surface (m : MSgSurface) = m.surface
+        let inline globalBB (m : MSgSurface) = m.globalBB
+        let inline sceneGraph (m : MSgSurface) = m.sceneGraph
+        let inline kdTree (m : MSgSurface) = m.kdTree
+    
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module SgSurface =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let surface =
+                { new Lens<PRo3D.SgSurface, PRo3D.Surface>() with
+                    override x.Get(r) = r.surface
+                    override x.Set(r,v) = { r with surface = v }
+                    override x.Update(r,f) = { r with surface = f r.surface }
+                }
             let globalBB =
-                { new Lens<PRo3D.Surface, Aardvark.Base.Box3d>() with
+                { new Lens<PRo3D.SgSurface, Aardvark.Base.Box3d>() with
                     override x.Get(r) = r.globalBB
                     override x.Set(r,v) = { r with globalBB = v }
                     override x.Update(r,f) = { r with globalBB = f r.globalBB }
                 }
             let sceneGraph =
-                { new Lens<PRo3D.Surface, Aardvark.SceneGraph.ISg>() with
+                { new Lens<PRo3D.SgSurface, Aardvark.SceneGraph.ISg>() with
                     override x.Get(r) = r.sceneGraph
                     override x.Set(r,v) = { r with sceneGraph = v }
                     override x.Update(r,f) = { r with sceneGraph = f r.sceneGraph }
                 }
             let kdTree =
-                { new Lens<PRo3D.Surface, Aardvark.VRVis.KdTreeSet>() with
+                { new Lens<PRo3D.SgSurface, Aardvark.VRVis.KdTreeSet>() with
                     override x.Get(r) = r.kdTree
                     override x.Set(r,v) = { r with kdTree = v }
                     override x.Update(r,f) = { r with kdTree = f r.kdTree }
@@ -162,7 +197,7 @@ module Mutable =
     type MModel private(__initial : PRo3D.Model) =
         let mutable __current = __initial
         let _scene = MScene.Create(__initial.scene)
-        let _surfaces = ResetMapSet((fun (v : PRo3D.Surface) -> v.guid :> obj), __initial.surfaces, MSurface.Create, fun (m,i) -> m.Update(i))
+        let _surfaces = ResetMapSet(unbox, __initial.surfaces, MSgSurface.Create, fun (m,i) -> m.Update(i))
         let _draw = ResetMod(__initial.draw)
         let _hoverPosition = ResetMod(__initial.hoverPosition)
         
@@ -206,7 +241,7 @@ module Mutable =
                     override x.Update(r,f) = { r with scene = f r.scene }
                 }
             let surfaces =
-                { new Lens<PRo3D.Model, Aardvark.Base.hset<PRo3D.Surface>>() with
+                { new Lens<PRo3D.Model, Aardvark.Base.hset<PRo3D.SgSurface>>() with
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
