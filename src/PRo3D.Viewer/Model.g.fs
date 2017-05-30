@@ -9,6 +9,7 @@ open PRo3D
 module Mutable =
 
     [<StructuredFormatDisplay("{AsString}")>]
+    [<System.Runtime.CompilerServices.Extension>]
     type MSurface private(__initial : PRo3D.Surface) =
         let mutable __current = __initial
         let _guid = ResetMod(__initial.guid)
@@ -28,6 +29,8 @@ module Mutable =
                 _name.Update(__model.name)
                 _importPath.Update(__model.importPath)
                 _opcPaths.Update(__model.opcPaths)
+        
+        static member Update(__self : MSurface, __model : PRo3D.Surface) = __self.Update(__model)
         
         static member Create(initial) = MSurface(initial)
         
@@ -74,6 +77,7 @@ module Mutable =
                     override x.Update(r,f) = { r with opcPaths = f r.opcPaths }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
+    [<System.Runtime.CompilerServices.Extension>]
     type MSgSurface private(__initial : PRo3D.SgSurface) =
         let mutable __current = __initial
         let _surface = MSurface.Create(__initial.surface)
@@ -93,6 +97,8 @@ module Mutable =
                 _globalBB.Update(__model.globalBB)
                 _sceneGraph.Update(__model.sceneGraph)
                 _kdTree.Update(__model.kdTree)
+        
+        static member Update(__self : MSgSurface, __model : PRo3D.SgSurface) = __self.Update(__model)
         
         static member Create(initial) = MSgSurface(initial)
         
@@ -139,6 +145,7 @@ module Mutable =
                     override x.Update(r,f) = { r with kdTree = f r.kdTree }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
+    [<System.Runtime.CompilerServices.Extension>]
     type MScene private(__initial : PRo3D.Scene) =
         let mutable __current = __initial
         let _cameraModel = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.cameraModel)
@@ -155,6 +162,8 @@ module Mutable =
                 _cameraModel.Update(__model.cameraModel)
                 _interaction.Update(__model.interaction)
                 _surfaces.Update(__model.surfaces)
+        
+        static member Update(__self : MScene, __model : PRo3D.Scene) = __self.Update(__model)
         
         static member Create(initial) = MScene(initial)
         
@@ -194,10 +203,11 @@ module Mutable =
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
+    [<System.Runtime.CompilerServices.Extension>]
     type MModel private(__initial : PRo3D.Model) =
         let mutable __current = __initial
         let _scene = MScene.Create(__initial.scene)
-        let _surfaces = ResetMapSet(unbox, __initial.surfaces, MSgSurface.Create, fun (m,i) -> m.Update(i))
+        let _surfaces = ResetMapSet(unbox, __initial.surfaces, MSgSurface.Create, MSgSurface.Update)
         let _draw = ResetMod(__initial.draw)
         let _hoverPosition = ResetMod(__initial.hoverPosition)
         
@@ -213,6 +223,8 @@ module Mutable =
                 _surfaces.Update(__model.surfaces)
                 _draw.Update(__model.draw)
                 _hoverPosition.Update(__model.hoverPosition)
+        
+        static member Update(__self : MModel, __model : PRo3D.Model) = __self.Update(__model)
         
         static member Create(initial) = MModel(initial)
         

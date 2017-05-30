@@ -17,7 +17,7 @@ let main argv =
     use app = new OpenGlApplication()
     let runtime = app.Runtime    
 
-    use form = new Form(Width = 1024, Height = 768)
+    use form = new Form(Width = 1280, Height = 800)
     let signature =
         runtime.CreateFramebufferSignature [
             DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba8; samples = 1 }

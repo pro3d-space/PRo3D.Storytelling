@@ -9,6 +9,7 @@ open Aardvark.PRo3d
 module Mutable =
 
     [<StructuredFormatDisplay("{AsString}")>]
+    [<System.Runtime.CompilerServices.Extension>]
     type MUrdar private(__initial : Aardvark.PRo3d.Urdar) =
         let mutable __current = __initial
         let _urdar = ResetMod(__initial.urdar)
@@ -19,6 +20,8 @@ module Mutable =
             if not (Object.ReferenceEquals(__model, __current)) then
                 __current <- __model
                 _urdar.Update(__model.urdar)
+        
+        static member Update(__self : MUrdar, __model : Aardvark.PRo3d.Urdar) = __self.Update(__model)
         
         static member Create(initial) = MUrdar(initial)
         
@@ -44,6 +47,7 @@ module Mutable =
                     override x.Update(r,f) = { r with urdar = f r.urdar }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
+    [<System.Runtime.CompilerServices.Extension>]
     type MModel private(__initial : Aardvark.PRo3d.Model) =
         let mutable __current = __initial
         let _boxHovered = ResetMod(__initial.boxHovered)
@@ -52,7 +56,7 @@ module Mutable =
         let _elements = ResetList(__initial.elements)
         let _hasD3Hate = ResetMod(__initial.hasD3Hate)
         let _boxScale = ResetMod(__initial.boxScale)
-        let _objects = ResetMapMap(__initial.objects, (fun k v -> MUrdar.Create(v)), (fun (m,i) -> m.Update(i)))
+        let _objects = ResetMapMap(__initial.objects, (fun k v -> MUrdar.Create(v)), MUrdar.Update)
         
         member x.boxHovered = _boxHovered :> IMod<_>
         member x.dragging = _dragging :> IMod<_>
@@ -72,6 +76,8 @@ module Mutable =
                 _hasD3Hate.Update(__model.hasD3Hate)
                 _boxScale.Update(__model.boxScale)
                 _objects.Update(__model.objects)
+        
+        static member Update(__self : MModel, __model : Aardvark.PRo3d.Model) = __self.Update(__model)
         
         static member Create(initial) = MModel(initial)
         
@@ -139,6 +145,7 @@ module Mutable =
                     override x.Update(r,f) = { r with objects = f r.objects }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
+    [<System.Runtime.CompilerServices.Extension>]
     type MCameraControllerState private(__initial : Aardvark.PRo3d.CameraControllerState) =
         let mutable __current = __initial
         let _view = ResetMod(__initial.view)
@@ -182,6 +189,8 @@ module Mutable =
                 _moveVec.Update(__model.moveVec)
                 _lastTime.Update(__model.lastTime)
                 _stash.Update(__model.stash)
+        
+        static member Update(__self : MCameraControllerState, __model : Aardvark.PRo3d.CameraControllerState) = __self.Update(__model)
         
         static member Create(initial) = MCameraControllerState(initial)
         

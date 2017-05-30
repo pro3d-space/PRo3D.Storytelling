@@ -96,7 +96,7 @@ module Surface =
             | Some path  ->
                 try 
                     let s = Serialization.loadAs<Scene> path
-                    { m with scene = s }
+                    let m = { m with scene = s }
                     load runtime signature s m
 
                 with e ->
@@ -230,6 +230,8 @@ module Viewer =
                 |> Sg.noEvents
                 |> Sg.trafo(trafo)
 
+    let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "semui-overrides.css" }
+
     let view (m : MModel) =
 
         let renderControl = 
@@ -276,27 +278,45 @@ module Viewer =
                 clazz "ui button"
                 onClick (fun _ -> ImportSurface)
              ] 
+
+        let surfaceList = 
+            Incremental.div 
+                (AttributeMap.ofList [clazz "ui divided list inverted segment"]) (
+                    alist {
+                        for s in (m.surfaces |> AList.ofASet) do
+                                yield div [clazz "item"] [
+                                    i [clazz "large cubes middle aligned icon"][]                                             
+                                    div [clazz "content"] [
+                                        div [clazz "header"] [Incremental.text s.surface.name]
+                                        div [clazz "description"] [
+                                            Incremental.text (
+                                                s.globalBB 
+                                                    |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
+                                        ]
+                                    ]
+                                    
+                                ]
+                    }
+            )   
+
+        let tabs = Html.SemUi.tabbed [clazz "ui inverted segment"] [
+                            ("Surfaces", surfaceList)
+                            ("Annotations", text "Annotations")
+                            ("Config", text "Config")
+                        ] "Surfaces"
       
-        require Html.semui (
-            body [] [                               
+        require (Html.semui)( // @ [myCss]) (
+            body [] [
                     Html.SemUi.adornerMenu [
                         "Interactions", [interactTools]
                         "Scene", [sceneTools]
                         "Add Surface", [openSurface]
-                    ](
+                    ](                        
                         div [clazz "pusher"] [                            
                             renderControl
-                            div [style "width: 30%; height: 100%; float:right; background: #1B1C1E"] [
-                                Incremental.div 
-                                    (AttributeMap.ofList [clazz "ui divided list inverted segment"]) (
-                                        alist {
-                                            for s in (m.surfaces |> AList.ofASet) do
-                                                    yield div [clazz "item"] [
-                                                        i [clazz "medium File Outline middle aligned icon"][]                                             
-                                                        Incremental.text s.surface.name
-                                                    ]
-                                        }
-                                )      
+                            div [clazz "ui"; style "width: 30%; height: 100%; float:right; background: #1B1C1E"] [
+                                tabs                        
+                                
                             ]
                         ]
                     )
