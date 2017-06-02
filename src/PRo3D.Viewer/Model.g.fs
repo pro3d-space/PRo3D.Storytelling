@@ -15,17 +15,11 @@ module Mutable =
         let _name = ResetMod.Create(__initial.name)
         let _importPath = ResetMod.Create(__initial.importPath)
         let _opcPaths = ResetMod.Create(__initial.opcPaths)
-        let _globalBB = ResetMod.Create(__initial.globalBB)
-        let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
-        let _kdTree = ResetMod.Create(__initial.kdTree)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
         member x.importPath = _importPath :> IMod<_>
         member x.opcPaths = _opcPaths :> IMod<_>
-        member x.globalBB = _globalBB :> IMod<_>
-        member x.sceneGraph = _sceneGraph :> IMod<_>
-        member x.kdTree = _kdTree :> IMod<_>
         
         member x.Update(v : PRo3D.Surface) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -35,9 +29,6 @@ module Mutable =
                 ResetMod.Update(_name,v.name)
                 ResetMod.Update(_importPath,v.importPath)
                 ResetMod.Update(_opcPaths,v.opcPaths)
-                ResetMod.Update(_globalBB,v.globalBB)
-                ResetMod.Update(_sceneGraph,v.sceneGraph)
-                ResetMod.Update(_kdTree,v.kdTree)
         
         static member Create(v : PRo3D.Surface) = MSurface(v)
         static member Update(m : MSurface, v : PRo3D.Surface) = m.Update(v)
@@ -74,20 +65,59 @@ module Mutable =
                     override x.Set(r,v) = { r with opcPaths = v }
                     override x.Update(r,f) = { r with opcPaths = f r.opcPaths }
                 }
+    [<StructuredFormatDisplay("{AsString}")>]
+    type MSgSurface(__initial : PRo3D.SgSurface) = 
+        let mutable __current = __initial
+        let _surface = MSurface.Create(__initial.surface)
+        let _globalBB = ResetMod.Create(__initial.globalBB)
+        let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
+        let _kdTree = ResetMod.Create(__initial.kdTree)
+        
+        member x.surface = _surface
+        member x.globalBB = _globalBB :> IMod<_>
+        member x.sceneGraph = _sceneGraph :> IMod<_>
+        member x.kdTree = _kdTree :> IMod<_>
+        
+        member x.Update(v : PRo3D.SgSurface) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                MSurface.Update(_surface, v.surface)
+                ResetMod.Update(_globalBB,v.globalBB)
+                ResetMod.Update(_sceneGraph,v.sceneGraph)
+                ResetMod.Update(_kdTree,v.kdTree)
+        
+        static member Create(v : PRo3D.SgSurface) = MSgSurface(v)
+        static member Update(m : MSgSurface, v : PRo3D.SgSurface) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module SgSurface =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let surface =
+                { new Lens<PRo3D.SgSurface, PRo3D.Surface>() with
+                    override x.Get(r) = r.surface
+                    override x.Set(r,v) = { r with surface = v }
+                    override x.Update(r,f) = { r with surface = f r.surface }
+                }
             let globalBB =
-                { new Lens<PRo3D.Surface, Aardvark.Base.Box3d>() with
+                { new Lens<PRo3D.SgSurface, Aardvark.Base.Box3d>() with
                     override x.Get(r) = r.globalBB
                     override x.Set(r,v) = { r with globalBB = v }
                     override x.Update(r,f) = { r with globalBB = f r.globalBB }
                 }
             let sceneGraph =
-                { new Lens<PRo3D.Surface, Aardvark.SceneGraph.ISg>() with
+                { new Lens<PRo3D.SgSurface, Aardvark.SceneGraph.ISg>() with
                     override x.Get(r) = r.sceneGraph
                     override x.Set(r,v) = { r with sceneGraph = v }
                     override x.Update(r,f) = { r with sceneGraph = f r.sceneGraph }
                 }
             let kdTree =
-                { new Lens<PRo3D.Surface, Aardvark.VRVis.KdTreeSet>() with
+                { new Lens<PRo3D.SgSurface, Aardvark.VRVis.KdTreeSet>() with
                     override x.Get(r) = r.kdTree
                     override x.Set(r,v) = { r with kdTree = v }
                     override x.Update(r,f) = { r with kdTree = f r.kdTree }
@@ -144,7 +174,7 @@ module Mutable =
     type MModel(__initial : PRo3D.Model) = 
         let mutable __current = __initial
         let _scene = MScene.Create(__initial.scene)
-        let _surfaces = MSet.Create((fun (v : PRo3D.Surface) -> v.guid :> obj), __initial.surfaces, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
+        let _surfaces = MSet.Create(unbox, __initial.surfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
         let _draw = ResetMod.Create(__initial.draw)
         let _hoverPosition = MOption.Create(__initial.hoverPosition)
         
@@ -180,7 +210,7 @@ module Mutable =
                     override x.Update(r,f) = { r with scene = f r.scene }
                 }
             let surfaces =
-                { new Lens<PRo3D.Model, Aardvark.Base.hset<PRo3D.Surface>>() with
+                { new Lens<PRo3D.Model, Aardvark.Base.hset<PRo3D.SgSurface>>() with
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }

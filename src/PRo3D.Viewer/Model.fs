@@ -65,11 +65,19 @@ type Surface = {
     
     name : string
     importPath : string
-    opcPaths : list<string>
+    opcPaths : list<string>    
+}
+
+[<DomainType>]
+type SgSurface = {
+    //[<PrimaryKey>]
+    //guid : System.Guid
+
+    surface : Surface    
 
     globalBB : Box3d   
     sceneGraph : ISg
-    kdTree : KdTreeSet
+    kdTree : KdTreeSet    
 }
   
 [<DomainType>] 
@@ -83,9 +91,24 @@ type Scene = {
 type Model = { 
    
     scene : Scene
-    surfaces   : hset<Surface>        
+    surfaces   : hset<SgSurface>        
 
     draw    : bool 
     hoverPosition : option<Trafo3d>
 }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
+module Model =
+    let initial =
+            {           
+                surfaces = HSet.empty                       
+                scene = {                   
+                        cameraModel = CameraController.initial            
+                        interaction = InteractionMode.PickOrbitCenter
+                        surfaces = []
+                }
+
+                draw = false
+                hoverPosition = None
+            }
 
