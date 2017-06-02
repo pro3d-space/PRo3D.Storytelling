@@ -9,28 +9,23 @@ open Aardvark.PRo3d
 module Mutable =
 
     [<StructuredFormatDisplay("{AsString}")>]
-    type MUrdar private(__initial : Aardvark.PRo3d.Urdar) =
+    type MUrdar(__initial : Aardvark.PRo3d.Urdar) = 
         let mutable __current = __initial
-        let _urdar = ResetMod(__initial.urdar)
+        let _urdar = ResetMod.Create(__initial.urdar)
         
         member x.urdar = _urdar :> IMod<_>
         
-        member x.Update(__model : Aardvark.PRo3d.Urdar) =
-            if not (Object.ReferenceEquals(__model, __current)) then
-                __current <- __model
-                _urdar.Update(__model.urdar)
+        member x.Update(v : Aardvark.PRo3d.Urdar) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_urdar,v.urdar)
         
-        static member Create(initial) = MUrdar(initial)
+        static member Create(v : Aardvark.PRo3d.Urdar) = MUrdar(v)
+        static member Update(m : MUrdar, v : Aardvark.PRo3d.Urdar) = m.Update(v)
         
         override x.ToString() = __current.ToString()
-        member private x.AsString = sprintf "%A" __current
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module MUrdar =
-        let inline urdar (m : MUrdar) = m.urdar
-    
-    
+        member x.AsString = sprintf "%A" __current
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -44,15 +39,15 @@ module Mutable =
                     override x.Update(r,f) = { r with urdar = f r.urdar }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
-    type MModel private(__initial : Aardvark.PRo3d.Model) =
+    type MModel(__initial : Aardvark.PRo3d.Model) = 
         let mutable __current = __initial
-        let _boxHovered = ResetMod(__initial.boxHovered)
-        let _dragging = ResetMod(__initial.dragging)
-        let _lastName = ResetMod(__initial.lastName)
-        let _elements = ResetList(__initial.elements)
-        let _hasD3Hate = ResetMod(__initial.hasD3Hate)
-        let _boxScale = ResetMod(__initial.boxScale)
-        let _objects = ResetMapMap(__initial.objects, (fun k v -> MUrdar.Create(v)), (fun (m,i) -> m.Update(i)))
+        let _boxHovered = ResetMod.Create(__initial.boxHovered)
+        let _dragging = ResetMod.Create(__initial.dragging)
+        let _lastName = MOption.Create(__initial.lastName)
+        let _elements = MList.Create(__initial.elements)
+        let _hasD3Hate = ResetMod.Create(__initial.hasD3Hate)
+        let _boxScale = ResetMod.Create(__initial.boxScale)
+        let _objects = MMap.Create(__initial.objects, (fun v -> MUrdar.Create(v)), (fun (m,v) -> MUrdar.Update(m, v)), (fun v -> v))
         
         member x.boxHovered = _boxHovered :> IMod<_>
         member x.dragging = _dragging :> IMod<_>
@@ -62,34 +57,23 @@ module Mutable =
         member x.boxScale = _boxScale :> IMod<_>
         member x.objects = _objects :> amap<_,_>
         
-        member x.Update(__model : Aardvark.PRo3d.Model) =
-            if not (Object.ReferenceEquals(__model, __current)) then
-                __current <- __model
-                _boxHovered.Update(__model.boxHovered)
-                _dragging.Update(__model.dragging)
-                _lastName.Update(__model.lastName)
-                _elements.Update(__model.elements)
-                _hasD3Hate.Update(__model.hasD3Hate)
-                _boxScale.Update(__model.boxScale)
-                _objects.Update(__model.objects)
+        member x.Update(v : Aardvark.PRo3d.Model) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_boxHovered,v.boxHovered)
+                ResetMod.Update(_dragging,v.dragging)
+                MOption.Update(_lastName, v.lastName)
+                MList.Update(_elements, v.elements)
+                ResetMod.Update(_hasD3Hate,v.hasD3Hate)
+                ResetMod.Update(_boxScale,v.boxScale)
+                MMap.Update(_objects, v.objects)
         
-        static member Create(initial) = MModel(initial)
+        static member Create(v : Aardvark.PRo3d.Model) = MModel(v)
+        static member Update(m : MModel, v : Aardvark.PRo3d.Model) = m.Update(v)
         
         override x.ToString() = __current.ToString()
-        member private x.AsString = sprintf "%A" __current
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module MModel =
-        let inline boxHovered (m : MModel) = m.boxHovered
-        let inline dragging (m : MModel) = m.dragging
-        let inline lastName (m : MModel) = m.lastName
-        let inline elements (m : MModel) = m.elements
-        let inline hasD3Hate (m : MModel) = m.hasD3Hate
-        let inline boxScale (m : MModel) = m.boxScale
-        let inline objects (m : MModel) = m.objects
-    
-    
+        member x.AsString = sprintf "%A" __current
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -133,26 +117,26 @@ module Mutable =
                     override x.Update(r,f) = { r with boxScale = f r.boxScale }
                 }
             let objects =
-                { new Lens<Aardvark.PRo3d.Model, Aardvark.Base.hmap<Microsoft.FSharp.Core.string, Aardvark.PRo3d.Urdar>>() with
+                { new Lens<Aardvark.PRo3d.Model, Aardvark.Base.hmap<Microsoft.FSharp.Core.string,Aardvark.PRo3d.Urdar>>() with
                     override x.Get(r) = r.objects
                     override x.Set(r,v) = { r with objects = v }
                     override x.Update(r,f) = { r with objects = f r.objects }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
-    type MCameraControllerState private(__initial : Aardvark.PRo3d.CameraControllerState) =
+    type MCameraControllerState(__initial : Aardvark.PRo3d.CameraControllerState) = 
         let mutable __current = __initial
-        let _view = ResetMod(__initial.view)
-        let _dragStart = ResetMod(__initial.dragStart)
-        let _look = ResetMod(__initial.look)
-        let _zoom = ResetMod(__initial.zoom)
-        let _pan = ResetMod(__initial.pan)
-        let _forward = ResetMod(__initial.forward)
-        let _backward = ResetMod(__initial.backward)
-        let _left = ResetMod(__initial.left)
-        let _right = ResetMod(__initial.right)
-        let _moveVec = ResetMod(__initial.moveVec)
-        let _lastTime = ResetMod(__initial.lastTime)
-        let _stash = ResetMod(__initial.stash)
+        let _view = ResetMod.Create(__initial.view)
+        let _dragStart = ResetMod.Create(__initial.dragStart)
+        let _look = ResetMod.Create(__initial.look)
+        let _zoom = ResetMod.Create(__initial.zoom)
+        let _pan = ResetMod.Create(__initial.pan)
+        let _forward = ResetMod.Create(__initial.forward)
+        let _backward = ResetMod.Create(__initial.backward)
+        let _left = ResetMod.Create(__initial.left)
+        let _right = ResetMod.Create(__initial.right)
+        let _moveVec = ResetMod.Create(__initial.moveVec)
+        let _lastTime = MOption.Create(__initial.lastTime)
+        let _stash = ResetMod.Create(__initial.stash)
         
         member x.view = _view :> IMod<_>
         member x.dragStart = _dragStart :> IMod<_>
@@ -167,44 +151,28 @@ module Mutable =
         member x.lastTime = _lastTime :> IMod<_>
         member x.stash = _stash :> IMod<_>
         
-        member x.Update(__model : Aardvark.PRo3d.CameraControllerState) =
-            if not (Object.ReferenceEquals(__model, __current)) then
-                __current <- __model
-                _view.Update(__model.view)
-                _dragStart.Update(__model.dragStart)
-                _look.Update(__model.look)
-                _zoom.Update(__model.zoom)
-                _pan.Update(__model.pan)
-                _forward.Update(__model.forward)
-                _backward.Update(__model.backward)
-                _left.Update(__model.left)
-                _right.Update(__model.right)
-                _moveVec.Update(__model.moveVec)
-                _lastTime.Update(__model.lastTime)
-                _stash.Update(__model.stash)
+        member x.Update(v : Aardvark.PRo3d.CameraControllerState) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_view,v.view)
+                ResetMod.Update(_dragStart,v.dragStart)
+                ResetMod.Update(_look,v.look)
+                ResetMod.Update(_zoom,v.zoom)
+                ResetMod.Update(_pan,v.pan)
+                ResetMod.Update(_forward,v.forward)
+                ResetMod.Update(_backward,v.backward)
+                ResetMod.Update(_left,v.left)
+                ResetMod.Update(_right,v.right)
+                ResetMod.Update(_moveVec,v.moveVec)
+                MOption.Update(_lastTime, v.lastTime)
+                _stash.Update(v.stash)
         
-        static member Create(initial) = MCameraControllerState(initial)
+        static member Create(v : Aardvark.PRo3d.CameraControllerState) = MCameraControllerState(v)
+        static member Update(m : MCameraControllerState, v : Aardvark.PRo3d.CameraControllerState) = m.Update(v)
         
         override x.ToString() = __current.ToString()
-        member private x.AsString = sprintf "%A" __current
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module MCameraControllerState =
-        let inline view (m : MCameraControllerState) = m.view
-        let inline dragStart (m : MCameraControllerState) = m.dragStart
-        let inline look (m : MCameraControllerState) = m.look
-        let inline zoom (m : MCameraControllerState) = m.zoom
-        let inline pan (m : MCameraControllerState) = m.pan
-        let inline forward (m : MCameraControllerState) = m.forward
-        let inline backward (m : MCameraControllerState) = m.backward
-        let inline left (m : MCameraControllerState) = m.left
-        let inline right (m : MCameraControllerState) = m.right
-        let inline moveVec (m : MCameraControllerState) = m.moveVec
-        let inline lastTime (m : MCameraControllerState) = m.lastTime
-        let inline stash (m : MCameraControllerState) = m.stash
-    
-    
+        member x.AsString = sprintf "%A" __current
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]

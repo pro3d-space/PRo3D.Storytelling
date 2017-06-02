@@ -9,15 +9,15 @@ open PRo3D
 module Mutable =
 
     [<StructuredFormatDisplay("{AsString}")>]
-    type MSurface private(__initial : PRo3D.Surface) =
+    type MSurface(__initial : PRo3D.Surface) = 
         let mutable __current = __initial
-        let _guid = ResetMod(__initial.guid)
-        let _name = ResetMod(__initial.name)
-        let _importPath = ResetMod(__initial.importPath)
-        let _opcPaths = ResetMod(__initial.opcPaths)
-        let _globalBB = ResetMod(__initial.globalBB)
-        let _sceneGraph = ResetMod(__initial.sceneGraph)
-        let _kdTree = ResetMod(__initial.kdTree)
+        let _guid = ResetMod.Create(__initial.guid)
+        let _name = ResetMod.Create(__initial.name)
+        let _importPath = ResetMod.Create(__initial.importPath)
+        let _opcPaths = ResetMod.Create(__initial.opcPaths)
+        let _globalBB = ResetMod.Create(__initial.globalBB)
+        let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
+        let _kdTree = ResetMod.Create(__initial.kdTree)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
@@ -27,34 +27,23 @@ module Mutable =
         member x.sceneGraph = _sceneGraph :> IMod<_>
         member x.kdTree = _kdTree :> IMod<_>
         
-        member x.Update(__model : PRo3D.Surface) =
-            if not (Object.ReferenceEquals(__model, __current)) then
-                __current <- __model
-                _guid.Update(__model.guid)
-                _name.Update(__model.name)
-                _importPath.Update(__model.importPath)
-                _opcPaths.Update(__model.opcPaths)
-                _globalBB.Update(__model.globalBB)
-                _sceneGraph.Update(__model.sceneGraph)
-                _kdTree.Update(__model.kdTree)
+        member x.Update(v : PRo3D.Surface) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_guid,v.guid)
+                ResetMod.Update(_name,v.name)
+                ResetMod.Update(_importPath,v.importPath)
+                ResetMod.Update(_opcPaths,v.opcPaths)
+                ResetMod.Update(_globalBB,v.globalBB)
+                ResetMod.Update(_sceneGraph,v.sceneGraph)
+                ResetMod.Update(_kdTree,v.kdTree)
         
-        static member Create(initial) = MSurface(initial)
+        static member Create(v : PRo3D.Surface) = MSurface(v)
+        static member Update(m : MSurface, v : PRo3D.Surface) = m.Update(v)
         
         override x.ToString() = __current.ToString()
-        member private x.AsString = sprintf "%A" __current
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module MSurface =
-        let inline guid (m : MSurface) = m.guid
-        let inline name (m : MSurface) = m.name
-        let inline importPath (m : MSurface) = m.importPath
-        let inline opcPaths (m : MSurface) = m.opcPaths
-        let inline globalBB (m : MSurface) = m.globalBB
-        let inline sceneGraph (m : MSurface) = m.sceneGraph
-        let inline kdTree (m : MSurface) = m.kdTree
-    
-    
+        member x.AsString = sprintf "%A" __current
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -104,36 +93,29 @@ module Mutable =
                     override x.Update(r,f) = { r with kdTree = f r.kdTree }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
-    type MScene private(__initial : PRo3D.Scene) =
+    type MScene(__initial : PRo3D.Scene) = 
         let mutable __current = __initial
         let _cameraModel = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.cameraModel)
-        let _interaction = ResetMod(__initial.interaction)
-        let _surfaces = ResetMod(__initial.surfaces)
+        let _interaction = ResetMod.Create(__initial.interaction)
+        let _surfaces = ResetMod.Create(__initial.surfaces)
         
         member x.cameraModel = _cameraModel
         member x.interaction = _interaction :> IMod<_>
         member x.surfaces = _surfaces :> IMod<_>
         
-        member x.Update(__model : PRo3D.Scene) =
-            if not (Object.ReferenceEquals(__model, __current)) then
-                __current <- __model
-                _cameraModel.Update(__model.cameraModel)
-                _interaction.Update(__model.interaction)
-                _surfaces.Update(__model.surfaces)
+        member x.Update(v : PRo3D.Scene) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_cameraModel, v.cameraModel)
+                ResetMod.Update(_interaction,v.interaction)
+                ResetMod.Update(_surfaces,v.surfaces)
         
-        static member Create(initial) = MScene(initial)
+        static member Create(v : PRo3D.Scene) = MScene(v)
+        static member Update(m : MScene, v : PRo3D.Scene) = m.Update(v)
         
         override x.ToString() = __current.ToString()
-        member private x.AsString = sprintf "%A" __current
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module MScene =
-        let inline cameraModel (m : MScene) = m.cameraModel
-        let inline interaction (m : MScene) = m.interaction
-        let inline surfaces (m : MScene) = m.surfaces
-    
-    
+        member x.AsString = sprintf "%A" __current
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -159,40 +141,32 @@ module Mutable =
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
-    type MModel private(__initial : PRo3D.Model) =
+    type MModel(__initial : PRo3D.Model) = 
         let mutable __current = __initial
         let _scene = MScene.Create(__initial.scene)
-        let _surfaces = ResetMapSet((fun (v : PRo3D.Surface) -> v.guid :> obj), __initial.surfaces, MSurface.Create, fun (m,i) -> m.Update(i))
-        let _draw = ResetMod(__initial.draw)
-        let _hoverPosition = ResetMod(__initial.hoverPosition)
+        let _surfaces = MSet.Create((fun (v : PRo3D.Surface) -> v.guid :> obj), __initial.surfaces, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
+        let _draw = ResetMod.Create(__initial.draw)
+        let _hoverPosition = MOption.Create(__initial.hoverPosition)
         
         member x.scene = _scene
         member x.surfaces = _surfaces :> aset<_>
         member x.draw = _draw :> IMod<_>
         member x.hoverPosition = _hoverPosition :> IMod<_>
         
-        member x.Update(__model : PRo3D.Model) =
-            if not (Object.ReferenceEquals(__model, __current)) then
-                __current <- __model
-                _scene.Update(__model.scene)
-                _surfaces.Update(__model.surfaces)
-                _draw.Update(__model.draw)
-                _hoverPosition.Update(__model.hoverPosition)
+        member x.Update(v : PRo3D.Model) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                MScene.Update(_scene, v.scene)
+                MSet.Update(_surfaces, v.surfaces)
+                ResetMod.Update(_draw,v.draw)
+                MOption.Update(_hoverPosition, v.hoverPosition)
         
-        static member Create(initial) = MModel(initial)
+        static member Create(v : PRo3D.Model) = MModel(v)
+        static member Update(m : MModel, v : PRo3D.Model) = m.Update(v)
         
         override x.ToString() = __current.ToString()
-        member private x.AsString = sprintf "%A" __current
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module MModel =
-        let inline scene (m : MModel) = m.scene
-        let inline surfaces (m : MModel) = m.surfaces
-        let inline draw (m : MModel) = m.draw
-        let inline hoverPosition (m : MModel) = m.hoverPosition
-    
-    
+        member x.AsString = sprintf "%A" __current
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]

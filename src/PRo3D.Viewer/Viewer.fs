@@ -263,59 +263,33 @@ module Viewer =
                 clazz "ui button"
                 onClick (fun _ -> ImportSurface)
              ] 
-      
+
+        let rest =
+            div [clazz "pusher"] [                            
+                renderControl
+                div [style "width: 30%; height: 100%; float:right; background: #1B1C1E"] [
+                    Incremental.div 
+                        (AttributeMap.ofList [clazz "ui divided list inverted segment"]) (
+                            alist {
+                                for s in (m.surfaces |> AList.ofASet) do
+                                        yield div [clazz "item"] [
+                                            i [clazz "medium File Outline middle aligned icon"][]                                             
+                                            Incremental.text s.name
+                                        ]
+                            }
+                    )      
+                ]
+            ]
+
         require Html.semui (
-            body [] [                               
-                    Html.SemUi.adornerMenu [
+            body [] (
+                Html.SemUi.adornerMenu [
                         "Interactions", [interactTools]
                         "Scene", [sceneTools]
                         "Add Surface", [openSurface]
-                    ](
-                        div [clazz "pusher"] [                            
-                            renderControl
-                            div [style "width: 30%; height: 100%; float:right; background: #1B1C1E"] [
-                                Incremental.div 
-                                    (AttributeMap.ofList [clazz "ui divided list inverted segment"]) (
-                                        alist {
-                                            for s in (m.surfaces |> AList.ofASet) do
-                                                    yield div [clazz "item"] [
-                                                        i [clazz "medium File Outline middle aligned icon"][]                                             
-                                                        Incremental.text s.name
-                                                    ]
-                                        }
-                                )      
-                            ]
-                        ]
-                    )
-                 //   ]
-            
-            
-
-                //require Html.semui (
-                //    Html.SemUi.adornerMenu [
-                //        "Interactions", [interactTools]
-                //        "Scene", [sceneTools]
-                //        "Add Surface", [openSurface]
-                    
-                //    ](
-                //        div [][
-                //            renderControl
-                //            div [style "width: 29%; height: 100%; float:right; background: #1B1C1E"] [                           
-                //                Incremental.div 
-                //                    (AttributeMap.ofList [clazz "ui divided list inverted"]) (
-                //                        alist {
-                //                            for s in (m.surfaces |> AList.ofASet) do
-                //                                    yield div [clazz "item"] [
-                //                                        i [clazz "medium File Outline middle aligned icon"][]                                             
-                //                                        text (s.guid.ToString())
-                //                                    ]   
-                //                        }
-                //                )                            
-                //            ]
-                //        ]
-                //    )
-                //)
-            ]
+                    ] 
+                    rest
+            )                 
         )
 
 
