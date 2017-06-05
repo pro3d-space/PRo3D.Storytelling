@@ -57,6 +57,75 @@ module OpcUtils =
                 |> Seq.toList 
         else []
 
+type Points = list<V3d>
+
+type Segment = Points
+
+type Projection = Linear = 0 | Viewpoint = 1 | Sky = 2
+type Geometry = Point = 0 | Line = 1 | Polyline = 2 | Polygon = 3 | DnS = 4 | Undefined = 5
+type Semantic = Horizon0 = 0 | Horizon1 = 1 | Horizon2 = 2 | Horizon3 = 3 | Horizon4 = 4 | Crossbed = 5 | GrainSize = 6
+
+[<DomainType>]
+type Annotation = {
+    
+    geometry : Geometry
+    projection : Projection
+    semantic : Semantic
+
+    points : plist<V3d>
+    segments : plist<plist<V3d>> //list<Segment>
+    color : C4b
+    thickness : NumericInput
+
+    visible : bool
+    text : string
+}
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Annotation =
+    let thickness = [1.0; 2.0; 3.0; 4.0; 5.0; 1.0; 1.0]
+    let color = [new C4b(241,238,246); new C4b(189,201,225); new C4b(116,169,207); new C4b(43,140,190); new C4b(4,90,141); new C4b(241,163,64); new C4b(153,142,195) ]
+
+    let thickn = {
+        value   = 3.0
+        min     = 1.0
+        max     = 8.0
+        step    = 1.0
+        format  = "{0:0}"
+    }
+
+    let make (projection) (geometry) (semantic) : Annotation  = 
+        let thickness = thickness.[int semantic]
+        let color = color.[int semantic]
+        {
+            
+            geometry = geometry
+            semantic = semantic
+            points = plist.Empty
+            segments = plist.Empty //[]
+            color = color
+            thickness = { thickn with value = thickness}
+            projection = projection
+            visible = true
+            text = ""
+        }
+
+[<DomainType>]
+type DrawingModel = {
+
+    draw    : bool 
+    hoverPosition : option<Trafo3d>
+    offset : option<V3d>
+
+    working : Option<Annotation>
+    projection : Projection
+    geometry : Geometry
+    semantic : Semantic
+
+    annotations : plist<Annotation>
+    exportPath : string
+}
+
 [<DomainType>]
 type Surface = {    
     
@@ -90,15 +159,31 @@ type Scene = {
 [<DomainType>]
 type Model = { 
    
-    scene : Scene
-    surfaces   : hset<SgSurface>        
+    scene       : Scene
+    drawing     : DrawingModel
+    surfaces    : hset<SgSurface>        
 
-    draw    : bool 
-    hoverPosition : option<Trafo3d>
+  //  draw    : bool 
+//    hoverPosition : option<Trafo3d>
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
 module Model =
+    let initialdrawing = {
+        hoverPosition = None
+        draw = false            
+        offset = None        
+
+        working = None
+        projection = Projection.Viewpoint
+        geometry = Geometry.Polyline
+        semantic = Semantic.Horizon3
+
+        annotations = PList.empty
+
+        exportPath = @"."
+    }
+
     let initial =
             {           
                 surfaces = HSet.empty                       
@@ -108,7 +193,9 @@ module Model =
                         surfaces = []
                 }
 
-                draw = false
-                hoverPosition = None
+                drawing = initialdrawing
+
+               // draw = false
+               //hoverPosition = None
             }
 

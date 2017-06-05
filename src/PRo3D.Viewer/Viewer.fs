@@ -106,11 +106,46 @@ module Surface =
             | _ -> m
 
 
+module GuiEx =
+
+    let menu (c : string )(entries : list<string * list<DomNode<'msg>>>) =
+            div [ clazz c ] (
+                entries |> List.map (fun (name, children) ->
+                    div [ clazz "item"] [ 
+                        b [] [text name]
+                        div [ clazz "menu" ] (
+                            children |> List.map (fun c ->
+                                div [clazz "item"] [c]
+                            )
+                        )
+                    ]
+                )
+            )
+       
+    let adornerMenu (sectionsAndItems : list<string * list<DomNode<'msg>>>) (rest : list<DomNode<'msg>>) =            
+        let pushButton() = 
+            div [
+                clazz "ui black big launch right attached fixed button menubutton"
+                js "onclick"        "$('.sidebar').sidebar('toggle');"
+            ] [
+                i [clazz "content icon"] [] 
+                span [clazz "text"] [text "Menu"]
+            ]
+        [
+            let c = [pushButton()] @ rest
+
+            yield 
+                menu "ui vertical inverted sidebar menu" sectionsAndItems
+            yield 
+                div [clazz "pusher"] c
+        ]
+
     
 module Viewer =
    
     type Message =
         | CameraMessage of CameraController.Message
+        | DrawingMessage of Drawing.Action
         | ImportSurface 
         | QuickLoad
         | AddSg of ISg
@@ -119,7 +154,7 @@ module Viewer =
         | OpenScene
         | NewScene
         | KeyDown of key : Aardvark.Application.Keys
-        | KeyUp of key : Aardvark.Application.Keys
+        | KeyUp of key : Aardvark.Application.Keys      
                 
     let lookAtData m = 
         let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
@@ -149,8 +184,9 @@ module Viewer =
             | None -> None
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =        
-        match msg, m.draw with
+        match msg, m.drawing.draw with
             | CameraMessage msg, false -> { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
+            | DrawingMessage msg, _ -> { m with drawing = Drawing.update m.drawing msg }
             | ImportSurface, _ -> 
                 match Dialogs.openFolder w with
                     | [] -> m
@@ -175,7 +211,8 @@ module Viewer =
                     | Some t -> 
                         let hit = r.GetPointOnRay(t)
                         Log.warn "hitihtihtihtithi %A" hit
-                        { m with hoverPosition = Some (Trafo3d.Translation hit)}
+                        let drawing = Drawing.update m.drawing (Drawing.Action.AddPoint hit)
+                        { m with drawing = drawing}
                     | None -> 
                         Log.error ("nooo hit")
                         m
@@ -191,13 +228,17 @@ module Viewer =
                     | None -> m
                     | Some path -> loadScene path m runtime signature
             | NewScene, _ -> { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
-            | KeyDown Aardvark.Application.Keys.LeftCtrl, _ -> { m with draw = true }
-            | KeyUp Aardvark.Application.Keys.LeftCtrl, _ -> { m with draw = false}
+            | KeyDown k, _ ->
+                    let d = Drawing.update m.drawing (Drawing.Action.KeyDown k)
+                    { m with drawing = d }
+            | KeyUp k, _ ->
+                    let d = Drawing.update m.drawing (Drawing.Action.KeyUp k)
+                    { m with drawing = d }
             | _ -> m
                 
     let scene (m : MModel) =
         let opcs =
-            aset {
+            aset {                
                 for surface in m.surfaces do
 
                     let createSg (bb : Box3d) sg =                       
@@ -208,7 +249,7 @@ module Viewer =
                                                                } |> Sg.noEvents
                                                         ) 
                         |> Sg.pickable (PickShape.Box bb) 
-
+                    
                     let sg = 
                         Mod.map2 createSg surface.globalBB surface.sceneGraph
                         |> Sg.dynamic
@@ -220,7 +261,7 @@ module Viewer =
             }
         opcs |> Sg.set
 
-    let mkISg color size trafo : ISg<Message> =         
+    let mkBrushISg color size trafo : ISg<Message> =         
         Sg.sphere 5 color size 
                 |> Sg.shader {
                     do! Shader.stableTrafo
@@ -240,16 +281,14 @@ module Viewer =
                             onKeyDown (KeyDown)
                             onKeyUp (KeyUp)
                             attribute "style" "width:70%; height: 100%; float:left"; ]) 
-                    (
-                        let trafo = 
-                            m.hoverPosition 
-                                |> Mod.map (function o -> match o with 
-                                                            | Some t-> t
-                                                            | None -> Trafo3d.Scale(V3d.Zero))
+                    (                    
+                        let annotations =
+                            Drawing.Sg.view m.drawing m.scene.cameraModel.view
+                                |> Sg.map DrawingMessage                                
+                                |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
+                                |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode  
 
-                        let brush = mkISg (Mod.constant C4b.Red) (Mod.constant 0.05) trafo
-
-                        [(scene m); brush]
+                        [(scene m); annotations]
                             |> Sg.ofList
                          //   |> Sg.fillMode (Mod.constant FillMode.Fill)
                          //   |> Sg.cullMode (Mod.constant CullMode.None)      
@@ -299,28 +338,56 @@ module Viewer =
                     }
             )   
 
+        let annotationUI = 
+            div [][
+                Drawing.UI.viewAnnotations m.drawing
+                Drawing.UI.viewAnnotationTools m.drawing |> UI.map DrawingMessage 
+            ]
+            
+
         let tabs = Html.SemUi.tabbed [clazz "ui inverted segment"] [
                             ("Surfaces", surfaceList)
-                            ("Annotations", text "Annotations")
+                            ("Annotations", annotationUI)
                             ("Config", text "Config")
                         ] "Surfaces"
       
-        let rest =
-            div [clazz "pusher"] [                            
+        let rest = [
                 renderControl
                 div [clazz "ui"; style "width: 30%; height: 100%; float:right; background: #1B1C1E"] [
                     tabs                        
                                 
-                ]
-            ]
+                ]   ]         
+        
+        require (Html.semui)( // @ [myCss]) 
+            let sections = [
+                "Interactions", [interactTools]
+                "Scene", [sceneTools]
+                "Add Surface", [openSurface]]
+              //  "Annotations", [Drawing.UI.viewAnnotationTools m.drawing |> UI.map DrawingMessage]]
+                
 
-        require (Html.semui)( // @ [myCss]) (
-            body [] 
-                    (Html.SemUi.adornerMenu [
-                        "Interactions", [interactTools]
-                        "Scene", [sceneTools]
-                        "Add Surface", [openSurface]]
-                    rest)
+            body [] (Html.SemUi.adornerMenu sections rest)
+               
+                //GuiEx.menu "ui sidebar inverted vertical menu" sections
+                //div[clazz "pusher"] [
+                //    yield div [
+                //        clazz "ui black big launch right attached fixed button menubutton"
+                //        js "onclick" "$('.sidebar').sidebar('toggle');"
+                //    ] [
+                //        i [clazz "content icon"] [] 
+                //        span [clazz "text"] [text "Menu"]
+                //    ]
+
+                //    yield! rest
+                //]
+
+                
+            
+                    //(GuiEx.adornerMenu [
+                    //    "Interactions", [interactTools]
+                    //    "Scene", [sceneTools]
+                    //    "Add Surface", [openSurface]]
+                    //rest)
         )
                                                               
 
