@@ -108,20 +108,38 @@ module Drawing =
     module UI =
         open Aardvark.Base.Incremental
 
+        let viewAnnotationToolsHorizontal (model:MDrawingModel) =
+            Html.Layout.horizontal [
+                Html.Layout.boxH [ i [clazz "large Write icon"][] ]
+                Html.Layout.boxH [ Html.SemUi.dropDown model.geometry SetGeometry ]
+                Html.Layout.boxH [ Html.SemUi.dropDown model.projection SetProjection ]
+                Html.Layout.boxH [ Html.SemUi.dropDown model.semantic SetSemantic ]
+                td [][] 
+            ]
+
+        let viewAnnotationToolsSlim (model:MDrawingModel) =
+            Html.SemUi.stuffStack[                                            
+                Html.SemUi.dropDown model.geometry SetGeometry
+                Html.SemUi.dropDown model.projection SetProjection
+                Html.SemUi.dropDown model.semantic SetSemantic
+            ]  
+
         let viewAnnotationTools (model:MDrawingModel)=  
+            Html.table [                            
+             //   Html.row "Text:" [Html.SemUi.textBox model.exportPath SetExportPath ]
+                Html.row "Geometry:" [Html.SemUi.dropDown model.geometry SetGeometry]
+                Html.row "Projections:" [Html.SemUi.dropDown model.projection SetProjection]
+                Html.row "Semantic:" [Html.SemUi.dropDown model.semantic SetSemantic]
+            ]    
+
+        let viewAnnotationToolsAcc (model:MDrawingModel)=  
             Html.SemUi.accordion "Annotation Tools" "Write" true [
-                Html.table [                            
-                    Html.row "Text:" [Html.SemUi.textBox model.exportPath SetExportPath ]
-                    Html.row "Geometry:" [Html.SemUi.dropDown model.geometry SetGeometry]
-                    Html.row "Projections:" [Html.SemUi.dropDown model.projection SetProjection]
-                    Html.row "Semantic:" [Html.SemUi.dropDown model.semantic SetSemantic]
-                ]                    
+                viewAnnotationTools model            
             ]
 
         let viewAnnotations (model:MDrawingModel) = 
-            Html.SemUi.accordion "Annotations" "File Outline" true [
-                Incremental.div 
-                    (AttributeMap.ofList [clazz "ui divided list"]) (
+            Incremental.div 
+                    (AttributeMap.ofList [clazz "ui divided list inverted segment"]) (
                             
                         alist {                                                                     
                             for a in model.annotations do 
@@ -129,15 +147,25 @@ module Drawing =
                                 let! sem = a.semantic
                                 let c = Annotation.color.[int sem]
 
-                                let bgc = sprintf "background: %s" (Html.ofC4b c)
+                                let bgc = sprintf "color: %s" (Html.ofC4b c)
                                     
-                                yield div [clazz "item"; style bgc] [
-                                        i [clazz "medium File Outline middle aligned icon"][]
-                                        text (a.geometry.ToString())
+                                yield div [clazz "item"] [
+                                        i [clazz "large Sticky Note middle aligned icon"; style bgc][]
+                                        div [clazz "content"] [
+                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
+                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
+                                            yield div [clazz "header"] [Incremental.text header]                                       
+                                            yield div [clazz "description"] [Incremental.text desc]      
+                                        ]
                                 ]                                                                    
                         }     
                 )
+
+        let viewAnnotationsAcc (model:MDrawingModel) = 
+            Html.SemUi.accordion "Annotations" "File Outline" true [
+                viewAnnotations model 
             ]
+
     module Sg =        
 
         let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =        

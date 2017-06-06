@@ -106,39 +106,6 @@ module Surface =
             | _ -> m
 
 
-module GuiEx =
-
-    let menu (c : string )(entries : list<string * list<DomNode<'msg>>>) =
-            div [ clazz c ] (
-                entries |> List.map (fun (name, children) ->
-                    div [ clazz "item"] [ 
-                        b [] [text name]
-                        div [ clazz "menu" ] (
-                            children |> List.map (fun c ->
-                                div [clazz "item"] [c]
-                            )
-                        )
-                    ]
-                )
-            )
-       
-    let adornerMenu (sectionsAndItems : list<string * list<DomNode<'msg>>>) (rest : list<DomNode<'msg>>) =            
-        let pushButton() = 
-            div [
-                clazz "ui black big launch right attached fixed button menubutton"
-                js "onclick"        "$('.sidebar').sidebar('toggle');"
-            ] [
-                i [clazz "content icon"] [] 
-                span [clazz "text"] [text "Menu"]
-            ]
-        [
-            let c = [pushButton()] @ rest
-
-            yield 
-                menu "ui vertical inverted sidebar menu" sectionsAndItems
-            yield 
-                div [clazz "pusher"] c
-        ]
 
     
 module Viewer =
@@ -294,6 +261,7 @@ module Viewer =
                          //   |> Sg.cullMode (Mod.constant CullMode.None)      
                     )
 
+        //right side fixed tabbed menu
         let interactTools =
             div [clazz "ui buttons inverted"] [
                 button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
@@ -341,7 +309,6 @@ module Viewer =
         let annotationUI = 
             div [][
                 Drawing.UI.viewAnnotations m.drawing
-                Drawing.UI.viewAnnotationTools m.drawing |> UI.map DrawingMessage 
             ]
             
 
@@ -351,22 +318,32 @@ module Viewer =
                             ("Config", text "Config")
                         ] "Surfaces"
       
-        let rest = div[][
-                    renderControl
-                    div [clazz "ui"; style "width: 30%; height: 100%; float:right; background: #1B1C1E"] [
-                        tabs                        
-                                
-                    ]   ]         
+        let topMenu = [Drawing.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage]
+            
+
+        let rest = 
+            [
+             //   div[clazz "ui bottom attached segment"][
+                renderControl
+                div [clazz "ui"; style "width: 30%; height: 100%; float:right; background: #1B1C1E"] [
+                    tabs                                                        
+                ]
+            //    div[clazz "ui inverted bottom attached menu"; style "width: 100%; height: 6%"] [i [clazz "wrench icon inverted"][]]
+             //   ]
+            ]
         
+        //Sidebar adorner
         require (Html.semui)( // @ [myCss]) 
             let sections = [
                 "Interactions", [interactTools]
+             //   "Annotation tools", [Drawing.UI.viewAnnotationToolsSlim m.drawing |> UI.map DrawingMessage]
                 "Scene", [sceneTools]
                 "Add Surface", [openSurface]]
-              //  "Annotations", [Drawing.UI.viewAnnotationTools m.drawing |> UI.map DrawingMessage]]
                 
-
-            body [] (Html.SemUi.adornerMenu sections rest)
+              //  "Annotations", [Drawing.UI.viewAnnotationTools m.drawing |> UI.map DrawingMessage]]
+                            
+            
+            body [] (GuiEx.adornerMenu sections topMenu rest)
                
                 //GuiEx.menu "ui sidebar inverted vertical menu" sections
                 //div[clazz "pusher"] [
