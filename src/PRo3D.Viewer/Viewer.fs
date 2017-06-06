@@ -351,12 +351,12 @@ module Viewer =
                             ("Config", text "Config")
                         ] "Surfaces"
       
-        let rest = [
-                renderControl
-                div [clazz "ui"; style "width: 30%; height: 100%; float:right; background: #1B1C1E"] [
-                    tabs                        
+        let rest = div[][
+                    renderControl
+                    div [clazz "ui"; style "width: 30%; height: 100%; float:right; background: #1B1C1E"] [
+                        tabs                        
                                 
-                ]   ]         
+                    ]   ]         
         
         require (Html.semui)( // @ [myCss]) 
             let sections = [
