@@ -28,6 +28,7 @@ let main argv =
 
     WebPart.startServer 4321 [ 
         MutableApp.toWebPart runtime a
+        Suave.Files.browseHome
     ]  
 
     use ctrl = new AardvarkCefBrowser()

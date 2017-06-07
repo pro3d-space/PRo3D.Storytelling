@@ -25,7 +25,7 @@ module GuiEx =
                 )
             )
        
-    let adornerMenu (sectionsAndItems : list<string * list<DomNode<'msg>>>)(top : list<DomNode<'msg>>) (rest : list<DomNode<'msg>>) =            
+    let adornerMenu2 (sectionsAndItems : list<string * list<DomNode<'msg>>>)(top : list<DomNode<'msg>>) (rest : list<DomNode<'msg>>) =            
         let pushButton() = 
             div [
                 clazz "ui black big launch right attached fixed button menubutton"
@@ -34,13 +34,36 @@ module GuiEx =
                 i [clazz "content icon"] [] 
                 span [clazz "text"] [text "Menu"]
             ]
+       
         [
             let c = [pushButton()] @ rest
 
             yield 
                 menu "ui vertical inverted sidebar menu" sectionsAndItems
             yield
-                div [clazz "ui bottom inverted fixed menu"] top 
+                div [clazz "ui bottom fixed menu"] top 
             yield 
                 div [clazz "pusher"] c
+        ]
+
+    let adornerMenu (sectionsAndItems : list<string * list<DomNode<'msg>>>)(top : list<DomNode<'msg>>) (rest : list<DomNode<'msg>>) =       
+        [
+            div[clazz "ui top attached demo menu blarg"] [
+                a [clazz "item blarg"] [
+                    i [clazz "sidebar icon"] []
+                ]
+                div [] top
+                
+            ]
+            div [clazz "ui bottom attached segment pushable"] [
+                menu "ui vertical inverted sidebar menu" sectionsAndItems
+                div [clazz "pusher"; style "height:95%; background:#000"] rest
+            ]
+
+             
+            
+            
+            //div [clazz "ui bottom fixed menu"] top 
+             
+            
         ]

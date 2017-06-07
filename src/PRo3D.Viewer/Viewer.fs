@@ -238,7 +238,7 @@ module Viewer =
                 |> Sg.noEvents
                 |> Sg.trafo(trafo)
 
-    let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "semui-overrides.css" }
+    
 
     let view (m : MModel) =
 
@@ -247,7 +247,7 @@ module Viewer =
                     (AttributeMap.ofList [ 
                             onKeyDown (KeyDown)
                             onKeyUp (KeyUp)
-                            attribute "style" "width:70%; height: 100%; float:left"; ]) 
+                            attribute "style" "width:70%; height: 95%; float:left"; ]) 
                     (                    
                         let annotations =
                             Drawing.Sg.view m.drawing m.scene.cameraModel.view
@@ -325,47 +325,54 @@ module Viewer =
             [
              //   div[clazz "ui bottom attached segment"][
                 renderControl
-                div [clazz "ui"; style "width: 30%; height: 100%; float:right; background: #1B1C1E"] [
-                    tabs                                                        
+                div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E"] [
+                    div [clazz "ui"; style "height: 40%"][
+                        tabs                                                        
+                    ]
                 ]
             //    div[clazz "ui inverted bottom attached menu"; style "width: 100%; height: 6%"] [i [clazz "wrench icon inverted"][]]
              //   ]
             ]
         
+        let usingContext =             
+            "$('.context.example .ui.sidebar')
+              .sidebar({
+                context: $('.context.example .bottom.segment')
+              })
+              .sidebar('attach events', '.context.example .menu.blarg .item.blarg')
+            ;"
+
         //Sidebar adorner
-        require (Html.semui)( // @ [myCss]) 
+        let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "./semui-overrides.css" }
+        require (Html.semui @ [myCss]) (
             let sections = [
-                "Interactions", [interactTools]
-             //   "Annotation tools", [Drawing.UI.viewAnnotationToolsSlim m.drawing |> UI.map DrawingMessage]
+                "Interactions", [interactTools]             
                 "Scene", [sceneTools]
-                "Add Surface", [openSurface]]
-                
-              //  "Annotations", [Drawing.UI.viewAnnotationTools m.drawing |> UI.map DrawingMessage]]
-                            
-            
-            body [] (GuiEx.adornerMenu sections topMenu rest)
+                "Add Surface", [openSurface]]                              
+            onBoot usingContext (                            
+                body [clazz "context example"; style "overflow:hidden"] (GuiEx.adornerMenu sections topMenu rest)
                
-                //GuiEx.menu "ui sidebar inverted vertical menu" sections
-                //div[clazz "pusher"] [
-                //    yield div [
-                //        clazz "ui black big launch right attached fixed button menubutton"
-                //        js "onclick" "$('.sidebar').sidebar('toggle');"
-                //    ] [
-                //        i [clazz "content icon"] [] 
-                //        span [clazz "text"] [text "Menu"]
-                //    ]
+                    //GuiEx.menu "ui sidebar inverted vertical menu" sections
+                    //div[clazz "pusher"] [
+                    //    yield div [
+                    //        clazz "ui black big launch right attached fixed button menubutton"
+                    //        js "onclick" "$('.sidebar').sidebar('toggle');"
+                    //    ] [
+                    //        i [clazz "content icon"] [] 
+                    //        span [clazz "text"] [text "Menu"]
+                    //    ]
 
-                //    yield! rest
-                //]
+                    //    yield! rest
+                    //]
 
                 
             
-                    //(GuiEx.adornerMenu [
-                    //    "Interactions", [interactTools]
-                    //    "Scene", [sceneTools]
-                    //    "Add Surface", [openSurface]]
-                    //rest)
-        )
+                        //(GuiEx.adornerMenu [
+                        //    "Interactions", [interactTools]
+                        //    "Scene", [sceneTools]
+                        //    "Add Surface", [openSurface]]
+                        //rest)
+        ))
                                                               
 
     let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) = 
