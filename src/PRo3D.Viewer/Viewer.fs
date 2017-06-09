@@ -322,16 +322,13 @@ module Viewer =
             
 
         let rest = 
-            [
-             //   div[clazz "ui bottom attached segment"][
+            [             
                 renderControl
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E"] [
                     div [clazz "ui"; style "height: 40%"][
-                        tabs                                                        
+                        tabs |> UI.map DrawingMessage
                     ]
-                ]
-            //    div[clazz "ui inverted bottom attached menu"; style "width: 100%; height: 6%"] [i [clazz "wrench icon inverted"][]]
-             //   ]
+                ]            
             ]
         
         let usingContext =             
@@ -350,28 +347,7 @@ module Viewer =
                 "Scene", [sceneTools]
                 "Add Surface", [openSurface]]                              
             onBoot usingContext (                            
-                body [clazz "context example"; style "overflow:hidden"] (GuiEx.adornerMenu sections topMenu rest)
-               
-                    //GuiEx.menu "ui sidebar inverted vertical menu" sections
-                    //div[clazz "pusher"] [
-                    //    yield div [
-                    //        clazz "ui black big launch right attached fixed button menubutton"
-                    //        js "onclick" "$('.sidebar').sidebar('toggle');"
-                    //    ] [
-                    //        i [clazz "content icon"] [] 
-                    //        span [clazz "text"] [text "Menu"]
-                    //    ]
-
-                    //    yield! rest
-                    //]
-
-                
-            
-                        //(GuiEx.adornerMenu [
-                        //    "Interactions", [interactTools]
-                        //    "Scene", [sceneTools]
-                        //    "Add Surface", [openSurface]]
-                        //rest)
+                body [clazz "context example"; style "overflow:hidden"] (GuiEx.adornerMenu sections topMenu rest)                                  
         ))
                                                               
 

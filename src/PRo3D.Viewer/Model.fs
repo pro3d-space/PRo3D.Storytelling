@@ -67,7 +67,8 @@ type Semantic = Horizon0 = 0 | Horizon1 = 1 | Horizon2 = 2 | Horizon3 = 3 | Hori
 
 [<DomainType>]
 type Annotation = {
-    
+    key : Guid
+
     geometry : Geometry
     projection : Projection
     semantic : Semantic
@@ -98,7 +99,7 @@ module Annotation =
         let thickness = thickness.[int semantic]
         let color = color.[int semantic]
         {
-            
+            key = Guid.NewGuid()
             geometry = geometry
             semantic = semantic
             points = plist.Empty
@@ -124,6 +125,8 @@ type DrawingModel = {
 
     annotations : plist<Annotation>
     exportPath : string
+
+    selected : hset<Guid>
 }
 
 [<DomainType>]
@@ -182,6 +185,8 @@ module Model =
         annotations = PList.empty
 
         exportPath = @"."
+
+        selected = HSet.empty
     }
 
     let initial =

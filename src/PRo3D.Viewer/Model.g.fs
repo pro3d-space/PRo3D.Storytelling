@@ -11,6 +11,7 @@ module Mutable =
     [<StructuredFormatDisplay("{AsString}")>]
     type MAnnotation(__initial : PRo3D.Annotation) = 
         let mutable __current = __initial
+        let _key = ResetMod.Create(__initial.key)
         let _geometry = ResetMod.Create(__initial.geometry)
         let _projection = ResetMod.Create(__initial.projection)
         let _semantic = ResetMod.Create(__initial.semantic)
@@ -21,6 +22,7 @@ module Mutable =
         let _visible = ResetMod.Create(__initial.visible)
         let _text = ResetMod.Create(__initial.text)
         
+        member x.key = _key :> IMod<_>
         member x.geometry = _geometry :> IMod<_>
         member x.projection = _projection :> IMod<_>
         member x.semantic = _semantic :> IMod<_>
@@ -35,6 +37,7 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current, v)) then
                 __current <- v
                 
+                ResetMod.Update(_key,v.key)
                 ResetMod.Update(_geometry,v.geometry)
                 ResetMod.Update(_projection,v.projection)
                 ResetMod.Update(_semantic,v.semantic)
@@ -56,6 +59,12 @@ module Mutable =
     module Annotation =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
+            let key =
+                { new Lens<PRo3D.Annotation, System.Guid>() with
+                    override x.Get(r) = r.key
+                    override x.Set(r,v) = { r with key = v }
+                    override x.Update(r,f) = { r with key = f r.key }
+                }
             let geometry =
                 { new Lens<PRo3D.Annotation, PRo3D.Geometry>() with
                     override x.Get(r) = r.geometry
@@ -122,6 +131,7 @@ module Mutable =
         let _semantic = ResetMod.Create(__initial.semantic)
         let _annotations = MList.Create(__initial.annotations, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
         let _exportPath = ResetMod.Create(__initial.exportPath)
+        let _selected = MSet.Create(__initial.selected)
         
         member x.draw = _draw :> IMod<_>
         member x.hoverPosition = _hoverPosition :> IMod<_>
@@ -132,6 +142,7 @@ module Mutable =
         member x.semantic = _semantic :> IMod<_>
         member x.annotations = _annotations :> alist<_>
         member x.exportPath = _exportPath :> IMod<_>
+        member x.selected = _selected :> aset<_>
         
         member x.Update(v : PRo3D.DrawingModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -146,6 +157,7 @@ module Mutable =
                 ResetMod.Update(_semantic,v.semantic)
                 MList.Update(_annotations, v.annotations)
                 ResetMod.Update(_exportPath,v.exportPath)
+                MSet.Update(_selected, v.selected)
         
         static member Create(v : PRo3D.DrawingModel) = MDrawingModel(v)
         static member Update(m : MDrawingModel, v : PRo3D.DrawingModel) = m.Update(v)
@@ -211,6 +223,12 @@ module Mutable =
                     override x.Get(r) = r.exportPath
                     override x.Set(r,v) = { r with exportPath = v }
                     override x.Update(r,f) = { r with exportPath = f r.exportPath }
+                }
+            let selected =
+                { new Lens<PRo3D.DrawingModel, Aardvark.Base.hset<System.Guid>>() with
+                    override x.Get(r) = r.selected
+                    override x.Set(r,v) = { r with selected = v }
+                    override x.Update(r,f) = { r with selected = f r.selected }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
     type MSurface(__initial : PRo3D.Surface) = 
