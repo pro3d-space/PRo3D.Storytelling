@@ -23,6 +23,14 @@ open MBrace.FsPickler
 open System.IO
 open PRo3D
 
+module PList =
+    let append (a : plist<_>) (b : plist<_>) =
+        let rec doIt xs =
+            match xs with
+                | x::xs -> PList.prepend x (doIt xs)
+                | [] -> b
+        doIt (PList.toList a)
+
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]        
 module Surface =
@@ -109,11 +117,13 @@ module Surface =
 
     
 module Viewer =
+    open Surface
    
     type Message =
         | CameraMessage of CameraController.Message
         | DrawingMessage of Drawing.Action
         | ImportSurface 
+        | ImportMeasurements 
         | QuickLoad
         | AddSg of ISg
         | PickSurface of SceneHit
@@ -164,7 +174,11 @@ module Viewer =
                             Surface.import runtime signature s m |> lookAtData
                         else
                             Log.error "path %s does not point to surface folder" path
-                            m            
+                            m   
+            | ImportMeasurements, _ ->
+                match Dialogs.openDialog w with
+                    | x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x.Value)}}
+                    | _ -> m   
             | QuickLoad, _ -> 
                 //let surface = Surface.mk (@"E:\Aardwork\Exomars\_SCENES\cd - Copy\Surface\Cape_Desire_RGB")
                 //let m = Surface.import runtime signature surface m 
@@ -285,6 +299,12 @@ module Viewer =
                 clazz "ui button"
                 onClick (fun _ -> ImportSurface)
              ] 
+            
+        let importMeasurements =
+            [ text "browse"] |> button [ 
+                clazz "ui button"
+                onClick (fun _ -> ImportMeasurements)
+             ] 
 
         let surfaceList = 
             Incremental.div 
@@ -338,7 +358,9 @@ module Viewer =
                 "Interactions", [interactTools]
              //   "Annotation tools", [Drawing.UI.viewAnnotationToolsSlim m.drawing |> UI.map DrawingMessage]
                 "Scene", [sceneTools]
-                "Add Surface", [openSurface]]
+                "Add Surface", [openSurface]
+                "Import Measurements", [importMeasurements]
+                ]
                 
               //  "Annotations", [Drawing.UI.viewAnnotationTools m.drawing |> UI.map DrawingMessage]]
                             

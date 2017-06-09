@@ -9,6 +9,90 @@ open PRo3D
 module Mutable =
 
     [<StructuredFormatDisplay("{AsString}")>]
+    type MDipAndStrikeResults(__initial : PRo3D.DipAndStrikeResults) = 
+        let mutable __current = __initial
+        let _plane = ResetMod.Create(__initial.plane)
+        let _dipAngle = ResetMod.Create(__initial.dipAngle)
+        let _dipDirection = ResetMod.Create(__initial.dipDirection)
+        let _strikeDirection = ResetMod.Create(__initial.strikeDirection)
+        let _dipAzimuth = ResetMod.Create(__initial.dipAzimuth)
+        let _strikeAzimuth = ResetMod.Create(__initial.strikeAzimuth)
+        let _centerOfMass = ResetMod.Create(__initial.centerOfMass)
+        
+        member x.plane = _plane :> IMod<_>
+        member x.dipAngle = _dipAngle :> IMod<_>
+        member x.dipDirection = _dipDirection :> IMod<_>
+        member x.strikeDirection = _strikeDirection :> IMod<_>
+        member x.dipAzimuth = _dipAzimuth :> IMod<_>
+        member x.strikeAzimuth = _strikeAzimuth :> IMod<_>
+        member x.centerOfMass = _centerOfMass :> IMod<_>
+        
+        member x.Update(v : PRo3D.DipAndStrikeResults) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_plane,v.plane)
+                ResetMod.Update(_dipAngle,v.dipAngle)
+                ResetMod.Update(_dipDirection,v.dipDirection)
+                ResetMod.Update(_strikeDirection,v.strikeDirection)
+                ResetMod.Update(_dipAzimuth,v.dipAzimuth)
+                ResetMod.Update(_strikeAzimuth,v.strikeAzimuth)
+                ResetMod.Update(_centerOfMass,v.centerOfMass)
+        
+        static member Create(v : PRo3D.DipAndStrikeResults) = MDipAndStrikeResults(v)
+        static member Update(m : MDipAndStrikeResults, v : PRo3D.DipAndStrikeResults) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module DipAndStrikeResults =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let plane =
+                { new Lens<PRo3D.DipAndStrikeResults, Aardvark.Base.Plane3d>() with
+                    override x.Get(r) = r.plane
+                    override x.Set(r,v) = { r with plane = v }
+                    override x.Update(r,f) = { r with plane = f r.plane }
+                }
+            let dipAngle =
+                { new Lens<PRo3D.DipAndStrikeResults, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.dipAngle
+                    override x.Set(r,v) = { r with dipAngle = v }
+                    override x.Update(r,f) = { r with dipAngle = f r.dipAngle }
+                }
+            let dipDirection =
+                { new Lens<PRo3D.DipAndStrikeResults, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.dipDirection
+                    override x.Set(r,v) = { r with dipDirection = v }
+                    override x.Update(r,f) = { r with dipDirection = f r.dipDirection }
+                }
+            let strikeDirection =
+                { new Lens<PRo3D.DipAndStrikeResults, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.strikeDirection
+                    override x.Set(r,v) = { r with strikeDirection = v }
+                    override x.Update(r,f) = { r with strikeDirection = f r.strikeDirection }
+                }
+            let dipAzimuth =
+                { new Lens<PRo3D.DipAndStrikeResults, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.dipAzimuth
+                    override x.Set(r,v) = { r with dipAzimuth = v }
+                    override x.Update(r,f) = { r with dipAzimuth = f r.dipAzimuth }
+                }
+            let strikeAzimuth =
+                { new Lens<PRo3D.DipAndStrikeResults, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.strikeAzimuth
+                    override x.Set(r,v) = { r with strikeAzimuth = v }
+                    override x.Update(r,f) = { r with strikeAzimuth = f r.strikeAzimuth }
+                }
+            let centerOfMass =
+                { new Lens<PRo3D.DipAndStrikeResults, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.centerOfMass
+                    override x.Set(r,v) = { r with centerOfMass = v }
+                    override x.Update(r,f) = { r with centerOfMass = f r.centerOfMass }
+                }
+    [<StructuredFormatDisplay("{AsString}")>]
     type MAnnotation(__initial : PRo3D.Annotation) = 
         let mutable __current = __initial
         let _geometry = ResetMod.Create(__initial.geometry)
@@ -18,6 +102,7 @@ module Mutable =
         let _segments = MList.Create(__initial.segments, (fun v -> MList.Create(v)), (fun (m,v) -> MList.Update(m, v)), (fun v -> v :> alist<_>))
         let _color = ResetMod.Create(__initial.color)
         let _thickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.thickness)
+        let _dnsResults = MOption.Create(__initial.dnsResults, (fun v -> MDipAndStrikeResults.Create(v)), (fun (m,v) -> MDipAndStrikeResults.Update(m, v)), (fun v -> v))
         let _visible = ResetMod.Create(__initial.visible)
         let _text = ResetMod.Create(__initial.text)
         
@@ -28,6 +113,7 @@ module Mutable =
         member x.segments = _segments :> alist<_>
         member x.color = _color :> IMod<_>
         member x.thickness = _thickness
+        member x.dnsResults = _dnsResults :> IMod<_>
         member x.visible = _visible :> IMod<_>
         member x.text = _text :> IMod<_>
         
@@ -42,6 +128,7 @@ module Mutable =
                 MList.Update(_segments, v.segments)
                 ResetMod.Update(_color,v.color)
                 Aardvark.UI.Mutable.MNumericInput.Update(_thickness, v.thickness)
+                MOption.Update(_dnsResults, v.dnsResults)
                 ResetMod.Update(_visible,v.visible)
                 ResetMod.Update(_text,v.text)
         
@@ -97,6 +184,12 @@ module Mutable =
                     override x.Get(r) = r.thickness
                     override x.Set(r,v) = { r with thickness = v }
                     override x.Update(r,f) = { r with thickness = f r.thickness }
+                }
+            let dnsResults =
+                { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.Option<PRo3D.DipAndStrikeResults>>() with
+                    override x.Get(r) = r.dnsResults
+                    override x.Set(r,v) = { r with dnsResults = v }
+                    override x.Update(r,f) = { r with dnsResults = f r.dnsResults }
                 }
             let visible =
                 { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.bool>() with
@@ -211,6 +304,36 @@ module Mutable =
                     override x.Get(r) = r.exportPath
                     override x.Set(r,v) = { r with exportPath = v }
                     override x.Update(r,f) = { r with exportPath = f r.exportPath }
+                }
+    [<StructuredFormatDisplay("{AsString}")>]
+    type MMeasurementsImporterModel(__initial : PRo3D.MeasurementsImporterModel) = 
+        let mutable __current = __initial
+        let _annotations = MList.Create(__initial.annotations, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
+        
+        member x.annotations = _annotations :> alist<_>
+        
+        member x.Update(v : PRo3D.MeasurementsImporterModel) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                MList.Update(_annotations, v.annotations)
+        
+        static member Create(v : PRo3D.MeasurementsImporterModel) = MMeasurementsImporterModel(v)
+        static member Update(m : MMeasurementsImporterModel, v : PRo3D.MeasurementsImporterModel) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module MeasurementsImporterModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let annotations =
+                { new Lens<PRo3D.MeasurementsImporterModel, Aardvark.Base.plist<PRo3D.Annotation>>() with
+                    override x.Get(r) = r.annotations
+                    override x.Set(r,v) = { r with annotations = v }
+                    override x.Update(r,f) = { r with annotations = f r.annotations }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
     type MSurface(__initial : PRo3D.Surface) = 
@@ -380,10 +503,12 @@ module Mutable =
         let _scene = MScene.Create(__initial.scene)
         let _drawing = MDrawingModel.Create(__initial.drawing)
         let _surfaces = MSet.Create(unbox, __initial.surfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
+        let _measurementPath = ResetMod.Create(__initial.measurementPath)
         
         member x.scene = _scene
         member x.drawing = _drawing
         member x.surfaces = _surfaces :> aset<_>
+        member x.measurementPath = _measurementPath :> IMod<_>
         
         member x.Update(v : PRo3D.Model) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -392,6 +517,7 @@ module Mutable =
                 MScene.Update(_scene, v.scene)
                 MDrawingModel.Update(_drawing, v.drawing)
                 MSet.Update(_surfaces, v.surfaces)
+                ResetMod.Update(_measurementPath,v.measurementPath)
         
         static member Create(v : PRo3D.Model) = MModel(v)
         static member Update(m : MModel, v : PRo3D.Model) = m.Update(v)
@@ -421,4 +547,10 @@ module Mutable =
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
+                }
+            let measurementPath =
+                { new Lens<PRo3D.Model, Microsoft.FSharp.Core.string>() with
+                    override x.Get(r) = r.measurementPath
+                    override x.Set(r,v) = { r with measurementPath = v }
+                    override x.Update(r,f) = { r with measurementPath = f r.measurementPath }
                 }
