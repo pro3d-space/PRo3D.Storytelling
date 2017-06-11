@@ -132,6 +132,7 @@ module Mutable =
         let _annotations = MList.Create(__initial.annotations, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
         let _exportPath = ResetMod.Create(__initial.exportPath)
         let _selected = MSet.Create(__initial.selected)
+        let _selectedAnnotation = MOption.Create(__initial.selectedAnnotation, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
         
         member x.draw = _draw :> IMod<_>
         member x.hoverPosition = _hoverPosition :> IMod<_>
@@ -143,6 +144,7 @@ module Mutable =
         member x.annotations = _annotations :> alist<_>
         member x.exportPath = _exportPath :> IMod<_>
         member x.selected = _selected :> aset<_>
+        member x.selectedAnnotation = _selectedAnnotation :> IMod<_>
         
         member x.Update(v : PRo3D.DrawingModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -158,6 +160,7 @@ module Mutable =
                 MList.Update(_annotations, v.annotations)
                 ResetMod.Update(_exportPath,v.exportPath)
                 MSet.Update(_selected, v.selected)
+                MOption.Update(_selectedAnnotation, v.selectedAnnotation)
         
         static member Create(v : PRo3D.DrawingModel) = MDrawingModel(v)
         static member Update(m : MDrawingModel, v : PRo3D.DrawingModel) = m.Update(v)
@@ -229,6 +232,12 @@ module Mutable =
                     override x.Get(r) = r.selected
                     override x.Set(r,v) = { r with selected = v }
                     override x.Update(r,f) = { r with selected = f r.selected }
+                }
+            let selectedAnnotation =
+                { new Lens<PRo3D.DrawingModel, Microsoft.FSharp.Core.option<PRo3D.Annotation>>() with
+                    override x.Get(r) = r.selectedAnnotation
+                    override x.Set(r,v) = { r with selectedAnnotation = v }
+                    override x.Update(r,f) = { r with selectedAnnotation = f r.selectedAnnotation }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
     type MSurface(__initial : PRo3D.Surface) = 
@@ -398,10 +407,12 @@ module Mutable =
         let _scene = MScene.Create(__initial.scene)
         let _drawing = MDrawingModel.Create(__initial.drawing)
         let _surfaces = MSet.Create(unbox, __initial.surfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
+        let _properties = ResetMod.Create(__initial.properties)
         
         member x.scene = _scene
         member x.drawing = _drawing
         member x.surfaces = _surfaces :> aset<_>
+        member x.properties = _properties :> IMod<_>
         
         member x.Update(v : PRo3D.Model) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -410,6 +421,7 @@ module Mutable =
                 MScene.Update(_scene, v.scene)
                 MDrawingModel.Update(_drawing, v.drawing)
                 MSet.Update(_surfaces, v.surfaces)
+                ResetMod.Update(_properties,v.properties)
         
         static member Create(v : PRo3D.Model) = MModel(v)
         static member Update(m : MModel, v : PRo3D.Model) = m.Update(v)
@@ -439,4 +451,10 @@ module Mutable =
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
+                }
+            let properties =
+                { new Lens<PRo3D.Model, PRo3D.Properties>() with
+                    override x.Get(r) = r.properties
+                    override x.Set(r,v) = { r with properties = v }
+                    override x.Update(r,f) = { r with properties = f r.properties }
                 }

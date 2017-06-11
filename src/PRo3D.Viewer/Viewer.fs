@@ -111,7 +111,7 @@ module Surface =
 module Viewer =
    
     type Message =
-        | CameraMessage of CameraController.Message
+        | CameraMessage of CameraController.Message        
         | DrawingMessage of Drawing.Action
         | ImportSurface 
         | QuickLoad
@@ -153,7 +153,17 @@ module Viewer =
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =        
         match msg, m.drawing.draw with
             | CameraMessage msg, false -> { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
-            | DrawingMessage msg, _ -> { m with drawing = Drawing.update m.drawing msg }
+            | DrawingMessage msg, _ -> 
+                //let m = 
+                //    match msg with
+                //        | Drawing.Action.Select _ ->                             
+                //            { m with properties = 
+                //                        match m.drawing.selectedAnnotation with 
+                //                            | Some a -> Properties.AnnotationProperties a
+                //                            | None -> Properties.NoProperties } 
+                //        | _ -> m
+                
+                { m with drawing = Drawing.update m.drawing msg }
             | ImportSurface, _ -> 
                 match Dialogs.openFolder w with
                     | [] -> m
@@ -318,15 +328,17 @@ module Viewer =
                             ("Config", text "Config")
                         ] "Surfaces"
       
-        let topMenu = [Drawing.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage]
-            
+        let topMenu = [Drawing.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage]                                
 
-        let rest = 
+        let rest model = 
             [             
                 renderControl
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E"] [
                     div [clazz "ui"; style "height: 40%"][
                         tabs |> UI.map DrawingMessage
+                    ]
+                    div [clazz "ui"; style "height: 40%"][
+                        text "Properties"
                     ]
                 ]            
             ]
@@ -347,7 +359,7 @@ module Viewer =
                 "Scene", [sceneTools]
                 "Add Surface", [openSurface]]                              
             onBoot usingContext (                            
-                body [clazz "context example"; style "overflow:hidden"] (GuiEx.adornerMenu sections topMenu rest)                                  
+                body [clazz "context example"; style "overflow:hidden"] (GuiEx.adornerMenu sections topMenu (rest model))                                  
         ))
                                                               
 

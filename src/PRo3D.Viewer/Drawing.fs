@@ -116,13 +116,15 @@ module Drawing =
                 { model with annotations = annotations }
             | Clear,_ ->
                 { model with annotations = PList.empty }
-            | Select id, false -> 
+            | Select id, false ->
                 let selection = 
                     if HSet.contains id model.selected 
                     then HSet.remove id model.selected 
                     else HSet.add id model.selected
 
-                { model with selected = selection }  
+                let ann = DrawingModel.tryGet model id
+                        
+                { model with selected = selection; selectedAnnotation = ann }  
             | _ -> model
 
     module UI =
@@ -189,9 +191,8 @@ module Drawing =
                                     let! c = mkColor model a 
                                     let bgc = sprintf "color: %s" (Html.ofC4b c)
                                     
-                                    yield div [clazz "item"] [
-                                            i [clazz "large Sticky Note middle aligned icon"; style bgc
-                                               onClick(fun _ -> Select (a.key |> Mod.force))][]
+                                    yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
+                                            i [clazz "large Sticky Note middle aligned icon"; style bgc][]
                                             div [clazz "content"] [
                                                 let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
                                                 let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
