@@ -74,6 +74,7 @@
     <Compile Include="Model.fs" />
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
+    <Compile Include="Properties.fs" />
     <Compile Include="Drawing.fs" />
     <Compile Include="MeasurementsImporter.fs" />
     <Compile Include="Viewer.fs" />
@@ -85,6 +86,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Aardvark.VRVis.Processing">
+      <HintPath>..\..\packages\Aardvark.VRVis.Processing\lib\net45\Aardvark.VRVis.Processing.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />

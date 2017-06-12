@@ -15,7 +15,7 @@ module Drawing =
     open Aardvark.UI
     open Aardvark.UI.Primitives
     open Aardvark.Rendering.Text
-    //open Aardvark.VRVis
+    //open Aardvark.VRVis.Processing
 
     open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.SceneGraph.FShadeSceneGraph
@@ -28,9 +28,13 @@ module Drawing =
         | Move             of V3d
         | Exit    
         | AddPoint         of V3d
-        | KeyDown of key : Keys
-        | KeyUp of key : Keys      
+        | KeyDown          of key : Keys
+        | KeyUp            of key : Keys      
         | Export
+        | Save              
+        | Load             
+        | Clear
+        | Select           of Guid
 
     let finishAndAppend (model : DrawingModel) = 
         let anns = match model.working with
@@ -104,6 +108,24 @@ module Drawing =
                     //Serialization.writeToFile path json 
                     
                     model
+            | Save,_->
+                Serialization.save "./lastMeasure" model.annotations |> ignore
+                model
+            | Load,_ ->
+                let annotations = 
+                    Serialization.loadAs<plist<Annotation>> "./lastMeasure"
+                { model with annotations = annotations }
+            | Clear,_ ->
+                { model with annotations = PList.empty }
+            | Select id, false ->
+                let selection = 
+                    if HSet.contains id model.selected 
+                    then HSet.remove id model.selected 
+                    else HSet.add id model.selected
+
+                let ann = DrawingModel.tryGet model id
+                        
+                { model with selected = selection; selectedAnnotation = ann }  
             | _ -> model
 
     module UI =
@@ -137,20 +159,41 @@ module Drawing =
             Html.SemUi.accordion "Annotation Tools" "Write" true [
                 viewAnnotationTools model            
             ]
+        
+        let mkColor (model : MDrawingModel) (a : MAnnotation) =
+            let id = a.key |> Mod.force
+
+            let color =  
+                model.selected 
+                    |> ASet.contains id 
+                    |> Mod.bind (function x -> if x then Mod.constant C4b.Red else a.color)
+
+            color
 
         let viewAnnotations (model:MDrawingModel) = 
-            Incremental.div 
-                    (AttributeMap.ofList [clazz "ui divided list inverted segment"]) (
+            div[][
+                div [clazz "ui buttons inverted"] [
+                    button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
+                            i [clazz "save icon"] [] ]
+                    button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
+                            i [clazz "folder outline icon"] [] ]
+                    button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
+                            i [clazz "file outline icon"] [] ]
+                ]
+
+                Incremental.div 
+                        (AttributeMap.ofList [clazz "ui divided list inverted segment"]) (
                             
-                        alist {                                                                     
-                            for a in model.annotations do 
+                            alist {                                                                     
+                                for a in model.annotations do 
                                         
+                                
                                 let! sem = a.semantic
                                 let c = Mod.force a.color //Annotation.color.[int sem]
 
                                 let bgc = sprintf "color: %s" (Html.ofC4b c)
                                     
-                                yield div [clazz "item"] [
+                                yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
                                         i [clazz "large Sticky Note middle aligned icon"; style bgc][]
                                         div [clazz "content"] [
                                             let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
@@ -158,9 +201,10 @@ module Drawing =
                                             yield div [clazz "header"] [Incremental.text header]                                       
                                             yield div [clazz "description"] [Incremental.text desc]      
                                         ]
-                                ]                                                                    
-                        }     
-                )
+                                    ]                                                                    
+                            }     
+                    )
+            ]
 
         let viewAnnotationsAcc (model:MDrawingModel) = 
             Html.SemUi.accordion "Annotations" "File Outline" true [
@@ -236,7 +280,7 @@ module Drawing =
                 return distF * size / 800.0 //needs hfov at this point
             }
 
-        let mkDotISg color size trafo =         
+        let mkDotISg color size trafo =                     
             Sg.sphere 5 color size 
                     |> Sg.shader {
                         do! Aardvark.Opc.Shader.stableTrafo
@@ -245,6 +289,7 @@ module Drawing =
                     }
                     |> Sg.noEvents
                     |> Sg.trafo(trafo) 
+
         
         let canvas =             
             Sg.sphere' 8 (new C4b(247,127,90)) 20.0
@@ -295,14 +340,15 @@ module Drawing =
             |> Sg.set
            
         let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>)= 
-            edgeLines false points trafo
+           let lines = edgeLines false points trafo           
+           lines
                 |> Sg.lines color                
                 |> Sg.shader {
                     do! Aardvark.Opc.Shader.stableTrafo
                     do! DefaultSurfaces.vertexColor
                     do! DefaultSurfaces.thickLine    
-                }
-                |> Sg.noEvents
+                }              
+                |> Sg.noEvents                
                 |> Sg.trafo trafo
                 |> Sg.uniform "LineWidth" width
                 |> Sg.pass (RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main)
@@ -330,7 +376,17 @@ module Drawing =
                                                 | Some a -> a.thickness.value
                                                 | None -> Mod.constant 1.0)
 
-            [lines points color thickness trafo; dots points color view]
+            let key = 
+                anno |> Mod.bind (function o -> match o with
+                                                | Some a -> a.key
+                                                | None -> Mod.constant Guid.Empty)
+            
+            let polyline = lines points color thickness trafo
+            let polyline =
+                polyline 
+                    
+
+            [polyline; dots points color view]
          //   [dots points color view]
 
         let annotation' (anno : MAnnotation)(view : IMod<CameraView>)(trafo:IMod<Trafo3d>) = 
@@ -353,7 +409,9 @@ module Drawing =
             let annotations =
                 aset {
                     for a in annoSet do
-                        yield! annotation' a cam trafo
+                       // let a = { a with color = UI.mkColor a }
+                       let c = UI.mkColor model a
+                       yield! (annotation' a cam trafo)
                 } |> Sg.set
                                 
             //canvas

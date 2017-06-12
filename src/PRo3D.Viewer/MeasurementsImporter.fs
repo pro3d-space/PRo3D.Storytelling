@@ -1,6 +1,7 @@
 ﻿namespace PRo3D
 
 module MeasurementsImporter = 
+    open System
     open System.Xml.Linq
     open System.Xml
 
@@ -90,6 +91,7 @@ module MeasurementsImporter =
         let style = (getStyle (m.Element(xname "LineAttributes")))
         let trafo = getTrafo (m.Element(xname "LocalToGlobal"))
         let an = {
+                key = Guid.NewGuid()
                 geometry = (getGeometry (anType, closed)) 
                 projection = Projection.Linear
                 semantic = Semantic.Horizon0

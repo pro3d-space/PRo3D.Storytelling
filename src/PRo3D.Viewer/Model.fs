@@ -14,6 +14,14 @@ open Aardvark.VRVis
 type NavigationMode = FreeFly = 0 | ArcBall = 1
 type InteractionMode = PickOrbitCenter = 0 | Draw = 1 | PlaceObject = 2
 
+module List =
+    let rec updateIf (p : 'a -> bool) (f : 'a -> 'a) (xs : list<'a>) = 
+        match xs with
+            | x :: xs ->
+                if(p x) then (f x) :: updateIf p f xs
+                else x :: updateIf p f xs
+            | [] -> []
+
 module OpcUtils =
     
     /// checks if "path" is a valid opc folder
@@ -81,7 +89,8 @@ type DipAndStrikeResults = {
 
 [<DomainType>]
 type Annotation = {
-    
+    key : Guid
+
     geometry : Geometry
     projection : Projection
     semantic : Semantic
@@ -119,7 +128,7 @@ module Annotation =
         let thickness = thickness.[int semantic]
         let color = color.[int semantic]
         {
-            
+            key = Guid.NewGuid()
             geometry = geometry
             semantic = semantic
             points = plist.Empty
@@ -132,6 +141,9 @@ module Annotation =
             visible = true
             text = ""
         }
+
+    let initial =
+        make Projection.Linear Geometry.Polyline Semantic.Horizon0
 
 [<DomainType>]
 type DrawingModel = {
@@ -147,7 +159,21 @@ type DrawingModel = {
 
     annotations : plist<Annotation>
     exportPath : string
+
+    selected : hset<Guid>
+    selectedAnnotation : option<Annotation>
 }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
+module DrawingModel =
+    let tryGet (m:DrawingModel) key = 
+            m.annotations |> Seq.tryFind(fun x -> x.key = key)
+
+    let update (m : DrawingModel) (ann : Annotation) = 
+        m.annotations.AsList 
+            |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
+            |> PList.ofList
+            
 
 [<DomainType>]
 type MeasurementsImporterModel = {
@@ -184,17 +210,25 @@ type Scene = {
     surfaces : list<Surface>
 }
 
+type Properties = 
+    | AnnotationProperties of Annotation
+    | NoProperties
+
 [<DomainType>]
 type Model = { 
    
     scene       : Scene
     drawing     : DrawingModel
     surfaces    : hset<SgSurface>        
+    properties  : Properties
 
-    measurementPath : string
+    //measurementPath : string
   //  draw    : bool 
 //    hoverPosition : option<Trafo3d>
 }
+
+
+    
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
 module Model =
@@ -211,21 +245,24 @@ module Model =
         annotations = PList.empty
 
         exportPath = @"."
+
+        selected = HSet.empty
+        selectedAnnotation = None
     }
 
-    let initial =
-            {           
-                surfaces = HSet.empty                       
-                scene = {                   
-                        cameraModel = CameraController.initial            
-                        interaction = InteractionMode.PickOrbitCenter
-                        surfaces = []
-                }
+    let initial = {           
+        surfaces = HSet.empty                       
+        scene = {                   
+                cameraModel = CameraController.initial            
+                interaction = InteractionMode.PickOrbitCenter
+                surfaces = []
+        }
 
-                drawing = initialdrawing
-                measurementPath = @"."
+        drawing = initialdrawing
+        properties = NoProperties
+        //measurementPath = @"."
 
-               // draw = false
-               //hoverPosition = None
-            }
+        // draw = false
+        //hoverPosition = None
+    }
 

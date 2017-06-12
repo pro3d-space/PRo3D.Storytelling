@@ -120,7 +120,7 @@ module Viewer =
     open Surface
    
     type Message =
-        | CameraMessage of CameraController.Message
+        | CameraMessage of CameraController.Message        
         | DrawingMessage of Drawing.Action
         | ImportSurface 
         | ImportMeasurements 
@@ -163,7 +163,17 @@ module Viewer =
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =        
         match msg, m.drawing.draw with
             | CameraMessage msg, false -> { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
-            | DrawingMessage msg, _ -> { m with drawing = Drawing.update m.drawing msg }
+            | DrawingMessage msg, _ -> 
+                //let m = 
+                //    match msg with
+                //        | Drawing.Action.Select _ ->                             
+                //            { m with properties = 
+                //                        match m.drawing.selectedAnnotation with 
+                //                            | Some a -> Properties.AnnotationProperties a
+                //                            | None -> Properties.NoProperties } 
+                //        | _ -> m
+                
+                { m with drawing = Drawing.update m.drawing msg }
             | ImportSurface, _ -> 
                 match Dialogs.openFolder w with
                     | [] -> m
@@ -338,20 +348,19 @@ module Viewer =
                             ("Config", text "Config")
                         ] "Surfaces"
       
-        let topMenu = [Drawing.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage]
-            
+        let topMenu = [Drawing.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage]                                
 
-        let rest = 
-            [
-             //   div[clazz "ui bottom attached segment"][
+        let rest model = 
+            [             
                 renderControl
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E"] [
                     div [clazz "ui"; style "height: 40%"][
-                        tabs                                                        
+                        tabs |> UI.map DrawingMessage
                     ]
-                ]
-            //    div[clazz "ui inverted bottom attached menu"; style "width: 100%; height: 6%"] [i [clazz "wrench icon inverted"][]]
-             //   ]
+                    div [clazz "ui"; style "height: 40%"][
+                        text "Properties"
+                    ]
+                ]            
             ]
         
         let usingContext =             
@@ -371,28 +380,7 @@ module Viewer =
                 "Add Surface", [openSurface]
                 "Import Measurements", [importMeasurements]]                              
             onBoot usingContext (                            
-                body [clazz "context example"; style "overflow:hidden"] (GuiEx.adornerMenu sections topMenu rest)
-               
-                    //GuiEx.menu "ui sidebar inverted vertical menu" sections
-                    //div[clazz "pusher"] [
-                    //    yield div [
-                    //        clazz "ui black big launch right attached fixed button menubutton"
-                    //        js "onclick" "$('.sidebar').sidebar('toggle');"
-                    //    ] [
-                    //        i [clazz "content icon"] [] 
-                    //        span [clazz "text"] [text "Menu"]
-                    //    ]
-
-                    //    yield! rest
-                    //]
-
-                
-            
-                        //(GuiEx.adornerMenu [
-                        //    "Interactions", [interactTools]
-                        //    "Scene", [sceneTools]
-                        //    "Add Surface", [openSurface]]
-                        //rest)
+                body [clazz "context example"; style "overflow:hidden"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
         ))
                                                               
 
