@@ -299,7 +299,7 @@ module Viewer =
                 clazz "ui button"
                 onClick (fun _ -> ImportSurface)
              ] 
-            
+
         let importMeasurements =
             [ text "browse"] |> button [ 
                 clazz "ui button"
@@ -369,13 +369,9 @@ module Viewer =
                 "Interactions", [interactTools]             
                 "Scene", [sceneTools]
                 "Add Surface", [openSurface]
-                "Import Measurements", [importMeasurements]
-                ]
-                
-              //  "Annotations", [Drawing.UI.viewAnnotationTools m.drawing |> UI.map DrawingMessage]]
-                            
-            
-            body [] (GuiEx.adornerMenu sections topMenu rest)
+                "Import Measurements", [importMeasurements]]                              
+            onBoot usingContext (                            
+                body [clazz "context example"; style "overflow:hidden"] (GuiEx.adornerMenu sections topMenu rest)
                
                     //GuiEx.menu "ui sidebar inverted vertical menu" sections
                     //div[clazz "pusher"] [

@@ -91,6 +91,7 @@ type Annotation = {
     color : C4b
     thickness : NumericInput
     dnsResults : Option<DipAndStrikeResults>
+    local2global : Option<Trafo3d>
 
     visible : bool
     text : string
@@ -126,6 +127,7 @@ module Annotation =
             color = color
             thickness = { thickn with value = thickness}
             dnsResults = None
+            local2global = None
             projection = projection
             visible = true
             text = ""

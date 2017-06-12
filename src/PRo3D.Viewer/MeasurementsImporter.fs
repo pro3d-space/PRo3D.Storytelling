@@ -22,6 +22,15 @@ module MeasurementsImporter =
         thickness = thickness a
         }
 
+    let getTrafo (t:XElement) = 
+        let strafo = t.Value.NestedBracketSplit(0)
+        let strafo1 = t.Value.NestedBracketSplitLevelOne()
+        let test = strafo1
+                    |> Seq.map(fun x ->  M44d.Parse(x))
+                    |> List.ofSeq
+        let trafo = Trafo3d(test.[0], test.[1])
+        trafo
+
     let parsePointsLevelOne (points:XElement) = points.Value.NestedBracketSplitLevelOne()
                                                     |> Seq.map (fun x -> V3d.Parse(x))
                                                     |> PList.ofSeq
@@ -79,6 +88,7 @@ module MeasurementsImporter =
                         | null -> false
                         | _ -> m.Element(xname "Closed").Value.ToBool()
         let style = (getStyle (m.Element(xname "LineAttributes")))
+        let trafo = getTrafo (m.Element(xname "LocalToGlobal"))
         let an = {
                 geometry = (getGeometry (anType, closed)) 
                 projection = Projection.Linear
@@ -88,6 +98,7 @@ module MeasurementsImporter =
                 color = style.color
                 thickness = style.thickness
                 dnsResults = None
+                local2global = Some trafo
                 visible = true 
                 text = ""
         }
