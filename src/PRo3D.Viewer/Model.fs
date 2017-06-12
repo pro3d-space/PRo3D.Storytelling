@@ -10,6 +10,7 @@ open Aardvark.Application
 open Aardvark.Opc
 open Aardvark.SceneGraph
 open Aardvark.VRVis
+//open Aardvark.Data.PhotoNetwork
 
 type NavigationMode = FreeFly = 0 | ArcBall = 1
 type InteractionMode = PickOrbitCenter = 0 | Draw = 1 | PlaceObject = 2
@@ -70,8 +71,22 @@ type Points = list<V3d>
 type Segment = Points
 
 type Projection = Linear = 0 | Viewpoint = 1 | Sky = 2
-type Geometry = Point = 0 | Line = 1 | Polyline = 2 | Polygon = 3 | DnS = 4 | Undefined = 5
+type Geometry = Point = 0 | Line = 1 | Polyline = 2 | Polygon = 3 | DnS = 4
 type Semantic = Horizon0 = 0 | Horizon1 = 1 | Horizon2 = 2 | Horizon3 = 3 | Horizon4 = 4 | Crossbed = 5 | GrainSize = 6
+
+[<DomainType>]
+type DipAndStrikeResults = {
+
+    plane : Plane3d
+
+    dipAngle : float
+    dipDirection : V3d
+    strikeDirection : V3d
+    dipAzimuth : float
+    strikeAzimuth : float
+
+    centerOfMass : V3d
+}
 
 [<DomainType>]
 type Annotation = {
@@ -87,9 +102,16 @@ type Annotation = {
     segments : plist<plist<V3d>> //list<Segment>
     color : C4b
     thickness : NumericInput
+    dnsResults : Option<DipAndStrikeResults>
+    local2global : Option<Trafo3d>
 
     visible : bool
     text : string
+}
+
+type Style = {
+    color : C4b
+    thickness : NumericInput
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -116,6 +138,8 @@ module Annotation =
             segments = plist.Empty //[]
             color = color
             thickness = { thickn with value = thickness}
+            dnsResults = None
+            local2global = None
             projection = projection
             visible = true
             text = ""
@@ -153,6 +177,11 @@ module DrawingModel =
             |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
             |> PList.ofList
             
+
+[<DomainType>]
+type MeasurementsImporterModel = {
+    annotations : plist<Annotation>
+}
 
 [<DomainType>]
 type Surface = {    
@@ -196,6 +225,7 @@ type Model = {
     surfaces    : hset<SgSurface>        
     properties  : Properties
 
+    //measurementPath : string
   //  draw    : bool 
 //    hoverPosition : option<Trafo3d>
 }
@@ -232,6 +262,7 @@ module Model =
 
         drawing = initialdrawing
         properties = NoProperties
+        //measurementPath = @"."
 
         // draw = false
         //hoverPosition = None

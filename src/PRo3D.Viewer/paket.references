@@ -13,6 +13,8 @@ Aardvark.UI.Primitives
 Aardvark.Service      
 Aardvark.Cef.WinForms
 
+Aardvark.Data.PhotoNetwork
+
 Aardvark.VRVis.Base
 Aardvark.VRVis.Geometry
 

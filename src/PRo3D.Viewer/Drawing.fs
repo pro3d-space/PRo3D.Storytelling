@@ -15,6 +15,7 @@ module Drawing =
     open Aardvark.UI
     open Aardvark.UI.Primitives
     open Aardvark.Rendering.Text
+    //open Aardvark.VRVis.Processing
 
     open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.SceneGraph.FShadeSceneGraph
@@ -187,19 +188,20 @@ module Drawing =
                             alist {                                                                     
                                 for a in model.annotations do 
                                         
-                                    let! sem = a.semantic
-                                                                    
-                                    let! c = mkColor model a 
-                                    let bgc = sprintf "color: %s" (Html.ofC4b c)
+                                
+                                let! sem = a.semantic
+                                let c = Mod.force a.color //Annotation.color.[int sem]
+
+                                let bgc = sprintf "color: %s" (Html.ofC4b c)
                                     
-                                    yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
-                                            i [clazz "large Sticky Note middle aligned icon"; style bgc][]
-                                            div [clazz "content"] [
-                                                let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
-                                                let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
-                                                yield div [clazz "header"] [Incremental.text header]                                       
-                                                yield div [clazz "description"] [Incremental.text desc]      
-                                            ]
+                                yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
+                                        i [clazz "large Sticky Note middle aligned icon"; style bgc][]
+                                        div [clazz "content"] [
+                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
+                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
+                                            yield div [clazz "header"] [Incremental.text header]                                       
+                                            yield div [clazz "description"] [Incremental.text desc]      
+                                        ]
                                     ]                                                                    
                             }     
                     )
@@ -209,6 +211,64 @@ module Drawing =
             Html.SemUi.accordion "Annotations" "File Outline" true [
                 viewAnnotations model 
             ]
+
+    //module DipAndStrike = 
+
+    //    let projectOntoPlane (x:V3d) (n:V3d) = (x - (x * n)).Normalized
+
+    //    let computeAzimuth (dir:V3d) (north:V3d) (planeNormal:V3d) =
+    //        let east = north.Cross(planeNormal)
+    //        let eastWestPlane = new Plane3d(east, 0.0) //separates west (-) from east  (+)
+    //        let northSouthPlane = new Plane3d(north, 0.0) //separates sout (-) from north  (+)
+
+    //        let coords = new V2d(eastWestPlane.Height(dir), northSouthPlane.Height(dir))
+    //        let angle = Fun.Atan(coords.Y / coords.X).DegreesFromRadians().Abs()
+
+    //        let nangle = match coords.X >= 0.0 with
+    //                        | true -> match coords.Y >= 0.0 with
+    //                                    | true -> 90.0 - angle
+    //                                    | false -> angle + 90.0
+    //                        | false -> match coords.Y > 0.0 with
+    //                                    | true -> 270.0 + angle
+    //                                    | false -> 270.0 - angle
+    //        nangle
+
+            
+  
+    //    let calculateDipAndStrikeResults (points:plist<V3d>) =
+    //        let up = V3d.OOI
+    //        let north = V3d.IOO
+    //        let plane = Aardvark.VRVis.PlaneFitting.FitPlane3dLS(points);
+    //        let bb = new Box3d(points);
+
+    //        let horP = new Plane3d(up, V3d.Zero);
+
+    //         //correct plane orientation - check if normals point in same direction
+    //        let height = horP.Height(plane.Normal);
+    //        if (height.Sign() = -1) then
+    //                plane.Normal = plane.Normal.Negated;
+
+    //        let n = plane.Normal;
+
+    //        //strike
+    //        let strike = up.Cross(n).Normalized;
+
+    //        //dip vector 
+    //        let dip = strike.Cross(n).Normalized;
+
+    //        //dip plane incline .. maximum dip angle
+    //        let v = strike.Cross(up).Normalized;
+
+    //        let dns = {
+    //            plane = plane
+    //            dipAngle = Math.Acos(v.Dot(dip)).DegreesFromRadians()
+    //            dipDirection = dip
+    //            strikeDirection = strike
+    //            dipAzimuth = computeAzimuth(v, north, up)
+    //            strikeAzimuth = computeAzimuth(strike, north, up)
+    //            centerOfMass = bb.Center
+    //        }
+    //        dns
 
     module Sg =        
 
@@ -302,7 +362,8 @@ module Drawing =
                     match o with
                         | Some a -> a.points
                         | None -> AList.empty
-                )    
+                ) 
+            
                 
             let withDefault (m : IMod<Option<'a>>) (f : 'a -> IMod<'b>) (defaultValue : 'b) = 
                 let defaultValue = defaultValue |> Mod.constant
@@ -334,9 +395,14 @@ module Drawing =
             [polyline; dots points color view]
          //   [dots points color view]
 
-        let annotation' (anno : MAnnotation)(view : IMod<CameraView>)(trafo : IMod<Trafo3d>)(color : IMod<C4b>) = 
-            [lines anno.points color anno.thickness.value trafo;
-             dots anno.points color view] 
+        let annotation' (anno : MAnnotation)(view : IMod<CameraView>)(trafo:IMod<Trafo3d>) = 
+            let count = anno.segments |> AList.toMod |> (Mod.map PList.count)
+            let c = Mod.force count
+            let points = match c with       
+                            | 0 -> anno.points
+                            | _ -> anno.segments |> AList.concat
+            [lines points anno.color anno.thickness.value trafo;
+             dots anno.points anno.color view] 
             |> ASet.ofList
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =        
@@ -351,6 +417,7 @@ module Drawing =
                     for a in annoSet do
                        // let a = { a with color = UI.mkColor a }
                        let c = UI.mkColor model a
+                       
                        yield! annotation' a cam a.modelTrafo c
                 } |> Sg.set
                                 

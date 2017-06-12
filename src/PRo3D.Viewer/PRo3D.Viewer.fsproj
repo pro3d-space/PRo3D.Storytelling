@@ -76,6 +76,7 @@
     <Compile Include="GuiEx.fs" />
     <Compile Include="Properties.fs" />
     <Compile Include="Drawing.fs" />
+    <Compile Include="MeasurementsImporter.fs" />
     <Compile Include="Viewer.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
@@ -85,6 +86,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Aardvark.VRVis.Processing">
+      <HintPath>..\..\packages\Aardvark.VRVis.Processing\lib\net45\Aardvark.VRVis.Processing.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
@@ -97,6 +101,7 @@
       <Project>{3b784ce7-f853-449a-a860-8d735c2a3f74}</Project>
       <Private>True</Private>
     </ProjectReference>
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
@@ -234,6 +239,17 @@
       <ItemGroup>
         <Reference Include="Aardvark.Compiler.DomainTypes">
           <HintPath>..\..\packages\Aardvark.Compiler.DomainTypes\lib\net45\Aardvark.Compiler.DomainTypes.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
+        <Reference Include="Aardvark.Data.PhotoNetwork">
+          <HintPath>..\..\packages\Aardvark.Data.PhotoNetwork\lib\net45\Aardvark.Data.PhotoNetwork.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
