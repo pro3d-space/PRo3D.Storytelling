@@ -10,6 +10,7 @@ open Aardvark.Application
 open Aardvark.Opc
 open Aardvark.SceneGraph
 open Aardvark.VRVis
+//open Aardvark.Data.PhotoNetwork
 
 type NavigationMode = FreeFly = 0 | ArcBall = 1
 type InteractionMode = PickOrbitCenter = 0 | Draw = 1 | PlaceObject = 2
