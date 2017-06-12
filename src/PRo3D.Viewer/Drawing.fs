@@ -171,41 +171,42 @@ module Drawing =
 
             color
 
-        let viewAnnotations (model:MDrawingModel) = 
-            div[][
-                div [clazz "ui buttons inverted"] [
-                    button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
-                            i [clazz "save icon"] [] ]
-                    button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
-                            i [clazz "folder outline icon"] [] ]
-                    button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
-                            i [clazz "file outline icon"] [] ]
-                ]
+        let viewAnnotationImportExport =
+            div [clazz "ui buttons inverted"] [
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
+                        i [clazz "save icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
+                        i [clazz "folder outline icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
+                        i [clazz "file outline icon"] [] ]
+            ]
 
-                Incremental.div 
-                        (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "height: 100%; overflow-y:auto"]) (
+        let viewAnnotations (model:MDrawingModel) = 
                             
-                            alist {                                                                     
-                                for a in model.annotations do 
+            Incremental.div 
+                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (
+                            
+                        alist {                                                                     
+                            for a in model.annotations do 
                                         
                                 
-                                let! sem = a.semantic
-                                let c = Mod.force a.color //Annotation.color.[int sem]
+                            let! sem = a.semantic
+                            let! c = mkColor model a
 
-                                let bgc = sprintf "color: %s" (Html.ofC4b c)
+                            let bgc = sprintf "color: %s" (Html.ofC4b c)
                                     
-                                yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
-                                        i [clazz "large Sticky Note middle aligned icon"; style bgc][]
-                                        div [clazz "content"] [
-                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
-                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
-                                            yield div [clazz "header"] [Incremental.text header]                                       
-                                            yield div [clazz "description"] [Incremental.text desc]      
-                                        ]
-                                    ]                                                                    
-                            }     
-                    )
-            ]
+                            yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
+                                    i [clazz "large Sticky Note middle aligned icon"; style bgc][]
+                                    div [clazz "content"] [
+                                        let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
+                                        let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
+                                        yield div [clazz "header"] [Incremental.text header]                                       
+                                        yield div [clazz "description"] [Incremental.text desc]      
+                                    ]
+                                ]
+                        }     
+                )
+            
 
         let viewAnnotationsAcc (model:MDrawingModel) = 
             Html.SemUi.accordion "Annotations" "File Outline" true [
@@ -387,22 +388,19 @@ module Drawing =
                                                 | Some a -> a.modelTrafo
                                                 | None -> Mod.constant Trafo3d.Identity)
             
-            let polyline = lines points color thickness trafo
-            let polyline =
-                polyline 
-                    
+            let polyline = lines points color thickness trafo                                
 
-            [polyline; dots points color view]
-         //   [dots points color view]
+            [polyline; dots points color view]         
 
-        let annotation' (anno : MAnnotation)(view : IMod<CameraView>)(trafo:IMod<Trafo3d>) = 
-            let count = anno.segments |> AList.toMod |> (Mod.map PList.count)
-            let c = Mod.force count
-            let points = match c with       
-                            | 0 -> anno.points
-                            | _ -> anno.segments |> AList.concat
-            [lines points anno.color anno.thickness.value trafo;
-             dots anno.points anno.color view] 
+        let annotation' (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =                         
+            let points = 
+                if (anno.segments |> AList.toList |> List.isEmpty) then
+                    anno.points
+                else
+                    anno.segments |> AList.concat
+
+            [lines points c anno.thickness.value anno.modelTrafo;
+             dots anno.points c view] 
             |> ASet.ofList
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =        
@@ -414,11 +412,9 @@ module Drawing =
 
             let annotations =
                 aset {
-                    for a in annoSet do
-                       // let a = { a with color = UI.mkColor a }
-                       let c = UI.mkColor model a
-                       
-                       yield! annotation' a cam a.modelTrafo c
+                    for a in annoSet do                       
+                       let c = UI.mkColor model a                       
+                       yield! annotation' a cam c
                 } |> Sg.set
                                 
             //canvas

@@ -11,19 +11,20 @@ module GuiEx =
 
         let finish<'msg> = td[] []
 
-    let menu (c : string )(entries : list<string * list<DomNode<'msg>>>) =
-            div [ clazz c ] (
-                entries |> List.map (fun (name, children) ->
-                    div [ clazz "item"] [ 
-                        b [] [text name]
-                        div [ clazz "menu" ] (
-                            children |> List.map (fun c ->
-                                div [clazz "item"] [c]
-                            )
+    let menu (c : string )(s : string)(entries : list<string * list<DomNode<'msg>>>) =                    
+        div [ clazz c; style s ] (
+            entries |> List.map (fun (name, children) ->
+                div [ clazz "item"] [ 
+                    b [] [text name]
+                    div [ clazz "menu" ] (
+                        children |> List.map (fun c ->
+                            div [clazz "item"] [c]
                         )
-                    ]
-                )
+                    )
+                ]
             )
+        )
+        
        
     let adornerMenu2 (sectionsAndItems : list<string * list<DomNode<'msg>>>)(top : list<DomNode<'msg>>) (rest : list<DomNode<'msg>>) =            
         let pushButton() = 
@@ -39,7 +40,7 @@ module GuiEx =
             let c = [pushButton()] @ rest
 
             yield 
-                menu "ui vertical inverted sidebar menu" sectionsAndItems
+                menu "ui vertical inverted sidebar menu" "" sectionsAndItems
             yield
                 div [clazz "ui bottom fixed menu"] top 
             yield 
@@ -48,16 +49,16 @@ module GuiEx =
 
     let adornerMenu (sectionsAndItems : list<string * list<DomNode<'msg>>>)(top : list<DomNode<'msg>>) (rest : list<DomNode<'msg>>) =       
         [
-            div[clazz "ui top attached demo menu blarg"] [
+            div[clazz "ui top fixed menu blarg"] [
                 a [clazz "item blarg"] [
                     i [clazz "sidebar icon"] []
                 ]
                 div [] top
                 
             ]
-            div [clazz "ui bottom attached segment pushable blarg"] [
-                menu "ui vertical inverted sidebar menu" sectionsAndItems
-                div [clazz "pusher"; style "background:#000"] rest
+            div [clazz "ui bottom attached segment pushable blarg";] [
+                menu "ui vertical inverted sidebar menu" "" sectionsAndItems
+                div [clazz "pusher"; style "background:#000;"] rest
             ]
 
              
@@ -81,5 +82,25 @@ module GuiEx =
                         let classAttr = "ui inverted bottom attached tab segment"
                         let active = if name = active then (sprintf "%s %s" classAttr "active") else classAttr
                         yield div [clazz active; attribute "data-tab" name] [ch]         
+                ]
+            )
+
+    let accordion text' icon active content' =
+            let title = if active then "title active inverted" else "title inverted"
+            let content = if active then "content active" else "content"
+                                    
+            onBoot "$('#__ID__').accordion();" (
+                div [clazz "ui inverted segment"] [
+                    div [clazz "ui inverted accordion fluid"] [
+                        div [clazz title] [
+                                i [clazz (icon + " large icon circular")][]                                 
+                                text text'
+                                //Static.a [clazz "ui label"] [
+                                //    i [clazz (icon + " icon circular inverted")] []
+                                //    text text'
+                                //]
+                        ]
+                        div [clazz content] content'
+                    ]
                 ]
             )

@@ -26,3 +26,8 @@ div.title {
     padding-top: 0px;
     padding-bottom: 0px;
 }
+
+/*div.content.active {
+    overflow-y : auto;    
+    max-height: 30%    
+}*/

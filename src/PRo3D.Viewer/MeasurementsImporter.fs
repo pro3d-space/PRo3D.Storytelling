@@ -98,7 +98,7 @@ module MeasurementsImporter =
                 color = style.color
                 thickness = style.thickness
                 dnsResults = None
-                local2global = Some trafo
+                modelTrafo = trafo
                 visible = true 
                 text = ""
         }

@@ -102,8 +102,7 @@ type Annotation = {
     segments : plist<plist<V3d>> //list<Segment>
     color : C4b
     thickness : NumericInput
-    dnsResults : Option<DipAndStrikeResults>
-    local2global : Option<Trafo3d>
+    dnsResults : Option<DipAndStrikeResults>    
 
     visible : bool
     text : string
@@ -138,8 +137,7 @@ module Annotation =
             segments = plist.Empty //[]
             color = color
             thickness = { thickn with value = thickness}
-            dnsResults = None
-            local2global = None
+            dnsResults = None            
             projection = projection
             visible = true
             text = ""

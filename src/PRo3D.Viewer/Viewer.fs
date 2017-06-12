@@ -119,7 +119,12 @@ module Surface =
 module Viewer =
     open Surface
    
+    type PropertyActions =
+        | DrawingMessage of Drawing.Action
+        | AnnotationMessage of AnnotationProperties.Action
+
     type Message =
+        | PropertyMessage of PropertyActions
         | CameraMessage of CameraController.Message        
         | DrawingMessage of Drawing.Action
         | AnnotationMessage of AnnotationProperties.Action
@@ -272,7 +277,7 @@ module Viewer =
                     (AttributeMap.ofList [ 
                             onKeyDown (KeyDown)
                             onKeyUp (KeyUp)
-                            attribute "style" "width:70%; height: 95%; float:left"; ]) 
+                            attribute "style" "width:70%; height: 100%; float:left"; ]) 
                     (                    
                         let annotations =
                             Drawing.Sg.view m.drawing m.scene.cameraModel.view
@@ -319,7 +324,7 @@ module Viewer =
 
         let surfaceList = 
             Incremental.div 
-                (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflowY:auto"]) (
+                (AttributeMap.ofList [clazz "ui divided list inverted segment";]) (
                     alist {
                         for s in (m.surfaces |> AList.ofASet) do
                                 yield div [clazz "item"] [
@@ -337,19 +342,6 @@ module Viewer =
                     }
             )   
 
-        let annotationUI = 
-            div [][
-                Drawing.UI.viewAnnotations m.drawing
-            ]
-            
-
-        let tabs = GuiEx.tabbed [clazz "ui inverted segment"; style "height: 45%"] [
-                            ("Surfaces", surfaceList)
-                            ("Annotations", annotationUI)
-                            ("Config", text "Config")
-                        ] "Surfaces"
-      
-        let topMenu = [Drawing.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage]                                
 
         let properties (model:MModel) =
             adaptive {
@@ -362,18 +354,38 @@ module Viewer =
                 return (opt |> UI.map AnnotationMessage)
             } 
 
+        let annotationUI = 
+            div [][
+                
+                Drawing.UI.viewAnnotationImportExport |> UI.map DrawingMessage
+                
+
+                GuiEx.accordion "Annotations" "Write" true [
+                    Drawing.UI.viewAnnotations m.drawing |> UI.map DrawingMessage
+                ]
+                GuiEx.accordion "Properties" "Write" true [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(properties m))
+                ]
+            ]
             
 
+        let tabs = GuiEx.tabbed [clazz "ui inverted segment"] [
+                            ("Surfaces", surfaceList)
+                            ("Annotations", annotationUI)
+                            ("Config", text "Config")
+                        ] "Surfaces" 
+      
+        let topMenu = [(Drawing.UI.viewAnnotationToolsHorizontal m.drawing) |> UI.map DrawingMessage ]                               
+        
         let rest (model : MModel) = 
             [             
                 renderControl
-                div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E"] [
-                 
-                    tabs |> UI.map DrawingMessage
-               //     div [clazz "ui horizontal divider inverted"][text "Properties"]
-                    div [clazz "ui"; style "height: 300px; overflowY:scroll"][                        
-                        Html.SemUi.accordion "Properties" "settings" true [Incremental.div AttributeMap.empty (AList.ofModSingle(properties model))]
-                    ]
+                div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden"] [
+                    div[style "height:41px"][text "spacer"]
+                    tabs
+
+               //     div [clazz "ui horizontal divider inverted"][text "Properties"]                                                            
+                    
                 ]            
             ]
         
@@ -390,12 +402,12 @@ module Viewer =
 
         require (Html.semui @ [myCss]) (
             let sections = [
-                "Interactions", [interactTools]             
+                "Interactions", [interactTools]
                 "Scene", [sceneTools]
                 "Add Surface", [openSurface]
                 "Import Measurements", [importMeasurements]]                              
             onBoot usingContext (                            
-                body [clazz "context example"; style "overflow:hidden"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
+                body [clazz "context example"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
         ))
                                                               
 

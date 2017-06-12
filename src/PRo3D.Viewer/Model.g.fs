@@ -105,7 +105,6 @@ module Mutable =
         let _color = ResetMod.Create(__initial.color)
         let _thickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.thickness)
         let _dnsResults = MOption.Create(__initial.dnsResults, (fun v -> MDipAndStrikeResults.Create(v)), (fun (m,v) -> MDipAndStrikeResults.Update(m, v)), (fun v -> v))
-        let _local2global = MOption.Create(__initial.local2global)
         let _visible = ResetMod.Create(__initial.visible)
         let _text = ResetMod.Create(__initial.text)
         
@@ -119,7 +118,6 @@ module Mutable =
         member x.color = _color :> IMod<_>
         member x.thickness = _thickness
         member x.dnsResults = _dnsResults :> IMod<_>
-        member x.local2global = _local2global :> IMod<_>
         member x.visible = _visible :> IMod<_>
         member x.text = _text :> IMod<_>
         
@@ -137,7 +135,6 @@ module Mutable =
                 ResetMod.Update(_color,v.color)
                 Aardvark.UI.Mutable.MNumericInput.Update(_thickness, v.thickness)
                 MOption.Update(_dnsResults, v.dnsResults)
-                MOption.Update(_local2global, v.local2global)
                 ResetMod.Update(_visible,v.visible)
                 ResetMod.Update(_text,v.text)
         
@@ -211,12 +208,6 @@ module Mutable =
                     override x.Get(r) = r.dnsResults
                     override x.Set(r,v) = { r with dnsResults = v }
                     override x.Update(r,f) = { r with dnsResults = f r.dnsResults }
-                }
-            let local2global =
-                { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.Option<Aardvark.Base.Trafo3d>>() with
-                    override x.Get(r) = r.local2global
-                    override x.Set(r,v) = { r with local2global = v }
-                    override x.Update(r,f) = { r with local2global = f r.local2global }
                 }
             let visible =
                 { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.bool>() with
