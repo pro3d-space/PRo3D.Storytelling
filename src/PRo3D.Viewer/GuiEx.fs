@@ -55,9 +55,9 @@ module GuiEx =
                 div [] top
                 
             ]
-            div [clazz "ui bottom attached segment pushable"] [
+            div [clazz "ui bottom attached segment pushable blarg"] [
                 menu "ui vertical inverted sidebar menu" sectionsAndItems
-                div [clazz "pusher"; style "height:95%; background:#000"] rest
+                div [clazz "pusher"; style "background:#000"] rest
             ]
 
              
@@ -67,3 +67,19 @@ module GuiEx =
              
             
         ]
+
+    let tabbed attr content active =            
+            onBoot "$('.menu .item').tab();" (
+                div attr [
+                    yield div [clazz "ui inverted segment top attached tabular menu"] [
+                            for (name,ch) in content do
+                                let active = if name = active then "inverted item active" else "inverted item"
+                                yield Static.a [clazz active; attribute "data-tab" name][text name]
+                          ]
+                                        
+                    for (name,ch) in content do
+                        let classAttr = "ui inverted bottom attached tab segment"
+                        let active = if name = active then (sprintf "%s %s" classAttr "active") else classAttr
+                        yield div [clazz active; attribute "data-tab" name] [ch]         
+                ]
+            )

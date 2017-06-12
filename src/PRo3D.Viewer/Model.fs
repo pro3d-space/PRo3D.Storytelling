@@ -77,6 +77,8 @@ type Semantic = Horizon0 = 0 | Horizon1 = 1 | Horizon2 = 2 | Horizon3 = 3 | Hori
 type Annotation = {
     key : Guid
 
+    modelTrafo : Trafo3d
+
     geometry : Geometry
     projection : Projection
     semantic : Semantic
@@ -117,6 +119,7 @@ module Annotation =
             projection = projection
             visible = true
             text = ""
+            modelTrafo = Trafo3d.Identity
         }
 
     let initial =
@@ -126,8 +129,7 @@ module Annotation =
 type DrawingModel = {
 
     draw    : bool 
-    hoverPosition : option<Trafo3d>
-    offset : option<V3d>
+    hoverPosition : option<Trafo3d>    
 
     working : Option<Annotation>
     projection : Projection
@@ -205,8 +207,7 @@ type Model = {
 module Model =
     let initialdrawing = {
         hoverPosition = None
-        draw = false            
-        offset = None        
+        draw = false                    
 
         working = None
         projection = Projection.Viewpoint

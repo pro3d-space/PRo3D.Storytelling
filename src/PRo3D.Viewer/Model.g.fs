@@ -12,6 +12,7 @@ module Mutable =
     type MAnnotation(__initial : PRo3D.Annotation) = 
         let mutable __current = __initial
         let _key = ResetMod.Create(__initial.key)
+        let _modelTrafo = ResetMod.Create(__initial.modelTrafo)
         let _geometry = ResetMod.Create(__initial.geometry)
         let _projection = ResetMod.Create(__initial.projection)
         let _semantic = ResetMod.Create(__initial.semantic)
@@ -23,6 +24,7 @@ module Mutable =
         let _text = ResetMod.Create(__initial.text)
         
         member x.key = _key :> IMod<_>
+        member x.modelTrafo = _modelTrafo :> IMod<_>
         member x.geometry = _geometry :> IMod<_>
         member x.projection = _projection :> IMod<_>
         member x.semantic = _semantic :> IMod<_>
@@ -38,6 +40,7 @@ module Mutable =
                 __current <- v
                 
                 ResetMod.Update(_key,v.key)
+                ResetMod.Update(_modelTrafo,v.modelTrafo)
                 ResetMod.Update(_geometry,v.geometry)
                 ResetMod.Update(_projection,v.projection)
                 ResetMod.Update(_semantic,v.semantic)
@@ -64,6 +67,12 @@ module Mutable =
                     override x.Get(r) = r.key
                     override x.Set(r,v) = { r with key = v }
                     override x.Update(r,f) = { r with key = f r.key }
+                }
+            let modelTrafo =
+                { new Lens<PRo3D.Annotation, Aardvark.Base.Trafo3d>() with
+                    override x.Get(r) = r.modelTrafo
+                    override x.Set(r,v) = { r with modelTrafo = v }
+                    override x.Update(r,f) = { r with modelTrafo = f r.modelTrafo }
                 }
             let geometry =
                 { new Lens<PRo3D.Annotation, PRo3D.Geometry>() with
@@ -124,7 +133,6 @@ module Mutable =
         let mutable __current = __initial
         let _draw = ResetMod.Create(__initial.draw)
         let _hoverPosition = MOption.Create(__initial.hoverPosition)
-        let _offset = MOption.Create(__initial.offset)
         let _working = MOption.Create(__initial.working, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
         let _projection = ResetMod.Create(__initial.projection)
         let _geometry = ResetMod.Create(__initial.geometry)
@@ -136,7 +144,6 @@ module Mutable =
         
         member x.draw = _draw :> IMod<_>
         member x.hoverPosition = _hoverPosition :> IMod<_>
-        member x.offset = _offset :> IMod<_>
         member x.working = _working :> IMod<_>
         member x.projection = _projection :> IMod<_>
         member x.geometry = _geometry :> IMod<_>
@@ -152,7 +159,6 @@ module Mutable =
                 
                 ResetMod.Update(_draw,v.draw)
                 MOption.Update(_hoverPosition, v.hoverPosition)
-                MOption.Update(_offset, v.offset)
                 MOption.Update(_working, v.working)
                 ResetMod.Update(_projection,v.projection)
                 ResetMod.Update(_geometry,v.geometry)
@@ -184,12 +190,6 @@ module Mutable =
                     override x.Get(r) = r.hoverPosition
                     override x.Set(r,v) = { r with hoverPosition = v }
                     override x.Update(r,f) = { r with hoverPosition = f r.hoverPosition }
-                }
-            let offset =
-                { new Lens<PRo3D.DrawingModel, Microsoft.FSharp.Core.option<Aardvark.Base.V3d>>() with
-                    override x.Get(r) = r.offset
-                    override x.Set(r,v) = { r with offset = v }
-                    override x.Update(r,f) = { r with offset = f r.offset }
                 }
             let working =
                 { new Lens<PRo3D.DrawingModel, Microsoft.FSharp.Core.Option<PRo3D.Annotation>>() with

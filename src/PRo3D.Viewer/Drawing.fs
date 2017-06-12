@@ -49,12 +49,7 @@ module Drawing =
                     {model with draw = false; hoverPosition = None }
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
-            | AddPoint p, true -> 
-                    let model =
-                        match model.offset with
-                            | None -> { model with offset = Some p }
-                            | Some _ -> model
-
+            | AddPoint p, true ->                     
                     let working = 
                         match model.working with
                                 | Some w ->     
@@ -62,7 +57,10 @@ module Drawing =
                                     Log.line "working contains %d points" k.points.Count
                                     k
                                 | None ->                                     
-                                    { (Annotation.make model.projection model.geometry model.semantic) with points = PList.ofList [p]}//add annotation states
+                                    { 
+                                        (Annotation.make model.projection model.geometry model.semantic) 
+                                            with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
+                                    } //add annotation states
 
                     let model = { model with working = Some working }
 
@@ -118,9 +116,12 @@ module Drawing =
                 { model with annotations = PList.empty }
             | Select id, false ->
                 let selection = 
-                    if HSet.contains id model.selected 
-                    then HSet.remove id model.selected 
-                    else HSet.add id model.selected
+                    if (not model.selected.IsEmpty) then
+                        if HSet.contains id model.selected 
+                        then HSet.remove id model.selected 
+                        else HSet.add id HSet.empty
+                    else
+                        HSet.add id model.selected                                        
 
                 let ann = DrawingModel.tryGet model id
                         
@@ -181,7 +182,7 @@ module Drawing =
                 ]
 
                 Incremental.div 
-                        (AttributeMap.ofList [clazz "ui divided list inverted segment"]) (
+                        (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "height: 100%; overflow-y:auto"]) (
                             
                             alist {                                                                     
                                 for a in model.annotations do 
@@ -294,7 +295,7 @@ module Drawing =
                 |> Sg.pass (RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main)
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
    
-        let annotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>)(trafo:IMod<Trafo3d>) = 
+        let annotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
             //alist builder?
             let points = 
                 anno |> AList.bind (fun o -> 
@@ -319,6 +320,11 @@ module Drawing =
                 anno |> Mod.bind (function o -> match o with
                                                 | Some a -> a.key
                                                 | None -> Mod.constant Guid.Empty)
+
+            let trafo = 
+                anno |> Mod.bind (function o -> match o with
+                                                | Some a -> a.modelTrafo
+                                                | None -> Mod.constant Trafo3d.Identity)
             
             let polyline = lines points color thickness trafo
             let polyline =
@@ -338,17 +344,17 @@ module Drawing =
             // since set provides more degrees of freedom for the compiler
             let annoSet = ASet.ofAList model.annotations 
 
-            let trafo = model.offset |> Mod.map (fun d -> match d with | Some p -> Trafo3d.Translation p | None -> Trafo3d.Identity )
+           // let trafo = model.offset |> Mod.map (fun d -> match d with | Some p -> Trafo3d.Translation p | None -> Trafo3d.Identity )
 
             let annotations =
                 aset {
                     for a in annoSet do
                        // let a = { a with color = UI.mkColor a }
                        let c = UI.mkColor model a
-                       yield! annotation' a cam trafo c
+                       yield! annotation' a cam a.modelTrafo c
                 } |> Sg.set
                                 
             //canvas
-            [brush model.hoverPosition; annotations] @ annotation model.working cam trafo
+            [brush model.hoverPosition; annotations] @ annotation model.working cam
             |> Sg.ofList
             

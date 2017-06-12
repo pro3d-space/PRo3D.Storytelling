@@ -299,7 +299,7 @@ module Viewer =
 
         let surfaceList = 
             Incremental.div 
-                (AttributeMap.ofList [clazz "ui divided list inverted segment"]) (
+                (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflowY:auto"]) (
                     alist {
                         for s in (m.surfaces |> AList.ofASet) do
                                 yield div [clazz "item"] [
@@ -323,7 +323,7 @@ module Viewer =
             ]
             
 
-        let tabs = Html.SemUi.tabbed [clazz "ui inverted segment"] [
+        let tabs = GuiEx.tabbed [clazz "ui inverted segment"; style "height: 45%"] [
                             ("Surfaces", surfaceList)
                             ("Annotations", annotationUI)
                             ("Config", text "Config")
@@ -348,12 +348,11 @@ module Viewer =
             [             
                 renderControl
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E"] [
-                    div [clazz "ui"; style "height: 40%"][
-                        tabs |> UI.map DrawingMessage
-                    ]
-                    div [clazz "ui"; style "height: 40%"][
-                        text "Properties"
-                        Incremental.div AttributeMap.empty (AList.ofModSingle(properties model))
+                 
+                    tabs |> UI.map DrawingMessage
+               //     div [clazz "ui horizontal divider inverted"][text "Properties"]
+                    div [clazz "ui"; style "height: 300px; overflowY:scroll"][                        
+                        Html.SemUi.accordion "Properties" "settings" true [Incremental.div AttributeMap.empty (AList.ofModSingle(properties model))]
                     ]
                 ]            
             ]
@@ -361,7 +360,7 @@ module Viewer =
         let usingContext =             
             "$('.context.example .ui.sidebar')
               .sidebar({
-                context: $('.context.example .bottom.segment')
+                context: $('.context.example .bottom.segment.blarg')
               })
               .sidebar('attach events', '.context.example .menu.blarg .item.blarg')
             ;"
