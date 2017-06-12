@@ -24,12 +24,10 @@ module MeasurementsImporter =
         }
 
     let getTrafo (t:XElement) = 
-        let strafo = t.Value.NestedBracketSplit(0)
-        let strafo1 = t.Value.NestedBracketSplitLevelOne()
-        let test = strafo1
-                    |> Seq.map(fun x ->  M44d.Parse(x))
-                    |> List.ofSeq
-        let trafo = Trafo3d(test.[0], test.[1])
+        let strafo = t.Value.NestedBracketSplitLevelOne()
+                        |> Seq.map(fun x ->  M44d.Parse(x))
+                        |> List.ofSeq
+        let trafo = Trafo3d(strafo.[0], strafo.[1])
         trafo
 
     let parsePointsLevelOne (points:XElement) = points.Value.NestedBracketSplitLevelOne()
