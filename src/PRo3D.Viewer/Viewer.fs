@@ -122,6 +122,7 @@ module Viewer =
     type Message =
         | CameraMessage of CameraController.Message        
         | DrawingMessage of Drawing.Action
+        | AnnotationMessage of AnnotationProperties.Action
         | ImportSurface 
         | ImportMeasurements 
         | QuickLoad
@@ -350,7 +351,20 @@ module Viewer =
       
         let topMenu = [Drawing.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage]                                
 
-        let rest model = 
+        let properties (model:MModel) =
+            adaptive {
+                let! bla = model.drawing.selectedAnnotation
+                let opt = 
+                    match bla with
+                        | Some a -> AnnotationProperties.view a
+                        | None   -> div[][]
+
+                return (opt |> UI.map AnnotationMessage)
+            } 
+
+            
+
+        let rest (model : MModel) = 
             [             
                 renderControl
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E"] [
@@ -359,6 +373,7 @@ module Viewer =
                     ]
                     div [clazz "ui"; style "height: 40%"][
                         text "Properties"
+                        Incremental.div AttributeMap.empty (AList.ofModSingle(properties model))
                     ]
                 ]            
             ]
@@ -373,6 +388,7 @@ module Viewer =
 
         //Sidebar adorner
         let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "./semui-overrides.css" }
+
         require (Html.semui @ [myCss]) (
             let sections = [
                 "Interactions", [interactTools]             
