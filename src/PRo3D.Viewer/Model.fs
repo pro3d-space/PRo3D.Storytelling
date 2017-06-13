@@ -92,6 +92,8 @@ type DipAndStrikeResults = {
 type Annotation = {
     key : Guid
 
+    modelTrafo : Trafo3d
+
     geometry : Geometry
     projection : Projection
     semantic : Semantic
@@ -100,8 +102,7 @@ type Annotation = {
     segments : plist<plist<V3d>> //list<Segment>
     color : C4b
     thickness : NumericInput
-    dnsResults : Option<DipAndStrikeResults>
-    local2global : Option<Trafo3d>
+    dnsResults : Option<DipAndStrikeResults>    
 
     visible : bool
     text : string
@@ -136,11 +137,11 @@ module Annotation =
             segments = plist.Empty //[]
             color = color
             thickness = { thickn with value = thickness}
-            dnsResults = None
-            local2global = None
+            dnsResults = None            
             projection = projection
             visible = true
             text = ""
+            modelTrafo = Trafo3d.Identity
         }
 
     let initial =
@@ -150,8 +151,7 @@ module Annotation =
 type DrawingModel = {
 
     draw    : bool 
-    hoverPosition : option<Trafo3d>
-    offset : option<V3d>
+    hoverPosition : option<Trafo3d>    
 
     working : Option<Annotation>
     projection : Projection
@@ -235,8 +235,7 @@ type Model = {
 module Model =
     let initialdrawing = {
         hoverPosition = None
-        draw = false            
-        offset = None        
+        draw = false                    
 
         working = None
         projection = Projection.Viewpoint

@@ -50,12 +50,7 @@ module Drawing =
                     {model with draw = false; hoverPosition = None }
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
-            | AddPoint p, true -> 
-                    let model =
-                        match model.offset with
-                            | None -> { model with offset = Some p }
-                            | Some _ -> model
-
+            | AddPoint p, true ->                     
                     let working = 
                         match model.working with
                                 | Some w ->     
@@ -63,7 +58,10 @@ module Drawing =
                                     Log.line "working contains %d points" k.points.Count
                                     k
                                 | None ->                                     
-                                    { (Annotation.make model.projection model.geometry model.semantic) with points = PList.ofList [p]}//add annotation states
+                                    { 
+                                        (Annotation.make model.projection model.geometry model.semantic) 
+                                            with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
+                                    } //add annotation states
 
                     let model = { model with working = Some working }
 
@@ -119,9 +117,12 @@ module Drawing =
                 { model with annotations = PList.empty }
             | Select id, false ->
                 let selection = 
-                    if HSet.contains id model.selected 
-                    then HSet.remove id model.selected 
-                    else HSet.add id model.selected
+                    if (not model.selected.IsEmpty) then
+                        if HSet.contains id model.selected 
+                        then HSet.remove id model.selected 
+                        else HSet.add id HSet.empty
+                    else
+                        HSet.add id model.selected                                        
 
                 let ann = DrawingModel.tryGet model id
                         
@@ -170,41 +171,42 @@ module Drawing =
 
             color
 
-        let viewAnnotations (model:MDrawingModel) = 
-            div[][
-                div [clazz "ui buttons inverted"] [
-                    button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
-                            i [clazz "save icon"] [] ]
-                    button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
-                            i [clazz "folder outline icon"] [] ]
-                    button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
-                            i [clazz "file outline icon"] [] ]
-                ]
+        let viewAnnotationImportExport =
+            div [clazz "ui buttons inverted"] [
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
+                        i [clazz "save icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
+                        i [clazz "folder outline icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
+                        i [clazz "file outline icon"] [] ]
+            ]
 
-                Incremental.div 
-                        (AttributeMap.ofList [clazz "ui divided list inverted segment"]) (
+        let viewAnnotations (model:MDrawingModel) = 
                             
-                            alist {                                                                     
-                                for a in model.annotations do 
+            Incremental.div 
+                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (
+                            
+                        alist {                                                                     
+                            for a in model.annotations do 
                                         
                                 
-                                let! sem = a.semantic
-                                let c = Mod.force a.color //Annotation.color.[int sem]
+                            let! sem = a.semantic
+                            let! c = mkColor model a
 
-                                let bgc = sprintf "color: %s" (Html.ofC4b c)
+                            let bgc = sprintf "color: %s" (Html.ofC4b c)
                                     
-                                yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
-                                        i [clazz "large Sticky Note middle aligned icon"; style bgc][]
-                                        div [clazz "content"] [
-                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
-                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
-                                            yield div [clazz "header"] [Incremental.text header]                                       
-                                            yield div [clazz "description"] [Incremental.text desc]      
-                                        ]
-                                    ]                                                                    
-                            }     
-                    )
-            ]
+                            yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
+                                    i [clazz "large Sticky Note middle aligned icon"; style bgc][]
+                                    div [clazz "content"] [
+                                        let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
+                                        let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
+                                        yield div [clazz "header"] [Incremental.text header]                                       
+                                        yield div [clazz "description"] [Incremental.text desc]      
+                                    ]
+                                ]
+                        }     
+                )
+            
 
         let viewAnnotationsAcc (model:MDrawingModel) = 
             Html.SemUi.accordion "Annotations" "File Outline" true [
@@ -374,7 +376,7 @@ module Drawing =
                 |> Sg.pass (RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main)
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
    
-        let annotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>)(trafo:IMod<Trafo3d>) = 
+        let annotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
             //alist builder?
             let points = 
                 anno |> AList.bind (fun o -> 
@@ -400,23 +402,25 @@ module Drawing =
                 anno |> Mod.bind (function o -> match o with
                                                 | Some a -> a.key
                                                 | None -> Mod.constant Guid.Empty)
+
+            let trafo = 
+                anno |> Mod.bind (function o -> match o with
+                                                | Some a -> a.modelTrafo
+                                                | None -> Mod.constant Trafo3d.Identity)
             
-            let polyline = lines points color thickness trafo
-            let polyline =
-                polyline 
-                    
+            let polyline = lines points color thickness trafo                                
 
-            [polyline; dots points color view]
-         //   [dots points color view]
+            [polyline; dots points color view]         
 
-        let annotation' (anno : MAnnotation)(view : IMod<CameraView>)(trafo:IMod<Trafo3d>) = 
-            let count = anno.segments |> AList.toMod |> (Mod.map PList.count)
-            let c = Mod.force count
-            let points = match c with       
-                            | 0 -> anno.points
-                            | _ -> anno.segments |> AList.concat
-            [lines points anno.color anno.thickness.value trafo;
-             dots anno.points anno.color view] 
+        let annotation' (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =                         
+            let points = 
+                if (anno.segments |> AList.toList |> List.isEmpty) then
+                    anno.points
+                else
+                    anno.segments |> AList.concat
+
+            [lines points c anno.thickness.value anno.modelTrafo;
+             dots anno.points c view] 
             |> ASet.ofList
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =        
@@ -424,20 +428,17 @@ module Drawing =
             // since set provides more degrees of freedom for the compiler
             let annoSet = ASet.ofAList model.annotations 
 
-            let trafo = model.offset |> Mod.map (fun d -> match d with | Some p -> Trafo3d.Translation p | None -> Trafo3d.Identity )
+           // let trafo = model.offset |> Mod.map (fun d -> match d with | Some p -> Trafo3d.Translation p | None -> Trafo3d.Identity )
 
             let annotations =
                 aset {
                     for a in annoSet do
                        // let a = { a with color = UI.mkColor a }
-                       let atrafo = match (Mod.force a.local2global) with  
-                                        | Some x -> Mod.constant x
-                                        | None -> trafo
                        let c = UI.mkColor model a
-                       yield! (annotation' a cam atrafo)
+                       yield! (annotation' a cam c)
                 } |> Sg.set
                                 
             //canvas
-            [brush model.hoverPosition; annotations] @ annotation model.working cam trafo
+            [brush model.hoverPosition; annotations] @ annotation model.working cam
             |> Sg.ofList
             
