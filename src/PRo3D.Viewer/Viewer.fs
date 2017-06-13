@@ -205,12 +205,21 @@ module ViewerApp =
             | PickSurface p, true ->                 
                 let fray = p.globalRay.Ray
                 let r = fray.Ray
+
+                let cameraLocation = m.scene.cameraModel.view.Location
+
+                let hitF (p : V3d) = 
+                    let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)
+                    match doKdTreeIntersection m Trafo3d.Identity ray with
+                        | Some t -> ray.Ray.GetPointOnRay t |> Some
+                        | None -> None
                 
                 match doKdTreeIntersection m Trafo3d.Identity fray with
                     | Some t -> 
                         let hit = r.GetPointOnRay(t)
                         Log.warn "hitihtihtihtithi %A" hit
-                        let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPoint hit)
+                        //let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPoint hit)
+                        let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
                         { m with drawing = drawing}
                     | None -> 
                         Log.error ("nooo hit")
