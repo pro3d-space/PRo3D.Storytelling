@@ -147,33 +147,8 @@ module Annotation =
     let initial =
         make Projection.Linear Geometry.Polyline Semantic.Horizon0
 
-[<DomainType>]
-type DrawingModel = {
 
-    draw    : bool 
-    hoverPosition : option<Trafo3d>    
 
-    working : Option<Annotation>
-    projection : Projection
-    geometry : Geometry
-    semantic : Semantic
-
-    annotations : plist<Annotation>
-    exportPath : string
-
-    selected : hset<Guid>
-    selectedAnnotation : option<Annotation>
-}
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
-module DrawingModel =
-    let tryGet (m:DrawingModel) key = 
-            m.annotations |> Seq.tryFind(fun x -> x.key = key)
-
-    let update (m : DrawingModel) (ann : Annotation) = 
-        m.annotations.AsList 
-            |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
-            |> PList.ofList
             
 
 [<DomainType>]
@@ -191,78 +166,4 @@ type Surface = {
     importPath : string
     opcPaths : list<string>    
 }
-
-[<DomainType>]
-type SgSurface = {
-    //[<PrimaryKey>]
-    //guid : System.Guid
-
-    surface : Surface    
-
-    globalBB : Box3d   
-    sceneGraph : ISg
-    kdTree : KdTreeSet    
-}
-  
-[<DomainType>] 
-type Scene = {
-    cameraModel : CameraControllerState    
-    interaction : InteractionMode
-    surfaces : list<Surface>
-}
-
-type Properties = 
-    | AnnotationProperties of Annotation
-    | NoProperties
-
-[<DomainType>]
-type Model = { 
-   
-    scene       : Scene
-    drawing     : DrawingModel
-    surfaces    : hset<SgSurface>        
-    properties  : Properties
-
-    //measurementPath : string
-  //  draw    : bool 
-//    hoverPosition : option<Trafo3d>
-}
-
-
-    
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
-module Model =
-    let initialdrawing = {
-        hoverPosition = None
-        draw = false                    
-
-        working = None
-        projection = Projection.Viewpoint
-        geometry = Geometry.Polyline
-        semantic = Semantic.Horizon3
-
-        annotations = PList.empty
-
-        exportPath = @"."
-
-        selected = HSet.empty
-        selectedAnnotation = None
-    }
-
-    let initial = {           
-        surfaces = HSet.empty                       
-        scene = {                   
-                cameraModel = CameraController.initial            
-                interaction = InteractionMode.PickOrbitCenter
-                surfaces = []
-        }
-
-        drawing = initialdrawing
-        properties = NoProperties
-        //measurementPath = @"."
-
-        // draw = false
-        //hoverPosition = None
-    }
 

@@ -1,6 +1,6 @@
 ﻿namespace PRo3D
 
-module Drawing =
+module DrawingApp =
     open Newtonsoft.Json    
     open Aardvark.Base
     open Aardvark.Application
@@ -20,27 +20,43 @@ module Drawing =
     open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.SceneGraph.FShadeSceneGraph
 
-    type Action =
-        | SetSemantic      of Semantic
-        | SetGeometry      of Geometry
-        | SetProjection    of Projection
-        | SetExportPath    of string
-        | Move             of V3d
-        | Exit    
-        | AddPoint         of V3d
-        | KeyDown          of key : Aardvark.Application.Keys
-        | KeyUp            of key : Aardvark.Application.Keys      
-        | Export
-        | Save              
-        | Load             
-        | Clear
-        | Select           of Guid
+    open PRo3D.Drawing
 
     let finishAndAppend (model : DrawingModel) = 
         let anns = match model.working with
                             | Some w -> model.annotations |> PList.append w
                             | None -> model.annotations
         { model with working = None; annotations = anns }
+
+    let addPoint p model =
+        let working, newSegment = 
+            match model.working with
+                    | Some w ->     
+                        let k = { w with points = w.points |> PList.prepend p }
+                        Log.line "working contains %d points" k.points.Count
+                        let segment =
+                            match PList.tryAt 0 w.points with
+                                | None -> None
+                                | Some a -> Some (a,p)
+
+                        k, segment
+                    | None ->                                     
+                        { 
+                            (Annotation.make model.projection model.geometry model.semantic)  //add annotation states
+                                with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
+                        }, None 
+
+        let model = { model with working = Some working }
+
+        //let model = match (working.geometry, (working.points |> PList.count)) with
+        //                | Geometry.Point, 1 -> model |> finishAndAppend
+        //                | Geometry.Line, 2 -> model |> finishAndAppend
+        //                | _ -> model
+
+        model, newSegment
+
+    let addNewSegment model segment =
+        failwith ""
 
     let update (model : DrawingModel) (act : Action) =
         match (act, model.draw) with
@@ -51,27 +67,14 @@ module Drawing =
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
             | AddPoint p, true ->                     
-                    let working = 
-                        match model.working with
-                                | Some w ->     
-                                    let k = { w with points = w.points |> PList.append p }
-                                    Log.line "working contains %d points" k.points.Count
-                                    k
-                                | None ->                                     
-                                    { 
-                                        (Annotation.make model.projection model.geometry model.semantic) 
-                                            with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
-                                    } //add annotation states
-
-                    let model = { model with working = Some working }
-
-                    let model = match (working.geometry, (working.points |> PList.count)) with
-                                    | Geometry.Point, 1 -> model |> finishAndAppend
-                                    | Geometry.Line, 2 -> model |> finishAndAppend
-                                    | _ -> model
-
-                    model                 
+                    addPoint p model |> fst               
+            | AddPointAdv (p, f), true ->
+                    let model, newSegment = addPoint p model                    
                     
+                    match newSegment with
+                        | None -> model
+                        | Some a -> addNewSegment model a
+
             | KeyDown Aardvark.Application.Keys.Enter, _ -> 
                     model |> finishAndAppend
             | Exit, _ -> 
