@@ -15,7 +15,7 @@ module Drawing =
     open Aardvark.UI
     open Aardvark.UI.Primitives
     open Aardvark.Rendering.Text
-    //open Aardvark.VRVis.Processing
+    open Aardvark.VRVis
 
     open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.SceneGraph.FShadeSceneGraph
@@ -28,8 +28,8 @@ module Drawing =
         | Move             of V3d
         | Exit    
         | AddPoint         of V3d
-        | KeyDown          of key : Keys
-        | KeyUp            of key : Keys      
+        | KeyDown          of key : Aardvark.Application.Keys
+        | KeyUp            of key : Aardvark.Application.Keys      
         | Export
         | Save              
         | Load             
@@ -74,7 +74,7 @@ module Drawing =
 
                     model                 
                     
-            | KeyDown Keys.Enter, _ -> 
+            | KeyDown Aardvark.Application.Keys.Enter, _ -> 
                     model |> finishAndAppend
             | Exit, _ -> 
                     { model with hoverPosition = None }
@@ -89,15 +89,15 @@ module Drawing =
                     { model with geometry = mode }
             | SetProjection mode, _ ->
                     { model with projection = mode }
-            | KeyDown Keys.D0, _ -> 
+            | KeyDown Aardvark.Application.Keys.D0, _ -> 
                     {model with semantic = Semantic.Horizon0 }               
-            | KeyDown Keys.D1, _ -> 
+            | KeyDown Aardvark.Application.Keys.D1, _ -> 
                     {model with semantic = Semantic.Horizon1 }               
-            | KeyDown Keys.D2, _ -> 
+            | KeyDown Aardvark.Application.Keys.D2, _ -> 
                     {model with semantic = Semantic.Horizon2 }               
-            | KeyDown Keys.D3, _ -> 
+            | KeyDown Aardvark.Application.Keys.D3, _ -> 
                     {model with semantic = Semantic.Horizon3 }               
-            | KeyDown Keys.D4, _ -> 
+            | KeyDown Aardvark.Application.Keys.D4, _ -> 
                     {model with semantic = Semantic.Horizon4 }               
             | SetExportPath s, _ ->
                     { model with exportPath = s }
@@ -113,7 +113,7 @@ module Drawing =
                 model
             | Load,_ ->
                 let annotations = 
-                    Serialization.loadAs<plist<Annotation>> "./lastMeasure"
+                    Serialization.loadAs<plist<PRo3D.Annotation>> "./lastMeasure"
                 { model with annotations = annotations }
             | Clear,_ ->
                 { model with annotations = PList.empty }
@@ -211,65 +211,85 @@ module Drawing =
                 viewAnnotations model 
             ]
 
-    //module DipAndStrike = 
+    module DipAndStrike = 
 
-    //    let projectOntoPlane (x:V3d) (n:V3d) = (x - (x * n)).Normalized
+        let projectOntoPlane (x:V3d) (n:V3d) = (x - (x * n)).Normalized
 
-    //    let computeAzimuth (dir:V3d) (north:V3d) (planeNormal:V3d) =
-    //        let east = north.Cross(planeNormal)
-    //        let eastWestPlane = new Plane3d(east, 0.0) //separates west (-) from east  (+)
-    //        let northSouthPlane = new Plane3d(north, 0.0) //separates sout (-) from north  (+)
+        let computeAzimuth (dir:V3d) (north:V3d) (planeNormal:V3d) =
+            let east = north.Cross(planeNormal)
+            let eastWestPlane = new Plane3d(east, 0.0) //separates west (-) from east  (+)
+            let northSouthPlane = new Plane3d(north, 0.0) //separates sout (-) from north  (+)
 
-    //        let coords = new V2d(eastWestPlane.Height(dir), northSouthPlane.Height(dir))
-    //        let angle = Fun.Atan(coords.Y / coords.X).DegreesFromRadians().Abs()
+            let coords = new V2d(eastWestPlane.Height(dir), northSouthPlane.Height(dir))
+            let angle = Fun.Atan(coords.Y / coords.X).DegreesFromRadians().Abs()
 
-    //        let nangle = match coords.X >= 0.0 with
-    //                        | true -> match coords.Y >= 0.0 with
-    //                                    | true -> 90.0 - angle
-    //                                    | false -> angle + 90.0
-    //                        | false -> match coords.Y > 0.0 with
-    //                                    | true -> 270.0 + angle
-    //                                    | false -> 270.0 - angle
-    //        nangle
+            //let nangle = match coords.X >= 0.0 with
+            //                | true -> match coords.Y >= 0.0 with
+            //                            | true -> 90.0 - angle
+            //                            | false -> angle + 90.0
+            //                | false -> match coords.Y > 0.0 with
+            //                            | true -> 270.0 + angle
+            //                            | false -> 270.0 - angle
+
+            let azimuth = match coords.X.Sign() with
+                            | -1 -> match coords.Y.Sign() with
+                                        | 1 -> 270.0 + angle
+                                        | _ -> 270.0 - angle 
+                            | _ -> match coords.Y.Sign() with
+                                        | -1 -> angle + 90.0
+                                        | _ -> 90.0 - angle
+                                        
+            azimuth
 
             
   
-    //    let calculateDipAndStrikeResults (points:plist<V3d>) =
-    //        let up = V3d.OOI
-    //        let north = V3d.IOO
-    //        let plane = Aardvark.VRVis.PlaneFitting.FitPlane3dLS(points);
-    //        let bb = new Box3d(points);
+        let calculateDipAndStrikeResults (points:plist<V3d>) =
+            let up = V3d.OOI
+            let north = V3d.IOO
+            let v3dArray = points.AsList |> List.toArray // points.toArray not possible because of: int -> V3d[]
+            let plane = PlaneFitting.FitPlane3dLS(v3dArray);
+            let bb = new Box3d(points);
 
-    //        let horP = new Plane3d(up, V3d.Zero);
+            let horP = new Plane3d(up, V3d.Zero);
 
-    //         //correct plane orientation - check if normals point in same direction
-    //        let height = horP.Height(plane.Normal);
-    //        if (height.Sign() = -1) then
-    //                plane.Normal = plane.Normal.Negated;
+             //correct plane orientation - check if normals point in same direction
+            let height = horP.Height(plane.Normal);
+            let planeNormal = match height.Sign() with
+                                | -1 -> plane.Normal.Negated
+                                | _ -> plane.Normal
 
-    //        let n = plane.Normal;
+            //strike
+            let strike = up.Cross(planeNormal).Normalized;
 
-    //        //strike
-    //        let strike = up.Cross(n).Normalized;
+            //dip vector 
+            let dip = strike.Cross(planeNormal).Normalized;
 
-    //        //dip vector 
-    //        let dip = strike.Cross(n).Normalized;
+            //dip plane incline .. maximum dip angle
+            let v = strike.Cross(up).Normalized;
 
-    //        //dip plane incline .. maximum dip angle
-    //        let v = strike.Cross(up).Normalized;
-
-    //        let dns = {
-    //            plane = plane
-    //            dipAngle = Math.Acos(v.Dot(dip)).DegreesFromRadians()
-    //            dipDirection = dip
-    //            strikeDirection = strike
-    //            dipAzimuth = computeAzimuth(v, north, up)
-    //            strikeAzimuth = computeAzimuth(strike, north, up)
-    //            centerOfMass = bb.Center
-    //        }
-    //        dns
+            let dns = {
+                plane = plane
+                dipAngle = Math.Acos(v.Dot(dip)).DegreesFromRadians()
+                dipDirection = dip
+                strikeDirection = strike
+                dipAzimuth = computeAzimuth v north up
+                strikeAzimuth = computeAzimuth strike north up
+                centerOfMass = bb.Center
+            }
+            dns
 
     module Sg =        
+
+        let discISg color size trafo =         
+            Sg.cone 5 color size (Mod.constant 2.1)
+                    |> Sg.shader {
+                        do! Aardvark.Opc.Shader.stableTrafo
+                        do! DefaultSurfaces.vertexColor
+                        do! DefaultSurfaces.simpleLighting
+                    }
+                    |> Sg.noEvents
+                    |> Sg.trafo(trafo) 
+
 
         let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =        
             adaptive {
@@ -410,8 +430,11 @@ module Drawing =
                 aset {
                     for a in annoSet do
                        // let a = { a with color = UI.mkColor a }
+                       let atrafo = match (Mod.force a.local2global) with  
+                                        | Some x -> Mod.constant x
+                                        | None -> trafo
                        let c = UI.mkColor model a
-                       yield! (annotation' a cam trafo)
+                       yield! (annotation' a cam atrafo)
                 } |> Sg.set
                                 
             //canvas

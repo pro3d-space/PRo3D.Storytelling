@@ -188,8 +188,8 @@ module Viewer =
                             m   
             | ImportMeasurements, _ ->
                 match Dialogs.openDialog w with
-                    | x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x.Value)}}
-                    | _ -> m   
+                    | Some x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x)}}
+                    | None -> m   
             | QuickLoad, _ -> 
                 //let surface = Surface.mk (@"E:\Aardwork\Exomars\_SCENES\cd - Copy\Surface\Cape_Desire_RGB")
                 //let m = Surface.import runtime signature surface m 

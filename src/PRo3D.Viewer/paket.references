@@ -14,6 +14,7 @@ Aardvark.Service
 Aardvark.Cef.WinForms
 
 Aardvark.Data.PhotoNetwork
+Aardvark.VRVis.Processing
 
 Aardvark.VRVis.Base
 Aardvark.VRVis.Geometry
