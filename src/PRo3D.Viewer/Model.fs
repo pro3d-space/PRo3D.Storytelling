@@ -90,7 +90,8 @@ type DipAndStrikeResults = {
 type Segment = {
     startPoint : V3d
     endPoint : V3d
-    segments : plist<V3d>
+    
+    points : plist<V3d> 
 }
 
 [<DomainType>]

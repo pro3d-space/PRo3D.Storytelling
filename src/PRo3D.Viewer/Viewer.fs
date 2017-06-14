@@ -210,9 +210,9 @@ module ViewerApp =
 
                 let hitF (p : V3d) = 
                     let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)
-                    let mutable abc = 0
-                    for i in 0 .. 10000000 do abc <- abc + 1
-                    printfn "%A" abc
+                    //let mutable a = 0
+                    //for i in 0 .. 60000000 do a <- a + 1
+                    //printfn "%A" 0
                     match doKdTreeIntersection m Trafo3d.Identity ray with
                         | Some t -> ray.Ray.GetPointOnRay t |> Some
                         | None -> None
@@ -221,7 +221,7 @@ module ViewerApp =
                 match doKdTreeIntersection m Trafo3d.Identity fray with
                     | Some t -> 
                         let hit = r.GetPointOnRay(t)
-                        Log.warn "hitihtihtihtithi %A" hit
+                        Log.warn "[PickSurface] %A" hit
                         //let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPoint hit)
                         let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
                         { m with drawing = drawing}

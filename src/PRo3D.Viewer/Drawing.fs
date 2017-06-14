@@ -26,7 +26,7 @@ module DrawingApp =
                             | None -> model.annotations
         { model with working = None; annotations = anns; pendingIntersections = ThreadPool.empty }
 
-    let addPoint p model =
+    let addPoint samplePoint p model =
         let working, newSegment = 
             match model.working with
                     | Some w ->     
@@ -37,8 +37,22 @@ module DrawingApp =
                                 newModel, None
                             | Some a -> 
                                 let segmentIndex = PList.count newModel.segments
-                                let newSegment = { startPoint = a; endPoint = p; segments = PList.empty }
-                                { newModel with segments = PList.append newSegment newModel.segments }, Some (newSegment,segmentIndex)
+
+                                let newSegment = { startPoint = a; endPoint = p; points = PList.ofList [a;p] }
+                                if PRo3D.Config.useAsyncIntersections then
+                                    { newModel with segments = PList.append newSegment newModel.segments }, Some (newSegment,segmentIndex)
+                                else
+                                    let dir = newSegment.endPoint - newSegment.startPoint
+                                    let points = 
+                                        [ for s in 0 .. PRo3D.Config.sampleCount do
+                                            let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                                            match samplePoint p with
+                                                | None -> ()
+                                                | Some projectedPoint ->
+                                                    yield projectedPoint 
+                                        ]
+                                    let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
+                                    { newModel with segments = PList.append newSegment newModel.segments }, None
                         
                     | None ->                                     
                         { 
@@ -48,16 +62,17 @@ module DrawingApp =
 
         let model = { model with working = Some working }
 
-        //let model = match (working.geometry, (working.points |> PList.count)) with
-        //                | Geometry.Point, 1 -> model |> finishAndAppend
-        //                | Geometry.Line, 2 -> model |> finishAndAppend
-        //                | _ -> model
+        match (working.geometry, (working.points |> PList.count)) with
+            | Geometry.Point, 1 -> 
+                model |> finishAndAppend, None
+            | Geometry.Line, 2 -> 
+                model |> finishAndAppend, None
+            | _ -> 
+                model, newSegment
 
-        model, newSegment
 
-    let addNewSegment samplePoint model (newSegment : Segment) =
-        let sampleCount = 20
-        let dir = newSegment.startPoint - newSegment.endPoint
+    let addNewSegment samplePoint model (newSegment : Segment, segmentIndex : int) =
+        let dir = newSegment.endPoint - newSegment.startPoint
         let id = Guid.NewGuid() |> string
 
         let computation = 
@@ -68,8 +83,8 @@ module DrawingApp =
                     async {
                         do! Async.SwitchToNewThread()
                         let r = 
-                            [ for s in 0 .. sampleCount do
-                                let p = p0 + dir * (float s / float sampleCount) // world space
+                            [ for s in 0 .. PRo3D.Config.sampleCount do
+                                let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
                                 match samplePoint p with
                                     | None -> ()
                                     | Some projectedPoint -> // projected point in world space
@@ -85,7 +100,9 @@ module DrawingApp =
                          let! r = Proc.Await (MVar.takeAsync result)
                          match r with
                             | Choice1Of2 r -> 
-                                yield SetSegment(segmentIndex,r)
+                                printfn "mked it: %A" r
+                                let segment = { newSegment with points = PList.ofList r}
+                                yield SetSegment(segmentIndex,segment)
                                 yield! doIt()
                             | Choice2Of2 _ -> ()
                     }
@@ -110,21 +127,21 @@ module DrawingApp =
                     {model with draw = false; hoverPosition = None }
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
-            | AddPoint p, true ->                     
-                    addPoint p model |> fst               
+            | AddPoint(p,samplePoint), true ->                     
+                    addPoint samplePoint p model |> fst               
             | AddPointAdv (point, samplePoint), true ->
-                    let model, newSegment = addPoint point model                    
+                    let model, newSegment = addPoint samplePoint point model                    
                     
                     match newSegment with
                         | None         -> model
                         | Some segment -> addNewSegment samplePoint model segment
 
-            | SetSegment(segmentIndex,samples), true ->
+            | SetSegment(segmentIndex,segment), _ ->
                 match model.working with
                     | None -> model
                     | Some w -> 
-                        let newSegment = PList.ofList samples
-                        { model with working = Some { w with segments = PList.setAt segmentIndex newSegment w.segments } }
+                        printfn "oida"
+                        { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
 
             | KeyDown Aardvark.Application.Keys.Enter, _ -> 
                     model |> finishAndAppend
@@ -398,7 +415,9 @@ module DrawingApp =
             
             aset {
                 for p in points |> ASet.ofAList do
-                    yield mkDotISg color (computeScale view (Mod.constant p) 5.0) (Mod.constant (Trafo3d.Translation(p)))
+                    let scale = computeScale view (Mod.constant p) 5.0
+                    //let scale = Mod.constant 0.6
+                    yield mkDotISg color scale (Mod.constant (Trafo3d.Translation(p)))
             } 
             |> Sg.set
             |> Sg.effect [
@@ -408,9 +427,9 @@ module DrawingApp =
                 ]
            
         let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
+
         let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>)= 
-           let lines = edgeLines false points trafo           
-           lines
+           edgeLines false points trafo           
                 |> Sg.lines color                
                 |> Sg.shader {
                     do! Aardvark.Opc.Shader.stableTrafo
@@ -423,14 +442,23 @@ module DrawingApp =
                 |> Sg.pass linePass
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
    
+        let viewAnnotation (a : MAnnotation) =
+            alist {
+                for segment in a.segments do
+                    let! startPoint = segment.startPoint
+                    let! endPoint = segment.endPoint
+                    yield  startPoint
+                    yield! segment.points
+                    yield  endPoint
+            }
+
         let workingAnnotations (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
 
             let points =
                 alist {
                     let! anno = anno
                     match anno with
-                        | Some a -> 
-                            yield! AList.concat a.segments
+                        | Some a -> yield! viewAnnotation a
                         | None -> ()
                 }
                 
@@ -441,31 +469,35 @@ module DrawingApp =
             
             let polyline = lines points color thickness trafo                                
 
-            [polyline; dots points color view]         
+            Sg.ofList [
+                polyline
+                dots points color view
+            ]         
 
         let finishedAnnotations (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =                         
-            let points = AList.concat anno.segments
+            let points = viewAnnotation anno
 
-            [lines points c anno.thickness.value anno.modelTrafo;
-             dots points c view] 
-            |> ASet.ofList
+            Sg.ofList [
+                lines points c anno.thickness.value anno.modelTrafo;
+                dots points c view
+            ]
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =        
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler
             let annoSet = ASet.ofAList model.annotations 
 
-           // let trafo = model.offset |> Mod.map (fun d -> match d with | Some p -> Trafo3d.Translation p | None -> Trafo3d.Identity )
-
             let annotations =
                 aset {
                     for a in annoSet do
                        // let a = { a with color = UI.mkColor a }
                        let c = UI.mkColor model a
-                       yield! finishedAnnotations a cam c
+                       yield finishedAnnotations a cam c
                 } |> Sg.set
                                 
-            //canvas
-            [brush model.hoverPosition; annotations] @ workingAnnotations model.working cam
-            |> Sg.ofList
+            Sg.ofList [
+                brush model.hoverPosition; 
+                annotations
+                workingAnnotations model.working cam
+            ]
             

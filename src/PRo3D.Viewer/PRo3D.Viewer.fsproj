@@ -71,6 +71,7 @@
   </Target>
   -->
   <ItemGroup>
+      <Compile Include="Config.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="Drawing-Model.fs" />
     <Compile Include="Viewer-Model.fs" />

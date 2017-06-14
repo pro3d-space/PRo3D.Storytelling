@@ -30,46 +30,56 @@ module MeasurementsImporter =
         let trafo = Trafo3d(strafo.[0], strafo.[1])
         trafo
 
-    let parsePointsLevelOne (points:XElement) = points.Value.NestedBracketSplitLevelOne()
-                                                    |> Seq.map (fun x -> V3d.Parse(x))
-                                                    |> PList.ofSeq
+
+    let parsePointsLevelOne (points:XElement) = 
+        points.Value.NestedBracketSplitLevelOne()
+            |> Seq.map (fun x -> V3d.Parse(x))
+            |> Seq.toArray
       
 
-    let parsePointsLevelZero (points:XElement) = points.Value.NestedBracketSplit(0) 
-                                                    |> Seq.map (fun x -> V3d.Parse(x))
-                                                    |> PList.ofSeq  
+    let parsePointsLevelZero (points:XElement) = 
+        points.Value.NestedBracketSplit(0) 
+            |> Seq.map (fun x -> V3d.Parse(x))
+            |> Seq.toArray
        
     
-    let getPoints (points:XElement, aType:string) =
-        let l = match points with
-                    | null -> PList.empty 
-                    | _-> match aType with
-                            | "Exomars.Base.Geology.Point" ->  PList.ofList [V3d.Parse(points.Value)]
-                            | "Exomars.Base.Geology.Line"  ->  parsePointsLevelOne points
-                            | _ -> parsePointsLevelZero points
-        l
+    let getPoints (points:XElement) (aType:string) =
+        match points with
+            | null -> [||]
+            | _-> match aType with
+                    | "Exomars.Base.Geology.Point" ->  [| V3d.Parse(points.Value) |]
+                    | "Exomars.Base.Geology.Line"  ->  parsePointsLevelOne points
+                    | _ -> parsePointsLevelZero points
       
+    let segmentOfArray (points : array<_>) = 
+        if points.Length > 0 then 
+            Some { startPoint = points.[0]; endPoint = points.[points.Length - 1]; points = PList.ofArray points }
+        else None
                         
-    let parseSegments (segments:XElement) = segments.Elements(xname "V3d_Array")
-                                                |> Seq.map (fun x -> parsePointsLevelZero x)
-                                                |> PList.ofSeq
+    let parseSegments (segments:XElement) = 
+        segments.Elements(xname "V3d_Array")
+            |> Seq.map (fun x -> x |> parsePointsLevelZero |> segmentOfArray)
+            |> Seq.toList
 
-    let parseSegment (seg:XElement) =  PList.ofList [parsePointsLevelZero seg]
+    let parseSegment (seg:XElement) = 
+        parsePointsLevelZero seg |> segmentOfArray 
         
-
     let getSegments (m:XElement, aType:string) = 
-        let segments = match aType with
-                        |"Exomars.Base.Geology.Line"            -> let segment = m.Element(xname "Segment")
-                                                                   match segment.FirstAttribute with
-                                                                    | null -> PList.empty
-                                                                    | _ -> parseSegment segment
-                        |"Exomars.Base.Geology.Polyline"   
-                        |"Exomars.Base.Geology.DipAndStrike"    -> let segments = m.Element(xname "Segments")
-                                                                   match segments with
-                                                                    | null -> PList.empty
-                                                                    | _ -> parseSegments segments
-                        |_ -> PList.empty
-        segments
+        let segments = 
+            match aType with
+                |"Exomars.Base.Geology.Line"  -> 
+                    let segment = m.Element(xname "Segment")
+                    match segment.FirstAttribute with
+                        | null -> []
+                        | _ -> [parseSegment segment]
+                | "Exomars.Base.Geology.Polyline"  | "Exomars.Base.Geology.DipAndStrike" -> 
+                    let segments = m.Element(xname "Segments")
+                    match segments with
+                        | null -> []
+                        | _ -> parseSegments segments
+                | _ -> []
+        List.choose id segments // drop all empty segments (semgents being None)
+
 
     let getGeometry (aType:string, closed:bool) = 
         let geometry = if closed then Geometry.Polygon
@@ -90,11 +100,11 @@ module MeasurementsImporter =
         let trafo = getTrafo (m.Element(xname "LocalToGlobal"))
         let an = {
                 key = Guid.NewGuid()
-                geometry = (getGeometry (anType, closed)) 
+                geometry = getGeometry (anType, closed)
                 projection = Projection.Linear
                 semantic = Semantic.Horizon0
-                points = (getPoints (m.Element(xname "Points"), anType))
-                segments = (getSegments (m, anType))
+                points = getPoints (m.Element(xname "Points")) anType |> PList.ofArray
+                segments = getSegments (m, anType) |> PList.ofList
                 color = style.color
                 thickness = style.thickness
                 dnsResults = None
