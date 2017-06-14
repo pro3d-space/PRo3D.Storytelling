@@ -68,8 +68,6 @@ module OpcUtils =
 
 type Points = list<V3d>
 
-type Segment = Points
-
 type Projection = Linear = 0 | Viewpoint = 1 | Sky = 2
 type Geometry = Point = 0 | Line = 1 | Polyline = 2 | Polygon = 3 | DnS = 4
 type Semantic = Horizon0 = 0 | Horizon1 = 1 | Horizon2 = 2 | Horizon3 = 3 | Horizon4 = 4 | Crossbed = 5 | GrainSize = 6
@@ -89,6 +87,13 @@ type DipAndStrikeResults = {
 }
 
 [<DomainType>]
+type Segment = {
+    startPoint : V3d
+    endPoint : V3d
+    segments : plist<V3d>
+}
+
+[<DomainType>]
 type Annotation = {
     key : Guid
 
@@ -99,7 +104,7 @@ type Annotation = {
     semantic : Semantic
 
     points : plist<V3d>
-    segments : plist<plist<V3d>> //list<Segment>
+    segments : plist<Segment> 
     color : C4b
     thickness : NumericInput
     dnsResults : Option<DipAndStrikeResults>    

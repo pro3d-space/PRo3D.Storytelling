@@ -37,7 +37,8 @@ module DrawingApp =
                                 newModel, None
                             | Some a -> 
                                 let segmentIndex = PList.count newModel.segments
-                                { newModel with segments = PList.append (PList.ofList [a;p]) newModel.segments }, Some (a,p,segmentIndex)
+                                let newSegment = { startPoint = a; endPoint = p; segments = PList.empty }
+                                { newModel with segments = PList.append newSegment newModel.segments }, Some (newSegment,segmentIndex)
                         
                     | None ->                                     
                         { 
@@ -54,9 +55,9 @@ module DrawingApp =
 
         model, newSegment
 
-    let addNewSegment samplePoint model (p0:V3d,p1:V3d,segmentIndex : int) =
+    let addNewSegment samplePoint model (newSegment : Segment) =
         let sampleCount = 20
-        let dir = p1-p0
+        let dir = newSegment.startPoint - newSegment.endPoint
         let id = Guid.NewGuid() |> string
 
         let computation = 
@@ -406,6 +407,7 @@ module DrawingApp =
                     toEffect <| DefaultSurfaces.simpleLighting
                 ]
            
+        let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
         let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>)= 
            let lines = edgeLines false points trafo           
            lines
@@ -418,7 +420,7 @@ module DrawingApp =
                 |> Sg.noEvents                
                 |> Sg.trafo trafo
                 |> Sg.uniform "LineWidth" width
-                |> Sg.pass (RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main)
+                |> Sg.pass linePass
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
    
         let workingAnnotations (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
