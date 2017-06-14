@@ -210,9 +210,9 @@ module ViewerApp =
 
                 let hitF (p : V3d) = 
                     let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)
-                    printfn "wahhh doing it"
-                    System.Threading.Thread.Sleep 1000
-                    printfn "done it"
+                    let mutable abc = 0
+                    for i in 0 .. 10000000 do abc <- abc + 1
+                    printfn "%A" abc
                     match doKdTreeIntersection m Trafo3d.Identity ray with
                         | Some t -> ray.Ray.GetPointOnRay t |> Some
                         | None -> None

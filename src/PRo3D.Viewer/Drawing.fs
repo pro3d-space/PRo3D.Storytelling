@@ -57,33 +57,48 @@ module DrawingApp =
     let addNewSegment samplePoint model (p0:V3d,p1:V3d,segmentIndex : int) =
         let sampleCount = 20
         let dir = p1-p0
-        let samples = 
-            [ for s in 0 .. 20 do
-                let p = p0 + dir * (float s / float sampleCount) // world space
-                yield async {
-                    do! Async.SwitchToNewThread()
-                    match samplePoint p with
-                        | None -> return None
-                        | Some projectedPoint -> // projected point in world space
-                            return Some projectedPoint
-                } |> Async.StartAsTask
-            ]
-
-        let mutable result = []
+        let id = Guid.NewGuid() |> string
 
         let computation = 
             proclist {
-                for s in samples do
-                    let! a = Proc.Await s
-                    match a with
-                        | None -> ()
-                        | Some s -> 
-                            result <-  result @ [s]
-                            yield SetSegment(segmentIndex, result)
+                let mutable r = []
+                let result = MVar.empty()
+                let task = 
+                    async {
+                        do! Async.SwitchToNewThread()
+                        let r = 
+                            [ for s in 0 .. sampleCount do
+                                let p = p0 + dir * (float s / float sampleCount) // world space
+                                match samplePoint p with
+                                    | None -> ()
+                                    | Some projectedPoint -> // projected point in world space
+                                        r <- r @ [projectedPoint]
+                                        MVar.put result (Choice1Of2 r)
+                                        yield projectedPoint
+                            ]
+                        MVar.put result (Choice2Of2 ())
+                    } |> Async.Start
+
+                let rec doIt () =
+                    proclist {
+                         let! r = Proc.Await (MVar.takeAsync result)
+                         match r with
+                            | Choice1Of2 r -> 
+                                yield SetSegment(segmentIndex,r)
+                                yield! doIt()
+                            | Choice2Of2 _ -> ()
+                    }
+
+                yield! doIt()
             } 
         
-        let threadPool = ThreadPool.add (Guid.NewGuid().ToString()) computation model.pendingIntersections
-        { model with pendingIntersections = threadPool }
+        let pool = 
+            if model.pendingIntersections.store.ContainsKey id then 
+                ThreadPool.remove id model.pendingIntersections
+            else 
+                model.pendingIntersections
+        { model with pendingIntersections = ThreadPool.add id computation pool }
+
 
 
     let update (model : DrawingModel) (act : Action) =
@@ -427,11 +442,7 @@ module DrawingApp =
             [polyline; dots points color view]         
 
         let finishedAnnotations (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =                         
-            let points = 
-                if (anno.segments |> AList.toList |> List.isEmpty) then
-                    anno.points
-                else
-                    anno.segments |> AList.concat
+            let points = AList.concat anno.segments
 
             [lines points c anno.thickness.value anno.modelTrafo;
              dots points c view] 

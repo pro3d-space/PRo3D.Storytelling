@@ -73,7 +73,7 @@
   <ItemGroup>
     <Compile Include="Model.fs" />
     <Compile Include="Drawing-Model.fs" />
-	    <Compile Include="Viewer-Model.fs" />
+    <Compile Include="Viewer-Model.fs" />
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
     <Compile Include="Properties.fs" />
@@ -86,7 +86,6 @@
     <Content Include="semui-overrides.css">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
