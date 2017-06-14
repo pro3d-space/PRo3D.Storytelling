@@ -280,17 +280,35 @@ module Drawing =
             }
             dns
 
+        let dipColor (dipAngle:float) (min:float) (max:float) =
+            let range = new Range1d(min, max)
+            let hue = (dipAngle - range.Min) / range.Size
+            let hsv = HSVf((1.0 - hue) * 0.625, 1.0, 1.0)
+
+            hsv.ToC3f().ToC4b()
+            
+
     module Sg =        
 
         let discISg color size trafo =         
-            Sg.cone 5 color size (Mod.constant 2.1)
-                    |> Sg.shader {
-                        do! Aardvark.Opc.Shader.stableTrafo
-                        do! DefaultSurfaces.vertexColor
-                        do! DefaultSurfaces.simpleLighting
-                    }
-                    |> Sg.noEvents
-                    |> Sg.trafo(trafo) 
+            Sg.cylinder 5 color size (Mod.constant 2.1)
+                        |> Sg.shader {
+                            do! Aardvark.Opc.Shader.stableTrafo
+                            do! DefaultSurfaces.vertexColor
+                            do! DefaultSurfaces.simpleLighting
+                        }
+                        |> Sg.noEvents
+                        |> Sg.trafo(trafo) 
+
+        let coneISg color size trafo =         
+            Sg.cone 5 color size (Mod.constant 0.5)
+                        |> Sg.shader {
+                            do! Aardvark.Opc.Shader.stableTrafo
+                            do! DefaultSurfaces.vertexColor
+                            do! DefaultSurfaces.simpleLighting
+                        }
+                        |> Sg.noEvents
+                        |> Sg.trafo(trafo) 
 
 
         let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =        
@@ -375,7 +393,19 @@ module Drawing =
                 |> Sg.uniform "LineWidth" width
                 |> Sg.pass (RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main)
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
-   
+        
+        //let drawDnS (anno : MAnnotation) (points : alist<V3d>) =
+        //    let color = match anno.dnsResults with
+        //                    | Some x -> (dipColor x.dipAngle 0.0 90.0)
+        //                    | None -> anno.color
+        //    let! t = anno.modelTrafo
+        //    let pos = t.Forward.TransformPos(points
+        //    let x = match anno.geometry with
+        //                | Geometry.DnS -> discISg color (computeScale view (Mod.constant p) 5.0) (Mod.constant (Trafo3d.Translation(p)))
+        //                | _ -> 
+
+            
+
         let annotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
             //alist builder?
             let points = 
@@ -408,8 +438,8 @@ module Drawing =
                                                 | Some a -> a.modelTrafo
                                                 | None -> Mod.constant Trafo3d.Identity)
             
-            let polyline = lines points color thickness trafo                                
-
+            let polyline = lines points color thickness trafo  
+           
             [polyline; dots points color view]         
 
         let annotation' (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =                         
