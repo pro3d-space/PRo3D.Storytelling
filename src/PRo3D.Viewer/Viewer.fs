@@ -21,6 +21,8 @@ open Aardvark.VRVis
 
 open MBrace.FsPickler
 open System.IO
+
+open PRo3D.Viewer
 open PRo3D
 
 module PList =
@@ -116,7 +118,7 @@ module Surface =
 
 
     
-module Viewer =
+module ViewerApp =
     open Surface
    
     type PropertyActions =
@@ -179,7 +181,7 @@ module Viewer =
                 //                            | None -> Properties.NoProperties } 
                 //        | _ -> m
                 
-                { m with drawing = Drawing.update m.drawing msg }
+                { m with drawing = DrawingApp.update m.drawing msg }
             | ImportSurface, _ -> 
                 match Dialogs.openFolder w with
                     | [] -> m
@@ -203,12 +205,21 @@ module Viewer =
             | PickSurface p, true ->                 
                 let fray = p.globalRay.Ray
                 let r = fray.Ray
+
+                let cameraLocation = m.scene.cameraModel.view.Location
+
+                let hitF (p : V3d) = 
+                    let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)
+                    match doKdTreeIntersection m Trafo3d.Identity ray with
+                        | Some t -> ray.Ray.GetPointOnRay t |> Some
+                        | None -> None
                 
                 match doKdTreeIntersection m Trafo3d.Identity fray with
                     | Some t -> 
                         let hit = r.GetPointOnRay(t)
                         Log.warn "hitihtihtihtithi %A" hit
-                        let drawing = Drawing.update m.drawing (Drawing.Action.AddPoint hit)
+                        //let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPoint hit)
+                        let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
                         { m with drawing = drawing}
                     | None -> 
                         Log.error ("nooo hit")
@@ -226,10 +237,10 @@ module Viewer =
                     | Some path -> loadScene path m runtime signature
             | NewScene, _ -> { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
             | KeyDown k, _ ->
-                    let d = Drawing.update m.drawing (Drawing.Action.KeyDown k)
+                    let d = DrawingApp.update m.drawing (Drawing.Action.KeyDown k)
                     { m with drawing = d }
             | KeyUp k, _ ->
-                    let d = Drawing.update m.drawing (Drawing.Action.KeyUp k)
+                    let d = DrawingApp.update m.drawing (Drawing.Action.KeyUp k)
                     { m with drawing = d }
             | _ -> m
                 
@@ -280,7 +291,7 @@ module Viewer =
                             attribute "style" "width:70%; height: 100%; float:left"; ]) 
                     (                    
                         let annotations =
-                            Drawing.Sg.view m.drawing m.scene.cameraModel.view
+                            DrawingApp.Sg.view m.drawing m.scene.cameraModel.view
                                 |> Sg.map DrawingMessage                                
                                 |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
                                 |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode  
@@ -357,11 +368,11 @@ module Viewer =
         let annotationUI = 
             div [][
                 
-                Drawing.UI.viewAnnotationImportExport |> UI.map DrawingMessage
+                DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
                 
 
                 GuiEx.accordion "Annotations" "Write" true [
-                    Drawing.UI.viewAnnotations m.drawing |> UI.map DrawingMessage
+                    DrawingApp.UI.viewAnnotations m.drawing |> UI.map DrawingMessage
                 ]
                 GuiEx.accordion "Properties" "Write" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(properties m))
@@ -375,7 +386,7 @@ module Viewer =
                             ("Config", text "Config")
                         ] "Surfaces" 
       
-        let topMenu = [(Drawing.UI.viewAnnotationToolsHorizontal m.drawing) |> UI.map DrawingMessage ]                               
+        let topMenu = [DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage ]                               
         
         let rest (model : MModel) = 
             [             
@@ -425,7 +436,7 @@ module Viewer =
         ThreadPool.empty
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) =
-        let m = Model.initial        
+        let m = PRo3D.Viewer.Viewer.initial        
         let m = Surface.loadLastScene m runtime signature
 
         App.start {

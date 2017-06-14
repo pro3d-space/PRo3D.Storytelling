@@ -1,6 +1,6 @@
 ﻿namespace PRo3D
 
-module Drawing =
+module DrawingApp =
     open Newtonsoft.Json    
     open Aardvark.Base
     open Aardvark.Application
@@ -20,27 +20,65 @@ module Drawing =
     open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.SceneGraph.FShadeSceneGraph
 
-    type Action =
-        | SetSemantic      of Semantic
-        | SetGeometry      of Geometry
-        | SetProjection    of Projection
-        | SetExportPath    of string
-        | Move             of V3d
-        | Exit    
-        | AddPoint         of V3d
-        | KeyDown          of key : Aardvark.Application.Keys
-        | KeyUp            of key : Aardvark.Application.Keys      
-        | Export
-        | Save              
-        | Load             
-        | Clear
-        | Select           of Guid
+    open PRo3D.Drawing
 
     let finishAndAppend (model : DrawingModel) = 
         let anns = match model.working with
-                            | Some w -> model.annotations |> PList.append w
+                            | Some w -> model.annotations |> PList.prepend w
                             | None -> model.annotations
         { model with working = None; annotations = anns }
+
+    let addPoint p model =
+        let working, newSegment = 
+            match model.working with
+                    | Some w ->     
+                        let newModel = { w with points = w.points |> PList.prepend p }
+                        Log.line "working contains %d points" newModel.points.Count
+                        match PList.tryAt 0 w.points with
+                            | None -> 
+                                newModel, None
+                            | Some a -> 
+                                let segmentIndex = PList.count newModel.segments
+                                { newModel with segments = PList.append (PList.ofList [p; a]) newModel.segments }, Some (a,p,segmentIndex)
+                        
+                    | None ->                                     
+                        { 
+                            (Annotation.make model.projection model.geometry model.semantic)  //add annotation states
+                                with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
+                        }, None 
+
+        let model = { model with working = Some working }
+
+        //let model = match (working.geometry, (working.points |> PList.count)) with
+        //                | Geometry.Point, 1 -> model |> finishAndAppend
+        //                | Geometry.Line, 2 -> model |> finishAndAppend
+        //                | _ -> model
+
+        model, newSegment
+
+    let addNewSegment samplePoint model (p0:V3d,p1:V3d,segmentIndex : int) =
+        let sampleCount = 20
+        let dir = p1-p0
+        let samples = 
+            [ for s in 0 .. 20 do
+                let p = p0 + dir * (float s / float sampleCount) // world space
+                match samplePoint p with
+                    | None -> ()
+                    | Some projectedPoint -> // projected point in world space
+                        yield projectedPoint
+            ]
+
+        //let a = 
+        //    proc {
+        //        send (SetComputedSegment(segmentIndex, newSegment))
+        //    }
+
+        match model.working with
+            | None -> model
+            | Some w -> 
+                let newSegment = PList.ofList samples
+                { model with working = Some { w with segments = PList.setAt segmentIndex newSegment w.segments } }
+
 
     let update (model : DrawingModel) (act : Action) =
         match (act, model.draw) with
@@ -51,27 +89,14 @@ module Drawing =
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
             | AddPoint p, true ->                     
-                    let working = 
-                        match model.working with
-                                | Some w ->     
-                                    let k = { w with points = w.points |> PList.append p }
-                                    Log.line "working contains %d points" k.points.Count
-                                    k
-                                | None ->                                     
-                                    { 
-                                        (Annotation.make model.projection model.geometry model.semantic) 
-                                            with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
-                                    } //add annotation states
-
-                    let model = { model with working = Some working }
-
-                    let model = match (working.geometry, (working.points |> PList.count)) with
-                                    | Geometry.Point, 1 -> model |> finishAndAppend
-                                    | Geometry.Line, 2 -> model |> finishAndAppend
-                                    | _ -> model
-
-                    model                 
+                    addPoint p model |> fst               
+            | AddPointAdv (point, samplePoint), true ->
+                    let model, newSegment = addPoint point model                    
                     
+                    match newSegment with
+                        | None         -> model
+                        | Some segment -> addNewSegment samplePoint model segment
+
             | KeyDown Aardvark.Application.Keys.Enter, _ -> 
                     model |> finishAndAppend
             | Exit, _ -> 
@@ -353,7 +378,7 @@ module Drawing =
                 |> AList.map(fun d -> trafo.GetValue().Backward.TransformPos d)
                 |> AList.toMod |> Mod.map (fun l ->
                     let list = PList.toList l
-                    let head = list |> List.tryHead
+                    let head = list |> List.tryLast
                     
                     match head with
                         | Some h -> if close then list @ [h] else list
@@ -411,7 +436,11 @@ module Drawing =
             let points = 
                 anno |> AList.bind (fun o -> 
                     match o with
-                        | Some a -> a.points
+                        | Some a -> 
+                             if (a.segments |> AList.toList |> List.isEmpty) then
+                                 a.points
+                             else
+                                 a.segments |> AList.concat
                         | None -> AList.empty
                 ) 
             
@@ -450,7 +479,7 @@ module Drawing =
                     anno.segments |> AList.concat
 
             [lines points c anno.thickness.value anno.modelTrafo;
-             dots anno.points c view] 
+             dots points c view] 
             |> ASet.ofList
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =        
