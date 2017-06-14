@@ -22,6 +22,7 @@ type Action =
     | Exit    
     | AddPoint         of V3d
     | AddPointAdv      of V3d * (V3d -> Option<V3d>)
+    | SetSegment       of int * list<V3d>
     | KeyDown          of key : Aardvark.Application.Keys
     | KeyUp            of key : Aardvark.Application.Keys      
     | Export

@@ -210,9 +210,13 @@ module ViewerApp =
 
                 let hitF (p : V3d) = 
                     let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)
+                    printfn "wahhh doing it"
+                    System.Threading.Thread.Sleep 1000
+                    printfn "done it"
                     match doKdTreeIntersection m Trafo3d.Identity ray with
                         | Some t -> ray.Ray.GetPointOnRay t |> Some
                         | None -> None
+                    
                 
                 match doKdTreeIntersection m Trafo3d.Identity fray with
                     | Some t -> 
@@ -433,7 +437,7 @@ module ViewerApp =
         //            yield AddSg sg
         //    }
 
-        ThreadPool.empty
+        DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) =
         let m = PRo3D.Viewer.Viewer.initial        
