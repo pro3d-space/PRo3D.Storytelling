@@ -420,15 +420,16 @@ module DrawingApp =
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
         
         //let drawDnS (anno : MAnnotation) (points : alist<V3d>) =
-        //    let color = match anno.dnsResults with
-        //                    | Some x -> (dipColor x.dipAngle 0.0 90.0)
+        //    let color = match anno.dnsResults |> Mod.force with
+        //                    | Some x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0)
         //                    | None -> anno.color
-        //    let! t = anno.modelTrafo
-        //    let pos = t.Forward.TransformPos(points
-        //    let x = match anno.geometry with
-        //                | Geometry.DnS -> discISg color (computeScale view (Mod.constant p) 5.0) (Mod.constant (Trafo3d.Translation(p)))
-        //                | _ -> 
-
+        //    let! t = anno.modelTrafo+
+        //    let size = points |> AList.toMod |> (Mod.map PList.count)
+        //    let pos = t.Forward.TransformPos(points |> AList.toList |> List.item(size/2))
+        //    let disc = match anno.geometry with
+        //                | Geometry.DnS -> [discISg color (computeScale view (Mod.constant pos) 5.0) (Mod.constant (Trafo3d.Translation(pos))) anno.modelTrafo]
+        //                | _ -> []
+        //    disc
             
 
         let annotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
@@ -477,7 +478,8 @@ module DrawingApp =
                     anno.points
                 else
                     anno.segments |> AList.concat
-
+            
+           // let dns = 
             [lines points c anno.thickness.value anno.modelTrafo;
              dots points c view] 
             |> ASet.ofList
