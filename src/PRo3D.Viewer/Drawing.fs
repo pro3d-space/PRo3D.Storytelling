@@ -20,9 +20,92 @@ module DrawingApp =
 
     open PRo3D.Drawing
 
+    module DipAndStrike = 
+
+        let projectOntoPlane (x:V3d) (n:V3d) = (x - (x * n)).Normalized
+
+        let computeAzimuth (dir:V3d) (north:V3d) (planeNormal:V3d) =
+            let east = north.Cross(planeNormal)
+            let eastWestPlane = new Plane3d(east, 0.0) //separates west (-) from east  (+)
+            let northSouthPlane = new Plane3d(north, 0.0) //separates sout (-) from north  (+)
+
+            let coords = new V2d(eastWestPlane.Height(dir), northSouthPlane.Height(dir))
+            let angle = Fun.Atan(coords.Y / coords.X).DegreesFromRadians().Abs()
+
+            //let nangle = match coords.X >= 0.0 with
+            //                | true -> match coords.Y >= 0.0 with
+            //                            | true -> 90.0 - angle
+            //                            | false -> angle + 90.0
+            //                | false -> match coords.Y > 0.0 with
+            //                            | true -> 270.0 + angle
+            //                            | false -> 270.0 - angle
+
+            match coords.X.Sign() with
+                    | -1 -> match coords.Y.Sign() with
+                                | 1 -> 270.0 + angle
+                                | _ -> 270.0 - angle 
+                    | _ -> match coords.Y.Sign() with
+                                | -1 -> angle + 90.0
+                                | _ -> 90.0 - angle
+
+        let calculateDipAndStrikeResults (points:plist<V3d>) =
+            let up = V3d.OOI
+            let north = V3d.IOO
+            let v3dArray = points.AsList |> List.toArray // points.toArray not possible because of: int -> V3d[]
+            let plane = PlaneFitting.FitPlane3dLS(v3dArray);
+            let bb = new Box3d(points);
+
+            let horP = new Plane3d(up, V3d.Zero);
+
+             //correct plane orientation - check if normals point in same direction
+            let height = horP.Height(plane.Normal);
+            let planeNormal = match height.Sign() with
+                                | -1 -> plane.Normal.Negated
+                                | _ -> plane.Normal
+
+            //strike
+            let strike = up.Cross(planeNormal).Normalized;
+
+            //dip vector 
+            let dip = strike.Cross(planeNormal).Normalized;
+
+            //dip plane incline .. maximum dip angle
+            let v = strike.Cross(up).Normalized;
+
+            let dns = {
+                plane = plane
+                dipAngle = Math.Acos(v.Dot(dip)).DegreesFromRadians()
+                dipDirection = dip
+                strikeDirection = strike
+                dipAzimuth = computeAzimuth v north up
+                strikeAzimuth = computeAzimuth strike north up
+                centerOfMass = bb.Center
+            }
+            dns
+
+        let dipColor (dipAngle:IMod<float>) (min:IMod<float>) (max:IMod<float>) =
+            adaptive {
+                let! dipAngle = dipAngle
+                let! min = min
+                let! max = max
+
+                let range = new Range1d(min, max)
+                let hue = (dipAngle - range.Min) / range.Size
+                let hsv = HSVf((1.0 - hue) * 0.625, 1.0, 1.0)
+
+                return hsv.ToC3f().ToC4b()
+            }
+
     let finishAndAppend (model : DrawingModel) = 
         let anns = match model.working with
-                            | Some w -> model.annotations |> PList.prepend w
+                            | Some w ->               
+                                let dns = 
+                                    match w.points.Count with
+                                        | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points) //more acc. by using segments as well?
+                                        | _ -> None 
+                                model.annotations 
+                                    |> PList.prepend { w with dnsResults = dns }
+                                        
                             | None -> model.annotations
         { model with working = None; annotations = anns; pendingIntersections = ThreadPool.empty }
 
@@ -284,79 +367,7 @@ module DrawingApp =
                 viewAnnotations model 
             ]
 
-    module DipAndStrike = 
-
-        let projectOntoPlane (x:V3d) (n:V3d) = (x - (x * n)).Normalized
-
-        let computeAzimuth (dir:V3d) (north:V3d) (planeNormal:V3d) =
-            let east = north.Cross(planeNormal)
-            let eastWestPlane = new Plane3d(east, 0.0) //separates west (-) from east  (+)
-            let northSouthPlane = new Plane3d(north, 0.0) //separates sout (-) from north  (+)
-
-            let coords = new V2d(eastWestPlane.Height(dir), northSouthPlane.Height(dir))
-            let angle = Fun.Atan(coords.Y / coords.X).DegreesFromRadians().Abs()
-
-            //let nangle = match coords.X >= 0.0 with
-            //                | true -> match coords.Y >= 0.0 with
-            //                            | true -> 90.0 - angle
-            //                            | false -> angle + 90.0
-            //                | false -> match coords.Y > 0.0 with
-            //                            | true -> 270.0 + angle
-            //                            | false -> 270.0 - angle
-
-            let azimuth = match coords.X.Sign() with
-                            | -1 -> match coords.Y.Sign() with
-                                        | 1 -> 270.0 + angle
-                                        | _ -> 270.0 - angle 
-                            | _ -> match coords.Y.Sign() with
-                                        | -1 -> angle + 90.0
-                                        | _ -> 90.0 - angle
-                                        
-            azimuth
-
-            
-  
-        let calculateDipAndStrikeResults (points:plist<V3d>) =
-            let up = V3d.OOI
-            let north = V3d.IOO
-            let v3dArray = points.AsList |> List.toArray // points.toArray not possible because of: int -> V3d[]
-            let plane = PlaneFitting.FitPlane3dLS(v3dArray);
-            let bb = new Box3d(points);
-
-            let horP = new Plane3d(up, V3d.Zero);
-
-             //correct plane orientation - check if normals point in same direction
-            let height = horP.Height(plane.Normal);
-            let planeNormal = match height.Sign() with
-                                | -1 -> plane.Normal.Negated
-                                | _ -> plane.Normal
-
-            //strike
-            let strike = up.Cross(planeNormal).Normalized;
-
-            //dip vector 
-            let dip = strike.Cross(planeNormal).Normalized;
-
-            //dip plane incline .. maximum dip angle
-            let v = strike.Cross(up).Normalized;
-
-            let dns = {
-                plane = plane
-                dipAngle = Math.Acos(v.Dot(dip)).DegreesFromRadians()
-                dipDirection = dip
-                strikeDirection = strike
-                dipAzimuth = computeAzimuth v north up
-                strikeAzimuth = computeAzimuth strike north up
-                centerOfMass = bb.Center
-            }
-            dns
-
-        let dipColor (dipAngle:float) (min:float) (max:float) =
-            let range = new Range1d(min, max)
-            let hue = (dipAngle - range.Min) / range.Size
-            let hsv = HSVf((1.0 - hue) * 0.625, 1.0, 1.0)
-
-            hsv.ToC3f().ToC4b()
+   
     
     let threads (m : DrawingModel) = m.pendingIntersections
 
@@ -459,6 +470,21 @@ module DrawingApp =
                 |> Sg.pass linePass
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
         
+        let drawDns (anno : MAnnotation) =             
+            //let color = Mod.bindOption anno.dnsResults C4b.White (fun x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0))
+            //let trafo 
+
+            aset {
+                //let! c = color
+                let! dns = anno.dnsResults                
+                match dns with
+                        | Some x -> 
+                            let color = DipAndStrike.dipColor x.dipAngle (Mod.constant 0.0) (Mod.constant 90.0)
+                            let middlePoint = anno.points |> AList.toMod |> Mod.map PList.count //get item at index ?
+                            yield discISg color (Mod.constant 1.0) (anno.modelTrafo)
+                        | None -> ()                            
+            } |> Sg.set
+
         //let drawDnS (anno : MAnnotation) (points : alist<V3d>) =
         //    let color = match anno.dnsResults |> Mod.force with
         //                    | Some x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0)
@@ -482,7 +508,7 @@ module DrawingApp =
                     yield  endPoint
             }
 
-        let workingAnnotations (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
+        let workingAnnotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
 
             let points =
                 alist {
@@ -504,13 +530,14 @@ module DrawingApp =
                 dots points color view
             ]         
 
-        let finishedAnnotations (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =                         
+        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =                         
             let points = viewAnnotation anno
             
            // let dns = 
             Sg.ofList [
                 lines points c anno.thickness.value anno.modelTrafo;
                 dots points c view
+                drawDns anno
             ]
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =        
@@ -523,12 +550,12 @@ module DrawingApp =
                     for a in annoSet do
                        // let a = { a with color = UI.mkColor a }
                        let c = UI.mkColor model a
-                       yield finishedAnnotations a cam c
+                       yield finishedAnnotation a cam c
                 } |> Sg.set
                                 
             Sg.ofList [
                 brush model.hoverPosition; 
                 annotations
-                workingAnnotations model.working cam
+                workingAnnotation model.working cam
             ]
             
