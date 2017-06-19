@@ -93,6 +93,54 @@ module Mutable =
                     override x.Update(r,f) = { r with centerOfMass = f r.centerOfMass }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
+    type MSegment(__initial : PRo3D.Segment) = 
+        let mutable __current = __initial
+        let _startPoint = ResetMod.Create(__initial.startPoint)
+        let _endPoint = ResetMod.Create(__initial.endPoint)
+        let _points = MList.Create(__initial.points)
+        
+        member x.startPoint = _startPoint :> IMod<_>
+        member x.endPoint = _endPoint :> IMod<_>
+        member x.points = _points :> alist<_>
+        
+        member x.Update(v : PRo3D.Segment) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_startPoint,v.startPoint)
+                ResetMod.Update(_endPoint,v.endPoint)
+                MList.Update(_points, v.points)
+        
+        static member Create(v : PRo3D.Segment) = MSegment(v)
+        static member Update(m : MSegment, v : PRo3D.Segment) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module Segment =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let startPoint =
+                { new Lens<PRo3D.Segment, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.startPoint
+                    override x.Set(r,v) = { r with startPoint = v }
+                    override x.Update(r,f) = { r with startPoint = f r.startPoint }
+                }
+            let endPoint =
+                { new Lens<PRo3D.Segment, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.endPoint
+                    override x.Set(r,v) = { r with endPoint = v }
+                    override x.Update(r,f) = { r with endPoint = f r.endPoint }
+                }
+            let points =
+                { new Lens<PRo3D.Segment, Aardvark.Base.plist<Aardvark.Base.V3d>>() with
+                    override x.Get(r) = r.points
+                    override x.Set(r,v) = { r with points = v }
+                    override x.Update(r,f) = { r with points = f r.points }
+                }
+    [<StructuredFormatDisplay("{AsString}")>]
     type MAnnotation(__initial : PRo3D.Annotation) = 
         let mutable __current = __initial
         let _key = ResetMod.Create(__initial.key)
@@ -101,7 +149,7 @@ module Mutable =
         let _projection = ResetMod.Create(__initial.projection)
         let _semantic = ResetMod.Create(__initial.semantic)
         let _points = MList.Create(__initial.points)
-        let _segments = MList.Create(__initial.segments, (fun v -> MList.Create(v)), (fun (m,v) -> MList.Update(m, v)), (fun v -> v :> alist<_>))
+        let _segments = MList.Create(__initial.segments, (fun v -> MSegment.Create(v)), (fun (m,v) -> MSegment.Update(m, v)), (fun v -> v))
         let _color = ResetMod.Create(__initial.color)
         let _thickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.thickness)
         let _dnsResults = MOption.Create(__initial.dnsResults, (fun v -> MDipAndStrikeResults.Create(v)), (fun (m,v) -> MDipAndStrikeResults.Update(m, v)), (fun v -> v))
@@ -186,7 +234,7 @@ module Mutable =
                     override x.Update(r,f) = { r with points = f r.points }
                 }
             let segments =
-                { new Lens<PRo3D.Annotation, Aardvark.Base.plist<Aardvark.Base.plist<Aardvark.Base.V3d>>>() with
+                { new Lens<PRo3D.Annotation, Aardvark.Base.plist<PRo3D.Segment>>() with
                     override x.Get(r) = r.segments
                     override x.Set(r,v) = { r with segments = v }
                     override x.Update(r,f) = { r with segments = f r.segments }

@@ -79,3 +79,10 @@ module Box3d =
         for b in bs do
             box.ExtendBy(b)
         box
+
+module Mod =
+    open Aardvark.Base.Incremental
+
+    let bindOption (m : IMod<Option<'a>>) (defaultValue : 'b) (project : 'a -> IMod<'b>)  : IMod<'b> =
+        m |> Mod.bind (function | None   -> Mod.constant defaultValue       
+                                | Some v -> project v)

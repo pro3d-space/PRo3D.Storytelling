@@ -20,8 +20,9 @@ type Action =
     | SetExportPath    of string
     | Move             of V3d
     | Exit    
-    | AddPoint         of V3d
+    | AddPoint         of V3d * (V3d -> Option<V3d>)
     | AddPointAdv      of V3d * (V3d -> Option<V3d>)
+    | SetSegment       of int * Segment
     | KeyDown          of key : Aardvark.Application.Keys
     | KeyUp            of key : Aardvark.Application.Keys      
     | Export

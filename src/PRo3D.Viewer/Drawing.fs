@@ -12,13 +12,11 @@ module DrawingApp =
     open Aardvark.Base.Rendering
     open Aardvark.Application
     open Aardvark.SceneGraph
-    open Aardvark.UI
-    open Aardvark.UI.Primitives
     open Aardvark.Rendering.Text
     open Aardvark.VRVis
 
-    open Aardvark.SceneGraph.SgPrimitives
-    open Aardvark.SceneGraph.FShadeSceneGraph
+    open Aardvark.UI
+    open Aardvark.UI.Primitives
 
     open PRo3D.Drawing
 
@@ -26,20 +24,35 @@ module DrawingApp =
         let anns = match model.working with
                             | Some w -> model.annotations |> PList.prepend w
                             | None -> model.annotations
-        { model with working = None; annotations = anns }
+        { model with working = None; annotations = anns; pendingIntersections = ThreadPool.empty }
 
-    let addPoint p model =
+    let addPoint samplePoint p model =
         let working, newSegment = 
             match model.working with
                     | Some w ->     
-                        let newModel = { w with points = w.points |> PList.prepend p }
+                        let newModel = { w with points = w.points |> PList.append p }
                         Log.line "working contains %d points" newModel.points.Count
-                        match PList.tryAt 0 w.points with
+                        match PList.tryAt (PList.count w.points - 1) w.points with
                             | None -> 
                                 newModel, None
                             | Some a -> 
                                 let segmentIndex = PList.count newModel.segments
-                                { newModel with segments = PList.append (PList.ofList [p; a]) newModel.segments }, Some (a,p,segmentIndex)
+
+                                let newSegment = { startPoint = a; endPoint = p; points = PList.ofList [a;p] }
+                                if PRo3D.Config.useAsyncIntersections then
+                                    { newModel with segments = PList.append newSegment newModel.segments }, Some (newSegment,segmentIndex)
+                                else
+                                    let dir = newSegment.endPoint - newSegment.startPoint
+                                    let points = 
+                                        [ for s in 0 .. PRo3D.Config.sampleCount do
+                                            let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                                            match samplePoint p with
+                                                | None -> ()
+                                                | Some projectedPoint ->
+                                                    yield projectedPoint 
+                                        ]
+                                    let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
+                                    { newModel with segments = PList.append newSegment newModel.segments }, None
                         
                     | None ->                                     
                         { 
@@ -49,35 +62,61 @@ module DrawingApp =
 
         let model = { model with working = Some working }
 
-        //let model = match (working.geometry, (working.points |> PList.count)) with
-        //                | Geometry.Point, 1 -> model |> finishAndAppend
-        //                | Geometry.Line, 2 -> model |> finishAndAppend
-        //                | _ -> model
+        match (working.geometry, (working.points |> PList.count)) with
+            | Geometry.Point, 1 -> 
+                model |> finishAndAppend, None
+            | Geometry.Line, 2 -> 
+                model |> finishAndAppend, None
+            | _ -> 
+                model, newSegment
 
-        model, newSegment
 
-    let addNewSegment samplePoint model (p0:V3d,p1:V3d,segmentIndex : int) =
-        let sampleCount = 20
-        let dir = p1-p0
-        let samples = 
-            [ for s in 0 .. 20 do
-                let p = p0 + dir * (float s / float sampleCount) // world space
-                match samplePoint p with
-                    | None -> ()
-                    | Some projectedPoint -> // projected point in world space
-                        yield projectedPoint
-            ]
+    let addNewSegment samplePoint model (newSegment : Segment, segmentIndex : int) =
+        let dir = newSegment.endPoint - newSegment.startPoint
+        let id = Guid.NewGuid() |> string
 
-        //let a = 
-        //    proc {
-        //        send (SetComputedSegment(segmentIndex, newSegment))
-        //    }
+        let computation = 
+            proclist {
+                let mutable r = []
+                let result = MVar.empty()
+                let task = 
+                    async {
+                        do! Async.SwitchToNewThread()
+                        let r = 
+                            [ for s in 0 .. PRo3D.Config.sampleCount do
+                                let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                                match samplePoint p with
+                                    | None -> ()
+                                    | Some projectedPoint -> // projected point in world space
+                                        r <- r @ [projectedPoint]
+                                        MVar.put result (Choice1Of2 r)
+                                        yield projectedPoint
+                            ]
+                        MVar.put result (Choice2Of2 ())
+                    } |> Async.Start
 
-        match model.working with
-            | None -> model
-            | Some w -> 
-                let newSegment = PList.ofList samples
-                { model with working = Some { w with segments = PList.setAt segmentIndex newSegment w.segments } }
+                let rec doIt () =
+                    proclist {
+                         let! r = Proc.Await (MVar.takeAsync result)
+                         match r with
+                            | Choice1Of2 r -> 
+                                printfn "mked it: %A" r
+                                let segment = { newSegment with points = PList.ofList r}
+                                yield SetSegment(segmentIndex,segment)
+                                yield! doIt()
+                            | Choice2Of2 _ -> ()
+                    }
+
+                yield! doIt()
+            } 
+        
+        let pool = 
+            if model.pendingIntersections.store.ContainsKey id then 
+                ThreadPool.remove id model.pendingIntersections
+            else 
+                model.pendingIntersections
+        { model with pendingIntersections = ThreadPool.add id computation pool }
+
 
 
     let update (model : DrawingModel) (act : Action) =
@@ -88,14 +127,21 @@ module DrawingApp =
                     {model with draw = false; hoverPosition = None }
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
-            | AddPoint p, true ->                     
-                    addPoint p model |> fst               
+            | AddPoint(p,samplePoint), true ->                     
+                    addPoint samplePoint p model |> fst               
             | AddPointAdv (point, samplePoint), true ->
-                    let model, newSegment = addPoint point model                    
+                    let model, newSegment = addPoint samplePoint point model                    
                     
                     match newSegment with
                         | None         -> model
                         | Some segment -> addNewSegment samplePoint model segment
+
+            | SetSegment(segmentIndex,segment), _ ->
+                match model.working with
+                    | None -> model
+                    | Some w -> 
+                        printfn "oida"
+                        { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
 
             | KeyDown Aardvark.Application.Keys.Enter, _ -> 
                     model |> finishAndAppend
@@ -311,7 +357,8 @@ module DrawingApp =
             let hsv = HSVf((1.0 - hue) * 0.625, 1.0, 1.0)
 
             hsv.ToC3f().ToC4b()
-            
+    
+    let threads (m : DrawingModel) = m.pendingIntersections
 
     module Sg =        
 
@@ -347,38 +394,16 @@ module DrawingApp =
 
         let mkDotISg color size trafo =                     
             Sg.sphere 5 color size 
-                    |> Sg.shader {
-                        do! Aardvark.Opc.Shader.stableTrafo
-                        do! DefaultSurfaces.vertexColor
-                        do! DefaultSurfaces.simpleLighting
-                    }
-                    |> Sg.noEvents
-                    |> Sg.trafo(trafo) 
+               |> Sg.noEvents
+               |> Sg.trafo(trafo) 
 
-        
-        let canvas =             
-            Sg.sphere' 8 (new C4b(247,127,90)) 20.0
-                |> Sg.shader {
-                    do! DefaultSurfaces.trafo
-                    do! DefaultSurfaces.vertexColor
-                    do! DefaultSurfaces.simpleLighting
-                }
-                |> Sg.requirePicking
-                |> Sg.noEvents 
-                    |> Sg.withEvents [
-                        Sg.onMouseMove (fun p -> (Action.Move p))
-                        Sg.onClick(fun p -> Action.AddPoint p)
-                        Sg.onLeave (fun _ -> Action.Exit)
-                    ]  
-                |> Sg.onOff (Mod.constant true)
-              //  |> Sg.map DrawingMessage
 
         let edgeLines (close : bool) (points : alist<V3d>) (trafo:IMod<Trafo3d>) =            
             points
                 |> AList.map(fun d -> trafo.GetValue().Backward.TransformPos d)
                 |> AList.toMod |> Mod.map (fun l ->
                     let list = PList.toList l
-                    let head = list |> List.tryLast
+                    let head = list |> List.tryHead
                     
                     match head with
                         | Some h -> if close then list @ [h] else list
@@ -390,23 +415,38 @@ module DrawingApp =
             
         let brush (hovered : IMod<Trafo3d option>) = 
             let trafo =
-                hovered |> Mod.map (function o -> match o with 
-                                                    | Some t-> t
-                                                    | None -> Trafo3d.Scale(V3d.Zero))
+                hovered |> Mod.map (fun o -> 
+                    match o with 
+                        | Some t-> t
+                        | None -> Trafo3d.Scale(V3d.Zero)
+                )
 
             mkDotISg (Mod.constant C4b.Red) (Mod.constant 0.05) trafo
+            |> Sg.effect [
+                toEffect <| Aardvark.Opc.Shader.stableTrafo
+                toEffect <| DefaultSurfaces.vertexColor
+                toEffect <| DefaultSurfaces.simpleLighting
+            ]
        
         let dots (points : alist<V3d>) (color : IMod<C4b>) (view : IMod<CameraView>) =            
             
             aset {
                 for p in points |> ASet.ofAList do
-                    yield mkDotISg color (computeScale view (Mod.constant p) 5.0) (Mod.constant (Trafo3d.Translation(p)))
+                    let scale = computeScale view (Mod.constant p) 5.0
+                    //let scale = Mod.constant 0.6
+                    yield mkDotISg color scale (Mod.constant (Trafo3d.Translation(p)))
             } 
             |> Sg.set
+            |> Sg.effect [
+                    toEffect <| Aardvark.Opc.Shader.stableTrafo
+                    toEffect <| DefaultSurfaces.vertexColor
+                    toEffect <| DefaultSurfaces.simpleLighting
+                ]
            
+        let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
+
         let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>)= 
-           let lines = edgeLines false points trafo           
-           lines
+           edgeLines false points trafo           
                 |> Sg.lines color                
                 |> Sg.shader {
                     do! Aardvark.Opc.Shader.stableTrafo
@@ -416,7 +456,7 @@ module DrawingApp =
                 |> Sg.noEvents                
                 |> Sg.trafo trafo
                 |> Sg.uniform "LineWidth" width
-                |> Sg.pass (RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main)
+                |> Sg.pass linePass
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
         
         //let drawDnS (anno : MAnnotation) (points : alist<V3d>) =
@@ -432,74 +472,63 @@ module DrawingApp =
         //    disc
             
 
-        let annotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
-            //alist builder?
-            let points = 
-                anno |> AList.bind (fun o -> 
-                    match o with
-                        | Some a -> 
-                             if (a.segments |> AList.toList |> List.isEmpty) then
-                                 a.points
-                             else
-                                 a.segments |> AList.concat
-                        | None -> AList.empty
-                ) 
-            
+        let viewAnnotation (a : MAnnotation) =
+            alist {
+                for segment in a.segments do
+                    let! startPoint = segment.startPoint
+                    let! endPoint = segment.endPoint
+                    yield  startPoint
+                    yield! segment.points
+                    yield  endPoint
+            }
+
+        let workingAnnotations (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
+
+            let points =
+                alist {
+                    let! anno = anno
+                    match anno with
+                        | Some a -> yield! viewAnnotation a
+                        | None -> ()
+                }
                 
-            let withDefault (m : IMod<Option<'a>>) (f : 'a -> IMod<'b>) (defaultValue : 'b) = 
-                let defaultValue = defaultValue |> Mod.constant
-                m |> Mod.bind (function | None -> defaultValue | Some v -> f v)
-
-            let color = 
-                withDefault anno (fun a -> a.color) C4b.VRVisGreen
-
-            let thickness = 
-                anno |> Mod.bind (function o -> match o with
-                                                | Some a -> a.thickness.value
-                                                | None -> Mod.constant 1.0)
-
-            let key = 
-                anno |> Mod.bind (function o -> match o with
-                                                | Some a -> a.key
-                                                | None -> Mod.constant Guid.Empty)
-
-            let trafo = 
-                anno |> Mod.bind (function o -> match o with
-                                                | Some a -> a.modelTrafo
-                                                | None -> Mod.constant Trafo3d.Identity)
+            let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color) 
+            let thickness = Mod.bindOption anno 1.0              (fun a -> a.thickness.value) 
+            let key       = Mod.bindOption anno Guid.Empty       (fun a -> a.key) 
+            let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo) 
             
             let polyline = lines points color thickness trafo  
            
-            [polyline; dots points color view]         
+            Sg.ofList [
+                polyline
+                dots points color view
+            ]         
 
-        let annotation' (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =                         
-            let points = 
-                if (anno.segments |> AList.toList |> List.isEmpty) then
-                    anno.points
-                else
-                    anno.segments |> AList.concat
+        let finishedAnnotations (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =                         
+            let points = viewAnnotation anno
             
            // let dns = 
-            [lines points c anno.thickness.value anno.modelTrafo;
-             dots points c view] 
-            |> ASet.ofList
+            Sg.ofList [
+                lines points c anno.thickness.value anno.modelTrafo;
+                dots points c view
+            ]
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =        
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler
             let annoSet = ASet.ofAList model.annotations 
 
-           // let trafo = model.offset |> Mod.map (fun d -> match d with | Some p -> Trafo3d.Translation p | None -> Trafo3d.Identity )
-
             let annotations =
                 aset {
                     for a in annoSet do
                        // let a = { a with color = UI.mkColor a }
                        let c = UI.mkColor model a
-                       yield! (annotation' a cam c)
+                       yield finishedAnnotations a cam c
                 } |> Sg.set
                                 
-            //canvas
-            [brush model.hoverPosition; annotations] @ annotation model.working cam
-            |> Sg.ofList
+            Sg.ofList [
+                brush model.hoverPosition; 
+                annotations
+                workingAnnotations model.working cam
+            ]
             

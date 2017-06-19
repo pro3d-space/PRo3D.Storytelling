@@ -20,7 +20,8 @@ module Statistics =
             while true do
                 System.Threading.Thread.Sleep 1000
                 let old = lock lockObj (fun () -> let r = stats in stats <- empty; r)
-                printfn "Status: %A, resulting in %A per object %A" old (old.elapsed / float old.loadedObjects) (old.elapsedCreate / float old.loadedObjects) 
+                ()
+                //printfn "Status: %A, resulting in %A per object %A" old (old.elapsed / float old.loadedObjects) (old.elapsedCreate / float old.loadedObjects) 
         } |> Async.Start 
 
     let emitLoaded (timeSpan : MicroTime) (createTime : MicroTime) (elapsedIndex : MicroTime) =  
