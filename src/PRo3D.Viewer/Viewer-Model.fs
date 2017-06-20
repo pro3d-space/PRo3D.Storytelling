@@ -37,6 +37,11 @@ type Properties =
     | AnnotationProperties of Annotation
     | NoProperties
 
+type Interactions =
+    | PickExploreCenter
+    | PlaceCoordinateSystem  // compute up north vector at that point
+    | DrawAnnotation
+
 [<DomainType>]
 type Model = { 
    
@@ -44,7 +49,9 @@ type Model = {
     drawing     : Drawing.DrawingModel
     surfaces    : hset<SgSurface>        
     properties  : Properties
-
+    interaction : Interactions
+    picking     : bool
+    
     //measurementPath : string
   //  draw    : bool 
 //    hoverPosition : option<Trafo3d>
@@ -63,6 +70,8 @@ module Viewer =
 
         drawing = Drawing.Model.initialdrawing
         properties = NoProperties
+        interaction = DrawAnnotation
+        picking = false
         //measurementPath = @"."
 
         // draw = false

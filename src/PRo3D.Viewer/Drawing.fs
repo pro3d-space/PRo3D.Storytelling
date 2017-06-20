@@ -97,10 +97,13 @@ module DrawingApp =
             }
 
     let finishAndAppend (model : DrawingModel) = 
+        //if there are at least 3 points do dns calculation (debug, dev). 
+        //might take long for large number of points so created on demand?
+
         let anns = match model.working with
                             | Some w ->               
                                 let dns = 
-                                    match w.points.Count with
+                                    match w.points.Count with 
                                         | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points) //more acc. by using segments as well?
                                         | _ -> None 
                                 model.annotations 
@@ -113,33 +116,38 @@ module DrawingApp =
         let working, newSegment = 
             match model.working with
                     | Some w ->     
-                        let newModel = { w with points = w.points |> PList.append p }
-                        Log.line "working contains %d points" newModel.points.Count
-                        match PList.tryAt (PList.count w.points - 1) w.points with
-                            | None -> 
-                                newModel, None
-                            | Some a -> 
-                                let segmentIndex = PList.count newModel.segments
+                        let annotation = { w with points = w.points |> PList.append p }
+                        Log.line "working contains %d points" annotation.points.Count
 
-                                let newSegment = { startPoint = a; endPoint = p; points = PList.ofList [a;p] }
-                                if PRo3D.Config.useAsyncIntersections then
-                                    { newModel with segments = PList.append newSegment newModel.segments }, Some (newSegment,segmentIndex)
-                                else
-                                    let dir = newSegment.endPoint - newSegment.startPoint
-                                    let points = 
-                                        [ for s in 0 .. PRo3D.Config.sampleCount do
-                                            let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
-                                            match samplePoint p with
-                                                | None -> ()
-                                                | Some projectedPoint ->
-                                                    yield projectedPoint 
-                                        ]
-                                    let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
-                                    { newModel with segments = PList.append newSegment newModel.segments }, None
+                        //fetch current drawing segment (projected, polyline or polygon)
+                        let projected =
+                            match PList.tryAt (PList.count w.points-1) w.points with
+                                | None -> 
+                                    annotation, None
+                                | Some a -> 
+                                    let segmentIndex = PList.count annotation.segments
+
+                                    let newSegment = { startPoint = a; endPoint = p; points = PList.ofList [a;p] }
+                                    if PRo3D.Config.useAsyncIntersections then
+                                        { annotation with segments = PList.append newSegment annotation.segments }, Some (newSegment,segmentIndex)
+                                    else
+                                        let dir = newSegment.endPoint - newSegment.startPoint
+                                        let points = 
+                                            [ for s in 0 .. PRo3D.Config.sampleCount do
+                                                let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                                                match samplePoint p with
+                                                    | None -> ()
+                                                    | Some projectedPoint ->
+                                                        yield projectedPoint 
+                                            ]
+                                        let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
+                                        { annotation with segments = PList.append newSegment annotation.segments }, None
+                        projected
                         
-                    | None ->                                     
+                    | None ->  //no working state, start new working annotation
                         { 
-                            (Annotation.make model.projection model.geometry model.semantic)  //add annotation states
+                            //annotation states should be immutable after creation
+                            (Annotation.make model.projection model.geometry model.semantic)  
                                 with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
                         }, None 
 
@@ -151,7 +159,7 @@ module DrawingApp =
             | Geometry.Line, 2 -> 
                 model |> finishAndAppend, None
             | _ -> 
-                model, newSegment
+                model, newSegment // returns current segment for async computations outside
 
 
     let addNewSegment samplePoint model (newSegment : Segment, segmentIndex : int) =
@@ -200,13 +208,11 @@ module DrawingApp =
                 model.pendingIntersections
         { model with pendingIntersections = ThreadPool.add id computation pool }
 
-
-
     let update (model : DrawingModel) (act : Action) =
         match (act, model.draw) with
-            | KeyDown Keys.LeftCtrl, _ ->                     
+            | StartDrawing, _ ->                     
                     { model with draw = true }
-            | KeyUp Keys.LeftCtrl, _ -> 
+            | StopDrawing, _ -> 
                     {model with draw = false; hoverPosition = None }
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
@@ -226,7 +232,9 @@ module DrawingApp =
                         printfn "oida"
                         { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
 
-            | KeyDown Aardvark.Application.Keys.Enter, _ -> 
+            //| KeyDown Aardvark.Application.Keys.Enter, _ -> 
+            //        model |> finishAndAppend
+            | Finish, _ -> 
                     model |> finishAndAppend
             | Exit, _ -> 
                     { model with hoverPosition = None }
@@ -240,17 +248,7 @@ module DrawingApp =
             | SetGeometry mode, _ ->
                     { model with geometry = mode }
             | SetProjection mode, _ ->
-                    { model with projection = mode }
-            | KeyDown Aardvark.Application.Keys.D0, _ -> 
-                    {model with semantic = Semantic.Horizon0 }               
-            | KeyDown Aardvark.Application.Keys.D1, _ -> 
-                    {model with semantic = Semantic.Horizon1 }               
-            | KeyDown Aardvark.Application.Keys.D2, _ -> 
-                    {model with semantic = Semantic.Horizon2 }               
-            | KeyDown Aardvark.Application.Keys.D3, _ -> 
-                    {model with semantic = Semantic.Horizon3 }               
-            | KeyDown Aardvark.Application.Keys.D4, _ -> 
-                    {model with semantic = Semantic.Horizon4 }               
+                    { model with projection = mode }                  
             | SetExportPath s, _ ->
                     { model with exportPath = s }
             | Export, _ ->
@@ -281,6 +279,7 @@ module DrawingApp =
                 let ann = DrawingModel.tryGet model id
                         
                 { model with selected = selection; selectedAnnotation = ann }  
+            | Nop, _ -> model
             | _ -> model
 
     module UI =
@@ -342,26 +341,24 @@ module DrawingApp =
                             
                         alist {                                                                     
                             for a in model.annotations do 
-                                        
-                                
-                            let! sem = a.semantic
-                            let! c = mkColor model a
+                                                                        
+                                let! sem = a.semantic
+                                let! c = mkColor model a
 
-                            let bgc = sprintf "color: %s" (Html.ofC4b c)
+                                let bgc = sprintf "color: %s" (Html.ofC4b c)
                                     
-                            yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
-                                    i [clazz "large Sticky Note middle aligned icon"; style bgc][]
-                                    div [clazz "content"] [
-                                        let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
-                                        let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
-                                        yield div [clazz "header"] [Incremental.text header]                                       
-                                        yield div [clazz "description"] [Incremental.text desc]      
+                                yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
+                                        i [clazz "large Sticky Note middle aligned icon"; style bgc][]
+                                        div [clazz "content"] [
+                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
+                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
+                                            yield div [clazz "header"] [Incremental.text header]                                       
+                                            yield div [clazz "description"] [Incremental.text desc]      
+                                        ]
                                     ]
-                                ]
                         }     
                 )
             
-
         let viewAnnotationsAcc (model:MDrawingModel) = 
             Html.SemUi.accordion "Annotations" "File Outline" true [
                 viewAnnotations model 
@@ -393,7 +390,6 @@ module DrawingApp =
                         |> Sg.noEvents
                         |> Sg.trafo(trafo) 
 
-
         let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =        
             adaptive {
                 let! p = p
@@ -407,7 +403,6 @@ module DrawingApp =
             Sg.sphere 5 color size 
                |> Sg.noEvents
                |> Sg.trafo(trafo) 
-
 
         let edgeLines (close : bool) (points : alist<V3d>) (trafo:IMod<Trafo3d>) =            
             points
@@ -484,20 +479,7 @@ module DrawingApp =
                             yield discISg color (Mod.constant 1.0) (anno.modelTrafo)
                         | None -> ()                            
             } |> Sg.set
-
-        //let drawDnS (anno : MAnnotation) (points : alist<V3d>) =
-        //    let color = match anno.dnsResults |> Mod.force with
-        //                    | Some x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0)
-        //                    | None -> anno.color
-        //    let! t = anno.modelTrafo+
-        //    let size = points |> AList.toMod |> (Mod.map PList.count)
-        //    let pos = t.Forward.TransformPos(points |> AList.toList |> List.item(size/2))
-        //    let disc = match anno.geometry with
-        //                | Geometry.DnS -> [discISg color (computeScale view (Mod.constant pos) 5.0) (Mod.constant (Trafo3d.Translation(pos))) anno.modelTrafo]
-        //                | _ -> []
-        //    disc
             
-
         let viewAnnotation (a : MAnnotation) =
             alist {
                 for segment in a.segments do

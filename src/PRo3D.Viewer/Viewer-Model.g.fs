@@ -120,11 +120,15 @@ module Mutable =
         let _drawing = PRo3D.Drawing.Mutable.MDrawingModel.Create(__initial.drawing)
         let _surfaces = MSet.Create(unbox, __initial.surfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
         let _properties = ResetMod.Create(__initial.properties)
+        let _interaction = ResetMod.Create(__initial.interaction)
+        let _picking = ResetMod.Create(__initial.picking)
         
         member x.scene = _scene
         member x.drawing = _drawing
         member x.surfaces = _surfaces :> aset<_>
         member x.properties = _properties :> IMod<_>
+        member x.interaction = _interaction :> IMod<_>
+        member x.picking = _picking :> IMod<_>
         
         member x.Update(v : PRo3D.Viewer.Model) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -134,6 +138,8 @@ module Mutable =
                 PRo3D.Drawing.Mutable.MDrawingModel.Update(_drawing, v.drawing)
                 MSet.Update(_surfaces, v.surfaces)
                 ResetMod.Update(_properties,v.properties)
+                ResetMod.Update(_interaction,v.interaction)
+                ResetMod.Update(_picking,v.picking)
         
         static member Create(v : PRo3D.Viewer.Model) = MModel(v)
         static member Update(m : MModel, v : PRo3D.Viewer.Model) = m.Update(v)
@@ -169,4 +175,16 @@ module Mutable =
                     override x.Get(r) = r.properties
                     override x.Set(r,v) = { r with properties = v }
                     override x.Update(r,f) = { r with properties = f r.properties }
+                }
+            let interaction =
+                { new Lens<PRo3D.Viewer.Model, PRo3D.Viewer.Interactions>() with
+                    override x.Get(r) = r.interaction
+                    override x.Set(r,v) = { r with interaction = v }
+                    override x.Update(r,f) = { r with interaction = f r.interaction }
+                }
+            let picking =
+                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.picking
+                    override x.Set(r,v) = { r with picking = v }
+                    override x.Update(r,f) = { r with picking = f r.picking }
                 }
