@@ -2,4 +2,4 @@
 
 
 let useAsyncIntersections = false
-let sampleCount = 20
+let sampleCount = 200

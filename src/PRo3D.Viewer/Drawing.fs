@@ -115,41 +115,48 @@ module DrawingApp =
     let addPoint samplePoint p model =
         let working, newSegment = 
             match model.working with
-                    | Some w ->     
-                        let annotation = { w with points = w.points |> PList.append p }
-                        Log.line "working contains %d points" annotation.points.Count
+                | Some w ->     
+                    let annotation = { w with points = w.points |> PList.append p }
+                    Log.line "working contains %d points" annotation.points.Count
 
-                        //fetch current drawing segment (projected, polyline or polygon)
-                        let projected =
-                            match PList.tryAt (PList.count w.points-1) w.points with
-                                | None -> 
-                                    annotation, None
-                                | Some a -> 
-                                    let segmentIndex = PList.count annotation.segments
+                    //fetch current drawing segment (projected, polyline or polygon)
+                    let result = 
+                        match w.projection with
+                            | Projection.Viewpoint | Projection.Sky ->                     
+                                match PList.tryAt (PList.count w.points-1) w.points with
+                                    | None -> 
+                                        annotation, None
+                                    | Some a -> 
+                                        let segmentIndex = PList.count annotation.segments
+                                        let newSegment = { startPoint = a; endPoint = p; points = PList.ofList [a;p] }
 
-                                    let newSegment = { startPoint = a; endPoint = p; points = PList.ofList [a;p] }
-                                    if PRo3D.Config.useAsyncIntersections then
-                                        { annotation with segments = PList.append newSegment annotation.segments }, Some (newSegment,segmentIndex)
-                                    else
-                                        let dir = newSegment.endPoint - newSegment.startPoint
-                                        let points = 
-                                            [ for s in 0 .. PRo3D.Config.sampleCount do
-                                                let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
-                                                match samplePoint p with
-                                                    | None -> ()
-                                                    | Some projectedPoint ->
-                                                        yield projectedPoint 
-                                            ]
-                                        let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
-                                        { annotation with segments = PList.append newSegment annotation.segments }, None
-                        projected
+                                        if PRo3D.Config.useAsyncIntersections then
+                                            { annotation with segments = PList.append newSegment annotation.segments }, Some (newSegment,segmentIndex)
+                                        else
+                                            let dir = newSegment.endPoint - newSegment.startPoint
+                                            let points = 
+                                                [ for s in 0 .. PRo3D.Config.sampleCount do
+                                                    let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                                                    match samplePoint p with
+                                                        | None -> ()
+                                                        | Some projectedPoint ->
+                                                            yield projectedPoint
+                                                ]
+                                            let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
+                                            { annotation with segments = PList.append newSegment annotation.segments }, None
+                            | Projection.Linear ->
+                                annotation, None
+                            | _ -> failwith "case does not exist"
+                    
+                    result
+                    
                         
-                    | None ->  //no working state, start new working annotation
-                        { 
-                            //annotation states should be immutable after creation
-                            (Annotation.make model.projection model.geometry model.semantic)  
-                                with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
-                        }, None 
+                | None ->  //no working state, start new working annotation
+                    { 
+                        //annotation states should be immutable after creation
+                        (Annotation.make model.projection model.geometry model.semantic)  
+                            with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
+                    }, None
 
         let model = { model with working = Some working }
 
@@ -160,7 +167,6 @@ module DrawingApp =
                 model |> finishAndAppend, None
             | _ -> 
                 model, newSegment // returns current segment for async computations outside
-
 
     let addNewSegment samplePoint model (newSegment : Segment, segmentIndex : int) =
         let dir = newSegment.endPoint - newSegment.startPoint
@@ -363,14 +369,12 @@ module DrawingApp =
             Html.SemUi.accordion "Annotations" "File Outline" true [
                 viewAnnotations model 
             ]
-
-   
-    
+ 
     let threads (m : DrawingModel) = m.pendingIntersections
 
     module Sg =        
 
-        let discISg color size trafo =         
+        let discISg color size trafo =
             Sg.cylinder 5 color size (Mod.constant 2.1)
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
@@ -380,7 +384,7 @@ module DrawingApp =
                         |> Sg.noEvents
                         |> Sg.trafo(trafo) 
 
-        let coneISg color size trafo =         
+        let coneISg color size trafo =
             Sg.cone 5 color size (Mod.constant 0.5)
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
@@ -390,7 +394,7 @@ module DrawingApp =
                         |> Sg.noEvents
                         |> Sg.trafo(trafo) 
 
-        let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =        
+        let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =
             adaptive {
                 let! p = p
                 let! v = view
@@ -399,12 +403,12 @@ module DrawingApp =
                 return distF * size / 800.0 //needs hfov at this point
             }
 
-        let mkDotISg color size trafo =                     
+        let mkDotISg color size trafo = 
             Sg.sphere 5 color size 
                |> Sg.noEvents
                |> Sg.trafo(trafo) 
 
-        let edgeLines (close : bool) (points : alist<V3d>) (trafo:IMod<Trafo3d>) =            
+        let edgeLines (close : bool) (points : alist<V3d>) (trafo:IMod<Trafo3d>) =
             points
                 |> AList.map(fun d -> trafo.GetValue().Backward.TransformPos d)
                 |> AList.toMod |> Mod.map (fun l ->
@@ -434,7 +438,7 @@ module DrawingApp =
                 toEffect <| DefaultSurfaces.simpleLighting
             ]
        
-        let dots (points : alist<V3d>) (color : IMod<C4b>) (view : IMod<CameraView>) =            
+        let dots (points : alist<V3d>) (color : IMod<C4b>) (view : IMod<CameraView>) = 
             
             aset {
                 for p in points |> ASet.ofAList do
@@ -465,7 +469,7 @@ module DrawingApp =
                 |> Sg.pass linePass
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
         
-        let drawDns (anno : MAnnotation) =             
+        let drawDns (anno : MAnnotation) =
             //let color = Mod.bindOption anno.dnsResults C4b.White (fun x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0))
             //let trafo 
 
@@ -480,57 +484,66 @@ module DrawingApp =
                         | None -> ()                            
             } |> Sg.set
             
-        let viewAnnotation (a : MAnnotation) =
-            alist {
-                for segment in a.segments do
-                    let! startPoint = segment.startPoint
-                    let! endPoint = segment.endPoint
-                    yield  startPoint
-                    yield! segment.points
-                    yield  endPoint
+        let getPolyline (a : MAnnotation) =
+            alist {                
+                let! hasSegments = a.segments |> AList.toMod |> Mod.map (fun d -> d |> PList.count > 0)
+                if hasSegments then
+                    for segment in a.segments do
+                        let! startPoint = segment.startPoint
+                        let! endPoint = segment.endPoint
+                        yield  startPoint
+                        yield! segment.points
+                        yield  endPoint
+                else
+                    yield! a.points
             }
 
         let workingAnnotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
 
-            let points =
+            let polyPoints =
                 alist {
                     let! anno = anno
                     match anno with
-                        | Some a -> yield! viewAnnotation a
+                        | Some a -> yield! getPolyline a
+                        | None -> ()
+                }
+
+            let points = 
+                alist {
+                    let! anno = anno
+                    match anno with
+                        | Some a -> yield! a.points
                         | None -> ()
                 }
                 
             let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color) 
             let thickness = Mod.bindOption anno 1.0              (fun a -> a.thickness.value) 
             let key       = Mod.bindOption anno Guid.Empty       (fun a -> a.key) 
-            let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo) 
-            
-            let polyline = lines points color thickness trafo  
-           
+            let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)          
+                                   
             Sg.ofList [
-                polyline
-                dots points color view
+                lines polyPoints color thickness trafo  //polyline
+                dots points color view                  //support points
             ]         
 
-        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =                         
-            let points = viewAnnotation anno
+        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =
+            let points = getPolyline anno
             
            // let dns = 
             Sg.ofList [
                 lines points c anno.thickness.value anno.modelTrafo;
-                dots points c view
-                drawDns anno
+             //   dots anno.points c view
+               // drawDns anno
             ]
 
-        let view (model:MDrawingModel) (cam:IMod<CameraView>) =        
+        let view (model:MDrawingModel) (cam:IMod<CameraView>) =
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler
             let annoSet = ASet.ofAList model.annotations 
 
             let annotations =
                 aset {
-                    for a in annoSet do
-                       // let a = { a with color = UI.mkColor a }
+                    for a in annoSet do                       
                        let c = UI.mkColor model a
                        yield finishedAnnotation a cam c
                 } |> Sg.set

@@ -36,7 +36,7 @@ module PList =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]        
 module Surface =
-    let mk path = {        
+    let mk path = {
         guid = Guid.NewGuid()
         name = IO.Path.GetFileName path
         importPath = path
@@ -114,9 +114,6 @@ module Surface =
                     System.IO.File.Delete path
                     m
             | _ -> m
-
-
-
     
 module ViewerApp =
     open Surface
@@ -168,7 +165,7 @@ module ViewerApp =
                     None
             | None -> None
     
-    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =        
+    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =
         
         match msg, m.interaction, m.drawing.draw with
             | CameraMessage  msg,_,false -> 
@@ -176,7 +173,7 @@ module ViewerApp =
             | DrawingMessage msg, DrawAnnotation,_-> 
                 //let m = 
                 //    match msg with
-                //        | Drawing.Action.Select _ ->                             
+                //        | Drawing.Action.Select _ ->
                 //            { m with properties = 
                 //                        match m.drawing.selectedAnnotation with 
                 //                            | Some a -> Properties.AnnotationProperties a
@@ -215,8 +212,7 @@ module ViewerApp =
                     match doKdTreeIntersection m Trafo3d.Identity ray with
                         | Some t -> ray.Ray.GetPointOnRay t |> Some
                         | None -> None
-                    
-                
+                                    
                 match doKdTreeIntersection m Trafo3d.Identity fray with
                     | Some t -> 
                         let hit = r.GetPointOnRay(t)
@@ -225,12 +221,11 @@ module ViewerApp =
                         match m.interaction with
                             | DrawAnnotation ->
                                 let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
-                                { m with drawing = drawing}
+                                { m with drawing = drawing }
                             | _ -> m
                     | None -> 
                         Log.error ("no hit")
                         m
-
             | SaveScene, _,_ -> 
                 match Dialogs.saveDialog w with
                     | None -> m
@@ -251,9 +246,9 @@ module ViewerApp =
                             | Aardvark.Application.Keys.D1          -> Drawing.Action.SetSemantic Semantic.Horizon1
                             | Aardvark.Application.Keys.D2          -> Drawing.Action.SetSemantic Semantic.Horizon2
                             | Aardvark.Application.Keys.D3          -> Drawing.Action.SetSemantic Semantic.Horizon3       
-                            | _                -> Drawing.Action.Nop
+                            | _                                     -> Drawing.Action.Nop
 
-                    { m with drawing = DrawingApp.update m.drawing a }                    
+                    { m with drawing = DrawingApp.update m.drawing a }
             | KeyUp k, _,_ ->
                     let d =
                         match k with
@@ -288,7 +283,7 @@ module ViewerApp =
             }
         opcs |> Sg.set
 
-    let mkBrushISg color size trafo : ISg<Message> =         
+    let mkBrushISg color size trafo : ISg<Message> =
         Sg.sphere 5 color size 
                 |> Sg.shader {
                     do! Shader.stableTrafo
@@ -297,8 +292,6 @@ module ViewerApp =
                 }
                 |> Sg.noEvents
                 |> Sg.trafo(trafo)
-
-    
 
     let view (m : MModel) =
 
@@ -440,7 +433,6 @@ module ViewerApp =
                 body [clazz "context example"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
         ))
                                                               
-
     let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) = 
         
         //let imports =
