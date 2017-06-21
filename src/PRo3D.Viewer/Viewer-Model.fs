@@ -62,7 +62,7 @@ module Viewer =
 
     let initial = {           
         surfaces = HSet.empty                       
-        scene = {                   
+        scene = {
                 cameraModel = CameraController.initial            
                 interaction = InteractionMode.PickOrbitCenter
                 surfaces = []
