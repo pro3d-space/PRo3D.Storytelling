@@ -173,3 +173,11 @@ type Surface = {
     opcPaths : list<string>    
 }
 
+[<DomainType>]
+type PRo3DUtils = {    
+
+    explorationCenter : V3d
+    northVector : V3d
+    upVector : V3d
+}
+

@@ -356,3 +356,51 @@ module Mutable =
                     override x.Set(r,v) = { r with opcPaths = v }
                     override x.Update(r,f) = { r with opcPaths = f r.opcPaths }
                 }
+    [<StructuredFormatDisplay("{AsString}")>]
+    type MPRo3DUtils(__initial : PRo3D.PRo3DUtils) = 
+        let mutable __current = __initial
+        let _explorationCenter = ResetMod.Create(__initial.explorationCenter)
+        let _northVector = ResetMod.Create(__initial.northVector)
+        let _upVector = ResetMod.Create(__initial.upVector)
+        
+        member x.explorationCenter = _explorationCenter :> IMod<_>
+        member x.northVector = _northVector :> IMod<_>
+        member x.upVector = _upVector :> IMod<_>
+        
+        member x.Update(v : PRo3D.PRo3DUtils) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_explorationCenter,v.explorationCenter)
+                ResetMod.Update(_northVector,v.northVector)
+                ResetMod.Update(_upVector,v.upVector)
+        
+        static member Create(v : PRo3D.PRo3DUtils) = MPRo3DUtils(v)
+        static member Update(m : MPRo3DUtils, v : PRo3D.PRo3DUtils) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module PRo3DUtils =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let explorationCenter =
+                { new Lens<PRo3D.PRo3DUtils, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.explorationCenter
+                    override x.Set(r,v) = { r with explorationCenter = v }
+                    override x.Update(r,f) = { r with explorationCenter = f r.explorationCenter }
+                }
+            let northVector =
+                { new Lens<PRo3D.PRo3DUtils, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.northVector
+                    override x.Set(r,v) = { r with northVector = v }
+                    override x.Update(r,f) = { r with northVector = f r.northVector }
+                }
+            let upVector =
+                { new Lens<PRo3D.PRo3DUtils, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.upVector
+                    override x.Set(r,v) = { r with upVector = v }
+                    override x.Update(r,f) = { r with upVector = f r.upVector }
+                }
