@@ -311,22 +311,23 @@ module DrawingApp =
 
         let discISg color size trafo =
             Sg.cylinder 30 color size (Mod.constant 0.2)
+                        |> Sg.noEvents
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
                             do! DefaultSurfaces.vertexColor
                             do! DefaultSurfaces.simpleLighting
                         }
-                        |> Sg.noEvents
+                       
                         |> Sg.trafo(trafo) 
 
         let coneISg color size trafo =
             Sg.cone 5 color size (Mod.constant 0.5)
+                        |> Sg.noEvents
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
                             do! DefaultSurfaces.vertexColor
                             do! DefaultSurfaces.simpleLighting
-                        }
-                        |> Sg.noEvents
+                        }                       
                         |> Sg.trafo(trafo) 
 
         let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =
@@ -427,12 +428,12 @@ module DrawingApp =
                     
             edges
                 |> Sg.lines color
+                |> Sg.noEvents
                 |> Sg.shader {
                     do! Aardvark.Opc.Shader.stableTrafo
                     do! DefaultSurfaces.vertexColor
                     do! DefaultSurfaces.thickLine    
-                }               
-                |> Sg.noEvents
+                }                               
                 |> Sg.trafo trafo
                 |> Sg.uniform "LineWidth" width
                 |> Sg.pass linePass

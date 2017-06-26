@@ -8,8 +8,10 @@ open PRo3D.Viewer
 [<AutoOpen>]
 module Mutable =
 
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MSgSurface(__initial : PRo3D.Viewer.SgSurface) = 
+    
+    
+    type MSgSurface(__initial : PRo3D.Viewer.SgSurface) =
+        inherit obj()
         let mutable __current = __initial
         let _surface = PRo3D.Mutable.MSurface.Create(__initial.surface)
         let _globalBB = ResetMod.Create(__initial.globalBB)
@@ -29,12 +31,16 @@ module Mutable =
                 ResetMod.Update(_globalBB,v.globalBB)
                 ResetMod.Update(_sceneGraph,v.sceneGraph)
                 ResetMod.Update(_kdTree,v.kdTree)
+                
         
-        static member Create(v : PRo3D.Viewer.SgSurface) = MSgSurface(v)
+        static member Create(__initial : PRo3D.Viewer.SgSurface) : MSgSurface = MSgSurface(__initial)
         static member Update(m : MSgSurface, v : PRo3D.Viewer.SgSurface) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Viewer.SgSurface> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -65,8 +71,10 @@ module Mutable =
                     override x.Set(r,v) = { r with kdTree = v }
                     override x.Update(r,f) = { r with kdTree = f r.kdTree }
                 }
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MScene(__initial : PRo3D.Viewer.Scene) = 
+    
+    
+    type MScene(__initial : PRo3D.Viewer.Scene) =
+        inherit obj()
         let mutable __current = __initial
         let _cameraModel = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.cameraModel)
         let _interaction = ResetMod.Create(__initial.interaction)
@@ -83,12 +91,16 @@ module Mutable =
                 Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_cameraModel, v.cameraModel)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_surfaces,v.surfaces)
+                
         
-        static member Create(v : PRo3D.Viewer.Scene) = MScene(v)
+        static member Create(__initial : PRo3D.Viewer.Scene) : MScene = MScene(__initial)
         static member Update(m : MScene, v : PRo3D.Viewer.Scene) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Viewer.Scene> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -113,8 +125,10 @@ module Mutable =
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
                 }
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MModel(__initial : PRo3D.Viewer.Model) = 
+    
+    
+    type MModel(__initial : PRo3D.Viewer.Model) =
+        inherit obj()
         let mutable __current = __initial
         let _scene = MScene.Create(__initial.scene)
         let _drawing = PRo3D.Drawing.Mutable.MDrawingModel.Create(__initial.drawing)
@@ -143,12 +157,16 @@ module Mutable =
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_picking,v.picking)
                 PRo3D.Mutable.MOrientationDisplayModel.Update(_orientations, v.orientations)
+                
         
-        static member Create(v : PRo3D.Viewer.Model) = MModel(v)
+        static member Create(__initial : PRo3D.Viewer.Model) : MModel = MModel(__initial)
         static member Update(m : MModel, v : PRo3D.Viewer.Model) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Viewer.Model> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]

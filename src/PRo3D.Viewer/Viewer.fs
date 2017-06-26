@@ -272,11 +272,12 @@ module ViewerApp =
                 for surface in m.surfaces do
 
                     let createSg (bb : Box3d) sg =                       
-                        sg |> Sg.noEvents |> Sg.andAlso (Sg.wireBox' C4b.VRVisGreen bb                                                            
+                        sg |> Sg.noEvents |> Sg.andAlso (Sg.wireBox' C4b.VRVisGreen bb  
+                                                            |> Sg.noEvents
                                                             |> Sg.shader {
                                                                     do! Shader.stableTrafo
                                                                     do! DefaultSurfaces.vertexColor 
-                                                               } |> Sg.noEvents
+                                                               }
                                                         ) 
                         |> Sg.pickable (PickShape.Box bb) 
                     
