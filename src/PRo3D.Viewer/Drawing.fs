@@ -476,30 +476,31 @@ module DrawingApp =
             //edge.P0 v.Normalized v.Length (r/2.5)                        
 
             
-            //let cylinders = 
-            //    edges 
-            //        |> Mod.map (fun e ->
-            //                [
-            //                    for edge in e do
-            //                        //yield Sg.cylinder' 3 C4b.White 
-            //                        let v = edge.P1 - edge.P0
-            //                        let c = Cylinder3d(edge.P0,v.Normalized, v.Length, 0.25)
-            //                        yield Sg.box' C4b.White Box3d.Unit 
-            //                            |> Sg.shader {
-            //                                do! Aardvark.Opc.Shader.stableTrafo
-            //                                do! DefaultSurfaces.vertexColor                                            
-            //                            }  
-            //                            |> Sg.noEvents                                         
-            //                           // |> Sg.trafo trafo
-            //                            |> Sg.pickable (PickShape.Cylinder c)
-            //                            |> Sg.withEvents [
-            //                                Sg.onMouseDownEvt (fun sceneHit -> Select (id |> Mod.force))]
-            //                ] |> Sg.ofList
+            let cylinders = 
+                edges 
+                    |> Mod.map (fun e ->
+                            [
+                                for edge in e do
+                                    //yield Sg.cylinder' 3 C4b.White 
+                                    let v = edge.P1 - edge.P0
+                                    let c = Cylinder3d(edge.P0,v.Normalized, v.Length, 0.25)
+                                    yield 
+                                        Sg.ofList[]
+                                            |> Sg.noEvents 
+                                            //|> Sg.shader {
+                                            //    do! Aardvark.Opc.Shader.stableTrafo
+                                            //    do! DefaultSurfaces.vertexColor                                            
+                                            //}                                                 
+                                            |> Sg.pickable (PickShape.Cylinder c)
+                                            |> Sg.trafo trafo
+                                            |> Sg.withEvents [
+                                                Sg.onMouseDownEvt (fun sceneHit -> Select (id |> Mod.force))]
+                            ] |> Sg.ofList
                               
-            //                )
+                            )
             
             
-            //let cylinders = cylinders |> Sg.dynamic 
+            let cylinders = cylinders |> Sg.dynamic 
                     
             edges
                 |> Sg.lines color
@@ -513,22 +514,7 @@ module DrawingApp =
                 |> Sg.uniform "LineWidth" width
                 |> Sg.pass linePass
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
-              //  |> Sg.andAlso cylinders
-                //|> Sg.pickable (PickShape.Box (box |> Mod.force))
-                //|> Sg.withEvents [
-                //            Sg.onMouseDownEvt (fun sceneHit -> Select (id |> Mod.force))
-                //        ]
-                //|> Sg.andAlso (
-                //    Sg.wireBox' C4b.VRVisGreen Box3d.Invalid
-                //        |> Sg.shader {
-                //            do! Aardvark.Opc.Shader.stableTrafo
-                //            do! DefaultSurfaces.vertexColor 
-                //        }
-                //        |> Sg.noEvents
-                //        |> Sg.pickable (PickShape.Box (box |> Mod.force))
-                //        ) |> Sg.withEvents [
-                //            Sg.onMouseDownEvt (fun sceneHit -> Select (id |> Mod.force))
-                //        ]
+              //  |> Sg.andAlso cylinders               
         
         let drawDns (anno : MAnnotation) =
             //let color = Mod.bindOption anno.dnsResults C4b.White (fun x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0))
