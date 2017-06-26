@@ -124,7 +124,7 @@ module ViewerApp =
         | AnnotationMessage of AnnotationProperties.Action
 
     type Message =
-        | PropertyMessage of PropertyActions
+        //| PropertyMessage of PropertyActions
         | CameraMessage of CameraController.Message        
         | DrawingMessage of Drawing.Action
         | CoordinatesMessage of OrientationDisplay.Action
@@ -185,6 +185,15 @@ module ViewerApp =
                 //        | _ -> m
                 
                 { m with drawing = DrawingApp.update w m.drawing msg }
+            | AnnotationMessage msg,_,_ ->                
+                    match m.drawing.selectedAnnotation with
+                        | Some a -> 
+                            let a' = AnnotationProperties.update a msg
+                            let annotations' = 
+                                m.drawing.annotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun x -> a')                                     
+                            { m with drawing = { m.drawing with selectedAnnotation = Some a'; annotations = annotations' |> PList.ofList }}
+
+                        | None -> m                                                
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolder w with
                     | [] -> m
@@ -273,6 +282,7 @@ module ViewerApp =
 
                     let createSg (bb : Box3d) sg =                       
                         sg |> Sg.noEvents |> Sg.andAlso (Sg.wireBox' C4b.VRVisGreen bb  
+                                                            |> Sg.noEvents
                                                             |> Sg.noEvents
                                                             |> Sg.shader {
                                                                     do! Shader.stableTrafo
@@ -364,7 +374,7 @@ module ViewerApp =
                     alist {
                         for s in (m.surfaces |> AList.ofASet) do
                                 yield div [clazz "item"] [
-                                    i [clazz "large cubes middle aligned icon"][]                                             
+                                    i [clazz "large cube middle aligned icon"][]                                             
                                     div [clazz "content"] [
                                         div [clazz "header"] [Incremental.text s.surface.name]
                                         div [clazz "description"] [
@@ -378,6 +388,13 @@ module ViewerApp =
                     }
             )   
 
+        let surfaceUI =
+            div[][
+                GuiEx.accordion "Surfaces" "Cubes" true [
+                        surfaceList
+                    ]
+            ]
+            
 
         let properties (model:MModel) =
             adaptive {
@@ -403,10 +420,8 @@ module ViewerApp =
 
         let annotationUI = 
             div [][
-                
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
                 
-
                 GuiEx.accordion "Annotations" "Write" true [
                     DrawingApp.UI.viewAnnotations m.drawing |> UI.map DrawingMessage
                 ]
@@ -417,12 +432,11 @@ module ViewerApp =
                     Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 
             ]
             
-
         let tabs = GuiEx.tabbed [clazz "ui inverted segment"] [
-                            ("Surfaces", surfaceList)
+                            ("Data", surfaceUI)
                             ("Annotations", annotationUI)
                             ("Config", text "Config")
-                        ] "Surfaces" 
+                        ] "Data" 
       
         let topMenu = [DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage ]                               
         

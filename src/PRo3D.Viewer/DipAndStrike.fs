@@ -11,9 +11,7 @@ module DipAndStrike =
     open Aardvark.VRVis
 
     open Aardvark.UI
-    open Aardvark.UI.Primitives
-
-    open PRo3D.Drawing
+    open Aardvark.UI.Primitives    
 
     let projectOntoPlane (x:V3d) (n:V3d) = (x - (x * n)).Normalized
 

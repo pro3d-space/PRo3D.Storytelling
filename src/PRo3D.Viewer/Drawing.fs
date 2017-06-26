@@ -206,18 +206,28 @@ module DrawingApp =
             | Clear,_ ->
                 { model with annotations = PList.empty }
             | Select id, false ->
-                let selection = 
-                    if (not model.selected.IsEmpty) then
-                        if HSet.contains id model.selected 
-                        then HSet.remove id model.selected 
-                        else HSet.add id HSet.empty
-                    else
-                        HSet.add id model.selected                                        
+                let selected = if (not model.selected.IsEmpty) then hset.Empty else model.selected
 
-                let ann = DrawingModel.tryGet model id
+                let selection, ann =         
+                    if (not model.selected.IsEmpty) then
+                        if HSet.contains id selected 
+                        then 
+                            HSet.remove id selected, None 
+                        else 
+                            HSet.add id hset.Empty, DrawingModel.tryGet model id
+                    else
+                        HSet.add id selected, DrawingModel.tryGet model id
                         
                 { model with selected = selection; selectedAnnotation = ann }  
             | Nop, _ -> model
+            | AnnotationPropertiesMsg msg,_ ->                
+                    match model.selectedAnnotation with
+                        | Some a -> 
+                            let a' = AnnotationProperties.update a msg
+                            let annotations' = 
+                                model.annotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun x -> a')                                     
+                            { model with selectedAnnotation = Some a'; annotations = annotations' |> PList.ofList }
+                        | None -> model                                                
             | _ -> model
 
     module UI =
@@ -286,18 +296,30 @@ module DrawingApp =
                                 let! c = mkColor model a
 
                                 let bgc = sprintf "color: %s" (Html.ofC4b c)
-                                    
-                                yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
-                                        i [clazz "large Sticky Note middle aligned icon"; style bgc][]
+                                
+                                let toggleVisibility = fun _ -> ToggleVisiblity (a.key |> Mod.force)
+                                let select = fun _ -> Select (a.key |> Mod.force)
+
+                                yield div [clazz "item"] [
+                                        i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
                                         div [clazz "content"] [
-                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
+                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
                                             let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
-                                            yield div [clazz "header"] [Incremental.text header]                                       
+                                            yield Incremental.div (AttributeMap.ofList [clazz "header"]) (
+                                                alist {
+                                                    yield Incremental.text header
+
+                                                    let! visible = a.visible
+                                                    yield if visible
+                                                          then i [clazz "unhide icon"; onClick toggleVisibility][] 
+                                                          else i [clazz "hide icon"; onClick toggleVisibility] []
+                                                } 
+                                            ) 
                                             yield div [clazz "description"] [Incremental.text desc]      
                                         ]
                                     ]
                         }     
-                )
+                ) 
             
         let viewAnnotationsAcc (model:MDrawingModel) = 
             Html.SemUi.accordion "Annotations" "File Outline" true [
@@ -532,7 +554,7 @@ module DrawingApp =
                 lines points c anno.thickness.value anno.modelTrafo anno.key;
                 dots points c view
                 drawDns anno view
-            ]
+            ] |> Sg.onOff anno.visible
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =
             // order is irrelevant for rendering. change list to set,
