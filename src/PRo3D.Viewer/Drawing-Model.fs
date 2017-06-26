@@ -32,6 +32,7 @@ type Action =
     | Save              
     | Load             
     | Clear
+    | QuickLoad
     | Select           of Guid
     | Nop
 

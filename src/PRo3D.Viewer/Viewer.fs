@@ -184,7 +184,7 @@ module ViewerApp =
                 //                            | None -> Properties.NoProperties } 
                 //        | _ -> m
                 
-                { m with drawing = DrawingApp.update m.drawing msg }
+                { m with drawing = DrawingApp.update w m.drawing msg }
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolder w with
                     | [] -> m
@@ -224,7 +224,7 @@ module ViewerApp =
                         
                         match m.interaction with
                             | DrawAnnotation ->
-                                let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
+                                let drawing = DrawingApp.update w m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
                                 { m with drawing = drawing }
                             | PlaceCoordinateSystem -> 
                                 let orientations = OrientationDisplay.update m.orientations (OrientationDisplay.Action.SetCenter(hit))
@@ -255,11 +255,11 @@ module ViewerApp =
                             | Aardvark.Application.Keys.D3          -> Drawing.Action.SetSemantic Semantic.Horizon3       
                             | _                                     -> Drawing.Action.Nop
 
-                    { m with drawing = DrawingApp.update m.drawing a }
+                    { m with drawing = DrawingApp.update w m.drawing a }
             | KeyUp k, _,_ ->
                     let d =
                         match k with
-                            | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update m.drawing Drawing.Action.StopDrawing
+                            | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update w m.drawing Drawing.Action.StopDrawing
                             | _ -> m.drawing
                     
                     { m with drawing = d }
@@ -272,7 +272,7 @@ module ViewerApp =
                 for surface in m.surfaces do
 
                     let createSg (bb : Box3d) sg =                       
-                        sg |> Sg.noEvents |> Sg.andAlso (wireBox' C4b.VRVisGreen bb                                                            
+                        sg |> Sg.noEvents |> Sg.andAlso (Sg.wireBox' C4b.VRVisGreen bb                                                            
                                                             |> Sg.shader {
                                                                     do! Shader.stableTrafo
                                                                     do! DefaultSurfaces.vertexColor 
@@ -284,7 +284,8 @@ module ViewerApp =
                         Mod.map2 createSg surface.globalBB surface.sceneGraph
                         |> Sg.dynamic
                         |> Sg.withEvents [
-                                Sg.onMouseDownEvt (fun sceneHit -> PickSurface sceneHit)
+                                SceneEventKind.Down, (fun sceneHit -> true, Seq.ofList [PickSurface sceneHit])
+                                //Sg.onMouseDownEvt (fun sceneHit -> PickSurface sceneHit)
                             ]
 
                     yield sg
@@ -312,7 +313,7 @@ module ViewerApp =
                     (                    
                         let annotations =
                             DrawingApp.Sg.view m.drawing m.scene.cameraModel.view
-                                |> Sg.map DrawingMessage                                
+                                |> Sg.map DrawingMessage
                                 |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
                                 |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
 

@@ -61,7 +61,7 @@ module OrientationDisplay =
                                 yield pos
                                 yield pos + length
                                 }
-                yield DrawingApp.Sg.lines al color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(pos))) 
+                yield DrawingApp.Sg.lines al color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(pos))) (Mod.constant Guid.Empty)
                 yield coneISg color (Mod.constant 0.02) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dir) * Trafo3d.Translation(pos+length))) 
                 } |> Sg.set 
                 

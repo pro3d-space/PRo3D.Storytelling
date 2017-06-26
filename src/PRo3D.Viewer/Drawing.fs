@@ -19,6 +19,7 @@ module DrawingApp =
     open Aardvark.UI.Primitives
 
     open PRo3D.Drawing
+    open System.Windows.Forms
 
     let finishAndAppend (model : DrawingModel) = 
         //if there are at least 3 points do dns calculation (debug, dev). 
@@ -138,7 +139,7 @@ module DrawingApp =
                 model.pendingIntersections
         { model with pendingIntersections = ThreadPool.add id computation pool }
 
-    let update (model : DrawingModel) (act : Action) =
+    let update (w : Form) (model : DrawingModel) (act : Action) =
         match (act, model.draw) with
             | StartDrawing, _ ->                     
                     { model with draw = true }
@@ -149,7 +150,7 @@ module DrawingApp =
             | AddPoint(p,samplePoint), true ->                     
                     addPoint samplePoint p model |> fst               
             | AddPointAdv (point, samplePoint), true ->
-                    let model, newSegment = addPoint samplePoint point model                    
+                    let model, newSegment = addPoint samplePoint point model
                     
                     match newSegment with
                         | None         -> model
@@ -158,8 +159,7 @@ module DrawingApp =
             | SetSegment(segmentIndex,segment), _ ->
                 match model.working with
                     | None -> model
-                    | Some w -> 
-                        printfn "oida"
+                    | Some w ->                         
                         { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
 
             //| KeyDown Aardvark.Application.Keys.Enter, _ -> 
@@ -189,12 +189,20 @@ module DrawingApp =
                     
                     model
             | Save,_->
-                Serialization.save "./lastMeasure" model.annotations |> ignore
-                model
-            | Load,_ ->
-                let annotations = 
-                    Serialization.loadAs<plist<PRo3D.Annotation>> "./lastMeasure"
-                { model with annotations = annotations }
+                match Dialogs.saveDialog w with
+                    | None -> model
+                    | Some p -> 
+                        Serialization.save "./lastMeasure" model.annotations |> ignore
+                        { model with annotations = Serialization.save p model.annotations }
+            | Load,_ ->                
+                match Dialogs.openDialog w with
+                    | None -> model
+                    | Some path -> 
+                        let annotations = Serialization.loadAs<plist<PRo3D.Annotation>> path
+                        { model with annotations = annotations }        
+            | QuickLoad,_ ->                
+                let annotations = Serialization.loadAs<plist<PRo3D.Annotation>> "./lastMeasure"
+                { model with annotations = annotations }        
             | Clear,_ ->
                 { model with annotations = PList.empty }
             | Select id, false ->
@@ -262,6 +270,8 @@ module DrawingApp =
                         i [clazz "folder outline icon"] [] ]
                 button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
                         i [clazz "file outline icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
+                        i [clazz "folder icon"] [] ]
             ]
 
         let viewAnnotations (model:MDrawingModel) = 
@@ -380,19 +390,69 @@ module DrawingApp =
            
         let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
 
-        let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>)= 
-           edgeLines false points trafo           
-                |> Sg.lines color                
+        let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
+            let box = points |> AList.toMod |> Mod.map (fun d -> if d.Count > 2 then Box3d d else Box3d.Unit)
+
+            let edges = edgeLines false points trafo
+
+            // Cylinder3d(trafo.Forward.TransformPos center,trafo.Forward.TransformPos (center+dir*height),radius)
+
+            //edge.P0 v.Normalized v.Length (r/2.5)                        
+
+            
+            //let cylinders = 
+            //    edges 
+            //        |> Mod.map (fun e ->
+            //                [
+            //                    for edge in e do
+            //                        //yield Sg.cylinder' 3 C4b.White 
+            //                        let v = edge.P1 - edge.P0
+            //                        let c = Cylinder3d(edge.P0,v.Normalized, v.Length, 0.25)
+            //                        yield Sg.box' C4b.White Box3d.Unit 
+            //                            |> Sg.shader {
+            //                                do! Aardvark.Opc.Shader.stableTrafo
+            //                                do! DefaultSurfaces.vertexColor                                            
+            //                            }  
+            //                            |> Sg.noEvents                                         
+            //                           // |> Sg.trafo trafo
+            //                            |> Sg.pickable (PickShape.Cylinder c)
+            //                            |> Sg.withEvents [
+            //                                Sg.onMouseDownEvt (fun sceneHit -> Select (id |> Mod.force))]
+            //                ] |> Sg.ofList
+                              
+            //                )
+            
+            
+            //let cylinders = cylinders |> Sg.dynamic 
+                    
+            edges
+                |> Sg.lines color
                 |> Sg.shader {
                     do! Aardvark.Opc.Shader.stableTrafo
                     do! DefaultSurfaces.vertexColor
                     do! DefaultSurfaces.thickLine    
-                }              
-                |> Sg.noEvents                
+                }               
+                |> Sg.noEvents
                 |> Sg.trafo trafo
                 |> Sg.uniform "LineWidth" width
                 |> Sg.pass linePass
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
+              //  |> Sg.andAlso cylinders
+                //|> Sg.pickable (PickShape.Box (box |> Mod.force))
+                //|> Sg.withEvents [
+                //            Sg.onMouseDownEvt (fun sceneHit -> Select (id |> Mod.force))
+                //        ]
+                //|> Sg.andAlso (
+                //    Sg.wireBox' C4b.VRVisGreen Box3d.Invalid
+                //        |> Sg.shader {
+                //            do! Aardvark.Opc.Shader.stableTrafo
+                //            do! DefaultSurfaces.vertexColor 
+                //        }
+                //        |> Sg.noEvents
+                //        |> Sg.pickable (PickShape.Box (box |> Mod.force))
+                //        ) |> Sg.withEvents [
+                //            Sg.onMouseDownEvt (fun sceneHit -> Select (id |> Mod.force))
+                //        ]
         
         let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) =             
             //let color = Mod.bindOption anno.dnsResults C4b.White (fun x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0))
@@ -428,9 +488,9 @@ module DrawingApp =
                                             yield p + slength2
                                             }
                         yield discISg color (Mod.constant 2.0)  (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p))) // disc
-                        yield lines dipLine color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) // dip vec
-                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) // strike1 vec
-                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) // strike2 vec
+                        yield lines dipLine color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
+                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
+                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike2 vec
                     | None -> () 
                                
             } |> Sg.set
@@ -473,7 +533,7 @@ module DrawingApp =
             let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)          
                                    
             Sg.ofList [
-                lines polyPoints color thickness trafo  //polyline
+                lines polyPoints color thickness trafo key //polyline
                 dots points color view                  //support points
             ]         
 
@@ -482,7 +542,7 @@ module DrawingApp =
             
            // let dns = 
             Sg.ofList [
-                lines points c anno.thickness.value anno.modelTrafo;
+                lines points c anno.thickness.value anno.modelTrafo anno.key;
                 dots points c view
                 drawDns anno view
             ]
