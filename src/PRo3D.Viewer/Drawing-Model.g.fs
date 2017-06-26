@@ -8,8 +8,10 @@ open PRo3D.Drawing
 [<AutoOpen>]
 module Mutable =
 
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MDrawingModel(__initial : PRo3D.Drawing.DrawingModel) = 
+    
+    
+    type MDrawingModel(__initial : PRo3D.Drawing.DrawingModel) =
+        inherit obj()
         let mutable __current = __initial
         let _draw = ResetMod.Create(__initial.draw)
         let _hoverPosition = MOption.Create(__initial.hoverPosition)
@@ -50,12 +52,16 @@ module Mutable =
                 MSet.Update(_selected, v.selected)
                 MOption.Update(_selectedAnnotation, v.selectedAnnotation)
                 ResetMod.Update(_pendingIntersections,v.pendingIntersections)
+                
         
-        static member Create(v : PRo3D.Drawing.DrawingModel) = MDrawingModel(v)
+        static member Create(__initial : PRo3D.Drawing.DrawingModel) : MDrawingModel = MDrawingModel(__initial)
         static member Update(m : MDrawingModel, v : PRo3D.Drawing.DrawingModel) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Drawing.DrawingModel> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]

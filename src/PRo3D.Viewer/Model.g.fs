@@ -8,8 +8,10 @@ open PRo3D
 [<AutoOpen>]
 module Mutable =
 
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MDipAndStrikeResults(__initial : PRo3D.DipAndStrikeResults) = 
+    
+    
+    type MDipAndStrikeResults(__initial : PRo3D.DipAndStrikeResults) =
+        inherit obj()
         let mutable __current = __initial
         let _plane = ResetMod.Create(__initial.plane)
         let _dipAngle = ResetMod.Create(__initial.dipAngle)
@@ -38,12 +40,16 @@ module Mutable =
                 ResetMod.Update(_dipAzimuth,v.dipAzimuth)
                 ResetMod.Update(_strikeAzimuth,v.strikeAzimuth)
                 ResetMod.Update(_centerOfMass,v.centerOfMass)
+                
         
-        static member Create(v : PRo3D.DipAndStrikeResults) = MDipAndStrikeResults(v)
+        static member Create(__initial : PRo3D.DipAndStrikeResults) : MDipAndStrikeResults = MDipAndStrikeResults(__initial)
         static member Update(m : MDipAndStrikeResults, v : PRo3D.DipAndStrikeResults) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.DipAndStrikeResults> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -92,8 +98,10 @@ module Mutable =
                     override x.Set(r,v) = { r with centerOfMass = v }
                     override x.Update(r,f) = { r with centerOfMass = f r.centerOfMass }
                 }
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MSegment(__initial : PRo3D.Segment) = 
+    
+    
+    type MSegment(__initial : PRo3D.Segment) =
+        inherit obj()
         let mutable __current = __initial
         let _startPoint = ResetMod.Create(__initial.startPoint)
         let _endPoint = ResetMod.Create(__initial.endPoint)
@@ -110,12 +118,16 @@ module Mutable =
                 ResetMod.Update(_startPoint,v.startPoint)
                 ResetMod.Update(_endPoint,v.endPoint)
                 MList.Update(_points, v.points)
+                
         
-        static member Create(v : PRo3D.Segment) = MSegment(v)
+        static member Create(__initial : PRo3D.Segment) : MSegment = MSegment(__initial)
         static member Update(m : MSegment, v : PRo3D.Segment) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Segment> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -140,8 +152,10 @@ module Mutable =
                     override x.Set(r,v) = { r with points = v }
                     override x.Update(r,f) = { r with points = f r.points }
                 }
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MAnnotation(__initial : PRo3D.Annotation) = 
+    
+    
+    type MAnnotation(__initial : PRo3D.Annotation) =
+        inherit obj()
         let mutable __current = __initial
         let _key = ResetMod.Create(__initial.key)
         let _modelTrafo = ResetMod.Create(__initial.modelTrafo)
@@ -185,12 +199,16 @@ module Mutable =
                 MOption.Update(_dnsResults, v.dnsResults)
                 ResetMod.Update(_visible,v.visible)
                 ResetMod.Update(_text,v.text)
+                
         
-        static member Create(v : PRo3D.Annotation) = MAnnotation(v)
+        static member Create(__initial : PRo3D.Annotation) : MAnnotation = MAnnotation(__initial)
         static member Update(m : MAnnotation, v : PRo3D.Annotation) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Annotation> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -269,8 +287,10 @@ module Mutable =
                     override x.Set(r,v) = { r with text = v }
                     override x.Update(r,f) = { r with text = f r.text }
                 }
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MMeasurementsImporterModel(__initial : PRo3D.MeasurementsImporterModel) = 
+    
+    
+    type MMeasurementsImporterModel(__initial : PRo3D.MeasurementsImporterModel) =
+        inherit obj()
         let mutable __current = __initial
         let _annotations = MList.Create(__initial.annotations, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
         
@@ -281,12 +301,16 @@ module Mutable =
                 __current <- v
                 
                 MList.Update(_annotations, v.annotations)
+                
         
-        static member Create(v : PRo3D.MeasurementsImporterModel) = MMeasurementsImporterModel(v)
+        static member Create(__initial : PRo3D.MeasurementsImporterModel) : MMeasurementsImporterModel = MMeasurementsImporterModel(__initial)
         static member Update(m : MMeasurementsImporterModel, v : PRo3D.MeasurementsImporterModel) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.MeasurementsImporterModel> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -299,8 +323,10 @@ module Mutable =
                     override x.Set(r,v) = { r with annotations = v }
                     override x.Update(r,f) = { r with annotations = f r.annotations }
                 }
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MSurface(__initial : PRo3D.Surface) = 
+    
+    
+    type MSurface(__initial : PRo3D.Surface) =
+        inherit obj()
         let mutable __current = __initial
         let _guid = ResetMod.Create(__initial.guid)
         let _name = ResetMod.Create(__initial.name)
@@ -320,12 +346,16 @@ module Mutable =
                 ResetMod.Update(_name,v.name)
                 ResetMod.Update(_importPath,v.importPath)
                 ResetMod.Update(_opcPaths,v.opcPaths)
+                
         
-        static member Create(v : PRo3D.Surface) = MSurface(v)
+        static member Create(__initial : PRo3D.Surface) : MSurface = MSurface(__initial)
         static member Update(m : MSurface, v : PRo3D.Surface) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Surface> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]

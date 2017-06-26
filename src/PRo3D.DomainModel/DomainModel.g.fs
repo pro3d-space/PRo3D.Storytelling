@@ -8,8 +8,10 @@ open Aardvark.PRo3d
 [<AutoOpen>]
 module Mutable =
 
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MUrdar(__initial : Aardvark.PRo3d.Urdar) = 
+    
+    
+    type MUrdar(__initial : Aardvark.PRo3d.Urdar) =
+        inherit obj()
         let mutable __current = __initial
         let _urdar = ResetMod.Create(__initial.urdar)
         
@@ -20,12 +22,16 @@ module Mutable =
                 __current <- v
                 
                 ResetMod.Update(_urdar,v.urdar)
+                
         
-        static member Create(v : Aardvark.PRo3d.Urdar) = MUrdar(v)
+        static member Create(__initial : Aardvark.PRo3d.Urdar) : MUrdar = MUrdar(__initial)
         static member Update(m : MUrdar, v : Aardvark.PRo3d.Urdar) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<Aardvark.PRo3d.Urdar> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -38,8 +44,10 @@ module Mutable =
                     override x.Set(r,v) = { r with urdar = v }
                     override x.Update(r,f) = { r with urdar = f r.urdar }
                 }
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MModel(__initial : Aardvark.PRo3d.Model) = 
+    
+    
+    type MModel(__initial : Aardvark.PRo3d.Model) =
+        inherit obj()
         let mutable __current = __initial
         let _boxHovered = ResetMod.Create(__initial.boxHovered)
         let _dragging = ResetMod.Create(__initial.dragging)
@@ -68,12 +76,16 @@ module Mutable =
                 ResetMod.Update(_hasD3Hate,v.hasD3Hate)
                 ResetMod.Update(_boxScale,v.boxScale)
                 MMap.Update(_objects, v.objects)
+                
         
-        static member Create(v : Aardvark.PRo3d.Model) = MModel(v)
+        static member Create(__initial : Aardvark.PRo3d.Model) : MModel = MModel(__initial)
         static member Update(m : MModel, v : Aardvark.PRo3d.Model) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<Aardvark.PRo3d.Model> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -122,8 +134,10 @@ module Mutable =
                     override x.Set(r,v) = { r with objects = v }
                     override x.Update(r,f) = { r with objects = f r.objects }
                 }
-    [<StructuredFormatDisplay("{AsString}")>]
-    type MCameraControllerState(__initial : Aardvark.PRo3d.CameraControllerState) = 
+    
+    
+    type MCameraControllerState(__initial : Aardvark.PRo3d.CameraControllerState) =
+        inherit obj()
         let mutable __current = __initial
         let _view = ResetMod.Create(__initial.view)
         let _dragStart = ResetMod.Create(__initial.dragStart)
@@ -167,12 +181,16 @@ module Mutable =
                 ResetMod.Update(_moveVec,v.moveVec)
                 MOption.Update(_lastTime, v.lastTime)
                 _stash.Update(v.stash)
+                
         
-        static member Create(v : Aardvark.PRo3d.CameraControllerState) = MCameraControllerState(v)
+        static member Create(__initial : Aardvark.PRo3d.CameraControllerState) : MCameraControllerState = MCameraControllerState(__initial)
         static member Update(m : MCameraControllerState, v : Aardvark.PRo3d.CameraControllerState) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
+        interface IUpdatable<Aardvark.PRo3d.CameraControllerState> with
+            member x.Update v = x.Update v
+    
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
