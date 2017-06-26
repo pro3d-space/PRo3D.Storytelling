@@ -41,6 +41,11 @@ module AnnotationProperties =
                             Html.row "Thickness:" [div [clazz "ui input"] [ Numeric.view' [InputBox] model.thickness |> UI.map ChangeThickness ]]
                             Html.row "Text:" [Html.SemUi.textBox model.text SetText ]
                             Html.row "Visible:" [Html.SemUi.toggleBox model.visible ToggleVisible ]
+
+                            //let da = Mod.bindOption model.dnsResults 1.0 (fun a -> a.dipAngle)
+                            //GuiEx.accordion "Dip&Strike" "Write" false [
+                            //     div [clazz "header"] [Incremental.text (Mod.constant "lalala")]  
+                            //]
                         ]
         )
 

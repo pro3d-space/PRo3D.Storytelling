@@ -21,82 +21,6 @@ module DrawingApp =
     open PRo3D.Drawing
     open System.Windows.Forms
 
-    module DipAndStrike = 
-
-        let projectOntoPlane (x:V3d) (n:V3d) = (x - (x * n)).Normalized
-
-        let computeAzimuth (dir:V3d) (north:V3d) (planeNormal:V3d) =
-            let east = north.Cross(planeNormal)
-            let eastWestPlane = new Plane3d(east, 0.0) //separates west (-) from east  (+)
-            let northSouthPlane = new Plane3d(north, 0.0) //separates sout (-) from north  (+)
-
-            let coords = new V2d(eastWestPlane.Height(dir), northSouthPlane.Height(dir))
-            let angle = Fun.Atan(coords.Y / coords.X).DegreesFromRadians().Abs()
-
-            //let nangle = match coords.X >= 0.0 with
-            //                | true -> match coords.Y >= 0.0 with
-            //                            | true -> 90.0 - angle
-            //                            | false -> angle + 90.0
-            //                | false -> match coords.Y > 0.0 with
-            //                            | true -> 270.0 + angle
-            //                            | false -> 270.0 - angle
-
-            match coords.X.Sign() with
-                    | -1 -> match coords.Y.Sign() with
-                                | 1 -> 270.0 + angle
-                                | _ -> 270.0 - angle 
-                    | _ -> match coords.Y.Sign() with
-                                | -1 -> angle + 90.0
-                                | _ -> 90.0 - angle
-
-        let calculateDipAndStrikeResults (points:plist<V3d>) =
-            let up = V3d.OOI
-            let north = V3d.IOO
-            let v3dArray = points.AsList |> List.toArray // points.toArray not possible because of: int -> V3d[]
-            let plane = PlaneFitting.FitPlane3dLS(v3dArray);
-            let bb = new Box3d(points);
-
-            let horP = new Plane3d(up, V3d.Zero);
-
-             //correct plane orientation - check if normals point in same direction
-            let height = horP.Height(plane.Normal);
-            let planeNormal = match height.Sign() with
-                                | -1 -> plane.Normal.Negated
-                                | _ -> plane.Normal
-
-            //strike
-            let strike = up.Cross(planeNormal).Normalized;
-
-            //dip vector 
-            let dip = strike.Cross(planeNormal).Normalized;
-
-            //dip plane incline .. maximum dip angle
-            let v = strike.Cross(up).Normalized;
-
-            let dns = {
-                plane = plane
-                dipAngle = Math.Acos(v.Dot(dip)).DegreesFromRadians()
-                dipDirection = dip
-                strikeDirection = strike
-                dipAzimuth = computeAzimuth v north up
-                strikeAzimuth = computeAzimuth strike north up
-                centerOfMass = bb.Center
-            }
-            dns
-
-        let dipColor (dipAngle:IMod<float>) (min:IMod<float>) (max:IMod<float>) =
-            adaptive {
-                let! dipAngle = dipAngle
-                let! min = min
-                let! max = max
-
-                let range = new Range1d(min, max)
-                let hue = (dipAngle - range.Min) / range.Size
-                let hsv = HSVf((1.0 - hue) * 0.625, 1.0, 1.0)
-
-                return hsv.ToC3f().ToC4b()
-            }
-
     let finishAndAppend (model : DrawingModel) = 
         //if there are at least 3 points do dns calculation (debug, dev). 
         //might take long for large number of points so created on demand?
@@ -383,9 +307,10 @@ module DrawingApp =
     let threads (m : DrawingModel) = m.pendingIntersections
 
     module Sg =        
+        //open Mutable.DipAndStrikeResultsModule.Lens
 
         let discISg color size trafo =
-            Sg.cylinder 5 color size (Mod.constant 2.1)
+            Sg.cylinder 30 color size (Mod.constant 0.2)
                         |> Sg.noEvents
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
@@ -516,19 +441,45 @@ module DrawingApp =
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
               //  |> Sg.andAlso cylinders               
         
-        let drawDns (anno : MAnnotation) =
+        let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) =             
             //let color = Mod.bindOption anno.dnsResults C4b.White (fun x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0))
             //let trafo 
 
             aset {
-                //let! c = color
-                let! dns = anno.dnsResults                
-                match dns with
-                        | Some x -> 
-                            let color = DipAndStrike.dipColor x.dipAngle (Mod.constant 0.0) (Mod.constant 90.0)
-                            let middlePoint = anno.points |> AList.toMod |> Mod.map PList.count //get item at index ?
-                            yield discISg color (Mod.constant 1.0) (anno.modelTrafo)
-                        | None -> ()                            
+                
+                let! dns = anno.dnsResults 
+                let! count = anno.points |> AList.toMod |> Mod.map PList.count //get item at index ?
+                let p = anno.points |> AList.toMod |> Mod.map (fun x -> x.[(count/2)])
+                let scale = computeScale view p 5.0
+                let! p = p
+                
+               match dns with
+                    | Some x -> 
+                        let color = DipAndStrike.dipColor x.dipAngle (Mod.constant 0.0) (Mod.constant 90.0)
+                        let! plane = x.plane
+                        let! dip = x.dipDirection
+                        let! strike = x.strikeDirection
+                        let dlength = dip.Normalized * 5.0
+                        let dipLine = alist{
+                                        yield p
+                                        yield p + dlength
+                                        }
+                        let slength1 = strike.Normalized.Negated * 5.0
+                        let slength2 = strike.Normalized * 5.0
+                        let strikeLine1 = alist {
+                                            yield p
+                                            yield p + slength1
+                                            }
+                        let strikeLine2 = alist {
+                                            yield p
+                                            yield p + slength2
+                                            }
+                        yield discISg color (Mod.constant 2.0)  (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p))) // disc
+                        yield lines dipLine color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
+                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
+                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike2 vec
+                    | None -> () 
+                               
             } |> Sg.set
             
         let getPolyline (a : MAnnotation) =
@@ -579,8 +530,8 @@ module DrawingApp =
            // let dns = 
             Sg.ofList [
                 lines points c anno.thickness.value anno.modelTrafo anno.key;
-             //   dots anno.points c view
-               // drawDns anno
+                dots points c view
+                drawDns anno view
             ]
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =

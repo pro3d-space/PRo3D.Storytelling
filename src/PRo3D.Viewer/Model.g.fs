@@ -386,3 +386,57 @@ module Mutable =
                     override x.Set(r,v) = { r with opcPaths = v }
                     override x.Update(r,f) = { r with opcPaths = f r.opcPaths }
                 }
+    
+    
+    type MOrientationDisplayModel(__initial : PRo3D.OrientationDisplayModel) =
+        inherit obj()
+        let mutable __current = __initial
+        let _center = MOption.Create(__initial.center)
+        let _northVector = MOption.Create(__initial.northVector)
+        let _upVector = MOption.Create(__initial.upVector)
+        
+        member x.center = _center :> IMod<_>
+        member x.northVector = _northVector :> IMod<_>
+        member x.upVector = _upVector :> IMod<_>
+        
+        member x.Update(v : PRo3D.OrientationDisplayModel) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                MOption.Update(_center, v.center)
+                MOption.Update(_northVector, v.northVector)
+                MOption.Update(_upVector, v.upVector)
+                
+        
+        static member Create(__initial : PRo3D.OrientationDisplayModel) : MOrientationDisplayModel = MOrientationDisplayModel(__initial)
+        static member Update(m : MOrientationDisplayModel, v : PRo3D.OrientationDisplayModel) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.OrientationDisplayModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module OrientationDisplayModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let center =
+                { new Lens<PRo3D.OrientationDisplayModel, Microsoft.FSharp.Core.Option<Aardvark.Base.V3d>>() with
+                    override x.Get(r) = r.center
+                    override x.Set(r,v) = { r with center = v }
+                    override x.Update(r,f) = { r with center = f r.center }
+                }
+            let northVector =
+                { new Lens<PRo3D.OrientationDisplayModel, Microsoft.FSharp.Core.Option<Aardvark.Base.V3d>>() with
+                    override x.Get(r) = r.northVector
+                    override x.Set(r,v) = { r with northVector = v }
+                    override x.Update(r,f) = { r with northVector = f r.northVector }
+                }
+            let upVector =
+                { new Lens<PRo3D.OrientationDisplayModel, Microsoft.FSharp.Core.Option<Aardvark.Base.V3d>>() with
+                    override x.Get(r) = r.upVector
+                    override x.Set(r,v) = { r with upVector = v }
+                    override x.Update(r,f) = { r with upVector = f r.upVector }
+                }

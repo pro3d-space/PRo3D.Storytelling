@@ -45,12 +45,13 @@ type Interactions =
 [<DomainType>]
 type Model = { 
    
-    scene       : Scene
-    drawing     : Drawing.DrawingModel
-    surfaces    : hset<SgSurface>        
-    properties  : Properties
-    interaction : Interactions
-    picking     : bool
+    scene        : Scene
+    drawing      : Drawing.DrawingModel
+    surfaces     : hset<SgSurface>        
+    properties   : Properties
+    interaction  : Interactions
+    picking      : bool
+    orientations : OrientationDisplayModel
     
     //measurementPath : string
   //  draw    : bool 
@@ -70,8 +71,9 @@ module Viewer =
 
         drawing = Drawing.Model.initialdrawing
         properties = NoProperties
-        interaction = DrawAnnotation
+        interaction = PlaceCoordinateSystem //DrawAnnotation
         picking = false
+        orientations = OrientationDisplayModel.initial
         //measurementPath = @"."
 
         // draw = false

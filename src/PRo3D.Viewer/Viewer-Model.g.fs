@@ -136,6 +136,7 @@ module Mutable =
         let _properties = ResetMod.Create(__initial.properties)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _picking = ResetMod.Create(__initial.picking)
+        let _orientations = PRo3D.Mutable.MOrientationDisplayModel.Create(__initial.orientations)
         
         member x.scene = _scene
         member x.drawing = _drawing
@@ -143,6 +144,7 @@ module Mutable =
         member x.properties = _properties :> IMod<_>
         member x.interaction = _interaction :> IMod<_>
         member x.picking = _picking :> IMod<_>
+        member x.orientations = _orientations
         
         member x.Update(v : PRo3D.Viewer.Model) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -154,6 +156,7 @@ module Mutable =
                 ResetMod.Update(_properties,v.properties)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_picking,v.picking)
+                PRo3D.Mutable.MOrientationDisplayModel.Update(_orientations, v.orientations)
                 
         
         static member Create(__initial : PRo3D.Viewer.Model) : MModel = MModel(__initial)
@@ -205,4 +208,10 @@ module Mutable =
                     override x.Get(r) = r.picking
                     override x.Set(r,v) = { r with picking = v }
                     override x.Update(r,f) = { r with picking = f r.picking }
+                }
+            let orientations =
+                { new Lens<PRo3D.Viewer.Model, PRo3D.OrientationDisplayModel>() with
+                    override x.Get(r) = r.orientations
+                    override x.Set(r,v) = { r with orientations = v }
+                    override x.Update(r,f) = { r with orientations = f r.orientations }
                 }

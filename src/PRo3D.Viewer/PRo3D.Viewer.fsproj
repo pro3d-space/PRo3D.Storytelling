@@ -77,9 +77,11 @@
     <Compile Include="Viewer-Model.fs" />
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
+    <Compile Include="DipAndStrike.fs" />
     <Compile Include="Properties.fs" />
     <Compile Include="Drawing.fs" />
     <Compile Include="MeasurementsImporter.fs" />
+    <Compile Include="OrientationDisplay.fs" />
     <Compile Include="Viewer.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />

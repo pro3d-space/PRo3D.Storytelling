@@ -117,6 +117,7 @@ module Surface =
     
 module ViewerApp =
     open Surface
+    open Aardvark.Base.Geometry.RayHit
    
     type PropertyActions =
         | DrawingMessage of Drawing.Action
@@ -126,9 +127,11 @@ module ViewerApp =
         | PropertyMessage of PropertyActions
         | CameraMessage of CameraController.Message        
         | DrawingMessage of Drawing.Action
+        | CoordinatesMessage of OrientationDisplay.Action
         | AnnotationMessage of AnnotationProperties.Action
         | ImportSurface 
         | ImportMeasurements 
+        | DnSProperties of PropertyActions
         | QuickLoad
         | AddSg of ISg
         | PickSurface of SceneHit
@@ -137,6 +140,7 @@ module ViewerApp =
         | NewScene
         | KeyDown of key : Aardvark.Application.Keys
         | KeyUp of key : Aardvark.Application.Keys      
+        | ToggleActions of Interactions
                 
     let lookAtData m = 
         let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
@@ -222,6 +226,9 @@ module ViewerApp =
                             | DrawAnnotation ->
                                 let drawing = DrawingApp.update w m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
                                 { m with drawing = drawing }
+                            | PlaceCoordinateSystem -> 
+                                let orientations = OrientationDisplay.update m.orientations (OrientationDisplay.Action.SetCenter(hit))
+                                { m with orientations = orientations }
                             | _ -> m
                     | None -> 
                         Log.error ("no hit")
@@ -256,6 +263,7 @@ module ViewerApp =
                             | _ -> m.drawing
                     
                     { m with drawing = d }
+            | ToggleActions t,_,_ -> { m with interaction = t }    
             | _ -> m
                 
     let scene (m : MModel) =
@@ -308,12 +316,12 @@ module ViewerApp =
                             DrawingApp.Sg.view m.drawing m.scene.cameraModel.view
                                 |> Sg.map DrawingMessage
                                 |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
-                                |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode  
+                                |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
 
-                        [
-                            (scene m)
-                            annotations
-                        ]
+                        let orientations =
+                            OrientationDisplay.Sg.view m.orientations m.scene.cameraModel.view
+
+                        [(scene m); annotations; orientations]
                             |> Sg.ofList
                          //   |> Sg.fillMode (Mod.constant FillMode.Fill)
                          //   |> Sg.cullMode (Mod.constant CullMode.None)      
@@ -322,9 +330,9 @@ module ViewerApp =
         //right side fixed tabbed menu
         let interactTools =
             div [clazz "ui buttons inverted"] [
-                button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
+                button [clazz "ui icon button"; onMouseClick (fun _ -> OpenScene )] [
                             i [clazz "large rocket icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
+                button [clazz "ui icon button"; onMouseClick (fun _ -> OpenScene)] [
                             i [clazz "large rocket icon"] [] ]
             ]
 
@@ -382,6 +390,17 @@ module ViewerApp =
                 return (opt |> UI.map AnnotationMessage)
             } 
 
+        let dns (model:MModel) =
+            adaptive {
+                let! bla = model.drawing.selectedAnnotation
+                let opt = 
+                    match bla with
+                        | Some a -> DipAndStrike.view a
+                        | None   -> div[][]
+
+                return (opt |> UI.map DnSProperties)
+            } 
+
         let annotationUI = 
             div [][
                 
@@ -393,7 +412,9 @@ module ViewerApp =
                 ]
                 GuiEx.accordion "Properties" "Write" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(properties m))
-                ]
+                ] 
+                GuiEx.accordion "Dip&Strike" "Write" false [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 
             ]
             
 
