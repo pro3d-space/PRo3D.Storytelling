@@ -357,49 +357,49 @@ module Mutable =
                     override x.Update(r,f) = { r with opcPaths = f r.opcPaths }
                 }
     [<StructuredFormatDisplay("{AsString}")>]
-    type MPRo3DUtils(__initial : PRo3D.PRo3DUtils) = 
+    type MOrientationDisplayModel(__initial : PRo3D.OrientationDisplayModel) = 
         let mutable __current = __initial
-        let _explorationCenter = ResetMod.Create(__initial.explorationCenter)
-        let _northVector = ResetMod.Create(__initial.northVector)
-        let _upVector = ResetMod.Create(__initial.upVector)
+        let _center = MOption.Create(__initial.center)
+        let _northVector = MOption.Create(__initial.northVector)
+        let _upVector = MOption.Create(__initial.upVector)
         
-        member x.explorationCenter = _explorationCenter :> IMod<_>
+        member x.center = _center :> IMod<_>
         member x.northVector = _northVector :> IMod<_>
         member x.upVector = _upVector :> IMod<_>
         
-        member x.Update(v : PRo3D.PRo3DUtils) =
+        member x.Update(v : PRo3D.OrientationDisplayModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
                 __current <- v
                 
-                ResetMod.Update(_explorationCenter,v.explorationCenter)
-                ResetMod.Update(_northVector,v.northVector)
-                ResetMod.Update(_upVector,v.upVector)
+                MOption.Update(_center, v.center)
+                MOption.Update(_northVector, v.northVector)
+                MOption.Update(_upVector, v.upVector)
         
-        static member Create(v : PRo3D.PRo3DUtils) = MPRo3DUtils(v)
-        static member Update(m : MPRo3DUtils, v : PRo3D.PRo3DUtils) = m.Update(v)
+        static member Create(v : PRo3D.OrientationDisplayModel) = MOrientationDisplayModel(v)
+        static member Update(m : MOrientationDisplayModel, v : PRo3D.OrientationDisplayModel) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module PRo3DUtils =
+    module OrientationDisplayModel =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
-            let explorationCenter =
-                { new Lens<PRo3D.PRo3DUtils, Aardvark.Base.V3d>() with
-                    override x.Get(r) = r.explorationCenter
-                    override x.Set(r,v) = { r with explorationCenter = v }
-                    override x.Update(r,f) = { r with explorationCenter = f r.explorationCenter }
+            let center =
+                { new Lens<PRo3D.OrientationDisplayModel, Microsoft.FSharp.Core.Option<Aardvark.Base.V3d>>() with
+                    override x.Get(r) = r.center
+                    override x.Set(r,v) = { r with center = v }
+                    override x.Update(r,f) = { r with center = f r.center }
                 }
             let northVector =
-                { new Lens<PRo3D.PRo3DUtils, Aardvark.Base.V3d>() with
+                { new Lens<PRo3D.OrientationDisplayModel, Microsoft.FSharp.Core.Option<Aardvark.Base.V3d>>() with
                     override x.Get(r) = r.northVector
                     override x.Set(r,v) = { r with northVector = v }
                     override x.Update(r,f) = { r with northVector = f r.northVector }
                 }
             let upVector =
-                { new Lens<PRo3D.PRo3DUtils, Aardvark.Base.V3d>() with
+                { new Lens<PRo3D.OrientationDisplayModel, Microsoft.FSharp.Core.Option<Aardvark.Base.V3d>>() with
                     override x.Get(r) = r.upVector
                     override x.Set(r,v) = { r with upVector = v }
                     override x.Update(r,f) = { r with upVector = f r.upVector }

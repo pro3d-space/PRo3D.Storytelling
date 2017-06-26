@@ -174,10 +174,17 @@ type Surface = {
 }
 
 [<DomainType>]
-type PRo3DUtils = {    
+type OrientationDisplayModel = {    
 
-    explorationCenter : V3d
-    northVector : V3d
-    upVector : V3d
+    center : Option<V3d>
+    northVector : Option<V3d>
+    upVector : Option<V3d>
 }
 
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module OrientationDisplayModel =
+    let initial = {
+        center = Some V3d.OOO
+        northVector = Some V3d.IOO
+        upVector = Some V3d.OOI
+        }

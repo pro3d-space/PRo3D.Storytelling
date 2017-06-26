@@ -24,7 +24,7 @@ let main argv =
             DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
         ]
 
-    let a = PRo3D.ViewerApp.start form runtime signature
+    let a = PRo3D.ViewerApp.start form runtime signature    
 
     WebPart.startServer 4321 [ 
         MutableApp.toWebPart runtime a

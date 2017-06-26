@@ -36,7 +36,7 @@ module PList =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]        
 module Surface =
-    let mk path = {        
+    let mk path = {
         guid = Guid.NewGuid()
         name = IO.Path.GetFileName path
         importPath = path
@@ -114,12 +114,10 @@ module Surface =
                     System.IO.File.Delete path
                     m
             | _ -> m
-
-
-
     
 module ViewerApp =
     open Surface
+    open Aardvark.Base.Geometry.RayHit
    
     type PropertyActions =
         | DrawingMessage of Drawing.Action
@@ -129,9 +127,11 @@ module ViewerApp =
         | PropertyMessage of PropertyActions
         | CameraMessage of CameraController.Message        
         | DrawingMessage of Drawing.Action
+        | CoordinatesMessage of OrientationDisplay.Action
         | AnnotationMessage of AnnotationProperties.Action
         | ImportSurface 
         | ImportMeasurements 
+        | DnSProperties of PropertyActions
         | QuickLoad
         | AddSg of ISg
         | PickSurface of SceneHit
@@ -140,6 +140,7 @@ module ViewerApp =
         | NewScene
         | KeyDown of key : Aardvark.Application.Keys
         | KeyUp of key : Aardvark.Application.Keys      
+        | ToggleActions of Interactions
                 
     let lookAtData m = 
         let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
@@ -167,14 +168,16 @@ module ViewerApp =
                 else
                     None
             | None -> None
-
-    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =        
-        match msg, m.drawing.draw with
-            | CameraMessage msg, false -> { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
-            | DrawingMessage msg, _ -> 
+    
+    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =
+        
+        match msg, m.interaction, m.drawing.draw with
+            | CameraMessage  msg,_,false -> 
+                { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
+            | DrawingMessage msg, DrawAnnotation,_-> 
                 //let m = 
                 //    match msg with
-                //        | Drawing.Action.Select _ ->                             
+                //        | Drawing.Action.Select _ ->
                 //            { m with properties = 
                 //                        match m.drawing.selectedAnnotation with 
                 //                            | Some a -> Properties.AnnotationProperties a
@@ -182,7 +185,7 @@ module ViewerApp =
                 //        | _ -> m
                 
                 { m with drawing = DrawingApp.update m.drawing msg }
-            | ImportSurface, _ -> 
+            | ImportSurface,_,_ -> 
                 match Dialogs.openFolder w with
                     | [] -> m
                     | paths ->
@@ -193,16 +196,13 @@ module ViewerApp =
                         else
                             Log.error "path %s does not point to surface folder" path
                             m   
-            | ImportMeasurements, _ ->
+            | ImportMeasurements,_,_ ->
                 match Dialogs.openDialog w with
                     | Some x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x)}}
                     | None -> m   
-            | QuickLoad, _ -> 
-                //let surface = Surface.mk (@"E:\Aardwork\Exomars\_SCENES\cd - Copy\Surface\Cape_Desire_RGB")
-                //let m = Surface.import runtime signature surface m 
-                //m |> lookAtData
+            | QuickLoad,_,_ ->                
                 loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
-            | PickSurface p, true ->                 
+            | PickSurface p, _,true ->                 
                 let fray = p.globalRay.Ray
                 let r = fray.Ray
 
@@ -216,36 +216,54 @@ module ViewerApp =
                     match doKdTreeIntersection m Trafo3d.Identity ray with
                         | Some t -> ray.Ray.GetPointOnRay t |> Some
                         | None -> None
-                    
-                
+                                    
                 match doKdTreeIntersection m Trafo3d.Identity fray with
                     | Some t -> 
                         let hit = r.GetPointOnRay(t)
                         Log.warn "[PickSurface] %A" hit
-                        //let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPoint hit)
-                        let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
-                        { m with drawing = drawing}
+                        
+                        match m.interaction with
+                            | DrawAnnotation ->
+                                let drawing = DrawingApp.update m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
+                                { m with drawing = drawing }
+                            | PlaceCoordinateSystem -> 
+                                let orientations = OrientationDisplay.update m.orientations (OrientationDisplay.Action.SetCenter(hit))
+                                { m with orientations = orientations }
+                            | _ -> m
                     | None -> 
-                        Log.error ("nooo hit")
+                        Log.error ("no hit")
                         m
-
-            | SaveScene, _ -> 
+            | SaveScene, _,_ -> 
                 match Dialogs.saveDialog w with
                     | None -> m
                     | Some p -> 
                         Serialization.save "./last" m.scene |> ignore
                         {m with scene = Serialization.save p m.scene}
-            | OpenScene, _ ->
+            | OpenScene,_,_ ->
                 match Dialogs.openDialog w with
                     | None -> m
                     | Some path -> loadScene path m runtime signature
-            | NewScene, _ -> { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
-            | KeyDown k, _ ->
-                    let d = DrawingApp.update m.drawing (Drawing.Action.KeyDown k)
+            | NewScene,_,_ -> { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
+            | KeyDown k, DrawAnnotation, _ ->
+                    let a =
+                        match k with
+                            | Aardvark.Application.Keys.Enter       -> Drawing.Action.Finish
+                            | Aardvark.Application.Keys.LeftCtrl    -> Drawing.Action.StartDrawing
+                            | Aardvark.Application.Keys.D0          -> Drawing.Action.SetSemantic Semantic.Horizon0
+                            | Aardvark.Application.Keys.D1          -> Drawing.Action.SetSemantic Semantic.Horizon1
+                            | Aardvark.Application.Keys.D2          -> Drawing.Action.SetSemantic Semantic.Horizon2
+                            | Aardvark.Application.Keys.D3          -> Drawing.Action.SetSemantic Semantic.Horizon3       
+                            | _                                     -> Drawing.Action.Nop
+
+                    { m with drawing = DrawingApp.update m.drawing a }
+            | KeyUp k, _,_ ->
+                    let d =
+                        match k with
+                            | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update m.drawing Drawing.Action.StopDrawing
+                            | _ -> m.drawing
+                    
                     { m with drawing = d }
-            | KeyUp k, _ ->
-                    let d = DrawingApp.update m.drawing (Drawing.Action.KeyUp k)
-                    { m with drawing = d }
+            | ToggleActions t,_,_ -> { m with interaction = t }    
             | _ -> m
                 
     let scene (m : MModel) =
@@ -273,7 +291,7 @@ module ViewerApp =
             }
         opcs |> Sg.set
 
-    let mkBrushISg color size trafo : ISg<Message> =         
+    let mkBrushISg color size trafo : ISg<Message> =
         Sg.sphere 5 color size 
                 |> Sg.shader {
                     do! Shader.stableTrafo
@@ -282,8 +300,6 @@ module ViewerApp =
                 }
                 |> Sg.noEvents
                 |> Sg.trafo(trafo)
-
-    
 
     let view (m : MModel) =
 
@@ -298,9 +314,12 @@ module ViewerApp =
                             DrawingApp.Sg.view m.drawing m.scene.cameraModel.view
                                 |> Sg.map DrawingMessage                                
                                 |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
-                                |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode  
+                                |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
 
-                        [(scene m); annotations]
+                        let orientations =
+                            OrientationDisplay.Sg.view m.orientations m.scene.cameraModel.view
+
+                        [(scene m); annotations; orientations]
                             |> Sg.ofList
                          //   |> Sg.fillMode (Mod.constant FillMode.Fill)
                          //   |> Sg.cullMode (Mod.constant CullMode.None)      
@@ -309,9 +328,9 @@ module ViewerApp =
         //right side fixed tabbed menu
         let interactTools =
             div [clazz "ui buttons inverted"] [
-                button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
+                button [clazz "ui icon button"; onMouseClick (fun _ -> OpenScene )] [
                             i [clazz "large rocket icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
+                button [clazz "ui icon button"; onMouseClick (fun _ -> OpenScene)] [
                             i [clazz "large rocket icon"] [] ]
             ]
 
@@ -369,6 +388,17 @@ module ViewerApp =
                 return (opt |> UI.map AnnotationMessage)
             } 
 
+        let dns (model:MModel) =
+            adaptive {
+                let! bla = model.drawing.selectedAnnotation
+                let opt = 
+                    match bla with
+                        | Some a -> DipAndStrike.view a
+                        | None   -> div[][]
+
+                return (opt |> UI.map DnSProperties)
+            } 
+
         let annotationUI = 
             div [][
                 
@@ -380,7 +410,9 @@ module ViewerApp =
                 ]
                 GuiEx.accordion "Properties" "Write" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(properties m))
-                ]
+                ] 
+                GuiEx.accordion "Dip&Strike" "Write" false [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 
             ]
             
 
@@ -425,7 +457,6 @@ module ViewerApp =
                 body [clazz "context example"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
         ))
                                                               
-
     let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) = 
         
         //let imports =

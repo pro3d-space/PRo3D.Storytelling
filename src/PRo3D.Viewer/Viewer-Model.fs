@@ -37,14 +37,22 @@ type Properties =
     | AnnotationProperties of Annotation
     | NoProperties
 
+type Interactions =
+    | PickExploreCenter
+    | PlaceCoordinateSystem  // compute up north vector at that point
+    | DrawAnnotation
+
 [<DomainType>]
 type Model = { 
    
-    scene       : Scene
-    drawing     : Drawing.DrawingModel
-    surfaces    : hset<SgSurface>        
-    properties  : Properties
-
+    scene        : Scene
+    drawing      : Drawing.DrawingModel
+    surfaces     : hset<SgSurface>        
+    properties   : Properties
+    interaction  : Interactions
+    picking      : bool
+    orientations : OrientationDisplayModel
+    
     //measurementPath : string
   //  draw    : bool 
 //    hoverPosition : option<Trafo3d>
@@ -63,6 +71,9 @@ module Viewer =
 
         drawing = Drawing.Model.initialdrawing
         properties = NoProperties
+        interaction = PlaceCoordinateSystem //DrawAnnotation
+        picking = false
+        orientations = OrientationDisplayModel.initial
         //measurementPath = @"."
 
         // draw = false

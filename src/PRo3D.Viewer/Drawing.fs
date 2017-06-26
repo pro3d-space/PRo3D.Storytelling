@@ -20,84 +20,14 @@ module DrawingApp =
 
     open PRo3D.Drawing
 
-    module DipAndStrike = 
-
-        let projectOntoPlane (x:V3d) (n:V3d) = (x - (x * n)).Normalized
-
-        let computeAzimuth (dir:V3d) (north:V3d) (planeNormal:V3d) =
-            let east = north.Cross(planeNormal)
-            let eastWestPlane = new Plane3d(east, 0.0) //separates west (-) from east  (+)
-            let northSouthPlane = new Plane3d(north, 0.0) //separates sout (-) from north  (+)
-
-            let coords = new V2d(eastWestPlane.Height(dir), northSouthPlane.Height(dir))
-            let angle = Fun.Atan(coords.Y / coords.X).DegreesFromRadians().Abs()
-
-            match coords.X.Sign() with
-                    | -1 -> match coords.Y.Sign() with
-                                | 1 -> 270.0 + angle
-                                | _ -> 270.0 - angle 
-                    | _ -> match coords.Y.Sign() with
-                                | -1 -> angle + 90.0
-                                | _ -> 90.0 - angle
-
-        let calculateDipAndStrikeResults (points:plist<V3d>) =
-            //let up = V3d.OOI
-            //let north = V3d.IOO
-            let v3dArray = points.AsList |> List.toArray // points.toArray not possible because of: int -> V3d[]
-
-            let p = v3dArray.[0]
-            let up = p.Normalized
-            let north = up.Cross(V3d.OOI.Cross(up))
-
-            let plane = PlaneFitting.FitPlane3dLS(v3dArray);
-            let bb = new Box3d(points);
-
-            let horP = new Plane3d(up, V3d.Zero);
-
-             //correct plane orientation - check if normals point in same direction
-            let height = horP.Height(plane.Normal);
-            let planeNormal = match height.Sign() with
-                                | -1 -> plane.Normal.Negated
-                                | _ -> plane.Normal
-
-            //strike
-            let strike = up.Cross(planeNormal).Normalized;
-
-            //dip vector 
-            let dip = strike.Cross(planeNormal).Normalized;
-
-            //dip plane incline .. maximum dip angle
-            let v = strike.Cross(up).Normalized;
-
-            let dns = {
-                plane = plane
-                dipAngle = Math.Acos(v.Dot(dip)).DegreesFromRadians()
-                dipDirection = dip
-                strikeDirection = strike
-                dipAzimuth = computeAzimuth v north up
-                strikeAzimuth = computeAzimuth strike north up
-                centerOfMass = bb.Center
-            }
-            dns
-
-        let dipColor (dipAngle:IMod<float>) (min:IMod<float>) (max:IMod<float>) =
-            adaptive {
-                let! dipAngle = dipAngle
-                let! min = min
-                let! max = max
-
-                let range = new Range1d(min, max)
-                let hue = (dipAngle - range.Min) / range.Size
-                let hsv = HSVf((1.0 - hue) * 0.625, 1.0, 1.0)
-
-                return hsv.ToC3f().ToC4b()
-            }
-
     let finishAndAppend (model : DrawingModel) = 
+        //if there are at least 3 points do dns calculation (debug, dev). 
+        //might take long for large number of points so created on demand?
+
         let anns = match model.working with
                             | Some w ->               
                                 let dns = 
-                                    match w.points.Count with
+                                    match w.points.Count with 
                                         | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points) //more acc. by using segments as well?
                                         | _ -> None 
                                 model.annotations 
@@ -109,36 +39,48 @@ module DrawingApp =
     let addPoint samplePoint p model =
         let working, newSegment = 
             match model.working with
-                    | Some w ->     
-                        let newModel = { w with points = w.points |> PList.append p }
-                        Log.line "working contains %d points" newModel.points.Count
-                        match PList.tryAt (PList.count w.points - 1) w.points with
-                            | None -> 
-                                newModel, None
-                            | Some a -> 
-                                let segmentIndex = PList.count newModel.segments
+                | Some w ->     
+                    let annotation = { w with points = w.points |> PList.append p }
+                    Log.line "working contains %d points" annotation.points.Count
 
-                                let newSegment = { startPoint = a; endPoint = p; points = PList.ofList [a;p] }
-                                if PRo3D.Config.useAsyncIntersections then
-                                    { newModel with segments = PList.append newSegment newModel.segments }, Some (newSegment,segmentIndex)
-                                else
-                                    let dir = newSegment.endPoint - newSegment.startPoint
-                                    let points = 
-                                        [ for s in 0 .. PRo3D.Config.sampleCount do
-                                            let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
-                                            match samplePoint p with
-                                                | None -> ()
-                                                | Some projectedPoint ->
-                                                    yield projectedPoint 
-                                        ]
-                                    let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
-                                    { newModel with segments = PList.append newSegment newModel.segments }, None
+                    //fetch current drawing segment (projected, polyline or polygon)
+                    let result = 
+                        match w.projection with
+                            | Projection.Viewpoint | Projection.Sky ->                     
+                                match PList.tryAt (PList.count w.points-1) w.points with
+                                    | None -> 
+                                        annotation, None
+                                    | Some a -> 
+                                        let segmentIndex = PList.count annotation.segments
+                                        let newSegment = { startPoint = a; endPoint = p; points = PList.ofList [a;p] }
+
+                                        if PRo3D.Config.useAsyncIntersections then
+                                            { annotation with segments = PList.append newSegment annotation.segments }, Some (newSegment,segmentIndex)
+                                        else
+                                            let dir = newSegment.endPoint - newSegment.startPoint
+                                            let points = 
+                                                [ for s in 0 .. PRo3D.Config.sampleCount do
+                                                    let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                                                    match samplePoint p with
+                                                        | None -> ()
+                                                        | Some projectedPoint ->
+                                                            yield projectedPoint
+                                                ]
+                                            let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
+                                            { annotation with segments = PList.append newSegment annotation.segments }, None
+                            | Projection.Linear ->
+                                annotation, None
+                            | _ -> failwith "case does not exist"
+                    
+                    result
+                    
                         
-                    | None ->                                     
-                        { 
-                            (Annotation.make model.projection model.geometry model.semantic)  //add annotation states
-                                with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
-                        }, None 
+                | None ->  //no working state, start new working annotation
+                    { 
+                        //annotation states should be immutable after creation
+                        (Annotation.make model.projection model.geometry model.semantic)  
+                            with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
+                    }, None
 
         let model = { model with working = Some working }
 
@@ -148,8 +90,7 @@ module DrawingApp =
             | Geometry.Line, 2 -> 
                 model |> finishAndAppend, None
             | _ -> 
-                model, newSegment
-
+                model, newSegment // returns current segment for async computations outside
 
     let addNewSegment samplePoint model (newSegment : Segment, segmentIndex : int) =
         let dir = newSegment.endPoint - newSegment.startPoint
@@ -197,13 +138,11 @@ module DrawingApp =
                 model.pendingIntersections
         { model with pendingIntersections = ThreadPool.add id computation pool }
 
-
-
     let update (model : DrawingModel) (act : Action) =
         match (act, model.draw) with
-            | KeyDown Keys.LeftCtrl, _ ->                     
+            | StartDrawing, _ ->                     
                     { model with draw = true }
-            | KeyUp Keys.LeftCtrl, _ -> 
+            | StopDrawing, _ -> 
                     {model with draw = false; hoverPosition = None }
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
@@ -223,7 +162,9 @@ module DrawingApp =
                         printfn "oida"
                         { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
 
-            | KeyDown Aardvark.Application.Keys.Enter, _ -> 
+            //| KeyDown Aardvark.Application.Keys.Enter, _ -> 
+            //        model |> finishAndAppend
+            | Finish, _ -> 
                     model |> finishAndAppend
             | Exit, _ -> 
                     { model with hoverPosition = None }
@@ -237,17 +178,7 @@ module DrawingApp =
             | SetGeometry mode, _ ->
                     { model with geometry = mode }
             | SetProjection mode, _ ->
-                    { model with projection = mode }
-            | KeyDown Aardvark.Application.Keys.D0, _ -> 
-                    {model with semantic = Semantic.Horizon0 }               
-            | KeyDown Aardvark.Application.Keys.D1, _ -> 
-                    {model with semantic = Semantic.Horizon1 }               
-            | KeyDown Aardvark.Application.Keys.D2, _ -> 
-                    {model with semantic = Semantic.Horizon2 }               
-            | KeyDown Aardvark.Application.Keys.D3, _ -> 
-                    {model with semantic = Semantic.Horizon3 }               
-            | KeyDown Aardvark.Application.Keys.D4, _ -> 
-                    {model with semantic = Semantic.Horizon4 }               
+                    { model with projection = mode }                  
             | SetExportPath s, _ ->
                     { model with exportPath = s }
             | Export, _ ->
@@ -278,6 +209,7 @@ module DrawingApp =
                 let ann = DrawingModel.tryGet model id
                         
                 { model with selected = selection; selectedAnnotation = ann }  
+            | Nop, _ -> model
             | _ -> model
 
     module UI =
@@ -339,38 +271,35 @@ module DrawingApp =
                             
                         alist {                                                                     
                             for a in model.annotations do 
-                                        
-                                
-                            let! sem = a.semantic
-                            let! c = mkColor model a
+                                                                        
+                                let! sem = a.semantic
+                                let! c = mkColor model a
 
-                            let bgc = sprintf "color: %s" (Html.ofC4b c)
+                                let bgc = sprintf "color: %s" (Html.ofC4b c)
                                     
-                            yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
-                                    i [clazz "large Sticky Note middle aligned icon"; style bgc][]
-                                    div [clazz "content"] [
-                                        let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
-                                        let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
-                                        yield div [clazz "header"] [Incremental.text header]                                       
-                                        yield div [clazz "description"] [Incremental.text desc]      
+                                yield div [clazz "item"; onClick(fun _ -> Select (a.key |> Mod.force))] [
+                                        i [clazz "large Sticky Note middle aligned icon"; style bgc][]
+                                        div [clazz "content"] [
+                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A" x y) a.geometry a.semantic
+                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
+                                            yield div [clazz "header"] [Incremental.text header]                                       
+                                            yield div [clazz "description"] [Incremental.text desc]      
+                                        ]
                                     ]
-                                ]
                         }     
                 )
             
-
         let viewAnnotationsAcc (model:MDrawingModel) = 
             Html.SemUi.accordion "Annotations" "File Outline" true [
                 viewAnnotations model 
             ]
-
-   
-    
+ 
     let threads (m : DrawingModel) = m.pendingIntersections
 
     module Sg =        
+        //open Mutable.DipAndStrikeResultsModule.Lens
 
-        let discISg color size trafo =         
+        let discISg color size trafo =
             Sg.cylinder 30 color size (Mod.constant 0.2)
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
@@ -380,7 +309,7 @@ module DrawingApp =
                         |> Sg.noEvents
                         |> Sg.trafo(trafo) 
 
-        let coneISg color size trafo =         
+        let coneISg color size trafo =
             Sg.cone 5 color size (Mod.constant 0.5)
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
@@ -390,8 +319,7 @@ module DrawingApp =
                         |> Sg.noEvents
                         |> Sg.trafo(trafo) 
 
-
-        let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =        
+        let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =
             adaptive {
                 let! p = p
                 let! v = view
@@ -400,13 +328,12 @@ module DrawingApp =
                 return distF * size / 800.0 //needs hfov at this point
             }
 
-        let mkDotISg color size trafo =                     
+        let mkDotISg color size trafo = 
             Sg.sphere 5 color size 
                |> Sg.noEvents
                |> Sg.trafo(trafo) 
 
-
-        let edgeLines (close : bool) (points : alist<V3d>) (trafo:IMod<Trafo3d>) =            
+        let edgeLines (close : bool) (points : alist<V3d>) (trafo:IMod<Trafo3d>) =
             points
                 |> AList.map(fun d -> trafo.GetValue().Backward.TransformPos d)
                 |> AList.toMod |> Mod.map (fun l ->
@@ -436,7 +363,7 @@ module DrawingApp =
                 toEffect <| DefaultSurfaces.simpleLighting
             ]
        
-        let dots (points : alist<V3d>) (color : IMod<C4b>) (view : IMod<CameraView>) =            
+        let dots (points : alist<V3d>) (color : IMod<C4b>) (view : IMod<CameraView>) = 
             
             aset {
                 for p in points |> ASet.ofAList do
@@ -483,65 +410,75 @@ module DrawingApp =
                     | Some x -> 
                         let color = DipAndStrike.dipColor x.dipAngle (Mod.constant 0.0) (Mod.constant 90.0)
                         let! plane = x.plane
-                        yield discISg color (Mod.constant 2.0)  (Mod.constant (Trafo3d.RotateInto(V3d.YAxis, plane.Normal) * Trafo3d.Translation(p)))
+                        let! dip = x.dipDirection
+                        let! strike = x.strikeDirection
+                        let dlength = dip.Normalized * 5.0
+                        let dipLine = alist{
+                                        yield p
+                                        yield p + dlength
+                                        }
+                        let slength1 = strike.Normalized.Negated * 5.0
+                        let slength2 = strike.Normalized * 5.0
+                        let strikeLine1 = alist {
+                                            yield p
+                                            yield p + slength1
+                                            }
+                        let strikeLine2 = alist {
+                                            yield p
+                                            yield p + slength2
+                                            }
+                        yield discISg color (Mod.constant 2.0)  (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p))) // disc
+                        yield lines dipLine color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) // dip vec
+                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) // strike1 vec
+                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) // strike2 vec
                     | None -> () 
-                                
-                //let dipVec = match dns with
-                //                | Some x ->
-                //                    let color = DipAndStrike.dipColor x.dipAngle (Mod.constant 0.0) (Mod.constant 90.0)
-                //                    yield lines alist{p;x.dipDirection} color 1.0  
-                //                | None -> []
-                                    
-                //[ disc ]
+                               
             } |> Sg.set
-
-        //let drawDnS (anno : MAnnotation) (points : alist<V3d>) =
-        //    let color = match anno.dnsResults |> Mod.force with
-        //                    | Some x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0)
-        //                    | None -> anno.color
-        //    let! t = anno.modelTrafo+
-        //    let size = points |> AList.toMod |> (Mod.map PList.count)
-        //    let pos = t.Forward.TransformPos(points |> AList.toList |> List.item(size/2))
-        //    let disc = match anno.geometry with
-        //                | Geometry.DnS -> [discISg color (computeScale view (Mod.constant pos) 5.0) (Mod.constant (Trafo3d.Translation(pos))) anno.modelTrafo]
-        //                | _ -> []
-        //    disc
             
-
-        let viewAnnotation (a : MAnnotation) =
-            alist {
-                for segment in a.segments do
-                    let! startPoint = segment.startPoint
-                    let! endPoint = segment.endPoint
-                    yield  startPoint
-                    yield! segment.points
-                    yield  endPoint
+        let getPolyline (a : MAnnotation) =
+            alist {                
+                let! hasSegments = a.segments |> AList.toMod |> Mod.map (fun d -> d |> PList.count > 0)
+                if hasSegments then
+                    for segment in a.segments do
+                        let! startPoint = segment.startPoint
+                        let! endPoint = segment.endPoint
+                        yield  startPoint
+                        yield! segment.points
+                        yield  endPoint
+                else
+                    yield! a.points
             }
 
         let workingAnnotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
 
-            let points =
+            let polyPoints =
                 alist {
                     let! anno = anno
                     match anno with
-                        | Some a -> yield! viewAnnotation a
+                        | Some a -> yield! getPolyline a
+                        | None -> ()
+                }
+
+            let points = 
+                alist {
+                    let! anno = anno
+                    match anno with
+                        | Some a -> yield! a.points
                         | None -> ()
                 }
                 
             let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color) 
             let thickness = Mod.bindOption anno 1.0              (fun a -> a.thickness.value) 
             let key       = Mod.bindOption anno Guid.Empty       (fun a -> a.key) 
-            let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo) 
-            
-            let polyline = lines points color thickness trafo  
-           
+            let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)          
+                                   
             Sg.ofList [
-                polyline
-                dots points color view
+                lines polyPoints color thickness trafo  //polyline
+                dots points color view                  //support points
             ]         
 
-        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =                         
-            let points = viewAnnotation anno
+        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =
+            let points = getPolyline anno
             
            // let dns = 
             Sg.ofList [
@@ -550,15 +487,14 @@ module DrawingApp =
                 drawDns anno view
             ]
 
-        let view (model:MDrawingModel) (cam:IMod<CameraView>) =        
+        let view (model:MDrawingModel) (cam:IMod<CameraView>) =
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler
             let annoSet = ASet.ofAList model.annotations 
 
             let annotations =
                 aset {
-                    for a in annoSet do
-                       // let a = { a with color = UI.mkColor a }
+                    for a in annoSet do                       
                        let c = UI.mkColor model a
                        yield finishedAnnotation a cam c
                 } |> Sg.set
