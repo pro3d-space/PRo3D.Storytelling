@@ -34,8 +34,6 @@ module DipAndStrike =
                             | _ -> 90.0 - angle
 
     let calculateDipAndStrikeResults (points:plist<V3d>) =
-        //let up = V3d.OOI
-        //let north = V3d.IOO
         let v3dArray = points.AsList |> List.toArray // points.toArray not possible because of: int -> V3d[]
 
         let p = v3dArray.[0]
@@ -90,14 +88,14 @@ module DipAndStrike =
 
     let view (model : MAnnotation) =
 
-        let da = (Mod.bindOption model.dnsResults 1.0 (fun a -> a.dipAngle)).ToString()
-        let daz = (Mod.bindOption model.dnsResults 1.0 (fun a -> a.dipAzimuth)).ToString()
-        let staz = (Mod.bindOption model.dnsResults 1.0 (fun a -> a.strikeAzimuth)).ToString()
+        let da = Mod.bindOption model.dnsResults 1.0 (fun a -> a.dipAngle)
+        let daz = Mod.bindOption model.dnsResults 1.0 (fun a -> a.dipAzimuth)
+        let staz = Mod.bindOption model.dnsResults 1.0 (fun a -> a.strikeAzimuth)
         require Html.semui (
             Html.table [
-                           div [clazz "Dipping Angle"] [Incremental.text (Mod.constant da)]  
-                           div [clazz "Dipping Orientation"] [Incremental.text (Mod.constant daz)]  
-                           div [clazz "Strike Orientation"] [Incremental.text (Mod.constant staz)]
+                           div [clazz "Dipping Angle"] [Incremental.text (da |> Mod.map (fun d -> sprintf "Dipping Angle: %f" (d)))]
+                           div [clazz "Dipping Orientation"] [Incremental.text (daz |> Mod.map (fun d -> sprintf "Dipping Orientation: %f" (d)))]
+                           div [clazz "Strike Orientation"] [Incremental.text (staz |> Mod.map (fun d -> sprintf "Strike Orientation: %f" (d)))]
                         ]
         )
 

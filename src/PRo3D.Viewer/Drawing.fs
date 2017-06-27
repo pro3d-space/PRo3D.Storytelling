@@ -321,7 +321,7 @@ module DrawingApp =
                         |> Sg.trafo(trafo) 
 
         let coneISg color size trafo =
-            Sg.cone 5 color size (Mod.constant 0.5)
+             Sg.cylinder 30 color size (Mod.constant 0.7)
                         |> Sg.noEvents
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
@@ -490,6 +490,7 @@ module DrawingApp =
                                             }
                         yield discISg color (Mod.constant 2.0)  (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p))) // disc
                         yield lines dipLine color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
+                        yield coneISg color (Mod.constant 0.5) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(p + dlength))) 
                         yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
                         yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike2 vec
                     | None -> () 

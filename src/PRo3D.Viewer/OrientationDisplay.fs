@@ -13,8 +13,7 @@ module OrientationDisplay =
 
     open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.SceneGraph.FShadeSceneGraph
-    //open Mutable.CoordinateSystemModelModule.Lens
-    open MeasurementsImporter
+   
 
     type Action =
         | SetCenter     of V3d
@@ -31,7 +30,6 @@ module OrientationDisplay =
               
 
     module Sg =
-        //open CoordinateSystem.Sg
 
         let coneISg color size trafo =         
             Sg.cone 30 color size (Mod.constant 0.2)
@@ -44,7 +42,7 @@ module OrientationDisplay =
                     |> Sg.trafo(trafo) 
 
 
-        let directionMarker (pos:IMod<Option<V3d>>) (dir:IMod<Option<V3d>>) (color:IMod<C4b>) =
+        let directionMarker (pos:IMod<Option<V3d>>) (dir:IMod<Option<V3d>>) (color:IMod<C4b>) (cam:IMod<CameraView>)=
             aset{
                 let! pos = pos
                 let! dir = dir
@@ -61,6 +59,7 @@ module OrientationDisplay =
                                 yield pos
                                 yield pos + length
                                 }
+                let scale =  DrawingApp.Sg.computeScale cam (Mod.constant pos) 5.0
                 yield DrawingApp.Sg.lines al color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(pos))) (Mod.constant Guid.Empty)
                 yield coneISg color (Mod.constant 0.02) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dir) * Trafo3d.Translation(pos+length))) 
                 } |> Sg.set 
@@ -70,7 +69,7 @@ module OrientationDisplay =
             aset{
                 let! pos = pos
                 match pos with
-                    | Some x -> yield DrawingApp.Sg.dots (alist{yield x}) (Mod.constant C4b.Magenta) cam
+                    | Some x -> yield DrawingApp.Sg.dots (alist{yield x}) color cam
                     | None -> ()
                 } |> Sg.set
 
@@ -79,11 +78,8 @@ module OrientationDisplay =
                 // order is irrelevant for rendering. change list to set,
                 // since set provides more degrees of freedom for the compiler
             
-                //let upLine = Sg.line model.center model.upVector (Mod.constant C4b.Magenta)
-                //let northLine = Sg.line model.center model.northVector (Mod.constant C4b.Cyan)
-                                
                 Sg.ofList [
                     point model.center (Mod.constant C4b.Magenta) cam
-                    directionMarker model.center model.upVector (Mod.constant C4b.Magenta)
-                    directionMarker model.center model.northVector (Mod.constant C4b.Cyan)
+                    directionMarker model.center model.upVector (Mod.constant C4b.Magenta) cam
+                    directionMarker model.center model.northVector (Mod.constant C4b.Cyan) cam
                 ]

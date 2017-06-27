@@ -118,6 +118,8 @@ module Surface =
 module ViewerApp =
     open Surface
     open Aardvark.Base.Geometry.RayHit
+    //open Viewer.Mutable.ModelModule.Lens
+    //open Viewer.Mutable.ModelModule.Lens
    
     type PropertyActions =
         | DrawingMessage of Drawing.Action
@@ -171,7 +173,7 @@ module ViewerApp =
     
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =
         
-        match msg, m.interaction, m.drawing.draw with
+        match msg, m.interaction, m.picking with
             | CameraMessage  msg,_,false -> 
                 { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
             | DrawingMessage msg, DrawAnnotation,_-> 
@@ -244,7 +246,7 @@ module ViewerApp =
                     | None -> m
                     | Some path -> loadScene path m runtime signature
             | NewScene,_,_ -> { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
-            | KeyDown k, DrawAnnotation, _ ->
+            | KeyDown k, _, _ ->
                     let a =
                         match k with
                             | Aardvark.Application.Keys.Enter       -> Drawing.Action.Finish
@@ -254,15 +256,23 @@ module ViewerApp =
                             | Aardvark.Application.Keys.D2          -> Drawing.Action.SetSemantic Semantic.Horizon2
                             | Aardvark.Application.Keys.D3          -> Drawing.Action.SetSemantic Semantic.Horizon3       
                             | _                                     -> Drawing.Action.Nop
+                    let picking =
+                        match k with 
+                            | Aardvark.Application.Keys.LeftCtrl -> true
+                            |_                                   -> false
+         
+                    match m.interaction with
+                        | DrawAnnotation -> { m with drawing = DrawingApp.update w m.drawing a; picking = picking }
+                        | PickExploreCenter -> {m with picking = picking}
+                        | PlaceCoordinateSystem -> {m with picking = picking}
 
-                    { m with drawing = DrawingApp.update w m.drawing a }
             | KeyUp k, _,_ ->
                     let d =
                         match k with
                             | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update w m.drawing Drawing.Action.StopDrawing
                             | _ -> m.drawing
                     
-                    { m with drawing = d }
+                    { m with drawing = d; picking = false }
             | ToggleActions t,_,_ -> { m with interaction = t }    
             | _ -> m
                 
@@ -330,9 +340,11 @@ module ViewerApp =
         //right side fixed tabbed menu
         let interactTools =
             div [clazz "ui buttons inverted"] [
-                button [clazz "ui icon button"; onMouseClick (fun _ -> OpenScene )] [
+                button [clazz "ui icon button"; onMouseClick (fun _ -> ToggleActions DrawAnnotation )] [
                             i [clazz "large rocket icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> OpenScene)] [
+                button [clazz "ui icon button"; onMouseClick (fun _ -> ToggleActions PlaceCoordinateSystem)] [
+                            i [clazz "large rocket icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> ToggleActions PickExploreCenter)] [
                             i [clazz "large rocket icon"] [] ]
             ]
 

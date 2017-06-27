@@ -71,7 +71,7 @@ module Viewer =
 
         drawing = Drawing.Model.initialdrawing
         properties = NoProperties
-        interaction = PlaceCoordinateSystem //DrawAnnotation
+        interaction = DrawAnnotation
         picking = false
         orientations = OrientationDisplayModel.initial
         //measurementPath = @"."
