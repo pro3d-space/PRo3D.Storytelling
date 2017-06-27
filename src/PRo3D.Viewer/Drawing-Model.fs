@@ -35,6 +35,8 @@ type Action =
     | QuickLoad
     | Select           of Guid
     | Nop
+    | AnnotationPropertiesMsg of AnnotationProperties.Action
+    | ToggleVisiblity of Guid
 
 
 [<DomainType>]

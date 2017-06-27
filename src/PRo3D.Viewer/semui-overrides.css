@@ -27,6 +27,10 @@ div.title {
     padding-bottom: 0px;
 }
 
+button, input, optgroup, select, textarea {
+    color: black;
+}
+
 /*div.content.active {
     overflow-y : auto;    
     max-height: 30%    
