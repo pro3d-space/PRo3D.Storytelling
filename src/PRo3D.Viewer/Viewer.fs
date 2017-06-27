@@ -41,6 +41,9 @@ module Surface =
         name = IO.Path.GetFileName path
         importPath = path
         opcPaths = OpcUtils.getOPCPaths path      
+        fillMode = FillMode.Fill
+        cullMode = CullMode.None
+        isVisible = true
     }
 
     let toSg (s:Surface) sg bb kd = {
@@ -122,27 +125,29 @@ module ViewerApp =
     //open Viewer.Mutable.ModelModule.Lens
    
     type PropertyActions =
-        | DrawingMessage of Drawing.Action
+        | DrawingMessage    of Drawing.Action
         | AnnotationMessage of AnnotationProperties.Action
 
     type Message =
         //| PropertyMessage of PropertyActions
-        | CameraMessage of CameraController.Message        
-        | DrawingMessage of Drawing.Action
-        | CoordinatesMessage of OrientationDisplay.Action
-        | AnnotationMessage of AnnotationProperties.Action
+        | CameraMessage             of CameraController.Message        
+        | DrawingMessage            of Drawing.Action
+        | CoordinatesMessage        of OrientationDisplay.Action
+        | AnnotationMessage         of AnnotationProperties.Action
+        | SurfacePropertiesMessage  of SurfaceProperties.Action
         | ImportSurface 
         | ImportMeasurements 
-        | DnSProperties of PropertyActions
+        | DnSProperties             of PropertyActions
         | QuickLoad
-        | AddSg of ISg
-        | PickSurface of SceneHit
+        | AddSg                     of ISg
+        | PickSurface               of SceneHit
         | SaveScene
         | OpenScene
         | NewScene
-        | KeyDown of key : Aardvark.Application.Keys
-        | KeyUp of key : Aardvark.Application.Keys      
-        | ToggleActions of Interactions
+        | KeyDown                   of key : Aardvark.Application.Keys
+        | KeyUp                     of key : Aardvark.Application.Keys      
+        | SetInteraction            of Interactions
+        | SelectSurface             of Guid
                 
     let lookAtData m = 
         let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
@@ -176,7 +181,7 @@ module ViewerApp =
         match msg, m.interaction, m.picking with
             | CameraMessage  msg,_,false -> 
                 { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
-            | DrawingMessage msg, DrawAnnotation,_-> 
+            | DrawingMessage msg, Interactions.DrawAnnotation,_-> 
                 //let m = 
                 //    match msg with
                 //        | Drawing.Action.Select _ ->
@@ -187,6 +192,20 @@ module ViewerApp =
                 //        | _ -> m
                 
                 { m with drawing = DrawingApp.update w m.drawing msg }
+          //  | SurfacePropertiesMessage msg,_,_ ->
+            | SelectSurface id,_,_ ->
+                
+                let surf = m.scene.surfaces |> Seq.tryFind(fun x -> x.guid = id)
+
+                { m with selectedSurface = surf}
+            | SurfacePropertiesMessage msg,_,_ ->
+                match m.selectedSurface with 
+                    | Some s -> 
+                        //let s' = SurfaceProperties.update s msg
+                        //let surfaces' =
+                        //    m.drawing.
+                        m
+                    | None -> m
             | AnnotationMessage msg,_,_ ->                
                     match m.drawing.selectedAnnotation with
                         | Some a -> 
@@ -234,10 +253,10 @@ module ViewerApp =
                         Log.warn "[PickSurface] %A" hit
                         
                         match m.interaction with
-                            | DrawAnnotation ->
+                            | Interactions.DrawAnnotation ->
                                 let drawing = DrawingApp.update w m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
                                 { m with drawing = drawing }
-                            | PlaceCoordinateSystem -> 
+                            | Interactions.PlaceCoordinateSystem -> 
                                 let orientations = OrientationDisplay.update m.orientations (OrientationDisplay.Action.SetCenter(hit))
                                 { m with orientations = orientations }
                             | _ -> m
@@ -271,9 +290,10 @@ module ViewerApp =
                             |_                                   -> false
          
                     match m.interaction with
-                        | DrawAnnotation -> { m with drawing = DrawingApp.update w m.drawing a; picking = picking }
-                        | PickExploreCenter -> {m with picking = picking}
-                        | PlaceCoordinateSystem -> {m with picking = picking}
+                        | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w m.drawing a; picking = picking }
+                        | Interactions.PickExploreCenter -> {m with picking = picking}
+                        | Interactions.PlaceCoordinateSystem -> {m with picking = picking}
+                        | _ -> failwith "interaction does not exist"
 
             | KeyUp k, _,_ ->
                     let d =
@@ -282,7 +302,7 @@ module ViewerApp =
                             | _ -> m.drawing
                     
                     { m with drawing = d; picking = false }
-            | ToggleActions t,_,_ -> { m with interaction = t }    
+            | SetInteraction t,_,_ -> { m with interaction = t }    
             | _ -> m
                 
     let scene (m : MModel) =
@@ -348,15 +368,20 @@ module ViewerApp =
                     )
 
         //right side fixed tabbed menu
-        let interactTools =
-            div [clazz "ui buttons inverted"] [
-                button [clazz "ui icon button"; onMouseClick (fun _ -> ToggleActions DrawAnnotation )] [
-                            i [clazz "large rocket icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> ToggleActions PlaceCoordinateSystem)] [
-                            i [clazz "large rocket icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> ToggleActions PickExploreCenter)] [
-                            i [clazz "large rocket icon"] [] ]
-            ]
+        let interactTools = Html.SemUi.dropDown m.interaction SetInteraction
+            //div [clazz "ui"] [
+                //button [clazz "ui icon button"; onMouseClick (fun _ -> SetInteraction Interactions.DrawAnnotation )] [
+                //    i [clazz "large rocket icon"][] 
+                //]
+                            
+                //button [clazz "ui icon button"; onMouseClick (fun _ -> SetInteraction Interactions.PlaceCoordinateSystem)] [
+                //    i [clazz "large rocket icon"][] 
+                //]
+
+                //button [clazz "ui icon button"; onMouseClick (fun _ -> SetInteraction Interactions.PickExploreCenter)] [
+                //    i [clazz "large rocket icon black inverted"][] 
+                //]
+            //]
 
         let sceneTools =
             div [clazz "ui buttons inverted"] [
@@ -385,30 +410,35 @@ module ViewerApp =
                 (AttributeMap.ofList [clazz "ui divided list inverted segment";]) (
                     alist {
                         for s in (m.surfaces |> AList.ofASet) do
-                                yield div [clazz "item"] [
-                                    i [clazz "large cube middle aligned icon"][]                                             
-                                    div [clazz "content"] [
-                                        div [clazz "header"] [Incremental.text s.surface.name]
-                                        div [clazz "description"] [
-                                            Incremental.text (
-                                                s.globalBB 
-                                                    |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
-                                        ]
+                            yield div [clazz "item"] [
+                                i [
+                                    clazz "large cube middle aligned icon"; 
+                                    onClick (fun x -> SelectSurface (s.surface.guid |> Mod.force))
+                                ][]
+                                div [clazz "content"] [
+                                    div [clazz "header"] [Incremental.text s.surface.name]
+                                    div [clazz "description"] [
+                                        Incremental.text (
+                                            s.globalBB 
+                                                |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
                                     ]
-                                    
                                 ]
+                            ]
                     }
             )   
 
         let surfaceUI =
             div[][
                 GuiEx.accordion "Surfaces" "Cubes" true [
-                        surfaceList
-                    ]
+                    surfaceList
+                ]
+                GuiEx.accordion "Properties" "Content" true [
+                    
+                ]
             ]
             
 
-        let properties (model:MModel) =
+        let annotationProperties (model:MModel) =
             adaptive {
                 let! bla = model.drawing.selectedAnnotation
                 let opt = 
@@ -437,10 +467,10 @@ module ViewerApp =
                 GuiEx.accordion "Annotations" "Write" true [
                     DrawingApp.UI.viewAnnotations m.drawing |> UI.map DrawingMessage
                 ]
-                GuiEx.accordion "Properties" "Write" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle(properties m))
+                GuiEx.accordion "Properties" "Content" true [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(annotationProperties m))
                 ] 
-                GuiEx.accordion "Dip&Strike" "Write" false [
+                GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 
             ]
             

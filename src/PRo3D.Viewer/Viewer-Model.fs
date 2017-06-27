@@ -38,20 +38,21 @@ type Properties =
     | NoProperties
 
 type Interactions =
-    | PickExploreCenter
-    | PlaceCoordinateSystem  // compute up north vector at that point
-    | DrawAnnotation
+    | PickExploreCenter     = 0
+    | PlaceCoordinateSystem = 1  // compute up north vector at that point
+    | DrawAnnotation        = 2
 
 [<DomainType>]
 type Model = { 
    
-    scene        : Scene
-    drawing      : Drawing.DrawingModel
-    surfaces     : hset<SgSurface>        
-    properties   : Properties
-    interaction  : Interactions
-    picking      : bool
-    orientations : OrientationDisplayModel
+    scene           : Scene
+    drawing         : Drawing.DrawingModel
+    surfaces        : hset<SgSurface>        
+    selectedSurface : option<Surface>
+    properties      : Properties
+    interaction     : Interactions
+    picking         : bool
+    orientations    : OrientationDisplayModel
     
     //measurementPath : string
   //  draw    : bool 
@@ -71,9 +72,10 @@ module Viewer =
 
         drawing = Drawing.Model.initialdrawing
         properties = NoProperties
-        interaction = DrawAnnotation
+        interaction = Interactions.DrawAnnotation
         picking = false
         orientations = OrientationDisplayModel.initial
+        selectedSurface = None
         //measurementPath = @"."
 
         // draw = false
