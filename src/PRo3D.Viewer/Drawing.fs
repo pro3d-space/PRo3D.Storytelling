@@ -343,7 +343,7 @@ module DrawingApp =
                         |> Sg.trafo(trafo) 
 
         let coneISg color size trafo =
-             Sg.cylinder 30 color size (Mod.constant 0.7)
+             Sg.cone 30 color size (Mod.constant 1.0)
                         |> Sg.noEvents
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
