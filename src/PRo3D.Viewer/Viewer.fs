@@ -396,7 +396,7 @@ module ViewerApp =
                     ]) 
 
         let renderControl =                 
-                CameraController.controlledControl m.scene.cameraModel CameraMessage (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant) 
+                CameraController.controlledControl m.scene.cameraModel CameraMessage (Frustum.perspective 60.0 0.01 10000.0 1.0 |> Mod.constant) 
                     (AttributeMap.ofList [
                             onKeyDown (KeyDown)
                             onKeyUp (KeyUp)
