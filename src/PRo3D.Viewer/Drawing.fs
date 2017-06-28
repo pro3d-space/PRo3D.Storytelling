@@ -329,8 +329,7 @@ module DrawingApp =
     let threads (m : DrawingModel) = m.pendingIntersections
 
     module Sg =        
-        //open Mutable.DipAndStrikeResultsModule.Lens
-
+        
         let discISg color size trafo =
             Sg.cylinder 30 color size (Mod.constant 0.2)
                         |> Sg.noEvents
@@ -339,7 +338,6 @@ module DrawingApp =
                             do! DefaultSurfaces.vertexColor
                             do! DefaultSurfaces.simpleLighting
                         }
-                       
                         |> Sg.trafo(trafo) 
 
         let coneISg color size trafo =
@@ -362,14 +360,15 @@ module DrawingApp =
             }
 
         let mkDotISg color size trafo = 
-            Sg.sphere 5 color size 
+            Sg.sphere 5 color size
                |> Sg.noEvents
                |> Sg.trafo(trafo) 
 
         let edgeLines (close : bool) (points : alist<V3d>) (trafo:IMod<Trafo3d>) =
             points
                 |> AList.map(fun d -> trafo.GetValue().Backward.TransformPos d)
-                |> AList.toMod |> Mod.map (fun l ->
+                |> AList.toMod 
+                |> Mod.map (fun l ->
                     let list = PList.toList l
                     let head = list |> List.tryHead
                     
@@ -378,8 +377,7 @@ module DrawingApp =
                                         |> List.pairwise
                                         |> List.map (fun (a,b) -> new Line3d(a,b))
                                         |> List.toArray
-                        | None -> [||]                         
-            )
+                        | None -> [||])
             
         let brush (hovered : IMod<Trafo3d option>) = 
             let trafo =
@@ -406,10 +404,10 @@ module DrawingApp =
             } 
             |> Sg.set
             |> Sg.effect [
-                    toEffect <| Aardvark.Opc.Shader.stableTrafo
-                    toEffect <| DefaultSurfaces.vertexColor
-                    toEffect <| DefaultSurfaces.simpleLighting
-                ]
+                toEffect <| Aardvark.Opc.Shader.stableTrafo
+                toEffect <| DefaultSurfaces.vertexColor
+                toEffect <| DefaultSurfaces.simpleLighting
+            ]
            
         let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
 
@@ -418,37 +416,24 @@ module DrawingApp =
 
             let edges = edgeLines false points trafo
 
-            // Cylinder3d(trafo.Forward.TransformPos center,trafo.Forward.TransformPos (center+dir*height),radius)
-
-            //edge.P0 v.Normalized v.Length (r/2.5)                        
-
-            
+            //invisible cylinders for polyline picking
             let cylinders = 
                 edges 
                     |> Mod.map (fun e ->
                             [
-                                for edge in e do
-                                    //yield Sg.cylinder' 3 C4b.White 
+                                for edge in e do                                    
                                     let v = edge.P1 - edge.P0
                                     let c = Cylinder3d(edge.P0,v.Normalized, v.Length, 0.25)
                                     yield 
                                         Sg.ofList[]
-                                            |> Sg.noEvents 
-                                            //|> Sg.shader {
-                                            //    do! Aardvark.Opc.Shader.stableTrafo
-                                            //    do! DefaultSurfaces.vertexColor                                            
-                                            //}                                                 
+                                            |> Sg.noEvents                                                                                          
                                             |> Sg.pickable (PickShape.Cylinder c)
                                             |> Sg.trafo trafo
                                             |> Sg.withEvents [
                                                 Sg.onMouseDownEvt (fun sceneHit -> Select (id |> Mod.force))]
-                            ] |> Sg.ofList
-                              
-                            )
-            
-            
-            let cylinders = cylinders |> Sg.dynamic 
-                    
+                            ] |> Sg.ofList)
+                    |> Sg.dynamic
+                                                            
             edges
                 |> Sg.lines color
                 |> Sg.noEvents
@@ -544,16 +529,15 @@ module DrawingApp =
                                    
             Sg.ofList [
                 lines polyPoints color thickness trafo key //polyline
-                dots points color view                  //support points
+                dots points color view                     //support points
             ]         
 
         let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =
             let points = getPolyline anno
-            
-           // let dns = 
+                       
             Sg.ofList [
                 lines points c anno.thickness.value anno.modelTrafo anno.key;
-                dots points c view
+             //   dots points c view
                 drawDns anno view
             ] |> Sg.onOff anno.visible
 
@@ -564,7 +548,7 @@ module DrawingApp =
 
             let annotations =
                 aset {
-                    for a in annoSet do                       
+                    for a in annoSet do
                        let c = UI.mkColor model a
                        yield finishedAnnotation a cam c
                 } |> Sg.set

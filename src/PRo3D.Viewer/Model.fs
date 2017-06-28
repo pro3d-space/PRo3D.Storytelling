@@ -10,6 +10,8 @@ open Aardvark.Application
 open Aardvark.Opc
 open Aardvark.SceneGraph
 open Aardvark.VRVis
+open Aardvark.Base.Rendering
+
 //open Aardvark.Data.PhotoNetwork
 
 type NavigationMode = FreeFly = 0 | ArcBall = 1
@@ -170,7 +172,11 @@ type Surface = {
     
     name : string
     importPath : string
-    opcPaths : list<string>    
+    opcPaths : list<string>
+    
+    fillMode  : FillMode
+    cullMode  : CullMode
+    isVisible : bool
 }
 
 [<DomainType>]

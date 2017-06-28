@@ -332,11 +332,17 @@ module Mutable =
         let _name = ResetMod.Create(__initial.name)
         let _importPath = ResetMod.Create(__initial.importPath)
         let _opcPaths = ResetMod.Create(__initial.opcPaths)
+        let _fillMode = ResetMod.Create(__initial.fillMode)
+        let _cullMode = ResetMod.Create(__initial.cullMode)
+        let _isVisible = ResetMod.Create(__initial.isVisible)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
         member x.importPath = _importPath :> IMod<_>
         member x.opcPaths = _opcPaths :> IMod<_>
+        member x.fillMode = _fillMode :> IMod<_>
+        member x.cullMode = _cullMode :> IMod<_>
+        member x.isVisible = _isVisible :> IMod<_>
         
         member x.Update(v : PRo3D.Surface) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -346,6 +352,9 @@ module Mutable =
                 ResetMod.Update(_name,v.name)
                 ResetMod.Update(_importPath,v.importPath)
                 ResetMod.Update(_opcPaths,v.opcPaths)
+                ResetMod.Update(_fillMode,v.fillMode)
+                ResetMod.Update(_cullMode,v.cullMode)
+                ResetMod.Update(_isVisible,v.isVisible)
                 
         
         static member Create(__initial : PRo3D.Surface) : MSurface = MSurface(__initial)
@@ -385,6 +394,24 @@ module Mutable =
                     override x.Get(r) = r.opcPaths
                     override x.Set(r,v) = { r with opcPaths = v }
                     override x.Update(r,f) = { r with opcPaths = f r.opcPaths }
+                }
+            let fillMode =
+                { new Lens<PRo3D.Surface, Aardvark.Base.Rendering.FillMode>() with
+                    override x.Get(r) = r.fillMode
+                    override x.Set(r,v) = { r with fillMode = v }
+                    override x.Update(r,f) = { r with fillMode = f r.fillMode }
+                }
+            let cullMode =
+                { new Lens<PRo3D.Surface, Aardvark.Base.Rendering.CullMode>() with
+                    override x.Get(r) = r.cullMode
+                    override x.Set(r,v) = { r with cullMode = v }
+                    override x.Update(r,f) = { r with cullMode = f r.cullMode }
+                }
+            let isVisible =
+                { new Lens<PRo3D.Surface, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.isVisible
+                    override x.Set(r,v) = { r with isVisible = v }
+                    override x.Update(r,f) = { r with isVisible = f r.isVisible }
                 }
     
     
