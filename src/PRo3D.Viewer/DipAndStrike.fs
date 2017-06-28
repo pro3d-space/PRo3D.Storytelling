@@ -89,11 +89,12 @@ module DipAndStrike =
         let da = Mod.bindOption model.dnsResults 1.0 (fun a -> a.dipAngle)
         let daz = Mod.bindOption model.dnsResults 1.0 (fun a -> a.dipAzimuth)
         let staz = Mod.bindOption model.dnsResults 1.0 (fun a -> a.strikeAzimuth)
+        
         require Html.semui (
-            Html.table [
-                           div [clazz "Dipping Angle"] [Incremental.text (da |> Mod.map (fun d -> sprintf "Dipping Angle: %f" (d)))]
-                           div [clazz "Dipping Orientation"] [Incremental.text (daz |> Mod.map (fun d -> sprintf "Dipping Orientation: %f" (d)))]
-                           div [clazz "Strike Orientation"] [Incremental.text (staz |> Mod.map (fun d -> sprintf "Strike Orientation: %f" (d)))]
-                        ]
+            Html.table [ 
+                Html.row "Dipping Angle:"       [Incremental.text (da |> Mod.map (fun d -> sprintf "%f" (d)))]
+                Html.row "Dipping Orientation:" [Incremental.text (daz |> Mod.map (fun d -> sprintf "%f" (d)))]
+                Html.row "Strike Orientation:"  [Incremental.text (staz |> Mod.map (fun d -> sprintf "%f" (d)))]
+            ]
         )
 
