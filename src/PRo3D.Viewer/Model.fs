@@ -181,6 +181,14 @@ type OrientationDisplayModel = {
     upVector : Option<V3d>
 }
 
+[<DomainType>]
+type NavigationModel = {
+    camera : CameraControllerState
+    navigationMode : NavigationMode  
+    coordinates : OrientationDisplayModel
+}
+
+
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module OrientationDisplayModel =
     let initial = {

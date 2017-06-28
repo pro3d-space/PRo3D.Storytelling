@@ -33,13 +33,13 @@ module OrientationDisplay =
 
         let coneISg color size trafo =         
             Sg.cone 30 color size (Mod.constant 0.2)
-                    |> Sg.shader {
+                    |> Sg.noEvents
+                    |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
                         do! DefaultSurfaces.trafo
                         do! DefaultSurfaces.vertexColor
                         do! DefaultSurfaces.simpleLighting
                     }
-                    |> Sg.noEvents
-                    |> Sg.trafo(trafo) 
+                    |> Sg.trafo(trafo)
 
 
         let directionMarker (pos:IMod<Option<V3d>>) (dir:IMod<Option<V3d>>) (color:IMod<C4b>) (cam:IMod<CameraView>)=
@@ -55,13 +55,16 @@ module OrientationDisplay =
                 let pos = match pos with 
                             | Some x -> x
                             | None -> V3d.NaN
+                let trafo = Trafo3d.Translation pos
+
                 let al = alist {
                                 yield pos
                                 yield pos + length
                                 }
+                //let trafo = //Trafo3d.FromNormalFrame(V3d.OOO, dir)
                 let scale =  DrawingApp.Sg.computeScale cam (Mod.constant pos) 5.0
                 yield DrawingApp.Sg.lines al color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(pos))) (Mod.constant Guid.Empty)
-                yield coneISg color (Mod.constant 0.02) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dir) * Trafo3d.Translation(pos+length))) 
+                yield coneISg color (Mod.constant 0.02) (Mod.constant (Trafo3d.RotateInto(V3d.OOI, (trafo.Backward.TransformPos dir).Normalized) * Trafo3d.Translation(pos+length))) //
                 } |> Sg.set 
                 
         
@@ -79,7 +82,7 @@ module OrientationDisplay =
                 // since set provides more degrees of freedom for the compiler
             
                 Sg.ofList [
-                    point model.center (Mod.constant C4b.Magenta) cam
-                    directionMarker model.center model.upVector (Mod.constant C4b.Magenta) cam
-                    directionMarker model.center model.northVector (Mod.constant C4b.Cyan) cam
+                    point model.center (Mod.constant C4b.Red) cam
+                    directionMarker model.center model.upVector (Mod.constant C4b.Blue) cam
+                    directionMarker model.center model.northVector (Mod.constant C4b.Red) cam
                 ]

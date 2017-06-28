@@ -440,3 +440,57 @@ module Mutable =
                     override x.Set(r,v) = { r with upVector = v }
                     override x.Update(r,f) = { r with upVector = f r.upVector }
                 }
+    
+    
+    type MNavigationModel(__initial : PRo3D.NavigationModel) =
+        inherit obj()
+        let mutable __current = __initial
+        let _camera = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.camera)
+        let _navigationMode = ResetMod.Create(__initial.navigationMode)
+        let _coordinates = MOrientationDisplayModel.Create(__initial.coordinates)
+        
+        member x.camera = _camera
+        member x.navigationMode = _navigationMode :> IMod<_>
+        member x.coordinates = _coordinates
+        
+        member x.Update(v : PRo3D.NavigationModel) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_camera, v.camera)
+                ResetMod.Update(_navigationMode,v.navigationMode)
+                MOrientationDisplayModel.Update(_coordinates, v.coordinates)
+                
+        
+        static member Create(__initial : PRo3D.NavigationModel) : MNavigationModel = MNavigationModel(__initial)
+        static member Update(m : MNavigationModel, v : PRo3D.NavigationModel) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.NavigationModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module NavigationModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let camera =
+                { new Lens<PRo3D.NavigationModel, Aardvark.UI.Primitives.CameraControllerState>() with
+                    override x.Get(r) = r.camera
+                    override x.Set(r,v) = { r with camera = v }
+                    override x.Update(r,f) = { r with camera = f r.camera }
+                }
+            let navigationMode =
+                { new Lens<PRo3D.NavigationModel, PRo3D.NavigationMode>() with
+                    override x.Get(r) = r.navigationMode
+                    override x.Set(r,v) = { r with navigationMode = v }
+                    override x.Update(r,f) = { r with navigationMode = f r.navigationMode }
+                }
+            let coordinates =
+                { new Lens<PRo3D.NavigationModel, PRo3D.OrientationDisplayModel>() with
+                    override x.Get(r) = r.coordinates
+                    override x.Set(r,v) = { r with coordinates = v }
+                    override x.Update(r,f) = { r with coordinates = f r.coordinates }
+                }
