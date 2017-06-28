@@ -12,7 +12,7 @@ module GuiEx =
         let finish<'msg> = td[] []
 
     let menu (c : string )(s : string)(entries : list<string * list<DomNode<'msg>>>) =                    
-        div [ clazz c; style s ] (
+        div [ clazz c; style s ] (            
             entries |> List.map (fun (name, children) ->
                 div [ clazz "item"] [ 
                     b [] [text name]
@@ -49,11 +49,13 @@ module GuiEx =
 
     let adornerMenu (sectionsAndItems : list<string * list<DomNode<'msg>>>)(top : list<DomNode<'msg>>) (rest : list<DomNode<'msg>>) =       
         [
-            div[clazz "ui top fixed menu blarg"] [
-                a [clazz "item blarg"] [
-                    i [clazz "sidebar icon"] []
-                ]
-                div [] top
+            div[clazz "ui top small fixed menu blarg"] [
+                yield 
+                    a [clazz "item blarg topmenu"] [
+                        i [clazz "large sidebar icon"] []                    
+                    ]
+                for t in top do
+                    yield div [clazz "item topmenu"] [t]
                 
             ]
             div [clazz "ui bottom attached segment pushable blarg";] [

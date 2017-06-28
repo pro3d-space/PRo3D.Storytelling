@@ -128,7 +128,7 @@ module ViewerApp =
         | DrawingMessage    of Drawing.Action
         | AnnotationMessage of AnnotationProperties.Action
 
-    type Message =
+    type Action =
         //| PropertyMessage of PropertyActions
         | CameraMessage             of CameraController.Message        
         | DrawingMessage            of Drawing.Action
@@ -149,6 +149,7 @@ module ViewerApp =
         | KeyUp                     of key : Aardvark.Application.Keys      
         | SetInteraction            of Interactions
         | SelectSurface             of Guid
+        | FlyToSurface              of Guid
                 
     let lookAtData m = 
         let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
@@ -158,6 +159,18 @@ module ViewerApp =
 
         { m with scene = { m.scene with cameraModel = cam }}
     
+    let lookAtSurface m id =
+        let surf = m.surfaces |> Seq.tryFind(fun x -> x.surface.guid = id)
+        match surf with
+            | Some s ->
+                let bb = s.globalBB
+                let cam = 
+                    let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
+                    { CameraController.initial with view = view }            
+
+                { m with scene = { m.scene with cameraModel = cam }}
+            | None -> m
+
     let loadScene path m runtime signature =
         let s = Serialization.loadAs<Scene> path
         let m = { m with scene = s }
@@ -177,7 +190,7 @@ module ViewerApp =
                     None
             | None -> None
     
-    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Message) =
+    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Action) =
         
         match msg, m.interaction, m.picking with
             | CameraMessage  msg,_,false -> 
@@ -194,20 +207,28 @@ module ViewerApp =
                 //                            | None -> Properties.NoProperties } 
                 //        | _ -> m
                 
-                { m with drawing = DrawingApp.update w m.drawing msg }
-          //  | SurfacePropertiesMessage msg,_,_ ->
+                { m with drawing = DrawingApp.update w m.drawing msg }          
             | SelectSurface id,_,_ ->
-                
                 let surf = m.scene.surfaces |> Seq.tryFind(fun x -> x.guid = id)
 
                 { m with selectedSurface = surf}
+            | FlyToSurface id,_,_ ->
+                lookAtSurface m id
             | SurfacePropertiesMessage msg,_,_ ->
                 match m.selectedSurface with 
                     | Some s -> 
-                        //let s' = SurfaceProperties.update s msg
-                        //let surfaces' =
-                        //    m.drawing.
-                        m
+                        let s' = SurfaceProperties.update s msg
+
+                        let surfaces' = 
+                            m.scene.surfaces |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')
+
+                        let sgSurfaces' =
+                            m.surfaces 
+                                |> HSet.toList 
+                                |> List.updateIf (fun x -> x.surface.guid = s'.guid) (fun x -> { x with surface = s'})
+                                |> HSet.ofList
+
+                        {m with surfaces = sgSurfaces'; selectedSurface = Some s'; scene = {m.scene with surfaces = surfaces'}}
                     | None -> m
             | AnnotationMessage msg,_,_ ->                
                     match m.drawing.selectedAnnotation with
@@ -323,6 +344,9 @@ module ViewerApp =
                                                                }
                                                         ) 
                         |> Sg.pickable (PickShape.Box bb) 
+                        |> Sg.onOff(surface.surface.isVisible)
+                        |> Sg.cullMode(surface.surface.cullMode)
+                        |> Sg.fillMode(surface.surface.fillMode)
                     
                     let sg = 
                         Mod.map2 createSg surface.globalBB surface.sceneGraph
@@ -331,7 +355,7 @@ module ViewerApp =
                                 SceneEventKind.Down, (fun sceneHit -> true, Seq.ofList [PickSurface sceneHit])
                                 //Sg.onMouseDownEvt (fun sceneHit -> PickSurface sceneHit)
                             ]
-
+                        
                     yield sg
             }
         opcs |> Sg.set
@@ -348,15 +372,30 @@ module ViewerApp =
 
     let view (m : MModel) =
 
-        let renderControl = 
+        let renderControlAttributes (model : MNavigationModel) =
+            amap {
+                let! state = model.navigationMode
+                match state with
+                    | NavigationMode.FreeFly -> 
+                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction Navigation.UI.frustum
+                    | NavigationMode.ArcBall -> 
+                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction Navigation.UI.frustum 
+                    | _ -> failwith "Invalid NavigationMode"
+            } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
-                //Incremental.renderControl 
-                //    (Mod.map2 Camera.create m.scene.navigation.camera.view (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant)) 
-                //    (AttributeMap.unionMany [
-                //        Navigation.UI.renderControlAttributes m.scene.navigation
-                //        [attribute "style" "width:70%; height: 100%; float:left"; ] |> AttributeMap.ofList
- 
-                //    ])
+        let rc2 =
+            Incremental.renderControl
+                    (Mod.map2 Camera.create m.scene.navigation.camera.view (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant)) 
+                    (AttributeMap.unionMany [
+                        renderControlAttributes m.scene.navigation
+                        [attribute "style" "width:70%; height: 100%; float:left"; ] |> AttributeMap.ofList
+                        AttributeMap.ofList [
+                            onKeyDown (KeyDown)
+                            onKeyUp (KeyUp)
+                            attribute "style" "width:70%; height: 100%; float:left"; ] 
+                    ]) 
+
+        let renderControl =                 
                 CameraController.controlledControl m.scene.cameraModel CameraMessage (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant) 
                     (AttributeMap.ofList [
                             onKeyDown (KeyDown)
@@ -427,7 +466,14 @@ module ViewerApp =
                                     onClick (fun x -> SelectSurface (s.surface.guid |> Mod.force))
                                 ][]
                                 div [clazz "content"] [
-                                    div [clazz "header"] [Incremental.text s.surface.name]
+                                    div [clazz "header"] [
+                                        Incremental.text s.surface.name
+                                        text " "
+                                        i [
+                                            clazz "home icon"; 
+                                            onClick (fun x -> FlyToSurface (s.surface.guid |> Mod.force))
+                                        ][]     
+                                    ]
                                     div [clazz "description"] [
                                         Incremental.text (
                                             s.globalBB 
@@ -436,7 +482,18 @@ module ViewerApp =
                                 ]
                             ]
                     }
-            )   
+            )
+            
+        let surfaceProperties (model:MModel) =
+            adaptive {
+                let! bla = model.selectedSurface
+                let opt = 
+                    match bla with
+                        | Some s -> SurfaceProperties.view s
+                        | None   -> div[][]
+
+                return (opt |> UI.map SurfacePropertiesMessage)
+            }
 
         let surfaceUI =
             div[][
@@ -444,7 +501,7 @@ module ViewerApp =
                     surfaceList
                 ]
                 GuiEx.accordion "Properties" "Content" true [
-                    
+                     Incremental.div AttributeMap.empty (AList.ofModSingle (surfaceProperties m))
                 ]
             ]
             
@@ -491,8 +548,11 @@ module ViewerApp =
                             ("Config", text "Config")
                         ] "Data" 
       
-        let topMenu = [Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
-                       DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage ]                               
+        let topMenu = [
+             Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
+             DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage 
+        ] 
+             
         
         let rest (model : MModel) = 
             [             
@@ -519,6 +579,7 @@ module ViewerApp =
 
         require (Html.semui @ [myCss]) (
             let sections = [
+                "blank", [div[style "height:15px"][]]
                 "Interactions", [interactTools]
                 "Scene", [sceneTools]
                 "Add Surface", [openSurface]

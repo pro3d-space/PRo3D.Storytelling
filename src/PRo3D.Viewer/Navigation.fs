@@ -46,7 +46,10 @@ module Navigation =
             } |> AttributeMap.ofAMap
 
         let viewNavigationModes  (model : MNavigationModel) =
-            Html.Layout.boxH [ Html.SemUi.dropDown model.navigationMode SetNavigationMode ]
+            Html.Layout.horizontal [
+                Html.Layout.boxH [ i [clazz "large location arrow icon"][] ]
+                Html.Layout.boxH [ Html.SemUi.dropDown model.navigationMode SetNavigationMode ]                
+            ]
             // Html.Layout.horizontal [
             //    Html.Layout.boxH [ i [clazz "large Crosshairs icon"][] ]
             //    Html.Layout.boxH [ Html.SemUi.dropDown model.navigationMode SetNavigationMode ]

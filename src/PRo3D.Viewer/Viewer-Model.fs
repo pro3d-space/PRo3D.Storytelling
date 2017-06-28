@@ -48,7 +48,7 @@ type Model = {
    
     scene           : Scene
     drawing         : Drawing.DrawingModel
-    surfaces        : hset<SgSurface>        
+    surfaces        : hset<SgSurface>
     selectedSurface : option<Surface>
     properties      : Properties
     interaction     : Interactions

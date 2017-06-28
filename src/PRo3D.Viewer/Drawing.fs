@@ -238,8 +238,7 @@ module DrawingApp =
                 Html.Layout.boxH [ i [clazz "large Write icon"][] ]
                 Html.Layout.boxH [ Html.SemUi.dropDown model.geometry SetGeometry ]
                 Html.Layout.boxH [ Html.SemUi.dropDown model.projection SetProjection ]
-                Html.Layout.boxH [ Html.SemUi.dropDown model.semantic SetSemantic ]
-                td [][] 
+                Html.Layout.boxH [ Html.SemUi.dropDown model.semantic SetSemantic ]                
             ]
 
         let viewAnnotationToolsSlim (model:MDrawingModel) =
