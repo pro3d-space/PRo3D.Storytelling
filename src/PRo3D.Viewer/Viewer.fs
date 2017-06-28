@@ -132,6 +132,7 @@ module ViewerApp =
         //| PropertyMessage of PropertyActions
         | CameraMessage             of CameraController.Message        
         | DrawingMessage            of Drawing.Action
+        | NavigationMessage         of Navigation.Action
         | CoordinatesMessage        of OrientationDisplay.Action
         | AnnotationMessage         of AnnotationProperties.Action
         | SurfacePropertiesMessage  of SurfaceProperties.Action
@@ -181,6 +182,8 @@ module ViewerApp =
         match msg, m.interaction, m.picking with
             | CameraMessage  msg,_,false -> 
                 { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
+            | NavigationMessage  msg,_,false -> 
+                { m with scene = { m.scene with navigation = Navigation.update m.scene.navigation msg }}
             | DrawingMessage msg, Interactions.DrawAnnotation,_-> 
                 //let m = 
                 //    match msg with
@@ -346,8 +349,16 @@ module ViewerApp =
     let view (m : MModel) =
 
         let renderControl = 
+
+                //Incremental.renderControl 
+                //    (Mod.map2 Camera.create m.scene.navigation.camera.view (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant)) 
+                //    (AttributeMap.unionMany [
+                //        Navigation.UI.renderControlAttributes m.scene.navigation
+                //        [attribute "style" "width:70%; height: 100%; float:left"; ] |> AttributeMap.ofList
+ 
+                //    ])
                 CameraController.controlledControl m.scene.cameraModel CameraMessage (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant) 
-                    (AttributeMap.ofList [ 
+                    (AttributeMap.ofList [
                             onKeyDown (KeyDown)
                             onKeyUp (KeyUp)
                             attribute "style" "width:70%; height: 100%; float:left"; ]) 
@@ -480,7 +491,8 @@ module ViewerApp =
                             ("Config", text "Config")
                         ] "Data" 
       
-        let topMenu = [DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage ]                               
+        let topMenu = [Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
+                       DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage ]                               
         
         let rest (model : MModel) = 
             [             

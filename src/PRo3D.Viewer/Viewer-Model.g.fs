@@ -77,10 +77,12 @@ module Mutable =
         inherit obj()
         let mutable __current = __initial
         let _cameraModel = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.cameraModel)
+        let _navigation = PRo3D.Mutable.MNavigationModel.Create(__initial.navigation)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _surfaces = ResetMod.Create(__initial.surfaces)
         
         member x.cameraModel = _cameraModel
+        member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
         member x.surfaces = _surfaces :> IMod<_>
         
@@ -89,6 +91,7 @@ module Mutable =
                 __current <- v
                 
                 Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_cameraModel, v.cameraModel)
+                PRo3D.Mutable.MNavigationModel.Update(_navigation, v.navigation)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_surfaces,v.surfaces)
                 
@@ -112,6 +115,12 @@ module Mutable =
                     override x.Get(r) = r.cameraModel
                     override x.Set(r,v) = { r with cameraModel = v }
                     override x.Update(r,f) = { r with cameraModel = f r.cameraModel }
+                }
+            let navigation =
+                { new Lens<PRo3D.Viewer.Scene, PRo3D.NavigationModel>() with
+                    override x.Get(r) = r.navigation
+                    override x.Set(r,v) = { r with navigation = v }
+                    override x.Update(r,f) = { r with navigation = f r.navigation }
                 }
             let interaction =
                 { new Lens<PRo3D.Viewer.Scene, PRo3D.InteractionMode>() with

@@ -64,7 +64,7 @@ module OrientationDisplay =
                 //let trafo = //Trafo3d.FromNormalFrame(V3d.OOO, dir)
                 let scale =  DrawingApp.Sg.computeScale cam (Mod.constant pos) 5.0
                 yield DrawingApp.Sg.lines al color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(pos))) (Mod.constant Guid.Empty)
-                yield coneISg color (Mod.constant 0.02) (Mod.constant (Trafo3d.RotateInto(V3d.OOI, (trafo.Backward.TransformPos dir).Normalized) * Trafo3d.Translation(pos+length))) //
+                yield coneISg color (Mod.constant 0.02) (Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos+length))) //
                 } |> Sg.set 
                 
         

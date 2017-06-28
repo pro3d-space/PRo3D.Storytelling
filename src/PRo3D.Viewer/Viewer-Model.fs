@@ -28,7 +28,8 @@ type SgSurface = {
   
 [<DomainType>] 
 type Scene = {
-    cameraModel : CameraControllerState    
+    cameraModel : CameraControllerState 
+    navigation  : NavigationModel
     interaction : InteractionMode
     surfaces : list<Surface>
 }
@@ -65,7 +66,8 @@ module Viewer =
     let initial = {           
         surfaces = HSet.empty                       
         scene = {
-                cameraModel = CameraController.initial            
+                cameraModel = CameraController.initial       
+                navigation = NavigationModel.initial
                 interaction = InteractionMode.PickOrbitCenter
                 surfaces = []
         }

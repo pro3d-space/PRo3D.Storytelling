@@ -187,6 +187,15 @@ type OrientationDisplayModel = {
     upVector : Option<V3d>
 }
 
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module OrientationDisplayModel =
+    let initial = {
+        center = Some V3d.OOO
+        northVector = Some V3d.IOO
+        upVector = Some V3d.OOI
+        }
+
+        
 [<DomainType>]
 type NavigationModel = {
     camera : CameraControllerState
@@ -194,11 +203,10 @@ type NavigationModel = {
     coordinates : OrientationDisplayModel
 }
 
-
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module OrientationDisplayModel =
+module NavigationModel =
     let initial = {
-        center = Some V3d.OOO
-        northVector = Some V3d.IOO
-        upVector = Some V3d.OOI
+        camera = ArcBallController.initial
+        navigationMode =  NavigationMode.FreeFly
+        coordinates = OrientationDisplayModel.initial
         }
