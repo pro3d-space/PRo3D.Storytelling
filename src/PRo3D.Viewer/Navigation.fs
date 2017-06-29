@@ -12,9 +12,9 @@ module Navigation =
     open Aardvark.Base.Rendering
 
     type Action =
-        | ArcBallAction     of ArcBallController.Message
-        | FreeFlyAction     of CameraController.Message
-        | SetNavigationMode of NavigationMode
+        | ArcBallAction         of ArcBallController.Message
+        | FreeFlyAction         of CameraController.Message
+        | SetNavigationMode     of NavigationMode
 
     let update (model : NavigationModel) (act : Action) =
         match act with            
@@ -22,7 +22,7 @@ module Navigation =
                 let model = 
                     match a with 
                         | ArcBallController.Message.Pick a ->
-                            { model with navigationMode =  NavigationMode.ArcBall }
+                            { model with navigationMode =  NavigationMode.ArcBall; exploreCenter = a }
                         | _ -> model
                         
                 { model with camera = ArcBallController.update model.camera a }
@@ -50,11 +50,13 @@ module Navigation =
                 Html.Layout.boxH [ i [clazz "large location arrow icon"][] ]
                 Html.Layout.boxH [ Html.SemUi.dropDown model.navigationMode SetNavigationMode ]                
             ]
-            // Html.Layout.horizontal [
-            //    Html.Layout.boxH [ i [clazz "large Crosshairs icon"][] ]
-            //    Html.Layout.boxH [ Html.SemUi.dropDown model.navigationMode SetNavigationMode ]
-            //]
-             
-            // Html.table [                            
-            //   Html.row "Mode:" [Html.SemUi.dropDown model.navigationMode SetNavigationMode]
-            //]
+
+    module Sg =
+        let view (model:MNavigationModel) =
+            let point =
+                aset{
+                let! pos = model.exploreCenter
+                yield DrawingApp.Sg.dots (alist{yield pos}) (Mod.constant C4b.Magenta) model.camera.view
+                } |> Sg.set
+            Sg.ofList [point]
+           

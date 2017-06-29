@@ -475,10 +475,12 @@ module Mutable =
         let _camera = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.camera)
         let _navigationMode = ResetMod.Create(__initial.navigationMode)
         let _coordinates = MOrientationDisplayModel.Create(__initial.coordinates)
+        let _exploreCenter = ResetMod.Create(__initial.exploreCenter)
         
         member x.camera = _camera
         member x.navigationMode = _navigationMode :> IMod<_>
         member x.coordinates = _coordinates
+        member x.exploreCenter = _exploreCenter :> IMod<_>
         
         member x.Update(v : PRo3D.NavigationModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -487,6 +489,7 @@ module Mutable =
                 Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_camera, v.camera)
                 ResetMod.Update(_navigationMode,v.navigationMode)
                 MOrientationDisplayModel.Update(_coordinates, v.coordinates)
+                ResetMod.Update(_exploreCenter,v.exploreCenter)
                 
         
         static member Create(__initial : PRo3D.NavigationModel) : MNavigationModel = MNavigationModel(__initial)
@@ -520,4 +523,10 @@ module Mutable =
                     override x.Get(r) = r.coordinates
                     override x.Set(r,v) = { r with coordinates = v }
                     override x.Update(r,f) = { r with coordinates = f r.coordinates }
+                }
+            let exploreCenter =
+                { new Lens<PRo3D.NavigationModel, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.exploreCenter
+                    override x.Set(r,v) = { r with exploreCenter = v }
+                    override x.Update(r,f) = { r with exploreCenter = f r.exploreCenter }
                 }

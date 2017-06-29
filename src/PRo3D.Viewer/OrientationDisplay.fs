@@ -35,7 +35,7 @@ module OrientationDisplay =
             Sg.cone 30 color size (Mod.constant 0.2)
                     |> Sg.noEvents
                     |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
-                        do! DefaultSurfaces.trafo
+                        do! Aardvark.Opc.Shader.stableTrafo
                         do! DefaultSurfaces.vertexColor
                         do! DefaultSurfaces.simpleLighting
                     }
@@ -55,16 +55,13 @@ module OrientationDisplay =
                 let pos = match pos with 
                             | Some x -> x
                             | None -> V3d.NaN
-                let trafo = Trafo3d.Translation pos
-
                 let al = alist {
                                 yield pos
                                 yield pos + length
                                 }
-                //let trafo = //Trafo3d.FromNormalFrame(V3d.OOO, dir)
                 let scale =  DrawingApp.Sg.computeScale cam (Mod.constant pos) 5.0
                 yield DrawingApp.Sg.lines al color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(pos))) (Mod.constant Guid.Empty)
-                yield coneISg color (Mod.constant 0.02) (Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos+length))) //
+                yield coneISg color (Mod.constant 0.02) (Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + length))) // 
                 } |> Sg.set 
                 
         

@@ -201,6 +201,7 @@ type NavigationModel = {
     camera : CameraControllerState
     navigationMode : NavigationMode  
     coordinates : OrientationDisplayModel
+    exploreCenter : V3d
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -209,4 +210,5 @@ module NavigationModel =
         camera = CameraController.initial  
         navigationMode =  NavigationMode.FreeFly
         coordinates = OrientationDisplayModel.initial
+        exploreCenter = V3d.OOO
         }

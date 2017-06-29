@@ -122,6 +122,10 @@ module ViewerApp =
     open Surface
     open Aardvark.Base.Geometry.RayHit
     open Aardvark.SceneGraph.SgFSharp.Sg
+    //open Viewer.Mutable.SceneModule.Lens
+    //open Viewer.Mutable.ModelModule.Lens
+    //open Viewer.Mutable.SceneModule.Lens
+    //open Viewer.Mutable.SceneModule.Lens
 
     //open Viewer.Mutable.ModelModule.Lens
     //open Viewer.Mutable.ModelModule.Lens
@@ -285,6 +289,9 @@ module ViewerApp =
                             | Interactions.PlaceCoordinateSystem -> 
                                 let orientations = OrientationDisplay.update m.orientations (OrientationDisplay.Action.SetCenter(hit))
                                 { m with orientations = orientations }
+                            | Interactions.PickExploreCenter ->
+                                let navigation = Navigation.update m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
+                                { m with scene = {m.scene with navigation= navigation} }
                             | _ -> m
                     | None -> 
                         Log.error ("no hit")
@@ -406,7 +413,10 @@ module ViewerApp =
                         let orientations =
                             OrientationDisplay.Sg.view m.orientations m.scene.navigation.camera.view
 
-                        [(scene m); annotations; orientations]
+                        let exploreCenter =
+                            Navigation.Sg.view m.scene.navigation
+
+                        [(scene m); annotations; orientations; exploreCenter] //; exploreCenter
                             |> Sg.ofList
                          //   |> Sg.fillMode (Mod.constant FillMode.Fill)
                          //   |> Sg.cullMode (Mod.constant CullMode.None)      
