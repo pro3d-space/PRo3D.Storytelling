@@ -75,7 +75,7 @@ module Surface =
     let import (runtime : IRuntime) (signature: IFramebufferSignature) (surface : Surface) (m : Model) =
         
         Log.start "importing: %A" surface.importPath        
-        let import = { Configurations.Empty.mars() with patchHierarchies = surface.opcPaths }                           
+        let import = { Configurations.Empty.mars() with patchHierarchies = surface.opcPaths }                 
         let sg, hierarchies, kdtree = Viewer.createPlainSceneGraph runtime signature import true
         Log.stop "did it"
               
@@ -122,6 +122,7 @@ module ViewerApp =
     open Surface
     open Aardvark.Base.Geometry.RayHit
     open Aardvark.SceneGraph.SgFSharp.Sg
+    open System.Collections.Concurrent
     //open Viewer.Mutable.SceneModule.Lens
     //open Viewer.Mutable.ModelModule.Lens
     //open Viewer.Mutable.SceneModule.Lens
@@ -196,13 +197,17 @@ module ViewerApp =
                     None
             | None -> None
     
-    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) (msg : Action) =
+    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
         match msg, m.interaction, m.picking with
             | CameraMessage  msg,_,false -> 
                 { m with scene = { m.scene with cameraModel = CameraController.update m.scene.cameraModel msg }}
             | NavigationMessage  msg,_,false -> 
                 { m with scene = { m.scene with navigation = Navigation.update m.scene.navigation msg }}
+            | DrawingMessage Drawing.Action.Connect, _, _ ->
+                Log.warn("sending abc")
+                bc.Add "abc"
+                m
             | DrawingMessage msg, Interactions.DrawAnnotation,_-> 
                 //let m = 
                 //    match msg with
@@ -627,14 +632,16 @@ module ViewerApp =
 
         DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage
 
-    let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) =
+    let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        
         let m = Surface.loadLastScene m runtime signature
+
+        
 
         App.start {
             unpersist = Unpersist.instance
             threads = pool runtime signature
             view = view
-            update = update w runtime signature
+            update = update w runtime signature bc
             initial = m
         }

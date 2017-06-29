@@ -23,6 +23,9 @@ module Serialization =
         let arr = File.ReadAllBytes(path)
         binarySerializer.UnPickle arr
 
+    let writeToFile path (contents : string) =
+        System.IO.File.WriteAllText(path, contents)
+
 module Dialogs =
     open Microsoft.WindowsAPICodePack.Dialogs    
 

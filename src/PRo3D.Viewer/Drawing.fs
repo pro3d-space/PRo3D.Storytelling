@@ -1,7 +1,7 @@
 ﻿namespace PRo3D
 
 module DrawingApp =
-    open Newtonsoft.Json    
+  //  open Newtonsoft.Json
     open Aardvark.Base
     open Aardvark.Application
     open Aardvark.UI
@@ -20,6 +20,10 @@ module DrawingApp =
 
     open PRo3D.Drawing
     open System.Windows.Forms
+    open System.Text
+    open System.Net.WebSockets
+    open System.Threading
+    open PRo3D
 
     let finishAndAppend (model : DrawingModel) = 
         //if there are at least 3 points do dns calculation (debug, dev). 
@@ -199,10 +203,24 @@ module DrawingApp =
                     | None -> model
                     | Some path -> 
                         let annotations = Serialization.loadAs<plist<PRo3D.Annotation>> path
-                        { model with annotations = annotations }        
+                        { model with annotations = annotations }
             | QuickLoad,_ ->                
                 let annotations = Serialization.loadAs<plist<PRo3D.Annotation>> "./lastMeasure"
                 { model with annotations = annotations }        
+            | Connect, _ ->
+              //  let client, token = Communication.establishConnection()
+
+              ////  let userMessage = Encoding.UTF8.GetString(buffer.Array, 0, result.Count); 
+                
+              //  let userMessage = "Message from client : 1 2 Polizei";
+              //  let buffer = new ArraySegment<byte>(Encoding.UTF8.GetBytes(userMessage))
+
+             //   client.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None) |> ignore
+                //let path = Path.combine([model.exportPath; "drawing.json"])
+                //printf "Writing %i annotations to %s" (model.annotations |> PList.count) path
+                //let json = model.annotations |> PList.map JsonTypes.ofAnnotation |> JsonConvert.SerializeObject
+                //Serialization.writeToFile path json
+                model
             | Clear,_ ->
                 { model with annotations = PList.empty }
             | Select id, false ->
@@ -281,6 +299,8 @@ module DrawingApp =
                         i [clazz "file outline icon"] [] ]
                 button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
                         i [clazz "folder icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Connect)] [
+                        i [clazz "send icon"] [] ]
             ]
 
         let viewAnnotations (model:MDrawingModel) = 

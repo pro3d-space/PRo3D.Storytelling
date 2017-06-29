@@ -155,7 +155,80 @@ module Annotation =
     let initial =
         make Projection.Linear Geometry.Polyline Semantic.Horizon0
 
+module JsonTypes =
+    type _V3d = {
+        X : double
+        Y : double
+        Z : double
+    }
 
+    type _Points = list<_V3d>
+
+    type _Segment = list<_V3d>
+
+    type _Annotation = {       
+        semantic : string
+        geometry : _Points 
+        segments : list<_Segment>
+        color : string
+        thickness : double        
+        projection : string
+        elevation : double
+        distance : double
+        azimuth : double
+        angle   : double
+    }
+
+    let ofV3d (v:V3d) : _V3d = { X = v.X; Y = v.Y; Z = v.Z }
+
+    let ofPolygon (p:Points) : _Points = p  |> List.map ofV3d
+
+    let ofSegment (s:Segment) : _Segment = s.points  |> PList.map ofV3d 
+                                                     |> PList.toList
+
+    let ofSegment1 (s:plist<V3d>) : _Segment = s  |> PList.map ofV3d
+                                                  |> PList.toList
+
+
+    let rec fold f s xs =
+        match xs with
+            | x::xs -> 
+                    let r = fold f s xs
+                    f x r
+            | [] -> s
+
+    let sum = [ 1 .. 10 ] |> List.fold (fun s e -> s * e) 1
+
+    let sumDistance (polyline : Points) : double =
+        polyline  |> List.pairwise |> List.fold (fun s (a,b) -> s + (b - a).LengthSquared) 0.0 |> Math.Sqrt
+
+    let ofAnnotation (a:Annotation) : _Annotation =
+        let polygon = ofPolygon (a.points |> PList.toList)
+        let avgHeight = (polygon |> List.map (fun v -> v.Z ) |> List.sum) / double polygon.Length
+        let distance = sumDistance (a.points |> PList.toList)
+        let angle, azimuth =
+            match a.dnsResults with
+                | Some dns -> 
+                    dns.dipAngle, dns.dipAzimuth
+                | None -> -1.0, -1.0
+
+        {            
+            semantic = a.semantic.ToString()
+            geometry = polygon
+            segments = a.segments |> PList.map (fun x -> ofSegment1 x.points) |> PList.toList //|> List.map (fun x -> ofSegment x)
+            color = a.color.ToString()
+            thickness = a.thickness.value
+            
+            projection = a.projection.ToString()
+            elevation = avgHeight
+            distance = distance
+
+            azimuth = azimuth
+            angle = angle
+        }  
+
+    //let ofDrawing (m : Drawing) : list<_Annotation> =
+    //    m.finished.AsList |> List.map ofAnnotation
 
             
 
