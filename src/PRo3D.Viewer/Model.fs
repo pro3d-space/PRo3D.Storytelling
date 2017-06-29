@@ -206,7 +206,7 @@ type NavigationModel = {
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module NavigationModel =
     let initial = {
-        camera = ArcBallController.initial
+        camera = CameraController.initial  
         navigationMode =  NavigationMode.FreeFly
         coordinates = OrientationDisplayModel.initial
         }

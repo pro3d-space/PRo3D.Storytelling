@@ -121,6 +121,8 @@ module Surface =
 module ViewerApp =
     open Surface
     open Aardvark.Base.Geometry.RayHit
+    open Aardvark.SceneGraph.SgFSharp.Sg
+
     //open Viewer.Mutable.ModelModule.Lens
     //open Viewer.Mutable.ModelModule.Lens
    
@@ -157,7 +159,7 @@ module ViewerApp =
             let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
             { CameraController.initial with view = view }            
 
-        { m with scene = { m.scene with cameraModel = cam }}
+        { m with scene = { m.scene with cameraModel = cam; navigation = {m.scene.navigation with camera = cam} }}
     
     let lookAtSurface m id =
         let surf = m.surfaces |> Seq.tryFind(fun x -> x.surface.guid = id)
@@ -168,7 +170,7 @@ module ViewerApp =
                     let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
                     { CameraController.initial with view = view }            
 
-                { m with scene = { m.scene with cameraModel = cam }}
+                { m with scene = { m.scene with cameraModel = cam; navigation = {m.scene.navigation with camera = cam} }}
             | None -> m
 
     let loadScene path m runtime signature =
@@ -260,7 +262,7 @@ module ViewerApp =
                 let fray = p.globalRay.Ray
                 let r = fray.Ray
 
-                let cameraLocation = m.scene.cameraModel.view.Location
+                let cameraLocation = m.scene.navigation.camera.view.Location // m.scene.cameraModel.view.Location
 
                 let hitF (p : V3d) = 
                     let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)
@@ -394,28 +396,42 @@ module ViewerApp =
                             onKeyUp (KeyUp)
                             attribute "style" "width:70%; height: 100%; float:left"; ] 
                     ]) 
-
-        let renderControl =                 
-                CameraController.controlledControl m.scene.cameraModel CameraMessage (Frustum.perspective 60.0 0.01 10000.0 1.0 |> Mod.constant) 
-                    (AttributeMap.ofList [
-                            onKeyDown (KeyDown)
-                            onKeyUp (KeyUp)
-                            attribute "style" "width:70%; height: 100%; float:left"; ]) 
                     (                    
                         let annotations =
-                            DrawingApp.Sg.view m.drawing m.scene.cameraModel.view
+                            DrawingApp.Sg.view m.drawing m.scene.navigation.camera.view
                                 |> Sg.map DrawingMessage
                                 |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
                                 |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
 
                         let orientations =
-                            OrientationDisplay.Sg.view m.orientations m.scene.cameraModel.view
+                            OrientationDisplay.Sg.view m.orientations m.scene.navigation.camera.view
 
                         [(scene m); annotations; orientations]
                             |> Sg.ofList
                          //   |> Sg.fillMode (Mod.constant FillMode.Fill)
                          //   |> Sg.cullMode (Mod.constant CullMode.None)      
                     )
+        //let renderControl =                 
+        //        CameraController.controlledControl m.scene.cameraModel CameraMessage (Frustum.perspective 60.0 0.01 10000.0 1.0 |> Mod.constant) 
+        //            (AttributeMap.ofList [
+        //                    onKeyDown (KeyDown)
+        //                    onKeyUp (KeyUp)
+        //                    attribute "style" "width:70%; height: 100%; float:left"; ]) 
+        //            (                    
+        //                let annotations =
+        //                    DrawingApp.Sg.view m.drawing m.scene.cameraModel.view
+        //                        |> Sg.map DrawingMessage
+        //                        |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
+        //                        |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
+
+        //                let orientations =
+        //                    OrientationDisplay.Sg.view m.orientations m.scene.cameraModel.view
+
+        //                [(scene m); annotations; orientations]
+        //                    |> Sg.ofList
+        //                 //   |> Sg.fillMode (Mod.constant FillMode.Fill)
+        //                 //   |> Sg.cullMode (Mod.constant CullMode.None)      
+        //            )
 
         //right side fixed tabbed menu
         let interactTools = Html.SemUi.dropDown m.interaction SetInteraction
@@ -556,7 +572,7 @@ module ViewerApp =
         
         let rest (model : MModel) = 
             [             
-                renderControl
+                rc2 //renderControl
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden"] [
                     div[style "height:41px"][text "spacer"]
                     tabs
