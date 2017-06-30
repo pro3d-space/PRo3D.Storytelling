@@ -75,7 +75,7 @@ module Surface =
     let import (runtime : IRuntime) (signature: IFramebufferSignature) (surface : Surface) (m : Model) =
         
         Log.start "importing: %A" surface.importPath        
-        let import = { Configurations.Empty.mars() with patchHierarchies = surface.opcPaths }                 
+        let import = { Configurations.Empty.mars() with patchHierarchies = surface.opcPaths }
         let sg, hierarchies, kdtree = Viewer.createPlainSceneGraph runtime signature import true
         Log.stop "did it"
               
@@ -347,37 +347,56 @@ module ViewerApp =
                     { m with drawing = d; picking = false }
             | SetInteraction t,_,_ -> { m with interaction = t }    
             | _ -> m
-                
+
+
     let scene (m : MModel) =
         let opcs =
             aset {                
                 for surface in m.surfaces do
+                   
+                    let isSelected = 
+                        Mod.bind2 (fun guid (selected: Option<MSurface>) ->
+                            match selected with
+                                | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
+                                | None -> Mod.constant false
+                        ) surface.surface.guid m.selectedSurface
 
-                    let createSg (bb : Box3d) sg =                       
-                        sg |> Sg.noEvents |> Sg.andAlso (Sg.wireBox' C4b.VRVisGreen bb  
-                                                            |> Sg.noEvents
-                                                            |> Sg.noEvents
-                                                            |> Sg.shader {
-                                                                    do! Shader.stableTrafo
-                                                                    do! DefaultSurfaces.vertexColor 
-                                                               }
-                                                        ) 
-                        |> Sg.pickable (PickShape.Box bb) 
-                        |> Sg.onOff(surface.surface.isVisible)
-                        |> Sg.cullMode(surface.surface.cullMode)
-                        |> Sg.fillMode(surface.surface.fillMode)
-                    
+                    let box =
+                        Sg.wireBox (Mod.constant C4b.VRVisGreen) surface.globalBB  
+                        |> Sg.noEvents
+                        |> Sg.shader {
+                                do! Shader.stableTrafo
+                                do! DefaultSurfaces.vertexColor                                                                     
+                            }
+
+                    let pickable =
+                        surface.globalBB |> Mod.map (fun bb -> Sg.pickable (PickShape.Box bb) box) |> Sg.dynamic
+
+                    let createSg (sg : ISg) =
+                        sg |> Sg.noEvents |> Sg.cullMode(surface.surface.cullMode) |> Sg.fillMode(surface.surface.fillMode) 
+
                     let sg = 
-                        Mod.map2 createSg surface.globalBB surface.sceneGraph
-                        |> Sg.dynamic
+                        Mod.map createSg surface.sceneGraph 
+                        |> Sg.dynamic          
+                        |> Sg.uniform "selected" isSelected
+                        |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
+                        |> Sg.onOff(surface.surface.isVisible)                             
                         |> Sg.withEvents [
                                 SceneEventKind.Down, (fun sceneHit -> true, Seq.ofList [PickSurface sceneHit])
                                 //Sg.onMouseDownEvt (fun sceneHit -> PickSurface sceneHit)
                             ]
-                        
+                        |> Sg.andAlso pickable
                     yield sg
             }
-        opcs |> Sg.set
+        opcs 
+            |> Sg.set
+            |> Sg.effect [
+                Shader.stableTrafo |> toEffect
+                DefaultSurfaces.constantColor C4f.White |> toEffect
+                DefaultSurfaces.diffuseTexture |> toEffect
+                Shader.selectionColor |> toEffect
+            ]
+
 
     let mkBrushISg color size trafo : ISg<Message> =
         Sg.sphere 5 color size 
@@ -459,7 +478,7 @@ module ViewerApp =
             ]
             
         let openSurface =
-            [ text "browse"] |> button [ 
+            [ text "browse"] |> button [
                 clazz "ui button"
                 onClick (fun _ -> ImportSurface)
              ] 
@@ -480,7 +499,7 @@ module ViewerApp =
                             let! color =
                                 match selected with
                                     | Some sel -> 
-                                        sel.guid |> Mod.map (fun g -> if g = (s.surface.guid |> Mod.force) then C4b.Red else C4b.White)
+                                        sel.guid |> Mod.map (fun g -> if g = (s.surface.guid |> Mod.force) then C4b.Blue else C4b.White)
                                     | None -> Mod.constant C4b.White
                             
                             let bgc = sprintf "color: %s" (Html.ofC4b color)
@@ -625,9 +644,7 @@ module ViewerApp =
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        
-        let m = Surface.loadLastScene m runtime signature
-
-        
+        let m = Surface.loadLastScene m runtime signature        
 
         App.start {
             unpersist = Unpersist.instance

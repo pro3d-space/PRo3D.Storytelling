@@ -49,7 +49,6 @@ let main argv =
 
     let a = PRo3D.ViewerApp.start form runtime signature bc   
 
-
     WebPart.startServer 4321 [ 
         MutableApp.toWebPart runtime a
         path "/websocket" >=> handShake ws

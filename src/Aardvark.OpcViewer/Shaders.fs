@@ -14,7 +14,15 @@ module Shader =
                 let c : V4d = uniform?LoDColor
                 let gamma = 1.0
                 let grayscale = 0.2126 * v.c.X ** gamma + 0.7152 * v.c.Y ** gamma  + 0.0722 * v.c.Z ** gamma 
-                return grayscale * c 
+                return grayscale * c
+            else return v.c
+        }
+
+    let selectionColor (v : Vertex) =
+        fragment {
+            if uniform?selected then
+                let c : V4d = uniform?selectionColor
+                return c * v.c
             else return v.c
         }
 
