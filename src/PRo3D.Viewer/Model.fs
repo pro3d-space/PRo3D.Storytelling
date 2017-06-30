@@ -255,19 +255,22 @@ type Surface = {
 }
 
 [<DomainType>]
-type OrientationDisplayModel = {    
+type ReferenceSystem = {    
 
-    center : Option<V3d>
-    northVector : Option<V3d>
-    upVector : Option<V3d>
+    origin : V3d
+    north : V3d
+    up : V3d
+    isVisible : bool
+    
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module OrientationDisplayModel =
+module ReferenceSystem =
     let initial = {
-        center = Some V3d.OOO
-        northVector = Some V3d.IOO
-        upVector = Some V3d.OOI
+        origin = V3d.OOO
+        north = V3d.IOO
+        up = V3d.OOI        
+        isVisible = true
         }
 
         
@@ -275,7 +278,7 @@ module OrientationDisplayModel =
 type NavigationModel = {
     camera : CameraControllerState
     navigationMode : NavigationMode  
-    coordinates : OrientationDisplayModel
+    coordinates : ReferenceSystem
     exploreCenter : V3d
 }
 
@@ -284,6 +287,6 @@ module NavigationModel =
     let initial = {
         camera = CameraController.initial  
         navigationMode =  NavigationMode.FreeFly
-        coordinates = OrientationDisplayModel.initial
+        coordinates = ReferenceSystem.initial
         exploreCenter = V3d.OOO
         }

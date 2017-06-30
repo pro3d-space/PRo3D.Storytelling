@@ -140,7 +140,7 @@ module ViewerApp =
         | CameraMessage             of CameraController.Message        
         | DrawingMessage            of Drawing.Action
         | NavigationMessage         of Navigation.Action
-        | CoordinatesMessage        of OrientationDisplay.Action
+        | ReferenceSystemMessage    of ReferenceSystemApp.Action
         | AnnotationMessage         of AnnotationProperties.Action
         | SurfacePropertiesMessage  of SurfaceProperties.Action
         | ImportSurface 
@@ -218,7 +218,7 @@ module ViewerApp =
                 //                            | None -> Properties.NoProperties } 
                 //        | _ -> m
                 
-                { m with drawing = DrawingApp.update w m.drawing msg }          
+                { m with drawing = DrawingApp.update w m.drawing msg }
             | SelectSurface id,_,_ ->
                 let surf = m.scene.surfaces |> Seq.tryFind(fun x -> x.guid = id)
                 let surf =
@@ -297,10 +297,12 @@ module ViewerApp =
                                 let drawing = DrawingApp.update w m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
                                 { m with drawing = drawing }
                             | Interactions.PlaceCoordinateSystem -> 
-                                let orientations = OrientationDisplay.update m.orientations (OrientationDisplay.Action.SetCenter(hit))
-                                { m with orientations = orientations }
+                                let refSystem = 
+                                    ReferenceSystemApp.update m.scene.referenceSystem (ReferenceSystemApp.Action.InferCoordSystem(hit))
+                                { m with scene = { m.scene with referenceSystem = refSystem }}
                             | Interactions.PickExploreCenter ->
-                                let navigation = Navigation.update m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
+                                let navigation = 
+                                    Navigation.update m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
                                 { m with scene = {m.scene with navigation= navigation} }
                             | _ -> m
                     | None -> 
@@ -346,6 +348,8 @@ module ViewerApp =
                     
                     { m with drawing = d; picking = false }
             | SetInteraction t,_,_ -> { m with interaction = t }    
+            | ReferenceSystemMessage a,_,_ -> 
+                { m with scene = { m.scene with referenceSystem = ReferenceSystemApp.update m.scene.referenceSystem a } }
             | _ -> m
 
 
@@ -450,7 +454,7 @@ module ViewerApp =
                                 |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
 
                         let orientations =
-                            OrientationDisplay.Sg.view m.orientations m.scene.navigation.camera.view
+                            ReferenceSystemApp.Sg.view m.scene.referenceSystem m.scene.navigation.camera.view
 
                         let exploreCenter =
                             Navigation.Sg.view m.scene.navigation
@@ -596,11 +600,19 @@ module ViewerApp =
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 
             ]
+
+        let configUI =
+            div[][
+                GuiEx.accordion "Coordinate System" "Map Signs" true [
+                    ReferenceSystemApp.UI.view m.scene.referenceSystem |> UI.map ReferenceSystemMessage
+                ]
+            ]
+            
             
         let tabs = GuiEx.tabbed [clazz "ui inverted segment"] [
                             ("Data", surfaceUI)
                             ("Annotations", annotationUI)
-                            ("Config", text "Config")
+                            ("Config", configUI)
                         ] "Data" 
       
         let topMenu = [
@@ -623,6 +635,7 @@ module ViewerApp =
                 context: $('.context.example .bottom.segment.blarg')
               })
               .sidebar('attach events', '.context.example .menu.blarg .item.blarg')
+              .sidebar('setting', 'transition', 'Overlay')
             ;"
 
         //Sidebar adorner

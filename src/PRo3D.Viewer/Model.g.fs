@@ -424,57 +424,66 @@ module Mutable =
                 }
     
     
-    type MOrientationDisplayModel(__initial : PRo3D.OrientationDisplayModel) =
+    type MReferenceSystem(__initial : PRo3D.ReferenceSystem) =
         inherit obj()
         let mutable __current = __initial
-        let _center = MOption.Create(__initial.center)
-        let _northVector = MOption.Create(__initial.northVector)
-        let _upVector = MOption.Create(__initial.upVector)
+        let _origin = ResetMod.Create(__initial.origin)
+        let _north = ResetMod.Create(__initial.north)
+        let _up = ResetMod.Create(__initial.up)
+        let _isVisible = ResetMod.Create(__initial.isVisible)
         
-        member x.center = _center :> IMod<_>
-        member x.northVector = _northVector :> IMod<_>
-        member x.upVector = _upVector :> IMod<_>
+        member x.origin = _origin :> IMod<_>
+        member x.north = _north :> IMod<_>
+        member x.up = _up :> IMod<_>
+        member x.isVisible = _isVisible :> IMod<_>
         
-        member x.Update(v : PRo3D.OrientationDisplayModel) =
+        member x.Update(v : PRo3D.ReferenceSystem) =
             if not (System.Object.ReferenceEquals(__current, v)) then
                 __current <- v
                 
-                MOption.Update(_center, v.center)
-                MOption.Update(_northVector, v.northVector)
-                MOption.Update(_upVector, v.upVector)
+                ResetMod.Update(_origin,v.origin)
+                ResetMod.Update(_north,v.north)
+                ResetMod.Update(_up,v.up)
+                ResetMod.Update(_isVisible,v.isVisible)
                 
         
-        static member Create(__initial : PRo3D.OrientationDisplayModel) : MOrientationDisplayModel = MOrientationDisplayModel(__initial)
-        static member Update(m : MOrientationDisplayModel, v : PRo3D.OrientationDisplayModel) = m.Update(v)
+        static member Create(__initial : PRo3D.ReferenceSystem) : MReferenceSystem = MReferenceSystem(__initial)
+        static member Update(m : MReferenceSystem, v : PRo3D.ReferenceSystem) = m.Update(v)
         
         override x.ToString() = __current.ToString()
         member x.AsString = sprintf "%A" __current
-        interface IUpdatable<PRo3D.OrientationDisplayModel> with
+        interface IUpdatable<PRo3D.ReferenceSystem> with
             member x.Update v = x.Update v
     
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module OrientationDisplayModel =
+    module ReferenceSystem =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
-            let center =
-                { new Lens<PRo3D.OrientationDisplayModel, Microsoft.FSharp.Core.Option<Aardvark.Base.V3d>>() with
-                    override x.Get(r) = r.center
-                    override x.Set(r,v) = { r with center = v }
-                    override x.Update(r,f) = { r with center = f r.center }
+            let origin =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.origin
+                    override x.Set(r,v) = { r with origin = v }
+                    override x.Update(r,f) = { r with origin = f r.origin }
                 }
-            let northVector =
-                { new Lens<PRo3D.OrientationDisplayModel, Microsoft.FSharp.Core.Option<Aardvark.Base.V3d>>() with
-                    override x.Get(r) = r.northVector
-                    override x.Set(r,v) = { r with northVector = v }
-                    override x.Update(r,f) = { r with northVector = f r.northVector }
+            let north =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.north
+                    override x.Set(r,v) = { r with north = v }
+                    override x.Update(r,f) = { r with north = f r.north }
                 }
-            let upVector =
-                { new Lens<PRo3D.OrientationDisplayModel, Microsoft.FSharp.Core.Option<Aardvark.Base.V3d>>() with
-                    override x.Get(r) = r.upVector
-                    override x.Set(r,v) = { r with upVector = v }
-                    override x.Update(r,f) = { r with upVector = f r.upVector }
+            let up =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.up
+                    override x.Set(r,v) = { r with up = v }
+                    override x.Update(r,f) = { r with up = f r.up }
+                }
+            let isVisible =
+                { new Lens<PRo3D.ReferenceSystem, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.isVisible
+                    override x.Set(r,v) = { r with isVisible = v }
+                    override x.Update(r,f) = { r with isVisible = f r.isVisible }
                 }
     
     
@@ -483,7 +492,7 @@ module Mutable =
         let mutable __current = __initial
         let _camera = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.camera)
         let _navigationMode = ResetMod.Create(__initial.navigationMode)
-        let _coordinates = MOrientationDisplayModel.Create(__initial.coordinates)
+        let _coordinates = MReferenceSystem.Create(__initial.coordinates)
         let _exploreCenter = ResetMod.Create(__initial.exploreCenter)
         
         member x.camera = _camera
@@ -497,7 +506,7 @@ module Mutable =
                 
                 Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_camera, v.camera)
                 ResetMod.Update(_navigationMode,v.navigationMode)
-                MOrientationDisplayModel.Update(_coordinates, v.coordinates)
+                MReferenceSystem.Update(_coordinates, v.coordinates)
                 ResetMod.Update(_exploreCenter,v.exploreCenter)
                 
         
@@ -528,7 +537,7 @@ module Mutable =
                     override x.Update(r,f) = { r with navigationMode = f r.navigationMode }
                 }
             let coordinates =
-                { new Lens<PRo3D.NavigationModel, PRo3D.OrientationDisplayModel>() with
+                { new Lens<PRo3D.NavigationModel, PRo3D.ReferenceSystem>() with
                     override x.Get(r) = r.coordinates
                     override x.Set(r,v) = { r with coordinates = v }
                     override x.Update(r,f) = { r with coordinates = f r.coordinates }
