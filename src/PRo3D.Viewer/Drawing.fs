@@ -551,13 +551,24 @@ module DrawingApp =
                 dots points color view                     //support points
             ]         
 
+        let text (anno : MAnnotation) = 
+            Sg.markdown MarkdownConfig.light anno.text
+                    |> Sg.noEvents
+                    |> Sg.shader {
+                            do! Aardvark.Opc.Shader.stableTrafo
+                        }
+                   // |> Sg.transform (Trafo3d.FromOrthoNormalBasis(-V3d.IOO, V3d.OOI, V3d.OIO))
+                    |> Sg.trafo anno.modelTrafo
+                    |> Sg.translate 0.0 0.0 3.0
+
         let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =
             let points = getPolyline anno
                        
             Sg.ofList [
                 lines points c anno.thickness.value anno.modelTrafo anno.key;
              //   dots points c view
-                drawDns anno view
+            //    text anno
+                drawDns anno view |> Sg.onOff anno.showDns
             ] |> Sg.onOff anno.visible
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =

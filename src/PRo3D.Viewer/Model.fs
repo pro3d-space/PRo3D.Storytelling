@@ -113,6 +113,7 @@ type Annotation = {
     dnsResults : Option<DipAndStrikeResults>    
 
     visible : bool
+    showDns : bool
     text : string
 }
 
@@ -150,6 +151,7 @@ module Annotation =
             visible = true
             text = ""
             modelTrafo = Trafo3d.Identity
+            showDns = true
         }
 
     let initial =

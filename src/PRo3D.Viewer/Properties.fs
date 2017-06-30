@@ -51,6 +51,7 @@ module AnnotationProperties =
         | ChangeThickness of Numeric.Action
         | SetText         of string
         | ToggleVisible
+        | ToggleShowDns
 
     let update (model : Annotation) (act : Action) =
         match act with
@@ -66,6 +67,8 @@ module AnnotationProperties =
                 { model with text = t }
             | ToggleVisible ->
                 { model with visible = (not model.visible) }
+            | ToggleShowDns ->
+                { model with showDns = (not model.showDns) }
 
     let view (model : MAnnotation) =        
         require Html.semui (
@@ -78,6 +81,7 @@ module AnnotationProperties =
                 Html.row "Thickness:"   [Numeric.view' [InputBox] model.thickness |> UI.map ChangeThickness ]
                 Html.row "Text:"        [Html.SemUi.textBox model.text SetText ]
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.visible ToggleVisible ]
+                Html.row "Show DnS:"    [Html.SemUi.toggleBox model.showDns ToggleShowDns ]
             ]
         )
 

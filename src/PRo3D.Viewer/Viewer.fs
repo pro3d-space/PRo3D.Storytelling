@@ -375,17 +375,27 @@ module ViewerApp =
                     let createSg (sg : ISg) =
                         sg |> Sg.noEvents |> Sg.cullMode(surface.surface.cullMode) |> Sg.fillMode(surface.surface.fillMode) 
 
+                    let! bb = surface.globalBB
                     let sg = 
                         Mod.map createSg surface.sceneGraph 
                         |> Sg.dynamic          
                         |> Sg.uniform "selected" isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
                         |> Sg.onOff(surface.surface.isVisible)                             
+                        |> Sg.andAlso (Sg.wireBox' C4b.VRVisGreen bb
+                                                            |> Sg.noEvents
+                                                            |> Sg.noEvents
+                                                            |> Sg.shader {
+                                                                    do! Shader.stableTrafo
+                                                                    do! DefaultSurfaces.vertexColor 
+                                                               }
+                                                        ) 
+                        |> Sg.pickable (PickShape.Box bb) 
                         |> Sg.withEvents [
                                 SceneEventKind.Down, (fun sceneHit -> true, Seq.ofList [PickSurface sceneHit])
                                 //Sg.onMouseDownEvt (fun sceneHit -> PickSurface sceneHit)
                             ]
-                        |> Sg.andAlso pickable
+                        //|> Sg.andAlso pickable
                     yield sg
             }
         opcs 
