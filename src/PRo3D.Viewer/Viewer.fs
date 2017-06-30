@@ -221,6 +221,11 @@ module ViewerApp =
                 { m with drawing = DrawingApp.update w m.drawing msg }          
             | SelectSurface id,_,_ ->
                 let surf = m.scene.surfaces |> Seq.tryFind(fun x -> x.guid = id)
+                let surf =
+                    match surf, m.selectedSurface with
+                        | Some a, Some b -> if a.guid = b.guid then None else Some a
+                        | Some a, None   -> Some a
+                        | None, _        -> None
 
                 { m with selectedSurface = surf}
             | FlyToSurface id,_,_ ->
@@ -397,7 +402,7 @@ module ViewerApp =
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
-        let rc2 =
+        let renderControl =
             Incremental.renderControl
                     (Mod.map2 Camera.create m.scene.navigation.camera.view (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant)) 
                     (AttributeMap.unionMany [
@@ -425,28 +430,7 @@ module ViewerApp =
                             |> Sg.ofList
                          //   |> Sg.fillMode (Mod.constant FillMode.Fill)
                          //   |> Sg.cullMode (Mod.constant CullMode.None)      
-                    )
-        //let renderControl =                 
-        //        CameraController.controlledControl m.scene.cameraModel CameraMessage (Frustum.perspective 60.0 0.01 10000.0 1.0 |> Mod.constant) 
-        //            (AttributeMap.ofList [
-        //                    onKeyDown (KeyDown)
-        //                    onKeyUp (KeyUp)
-        //                    attribute "style" "width:70%; height: 100%; float:left"; ]) 
-        //            (                    
-        //                let annotations =
-        //                    DrawingApp.Sg.view m.drawing m.scene.cameraModel.view
-        //                        |> Sg.map DrawingMessage
-        //                        |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
-        //                        |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
-
-        //                let orientations =
-        //                    OrientationDisplay.Sg.view m.orientations m.scene.cameraModel.view
-
-        //                [(scene m); annotations; orientations]
-        //                    |> Sg.ofList
-        //                 //   |> Sg.fillMode (Mod.constant FillMode.Fill)
-        //                 //   |> Sg.cullMode (Mod.constant CullMode.None)      
-        //            )
+                    )       
 
         //right side fixed tabbed menu
         let interactTools = Html.SemUi.dropDown m.interaction SetInteraction
@@ -491,9 +475,20 @@ module ViewerApp =
                 (AttributeMap.ofList [clazz "ui divided list inverted segment";]) (
                     alist {
                         for s in (m.surfaces |> AList.ofASet) do
+
+                            let! selected = m.selectedSurface
+                            let! color =
+                                match selected with
+                                    | Some sel -> 
+                                        sel.guid |> Mod.map (fun g -> if g = (s.surface.guid |> Mod.force) then C4b.Red else C4b.White)
+                                    | None -> Mod.constant C4b.White
+                            
+                            let bgc = sprintf "color: %s" (Html.ofC4b color)
+
                             yield div [clazz "item"] [
                                 i [
                                     clazz "large cube middle aligned icon"; 
+                                    style bgc
                                     onClick (fun x -> SelectSurface (s.surface.guid |> Mod.force))
                                 ][]
                                 div [clazz "content"] [
@@ -583,17 +578,13 @@ module ViewerApp =
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
              DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage 
         ] 
-             
-        
+                     
         let rest (model : MModel) = 
             [             
-                rc2 //renderControl
+                renderControl
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden"] [
                     div[style "height:41px"][text "spacer"]
-                    tabs
-
-               //     div [clazz "ui horizontal divider inverted"][text "Properties"]                                                            
-                    
+                    tabs                    
                 ]            
             ]
         
