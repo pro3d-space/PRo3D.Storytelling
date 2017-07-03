@@ -16,8 +16,8 @@ open PRo3D
 
 [<DomainType>]
 type SgSurface = {
-    //[<PrimaryKey>]
-    //guid : System.Guid
+    [<PrimaryKey>]
+    guid : System.Guid
 
     surface : Surface    
 

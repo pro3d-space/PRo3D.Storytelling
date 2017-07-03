@@ -361,7 +361,7 @@ module NavigationModel =
         camera = CameraController.initial  
         navigationMode =  NavigationMode.FreeFly
         coordinates = ReferenceSystem.initial
-        exploreCenter = V3d.NaN
+        exploreCenter = V3d.Zero // make option
         }
 
 

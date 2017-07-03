@@ -48,7 +48,7 @@ module Surface =
 
     let toSg (s:Surface) sg bb kd = {
         surface = s
-       // guid = Guid.NewGuid()
+        guid = Guid.NewGuid()
         sceneGraph = sg
         globalBB = bb
         kdTree = kd
@@ -61,41 +61,37 @@ module Surface =
 
     let computeBB (hierarchies : list<PatchHierarchy>) =
          hierarchies
-                |> List.map(fun d -> d.tree |> QTree.getLeaves)                  
-                |> Seq.map (fun p -> p |> Seq.map(fun d -> checkBB d.info.GlobalBoundingBox)) 
-                |> Seq.concat
-                |> Box3d.ofSeq
+            |> List.map(fun d -> d.tree |> QTree.getLeaves)                  
+            |> Seq.map (fun p -> p |> Seq.map(fun d -> checkBB d.info.GlobalBoundingBox)) 
+            |> Seq.concat
+            |> Box3d.ofSeq
 
     let computeBBfromRoots (hierarchies : list<PatchHierarchy>) =
          hierarchies
-                |> List.map(fun d -> d.tree |> QTree.getRoot)                  
-                |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)                                
-                |> Box3d.ofSeq
+            |> List.map(fun d -> d.tree |> QTree.getRoot)                  
+            |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)                                
+            |> Box3d.ofSeq
+    
+    let createSgSurfaces runtime signature surfaces =
+        surfaces
+            //|> List.map (fun (d : Surface) -> { d with guid = Guid.NewGuid() })
+            |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths })
+            |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
+            |> List.zip surfaces
+            |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> toSg surf sg (hierarchies |> computeBB) kdtree)
+            |> HSet.ofList
 
-    let import (runtime : IRuntime) (signature: IFramebufferSignature) (surface : Surface) (m : Model) =
-        
-        Log.start "importing: %A" surface.importPath        
-        let import = { Configurations.Empty.mars() with patchHierarchies = surface.opcPaths }
-        let sg, hierarchies, kdtree = Viewer.createPlainSceneGraph runtime signature import true
-        Log.stop "did it"
-              
-        let surfaceImp = toSg surface sg (hierarchies |> computeBB) kdtree
-                
+    let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : list<Surface>) (m : Model) =
+                        
+        let surfSet = createSgSurfaces runtime signature surfaces
+                                                
         { m with 
-                scene       = { m.scene with surfaces = surface::m.scene.surfaces }
-                surfaces    = HSet.add surfaceImp m.surfaces }
+            scene       =  { m.scene with surfaces = surfaces @ m.scene.surfaces }
+            surfaces    =  HSet.union surfSet m.surfaces }
 
     let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
         
-        let surfs = 
-            s.surfaces 
-                |> List.map (fun d -> { d with guid = Guid.NewGuid() })
-                |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths })
-                |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
-                |> List.zip s.surfaces
-                |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> toSg surf sg (hierarchies |> computeBB) kdtree)
-                |> HSet.ofList
-
+        let surfs = createSgSurfaces runtime signature s.surfaces
         { m with scene = s; surfaces = surfs }
 
     let fileExists path =
@@ -264,9 +260,8 @@ module ViewerApp =
                     | [] -> m
                     | paths ->
                         let path = paths.Head
-                        if (path |> OpcUtils.isSurfaceFolder) then
-                            let s = Surface.mk path
-                            Surface.import runtime signature s m |> lookAtData
+                        if (path |> OpcUtils.isSurfaceFolder) then                            
+                            Surface.import' runtime signature [Surface.mk path] PRo3D.Viewer.Viewer.initial |> lookAtData
                         else
                             Log.error "path %s does not point to surface folder" path
                             m   
@@ -322,7 +317,8 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | None -> m
                     | Some path -> loadScene path m runtime signature
-            | NewScene,_,_ -> { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
+            | NewScene,_,_ ->
+                PRo3D.Viewer.Viewer.initial     //   { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
             | KeyDown k, _, _ ->
                     let a =
                         match k with
@@ -355,7 +351,7 @@ module ViewerApp =
             | ReferenceSystemMessage a,_,_ -> 
                 { m with scene = { m.scene with referenceSystem = ReferenceSystemApp.update m.scene.referenceSystem a } }
              | ConfigPropertiesMessage a,_,_ -> 
-                { m with scene = { m.scene with config = ConfigProperties.update m.scene.config a; referenceSystem = { m.scene.referenceSystem with arrowScale = m.scene.config.arrowSize } } }
+                m //{ m with scene = { m.scene with config = ConfigProperties.update m.scene.config a; referenceSystem = { m.scene.referenceSystem with arrowScale = m.scene.config.arrowSize } } }
             | _ -> m
 
 
@@ -383,12 +379,22 @@ module ViewerApp =
                         surface.globalBB |> Mod.map (fun bb -> Sg.pickable (PickShape.Box bb) box) |> Sg.dynamic
 
                     let createSg (sg : ISg) =
-                        sg |> Sg.noEvents |> Sg.cullMode(surface.surface.cullMode) |> Sg.fillMode(surface.surface.fillMode) 
+                        sg 
+                        |> Sg.noEvents 
+                        |> Sg.cullMode(surface.surface.cullMode) 
+                        |> Sg.fillMode(surface.surface.fillMode)                         
+                        |> Sg.effect [
+                            Shader.stableTrafo |> toEffect
+                            DefaultSurfaces.constantColor C4f.White |> toEffect
+                            DefaultSurfaces.diffuseTexture |> toEffect
+                            //Shader.selectionColor |> toEffect
+                        ]
 
                     let! bb = surface.globalBB
                     let sg = 
                         Mod.map createSg surface.sceneGraph 
                         |> Sg.dynamic          
+
                         |> Sg.uniform "selected" isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
                         |> Sg.onOff(surface.surface.isVisible)                             
@@ -414,7 +420,7 @@ module ViewerApp =
                 Shader.stableTrafo |> toEffect
                 DefaultSurfaces.constantColor C4f.White |> toEffect
                 DefaultSurfaces.diffuseTexture |> toEffect
-                Shader.selectionColor |> toEffect
+                //Shader.selectionColor |> toEffect
             ]
 
 
@@ -443,7 +449,7 @@ module ViewerApp =
 
         let renderControl =
             Incremental.renderControl
-                    (Mod.map2 Camera.create m.scene.navigation.camera.view (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant)) 
+                    (Mod.map2 Camera.create m.scene.cameraModel.view (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant)) 
                     (AttributeMap.unionMany [
                         renderControlAttributes m.scene.navigation
                         [attribute "style" "width:70%; height: 100%; float:left"; ] |> AttributeMap.ofList
@@ -465,7 +471,7 @@ module ViewerApp =
                         let exploreCenter =
                             Navigation.Sg.view m.scene.navigation
 
-                        [(scene m); annotations; orientations; exploreCenter] //; exploreCenter
+                        [(scene m); annotations; orientations; exploreCenter] //; 
                             |> Sg.ofList
                          //   |> Sg.fillMode (Mod.constant FillMode.Fill)
                          //   |> Sg.cullMode (Mod.constant CullMode.None)      
