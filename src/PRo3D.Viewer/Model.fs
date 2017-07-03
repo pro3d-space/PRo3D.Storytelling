@@ -255,44 +255,6 @@ type Surface = {
 }
 
 [<DomainType>]
-type ReferenceSystem = {    
-
-    origin : V3d
-    north : V3d
-    up : V3d
-    isVisible : bool
-    
-}
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module ReferenceSystem =
-    let initial = {
-        origin = V3d.OOO
-        north = V3d.IOO
-        up = V3d.OOI        
-        isVisible = true
-        }
-
-        
-[<DomainType>]
-type NavigationModel = {
-    camera : CameraControllerState
-    navigationMode : NavigationMode  
-    coordinates : ReferenceSystem
-    exploreCenter : V3d
-}
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module NavigationModel =
-    let initial = {
-        camera = CameraController.initial  
-        navigationMode =  NavigationMode.FreeFly
-        coordinates = ReferenceSystem.initial
-        exploreCenter = V3d.NaN
-        }
-
-
-[<DomainType>]
 type ViewConfigModel = {
     nearPlane : NumericInput
     farPlane : NumericInput
@@ -363,3 +325,43 @@ module ViewConfigModel =
         minDipAngle = initMinAngle
         maxDipAngle = initMaxAngle
         }
+
+[<DomainType>]
+type ReferenceSystem = {    
+
+    origin : V3d
+    north : V3d
+    up : V3d
+    isVisible : bool
+    arrowScale : NumericInput
+}
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module ReferenceSystem =
+    let initial = {
+        origin = V3d.OOO
+        north = V3d.IOO
+        up = V3d.OOI        
+        isVisible = true
+        arrowScale = ViewConfigModel.initArrowSize
+        }
+
+        
+[<DomainType>]
+type NavigationModel = {
+    camera : CameraControllerState
+    navigationMode : NavigationMode  
+    coordinates : ReferenceSystem
+    exploreCenter : V3d
+}
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module NavigationModel =
+    let initial = {
+        camera = CameraController.initial  
+        navigationMode =  NavigationMode.FreeFly
+        coordinates = ReferenceSystem.initial
+        exploreCenter = V3d.NaN
+        }
+
+

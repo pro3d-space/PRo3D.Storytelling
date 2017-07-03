@@ -424,132 +424,6 @@ module Mutable =
                 }
     
     
-    type MReferenceSystem(__initial : PRo3D.ReferenceSystem) =
-        inherit obj()
-        let mutable __current = __initial
-        let _origin = ResetMod.Create(__initial.origin)
-        let _north = ResetMod.Create(__initial.north)
-        let _up = ResetMod.Create(__initial.up)
-        let _isVisible = ResetMod.Create(__initial.isVisible)
-        
-        member x.origin = _origin :> IMod<_>
-        member x.north = _north :> IMod<_>
-        member x.up = _up :> IMod<_>
-        member x.isVisible = _isVisible :> IMod<_>
-        
-        member x.Update(v : PRo3D.ReferenceSystem) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
-                
-                ResetMod.Update(_origin,v.origin)
-                ResetMod.Update(_north,v.north)
-                ResetMod.Update(_up,v.up)
-                ResetMod.Update(_isVisible,v.isVisible)
-                
-        
-        static member Create(__initial : PRo3D.ReferenceSystem) : MReferenceSystem = MReferenceSystem(__initial)
-        static member Update(m : MReferenceSystem, v : PRo3D.ReferenceSystem) = m.Update(v)
-        
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
-        interface IUpdatable<PRo3D.ReferenceSystem> with
-            member x.Update v = x.Update v
-    
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module ReferenceSystem =
-        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-        module Lens =
-            let origin =
-                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
-                    override x.Get(r) = r.origin
-                    override x.Set(r,v) = { r with origin = v }
-                    override x.Update(r,f) = { r with origin = f r.origin }
-                }
-            let north =
-                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
-                    override x.Get(r) = r.north
-                    override x.Set(r,v) = { r with north = v }
-                    override x.Update(r,f) = { r with north = f r.north }
-                }
-            let up =
-                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
-                    override x.Get(r) = r.up
-                    override x.Set(r,v) = { r with up = v }
-                    override x.Update(r,f) = { r with up = f r.up }
-                }
-            let isVisible =
-                { new Lens<PRo3D.ReferenceSystem, Microsoft.FSharp.Core.bool>() with
-                    override x.Get(r) = r.isVisible
-                    override x.Set(r,v) = { r with isVisible = v }
-                    override x.Update(r,f) = { r with isVisible = f r.isVisible }
-                }
-    
-    
-    type MNavigationModel(__initial : PRo3D.NavigationModel) =
-        inherit obj()
-        let mutable __current = __initial
-        let _camera = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.camera)
-        let _navigationMode = ResetMod.Create(__initial.navigationMode)
-        let _coordinates = MReferenceSystem.Create(__initial.coordinates)
-        let _exploreCenter = ResetMod.Create(__initial.exploreCenter)
-        
-        member x.camera = _camera
-        member x.navigationMode = _navigationMode :> IMod<_>
-        member x.coordinates = _coordinates
-        member x.exploreCenter = _exploreCenter :> IMod<_>
-        
-        member x.Update(v : PRo3D.NavigationModel) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
-                
-                Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_camera, v.camera)
-                ResetMod.Update(_navigationMode,v.navigationMode)
-                MReferenceSystem.Update(_coordinates, v.coordinates)
-                ResetMod.Update(_exploreCenter,v.exploreCenter)
-                
-        
-        static member Create(__initial : PRo3D.NavigationModel) : MNavigationModel = MNavigationModel(__initial)
-        static member Update(m : MNavigationModel, v : PRo3D.NavigationModel) = m.Update(v)
-        
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
-        interface IUpdatable<PRo3D.NavigationModel> with
-            member x.Update v = x.Update v
-    
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module NavigationModel =
-        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-        module Lens =
-            let camera =
-                { new Lens<PRo3D.NavigationModel, Aardvark.UI.Primitives.CameraControllerState>() with
-                    override x.Get(r) = r.camera
-                    override x.Set(r,v) = { r with camera = v }
-                    override x.Update(r,f) = { r with camera = f r.camera }
-                }
-            let navigationMode =
-                { new Lens<PRo3D.NavigationModel, PRo3D.NavigationMode>() with
-                    override x.Get(r) = r.navigationMode
-                    override x.Set(r,v) = { r with navigationMode = v }
-                    override x.Update(r,f) = { r with navigationMode = f r.navigationMode }
-                }
-            let coordinates =
-                { new Lens<PRo3D.NavigationModel, PRo3D.ReferenceSystem>() with
-                    override x.Get(r) = r.coordinates
-                    override x.Set(r,v) = { r with coordinates = v }
-                    override x.Update(r,f) = { r with coordinates = f r.coordinates }
-                }
-            let exploreCenter =
-                { new Lens<PRo3D.NavigationModel, Aardvark.Base.V3d>() with
-                    override x.Get(r) = r.exploreCenter
-                    override x.Set(r,v) = { r with exploreCenter = v }
-                    override x.Update(r,f) = { r with exploreCenter = f r.exploreCenter }
-                }
-    
-    
     type MViewConfigModel(__initial : PRo3D.ViewConfigModel) =
         inherit obj()
         let mutable __current = __initial
@@ -637,4 +511,139 @@ module Mutable =
                     override x.Get(r) = r.maxDipAngle
                     override x.Set(r,v) = { r with maxDipAngle = v }
                     override x.Update(r,f) = { r with maxDipAngle = f r.maxDipAngle }
+                }
+    
+    
+    type MReferenceSystem(__initial : PRo3D.ReferenceSystem) =
+        inherit obj()
+        let mutable __current = __initial
+        let _origin = ResetMod.Create(__initial.origin)
+        let _north = ResetMod.Create(__initial.north)
+        let _up = ResetMod.Create(__initial.up)
+        let _isVisible = ResetMod.Create(__initial.isVisible)
+        let _arrowScale = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowScale)
+        
+        member x.origin = _origin :> IMod<_>
+        member x.north = _north :> IMod<_>
+        member x.up = _up :> IMod<_>
+        member x.isVisible = _isVisible :> IMod<_>
+        member x.arrowScale = _arrowScale
+        
+        member x.Update(v : PRo3D.ReferenceSystem) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_origin,v.origin)
+                ResetMod.Update(_north,v.north)
+                ResetMod.Update(_up,v.up)
+                ResetMod.Update(_isVisible,v.isVisible)
+                Aardvark.UI.Mutable.MNumericInput.Update(_arrowScale, v.arrowScale)
+                
+        
+        static member Create(__initial : PRo3D.ReferenceSystem) : MReferenceSystem = MReferenceSystem(__initial)
+        static member Update(m : MReferenceSystem, v : PRo3D.ReferenceSystem) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.ReferenceSystem> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module ReferenceSystem =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let origin =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.origin
+                    override x.Set(r,v) = { r with origin = v }
+                    override x.Update(r,f) = { r with origin = f r.origin }
+                }
+            let north =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.north
+                    override x.Set(r,v) = { r with north = v }
+                    override x.Update(r,f) = { r with north = f r.north }
+                }
+            let up =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.up
+                    override x.Set(r,v) = { r with up = v }
+                    override x.Update(r,f) = { r with up = f r.up }
+                }
+            let isVisible =
+                { new Lens<PRo3D.ReferenceSystem, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.isVisible
+                    override x.Set(r,v) = { r with isVisible = v }
+                    override x.Update(r,f) = { r with isVisible = f r.isVisible }
+                }
+            let arrowScale =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.arrowScale
+                    override x.Set(r,v) = { r with arrowScale = v }
+                    override x.Update(r,f) = { r with arrowScale = f r.arrowScale }
+                }
+    
+    
+    type MNavigationModel(__initial : PRo3D.NavigationModel) =
+        inherit obj()
+        let mutable __current = __initial
+        let _camera = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.camera)
+        let _navigationMode = ResetMod.Create(__initial.navigationMode)
+        let _coordinates = MReferenceSystem.Create(__initial.coordinates)
+        let _exploreCenter = ResetMod.Create(__initial.exploreCenter)
+        
+        member x.camera = _camera
+        member x.navigationMode = _navigationMode :> IMod<_>
+        member x.coordinates = _coordinates
+        member x.exploreCenter = _exploreCenter :> IMod<_>
+        
+        member x.Update(v : PRo3D.NavigationModel) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_camera, v.camera)
+                ResetMod.Update(_navigationMode,v.navigationMode)
+                MReferenceSystem.Update(_coordinates, v.coordinates)
+                ResetMod.Update(_exploreCenter,v.exploreCenter)
+                
+        
+        static member Create(__initial : PRo3D.NavigationModel) : MNavigationModel = MNavigationModel(__initial)
+        static member Update(m : MNavigationModel, v : PRo3D.NavigationModel) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.NavigationModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module NavigationModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let camera =
+                { new Lens<PRo3D.NavigationModel, Aardvark.UI.Primitives.CameraControllerState>() with
+                    override x.Get(r) = r.camera
+                    override x.Set(r,v) = { r with camera = v }
+                    override x.Update(r,f) = { r with camera = f r.camera }
+                }
+            let navigationMode =
+                { new Lens<PRo3D.NavigationModel, PRo3D.NavigationMode>() with
+                    override x.Get(r) = r.navigationMode
+                    override x.Set(r,v) = { r with navigationMode = v }
+                    override x.Update(r,f) = { r with navigationMode = f r.navigationMode }
+                }
+            let coordinates =
+                { new Lens<PRo3D.NavigationModel, PRo3D.ReferenceSystem>() with
+                    override x.Get(r) = r.coordinates
+                    override x.Set(r,v) = { r with coordinates = v }
+                    override x.Update(r,f) = { r with coordinates = f r.coordinates }
+                }
+            let exploreCenter =
+                { new Lens<PRo3D.NavigationModel, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.exploreCenter
+                    override x.Set(r,v) = { r with exploreCenter = v }
+                    override x.Update(r,f) = { r with exploreCenter = f r.exploreCenter }
                 }

@@ -20,6 +20,7 @@ module ReferenceSystemApp =
         | SetUp            of V3d       
         | SetNorth         of V3d
         | ToggleVisible
+        | SetArrowScale    of NumericInput
     
     let upVector (point:V3d) = point.Normalized
     
@@ -36,12 +37,13 @@ module ReferenceSystemApp =
             | SetOrigin p     -> { model with origin = p }
             | SetUp     up    -> { model with up = up }
             | SetNorth  n     -> { model with north = n }
-            | ToggleVisible   -> { model with isVisible = not model.isVisible}              
+            | ToggleVisible   -> { model with isVisible = not model.isVisible}     
+            | SetArrowScale s -> { model with arrowScale = s }
 
     module Sg =
 
-        let coneISg color size trafo =         
-            Sg.cone 30 color size (Mod.constant 0.2)
+        let coneISg color radius size trafo =  
+            Sg.cone 30 color radius size
                     |> Sg.noEvents
                     |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
                         do! Aardvark.Opc.Shader.stableTrafo
@@ -50,20 +52,21 @@ module ReferenceSystemApp =
                     }
                     |> Sg.trafo(trafo)
 
-        let directionMarker (pos:IMod<V3d>) (dir:IMod<V3d>) (color:IMod<C4b>) (cam:IMod<CameraView>)=
+        let directionMarker (pos:IMod<V3d>) (dir:IMod<V3d>) (color:IMod<C4b>) (scale:IMod<float>) (cam:IMod<CameraView>) =
             aset{
                 let! pos = pos
                 let! dir = dir
-                
-                let length = dir * 0.3
+                let! s = scale
+                let length = dir * s
                 let al = 
                     alist {
                         yield pos
                         yield pos + length
                     }
-                let scale =  DrawingApp.Sg.computeScale cam (Mod.constant pos) 5.0
+                let radius = s * 0.1
+                //let scale =  DrawingApp.Sg.computeScale cam (Mod.constant pos) 5.0
                 yield DrawingApp.Sg.lines al color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(pos))) (Mod.constant Guid.Empty)
-                yield coneISg color (Mod.constant 0.02) (Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + length))) // 
+                yield coneISg color (Mod.constant radius) scale (Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + length))) // 
             } |> Sg.set 
                 
         
@@ -80,8 +83,8 @@ module ReferenceSystemApp =
             
                 Sg.ofList [
                     point model.origin (Mod.constant C4b.Red) cam
-                    directionMarker model.origin model.up (Mod.constant C4b.Blue) cam
-                    directionMarker model.origin model.north (Mod.constant C4b.Red) cam
+                    directionMarker model.origin model.up (Mod.constant C4b.Blue) model.arrowScale.value cam
+                    directionMarker model.origin model.north (Mod.constant C4b.Red) model.arrowScale.value cam
                 ] |> Sg.onOff(model.isVisible)
     module UI =
         let view (model:MReferenceSystem) =
