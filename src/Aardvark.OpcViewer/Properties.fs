@@ -7,7 +7,7 @@ open PatchLod
 
 module DefaultMetrics =
 
-    let mars (self : AdaptiveToken) (vp : IMod<Trafo3d>) (p : RenderPatch) =
+    let mars (self : AdaptiveToken) (vp : IMod<Trafo3d>) (factor : IMod<float>) (p : RenderPatch) =
         let m = p.trafo.GetValue self
         let vp = vp.GetValue self
         let mvp = m * vp
@@ -17,7 +17,7 @@ module DefaultMetrics =
         log area > log 0.8
         //true
 
-    let tunnel (self : AdaptiveToken)  (vp : IMod<Trafo3d>)  (p : RenderPatch) =
+    let tunnel (self : AdaptiveToken)  (vp : IMod<Trafo3d>) (factor : IMod<float>)  (p : RenderPatch) =
         let m = p.trafo.GetValue self
         let vp = vp.GetValue self
         let mvp = m * vp

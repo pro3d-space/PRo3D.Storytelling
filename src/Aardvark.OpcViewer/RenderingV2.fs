@@ -35,7 +35,7 @@ module PatchLod =
             trafo       : IMod<Trafo3d>
         }
 
-    type LodDecider = AdaptiveToken -> IMod<Trafo3d> -> RenderPatch -> bool 
+    type LodDecider = AdaptiveToken -> IMod<Trafo3d> -> IMod<float> -> RenderPatch -> bool 
 
     type PatchNode(signature : IFramebufferSignature, runner : Load.Runner, 
                    baseDir : string, decider : LodDecider, 
@@ -74,7 +74,7 @@ module PatchLod =
             // prepare data for lod metric
             let vp   = Mod.map2 (*) n.ViewTrafo n.ProjTrafo
             let godeeper (self : AdaptiveToken) (p : RenderPatch) =
-                n.Decider self vp p 
+                n.Decider self vp (Mod.constant 3.0) p 
 
             let preparePatch (p : RenderPatch) =
 
