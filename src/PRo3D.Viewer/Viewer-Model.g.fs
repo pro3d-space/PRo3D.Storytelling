@@ -80,12 +80,14 @@ module Mutable =
         let _navigation = PRo3D.Mutable.MNavigationModel.Create(__initial.navigation)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _surfaces = ResetMod.Create(__initial.surfaces)
+        let _referenceSystem = PRo3D.Mutable.MReferenceSystem.Create(__initial.referenceSystem)
         let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
         
         member x.cameraModel = _cameraModel
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
         member x.surfaces = _surfaces :> IMod<_>
+        member x.referenceSystem = _referenceSystem
         member x.config = _config
         
         member x.Update(v : PRo3D.Viewer.Scene) =
@@ -96,6 +98,7 @@ module Mutable =
                 PRo3D.Mutable.MNavigationModel.Update(_navigation, v.navigation)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_surfaces,v.surfaces)
+                PRo3D.Mutable.MReferenceSystem.Update(_referenceSystem, v.referenceSystem)
                 PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
                 
         
@@ -137,6 +140,12 @@ module Mutable =
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
                 }
+            let referenceSystem =
+                { new Lens<PRo3D.Viewer.Scene, PRo3D.ReferenceSystem>() with
+                    override x.Get(r) = r.referenceSystem
+                    override x.Set(r,v) = { r with referenceSystem = v }
+                    override x.Update(r,f) = { r with referenceSystem = f r.referenceSystem }
+                }
             let config =
                 { new Lens<PRo3D.Viewer.Scene, PRo3D.ViewConfigModel>() with
                     override x.Get(r) = r.config
@@ -155,7 +164,6 @@ module Mutable =
         let _properties = ResetMod.Create(__initial.properties)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _picking = ResetMod.Create(__initial.picking)
-        let _orientations = PRo3D.Mutable.MOrientationDisplayModel.Create(__initial.orientations)
         
         member x.scene = _scene
         member x.drawing = _drawing
@@ -164,7 +172,6 @@ module Mutable =
         member x.properties = _properties :> IMod<_>
         member x.interaction = _interaction :> IMod<_>
         member x.picking = _picking :> IMod<_>
-        member x.orientations = _orientations
         
         member x.Update(v : PRo3D.Viewer.Model) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -177,7 +184,6 @@ module Mutable =
                 ResetMod.Update(_properties,v.properties)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_picking,v.picking)
-                PRo3D.Mutable.MOrientationDisplayModel.Update(_orientations, v.orientations)
                 
         
         static member Create(__initial : PRo3D.Viewer.Model) : MModel = MModel(__initial)
@@ -235,10 +241,4 @@ module Mutable =
                     override x.Get(r) = r.picking
                     override x.Set(r,v) = { r with picking = v }
                     override x.Update(r,f) = { r with picking = f r.picking }
-                }
-            let orientations =
-                { new Lens<PRo3D.Viewer.Model, PRo3D.OrientationDisplayModel>() with
-                    override x.Get(r) = r.orientations
-                    override x.Set(r,v) = { r with orientations = v }
-                    override x.Update(r,f) = { r with orientations = f r.orientations }
                 }

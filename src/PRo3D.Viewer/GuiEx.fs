@@ -30,7 +30,9 @@ module GuiEx =
         let pushButton() = 
             div [
                 clazz "ui black big launch right attached fixed button menubutton"
-                js "onclick"        "$('.sidebar').sidebar('toggle');"
+                js "onclick"        "$('.sidebar')
+                                        .sidebar('setting', 'transition', 'overlay')
+                                        .sidebar('toggle');"
             ] [
                 i [clazz "content icon"] [] 
                 span [clazz "text"] [text "Menu"]
@@ -52,15 +54,15 @@ module GuiEx =
             div[clazz "ui top small fixed menu blarg"] [
                 yield 
                     a [clazz "item blarg topmenu"] [
-                        i [clazz "large sidebar icon"] []                    
+                        i [clazz "large sidebar icon"] []
                     ]
                 for t in top do
                     yield div [clazz "item topmenu"] [t]
                 
             ]
-            div [clazz "ui bottom attached segment pushable blarg";] [
+            div [clazz "ui bottom attached segment blarg";] [
                 menu "ui vertical inverted sidebar menu" "" sectionsAndItems
-                div [clazz "pusher"; style "background:#000;"] rest
+                div [style "background:#000;"] rest
             ]
 
              

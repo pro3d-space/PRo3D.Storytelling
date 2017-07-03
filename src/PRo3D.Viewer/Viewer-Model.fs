@@ -32,6 +32,7 @@ type Scene = {
     navigation  : NavigationModel
     interaction : InteractionMode
     surfaces : list<Surface>
+    referenceSystem : ReferenceSystem
     config : ViewConfigModel
 }
 
@@ -53,9 +54,7 @@ type Model = {
     selectedSurface : option<Surface>
     properties      : Properties
     interaction     : Interactions
-    picking         : bool
-    orientations    : OrientationDisplayModel
-    
+    picking         : bool       
     //measurementPath : string
   //  draw    : bool 
 //    hoverPosition : option<Trafo3d>
@@ -71,6 +70,7 @@ module Viewer =
                 navigation = NavigationModel.initial
                 interaction = InteractionMode.PickOrbitCenter
                 surfaces = []
+                referenceSystem = ReferenceSystem.initial
                 config = ViewConfigModel.initial
         }
 
@@ -78,7 +78,7 @@ module Viewer =
         properties = NoProperties
         interaction = Interactions.DrawAnnotation
         picking = false
-        orientations = OrientationDisplayModel.initial
+        
         selectedSurface = None
         //measurementPath = @"."
 

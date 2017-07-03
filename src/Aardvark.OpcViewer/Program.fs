@@ -106,23 +106,11 @@ module Viewer =
         //        DefaultSurfaces.constantColor C4f.White |> toEffect
         //     ]
         
-
         let sg =        
             g   
                // |> Sg.andAlso (box)
                 |> Sg.transform preTransform
-                |> Sg.effect [
-                            Shader.stableTrafo |> toEffect
-                            DefaultSurfaces.constantColor C4f.White |> toEffect
-                            DefaultSurfaces.diffuseTexture |> toEffect
-                            Shader.LoDColor |> toEffect
-                            //DefaultSurfaces.simpleLighting |> toEffect
-                        ]
-                |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
-                |> Sg.uniform "LodVisEnabled" lodVisEnabled
-                |> Sg.cullMode (Mod.constant CullMode.None)
-                
-
+                                
         sg, patchHierarchies, overallTree
 
     let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcScene)  = 

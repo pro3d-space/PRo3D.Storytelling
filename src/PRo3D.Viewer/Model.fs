@@ -113,6 +113,7 @@ type Annotation = {
     dnsResults : Option<DipAndStrikeResults>    
 
     visible : bool
+    showDns : bool
     text : string
 }
 
@@ -150,12 +151,86 @@ module Annotation =
             visible = true
             text = ""
             modelTrafo = Trafo3d.Identity
+            showDns = true
         }
 
     let initial =
         make Projection.Linear Geometry.Polyline Semantic.Horizon0
 
+module JsonTypes =
+    type _V3d = {
+        X : double
+        Y : double
+        Z : double
+    }
 
+    type _Points = list<_V3d>
+
+    type _Segment = list<_V3d>
+
+    type _Annotation = {       
+        semantic : string
+        geometry : _Points 
+        segments : list<_Segment>
+        color : string
+        thickness : double        
+        projection : string
+        elevation : double
+        distance : double
+        azimuth : double
+        angle   : double
+    }
+
+    let ofV3d (v:V3d) : _V3d = { X = v.X; Y = v.Y; Z = v.Z }
+
+    let ofPolygon (p:Points) : _Points = p  |> List.map ofV3d
+
+    let ofSegment (s:Segment) : _Segment = s.points  |> PList.map ofV3d 
+                                                     |> PList.toList
+
+    let ofSegment1 (s:plist<V3d>) : _Segment = s  |> PList.map ofV3d
+                                                  |> PList.toList
+
+
+    let rec fold f s xs =
+        match xs with
+            | x::xs -> 
+                    let r = fold f s xs
+                    f x r
+            | [] -> s
+
+    let sum = [ 1 .. 10 ] |> List.fold (fun s e -> s * e) 1
+
+    let sumDistance (polyline : Points) : double =
+        polyline  |> List.pairwise |> List.fold (fun s (a,b) -> s + (b - a).LengthSquared) 0.0 |> Math.Sqrt
+
+    let ofAnnotation (a:Annotation) : _Annotation =
+        let polygon = ofPolygon (a.points |> PList.toList)
+        let avgHeight = (polygon |> List.map (fun v -> v.Z ) |> List.sum) / double polygon.Length
+        let distance = sumDistance (a.points |> PList.toList)
+        let angle, azimuth =
+            match a.dnsResults with
+                | Some dns -> 
+                    dns.dipAngle, dns.dipAzimuth
+                | None -> -1.0, -1.0
+
+        {            
+            semantic = a.semantic.ToString()
+            geometry = polygon
+            segments = a.segments |> PList.map (fun x -> ofSegment1 x.points) |> PList.toList //|> List.map (fun x -> ofSegment x)
+            color = a.color.ToString()
+            thickness = a.thickness.value
+            
+            projection = a.projection.ToString()
+            elevation = avgHeight
+            distance = distance
+
+            azimuth = azimuth
+            angle = angle
+        }  
+
+    //let ofDrawing (m : Drawing) : list<_Annotation> =
+    //    m.finished.AsList |> List.map ofAnnotation
 
             
 
@@ -180,19 +255,22 @@ type Surface = {
 }
 
 [<DomainType>]
-type OrientationDisplayModel = {    
+type ReferenceSystem = {    
 
-    center : Option<V3d>
-    northVector : Option<V3d>
-    upVector : Option<V3d>
+    origin : V3d
+    north : V3d
+    up : V3d
+    isVisible : bool
+    
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module OrientationDisplayModel =
+module ReferenceSystem =
     let initial = {
-        center = None
-        northVector = None
-        upVector = None
+        origin = V3d.OOO
+        north = V3d.IOO
+        up = V3d.OOI        
+        isVisible = true
         }
 
         
@@ -200,7 +278,7 @@ module OrientationDisplayModel =
 type NavigationModel = {
     camera : CameraControllerState
     navigationMode : NavigationMode  
-    coordinates : OrientationDisplayModel
+    coordinates : ReferenceSystem
     exploreCenter : V3d
 }
 
@@ -209,7 +287,7 @@ module NavigationModel =
     let initial = {
         camera = CameraController.initial  
         navigationMode =  NavigationMode.FreeFly
-        coordinates = OrientationDisplayModel.initial
+        coordinates = ReferenceSystem.initial
         exploreCenter = V3d.NaN
         }
 
