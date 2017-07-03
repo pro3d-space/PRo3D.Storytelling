@@ -190,9 +190,9 @@ type OrientationDisplayModel = {
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module OrientationDisplayModel =
     let initial = {
-        center = Some V3d.OOO
-        northVector = Some V3d.IOO
-        upVector = Some V3d.OOI
+        center = None
+        northVector = None
+        upVector = None
         }
 
         
@@ -210,5 +210,78 @@ module NavigationModel =
         camera = CameraController.initial  
         navigationMode =  NavigationMode.FreeFly
         coordinates = OrientationDisplayModel.initial
-        exploreCenter = V3d.OOO
+        exploreCenter = V3d.NaN
+        }
+
+
+[<DomainType>]
+type ViewConfigModel = {
+    nearPlane : NumericInput
+    farPlane : NumericInput
+    navigationSensitivity : NumericInput
+    arrowSize : NumericInput
+    dnsPlaneSize : NumericInput
+    minDipAngle : NumericInput
+    maxDipAngle : NumericInput
+    }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module ViewConfigModel =
+    let initNearPlane = {
+        value   = 0.1
+        min     = 0.1
+        max     = 100.0
+        step    = 0.1
+        format  = "{0:0}"
+    }
+    let initFarPlane = {
+        value   = 100.0
+        min     = 0.1
+        max     = 1000000.0
+        step    = 0.1
+        format  = "{0:0}"
+    }
+    let initNavSens = {
+        value   = 1.0
+        min     = 0.1
+        max     = 100.0
+        step    = 0.1
+        format  = "{0:0}"
+    }
+    let initArrowSize = {
+        value   = 1.0
+        min     = 0.1
+        max     = 10.0
+        step    = 0.1
+        format  = "{0:0}"
+    }
+    let initPlaneSize = {
+        value   = 1.0
+        min     = 0.1
+        max     = 10.0
+        step    = 0.1
+        format  = "{0:0}"
+    }
+    let initMinAngle = {
+        value   = 1.0
+        min     = 1.0
+        max     = 90.0
+        step    = 1.0
+        format  = "{0:0}"
+    }
+    let initMaxAngle = {
+        value   = 90.0
+        min     = 1.0
+        max     = 90.0
+        step    = 1.0
+        format  = "{0:0}"
+    }
+    let initial = {
+        nearPlane = initNearPlane
+        farPlane = initFarPlane
+        navigationSensitivity = initNavSens
+        arrowSize = initArrowSize
+        dnsPlaneSize = initPlaneSize
+        minDipAngle = initMinAngle
+        maxDipAngle = initMaxAngle
         }

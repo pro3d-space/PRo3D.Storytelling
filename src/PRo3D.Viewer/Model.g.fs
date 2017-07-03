@@ -530,3 +530,93 @@ module Mutable =
                     override x.Set(r,v) = { r with exploreCenter = v }
                     override x.Update(r,f) = { r with exploreCenter = f r.exploreCenter }
                 }
+    
+    
+    type MViewConfigModel(__initial : PRo3D.ViewConfigModel) =
+        inherit obj()
+        let mutable __current = __initial
+        let _nearPlane = Aardvark.UI.Mutable.MNumericInput.Create(__initial.nearPlane)
+        let _farPlane = Aardvark.UI.Mutable.MNumericInput.Create(__initial.farPlane)
+        let _navigationSensitivity = Aardvark.UI.Mutable.MNumericInput.Create(__initial.navigationSensitivity)
+        let _arrowSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowSize)
+        let _dnsPlaneSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.dnsPlaneSize)
+        let _minDipAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.minDipAngle)
+        let _maxDipAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.maxDipAngle)
+        
+        member x.nearPlane = _nearPlane
+        member x.farPlane = _farPlane
+        member x.navigationSensitivity = _navigationSensitivity
+        member x.arrowSize = _arrowSize
+        member x.dnsPlaneSize = _dnsPlaneSize
+        member x.minDipAngle = _minDipAngle
+        member x.maxDipAngle = _maxDipAngle
+        
+        member x.Update(v : PRo3D.ViewConfigModel) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                Aardvark.UI.Mutable.MNumericInput.Update(_nearPlane, v.nearPlane)
+                Aardvark.UI.Mutable.MNumericInput.Update(_farPlane, v.farPlane)
+                Aardvark.UI.Mutable.MNumericInput.Update(_navigationSensitivity, v.navigationSensitivity)
+                Aardvark.UI.Mutable.MNumericInput.Update(_arrowSize, v.arrowSize)
+                Aardvark.UI.Mutable.MNumericInput.Update(_dnsPlaneSize, v.dnsPlaneSize)
+                Aardvark.UI.Mutable.MNumericInput.Update(_minDipAngle, v.minDipAngle)
+                Aardvark.UI.Mutable.MNumericInput.Update(_maxDipAngle, v.maxDipAngle)
+                
+        
+        static member Create(__initial : PRo3D.ViewConfigModel) : MViewConfigModel = MViewConfigModel(__initial)
+        static member Update(m : MViewConfigModel, v : PRo3D.ViewConfigModel) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.ViewConfigModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module ViewConfigModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let nearPlane =
+                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.nearPlane
+                    override x.Set(r,v) = { r with nearPlane = v }
+                    override x.Update(r,f) = { r with nearPlane = f r.nearPlane }
+                }
+            let farPlane =
+                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.farPlane
+                    override x.Set(r,v) = { r with farPlane = v }
+                    override x.Update(r,f) = { r with farPlane = f r.farPlane }
+                }
+            let navigationSensitivity =
+                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.navigationSensitivity
+                    override x.Set(r,v) = { r with navigationSensitivity = v }
+                    override x.Update(r,f) = { r with navigationSensitivity = f r.navigationSensitivity }
+                }
+            let arrowSize =
+                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.arrowSize
+                    override x.Set(r,v) = { r with arrowSize = v }
+                    override x.Update(r,f) = { r with arrowSize = f r.arrowSize }
+                }
+            let dnsPlaneSize =
+                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.dnsPlaneSize
+                    override x.Set(r,v) = { r with dnsPlaneSize = v }
+                    override x.Update(r,f) = { r with dnsPlaneSize = f r.dnsPlaneSize }
+                }
+            let minDipAngle =
+                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.minDipAngle
+                    override x.Set(r,v) = { r with minDipAngle = v }
+                    override x.Update(r,f) = { r with minDipAngle = f r.minDipAngle }
+                }
+            let maxDipAngle =
+                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.maxDipAngle
+                    override x.Set(r,v) = { r with maxDipAngle = v }
+                    override x.Update(r,f) = { r with maxDipAngle = f r.maxDipAngle }
+                }

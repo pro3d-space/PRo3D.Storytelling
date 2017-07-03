@@ -32,6 +32,7 @@ type Scene = {
     navigation  : NavigationModel
     interaction : InteractionMode
     surfaces : list<Surface>
+    config : ViewConfigModel
 }
 
 type Properties = 
@@ -70,6 +71,7 @@ module Viewer =
                 navigation = NavigationModel.initial
                 interaction = InteractionMode.PickOrbitCenter
                 surfaces = []
+                config = ViewConfigModel.initial
         }
 
         drawing = Drawing.Model.initialdrawing

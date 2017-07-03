@@ -122,13 +122,7 @@ module ViewerApp =
     open Surface
     open Aardvark.Base.Geometry.RayHit
     open Aardvark.SceneGraph.SgFSharp.Sg
-    //open Viewer.Mutable.SceneModule.Lens
-    //open Viewer.Mutable.ModelModule.Lens
-    //open Viewer.Mutable.SceneModule.Lens
-    //open Viewer.Mutable.SceneModule.Lens
-
-    //open Viewer.Mutable.ModelModule.Lens
-    //open Viewer.Mutable.ModelModule.Lens
+   
    
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -145,6 +139,7 @@ module ViewerApp =
         | ImportSurface 
         | ImportMeasurements 
         | DnSProperties             of PropertyActions
+        | ConfigPropertiesMessage   of ConfigProperties.Action
         | QuickLoad
         | AddSg                     of ISg
         | PickSurface               of SceneHit
@@ -392,7 +387,7 @@ module ViewerApp =
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
-        let rc2 =
+        let renderControl =
             Incremental.renderControl
                     (Mod.map2 Camera.create m.scene.navigation.camera.view (Frustum.perspective 60.0 0.1 100.0 1.0 |> Mod.constant)) 
                     (AttributeMap.unionMany [
@@ -521,6 +516,7 @@ module ViewerApp =
                 return (opt |> UI.map SurfacePropertiesMessage)
             }
 
+
         let surfaceUI =
             div[][
                 GuiEx.accordion "Surfaces" "Cubes" true [
@@ -567,11 +563,27 @@ module ViewerApp =
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 
             ]
+
+        let config (model:MModel) =
+            adaptive {
+                let opt = ConfigProperties.view model.scene.config
+                return (opt |> UI.map ConfigPropertiesMessage)
+            } 
+
+        let configUI =
+            div[][
+                //GuiEx.accordion "ViewerConfig" "Write" true [
+                //    config m
+                //]
+                GuiEx.accordion "ViewerConfig" "Write" true [
+                     Incremental.div AttributeMap.empty (AList.ofModSingle (config m))
+                ]
+            ]
             
         let tabs = GuiEx.tabbed [clazz "ui inverted segment"] [
                             ("Data", surfaceUI)
                             ("Annotations", annotationUI)
-                            ("Config", text "Config")
+                            ("Config", configUI)
                         ] "Data" 
       
         let topMenu = [
@@ -582,7 +594,7 @@ module ViewerApp =
         
         let rest (model : MModel) = 
             [             
-                rc2 //renderControl
+                renderControl
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden"] [
                     div[style "height:41px"][text "spacer"]
                     tabs
