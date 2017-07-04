@@ -60,9 +60,9 @@ module GuiEx =
                     yield div [clazz "item topmenu"] [t]
                 
             ]
-            div [clazz "ui bottom attached segment blarg";] [
+            div [clazz "ui bottom attached segment blarg pushable";] [
                 menu "ui vertical inverted sidebar menu" "" sectionsAndItems
-                div [style "background:#000;"] rest
+                div [clazz "pusher"; style "background:#000;"] rest
             ]
 
              

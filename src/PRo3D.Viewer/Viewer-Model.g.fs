@@ -13,11 +13,13 @@ module Mutable =
     type MSgSurface(__initial : PRo3D.Viewer.SgSurface) =
         inherit obj()
         let mutable __current = __initial
+        let _guid = ResetMod.Create(__initial.guid)
         let _surface = PRo3D.Mutable.MSurface.Create(__initial.surface)
         let _globalBB = ResetMod.Create(__initial.globalBB)
         let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
         let _kdTree = ResetMod.Create(__initial.kdTree)
         
+        member x.guid = _guid :> IMod<_>
         member x.surface = _surface
         member x.globalBB = _globalBB :> IMod<_>
         member x.sceneGraph = _sceneGraph :> IMod<_>
@@ -27,6 +29,7 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current, v)) then
                 __current <- v
                 
+                ResetMod.Update(_guid,v.guid)
                 PRo3D.Mutable.MSurface.Update(_surface, v.surface)
                 ResetMod.Update(_globalBB,v.globalBB)
                 ResetMod.Update(_sceneGraph,v.sceneGraph)
@@ -47,6 +50,12 @@ module Mutable =
     module SgSurface =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
+            let guid =
+                { new Lens<PRo3D.Viewer.SgSurface, System.Guid>() with
+                    override x.Get(r) = r.guid
+                    override x.Set(r,v) = { r with guid = v }
+                    override x.Update(r,f) = { r with guid = f r.guid }
+                }
             let surface =
                 { new Lens<PRo3D.Viewer.SgSurface, PRo3D.Surface>() with
                     override x.Get(r) = r.surface
@@ -159,7 +168,7 @@ module Mutable =
         let mutable __current = __initial
         let _scene = MScene.Create(__initial.scene)
         let _drawing = PRo3D.Drawing.Mutable.MDrawingModel.Create(__initial.drawing)
-        let _surfaces = MSet.Create(unbox, __initial.surfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
+        let _surfaces = MSet.Create((fun (v : PRo3D.Viewer.SgSurface) -> v.guid :> obj), __initial.surfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
         let _selectedSurface = MOption.Create(__initial.selectedSurface, (fun v -> PRo3D.Mutable.MSurface.Create(v)), (fun (m,v) -> PRo3D.Mutable.MSurface.Update(m, v)), (fun v -> v))
         let _properties = ResetMod.Create(__initial.properties)
         let _interaction = ResetMod.Create(__initial.interaction)
