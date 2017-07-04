@@ -359,8 +359,8 @@ module DrawingApp =
                         }
                         |> Sg.trafo(trafo) 
 
-        let coneISg color size trafo =
-             Sg.cone 30 color size (Mod.constant 1.0)
+        let coneISg color radius size trafo =  
+            Sg.cone 30 color radius size
                         |> Sg.noEvents
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
@@ -467,7 +467,7 @@ module DrawingApp =
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
               //  |> Sg.andAlso cylinders               
         
-        let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) =             
+        let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) (conf:MViewConfigModel)=             
             //let color = Mod.bindOption anno.dnsResults C4b.White (fun x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0))
             //let trafo 
 
@@ -476,12 +476,11 @@ module DrawingApp =
                 let! dns = anno.dnsResults 
                 let! count = anno.points |> AList.toMod |> Mod.map PList.count //get item at index ?
                 let p = anno.points |> AList.toMod |> Mod.map (fun x -> x.[(count/2)])
-                let scale = computeScale view p 5.0
                 let! p = p
                 
                match dns with
                     | Some x -> 
-                        let color = DipAndStrike.dipColor x.dipAngle (Mod.constant 0.0) (Mod.constant 90.0)
+                        let color = DipAndStrike.dipColor x.dipAngle conf.minDipAngle.value conf.maxDipAngle.value
                         let! plane = x.plane
                         let! dip = x.dipDirection
                         let! strike = x.strikeDirection
@@ -490,8 +489,9 @@ module DrawingApp =
                                         yield p
                                         yield p + dlength
                                         }
-                        let slength1 = strike.Normalized.Negated * 5.0
-                        let slength2 = strike.Normalized * 5.0
+                        let! s = conf.arrowSize.value
+                        let slength1 = strike.Normalized.Negated * s
+                        let slength2 = strike.Normalized * s
                         let strikeLine1 = alist {
                                             yield p
                                             yield p + slength1
@@ -500,9 +500,10 @@ module DrawingApp =
                                             yield p
                                             yield p + slength2
                                             }
-                        yield discISg color (Mod.constant 2.0)  (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p))) // disc
+                        let radius = s * 0.1
+                        yield discISg color conf.dnsPlaneSize.value  (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p))) // disc
                         yield lines dipLine color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
-                        yield coneISg color (Mod.constant 0.5) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(p + dlength))) 
+                        yield coneISg color (Mod.constant radius) conf.arrowSize.value (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(p + dlength))) 
                         yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
                         yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike2 vec
                     | None -> () 
@@ -561,14 +562,14 @@ module DrawingApp =
                     |> Sg.trafo anno.modelTrafo
                     |> Sg.translate 0.0 0.0 3.0
 
-        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) =
+        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:MViewConfigModel) =
             let points = getPolyline anno
                        
             Sg.ofList [
                 lines points c anno.thickness.value anno.modelTrafo anno.key;
              //   dots points c view
             //    text anno
-                drawDns anno view |> Sg.onOff anno.showDns
+                drawDns anno view conf |> Sg.onOff anno.showDns
             ] |> Sg.onOff anno.visible
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =
@@ -580,7 +581,7 @@ module DrawingApp =
                 aset {
                     for a in annoSet do
                        let c = UI.mkColor model a
-                       yield finishedAnnotation a cam c
+                       yield finishedAnnotation a cam c model.config
                 } |> Sg.set
                                 
             Sg.ofList [

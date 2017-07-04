@@ -58,6 +58,7 @@ type DrawingModel = {
     selectedAnnotation : option<Annotation>
 
     pendingIntersections : ThreadPool<Action>
+    config : ViewConfigModel
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
@@ -78,6 +79,7 @@ module Model =
         selected = HSet.empty
         selectedAnnotation = None
         pendingIntersections = ThreadPool.empty
+        config = ViewConfigModel.initial
     }
 
 

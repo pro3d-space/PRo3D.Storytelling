@@ -123,6 +123,9 @@ module ViewerApp =
     open Aardvark.Base.Geometry.RayHit
     open Aardvark.SceneGraph.SgFSharp.Sg
     open System.Collections.Concurrent
+    open FShade.GLSL.AssemblerState
+    //open Viewer.Mutable.ModelModule.Lens
+
    // open Mutable.ReferenceSystemModule.Lens
 
     //open Viewer.Mutable.SceneModule.Lens
@@ -355,7 +358,10 @@ module ViewerApp =
             | ReferenceSystemMessage a,_,_ -> 
                 { m with scene = { m.scene with referenceSystem = ReferenceSystemApp.update m.scene.referenceSystem a } }
              | ConfigPropertiesMessage a,_,_ -> 
-                { m with scene = { m.scene with config = ConfigProperties.update m.scene.config a; referenceSystem = { m.scene.referenceSystem with arrowScale = m.scene.config.arrowSize } } }
+                let c' = ConfigProperties.update m.scene.config a
+                { m with scene = { m.scene with config = c';
+                                                referenceSystem = { m.scene.referenceSystem with arrowScale = c'.arrowSize } };
+                         drawing = { m.drawing with config = c' } }
             | _ -> m
 
 

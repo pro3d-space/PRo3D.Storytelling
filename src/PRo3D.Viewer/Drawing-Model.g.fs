@@ -24,6 +24,7 @@ module Mutable =
         let _selected = MSet.Create(__initial.selected)
         let _selectedAnnotation = MOption.Create(__initial.selectedAnnotation, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
         let _pendingIntersections = ResetMod.Create(__initial.pendingIntersections)
+        let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
         
         member x.draw = _draw :> IMod<_>
         member x.hoverPosition = _hoverPosition :> IMod<_>
@@ -36,6 +37,7 @@ module Mutable =
         member x.selected = _selected :> aset<_>
         member x.selectedAnnotation = _selectedAnnotation :> IMod<_>
         member x.pendingIntersections = _pendingIntersections :> IMod<_>
+        member x.config = _config
         
         member x.Update(v : PRo3D.Drawing.DrawingModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -52,6 +54,7 @@ module Mutable =
                 MSet.Update(_selected, v.selected)
                 MOption.Update(_selectedAnnotation, v.selectedAnnotation)
                 ResetMod.Update(_pendingIntersections,v.pendingIntersections)
+                PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
                 
         
         static member Create(__initial : PRo3D.Drawing.DrawingModel) : MDrawingModel = MDrawingModel(__initial)
@@ -133,4 +136,10 @@ module Mutable =
                     override x.Get(r) = r.pendingIntersections
                     override x.Set(r,v) = { r with pendingIntersections = v }
                     override x.Update(r,f) = { r with pendingIntersections = f r.pendingIntersections }
+                }
+            let config =
+                { new Lens<PRo3D.Drawing.DrawingModel, PRo3D.ViewConfigModel>() with
+                    override x.Get(r) = r.config
+                    override x.Set(r,v) = { r with config = v }
+                    override x.Update(r,f) = { r with config = f r.config }
                 }

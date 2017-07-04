@@ -133,7 +133,7 @@ module ConfigProperties =
                 Html.row "Near Plane:"  [Numeric.view' [InputBox] model.nearPlane |> UI.map SetNearPlane ]               
                 Html.row "Far Plane:"   [Numeric.view' [InputBox] model.farPlane |> UI.map SetFarPlane ]    
                 Html.row "Navigation Sensitivity:"   [Numeric.view' [InputBox] model.navigationSensitivity |> UI.map SetNavigationSensitivity ]    
-                Html.row "Arrow Size:"  [Numeric.view' [InputBox] model.nearPlane |> UI.map SetArrowSize ]               
+                Html.row "Arrow Size:"  [Numeric.view' [InputBox] model.arrowSize |> UI.map SetArrowSize ]               
                 Html.row "D+S Plane Size:"   [Numeric.view' [InputBox] model.dnsPlaneSize |> UI.map SetDnSPlaneSize ]    
                 Html.row "Min Dipping Angle:"   [Numeric.view' [InputBox] model.minDipAngle |> UI.map SetMinDipAngle ]
                 Html.row "Max Dipping Angle:"   [Numeric.view' [InputBox] model.maxDipAngle |> UI.map SetMaxDipAngle ]
