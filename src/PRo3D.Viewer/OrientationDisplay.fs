@@ -90,9 +90,9 @@ module ReferenceSystemApp =
         let view (model:MReferenceSystem) =
             require Html.semui (
                 Html.table [                                                
-                    Html.row "Pos:"     [Incremental.text (model.origin |> Mod.map (fun x -> sprintf "%A" x ))]                
-                    Html.row "Up:"      [Incremental.text (model.up |> Mod.map (fun x -> sprintf "%A" x ))]
-                    Html.row "North:"   [Incremental.text (model.north |> Mod.map (fun x -> sprintf "%A" x ))]
+                    Html.row "Pos:"     [Incremental.text (model.origin |> Mod.map (fun x -> x.ToString("0.00")))]
+                    Html.row "Up:"      [Incremental.text (model.up     |> Mod.map (fun x -> x.ToString("0.00")))]
+                    Html.row "North:"   [Incremental.text (model.north  |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Bearing:" [text "not implemented"] // compute azimuth with view dir, north vector and up vector
                     Html.row "Pitch:"   [text "not implemented"] // same for pitch which relates to dip angle
                     Html.row "Height:"  [text "not implemented"]
