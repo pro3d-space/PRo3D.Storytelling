@@ -13,7 +13,6 @@ Aardvark.UI.Primitives
 Aardvark.Service      
 Aardvark.Cef.WinForms
 
-Aardvark.Data.PhotoNetwork
 Aardvark.VRVis.Processing
 
 Aardvark.VRVis.Base
@@ -24,3 +23,5 @@ Aardvark.Compiler.DomainTypes.MSBuild
 
 WindowsAPICodePack-Core
 WindowsAPICodePack-ShellExtensions
+
+Newtonsoft.Json

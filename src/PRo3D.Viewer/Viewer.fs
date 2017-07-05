@@ -189,11 +189,7 @@ module ViewerApp =
         
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false -> 
-                { m with scene = { m.scene with navigation = Navigation.update m.scene.navigation msg }}
-            | DrawingMessage Drawing.Action.Connect, _, _ ->
-                Log.warn("sending abc")
-                bc.Add "abc"
-                m
+                { m with scene = { m.scene with navigation = Navigation.update m.scene.navigation msg }}                            
             | DrawingMessage msg, Interactions.DrawAnnotation,_-> 
                 //let m = 
                 //    match msg with
@@ -204,7 +200,7 @@ module ViewerApp =
                 //                            | None -> Properties.NoProperties } 
                 //        | _ -> m
                 
-                { m with drawing = DrawingApp.update w m.drawing msg }
+                { m with drawing = DrawingApp.update w bc m.drawing msg }
             | SelectSurface id,_,_ ->
                 let surf = m.scene.surfaces |> Seq.tryFind(fun x -> x.guid = id)
                 let surf =
@@ -285,7 +281,7 @@ module ViewerApp =
                         
                         match m.interaction with
                             | Interactions.DrawAnnotation ->
-                                let drawing = DrawingApp.update w m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
+                                let drawing = DrawingApp.update w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
                                 { m with drawing = drawing }
                             | Interactions.PlaceCoordinateSystem -> 
                                 let refSystem = 
@@ -327,7 +323,7 @@ module ViewerApp =
                             |_                                   -> false
          
                     match m.interaction with
-                        | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w m.drawing a; picking = picking }
+                        | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing a; picking = picking }
                         | Interactions.PickExploreCenter -> {m with picking = picking}
                         | Interactions.PlaceCoordinateSystem -> {m with picking = picking}
                         | _ -> failwith "interaction does not exist"
@@ -335,7 +331,7 @@ module ViewerApp =
             | KeyUp k, _,_ ->
                     let d =
                         match k with
-                            | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update w m.drawing Drawing.Action.StopDrawing
+                            | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update w bc m.drawing Drawing.Action.StopDrawing
                             | _ -> m.drawing
                     
                     { m with drawing = d; picking = false }
@@ -503,7 +499,7 @@ module ViewerApp =
 
         let surfaceList = 
             Incremental.div 
-                (AttributeMap.ofList [clazz "ui divided list inverted segment";]) (
+                (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"]) (
                     alist {
                         for s in (m.surfaces |> AList.ofASet) do
 

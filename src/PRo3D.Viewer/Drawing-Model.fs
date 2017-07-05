@@ -20,7 +20,7 @@ type Action =
     | SetExportPath    of string
     | Move             of V3d
     | Exit    
-    | Connect
+    | Send
     | StartDrawing            
     | StopDrawing
     | AddPoint         of V3d * (V3d -> Option<V3d>)
