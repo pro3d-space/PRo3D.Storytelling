@@ -32,16 +32,21 @@ module Navigation =
                 { model with navigationMode = mode }
 
     module UI =
+        open Aardvark.Base.Camera
 
-        let frustum =
-                Mod.constant (Frustum.perspective 60.0 0.1 100.0 1.0)
+        let frustum (model : MNavigationModel) =
+            adaptive {
+                let! near = model.config.nearPlane.value
+                let! far = model.config.farPlane.value
+                return (Frustum.perspective 60.0 near far 1.0)
+                }
 
         let renderControlAttributes (model : MNavigationModel) =
             amap {
                 let! state = model.navigationMode 
                 match state with
-                    | NavigationMode.FreeFly -> yield! CameraController.extractAttributes model.camera FreeFlyAction frustum
-                    | NavigationMode.ArcBall -> yield! ArcBallController.extractAttributes model.camera ArcBallAction frustum
+                    | NavigationMode.FreeFly -> yield! CameraController.extractAttributes model.camera FreeFlyAction (frustum model)
+                    | NavigationMode.ArcBall -> yield! ArcBallController.extractAttributes model.camera ArcBallAction (frustum model)
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap
 

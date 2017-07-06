@@ -272,49 +272,49 @@ module ViewConfigModel =
         min     = 0.1
         max     = 100.0
         step    = 0.1
-        format  = "{0:0}"
+        format  = "{0:0.00}"
     }
     let initFarPlane = {
         value   = 100.0
         min     = 0.1
         max     = 1000000.0
         step    = 0.1
-        format  = "{0:0}"
+        format  = "{0:0.00}"
     }
     let initNavSens = {
         value   = 1.0
         min     = 0.1
         max     = 100.0
         step    = 0.1
-        format  = "{0:0}"
+        format  = "{0:0.00}"
     }
     let initArrowSize = {
         value   = 1.0
         min     = 0.1
         max     = 10.0
         step    = 0.1
-        format  = "0.1"
+        format  = "{0:0.00}"
     }
     let initPlaneSize = {
         value   = 1.0
         min     = 0.1
         max     = 10.0
         step    = 0.1
-        format  = "{0:0}"
+        format  = "{0:0.00}"
     }
     let initMinAngle = {
         value   = 1.0
         min     = 1.0
         max     = 90.0
         step    = 1.0
-        format  = "{0:0}"
+        format  = "{0:0.0}"
     }
     let initMaxAngle = {
         value   = 90.0
         min     = 1.0
         max     = 90.0
         step    = 1.0
-        format  = "{0:0}"
+        format  = "{0:0.0}"
     }
     let initial = {
         nearPlane = initNearPlane
@@ -353,6 +353,7 @@ type NavigationModel = {
     navigationMode : NavigationMode  
     coordinates : ReferenceSystem
     exploreCenter : V3d
+    config : ViewConfigModel
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -362,6 +363,7 @@ module NavigationModel =
         navigationMode =  NavigationMode.FreeFly
         coordinates = ReferenceSystem.initial
         exploreCenter = V3d.Zero // make option
+        config = ViewConfigModel.initial
         }
 
 

@@ -593,11 +593,13 @@ module Mutable =
         let _navigationMode = ResetMod.Create(__initial.navigationMode)
         let _coordinates = MReferenceSystem.Create(__initial.coordinates)
         let _exploreCenter = ResetMod.Create(__initial.exploreCenter)
+        let _config = MViewConfigModel.Create(__initial.config)
         
         member x.camera = _camera
         member x.navigationMode = _navigationMode :> IMod<_>
         member x.coordinates = _coordinates
         member x.exploreCenter = _exploreCenter :> IMod<_>
+        member x.config = _config
         
         member x.Update(v : PRo3D.NavigationModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -607,6 +609,7 @@ module Mutable =
                 ResetMod.Update(_navigationMode,v.navigationMode)
                 MReferenceSystem.Update(_coordinates, v.coordinates)
                 ResetMod.Update(_exploreCenter,v.exploreCenter)
+                MViewConfigModel.Update(_config, v.config)
                 
         
         static member Create(__initial : PRo3D.NavigationModel) : MNavigationModel = MNavigationModel(__initial)
@@ -646,4 +649,10 @@ module Mutable =
                     override x.Get(r) = r.exploreCenter
                     override x.Set(r,v) = { r with exploreCenter = v }
                     override x.Update(r,f) = { r with exploreCenter = f r.exploreCenter }
+                }
+            let config =
+                { new Lens<PRo3D.NavigationModel, PRo3D.ViewConfigModel>() with
+                    override x.Get(r) = r.config
+                    override x.Set(r,v) = { r with config = v }
+                    override x.Update(r,f) = { r with config = f r.config }
                 }
