@@ -269,38 +269,38 @@ type ViewConfigModel = {
 module ViewConfigModel =
     let initNearPlane = {
         value   = 0.1
-        min     = 0.1
+        min     = 0.01
         max     = 100.0
-        step    = 0.1
+        step    = 0.01
         format  = "{0:0.00}"
     }
     let initFarPlane = {
-        value   = 100.0
-        min     = 0.1
+        value   = 10000.0
+        min     = 1.0
         max     = 1000000.0
-        step    = 0.1
-        format  = "{0:0.00}"
+        step    = 1.0
+        format  = "{0:0.0}"
     }
     let initNavSens = {
         value   = 1.0
         min     = 0.1
         max     = 100.0
         step    = 0.1
-        format  = "{0:0.00}"
+        format  = "{0:0.0}"
     }
     let initArrowSize = {
         value   = 1.0
         min     = 0.1
         max     = 10.0
         step    = 0.1
-        format  = "{0:0.00}"
+        format  = "{0:0.0}"
     }
     let initPlaneSize = {
         value   = 1.0
         min     = 0.1
         max     = 10.0
         step    = 0.1
-        format  = "{0:0.00}"
+        format  = "{0:0.0}"
     }
     let initMinAngle = {
         value   = 1.0

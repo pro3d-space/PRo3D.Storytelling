@@ -139,3 +139,14 @@ module ConfigProperties =
                 Html.row "Max Dipping Angle:"   [Numeric.view' [InputBox] model.maxDipAngle |> UI.map SetMaxDipAngle ]
             ]
         )
+
+module CameraProperties =
+    let view (model : MCameraControllerState) =    
+        require Html.semui (
+            Html.table [      
+                Html.row "Location:"    [Incremental.text (model.view |> Mod.map(fun x -> x.Location.ToString("0.00")))]
+                Html.row "Forward:"     [Incremental.text (model.view |> Mod.map(fun x -> x.Forward.ToString("0.000")))]
+                Html.row "Sky:"         [Incremental.text (model.view |> Mod.map(fun x -> x.Sky.ToString("0.000")))]
+            ]
+        )
+    

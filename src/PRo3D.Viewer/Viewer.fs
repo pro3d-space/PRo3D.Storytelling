@@ -100,13 +100,17 @@ module Surface =
         else
             None
 
+    let loadScene path m runtime signature =
+        let s = Serialization.loadAs<Scene> path
+        let m = { m with scene = s }
+
+        load runtime signature s m
+
     let loadLastScene m runtime signature =
         match fileExists "./last" with
             | Some path  ->
                 try 
-                    let s = Serialization.loadAs<Scene> path
-                    let m = { m with scene = s }
-                    load runtime signature s m
+                   loadScene path m runtime signature
 
                 with e ->
                     Aardvark.Base.Log.warn "could not restore %A. using empty scene" p
@@ -120,27 +124,12 @@ module ViewerApp =
     open Aardvark.SceneGraph.SgFSharp.Sg
     open System.Collections.Concurrent
     open FShade.GLSL.AssemblerState
-    open Aardvark.Base.MultimethodTest
-
-    //open Viewer.Mutable.ModelModule.Lens
-
-   // open Mutable.ReferenceSystemModule.Lens
-
-    //open Viewer.Mutable.SceneModule.Lens
-    //open Viewer.Mutable.ModelModule.Lens
-    //open Viewer.Mutable.SceneModule.Lens
-    //open Viewer.Mutable.SceneModule.Lens
-
-    //open Viewer.Mutable.ModelModule.Lens
-    //open Viewer.Mutable.ModelModule.Lens
-   
-   
+        
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
         | AnnotationMessage of AnnotationProperties.Action
 
-    type Action =
-        //| PropertyMessage of PropertyActions
+    type Action =                
         | DrawingMessage            of Drawing.Action
         | NavigationMessage         of Navigation.Action
         | ReferenceSystemMessage    of ReferenceSystemApp.Action
@@ -150,7 +139,8 @@ module ViewerApp =
         | ImportMeasurements 
         | DnSProperties             of PropertyActions
         | ConfigPropertiesMessage   of ConfigProperties.Action
-        | QuickLoad
+        | QuickLoad1
+        | QuickLoad2
         | AddSg                     of ISg
         | PickSurface               of SceneHit
         | SaveScene
@@ -181,13 +171,7 @@ module ViewerApp =
 
                 { m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
             | None -> m
-
-    let loadScene path m runtime signature =
-        let s = Serialization.loadAs<Scene> path
-        let m = { m with scene = s }
-
-        Surface.load runtime signature s m
-        
+            
     let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) : Option<double> = 
         match m.surfaces |> HSet.map (fun d -> d.kdTree) |> HSet.toSeq |> Seq.tryHead with 
             | Some kd ->                    
@@ -205,11 +189,7 @@ module ViewerApp =
         
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false -> 
-                { m with scene = { m.scene with navigation = Navigation.update m.scene.navigation msg }}
-            | DrawingMessage Drawing.Action.Connect, _, _ ->
-                Log.warn("sending abc")
-                bc.Add "abc"
-                m
+                { m with scene = { m.scene with navigation = Navigation.update m.scene.navigation msg }}                            
             | DrawingMessage msg, Interactions.DrawAnnotation,_-> 
                 //let m = 
                 //    match msg with
@@ -220,7 +200,7 @@ module ViewerApp =
                 //                            | None -> Properties.NoProperties } 
                 //        | _ -> m
                 
-                { m with drawing = DrawingApp.update w m.drawing msg }
+                { m with drawing = DrawingApp.update w bc m.drawing msg }
             | SelectSurface id,_,_ ->
                 let surf = m.scene.surfaces |> Seq.tryFind(fun x -> x.guid = id)
                 let surf =
@@ -263,7 +243,7 @@ module ViewerApp =
                     | paths ->
                         let path = paths.Head
                         if (path |> OpcUtils.isSurfaceFolder) then                            
-                            Surface.import' runtime signature [Surface.mk path] PRo3D.Viewer.Viewer.initial |> lookAtData
+                            Surface.import' runtime signature [Surface.mk path] m |> lookAtData
                         else
                             Log.error "path %s does not point to surface folder" path
                             m   
@@ -271,8 +251,14 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | Some x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x)}}
                     | None -> m   
-            | QuickLoad,_,_ ->                
-                loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
+            | QuickLoad1,_,_ ->                
+                //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
+                let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\Cape_Desire_RGB"
+                Surface.import' runtime signature [Surface.mk path] m |> lookAtData
+            | QuickLoad2,_,_ ->                
+                //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
+                let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\cape.scn"
+                loadScene path m runtime signature
             | PickSurface p, _,true ->                 
                 let fray = p.globalRay.Ray
                 let r = fray.Ray
@@ -295,7 +281,7 @@ module ViewerApp =
                         
                         match m.interaction with
                             | Interactions.DrawAnnotation ->
-                                let drawing = DrawingApp.update w m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
+                                let drawing = DrawingApp.update w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
                                 { m with drawing = drawing }
                             | Interactions.PlaceCoordinateSystem -> 
                                 let refSystem = 
@@ -337,7 +323,7 @@ module ViewerApp =
                             |_                                   -> false
          
                     match m.interaction with
-                        | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w m.drawing a; picking = picking }
+                        | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing a; picking = picking }
                         | Interactions.PickExploreCenter -> {m with picking = picking}
                         | Interactions.PlaceCoordinateSystem -> {m with picking = picking}
                         | _ -> failwith "interaction does not exist"
@@ -345,21 +331,20 @@ module ViewerApp =
             | KeyUp k, _,_ ->
                     let d =
                         match k with
-                            | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update w m.drawing Drawing.Action.StopDrawing
+                            | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update w bc m.drawing Drawing.Action.StopDrawing
                             | _ -> m.drawing
                     
                     { m with drawing = d; picking = false }
             | SetInteraction t,_,_ -> { m with interaction = t }    
             | ReferenceSystemMessage a,_,_ -> 
                 { m with scene = { m.scene with referenceSystem = ReferenceSystemApp.update m.scene.referenceSystem a } }
-             | ConfigPropertiesMessage a,_,_ -> 
+            | ConfigPropertiesMessage a,_,_ -> 
                 let c' = ConfigProperties.update m.scene.config a
                 { m with scene = { m.scene with config = c';
                                                 referenceSystem = { m.scene.referenceSystem with arrowScale = c'.arrowSize };
                                                 navigation = { m.scene.navigation with config = c' } };
                          drawing = { m.drawing with config = c' } }
             | _ -> m
-
 
     let scene (m : MModel) =
         let opcs =
@@ -373,43 +358,36 @@ module ViewerApp =
                                 | None -> Mod.constant false
                         ) surface.surface.guid m.selectedSurface
 
-                    let box =
-                        Sg.wireBox (Mod.constant C4b.VRVisGreen) surface.globalBB  
-                        |> Sg.noEvents
-                        |> Sg.shader {
-                                do! Shader.stableTrafo
-                                do! DefaultSurfaces.vertexColor                                                                     
-                            }
+                    //let box =
+                    //    Sg.wireBox (Mod.constant C4b.Red) surface.globalBB  
+                    //    |> Sg.noEvents
+                    //    |> Sg.shader {
+                    //            do! Shader.stableTrafo
+                    //            do! DefaultSurfaces.vertexColor                                                                     
+                    //        }
 
-                    let pickable =
-                        surface.globalBB |> Mod.map (fun bb -> Sg.pickable (PickShape.Box bb) box) |> Sg.dynamic
+                    //let pickable =
+                    //    surface.globalBB |> Mod.map (fun bb -> Sg.pickable (PickShape.Box bb) box) |> Sg.dynamic
 
                     let createSg (sg : ISg) =
                         sg 
                         |> Sg.noEvents 
                         |> Sg.cullMode(surface.surface.cullMode) 
                         |> Sg.fillMode(surface.surface.fillMode)                         
-                        |> Sg.effect [
-                            Shader.stableTrafo |> toEffect
-                            DefaultSurfaces.constantColor C4f.White |> toEffect
-                            DefaultSurfaces.diffuseTexture |> toEffect
-                            //Shader.selectionColor |> toEffect
-                        ]
 
                     let! bb = surface.globalBB
                     let sg = 
                         Mod.map createSg surface.sceneGraph 
                         |> Sg.dynamic          
-
                         |> Sg.uniform "selected" isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
                         |> Sg.onOff(surface.surface.isVisible)                             
-                        |> Sg.andAlso (Sg.wireBox' C4b.VRVisGreen bb
+                        |> Sg.andAlso (Sg.wireBox' C4b.Red bb
                                                             |> Sg.noEvents
                                                             |> Sg.noEvents
                                                             |> Sg.shader {
                                                                     do! Shader.stableTrafo
-                                                                    do! DefaultSurfaces.vertexColor 
+                                                                    do! DefaultSurfaces.vertexColor                                                                     
                                                                }
                                                         ) 
                         |> Sg.pickable (PickShape.Box bb) 
@@ -424,11 +402,10 @@ module ViewerApp =
             |> Sg.set
             |> Sg.effect [
                 Shader.stableTrafo |> toEffect
-                DefaultSurfaces.constantColor C4f.White |> toEffect
-                DefaultSurfaces.diffuseTexture |> toEffect
-                //Shader.selectionColor |> toEffect
+                //DefaultSurfaces.constantColor C4f.White |> toEffect                            
+                DefaultSurfaces.diffuseTexture |> toEffect         
+                Shader.selectionColor |> toEffect                
             ]
-
 
     let mkBrushISg color size trafo : ISg<Message> =
         Sg.sphere 5 color size 
@@ -464,7 +441,7 @@ module ViewerApp =
                             onKeyUp (KeyUp)
                             attribute "style" "width:70%; height: 100%; float:left"; ] 
                     ]) 
-                    (                    
+                    (                                             
                         let annotations =
                             DrawingApp.Sg.view m.drawing m.scene.navigation.camera.view
                                 |> Sg.map DrawingMessage
@@ -523,7 +500,7 @@ module ViewerApp =
 
         let surfaceList = 
             Incremental.div 
-                (AttributeMap.ofList [clazz "ui divided list inverted segment";]) (
+                (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"]) (
                     alist {
                         for s in (m.surfaces |> AList.ofASet) do
 
@@ -575,6 +552,8 @@ module ViewerApp =
 
         let surfaceUI =
             div[][
+                button [onClick (fun _ -> QuickLoad1)][text "Surface"]
+                button [onClick (fun _ -> QuickLoad2)][text "Scene"]
                 GuiEx.accordion "Surfaces" "Cubes" true [
                     surfaceList
                 ]
@@ -628,6 +607,10 @@ module ViewerApp =
 
         let configUI =
             div[][
+                GuiEx.accordion "Camera" "Camera Retro" true [
+                    CameraProperties.view m.scene.navigation.camera
+                ]
+
                 GuiEx.accordion "Coordinate System" "Map Signs" true [
                     ReferenceSystemApp.UI.view m.scene.referenceSystem |> UI.map ReferenceSystemMessage
                 ]
@@ -696,7 +679,9 @@ module ViewerApp =
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        
         let m = Surface.loadLastScene m runtime signature        
-
+       // let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\Cape_Desire_RGB"
+        //let m = Surface.import' runtime signature [Surface.mk path] m |> lookAtData
+        
         App.start {
             unpersist = Unpersist.instance
             threads = pool runtime signature
