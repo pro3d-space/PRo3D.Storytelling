@@ -290,7 +290,7 @@ module ViewerApp =
                             | Interactions.PickExploreCenter ->
                                 let navigation = 
                                     Navigation.update m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
-                                { m with scene = {m.scene with navigation= navigation} }
+                                { m with scene = {m.scene with navigation= navigation; } }
                             | _ -> m
                     | None -> 
                         Log.error ("no hit")
@@ -341,7 +341,8 @@ module ViewerApp =
             | ConfigPropertiesMessage a,_,_ -> 
                 let c' = ConfigProperties.update m.scene.config a
                 { m with scene = { m.scene with config = c';
-                                                referenceSystem = { m.scene.referenceSystem with arrowScale = c'.arrowSize } };
+                                                referenceSystem = { m.scene.referenceSystem with arrowScale = c'.arrowSize };
+                                                navigation = { m.scene.navigation with config = c' } };
                          drawing = { m.drawing with config = c' } }
             | _ -> m
 
@@ -423,15 +424,15 @@ module ViewerApp =
                 let! state = model.navigationMode
                 match state with
                     | NavigationMode.FreeFly -> 
-                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction Navigation.UI.frustum
+                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction (Navigation.UI.frustum model)
                     | NavigationMode.ArcBall -> 
-                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction Navigation.UI.frustum 
+                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction (Navigation.UI.frustum model)
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
         let renderControl =
             Incremental.renderControl
-                    (Mod.map2 Camera.create m.scene.navigation.camera.view (Frustum.perspective 60.0 0.1 10000.0 1.0 |> Mod.constant)) 
+                    (Mod.map2 Camera.create m.scene.navigation.camera.view (Navigation.UI.frustum m.scene.navigation)) //(Frustum.perspective 60.0 m.scene.config.nearPlane.value 100.0 1.0 |> Mod.constant)
                     (AttributeMap.unionMany [
                         renderControlAttributes m.scene.navigation
                         [attribute "style" "width:70%; height: 100%; float:left"; ] |> AttributeMap.ofList

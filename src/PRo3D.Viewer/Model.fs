@@ -356,6 +356,7 @@ type NavigationModel = {
     navigationMode : NavigationMode  
     coordinates : ReferenceSystem
     exploreCenter : V3d
+    config : ViewConfigModel
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -365,6 +366,7 @@ module NavigationModel =
         navigationMode =  NavigationMode.FreeFly
         coordinates = ReferenceSystem.initial
         exploreCenter = V3d.Zero // make option
+        config = ViewConfigModel.initial
         }
 
 
