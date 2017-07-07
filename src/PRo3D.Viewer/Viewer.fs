@@ -172,15 +172,15 @@ module ViewerApp =
                 { m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
             | None -> m
             
-    let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) : Option<double> = 
-        match m.surfaces |> HSet.map (fun d -> d.kdTree) |> HSet.toSeq |> Seq.tryHead with 
-            | Some kd ->                    
+    let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) : Option<double*string> = 
+        match m.surfaces |> HSet.map (fun d -> d.kdTree, d.surface.name) |> HSet.toSeq |> Seq.tryHead with 
+            | Some (kd,n) ->                    
                 let kdi = kd |> KdIntersectionTree
                 let mutable hit = ObjectRayHit.MaxRange
                 let objFilter  a b = true
                 let hitFilter a b c d = false
                 if kdi.Intersect(r, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
-                    Some hit.RayHit.T
+                    Some (hit.RayHit.T, n)
                 else
                     None
             | None -> None
@@ -271,17 +271,17 @@ module ViewerApp =
                     //for i in 0 .. 60000000 do a <- a + 1
                     //printfn "%A" 0
                     match doKdTreeIntersection m Trafo3d.Identity ray with
-                        | Some t -> ray.Ray.GetPointOnRay t |> Some
+                        | Some (t,n) -> ray.Ray.GetPointOnRay t |> Some
                         | None -> None
                                     
                 match doKdTreeIntersection m Trafo3d.Identity fray with
-                    | Some t -> 
+                    | Some (t,n) -> 
                         let hit = r.GetPointOnRay(t)
-                        Log.warn "[PickSurface] %A" hit
+                        Log.line "[PickSurface] %s %A" n hit
                         
                         match m.interaction with
                             | Interactions.DrawAnnotation ->
-                                let drawing = DrawingApp.update w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF))
+                                let drawing = DrawingApp.update w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,n))
                                 { m with drawing = drawing }
                             | Interactions.PlaceCoordinateSystem -> 
                                 let refSystem = 

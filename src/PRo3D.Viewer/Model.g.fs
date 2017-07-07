@@ -170,6 +170,7 @@ module Mutable =
         let _visible = ResetMod.Create(__initial.visible)
         let _showDns = ResetMod.Create(__initial.showDns)
         let _text = ResetMod.Create(__initial.text)
+        let _surfaceName = ResetMod.Create(__initial.surfaceName)
         
         member x.key = _key :> IMod<_>
         member x.modelTrafo = _modelTrafo :> IMod<_>
@@ -184,6 +185,7 @@ module Mutable =
         member x.visible = _visible :> IMod<_>
         member x.showDns = _showDns :> IMod<_>
         member x.text = _text :> IMod<_>
+        member x.surfaceName = _surfaceName :> IMod<_>
         
         member x.Update(v : PRo3D.Annotation) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -202,6 +204,7 @@ module Mutable =
                 ResetMod.Update(_visible,v.visible)
                 ResetMod.Update(_showDns,v.showDns)
                 ResetMod.Update(_text,v.text)
+                ResetMod.Update(_surfaceName,v.surfaceName)
                 
         
         static member Create(__initial : PRo3D.Annotation) : MAnnotation = MAnnotation(__initial)
@@ -295,6 +298,12 @@ module Mutable =
                     override x.Get(r) = r.text
                     override x.Set(r,v) = { r with text = v }
                     override x.Update(r,f) = { r with text = f r.text }
+                }
+            let surfaceName =
+                { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.string>() with
+                    override x.Get(r) = r.surfaceName
+                    override x.Set(r,v) = { r with surfaceName = v }
+                    override x.Update(r,f) = { r with surfaceName = f r.surfaceName }
                 }
     
     

@@ -44,7 +44,7 @@ module DrawingApp =
                             | None -> model.annotations
         { model with working = None; annotations = anns; pendingIntersections = ThreadPool.empty }
 
-    let addPoint samplePoint p model =
+    let addPoint samplePoint p model surfaceName =
         let working, newSegment = 
             match model.working with
                 | Some w ->     
@@ -86,7 +86,7 @@ module DrawingApp =
                 | None ->  //no working state, start new working annotation
                     { 
                         //annotation states should be immutable after creation
-                        (Annotation.make model.projection model.geometry model.semantic)  
+                        (Annotation.make model.projection model.geometry model.semantic surfaceName)  
                             with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
                     }, None
 
@@ -156,10 +156,10 @@ module DrawingApp =
                     {model with draw = false; hoverPosition = None }
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
-            | AddPoint(p,samplePoint), true ->                     
-                    addPoint samplePoint p model |> fst               
-            | AddPointAdv (point, samplePoint), true ->
-                    let model, newSegment = addPoint samplePoint point model
+            //| AddPoint(p,samplePoint), true ->                     
+            //        addPoint samplePoint p model |> fst               
+            | AddPointAdv (point, samplePoint, name), true ->
+                    let model, newSegment = addPoint samplePoint point model name
                     
                     match newSegment with
                         | None         -> model
@@ -324,7 +324,7 @@ module DrawingApp =
                                         i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
                                         div [clazz "content"] [
                                             let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
-                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | Proj: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.projection
+                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
                                             yield Incremental.div (AttributeMap.ofList [clazz "header"]) (
                                                 alist {
                                                     yield Incremental.text header

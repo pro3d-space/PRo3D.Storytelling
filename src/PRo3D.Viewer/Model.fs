@@ -115,6 +115,8 @@ type Annotation = {
     visible : bool
     showDns : bool
     text : string
+
+    surfaceName : string
 }
 
 type Style = {
@@ -135,7 +137,7 @@ module Annotation =
         format  = "{0:0}"
     }
 
-    let make (projection) (geometry) (semantic) : Annotation  = 
+    let make (projection) (geometry) (semantic) (surfName) : Annotation  = 
         let thickness = thickness.[int semantic]
         let color = color.[int semantic]
         {
@@ -152,10 +154,11 @@ module Annotation =
             text = ""
             modelTrafo = Trafo3d.Identity
             showDns = true
+            surfaceName = surfName
         }
 
     let initial =
-        make Projection.Linear Geometry.Polyline Semantic.Horizon0
+        make Projection.Linear Geometry.Polyline Semantic.Horizon0 ""
 
 module JsonTypes =
     type _V3d = {
