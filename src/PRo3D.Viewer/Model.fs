@@ -182,6 +182,7 @@ module JsonTypes =
         distance : double
         azimuth : double
         angle   : double
+        surfid  : string
     }
 
     let ofV3d (v:V3d) : _V3d = { X = v.X; Y = v.Y; Z = v.Z }
@@ -230,6 +231,7 @@ module JsonTypes =
 
             azimuth = azimuth
             angle = angle
+            surfid = a.surfaceName
         }  
 
     //let ofDrawing (m : Drawing) : list<_Annotation> =

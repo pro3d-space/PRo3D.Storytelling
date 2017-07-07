@@ -29,10 +29,8 @@ module SurfaceProperties =
 
     let view (model : MSurface) =    
         require Html.semui (
-            Html.table [                            
-                //Html.row "Geometry:"    [Html.SemUi.dropDown model.geometry SetGeometry]
-                //Html.row "Projection:"  [Html.SemUi.dropDown model.projection SetProjection]      
-                Html.row "Path:"        [Incremental.text (model.importPath |> Mod.map (fun x -> sprintf "%A" x ))]                
+            Html.table [                                            
+               // Html.row "Path:"        [Incremental.text (model.importPath |> Mod.map (fun x -> sprintf "%A" x ))]                
                 Html.row "Fillmode:"    [Html.SemUi.dropDown model.fillMode SetFillMode]
                 Html.row "Cullmode:"    [Html.SemUi.dropDown model.cullMode SetCullMode]
                 Html.row "Name:"        [Html.SemUi.textBox model.name SetName ]

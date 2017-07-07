@@ -142,7 +142,7 @@ module ViewerApp =
         | QuickLoad1
         | QuickLoad2
         | AddSg                     of ISg
-        | PickSurface               of SceneHit
+        | PickSurface               of SceneHit*string
         | SaveScene
         | OpenScene
         | NewScene
@@ -172,18 +172,28 @@ module ViewerApp =
                 { m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
             | None -> m
             
-    let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) : Option<double*string> = 
-        match m.surfaces |> HSet.map (fun d -> d.kdTree, d.surface.name) |> HSet.toSeq |> Seq.tryHead with 
-            | Some (kd,n) ->                    
-                let kdi = kd |> KdIntersectionTree
-                let mutable hit = ObjectRayHit.MaxRange
-                let objFilter  a b = true
-                let hitFilter a b c d = false
-                if kdi.Intersect(r, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
-                    Some (hit.RayHit.T, n)
-                else
-                    None
-            | None -> None
+    let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) = 
+        m.surfaces 
+            |> HSet.map (fun d -> d.kdTree, d.surface.name) 
+            |> HSet.map (
+                fun (kd,n) ->            
+                    Log.warn "do intersection for %s" n
+                    let kdi = kd |> KdIntersectionTree
+                    let mutable hit = ObjectRayHit.MaxRange
+                    let objFilter  a b = true
+                    let hitFilter a b c d = false
+                    if kdi.Intersect(r, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
+                        Log.warn "hit for %s" n
+                        Some (hit.RayHit.T, n)
+                    else
+                        Log.error "no hit for %s" n
+                        None //Double.MaxValue, n
+                )
+            |> HSet.toSeq
+            |> Seq.filter(fun d -> d.IsSome)
+            |> Seq.map(fun d -> d.Value)
+            |> Seq.sortByDescending(fun (t,n)-> t)
+            |> Seq.tryHead
     
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
@@ -209,7 +219,7 @@ module ViewerApp =
                         | Some a, None   -> Some a
                         | None, _        -> None
 
-                { m with selectedSurface = surf}
+                { m with selectedSurface = surf }
             | FlyToSurface id,_,_ ->
                 lookAtSurface m id
             | SurfacePropertiesMessage msg,_,_ ->
@@ -259,7 +269,8 @@ module ViewerApp =
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
                 let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\cape.scn"
                 loadScene path m runtime signature
-            | PickSurface p, _,true ->                 
+            | PickSurface (p,name), _ ,true ->                
+                Log.line "hit surface %s" name
                 let fray = p.globalRay.Ray
                 let r = fray.Ray
 
@@ -322,11 +333,15 @@ module ViewerApp =
                             | Aardvark.Application.Keys.LeftCtrl -> true
                             |_                                   -> false
          
-                    match m.interaction with
-                        | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing a; picking = picking }
-                        | Interactions.PickExploreCenter -> {m with picking = picking}
-                        | Interactions.PlaceCoordinateSystem -> {m with picking = picking}
-                        | _ -> failwith "interaction does not exist"
+                    let m =
+                        match m.interaction with
+                            | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing a; picking = picking }
+                            | Interactions.PickExploreCenter -> {m with picking = picking}
+                            | Interactions.PlaceCoordinateSystem -> {m with picking = picking}
+                            | _ -> failwith "interaction does not exist"
+
+
+                    m
 
             | KeyUp k, _,_ ->
                     let d =
@@ -358,17 +373,6 @@ module ViewerApp =
                                 | None -> Mod.constant false
                         ) surface.surface.guid m.selectedSurface
 
-                    //let box =
-                    //    Sg.wireBox (Mod.constant C4b.Red) surface.globalBB  
-                    //    |> Sg.noEvents
-                    //    |> Sg.shader {
-                    //            do! Shader.stableTrafo
-                    //            do! DefaultSurfaces.vertexColor                                                                     
-                    //        }
-
-                    //let pickable =
-                    //    surface.globalBB |> Mod.map (fun bb -> Sg.pickable (PickShape.Box bb) box) |> Sg.dynamic
-
                     let createSg (sg : ISg) =
                         sg 
                         |> Sg.noEvents 
@@ -392,7 +396,9 @@ module ViewerApp =
                                                         ) 
                         |> Sg.pickable (PickShape.Box bb) 
                         |> Sg.withEvents [
-                                SceneEventKind.Down, (fun sceneHit -> true, Seq.ofList [PickSurface sceneHit])
+                                SceneEventKind.Down, (
+                                    fun sceneHit -> 
+                                        true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])
                                 //Sg.onMouseDownEvt (fun sceneHit -> PickSurface sceneHit)
                             ]
                         //|> Sg.andAlso pickable
@@ -549,7 +555,6 @@ module ViewerApp =
                 return (opt |> UI.map SurfacePropertiesMessage)
             }
 
-
         let surfaceUI =
             div[][
                 button [onClick (fun _ -> QuickLoad1)][text "Surface"]
@@ -561,7 +566,6 @@ module ViewerApp =
                      Incremental.div AttributeMap.empty (AList.ofModSingle (surfaceProperties m))
                 ]
             ]
-            
 
         let annotationProperties (model:MModel) =
             adaptive {
@@ -663,8 +667,7 @@ module ViewerApp =
                 body [clazz "context example"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
         ))
                                                               
-    let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) = 
-        
+    let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =         
         //let imports =
         //    proclist {
         //        for opcPath in m.importOpcs do
@@ -674,7 +677,30 @@ module ViewerApp =
         //            yield AddSg sg
         //    }
 
-        DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage
+        //ThreadPool.union 
+        //    (DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage) 
+        //    (DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage) 
+        let drawing =
+            DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage
+
+        let freeFly = 
+            CameraController.threads m.scene.navigation.camera
+                |> ThreadPool.map Navigation.FreeFlyAction |> ThreadPool.map NavigationMessage
+
+        let arc =              
+            ArcBallController.threads m.scene.navigation.camera
+                |> ThreadPool.map Navigation.ArcBallAction |> ThreadPool.map NavigationMessage
+
+        //let nav =
+        //    if m.scene.navigation.navigationMode == NavigationMode.FreeFly then freeFly else arc
+        let nav =
+            match m.scene.navigation.navigationMode with
+                | NavigationMode.FreeFly -> freeFly
+                | NavigationMode.ArcBall -> arc
+                | _ -> failwith "invalid nav mode"
+            
+        
+        ThreadPool.union drawing nav
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        

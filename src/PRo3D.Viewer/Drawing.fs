@@ -567,8 +567,8 @@ module DrawingApp =
             let points = getPolyline anno
                        
             Sg.ofList [
-                lines points c anno.thickness.value anno.modelTrafo anno.key;
-             //   dots points c view
+                lines points c anno.thickness.value anno.modelTrafo anno.key;                
+                dots anno.points c view                    
             //    text anno
                 drawDns anno view conf |> Sg.onOff anno.showDns
             ] |> Sg.onOff anno.visible
