@@ -23,8 +23,8 @@ type Action =
     | Send
     | StartDrawing            
     | StopDrawing
-    | AddPoint         of V3d * (V3d -> Option<V3d>)
-    | AddPointAdv      of V3d * (V3d -> Option<V3d>)
+    //| AddPoint         of V3d * (V3d -> Option<V3d>)
+    | AddPointAdv      of V3d * (V3d -> Option<V3d>) * string
     | SetSegment       of int * Segment
     | Finish
     //| KeyDown          of key : Aardvark.Application.Keys

@@ -113,6 +113,7 @@ module MeasurementsImporter =
                 visible = true 
                 showDns = true
                 text = ""
+                surfaceName = ""
         }
         an
         

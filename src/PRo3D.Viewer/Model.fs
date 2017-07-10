@@ -124,6 +124,8 @@ type Annotation = {
     visible : bool
     showDns : bool
     text : string
+
+    surfaceName : string
 }
 
 type Style = {
@@ -146,6 +148,7 @@ module Annotation =
         format  = "{0:0}"
     }
 
+    
     let getHeightDelta (p:V3d) (upVec:V3d) = (p * upVec).Length
 
     let calcResultsPoint (point:V3d) (trafo:Trafo3d) (upVec:V3d) =
@@ -198,7 +201,7 @@ module Annotation =
             | x when x > 1 -> calcResultsLine model upVec
             | _ -> calcResultsPoint model.points.[0] model.modelTrafo upVec
 
-    let make (projection) (geometry) (semantic) : Annotation  = 
+    let make (projection) (geometry) (semantic) (surfName) : Annotation  = 
         let thickness = thickness.[int semantic]
         let color = color.[int semantic]
         {
@@ -216,10 +219,11 @@ module Annotation =
             text = ""
             modelTrafo = Trafo3d.Identity
             showDns = true
+            surfaceName = surfName
         }
 
     let initial =
-        make Projection.Linear Geometry.Polyline Semantic.Horizon0
+        make Projection.Linear Geometry.Polyline Semantic.Horizon0 ""
 
 module JsonTypes =
     type _V3d = {
@@ -243,6 +247,7 @@ module JsonTypes =
         distance : double
         azimuth : double
         angle   : double
+        surfid  : string
     }
 
     let ofV3d (v:V3d) : _V3d = { X = v.X; Y = v.Y; Z = v.Z }
@@ -291,6 +296,7 @@ module JsonTypes =
 
             azimuth = azimuth
             angle = angle
+            surfid = a.surfaceName
         }  
 
     //let ofDrawing (m : Drawing) : list<_Annotation> =

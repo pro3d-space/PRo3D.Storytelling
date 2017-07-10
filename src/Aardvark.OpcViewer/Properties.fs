@@ -15,7 +15,7 @@ module DefaultMetrics =
         //let area = computeScreenSpaceArea p.info.GlobalBoundingBox vp
 
         log area > log 0.8
-        //true
+        true
 
     let tunnel (self : AdaptiveToken)  (vp : IMod<Trafo3d>) (factor : IMod<float>)  (p : RenderPatch) =
         let m = p.trafo.GetValue self
