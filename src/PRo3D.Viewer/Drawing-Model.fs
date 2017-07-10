@@ -59,6 +59,7 @@ type DrawingModel = {
 
     pendingIntersections : ThreadPool<Action>
     config : ViewConfigModel
+    coordinates : ReferenceSystem
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
@@ -80,6 +81,7 @@ module Model =
         selectedAnnotation = None
         pendingIntersections = ThreadPool.empty
         config = ViewConfigModel.initial
+        coordinates = ReferenceSystem.initial
     }
 
 

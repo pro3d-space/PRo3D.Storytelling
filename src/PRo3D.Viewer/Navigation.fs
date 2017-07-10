@@ -10,6 +10,8 @@ module Navigation =
     
     open Aardvark.Base.Incremental
     open Aardvark.Base.Rendering
+    open Aardvark.Base.Camera
+   // open Navigation.Sg
 
     type Action =
         | ArcBallAction         of ArcBallController.Message
@@ -29,8 +31,16 @@ module Navigation =
             | FreeFlyAction a ->
                 { model with camera = CameraController.update model.camera a }
             | SetNavigationMode mode ->
-                { model with navigationMode = mode }
-
+                match mode with
+                    | NavigationMode.FreeFly -> 
+                        let center = 
+                            match model.camera.orbitCenter with
+                                | Some x ->  x
+                                | None   -> V3d.OOO
+                        let view' = CameraView.lookAt model.camera.view.Location center model.camera.view.Sky
+                        { model with camera = { model.camera with view = view'}; navigationMode = mode} 
+                    | _ ->  { model with navigationMode = mode }
+               
     module UI =
         open Aardvark.Base.Camera
 

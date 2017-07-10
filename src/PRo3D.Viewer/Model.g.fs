@@ -100,6 +100,69 @@ module Mutable =
                 }
     
     
+    type MAnnotationResults(__initial : PRo3D.AnnotationResults) =
+        inherit obj()
+        let mutable __current = __initial
+        let _height = ResetMod.Create(__initial.height)
+        let _heightDelta = ResetMod.Create(__initial.heightDelta)
+        let _length = ResetMod.Create(__initial.length)
+        let _wayLength = ResetMod.Create(__initial.wayLength)
+        
+        member x.height = _height :> IMod<_>
+        member x.heightDelta = _heightDelta :> IMod<_>
+        member x.length = _length :> IMod<_>
+        member x.wayLength = _wayLength :> IMod<_>
+        
+        member x.Update(v : PRo3D.AnnotationResults) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_height,v.height)
+                ResetMod.Update(_heightDelta,v.heightDelta)
+                ResetMod.Update(_length,v.length)
+                ResetMod.Update(_wayLength,v.wayLength)
+                
+        
+        static member Create(__initial : PRo3D.AnnotationResults) : MAnnotationResults = MAnnotationResults(__initial)
+        static member Update(m : MAnnotationResults, v : PRo3D.AnnotationResults) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.AnnotationResults> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module AnnotationResults =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let height =
+                { new Lens<PRo3D.AnnotationResults, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.height
+                    override x.Set(r,v) = { r with height = v }
+                    override x.Update(r,f) = { r with height = f r.height }
+                }
+            let heightDelta =
+                { new Lens<PRo3D.AnnotationResults, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.heightDelta
+                    override x.Set(r,v) = { r with heightDelta = v }
+                    override x.Update(r,f) = { r with heightDelta = f r.heightDelta }
+                }
+            let length =
+                { new Lens<PRo3D.AnnotationResults, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.length
+                    override x.Set(r,v) = { r with length = v }
+                    override x.Update(r,f) = { r with length = f r.length }
+                }
+            let wayLength =
+                { new Lens<PRo3D.AnnotationResults, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.wayLength
+                    override x.Set(r,v) = { r with wayLength = v }
+                    override x.Update(r,f) = { r with wayLength = f r.wayLength }
+                }
+    
+    
     type MSegment(__initial : PRo3D.Segment) =
         inherit obj()
         let mutable __current = __initial
@@ -166,6 +229,7 @@ module Mutable =
         let _segments = MList.Create(__initial.segments, (fun v -> MSegment.Create(v)), (fun (m,v) -> MSegment.Update(m, v)), (fun v -> v))
         let _color = ResetMod.Create(__initial.color)
         let _thickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.thickness)
+        let _results = MOption.Create(__initial.results, (fun v -> MAnnotationResults.Create(v)), (fun (m,v) -> MAnnotationResults.Update(m, v)), (fun v -> v))
         let _dnsResults = MOption.Create(__initial.dnsResults, (fun v -> MDipAndStrikeResults.Create(v)), (fun (m,v) -> MDipAndStrikeResults.Update(m, v)), (fun v -> v))
         let _visible = ResetMod.Create(__initial.visible)
         let _showDns = ResetMod.Create(__initial.showDns)
@@ -180,6 +244,7 @@ module Mutable =
         member x.segments = _segments :> alist<_>
         member x.color = _color :> IMod<_>
         member x.thickness = _thickness
+        member x.results = _results :> IMod<_>
         member x.dnsResults = _dnsResults :> IMod<_>
         member x.visible = _visible :> IMod<_>
         member x.showDns = _showDns :> IMod<_>
@@ -198,6 +263,7 @@ module Mutable =
                 MList.Update(_segments, v.segments)
                 ResetMod.Update(_color,v.color)
                 Aardvark.UI.Mutable.MNumericInput.Update(_thickness, v.thickness)
+                MOption.Update(_results, v.results)
                 MOption.Update(_dnsResults, v.dnsResults)
                 ResetMod.Update(_visible,v.visible)
                 ResetMod.Update(_showDns,v.showDns)
@@ -271,6 +337,12 @@ module Mutable =
                     override x.Get(r) = r.thickness
                     override x.Set(r,v) = { r with thickness = v }
                     override x.Update(r,f) = { r with thickness = f r.thickness }
+                }
+            let results =
+                { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.Option<PRo3D.AnnotationResults>>() with
+                    override x.Get(r) = r.results
+                    override x.Set(r,v) = { r with results = v }
+                    override x.Update(r,f) = { r with results = f r.results }
                 }
             let dnsResults =
                 { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.Option<PRo3D.DipAndStrikeResults>>() with

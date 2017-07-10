@@ -38,8 +38,9 @@ module DrawingApp =
                                     match w.points.Count with 
                                         | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points) //more acc. by using segments as well?
                                         | _ -> None 
+                                let results = Annotation.calculateAnnotationResults w model.coordinates.up
                                 model.annotations 
-                                    |> PList.prepend { w with dnsResults = dns }
+                                    |> PList.prepend { w with dnsResults = dns; results = Some results }
                                         
                             | None -> model.annotations
         { model with working = None; annotations = anns; pendingIntersections = ThreadPool.empty }

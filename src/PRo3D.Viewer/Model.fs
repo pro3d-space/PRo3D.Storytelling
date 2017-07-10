@@ -89,6 +89,14 @@ type DipAndStrikeResults = {
 }
 
 [<DomainType>]
+type AnnotationResults = {
+
+    height : float
+    heightDelta : float
+    length : float
+    wayLength : float
+}
+[<DomainType>]
 type Segment = {
     startPoint : V3d
     endPoint : V3d
@@ -110,7 +118,8 @@ type Annotation = {
     segments : plist<Segment> 
     color : C4b
     thickness : NumericInput
-    dnsResults : Option<DipAndStrikeResults>    
+    results : Option<AnnotationResults>
+    dnsResults : Option<DipAndStrikeResults>
 
     visible : bool
     showDns : bool
@@ -124,6 +133,8 @@ type Style = {
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Annotation =
+    open Aardvark.Base.IndexedGeometryPrimitives
+
     let thickness = [1.0; 2.0; 3.0; 4.0; 5.0; 1.0; 1.0]
     let color = [new C4b(241,238,246); new C4b(189,201,225); new C4b(116,169,207); new C4b(43,140,190); new C4b(4,90,141); new C4b(241,163,64); new C4b(153,142,195) ]
 
@@ -134,6 +145,58 @@ module Annotation =
         step    = 1.0
         format  = "{0:0}"
     }
+
+    let getHeightDelta (p:V3d) (upVec:V3d) = (p * upVec).Length
+
+    let calcResultsPoint (point:V3d) (trafo:Trafo3d) (upVec:V3d) =
+        let p = point //trafo.Forward.TransformPos(point)
+        {   height = getHeightDelta p upVec
+            heightDelta = 0.0
+            length = 0.0
+            wayLength = 0.0
+            }
+
+    let getDistance (points:list<V3d>) = points
+                                            |> List.pairwise
+                                            |> List.map (fun (a,b) -> V3d.Distance(a,b))
+                                            |> List.sum
+
+    let getSegmentDistance (s:Segment) = getDistance
+                                            [ yield s.startPoint ; 
+                                               for p in s.points do
+                                                    yield p; 
+                                              yield s.endPoint 
+                                            ] 
+   
+    let getWay (segments:plist<Segment>) = [ for s in segments do
+                                                yield getSegmentDistance s
+                                           ] |> List.sum
+                                                               
+
+    let calcResultsLine (model:Annotation) (upVec:V3d) =
+        let count = model.points.Count
+        let dist = V3d.Distance(model.points.[0], model.points.[count-1]);
+        let way = match model.segments.Count with
+                        | x when x > 0 -> getWay model.segments
+                        |_ -> dist
+
+        let heights = model.points 
+                       // |> PList.map(fun x -> model.modelTrafo.Forward.TransformPos(x))
+                        |> PList.map(fun p -> getHeightDelta p upVec) 
+                        |> PList.toList
+
+        let hcount = heights.Length
+
+        {   height = heights |> List.max
+            heightDelta = Fun.Abs (heights.[hcount-1] - heights.[0])
+            length = dist
+            wayLength = way
+            }
+
+    let calculateAnnotationResults (model:Annotation) (upVec:V3d) =
+        match model.points.Count with
+            | x when x > 1 -> calcResultsLine model upVec
+            | _ -> calcResultsPoint model.points.[0] model.modelTrafo upVec
 
     let make (projection) (geometry) (semantic) : Annotation  = 
         let thickness = thickness.[int semantic]
@@ -146,6 +209,7 @@ module Annotation =
             segments = plist.Empty //[]
             color = color
             thickness = { thickn with value = thickness}
+            results = None
             dnsResults = None            
             projection = projection
             visible = true

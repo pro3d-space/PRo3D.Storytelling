@@ -263,7 +263,7 @@ module ViewerApp =
                 let fray = p.globalRay.Ray
                 let r = fray.Ray
 
-                let cameraLocation = m.scene.navigation.camera.view.Location // m.scene.cameraModel.view.Location
+                let cameraLocation = m.scene.navigation.camera.view.Location 
 
                 let hitF (p : V3d) = 
                     let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)
@@ -290,7 +290,7 @@ module ViewerApp =
                             | Interactions.PickExploreCenter ->
                                 let navigation = 
                                     Navigation.update m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
-                                { m with scene = {m.scene with navigation= navigation; } }
+                                { m with scene = {m.scene with navigation = navigation; } }
                             | _ -> m
                     | None -> 
                         Log.error ("no hit")

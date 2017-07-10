@@ -107,6 +107,7 @@ module MeasurementsImporter =
                 segments = getSegments (m, anType) |> PList.ofList
                 color = style.color
                 thickness = style.thickness
+                results = None
                 dnsResults = None
                 modelTrafo = trafo
                 visible = true 

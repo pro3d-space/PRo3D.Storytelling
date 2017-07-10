@@ -70,7 +70,13 @@ module AnnotationProperties =
             | ToggleShowDns ->
                 { model with showDns = (not model.showDns) }
 
-    let view (model : MAnnotation) =        
+    let view (model : MAnnotation) =   
+        
+        let height   = Mod.bindOption model.results Double.NaN (fun a -> a.height)
+        let heightD  = Mod.bindOption model.results Double.NaN (fun a -> a.heightDelta)
+        let length   = Mod.bindOption model.results Double.NaN (fun a -> a.length)
+        let wLength  = Mod.bindOption model.results Double.NaN (fun a -> a.wayLength)
+
         require Html.semui (
             Html.table [                            
                 //Html.row "Geometry:"    [Html.SemUi.dropDown model.geometry SetGeometry]
@@ -82,6 +88,10 @@ module AnnotationProperties =
                 Html.row "Text:"        [Html.SemUi.textBox model.text SetText ]
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.visible ToggleVisible ]
                 Html.row "Show DnS:"    [Html.SemUi.toggleBox model.showDns ToggleShowDns ]
+                Html.row "Height:"      [Incremental.text (height   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+                Html.row "HeightDelta:" [Incremental.text (heightD  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+                Html.row "Lenght:"      [Incremental.text (length   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+                Html.row "WayLength:"   [Incremental.text (wLength  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
             ]
         )
 
