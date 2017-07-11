@@ -491,47 +491,52 @@ module DrawingApp =
             //let trafo 
 
             aset {
-                
+                            
                 let! dns = anno.dnsResults 
-                let! count = anno.points |> AList.toMod |> Mod.map PList.count //get item at index ?
-                let point = anno.points |> AList.toMod |> Mod.map (fun x -> x.[(count/2)])
-                let! p = point
-                
-               match dns with
+                match dns with
                     | Some x -> 
-                        let color = DipAndStrike.dipColor x.dipAngle conf.minDipAngle.value conf.maxDipAngle.value
-                        let! plane = x.plane
-                        let! dip = x.dipDirection
-                        let! strike = x.strikeDirection
-                        let! s = conf.arrowSize.value
-                        let scale = computeInvariantScale view conf point
-                        let! scale = scale
-                        let dlength = dip.Normalized * scale
-                        let dipLine = alist{
-                                        yield p
-                                        yield p + dlength
-                                        }                       
-                        let slength1 = strike.Normalized.Negated * scale
-                        let slength2 = strike.Normalized * scale
-                        let strikeLine1 = alist {
-                                            yield p
-                                            yield p + slength1
-                                            }
-                        let strikeLine2 = alist {
-                                            yield p
-                                            yield p + slength2
-                                            }
+                        let! count = anno.points |> AList.toMod |> Mod.map PList.count //get item at index ?
+                        let center = anno.points |> AList.toMod |> Mod.map (fun x -> x.[(count/2)])                      
 
+                        let color = 
+                            DipAndStrike.dipColor x.dipAngle conf.minDipAngle.value conf.maxDipAngle.value
+                                                                    
+                        let scale = computeInvariantScale view conf center
+                        let! dip = x.dipDirection
+                                    
+                        let! dipLine = 
+                            Mod.map2 (fun c s -> alist{ yield c; yield c + dip.Normalized * s }) center scale
+                                                
+                      
                         
-                        let radius = scale * 0.05
-                        let! planeSize = conf.dnsPlaneSize.value
-                        let height = planeSize * 0.2
-                        let coneSize = scale * 0.5
-                        yield discISg color conf.dnsPlaneSize.value (Mod.constant height) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p)))  // disc
-                        yield lines dipLine color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
-                        yield coneISg color (Mod.constant radius) (Mod.constant coneSize) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(p + dlength))) 
-                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
-                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike2 vec
+                        let radius = scale |> Mod.map(fun d -> d * 0.05)
+                        let coneSize = scale |> Mod.map(fun d -> d * 0.5)
+                        let height = conf.dnsPlaneSize.value |> Mod.map(fun d -> d * 0.2)                        
+
+                        let posTrafo =
+                            center |> Mod.map(fun d -> Trafo3d.Translation(d))
+
+                        // disc
+                        let discTrafo =
+                            Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
+                        yield discISg color conf.dnsPlaneSize.value height discTrafo 
+
+                        // dip vec                        
+                        yield lines dipLine color (Mod.constant 1.0) posTrafo anno.key 
+
+                        let coneTrafo = 
+                            Mod.map2(fun c s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(c + dip.Normalized * s)) center scale
+                        yield coneISg color radius coneSize coneTrafo
+
+                        // strike vecs
+                        let strikeLen = 
+                            Mod.map2(fun (str:V3d) s -> str.Normalized * s) x.strikeDirection scale
+
+                        let! strikeLine1 = Mod.map2(fun c s -> alist { yield c; yield c - s}) center strikeLen
+                        let! strikeLine2 = Mod.map2(fun c s -> alist { yield c; yield c + s}) center strikeLen
+
+                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) posTrafo anno.key // strike1 vec
+                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) posTrafo anno.key // strike2 vec
                     | None -> () 
                                
             } |> Sg.set

@@ -611,15 +611,16 @@ module ViewerApp =
 
         let configUI =
             div[][
-                GuiEx.accordion "Camera" "Camera Retro" true [
-                    CameraProperties.view m.scene.navigation.camera
-                ]
-
-                GuiEx.accordion "Coordinate System" "Map Signs" true [
-                    ReferenceSystemApp.UI.view m.scene.referenceSystem |> UI.map ReferenceSystemMessage
-                ]
                 GuiEx.accordion "ViewerConfig" "Write" true [
                      Incremental.div AttributeMap.empty (AList.ofModSingle (config m))
+                ]
+
+                GuiEx.accordion "Coordinate System" "Map Signs" false [
+                    ReferenceSystemApp.UI.view m.scene.referenceSystem |> UI.map ReferenceSystemMessage
+                ]
+
+                GuiEx.accordion "Camera" "Camera Retro" false [
+                    CameraProperties.view m.scene.navigation.camera
                 ]
             ]
             
@@ -676,30 +677,20 @@ module ViewerApp =
         //            let sg = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
         //            yield AddSg sg
         //    }
-
-        //ThreadPool.union 
-        //    (DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage) 
-        //    (DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage) 
+     
         let drawing =
             DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage
-
-        let freeFly = 
-            CameraController.threads m.scene.navigation.camera
-                |> ThreadPool.map Navigation.FreeFlyAction |> ThreadPool.map NavigationMessage
-
-        let arc =              
-            ArcBallController.threads m.scene.navigation.camera
-                |> ThreadPool.map Navigation.ArcBallAction |> ThreadPool.map NavigationMessage
-
-        //let nav =
-        //    if m.scene.navigation.navigationMode == NavigationMode.FreeFly then freeFly else arc
+       
         let nav =
             match m.scene.navigation.navigationMode with
-                | NavigationMode.FreeFly -> freeFly
-                | NavigationMode.ArcBall -> arc
+                | NavigationMode.FreeFly -> 
+                    CameraController.threads m.scene.navigation.camera
+                        |> ThreadPool.map Navigation.FreeFlyAction |> ThreadPool.map NavigationMessage
+                | NavigationMode.ArcBall ->
+                    ArcBallController.threads m.scene.navigation.camera
+                        |> ThreadPool.map Navigation.ArcBallAction |> ThreadPool.map NavigationMessage
                 | _ -> failwith "invalid nav mode"
-            
-        
+                    
         ThreadPool.union drawing nav
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
