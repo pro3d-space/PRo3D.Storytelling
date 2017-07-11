@@ -351,8 +351,11 @@ module DrawingApp =
 
     module Sg =        
         
-        let discISg color size trafo =
-            Sg.cylinder 30 color size (Mod.constant 0.2)
+        //let distanceInvariantTrafo (view : IMod<CameraView>) (pos:V3d) (scale:float) =
+        //    let pcam = 
+
+        let discISg color size height trafo =
+            Sg.cylinder 30 color size height
                         |> Sg.noEvents
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
@@ -378,6 +381,20 @@ module DrawingApp =
                 let distV = p - v.Location
                 let distF = V3d.Dot(v.Forward, distV)
                 return distF * size / 800.0 //needs hfov at this point
+            }
+
+        let computeInvariantScale (view : IMod<CameraView>) (conf:MViewConfigModel) (p:IMod<V3d>) =
+            adaptive {
+                let! p = p
+                let! v = view
+                let! near = conf.nearPlane.value
+                let! size = conf.arrowSize.value
+                let hfov = 60.0
+               
+                let wz = Fun.Tan(hfov / 2.0) * near * size * 0.5
+                let dist = V3d.Distance(p, v.Location)
+
+                return ( wz / near ) * dist
             }
 
         let mkDotISg color size trafo = 
@@ -477,8 +494,8 @@ module DrawingApp =
                 
                 let! dns = anno.dnsResults 
                 let! count = anno.points |> AList.toMod |> Mod.map PList.count //get item at index ?
-                let p = anno.points |> AList.toMod |> Mod.map (fun x -> x.[(count/2)])
-                let! p = p
+                let point = anno.points |> AList.toMod |> Mod.map (fun x -> x.[(count/2)])
+                let! p = point
                 
                match dns with
                     | Some x -> 
@@ -486,14 +503,16 @@ module DrawingApp =
                         let! plane = x.plane
                         let! dip = x.dipDirection
                         let! strike = x.strikeDirection
-                        let dlength = dip.Normalized * 5.0
+                        let! s = conf.arrowSize.value
+                        let scale = computeInvariantScale view conf point
+                        let! scale = scale
+                        let dlength = dip.Normalized * scale
                         let dipLine = alist{
                                         yield p
                                         yield p + dlength
-                                        }
-                        let! s = conf.arrowSize.value
-                        let slength1 = strike.Normalized.Negated * s
-                        let slength2 = strike.Normalized * s
+                                        }                       
+                        let slength1 = strike.Normalized.Negated * scale
+                        let slength2 = strike.Normalized * scale
                         let strikeLine1 = alist {
                                             yield p
                                             yield p + slength1
@@ -502,10 +521,15 @@ module DrawingApp =
                                             yield p
                                             yield p + slength2
                                             }
-                        let radius = s * 0.1
-                        yield discISg color conf.dnsPlaneSize.value  (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p))) // disc
+
+                        
+                        let radius = scale * 0.05
+                        let! planeSize = conf.dnsPlaneSize.value
+                        let height = planeSize * 0.2
+                        let coneSize = scale * 0.5
+                        yield discISg color conf.dnsPlaneSize.value (Mod.constant height) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p)))  // disc
                         yield lines dipLine color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
-                        yield coneISg color (Mod.constant radius) conf.arrowSize.value (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(p + dlength))) 
+                        yield coneISg color (Mod.constant radius) (Mod.constant coneSize) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(p + dlength))) 
                         yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
                         yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike2 vec
                     | None -> () 
