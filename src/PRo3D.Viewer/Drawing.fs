@@ -502,12 +502,7 @@ module DrawingApp =
                             DipAndStrike.dipColor x.dipAngle conf.minDipAngle.value conf.maxDipAngle.value
                                                                     
                         let scale = computeInvariantScale view conf center
-                        let! dip = x.dipDirection
-                                    
-                        let! dipLine = 
-                            Mod.map2 (fun c s -> alist{ yield c; yield c + dip.Normalized * s }) center scale
-                                                
-                      
+                        let! dip = x.dipDirection                                    
                         
                         let radius = scale |> Mod.map(fun d -> d * 0.05)
                         let coneSize = scale |> Mod.map(fun d -> d * 0.5)
@@ -521,7 +516,14 @@ module DrawingApp =
                             Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
                         yield discISg color conf.dnsPlaneSize.value height discTrafo 
 
-                        // dip vec                        
+                        // dip vec       
+                        let dipLine = 
+                            alist {
+                                let! c = center
+                                let! s = scale
+                                yield c + dip.Normalized * s
+                            }                            
+
                         yield lines dipLine color (Mod.constant 1.0) posTrafo anno.key 
 
                         let coneTrafo = 
@@ -613,7 +615,7 @@ module DrawingApp =
                 lines points c anno.thickness.value anno.modelTrafo anno.key;                
                 dots anno.points c view                    
             //    text anno
-                drawDns anno view conf |> Sg.onOff anno.showDns
+                drawDns anno view conf //|> Sg.onOff anno.showDns
             ] |> Sg.onOff anno.visible
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =
