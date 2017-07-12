@@ -532,8 +532,21 @@ module DrawingApp =
                         let strikeLen = 
                             Mod.map2(fun (str:V3d) s -> str.Normalized * s) x.strikeDirection scale
 
-                        let! strikeLine1 = Mod.map2(fun c s -> alist { yield c; yield c - s}) center strikeLen
-                        let! strikeLine2 = Mod.map2(fun c s -> alist { yield c; yield c + s}) center strikeLen
+                        let strikeLine1 = 
+                            alist {
+                                let! c = center
+                                let! s = strikeLen
+                                yield c; yield c - s
+                            }
+                        let strikeLine2 = 
+                            alist {
+                                let! c = center
+                                let! s = strikeLen
+                                yield c; yield c + s
+                            }
+                        
+                        //Mod.map2(fun c s -> alist { yield c; yield c - s}) center strikeLen
+                        //let! strikeLine2 = Mod.map2(fun c s -> alist { yield c; yield c + s}) center strikeLen
 
                         yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) posTrafo anno.key // strike1 vec
                         yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) posTrafo anno.key // strike2 vec
