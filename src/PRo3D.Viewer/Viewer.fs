@@ -151,6 +151,8 @@ module ViewerApp =
         | SetInteraction            of Interactions
         | SelectSurface             of Guid
         | FlyToSurface              of Guid
+        | Undo
+        | Redo
                 
     let lookAtData m = 
         let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
@@ -194,6 +196,9 @@ module ViewerApp =
             |> Seq.map(fun d -> d.Value)
             |> Seq.sortByDescending(fun (t,n)-> t)
             |> Seq.tryHead
+
+    let stash (model : Model) =
+        { model with past = Some model.drawing; future = None }
     
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
@@ -210,7 +215,7 @@ module ViewerApp =
                 //                            | None -> Properties.NoProperties } 
                 //        | _ -> m
                 
-                { m with drawing = DrawingApp.update w bc m.drawing msg }
+                { m with drawing = DrawingApp.update w bc m.drawing msg } |> stash
             | SelectSurface id,_,_ ->
                 let surf = m.scene.surfaces |> Seq.tryFind(fun x -> x.guid = id)
                 let surf =
@@ -293,7 +298,7 @@ module ViewerApp =
                         match m.interaction with
                             | Interactions.DrawAnnotation ->
                                 let drawing = DrawingApp.update w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,n))
-                                { m with drawing = drawing }
+                                { m with drawing = drawing } |> stash
                             | Interactions.PlaceCoordinateSystem -> 
                                 let refSystem = 
                                     ReferenceSystemApp.update m.scene.referenceSystem (ReferenceSystemApp.Action.InferCoordSystem(hit))
@@ -335,13 +340,12 @@ module ViewerApp =
          
                     let m =
                         match m.interaction with
-                            | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing a; picking = picking }
+                            | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing a; picking = picking } |> stash
                             | Interactions.PickExploreCenter -> {m with picking = picking}
                             | Interactions.PlaceCoordinateSystem -> {m with picking = picking}
                             | _ -> failwith "interaction does not exist"
 
-
-                    m
+                    m 
 
             | KeyUp k, _,_ ->
                     let d =
@@ -349,7 +353,7 @@ module ViewerApp =
                             | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update w bc m.drawing Drawing.Action.StopDrawing
                             | _ -> m.drawing
                     
-                    { m with drawing = d; picking = false }
+                    { m with drawing = d; picking = false } |> stash
             | SetInteraction t,_,_ -> { m with interaction = t }    
             | ReferenceSystemMessage a,_,_ -> 
                 { m with scene = { m.scene with referenceSystem = ReferenceSystemApp.update m.scene.referenceSystem a } }
@@ -359,6 +363,14 @@ module ViewerApp =
                                                 referenceSystem = { m.scene.referenceSystem with arrowScale = c'.arrowSize };
                                                 navigation = { m.scene.navigation with config = c' } };
                          drawing = { m.drawing with config = c' } }
+            | Undo,_,_ -> 
+                match m.past with
+                    | Some p -> { m with drawing = p; future = Some m.drawing }
+                    | None -> m
+            | Redo,_,_ ->
+                match m.future with
+                    | Some f -> { m with drawing = f }
+                    | None -> m
             | _ -> m
 
     let scene (m : MModel) =
@@ -634,6 +646,8 @@ module ViewerApp =
         let topMenu = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
              DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage 
+             button [clazz "ui icon button"; onMouseClick (fun _ -> Undo)] [i [clazz "arrow left icon"] [] ]
+             button [clazz "ui icon button"; onMouseClick (fun _ -> Redo)] [i [clazz "arrow right icon"] [] ]
         ] 
                      
         let rest (model : MModel) = 

@@ -164,6 +164,8 @@ module Mutable =
         let _properties = ResetMod.Create(__initial.properties)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _picking = ResetMod.Create(__initial.picking)
+        let _past = ResetMod.Create(__initial.past)
+        let _future = ResetMod.Create(__initial.future)
         
         member x.scene = _scene
         member x.drawing = _drawing
@@ -172,6 +174,8 @@ module Mutable =
         member x.properties = _properties :> IMod<_>
         member x.interaction = _interaction :> IMod<_>
         member x.picking = _picking :> IMod<_>
+        member x.past = _past :> IMod<_>
+        member x.future = _future :> IMod<_>
         
         member x.Update(v : PRo3D.Viewer.Model) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -184,6 +188,8 @@ module Mutable =
                 ResetMod.Update(_properties,v.properties)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_picking,v.picking)
+                _past.Update(v.past)
+                _future.Update(v.future)
                 
         
         static member Create(__initial : PRo3D.Viewer.Model) : MModel = MModel(__initial)
@@ -241,4 +247,16 @@ module Mutable =
                     override x.Get(r) = r.picking
                     override x.Set(r,v) = { r with picking = v }
                     override x.Update(r,f) = { r with picking = f r.picking }
+                }
+            let past =
+                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with
+                    override x.Get(r) = r.past
+                    override x.Set(r,v) = { r with past = v }
+                    override x.Update(r,f) = { r with past = f r.past }
+                }
+            let future =
+                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with
+                    override x.Get(r) = r.future
+                    override x.Set(r,v) = { r with future = v }
+                    override x.Update(r,f) = { r with future = f r.future }
                 }

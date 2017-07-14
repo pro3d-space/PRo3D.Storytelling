@@ -59,7 +59,7 @@ type DrawingModel = {
 
     pendingIntersections : ThreadPool<Action>
     config : ViewConfigModel
-    coordinates : ReferenceSystem
+    coordinates : ReferenceSystem   
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    

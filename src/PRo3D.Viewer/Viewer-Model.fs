@@ -54,6 +54,13 @@ type Model = {
     properties      : Properties
     interaction     : Interactions
     picking         : bool       
+
+    [<TreatAsValue>]
+    past : Option<Drawing.DrawingModel> 
+
+    [<TreatAsValue>]
+    future : Option<Drawing.DrawingModel> 
+  
     //measurementPath : string
   //  draw    : bool 
 //    hoverPosition : option<Trafo3d>
@@ -65,21 +72,19 @@ module Viewer =
     let initial = {           
         surfaces = HSet.empty                       
         scene = {
-                navigation = NavigationModel.initial
-                interaction = InteractionMode.PickOrbitCenter
-                surfaces = []
+                navigation      = NavigationModel.initial
+                interaction     = InteractionMode.PickOrbitCenter
+                surfaces        = []
                 referenceSystem = ReferenceSystem.initial
-                config = ViewConfigModel.initial
+                config          = ViewConfigModel.initial
         }
 
-        drawing = Drawing.Model.initialdrawing
-        properties = NoProperties
-        interaction = Interactions.DrawAnnotation
-        picking = false
+        drawing         = Drawing.Model.initialdrawing
+        properties      = NoProperties
+        interaction     = Interactions.DrawAnnotation
+        picking         = false
         
         selectedSurface = None
-        //measurementPath = @"."
-
-        // draw = false
-        //hoverPosition = None
+        past            = None
+        future          = None
     }

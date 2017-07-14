@@ -28,24 +28,34 @@ module DrawingApp =
 
     open MBrace.FsPickler.Json   
 
-    let finishAndAppend (model : DrawingModel) = 
+    let getFinishedAnnotation (model : DrawingModel) =
+        match model.working with
+            | Some w ->               
+                let dns = 
+                    match w.points.Count with 
+                        | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points) //more acc. by using segments as well?
+                        | _ -> None 
+                let results = Annotation.calculateAnnotationResults w model.coordinates.up
+                Some { w with dnsResults = dns; results = Some results }
+            | None -> None
+
+    let finishAndAppendAndSend (model : DrawingModel) (bc : BlockingCollection<string>) = 
         //if there are at least 3 points do dns calculation (debug, dev). 
         //might take long for large number of points so created on demand?
 
-        let anns = match model.working with
-                            | Some w ->               
-                                let dns = 
-                                    match w.points.Count with 
-                                        | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points) //more acc. by using segments as well?
-                                        | _ -> None 
-                                let results = Annotation.calculateAnnotationResults w model.coordinates.up
-                                model.annotations 
-                                    |> PList.prepend { w with dnsResults = dns; results = Some results }
-                                        
-                            | None -> model.annotations
+        let anns = 
+            match getFinishedAnnotation model with
+                | Some a -> 
+                    let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
+                    Log.line "sending %A" a.semantic
+                    bc.Add json
+
+                    model.annotations |> PList.prepend a
+                | None -> model.annotations
+        
         { model with working = None; annotations = anns; pendingIntersections = ThreadPool.empty }
 
-    let addPoint samplePoint p model surfaceName =
+    let addPoint samplePoint p model surfaceName bc =
         let working, newSegment = 
             match model.working with
                 | Some w ->     
@@ -95,9 +105,9 @@ module DrawingApp =
 
         match (working.geometry, (working.points |> PList.count)) with
             | Geometry.Point, 1 -> 
-                model |> finishAndAppend, None
+                finishAndAppendAndSend model bc, None
             | Geometry.Line, 2 -> 
-                model |> finishAndAppend, None
+                finishAndAppendAndSend model bc, None
             | _ -> 
                 model, newSegment // returns current segment for async computations outside
 
@@ -154,13 +164,13 @@ module DrawingApp =
             | StartDrawing, _ ->                     
                     { model with draw = true }
             | StopDrawing, _ -> 
-                    {model with draw = false; hoverPosition = None }
+                    { model with draw = false; hoverPosition = None }
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
             //| AddPoint(p,samplePoint), true ->                     
             //        addPoint samplePoint p model |> fst               
             | AddPointAdv (point, samplePoint, name), true ->
-                    let model, newSegment = addPoint samplePoint point model name
+                    let model, newSegment = addPoint samplePoint point model name bc
                     
                     match newSegment with
                         | None         -> model
@@ -175,7 +185,7 @@ module DrawingApp =
             //| KeyDown Aardvark.Application.Keys.Enter, _ -> 
             //        model |> finishAndAppend
             | Finish, _ -> 
-                    model |> finishAndAppend
+                    finishAndAppendAndSend model bc
             | Exit, _ -> 
                     { model with hoverPosition = None }
             | SetSemantic mode, _ ->
@@ -534,21 +544,19 @@ module DrawingApp =
                         let strikeLen = 
                             Mod.map2(fun (str:V3d) s -> str.Normalized * s) x.strikeDirection scale
 
-                        let strikeLine1 = 
+                        let strikeLine1 =
                             alist {
                                 let! c = center
                                 let! s = strikeLen
                                 yield c; yield c - s
                             }
+
                         let strikeLine2 = 
                             alist {
                                 let! c = center
                                 let! s = strikeLen
                                 yield c; yield c + s
-                            }
-                        
-                        //Mod.map2(fun c s -> alist { yield c; yield c - s}) center strikeLen
-                        //let! strikeLine2 = Mod.map2(fun c s -> alist { yield c; yield c + s}) center strikeLen
+                            }                                            
 
                         yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) posTrafo anno.key // strike1 vec
                         yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) posTrafo anno.key // strike2 vec
