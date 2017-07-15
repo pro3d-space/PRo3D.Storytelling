@@ -159,6 +159,9 @@ module DrawingApp =
         
     let pickler = MBrace.FsPickler.Json.JsonSerializer(indent=true)
 
+    let stash (model : DrawingModel) =
+        { model with past = Some model; future = None }
+
     let update (w : Form) (bc : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
         match (act, model.draw) with
             | StartDrawing, _ ->                     
@@ -175,6 +178,7 @@ module DrawingApp =
                     match newSegment with
                         | None         -> model
                         | Some segment -> addNewSegment samplePoint model segment
+                    |> stash
 
             | SetSegment(segmentIndex,segment), _ ->
                 match model.working with
@@ -185,7 +189,7 @@ module DrawingApp =
             //| KeyDown Aardvark.Application.Keys.Enter, _ -> 
             //        model |> finishAndAppend
             | Finish, _ -> 
-                    finishAndAppendAndSend model bc
+                    finishAndAppendAndSend model bc |> stash
             | Exit, _ -> 
                     { model with hoverPosition = None }
             | SetSemantic mode, _ ->
@@ -257,7 +261,16 @@ module DrawingApp =
                             let annotations' = 
                                 model.annotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun x -> a')                                     
                             { model with selectedAnnotation = Some a'; annotations = annotations' |> PList.ofList }
-                        | None -> model                                                
+                        | None -> model                        
+                        
+            | Undo, _ -> 
+                match model.past with
+                    | Some p -> { p with future = Some model }
+                    | None -> model
+            | Redo, _ ->
+                match model.future with
+                    | Some f -> f
+                    | None -> model
             | _ -> model
 
     module UI =
@@ -313,6 +326,8 @@ module DrawingApp =
                         i [clazz "folder icon"] [] ]
                 button [clazz "ui icon button"; onMouseClick (fun _ -> Send)] [
                         i [clazz "send icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Undo)] [i [clazz "arrow left icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Redo)] [i [clazz "arrow right icon"] [] ]
             ]
 
         let viewAnnotations (model:MDrawingModel) = 

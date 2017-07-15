@@ -151,9 +151,7 @@ module ViewerApp =
         | KeyUp                     of key : Aardvark.Application.Keys      
         | SetInteraction            of Interactions
         | SelectSurface             of Guid
-        | FlyToSurface              of Guid
-        | Undo
-        | Redo
+        | FlyToSurface              of Guid      
                 
     let lookAtData m = 
         let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
@@ -371,18 +369,12 @@ module ViewerApp =
                 { m with scene = { m.scene with referenceSystem = ReferenceSystemApp.update m.scene.referenceSystem a } }
             | ConfigPropertiesMessage a,_,_ -> 
                 let c' = ConfigProperties.update m.scene.config a
-                { m with scene = { m.scene with config = c';
+                { m with 
+                    scene = { 
+                            m.scene with config = c';
                                                 referenceSystem = { m.scene.referenceSystem with arrowScale = c'.arrowSize };
-                                                navigation = { m.scene.navigation with config = c' } };
-                         drawing = { m.drawing with config = c' } }
-            | Undo,_,_ -> 
-                match m.past with
-                    | Some p -> { m with drawing = p; future = Some m.drawing }
-                    | None -> m
-            | Redo,_,_ ->
-                match m.future with
-                    | Some f -> { m with drawing = f }
-                    | None -> m
+                                                navigation = { m.scene.navigation with config = c' } }
+                    drawing = { m.drawing with config = c' } }           
             | _ -> m
 
     let scene (m : MModel) =
@@ -410,22 +402,22 @@ module ViewerApp =
                         |> Sg.uniform "selected" isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
                         |> Sg.onOff(surface.surface.isVisible)                             
-                        |> Sg.andAlso (Sg.wireBox' C4b.Red bb
-                                                            |> Sg.noEvents
-                                                            |> Sg.noEvents
-                                                            |> Sg.shader {
-                                                                    do! Shader.stableTrafo
-                                                                    do! DefaultSurfaces.vertexColor                                                                     
-                                                               }
-                                                        ) 
+                        |> Sg.andAlso (
+                            Sg.wireBox' C4b.Red bb
+                                    |> Sg.noEvents
+                                    |> Sg.noEvents
+                                    |> Sg.shader {
+                                            do! Shader.stableTrafo
+                                            do! DefaultSurfaces.vertexColor                                                                     
+                                        }
+                            ) 
                         |> Sg.pickable (PickShape.Box bb) 
                         |> Sg.withEvents [
                                 SceneEventKind.Down, (
                                     fun sceneHit -> 
                                         true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])
                                 //Sg.onMouseDownEvt (fun sceneHit -> PickSurface sceneHit)
-                            ]
-                        //|> Sg.andAlso pickable
+                            ]                        
                     yield sg
             }
         opcs 
@@ -663,9 +655,7 @@ module ViewerApp =
       
         let topMenu = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
-             DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage 
-             button [clazz "ui icon button"; onMouseClick (fun _ -> Undo)] [i [clazz "arrow left icon"] [] ]
-             button [clazz "ui icon button"; onMouseClick (fun _ -> Redo)] [i [clazz "arrow right icon"] [] ]
+             DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage              
         ] 
                      
         let rest (model : MModel) = 

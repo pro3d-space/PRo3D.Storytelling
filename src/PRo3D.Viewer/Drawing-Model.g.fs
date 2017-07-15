@@ -26,6 +26,8 @@ module Mutable =
         let _pendingIntersections = ResetMod.Create(__initial.pendingIntersections)
         let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
         let _coordinates = PRo3D.Mutable.MReferenceSystem.Create(__initial.coordinates)
+        let _past = ResetMod.Create(__initial.past)
+        let _future = ResetMod.Create(__initial.future)
         
         member x.draw = _draw :> IMod<_>
         member x.hoverPosition = _hoverPosition :> IMod<_>
@@ -40,6 +42,8 @@ module Mutable =
         member x.pendingIntersections = _pendingIntersections :> IMod<_>
         member x.config = _config
         member x.coordinates = _coordinates
+        member x.past = _past :> IMod<_>
+        member x.future = _future :> IMod<_>
         
         member x.Update(v : PRo3D.Drawing.DrawingModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -58,6 +62,8 @@ module Mutable =
                 ResetMod.Update(_pendingIntersections,v.pendingIntersections)
                 PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
                 PRo3D.Mutable.MReferenceSystem.Update(_coordinates, v.coordinates)
+                _past.Update(v.past)
+                _future.Update(v.future)
                 
         
         static member Create(__initial : PRo3D.Drawing.DrawingModel) : MDrawingModel = MDrawingModel(__initial)
@@ -151,4 +157,16 @@ module Mutable =
                     override x.Get(r) = r.coordinates
                     override x.Set(r,v) = { r with coordinates = v }
                     override x.Update(r,f) = { r with coordinates = f r.coordinates }
+                }
+            let past =
+                { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with
+                    override x.Get(r) = r.past
+                    override x.Set(r,v) = { r with past = v }
+                    override x.Update(r,f) = { r with past = f r.past }
+                }
+            let future =
+                { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with
+                    override x.Get(r) = r.future
+                    override x.Set(r,v) = { r with future = v }
+                    override x.Update(r,f) = { r with future = f r.future }
                 }
