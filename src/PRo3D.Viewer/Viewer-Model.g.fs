@@ -90,12 +90,14 @@ module Mutable =
         let _surfaces = ResetMod.Create(__initial.surfaces)
         let _referenceSystem = PRo3D.Mutable.MReferenceSystem.Create(__initial.referenceSystem)
         let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
+        let _scenePath = MOption.Create(__initial.scenePath)
         
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
         member x.surfaces = _surfaces :> IMod<_>
         member x.referenceSystem = _referenceSystem
         member x.config = _config
+        member x.scenePath = _scenePath :> IMod<_>
         
         member x.Update(v : PRo3D.Viewer.Scene) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -106,6 +108,7 @@ module Mutable =
                 ResetMod.Update(_surfaces,v.surfaces)
                 PRo3D.Mutable.MReferenceSystem.Update(_referenceSystem, v.referenceSystem)
                 PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
+                MOption.Update(_scenePath, v.scenePath)
                 
         
         static member Create(__initial : PRo3D.Viewer.Scene) : MScene = MScene(__initial)
@@ -151,6 +154,12 @@ module Mutable =
                     override x.Get(r) = r.config
                     override x.Set(r,v) = { r with config = v }
                     override x.Update(r,f) = { r with config = f r.config }
+                }
+            let scenePath =
+                { new Lens<PRo3D.Viewer.Scene, Microsoft.FSharp.Core.option<Microsoft.FSharp.Core.string>>() with
+                    override x.Get(r) = r.scenePath
+                    override x.Set(r,v) = { r with scenePath = v }
+                    override x.Update(r,f) = { r with scenePath = f r.scenePath }
                 }
     
     

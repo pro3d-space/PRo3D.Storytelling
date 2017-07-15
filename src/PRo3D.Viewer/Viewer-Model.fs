@@ -28,11 +28,12 @@ type SgSurface = {
   
 [<DomainType>] 
 type Scene = {
-    navigation  : NavigationModel
-    interaction : InteractionMode
-    surfaces : list<Surface>
+    navigation      : NavigationModel
+    interaction     : InteractionMode
+    surfaces        : list<Surface>
     referenceSystem : ReferenceSystem
-    config : ViewConfigModel
+    config          : ViewConfigModel
+    scenePath       : option<string>
 }
 
 type Properties = 
@@ -77,6 +78,7 @@ module Viewer =
                 surfaces        = []
                 referenceSystem = ReferenceSystem.initial
                 config          = ViewConfigModel.initial
+                scenePath       = None
         }
 
         drawing         = Drawing.Model.initialdrawing

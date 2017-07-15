@@ -144,6 +144,7 @@ module ViewerApp =
         | AddSg                     of ISg
         | PickSurface               of SceneHit*string
         | SaveScene
+        | SaveAs                    
         | OpenScene
         | NewScene
         | KeyDown                   of key : Aardvark.Application.Keys
@@ -312,11 +313,22 @@ module ViewerApp =
                         Log.error ("no hit")
                         m
             | SaveScene, _,_ -> 
+                match m.scene.scenePath with
+                    | None ->                        
+                        match Dialogs.saveDialog w with
+                            | None -> m
+                            | Some p -> 
+                                Serialization.save "./last" m.scene |> ignore
+                                { m with scene = Serialization.save p { m.scene with scenePath = Some p} }
+                    | Some path ->
+                        Serialization.save "./last" m.scene |> ignore
+                        { m with scene = Serialization.save path m.scene }
+            | SaveAs,_,_ ->
                 match Dialogs.saveDialog w with
                     | None -> m
                     | Some p -> 
                         Serialization.save "./last" m.scene |> ignore
-                        {m with scene = Serialization.save p m.scene}
+                        { m with scene = Serialization.save p { m.scene with scenePath = Some p} }
             | OpenScene,_,_ ->
                 match Dialogs.openDialog w with
                     | None -> m
@@ -421,8 +433,8 @@ module ViewerApp =
             |> Sg.effect [
                 Shader.stableTrafo |> toEffect
                 //DefaultSurfaces.constantColor C4f.White |> toEffect                            
-                DefaultSurfaces.diffuseTexture |> toEffect         
-                Shader.selectionColor |> toEffect                
+                DefaultSurfaces.diffuseTexture |> toEffect
+                Shader.selectionColor |> toEffect       
             ]
 
     let mkBrushISg color size trafo : ISg<Message> =
@@ -497,11 +509,17 @@ module ViewerApp =
         let sceneTools =
             div [clazz "ui buttons inverted"] [
                 button [clazz "ui icon button"; onMouseClick (fun _ -> SaveScene)] [
-                            i [clazz "save icon"] [] ]
+                            i [clazz "large save icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> SaveAs)] [
+                    i [clazz "large icons"] [
+                        i [clazz "save icon"] [] 
+                        i [clazz "top right corner arrow down icon"] [] 
+                    ]
+                ]
                 button [clazz "ui icon button"; onMouseClick (fun _ -> OpenScene)] [
-                            i [clazz "folder outline icon"] [] ]
+                            i [clazz "large folder outline icon"] [] ]
                 button [clazz "ui icon button"; onMouseClick (fun _ -> NewScene)] [
-                            i [clazz "file outline icon"] [] ]
+                            i [clazz "large file outline icon"] [] ]
             ]
             
         let openSurface =
