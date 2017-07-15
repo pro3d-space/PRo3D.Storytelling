@@ -33,10 +33,10 @@ module DrawingApp =
             | Some w ->               
                 let dns = 
                     match w.points.Count with 
-                        | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points) //more acc. by using segments as well?
+                        | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points model.config.coordinates.up.value) //more acc. by using segments as well?
                         | _ -> None 
                 let results = Annotation.calculateAnnotationResults w model.config.coordinates.up.value
-                Some { w with dnsResults = dns; results = Some results }
+                Some { w with dnsResults = dns ; results = Some results }
             | None -> None
 
     let finishAndAppendAndSend (model : DrawingModel) (bc : BlockingCollection<string>) = 
@@ -511,10 +511,7 @@ module DrawingApp =
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
               //  |> Sg.andAlso cylinders               
         
-        let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) (conf:MViewConfigModel)=             
-            //let color = Mod.bindOption anno.dnsResults C4b.White (fun x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0))
-            //let trafo 
-
+        let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) (conf:MViewConfigModel)=                         
             aset {
                             
                 let! dns = anno.dnsResults 
@@ -526,12 +523,12 @@ module DrawingApp =
                         let color = 
                             DipAndStrike.dipColor x.dipAngle conf.minDipAngle.value conf.maxDipAngle.value
                                                                     
-                        let scale = computeInvariantScale view conf center
-                        let! dip = x.dipDirection                                    
+                        let scale = conf.arrowSize.value //computeInvariantScale view conf center
+                                                
                         
                         let radius = scale |> Mod.map(fun d -> d * 0.05)
-                        let coneSize = scale |> Mod.map(fun d -> d * 0.5)
-                        let height = conf.dnsPlaneSize.value |> Mod.map(fun d -> d * 0.2)                        
+                        let coneSize = scale |> Mod.map(fun d -> d * 0.3)
+                        let height = conf.dnsPlaneSize.value |> Mod.map(fun d -> d * 0.01)
 
                         let posTrafo =
                             center |> Mod.map(fun d -> Trafo3d.Translation(d))
@@ -539,25 +536,32 @@ module DrawingApp =
                         // disc
                         let discTrafo =
                             Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
+
                         yield discISg color conf.dnsPlaneSize.value height discTrafo 
+
+                        let! dip = x.dipDirection
 
                         // dip vec       
                         let dipLine = 
                             alist {
                                 let! c = center
                                 let! s = scale
-                                yield c + dip.Normalized * s
+                                //let! f = conf.arrowSize.value
+
+                                yield c
+                                yield c + dip.Normalized * s //* f
                             }                            
 
-                        yield lines dipLine color (Mod.constant 1.0) posTrafo anno.key 
+                        yield lines dipLine color (Mod.constant 3.0) posTrafo anno.key 
 
                         let coneTrafo = 
                             Mod.map2(fun c s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(c + dip.Normalized * s)) center scale
+
                         yield coneISg color radius coneSize coneTrafo
 
-                        // strike vecs
+                        //strike vecs
                         let strikeLen = 
-                            Mod.map2(fun (str:V3d) s -> str.Normalized * s) x.strikeDirection scale
+                            Mod.map2(fun (str:V3d) s -> str.Normalized * s * 0.66) x.strikeDirection scale
 
                         let strikeLine1 =
                             alist {
@@ -573,8 +577,8 @@ module DrawingApp =
                                 yield c; yield c + s
                             }                                            
 
-                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) posTrafo anno.key // strike1 vec
-                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) posTrafo anno.key // strike2 vec
+                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 3.0) posTrafo anno.key // strike1 vec
+                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 3.0) posTrafo anno.key // strike2 vec
                     | None -> () 
                                
             } |> Sg.set

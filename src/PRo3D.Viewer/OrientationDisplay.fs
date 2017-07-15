@@ -86,8 +86,8 @@ module ReferenceSystemApp =
             
                 Sg.ofList [
                     point model.origin (Mod.constant C4b.Red) cam
-                    directionMarker model.origin (model.up.value) (Mod.constant C4b.Blue) model.arrowScale.value cam
-                    directionMarker model.origin model.north (Mod.constant C4b.Red) model.arrowScale.value cam
+                    directionMarker model.origin model.up.value (Mod.constant C4b.Blue) model.arrowScale.value cam
+                    //directionMarker model.origin model.north (Mod.constant C4b.Red) model.arrowScale.value cam
                 ] |> Sg.onOff(model.isVisible)
     module UI =
         let view (model:MReferenceSystem) =

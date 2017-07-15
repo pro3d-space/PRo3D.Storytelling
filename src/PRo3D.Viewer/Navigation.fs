@@ -32,12 +32,18 @@ module Navigation =
                 { model with camera = CameraController.update model.camera a }
             | SetNavigationMode mode ->
                 match mode with
-                    | NavigationMode.FreeFly -> 
+                    | NavigationMode.FreeFly -> // should set look at to center when in arcball mode?
                         let center = 
                             match model.camera.orbitCenter with
                                 | Some x ->  x
                                 | None   -> V3d.OOO
-                        let view' = CameraView.lookAt model.camera.view.Location center model.camera.view.Sky
+
+
+                        //let view' =
+                        //    CameraView.withUp model.config.coordinates.up.value model.camera.view
+                        let view' =
+                            CameraView.lookAt model.camera.view.Location center model.config.coordinates.up.value
+                        
                         { model with camera = { model.camera with view = view'}; navigationMode = mode} 
                     | _ ->  { model with navigationMode = mode }
                

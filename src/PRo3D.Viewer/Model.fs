@@ -410,7 +410,7 @@ module ViewConfigModel =
         format  = "{0:0.0}"
     }
     let initPlaneSize = {
-        value   = 1.0
+        value   = 0.5
         min     = 0.1
         max     = 10.0
         step    = 0.1

@@ -366,11 +366,23 @@ module ViewerApp =
                     
                     { m with drawing = d; picking = false } |> stash
             | SetInteraction t,_,_ -> { m with interaction = t }    
-            | ReferenceSystemMessage a,_,_ -> 
-                { m with 
-                    scene = { m.scene with 
-                                    config = { m.scene.config with 
-                                                            coordinates = ReferenceSystemApp.update m.scene.config.coordinates a }}}
+            | ReferenceSystemMessage a,_,_ ->                 
+                let m = 
+                    { m with scene = { m.scene with config = { m.scene.config with coordinates = ReferenceSystemApp.update m.scene.config.coordinates a }}}
+
+                let m =
+                    match a with 
+                        | ReferenceSystemApp.Action.SetUp k->
+                            let cam = m.scene.navigation.camera
+                            //let view' = cam.view |> CameraView.withUp m.scene.config.coordinates.up.value 
+                            let view' = CameraView.lookAt cam.view.Location (cam.view.Location + cam.view.Forward) m.scene.config.coordinates.up.value
+                            let cam' = { cam with view = view' }
+                        
+                            (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam')                            
+                     
+                        | _ -> m
+
+                m
             | ConfigPropertiesMessage a,_,_ -> 
                 let c' = ConfigProperties.update m.scene.config a
                 { m with 
@@ -405,15 +417,15 @@ module ViewerApp =
                         |> Sg.uniform "selected" isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
                         |> Sg.onOff(surface.surface.isVisible)                             
-                        |> Sg.andAlso (
-                            Sg.wireBox' C4b.Red bb
-                                    |> Sg.noEvents
-                                    |> Sg.noEvents
-                                    |> Sg.shader {
-                                            do! Shader.stableTrafo
-                                            do! DefaultSurfaces.vertexColor                                                                     
-                                        }
-                            ) 
+                        //|> Sg.andAlso (
+                        //    Sg.wireBox' C4b.Red bb
+                        //            |> Sg.noEvents
+                        //            |> Sg.noEvents
+                        //            |> Sg.shader {
+                        //                    do! Shader.stableTrafo
+                        //                    do! DefaultSurfaces.vertexColor                                                                     
+                        //                }
+                        //    ) 
                         |> Sg.pickable (PickShape.Box bb) 
                         |> Sg.withEvents [
                                 SceneEventKind.Down, (
@@ -483,23 +495,7 @@ module ViewerApp =
                             |> Sg.ofList
                          //   |> Sg.fillMode (Mod.constant FillMode.Fill)
                          //   |> Sg.cullMode (Mod.constant CullMode.None)      
-                    )       
-
-        //right side fixed tabbed menu
-        let interactTools = Html.SemUi.dropDown m.interaction SetInteraction
-            //div [clazz "ui"] [
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> SetInteraction Interactions.DrawAnnotation )] [
-                //    i [clazz "large rocket icon"][] 
-                //]
-                            
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> SetInteraction Interactions.PlaceCoordinateSystem)] [
-                //    i [clazz "large rocket icon"][] 
-                //]
-
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> SetInteraction Interactions.PickExploreCenter)] [
-                //    i [clazz "large rocket icon black inverted"][] 
-                //]
-            //]
+                    )              
 
         let sceneTools =
             div [clazz "ui buttons inverted"] [
@@ -657,8 +653,13 @@ module ViewerApp =
                         ] "Data" 
       
         let topMenu = [
+             Html.Layout.horizontal [
+                Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
+                Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
+             ]
+
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
-             DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage              
+             DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
         ] 
                      
         let rest (model : MModel) = 
@@ -684,8 +685,7 @@ module ViewerApp =
 
         require (Html.semui @ [myCss]) (
             let sections = [
-                "blank", [div[style "height:15px"][]]
-                "Interactions", [interactTools]
+                "blank", [div[style "height:15px"][]]                
                 "Scene", [sceneTools]
                 "Add Surface", [openSurface]
                 "Import Measurements", [importMeasurements]]                              
