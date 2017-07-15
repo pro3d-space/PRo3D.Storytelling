@@ -17,10 +17,10 @@ module ReferenceSystemApp =
     type Action =
         | InferCoordSystem of V3d
         | SetOrigin        of V3d
-        | SetUp            of V3d       
+        | SetUp            of Vector3d.Action       
         | SetNorth         of V3d
         | ToggleVisible
-        | SetArrowScale    of NumericInput
+        | SetArrowScale    of NumericInput        
     
     let upVector (point:V3d) = point.Normalized
     
@@ -33,9 +33,12 @@ module ReferenceSystemApp =
             | InferCoordSystem p ->
                 let up = upVector p
                 let n = northVector up
-                { model with origin = p; north = n; up = up }
+                { model with origin = p; north = n; up = ReferenceSystem.setV3d up }
             | SetOrigin p     -> { model with origin = p }
-            | SetUp     up    -> { model with up = up }
+            | SetUp     up    ->    
+                let up = Vector3d.update model.up up
+                let up' = ReferenceSystem.setV3d up.value.Normalized
+                { model with up =  up'}
             | SetNorth  n     -> { model with north = n }
             | ToggleVisible   -> { model with isVisible = not model.isVisible}     
             | SetArrowScale s -> { model with arrowScale = s }
@@ -83,16 +86,16 @@ module ReferenceSystemApp =
             
                 Sg.ofList [
                     point model.origin (Mod.constant C4b.Red) cam
-                    directionMarker model.origin model.up (Mod.constant C4b.Blue) model.arrowScale.value cam
+                    directionMarker model.origin (model.up.value) (Mod.constant C4b.Blue) model.arrowScale.value cam
                     directionMarker model.origin model.north (Mod.constant C4b.Red) model.arrowScale.value cam
                 ] |> Sg.onOff(model.isVisible)
     module UI =
         let view (model:MReferenceSystem) =
             require Html.semui (
                 Html.table [                                                
-                    Html.row "Pos:"     [Incremental.text (model.origin |> Mod.map (fun x -> x.ToString("0.00")))]
-                    Html.row "Up:"      [Incremental.text (model.up     |> Mod.map (fun x -> x.ToString("0.00")))]
-                    Html.row "North:"   [Incremental.text (model.north  |> Mod.map (fun x -> x.ToString("0.00")))]
+                    Html.row "Pos:"     [Incremental.text (model.origin     |> Mod.map (fun x -> x.ToString("0.00")))]
+                    Html.row "Up:"      [Vector3d.view model.up |> UI.map SetUp ]
+                    Html.row "North:"   [Incremental.text (model.north      |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Bearing:" [text "not implemented"] // compute azimuth with view dir, north vector and up vector
                     Html.row "Pitch:"   [text "not implemented"] // same for pitch which relates to dip angle
                     Html.row "Height:"  [text "not implemented"]

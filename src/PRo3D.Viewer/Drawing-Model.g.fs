@@ -25,7 +25,6 @@ module Mutable =
         let _selectedAnnotation = MOption.Create(__initial.selectedAnnotation, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
         let _pendingIntersections = ResetMod.Create(__initial.pendingIntersections)
         let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
-        let _coordinates = PRo3D.Mutable.MReferenceSystem.Create(__initial.coordinates)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
         
@@ -41,7 +40,6 @@ module Mutable =
         member x.selectedAnnotation = _selectedAnnotation :> IMod<_>
         member x.pendingIntersections = _pendingIntersections :> IMod<_>
         member x.config = _config
-        member x.coordinates = _coordinates
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         
@@ -61,7 +59,6 @@ module Mutable =
                 MOption.Update(_selectedAnnotation, v.selectedAnnotation)
                 ResetMod.Update(_pendingIntersections,v.pendingIntersections)
                 PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
-                PRo3D.Mutable.MReferenceSystem.Update(_coordinates, v.coordinates)
                 _past.Update(v.past)
                 _future.Update(v.future)
                 
@@ -151,12 +148,6 @@ module Mutable =
                     override x.Get(r) = r.config
                     override x.Set(r,v) = { r with config = v }
                     override x.Update(r,f) = { r with config = f r.config }
-                }
-            let coordinates =
-                { new Lens<PRo3D.Drawing.DrawingModel, PRo3D.ReferenceSystem>() with
-                    override x.Get(r) = r.coordinates
-                    override x.Set(r,v) = { r with coordinates = v }
-                    override x.Update(r,f) = { r with coordinates = f r.coordinates }
                 }
             let past =
                 { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with

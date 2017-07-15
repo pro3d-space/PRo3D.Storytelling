@@ -313,26 +313,70 @@ type MeasurementsImporterModel = {
 type Surface = {    
     
     [<PrimaryKey>]
-    guid : System.Guid
+    guid        : System.Guid
     
-    name : string
-    importPath : string
-    opcPaths : list<string>
+    name        : string
+    importPath  : string
+    opcPaths    : list<string>
     
-    fillMode  : FillMode
-    cullMode  : CullMode
-    isVisible : bool
+    fillMode    : FillMode
+    cullMode    : CullMode
+    isVisible   : bool
 }
 
 [<DomainType>]
+type ReferenceSystem = {    
+
+    origin      : V3d
+    north       : V3d
+    up          : V3dInput
+    isVisible   : bool
+    arrowScale  : NumericInput
+}
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module ReferenceSystem =
+    let initNum = {
+        value   = 0.0
+        min     = -1.0
+        max     = +1.0
+        step    = 0.1
+        format  = "{0:0.000}"
+    }
+
+    let setV3d (v : V3d) = {
+        x = { initNum with value = v.X }
+        y = { initNum with value = v.Y }
+        z = { initNum with value = v.Z }
+        value = v    
+    }
+
+    let initArrowSize = {
+        value   = 1.0
+        min     = 0.1
+        max     = 10.0
+        step    = 0.1
+        format  = "{0:0.0}"
+    }
+
+    let initial = {
+        origin = V3d.OOO
+        north = V3d.IOO
+        up = setV3d V3d.OOI
+        isVisible = true
+        arrowScale = initArrowSize
+        }
+
+[<DomainType>]
 type ViewConfigModel = {
-    nearPlane : NumericInput
-    farPlane : NumericInput
-    navigationSensitivity : NumericInput
-    arrowSize : NumericInput
-    dnsPlaneSize : NumericInput
-    minDipAngle : NumericInput
-    maxDipAngle : NumericInput
+    nearPlane               : NumericInput
+    farPlane                : NumericInput
+    navigationSensitivity   : NumericInput
+    arrowSize               : NumericInput
+    dnsPlaneSize            : NumericInput
+    minDipAngle             : NumericInput
+    maxDipAngle             : NumericInput
+    coordinates             : ReferenceSystem
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -394,27 +438,12 @@ module ViewConfigModel =
         dnsPlaneSize = initPlaneSize
         minDipAngle = initMinAngle
         maxDipAngle = initMaxAngle
+        coordinates = ReferenceSystem.initial
         }
+    
+    
+ 
 
-[<DomainType>]
-type ReferenceSystem = {    
-
-    origin : V3d
-    north : V3d
-    up : V3d
-    isVisible : bool
-    arrowScale : NumericInput
-}
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module ReferenceSystem =
-    let initial = {
-        origin = V3d.OOO
-        north = V3d.IOO
-        up = V3d.OOI        
-        isVisible = true
-        arrowScale = ViewConfigModel.initArrowSize
-        }
 
         
 [<DomainType>]

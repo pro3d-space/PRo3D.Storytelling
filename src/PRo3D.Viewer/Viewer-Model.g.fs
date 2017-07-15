@@ -88,14 +88,12 @@ module Mutable =
         let _navigation = PRo3D.Mutable.MNavigationModel.Create(__initial.navigation)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _surfaces = ResetMod.Create(__initial.surfaces)
-        let _referenceSystem = PRo3D.Mutable.MReferenceSystem.Create(__initial.referenceSystem)
         let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
         let _scenePath = MOption.Create(__initial.scenePath)
         
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
         member x.surfaces = _surfaces :> IMod<_>
-        member x.referenceSystem = _referenceSystem
         member x.config = _config
         member x.scenePath = _scenePath :> IMod<_>
         
@@ -106,7 +104,6 @@ module Mutable =
                 PRo3D.Mutable.MNavigationModel.Update(_navigation, v.navigation)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_surfaces,v.surfaces)
-                PRo3D.Mutable.MReferenceSystem.Update(_referenceSystem, v.referenceSystem)
                 PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
                 MOption.Update(_scenePath, v.scenePath)
                 
@@ -142,12 +139,6 @@ module Mutable =
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
-                }
-            let referenceSystem =
-                { new Lens<PRo3D.Viewer.Scene, PRo3D.ReferenceSystem>() with
-                    override x.Get(r) = r.referenceSystem
-                    override x.Set(r,v) = { r with referenceSystem = v }
-                    override x.Update(r,f) = { r with referenceSystem = f r.referenceSystem }
                 }
             let config =
                 { new Lens<PRo3D.Viewer.Scene, PRo3D.ViewConfigModel>() with

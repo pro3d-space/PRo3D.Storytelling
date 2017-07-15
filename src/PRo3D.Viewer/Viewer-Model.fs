@@ -30,8 +30,7 @@ type SgSurface = {
 type Scene = {
     navigation      : NavigationModel
     interaction     : InteractionMode
-    surfaces        : list<Surface>
-    referenceSystem : ReferenceSystem
+    surfaces        : list<Surface>    
     config          : ViewConfigModel
     scenePath       : option<string>
 }
@@ -75,13 +74,12 @@ module Viewer =
         scene = {
                 navigation      = NavigationModel.initial
                 interaction     = InteractionMode.PickOrbitCenter
-                surfaces        = []
-                referenceSystem = ReferenceSystem.initial
+                surfaces        = []                
                 config          = ViewConfigModel.initial
                 scenePath       = None
         }
 
-        drawing         = Drawing.Model.initialdrawing
+        drawing         = Drawing.DrawingModel.initialdrawing
         properties      = NoProperties
         interaction     = Interactions.DrawAnnotation
         picking         = false

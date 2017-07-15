@@ -61,7 +61,7 @@ type DrawingModel = {
 
     pendingIntersections : ThreadPool<Action>
     config : ViewConfigModel
-    coordinates : ReferenceSystem   
+    //coordinates : ReferenceSystem   
 
     [<TreatAsValue>]
     past : Option<DrawingModel> 
@@ -71,7 +71,15 @@ type DrawingModel = {
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
-module Model =
+module DrawingModel =
+    let tryGet (m:DrawingModel) key = 
+            m.annotations |> Seq.tryFind(fun x -> x.key = key)
+
+    let update (m : DrawingModel) (ann : Annotation) = 
+        m.annotations.AsList 
+            |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
+            |> PList.ofList
+
     let initialdrawing = {
         hoverPosition = None
         draw          = false                    
@@ -88,22 +96,8 @@ module Model =
         selected                = HSet.empty
         selectedAnnotation      = None
         pendingIntersections    = ThreadPool.empty
-        config                  = ViewConfigModel.initial
-        coordinates             = ReferenceSystem.initial
+        config                  = ViewConfigModel.initial        
 
         past    = None
         future  = None
     }
-
-
-
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
-module DrawingModel =
-    let tryGet (m:DrawingModel) key = 
-            m.annotations |> Seq.tryFind(fun x -> x.key = key)
-
-    let update (m : DrawingModel) (ann : Annotation) = 
-        m.annotations.AsList 
-            |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
-            |> PList.ofList

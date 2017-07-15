@@ -300,8 +300,9 @@ module ViewerApp =
                                 { m with drawing = drawing } |> stash
                             | Interactions.PlaceCoordinateSystem -> 
                                 let refSystem = 
-                                    ReferenceSystemApp.update m.scene.referenceSystem (ReferenceSystemApp.Action.InferCoordSystem(hit))
-                                { m with scene = { m.scene with referenceSystem = refSystem }}
+                                    ReferenceSystemApp.update m.scene.config.coordinates (ReferenceSystemApp.Action.InferCoordSystem(hit))
+                                //(m, MScene. *. Config.Coordinates) <=== refSystem
+                                { m with scene = { m.scene with config = { m.scene.config with coordinates = refSystem }}}
                             | Interactions.PickExploreCenter ->
                                 let navigation = 
                                     Navigation.update m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
@@ -366,15 +367,17 @@ module ViewerApp =
                     { m with drawing = d; picking = false } |> stash
             | SetInteraction t,_,_ -> { m with interaction = t }    
             | ReferenceSystemMessage a,_,_ -> 
-                { m with scene = { m.scene with referenceSystem = ReferenceSystemApp.update m.scene.referenceSystem a } }
+                { m with 
+                    scene = { m.scene with 
+                                    config = { m.scene.config with 
+                                                            coordinates = ReferenceSystemApp.update m.scene.config.coordinates a }}}
             | ConfigPropertiesMessage a,_,_ -> 
                 let c' = ConfigProperties.update m.scene.config a
                 { m with 
-                    scene = { 
-                            m.scene with config = c';
-                                                referenceSystem = { m.scene.referenceSystem with arrowScale = c'.arrowSize };
-                                                navigation = { m.scene.navigation with config = c' } }
-                    drawing = { m.drawing with config = c' } }           
+                    scene   = { m.scene with 
+                                    config          = c'                                   
+                                    navigation      = { m.scene.navigation with config = c' } }
+                    drawing = { m.drawing with config = c' } } 
             | _ -> m
 
     let scene (m : MModel) =
@@ -471,7 +474,7 @@ module ViewerApp =
                                 |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
 
                         let orientations =
-                            ReferenceSystemApp.Sg.view m.scene.referenceSystem m.scene.navigation.camera.view
+                            ReferenceSystemApp.Sg.view m.scene.config.coordinates m.scene.navigation.camera.view
 
                         let exploreCenter =
                             Navigation.Sg.view m.scene.navigation
@@ -638,7 +641,7 @@ module ViewerApp =
                 ]
 
                 GuiEx.accordion "Coordinate System" "Map Signs" false [
-                    ReferenceSystemApp.UI.view m.scene.referenceSystem |> UI.map ReferenceSystemMessage
+                    ReferenceSystemApp.UI.view m.scene.config.coordinates |> UI.map ReferenceSystemMessage
                 ]
 
                 GuiEx.accordion "Camera" "Camera Retro" false [
