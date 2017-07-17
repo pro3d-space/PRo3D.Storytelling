@@ -227,7 +227,7 @@ module Mutable =
         let _semantic = ResetMod.Create(__initial.semantic)
         let _points = MList.Create(__initial.points)
         let _segments = MList.Create(__initial.segments, (fun v -> MSegment.Create(v)), (fun (m,v) -> MSegment.Update(m, v)), (fun v -> v))
-        let _color = ResetMod.Create(__initial.color)
+        let _color = Aardvark.UI.Mutable.MColorInput.Create(__initial.color)
         let _thickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.thickness)
         let _results = MOption.Create(__initial.results, (fun v -> MAnnotationResults.Create(v)), (fun (m,v) -> MAnnotationResults.Update(m, v)), (fun v -> v))
         let _dnsResults = MOption.Create(__initial.dnsResults, (fun v -> MDipAndStrikeResults.Create(v)), (fun (m,v) -> MDipAndStrikeResults.Update(m, v)), (fun v -> v))
@@ -243,7 +243,7 @@ module Mutable =
         member x.semantic = _semantic :> IMod<_>
         member x.points = _points :> alist<_>
         member x.segments = _segments :> alist<_>
-        member x.color = _color :> IMod<_>
+        member x.color = _color
         member x.thickness = _thickness
         member x.results = _results :> IMod<_>
         member x.dnsResults = _dnsResults :> IMod<_>
@@ -263,7 +263,7 @@ module Mutable =
                 ResetMod.Update(_semantic,v.semantic)
                 MList.Update(_points, v.points)
                 MList.Update(_segments, v.segments)
-                ResetMod.Update(_color,v.color)
+                Aardvark.UI.Mutable.MColorInput.Update(_color, v.color)
                 Aardvark.UI.Mutable.MNumericInput.Update(_thickness, v.thickness)
                 MOption.Update(_results, v.results)
                 MOption.Update(_dnsResults, v.dnsResults)
@@ -330,7 +330,7 @@ module Mutable =
                     override x.Update(r,f) = { r with segments = f r.segments }
                 }
             let color =
-                { new Lens<PRo3D.Annotation, Aardvark.Base.C4b>() with
+                { new Lens<PRo3D.Annotation, Aardvark.UI.ColorInput>() with
                     override x.Get(r) = r.color
                     override x.Set(r,v) = { r with color = v }
                     override x.Update(r,f) = { r with color = f r.color }

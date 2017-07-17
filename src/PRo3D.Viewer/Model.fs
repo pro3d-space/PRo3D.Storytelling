@@ -106,24 +106,24 @@ type Segment = {
 
 [<DomainType>]
 type Annotation = {
-    key : Guid
+    key         : Guid
 
-    modelTrafo : Trafo3d
+    modelTrafo  : Trafo3d
 
-    geometry : Geometry
-    projection : Projection
-    semantic : Semantic
+    geometry    : Geometry
+    projection  : Projection
+    semantic    : Semantic
 
-    points : plist<V3d>
-    segments : plist<Segment> 
-    color : C4b
-    thickness : NumericInput
-    results : Option<AnnotationResults>
-    dnsResults : Option<DipAndStrikeResults>
+    points      : plist<V3d>
+    segments    : plist<Segment> 
+    color       : ColorInput
+    thickness   : NumericInput
+    results     : Option<AnnotationResults>
+    dnsResults  : Option<DipAndStrikeResults>
 
-    visible : bool
-    showDns : bool
-    text : string
+    visible     : bool
+    showDns     : bool
+    text        : string
 
     surfaceName : string
 }
@@ -210,7 +210,7 @@ module Annotation =
             semantic = semantic
             points = plist.Empty
             segments = plist.Empty //[]
-            color = color
+            color = { c = color }
             thickness = { thickn with value = thickness}
             results = None
             dnsResults = None            

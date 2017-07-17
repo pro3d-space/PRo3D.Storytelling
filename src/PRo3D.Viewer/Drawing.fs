@@ -310,7 +310,7 @@ module DrawingApp =
             let color =  
                 model.selected 
                     |> ASet.contains id 
-                    |> Mod.bind (function x -> if x then Mod.constant C4b.Red else a.color)
+                    |> Mod.bind (function x -> if x then Mod.constant C4b.Red else a.color.c)
 
             color
 
@@ -615,7 +615,7 @@ module DrawingApp =
                         | None -> ()
                 }
                 
-            let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color) 
+            let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color.c) 
             let thickness = Mod.bindOption anno 1.0              (fun a -> a.thickness.value) 
             let key       = Mod.bindOption anno Guid.Empty       (fun a -> a.key) 
             let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)          
@@ -639,10 +639,10 @@ module DrawingApp =
             let points = getPolyline anno
                        
             Sg.ofList [
-                lines points c anno.thickness.value anno.modelTrafo anno.key;                
+                lines points anno.color.c anno.thickness.value anno.modelTrafo anno.key;         
                 dots anno.points c view                    
             //    text anno
-                drawDns anno view conf //|> Sg.onOff anno.showDns
+                drawDns anno view conf |> Sg.onOff anno.showDns
             ] |> Sg.onOff anno.visible
 
         let view (model:MDrawingModel) (cam:IMod<CameraView>) =
