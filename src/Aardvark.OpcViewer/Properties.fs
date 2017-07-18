@@ -14,7 +14,7 @@ module DefaultMetrics =
         let area = computeScreenSpaceArea p.info.LocalBoundingBox mvp
         //let area = computeScreenSpaceArea p.info.GlobalBoundingBox vp
 
-        log area > log 0.8
+      //  log area > log 3.8
         true
 
     let tunnel (self : AdaptiveToken)  (vp : IMod<Trafo3d>) (factor : IMod<float>)  (p : RenderPatch) =

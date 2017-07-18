@@ -265,7 +265,7 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | Some x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x)}}
                     | None -> m   
-            | QuickLoad1,_,_ ->                
+            | QuickLoad1,_,_ ->
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
                 let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\Cape_Desire_RGB"
                 Surface.import' runtime signature [Surface.mk path] m |> lookAtData
@@ -384,11 +384,12 @@ module ViewerApp =
 
                 m
             | ConfigPropertiesMessage a,_,_ -> 
+                Log.line "config message %A" a
                 let c' = ConfigProperties.update m.scene.config a
                 { m with 
                     scene   = { m.scene with 
                                     config          = c'                                   
-                                    navigation      = { m.scene.navigation with config = c' } }
+                                    navigation      = { m.scene.navigation with config = c' }} //; camera = { m.scene.navigation.camera with sensitivity = c'.navigationSensitivity.value} } }
                     drawing = { m.drawing with config = c' } } 
             | _ -> m
 
@@ -417,15 +418,15 @@ module ViewerApp =
                         |> Sg.uniform "selected" isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
                         |> Sg.onOff(surface.surface.isVisible)                             
-                        //|> Sg.andAlso (
-                        //    Sg.wireBox' C4b.Red bb
-                        //            |> Sg.noEvents
-                        //            |> Sg.noEvents
-                        //            |> Sg.shader {
-                        //                    do! Shader.stableTrafo
-                        //                    do! DefaultSurfaces.vertexColor                                                                     
-                        //                }
-                        //    ) 
+                        |> Sg.andAlso (
+                            Sg.wireBox' C4b.Red bb
+                                    |> Sg.noEvents
+                                    |> Sg.noEvents
+                                    |> Sg.shader {
+                                            do! Shader.stableTrafo
+                                            do! DefaultSurfaces.vertexColor                                                                     
+                                        }
+                            ) 
                         |> Sg.pickable (PickShape.Box bb) 
                         |> Sg.withEvents [
                                 SceneEventKind.Down, (

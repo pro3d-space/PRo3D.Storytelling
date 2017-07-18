@@ -92,7 +92,7 @@ module AnnotationProperties =
                 Html.row "Show DnS:"    [Html.SemUi.toggleBox model.showDns ToggleShowDns ]
                 Html.row "Height:"      [Incremental.text (height   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
                 Html.row "HeightDelta:" [Incremental.text (heightD  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
-                Html.row "Lenght:"      [Incremental.text (length   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+                Html.row "Length:"      [Incremental.text (length   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
                 Html.row "WayLength:"   [Incremental.text (wLength  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
             ]
         )
