@@ -20,8 +20,8 @@ module ReferenceSystemApp =
         | SetUp              of V3d       
         | SetNorth           of V3d
         | ToggleVisible
-        | SetArrowLength     of NumericInput
-        | SetArrowThickness  of NumericInput
+        | SetConfig          of ViewConfigModel
+ 
     
     let upVector (point:V3d) = point.Normalized
     
@@ -39,8 +39,7 @@ module ReferenceSystemApp =
             | SetUp     up         -> { model with up = up }
             | SetNorth  n          -> { model with north = n }
             | ToggleVisible        -> { model with isVisible = not model.isVisible}     
-            | SetArrowLength al    -> { model with arrowLength = al }
-            | SetArrowThickness at -> { model with arrowThickness = at }
+            | SetConfig c          -> { model with config = c }
 
     module Sg =
 
@@ -85,8 +84,8 @@ module ReferenceSystemApp =
             
                 Sg.ofList [
                     point model.origin (Mod.constant C4b.Red) cam
-                    directionMarker model.origin model.up (Mod.constant C4b.Blue) model.arrowLength.value  model.arrowThickness.value cam
-                    directionMarker model.origin model.north (Mod.constant C4b.Red) model.arrowLength.value model.arrowThickness.value cam
+                    directionMarker model.origin model.up (Mod.constant C4b.Blue) model.config.arrowLength.value  model.config.arrowThickness.value cam
+                    directionMarker model.origin model.north (Mod.constant C4b.Red) model.config.arrowLength.value model.config.arrowThickness.value cam
                 ] |> Sg.onOff(model.isVisible)
     module UI =
         let view (model:MReferenceSystem) =

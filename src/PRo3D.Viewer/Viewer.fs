@@ -356,7 +356,7 @@ module ViewerApp =
             | ConfigPropertiesMessage a,_,_ -> 
                 let c' = ConfigProperties.update m.scene.config a
                 { m with scene = { m.scene with config = c';
-                                                referenceSystem = { m.scene.referenceSystem with arrowLength = c'.arrowLength; arrowThickness = c'.arrowThickness };
+                                                referenceSystem = { m.scene.referenceSystem with config = c'};
                                                 navigation = { m.scene.navigation with config = c' } };
                          drawing = { m.drawing with config = c' } }
             | _ -> m

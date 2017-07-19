@@ -611,15 +611,13 @@ module Mutable =
         let _north = ResetMod.Create(__initial.north)
         let _up = ResetMod.Create(__initial.up)
         let _isVisible = ResetMod.Create(__initial.isVisible)
-        let _arrowLength = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowLength)
-        let _arrowThickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowThickness)
+        let _config = MViewConfigModel.Create(__initial.config)
         
         member x.origin = _origin :> IMod<_>
         member x.north = _north :> IMod<_>
         member x.up = _up :> IMod<_>
         member x.isVisible = _isVisible :> IMod<_>
-        member x.arrowLength = _arrowLength
-        member x.arrowThickness = _arrowThickness
+        member x.config = _config
         
         member x.Update(v : PRo3D.ReferenceSystem) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -629,8 +627,7 @@ module Mutable =
                 ResetMod.Update(_north,v.north)
                 ResetMod.Update(_up,v.up)
                 ResetMod.Update(_isVisible,v.isVisible)
-                Aardvark.UI.Mutable.MNumericInput.Update(_arrowLength, v.arrowLength)
-                Aardvark.UI.Mutable.MNumericInput.Update(_arrowThickness, v.arrowThickness)
+                MViewConfigModel.Update(_config, v.config)
                 
         
         static member Create(__initial : PRo3D.ReferenceSystem) : MReferenceSystem = MReferenceSystem(__initial)
@@ -671,17 +668,11 @@ module Mutable =
                     override x.Set(r,v) = { r with isVisible = v }
                     override x.Update(r,f) = { r with isVisible = f r.isVisible }
                 }
-            let arrowLength =
-                { new Lens<PRo3D.ReferenceSystem, Aardvark.UI.NumericInput>() with
-                    override x.Get(r) = r.arrowLength
-                    override x.Set(r,v) = { r with arrowLength = v }
-                    override x.Update(r,f) = { r with arrowLength = f r.arrowLength }
-                }
-            let arrowThickness =
-                { new Lens<PRo3D.ReferenceSystem, Aardvark.UI.NumericInput>() with
-                    override x.Get(r) = r.arrowThickness
-                    override x.Set(r,v) = { r with arrowThickness = v }
-                    override x.Update(r,f) = { r with arrowThickness = f r.arrowThickness }
+            let config =
+                { new Lens<PRo3D.ReferenceSystem, PRo3D.ViewConfigModel>() with
+                    override x.Get(r) = r.config
+                    override x.Set(r,v) = { r with config = v }
+                    override x.Update(r,f) = { r with config = f r.config }
                 }
     
     

@@ -412,8 +412,7 @@ type ReferenceSystem = {
     north : V3d
     up : V3d
     isVisible : bool
-    arrowLength : NumericInput
-    arrowThickness : NumericInput
+    config : ViewConfigModel
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -423,8 +422,7 @@ module ReferenceSystem =
         north = V3d.IOO
         up = V3d.OOI        
         isVisible = true
-        arrowLength = ViewConfigModel.initArrowLength
-        arrowThickness = ViewConfigModel.initArrowThickness
+        config = ViewConfigModel.initial
         }
 
         
