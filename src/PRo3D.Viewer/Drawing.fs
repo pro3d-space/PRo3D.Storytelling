@@ -383,15 +383,15 @@ module DrawingApp =
                 return distF * size / 800.0 //needs hfov at this point
             }
 
-        let computeInvariantScale (view : IMod<CameraView>) (conf:MViewConfigModel) (p:IMod<V3d>) =
+        let computeInvariantScale (view : IMod<CameraView>) (conf:MViewConfigModel) (p:IMod<V3d>) (size:IMod<float>) =
             adaptive {
                 let! p = p
                 let! v = view
                 let! near = conf.nearPlane.value
-                let! size = conf.arrowSize.value
+                let! size = size
                 let hfov = 60.0
                
-                let wz = Fun.Tan(hfov / 2.0) * near * size * 0.5
+                let wz = Fun.Tan(hfov / 2.0) * near * size * 0.1
                 let dist = V3d.Distance(p, v.Location)
 
                 return ( wz / near ) * dist
@@ -503,16 +503,19 @@ module DrawingApp =
                         let! plane = x.plane
                         let! dip = x.dipDirection
                         let! strike = x.strikeDirection
-                        let! s = conf.arrowSize.value
-                        let scale = computeInvariantScale view conf point
-                        let! scale = scale
-                        let dlength = dip.Normalized * scale
+                        //let! sl = conf.arrowLength.value
+                        //let! st = conf.arrowThickness.value
+                        let lineThicknessScale = computeInvariantScale view conf point conf.arrowThickness.value
+                        let! lts = lineThicknessScale
+                        let lineLengthScale = computeInvariantScale view conf point conf.arrowLength.value
+                        let! lineLengthScale = lineLengthScale
+                        let dlength = dip.Normalized * lineLengthScale
                         let dipLine = alist{
                                         yield p
                                         yield p + dlength
                                         }                       
-                        let slength1 = strike.Normalized.Negated * scale
-                        let slength2 = strike.Normalized * scale
+                        let slength1 = strike.Normalized.Negated * lineLengthScale
+                        let slength2 = strike.Normalized * lineLengthScale
                         let strikeLine1 = alist {
                                             yield p
                                             yield p + slength1
@@ -523,15 +526,17 @@ module DrawingApp =
                                             }
 
                         
-                        let radius = scale * 0.05
-                        let! planeSize = conf.dnsPlaneSize.value
-                        let height = planeSize * 0.2
-                        let coneSize = scale * 0.5
-                        yield discISg color conf.dnsPlaneSize.value (Mod.constant height) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p)))  // disc
-                        yield lines dipLine color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
+                        let radius = lts * 0.05
+                        let! planeScale = computeInvariantScale view conf point conf.dnsPlaneSize.value
+                        let lineThickness = lts * 0.3
+                        //let height = planeScale * 0.2
+                        let coneSize = lineLengthScale * 0.5
+
+                        yield discISg color (Mod.constant planeScale) (Mod.constant 0.001) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p)))  // disc
+                        yield lines dipLine color (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
                         yield coneISg color (Mod.constant radius) (Mod.constant coneSize) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(p + dlength))) 
-                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
-                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike2 vec
+                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
+                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike2 vec
                     | None -> () 
                                
             } |> Sg.set

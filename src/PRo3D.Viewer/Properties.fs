@@ -113,7 +113,8 @@ module ConfigProperties =
         | SetNearPlane              of Numeric.Action
         | SetFarPlane               of Numeric.Action
         | SetNavigationSensitivity  of Numeric.Action
-        | SetArrowSize              of Numeric.Action
+        | SetArrowLength            of Numeric.Action
+        | SetArrowThickness         of Numeric.Action
         | SetDnSPlaneSize           of Numeric.Action
         | SetMinDipAngle            of Numeric.Action
         | SetMaxDipAngle            of Numeric.Action
@@ -126,8 +127,10 @@ module ConfigProperties =
                 { model with farPlane = Numeric.update model.farPlane s }
             | SetNavigationSensitivity s ->
                 { model with navigationSensitivity = Numeric.update model.navigationSensitivity s }
-            | SetArrowSize s ->
-                { model with arrowSize = Numeric.update model.arrowSize s }
+            | SetArrowLength al ->
+                { model with arrowLength = Numeric.update model.arrowLength al }
+            | SetArrowThickness at ->
+                { model with arrowThickness = Numeric.update model.arrowThickness at }
             | SetDnSPlaneSize s ->
                 { model with dnsPlaneSize = Numeric.update model.dnsPlaneSize s }
             | SetMinDipAngle s ->
@@ -141,7 +144,8 @@ module ConfigProperties =
                 Html.row "Near Plane:"  [Numeric.view' [InputBox] model.nearPlane |> UI.map SetNearPlane ]               
                 Html.row "Far Plane:"   [Numeric.view' [InputBox] model.farPlane |> UI.map SetFarPlane ]    
                 Html.row "Navigation Sensitivity:"   [Numeric.view' [InputBox] model.navigationSensitivity |> UI.map SetNavigationSensitivity ]    
-                Html.row "Arrow Size:"  [Numeric.view' [InputBox] model.arrowSize |> UI.map SetArrowSize ]               
+                Html.row "Arrow Length:"  [Numeric.view' [InputBox] model.arrowLength |> UI.map SetArrowLength ]  
+                Html.row "Arrow Thickness:"  [Numeric.view' [InputBox] model.arrowThickness |> UI.map SetArrowThickness ]  
                 Html.row "D+S Plane Size:"   [Numeric.view' [InputBox] model.dnsPlaneSize |> UI.map SetDnSPlaneSize ]    
                 Html.row "Min Dipping Angle:"   [Numeric.view' [InputBox] model.minDipAngle |> UI.map SetMinDipAngle ]
                 Html.row "Max Dipping Angle:"   [Numeric.view' [InputBox] model.maxDipAngle |> UI.map SetMaxDipAngle ]

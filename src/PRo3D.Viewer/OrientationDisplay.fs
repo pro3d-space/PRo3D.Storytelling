@@ -15,12 +15,13 @@ module ReferenceSystemApp =
     open Aardvark.SceneGraph.FShadeSceneGraph
    
     type Action =
-        | InferCoordSystem of V3d
-        | SetOrigin        of V3d
-        | SetUp            of V3d       
-        | SetNorth         of V3d
+        | InferCoordSystem   of V3d
+        | SetOrigin          of V3d
+        | SetUp              of V3d       
+        | SetNorth           of V3d
         | ToggleVisible
-        | SetArrowScale    of NumericInput
+        | SetArrowLength     of NumericInput
+        | SetArrowThickness  of NumericInput
     
     let upVector (point:V3d) = point.Normalized
     
@@ -34,11 +35,12 @@ module ReferenceSystemApp =
                 let up = upVector p
                 let n = northVector up
                 { model with origin = p; north = n; up = up }
-            | SetOrigin p     -> { model with origin = p }
-            | SetUp     up    -> { model with up = up }
-            | SetNorth  n     -> { model with north = n }
-            | ToggleVisible   -> { model with isVisible = not model.isVisible}     
-            | SetArrowScale s -> { model with arrowScale = s }
+            | SetOrigin p          -> { model with origin = p }
+            | SetUp     up         -> { model with up = up }
+            | SetNorth  n          -> { model with north = n }
+            | ToggleVisible        -> { model with isVisible = not model.isVisible}     
+            | SetArrowLength al    -> { model with arrowLength = al }
+            | SetArrowThickness at -> { model with arrowThickness = at }
 
     module Sg =
 
@@ -52,21 +54,21 @@ module ReferenceSystemApp =
                     }
                     |> Sg.trafo(trafo)
 
-        let directionMarker (pos:IMod<V3d>) (dir:IMod<V3d>) (color:IMod<C4b>) (scale:IMod<float>) (cam:IMod<CameraView>) =
+        let directionMarker (pos:IMod<V3d>) (dir:IMod<V3d>) (color:IMod<C4b>) (length:IMod<float>) (thickness:IMod<float>) (cam:IMod<CameraView>) =
             aset{
                 let! pos = pos
                 let! dir = dir
-                let! s = scale
-                let length = dir * s
+                let! length = length
+                let scaledLength = dir * length
                 let al = 
                     alist {
                         yield pos
-                        yield pos + length
+                        yield pos + scaledLength
                     }
-                let radius = s * 0.1
+                let radius = length * 0.1
                 //let scale =  DrawingApp.Sg.computeScale cam (Mod.constant pos) 5.0
                 yield DrawingApp.Sg.lines al color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(pos))) (Mod.constant Guid.Empty)
-                yield coneISg color (Mod.constant radius) (Mod.constant s) (Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + length))) // 
+                yield coneISg color (Mod.constant radius) (Mod.constant length) (Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + scaledLength))) // 
             } |> Sg.set 
                 
         
@@ -83,8 +85,8 @@ module ReferenceSystemApp =
             
                 Sg.ofList [
                     point model.origin (Mod.constant C4b.Red) cam
-                    directionMarker model.origin model.up (Mod.constant C4b.Blue) model.arrowScale.value cam
-                    directionMarker model.origin model.north (Mod.constant C4b.Red) model.arrowScale.value cam
+                    directionMarker model.origin model.up (Mod.constant C4b.Blue) model.arrowLength.value  model.arrowThickness.value cam
+                    directionMarker model.origin model.north (Mod.constant C4b.Red) model.arrowLength.value model.arrowThickness.value cam
                 ] |> Sg.onOff(model.isVisible)
     module UI =
         let view (model:MReferenceSystem) =

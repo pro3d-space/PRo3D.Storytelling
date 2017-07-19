@@ -329,7 +329,8 @@ type ViewConfigModel = {
     nearPlane : NumericInput
     farPlane : NumericInput
     navigationSensitivity : NumericInput
-    arrowSize : NumericInput
+    arrowLength : NumericInput
+    arrowThickness : NumericInput
     dnsPlaneSize : NumericInput
     minDipAngle : NumericInput
     maxDipAngle : NumericInput
@@ -358,19 +359,26 @@ module ViewConfigModel =
         step    = 0.1
         format  = "{0:0.0}"
     }
-    let initArrowSize = {
-        value   = 1.0
-        min     = 0.1
+    let initArrowLength = {
+        value   = 0.5
+        min     = 0.01
         max     = 10.0
-        step    = 0.1
-        format  = "{0:0.0}"
+        step    = 0.01
+        format  = "{0:0.00}"
+    }
+    let initArrowThickness = {
+        value   = 0.5
+        min     = 0.01
+        max     = 10.0
+        step    = 0.01
+        format  = "{0:0.00}"
     }
     let initPlaneSize = {
-        value   = 1.0
-        min     = 0.1
+        value   = 0.2
+        min     = 0.01
         max     = 10.0
-        step    = 0.1
-        format  = "{0:0.0}"
+        step    = 0.01
+        format  = "{0:0.00}"
     }
     let initMinAngle = {
         value   = 1.0
@@ -390,7 +398,8 @@ module ViewConfigModel =
         nearPlane = initNearPlane
         farPlane = initFarPlane
         navigationSensitivity = initNavSens
-        arrowSize = initArrowSize
+        arrowLength = initArrowLength
+        arrowThickness = initArrowThickness
         dnsPlaneSize = initPlaneSize
         minDipAngle = initMinAngle
         maxDipAngle = initMaxAngle
@@ -403,7 +412,8 @@ type ReferenceSystem = {
     north : V3d
     up : V3d
     isVisible : bool
-    arrowScale : NumericInput
+    arrowLength : NumericInput
+    arrowThickness : NumericInput
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -413,7 +423,8 @@ module ReferenceSystem =
         north = V3d.IOO
         up = V3d.OOI        
         isVisible = true
-        arrowScale = ViewConfigModel.initArrowSize
+        arrowLength = ViewConfigModel.initArrowLength
+        arrowThickness = ViewConfigModel.initArrowThickness
         }
 
         

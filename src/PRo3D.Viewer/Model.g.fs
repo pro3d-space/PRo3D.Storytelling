@@ -511,7 +511,8 @@ module Mutable =
         let _nearPlane = Aardvark.UI.Mutable.MNumericInput.Create(__initial.nearPlane)
         let _farPlane = Aardvark.UI.Mutable.MNumericInput.Create(__initial.farPlane)
         let _navigationSensitivity = Aardvark.UI.Mutable.MNumericInput.Create(__initial.navigationSensitivity)
-        let _arrowSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowSize)
+        let _arrowLength = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowLength)
+        let _arrowThickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowThickness)
         let _dnsPlaneSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.dnsPlaneSize)
         let _minDipAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.minDipAngle)
         let _maxDipAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.maxDipAngle)
@@ -519,7 +520,8 @@ module Mutable =
         member x.nearPlane = _nearPlane
         member x.farPlane = _farPlane
         member x.navigationSensitivity = _navigationSensitivity
-        member x.arrowSize = _arrowSize
+        member x.arrowLength = _arrowLength
+        member x.arrowThickness = _arrowThickness
         member x.dnsPlaneSize = _dnsPlaneSize
         member x.minDipAngle = _minDipAngle
         member x.maxDipAngle = _maxDipAngle
@@ -531,7 +533,8 @@ module Mutable =
                 Aardvark.UI.Mutable.MNumericInput.Update(_nearPlane, v.nearPlane)
                 Aardvark.UI.Mutable.MNumericInput.Update(_farPlane, v.farPlane)
                 Aardvark.UI.Mutable.MNumericInput.Update(_navigationSensitivity, v.navigationSensitivity)
-                Aardvark.UI.Mutable.MNumericInput.Update(_arrowSize, v.arrowSize)
+                Aardvark.UI.Mutable.MNumericInput.Update(_arrowLength, v.arrowLength)
+                Aardvark.UI.Mutable.MNumericInput.Update(_arrowThickness, v.arrowThickness)
                 Aardvark.UI.Mutable.MNumericInput.Update(_dnsPlaneSize, v.dnsPlaneSize)
                 Aardvark.UI.Mutable.MNumericInput.Update(_minDipAngle, v.minDipAngle)
                 Aardvark.UI.Mutable.MNumericInput.Update(_maxDipAngle, v.maxDipAngle)
@@ -569,11 +572,17 @@ module Mutable =
                     override x.Set(r,v) = { r with navigationSensitivity = v }
                     override x.Update(r,f) = { r with navigationSensitivity = f r.navigationSensitivity }
                 }
-            let arrowSize =
+            let arrowLength =
                 { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
-                    override x.Get(r) = r.arrowSize
-                    override x.Set(r,v) = { r with arrowSize = v }
-                    override x.Update(r,f) = { r with arrowSize = f r.arrowSize }
+                    override x.Get(r) = r.arrowLength
+                    override x.Set(r,v) = { r with arrowLength = v }
+                    override x.Update(r,f) = { r with arrowLength = f r.arrowLength }
+                }
+            let arrowThickness =
+                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.arrowThickness
+                    override x.Set(r,v) = { r with arrowThickness = v }
+                    override x.Update(r,f) = { r with arrowThickness = f r.arrowThickness }
                 }
             let dnsPlaneSize =
                 { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
@@ -602,13 +611,15 @@ module Mutable =
         let _north = ResetMod.Create(__initial.north)
         let _up = ResetMod.Create(__initial.up)
         let _isVisible = ResetMod.Create(__initial.isVisible)
-        let _arrowScale = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowScale)
+        let _arrowLength = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowLength)
+        let _arrowThickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowThickness)
         
         member x.origin = _origin :> IMod<_>
         member x.north = _north :> IMod<_>
         member x.up = _up :> IMod<_>
         member x.isVisible = _isVisible :> IMod<_>
-        member x.arrowScale = _arrowScale
+        member x.arrowLength = _arrowLength
+        member x.arrowThickness = _arrowThickness
         
         member x.Update(v : PRo3D.ReferenceSystem) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -618,7 +629,8 @@ module Mutable =
                 ResetMod.Update(_north,v.north)
                 ResetMod.Update(_up,v.up)
                 ResetMod.Update(_isVisible,v.isVisible)
-                Aardvark.UI.Mutable.MNumericInput.Update(_arrowScale, v.arrowScale)
+                Aardvark.UI.Mutable.MNumericInput.Update(_arrowLength, v.arrowLength)
+                Aardvark.UI.Mutable.MNumericInput.Update(_arrowThickness, v.arrowThickness)
                 
         
         static member Create(__initial : PRo3D.ReferenceSystem) : MReferenceSystem = MReferenceSystem(__initial)
@@ -659,11 +671,17 @@ module Mutable =
                     override x.Set(r,v) = { r with isVisible = v }
                     override x.Update(r,f) = { r with isVisible = f r.isVisible }
                 }
-            let arrowScale =
+            let arrowLength =
                 { new Lens<PRo3D.ReferenceSystem, Aardvark.UI.NumericInput>() with
-                    override x.Get(r) = r.arrowScale
-                    override x.Set(r,v) = { r with arrowScale = v }
-                    override x.Update(r,f) = { r with arrowScale = f r.arrowScale }
+                    override x.Get(r) = r.arrowLength
+                    override x.Set(r,v) = { r with arrowLength = v }
+                    override x.Update(r,f) = { r with arrowLength = f r.arrowLength }
+                }
+            let arrowThickness =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.arrowThickness
+                    override x.Set(r,v) = { r with arrowThickness = v }
+                    override x.Update(r,f) = { r with arrowThickness = f r.arrowThickness }
                 }
     
     
