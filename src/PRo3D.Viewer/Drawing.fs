@@ -28,24 +28,34 @@ module DrawingApp =
 
     open MBrace.FsPickler.Json   
 
-    let finishAndAppend (model : DrawingModel) = 
+    let getFinishedAnnotation (model : DrawingModel) =
+        match model.working with
+            | Some w ->               
+                let dns = 
+                    match w.points.Count with 
+                        | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points model.config.coordinates.up.value) //more acc. by using segments as well?
+                        | _ -> None 
+                let results = Annotation.calculateAnnotationResults w model.config.coordinates.up.value
+                Some { w with dnsResults = dns ; results = Some results }
+            | None -> None
+
+    let finishAndAppendAndSend (model : DrawingModel) (bc : BlockingCollection<string>) = 
         //if there are at least 3 points do dns calculation (debug, dev). 
         //might take long for large number of points so created on demand?
 
-        let anns = match model.working with
-                            | Some w ->               
-                                let dns = 
-                                    match w.points.Count with 
-                                        | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points) //more acc. by using segments as well?
-                                        | _ -> None 
-                                let results = Annotation.calculateAnnotationResults w model.coordinates.up
-                                model.annotations 
-                                    |> PList.prepend { w with dnsResults = dns; results = Some results }
-                                        
-                            | None -> model.annotations
+        let anns = 
+            match getFinishedAnnotation model with
+                | Some a -> 
+                    let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
+                    Log.line "sending %A" a.semantic
+                    bc.Add json
+
+                    model.annotations |> PList.prepend a
+                | None -> model.annotations
+        
         { model with working = None; annotations = anns; pendingIntersections = ThreadPool.empty }
 
-    let addPoint samplePoint p model surfaceName =
+    let addPoint samplePoint p model surfaceName bc =
         let working, newSegment = 
             match model.working with
                 | Some w ->     
@@ -95,9 +105,9 @@ module DrawingApp =
 
         match (working.geometry, (working.points |> PList.count)) with
             | Geometry.Point, 1 -> 
-                model |> finishAndAppend, None
+                finishAndAppendAndSend model bc, None
             | Geometry.Line, 2 -> 
-                model |> finishAndAppend, None
+                finishAndAppendAndSend model bc, None
             | _ -> 
                 model, newSegment // returns current segment for async computations outside
 
@@ -149,22 +159,26 @@ module DrawingApp =
         
     let pickler = MBrace.FsPickler.Json.JsonSerializer(indent=true)
 
+    let stash (model : DrawingModel) =
+        { model with past = Some model; future = None }
+
     let update (w : Form) (bc : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
         match (act, model.draw) with
             | StartDrawing, _ ->                     
                     { model with draw = true }
             | StopDrawing, _ -> 
-                    {model with draw = false; hoverPosition = None }
+                    { model with draw = false; hoverPosition = None }
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
             //| AddPoint(p,samplePoint), true ->                     
             //        addPoint samplePoint p model |> fst               
             | AddPointAdv (point, samplePoint, name), true ->
-                    let model, newSegment = addPoint samplePoint point model name
+                    let model, newSegment = addPoint samplePoint point model name bc
                     
                     match newSegment with
                         | None         -> model
                         | Some segment -> addNewSegment samplePoint model segment
+                    |> stash
 
             | SetSegment(segmentIndex,segment), _ ->
                 match model.working with
@@ -175,7 +189,7 @@ module DrawingApp =
             //| KeyDown Aardvark.Application.Keys.Enter, _ -> 
             //        model |> finishAndAppend
             | Finish, _ -> 
-                    model |> finishAndAppend
+                    finishAndAppendAndSend model bc |> stash
             | Exit, _ -> 
                     { model with hoverPosition = None }
             | SetSemantic mode, _ ->
@@ -247,7 +261,16 @@ module DrawingApp =
                             let annotations' = 
                                 model.annotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun x -> a')                                     
                             { model with selectedAnnotation = Some a'; annotations = annotations' |> PList.ofList }
-                        | None -> model                                                
+                        | None -> model                        
+                        
+            | Undo, _ -> 
+                match model.past with
+                    | Some p -> { p with future = Some model }
+                    | None -> model
+            | Redo, _ ->
+                match model.future with
+                    | Some f -> f
+                    | None -> model
             | _ -> model
 
     module UI =
@@ -287,7 +310,7 @@ module DrawingApp =
             let color =  
                 model.selected 
                     |> ASet.contains id 
-                    |> Mod.bind (function x -> if x then Mod.constant C4b.Red else a.color)
+                    |> Mod.bind (function x -> if x then Mod.constant C4b.Red else a.color.c)
 
             color
 
@@ -303,6 +326,8 @@ module DrawingApp =
                         i [clazz "folder icon"] [] ]
                 button [clazz "ui icon button"; onMouseClick (fun _ -> Send)] [
                         i [clazz "send icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Undo)] [i [clazz "arrow left icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Redo)] [i [clazz "arrow right icon"] [] ]
             ]
 
         let viewAnnotations (model:MDrawingModel) = 
@@ -486,57 +511,110 @@ module DrawingApp =
                 |> Sg.depthTest (Mod.constant DepthTestMode.None)
               //  |> Sg.andAlso cylinders               
         
-        let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) (conf:MViewConfigModel)=             
-            //let color = Mod.bindOption anno.dnsResults C4b.White (fun x -> (DipAndStrike.dipColor x.dipAngle 0.0 90.0))
-            //let trafo 
-
+        let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) (conf:MViewConfigModel)=                         
             aset {
-                
+                            
                 let! dns = anno.dnsResults 
-                let! count = anno.points |> AList.toMod |> Mod.map PList.count //get item at index ?
-                let point = anno.points |> AList.toMod |> Mod.map (fun x -> x.[(count/2)])
-                let! p = point
-                
-               match dns with
+                match dns with
                     | Some x -> 
-                        let color = DipAndStrike.dipColor x.dipAngle conf.minDipAngle.value conf.maxDipAngle.value
-                        let! plane = x.plane
+                        let! count = anno.points |> AList.toMod |> Mod.map PList.count //get item at index ?
+                        let center = anno.points |> AList.toMod |> Mod.map (fun x -> x.[(count/2)])                      
+
+                        let color = 
+                            DipAndStrike.dipColor x.dipAngle conf.minDipAngle.value conf.maxDipAngle.value
+                                                                    
+                        let scale = conf.arrowLength.value //computeInvariantScale view conf center
+                                                
+                        
+                        let radius = scale |> Mod.map(fun d -> d * 0.05)
+                        let coneSize = scale |> Mod.map(fun d -> d * 0.3)
+                        let height = conf.dnsPlaneSize.value |> Mod.map(fun d -> d * 0.01)
+
+                        let posTrafo =
+                            center |> Mod.map(fun d -> Trafo3d.Translation(d))
+
+                        // disc
+                        let discTrafo =
+                            Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
+
+                        yield discISg color conf.dnsPlaneSize.value height discTrafo 
+
                         let! dip = x.dipDirection
-                        let! strike = x.strikeDirection
-                        //let! sl = conf.arrowLength.value
-                        //let! st = conf.arrowThickness.value
-                        let lineThicknessScale = computeInvariantScale view conf point conf.arrowThickness.value
-                        let! lts = lineThicknessScale
-                        let lineLengthScale = computeInvariantScale view conf point conf.arrowLength.value
-                        let! lineLengthScale = lineLengthScale
-                        let dlength = dip.Normalized * lineLengthScale
-                        let dipLine = alist{
-                                        yield p
-                                        yield p + dlength
-                                        }                       
-                        let slength1 = strike.Normalized.Negated * lineLengthScale
-                        let slength2 = strike.Normalized * lineLengthScale
-                        let strikeLine1 = alist {
-                                            yield p
-                                            yield p + slength1
-                                            }
-                        let strikeLine2 = alist {
-                                            yield p
-                                            yield p + slength2
-                                            }
+                        //let! strike = x.strikeDirection
+                        ////let! sl = conf.arrowLength.value
+                        ////let! st = conf.arrowThickness.value
+                        //let lineThicknessScale = computeInvariantScale view conf point conf.arrowThickness.value
+                        //let! lts = lineThicknessScale
+                        //let lineLengthScale = computeInvariantScale view conf point conf.arrowLength.value
+                        //let! lineLengthScale = lineLengthScale
+                        //let dlength = dip.Normalized * lineLengthScale
+                        //let dipLine = alist{
+                        //                yield p
+                        //                yield p + dlength
+                        //                }                       
+                        //let slength1 = strike.Normalized.Negated * lineLengthScale
+                        //let slength2 = strike.Normalized * lineLengthScale
+                        //let strikeLine1 = alist {
+                        //                    yield p
+                        //                    yield p + slength1
+                        //                    }
+                        //let strikeLine2 = alist {
+                        //                    yield p
+                        //                    yield p + slength2
+                        //                    }
 
                         
-                        let radius = lts * 0.05
-                        let! planeScale = computeInvariantScale view conf point conf.dnsPlaneSize.value
-                        let lineThickness = lts * 0.3
-                        //let height = planeScale * 0.2
-                        let coneSize = lineLengthScale * 0.5
+                        //let radius = lts * 0.05
+                        //let! planeScale = computeInvariantScale view conf point conf.dnsPlaneSize.value
+                        //let lineThickness = lts * 0.3
+                        ////let height = planeScale * 0.2
+                        //let coneSize = lineLengthScale * 0.5
 
-                        yield discISg color (Mod.constant planeScale) (Mod.constant 0.001) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p)))  // disc
-                        yield lines dipLine color (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
-                        yield coneISg color (Mod.constant radius) (Mod.constant coneSize) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(p + dlength))) 
-                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
-                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike2 vec
+                        //yield discISg color (Mod.constant planeScale) (Mod.constant 0.001) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p)))  // disc
+                        //yield lines dipLine color (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
+                        //yield coneISg color (Mod.constant radius) (Mod.constant coneSize) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(p + dlength))) 
+                        //yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
+                        //yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike2 vec
+
+
+                        // dip vec       
+                        let dipLine = 
+                            alist {
+                                let! c = center
+                                let! s = scale
+                                //let! f = conf.arrowSize.value
+
+                                yield c
+                                yield c + dip.Normalized * s //* f
+                            }                            
+
+                        yield lines dipLine color (Mod.constant 3.0) posTrafo anno.key 
+
+                        let coneTrafo = 
+                            Mod.map2(fun c s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(c + dip.Normalized * s)) center scale
+
+                        yield coneISg color radius coneSize coneTrafo
+
+                        //strike vecs
+                        let strikeLen = 
+                            Mod.map2(fun (str:V3d) s -> str.Normalized * s * 0.66) x.strikeDirection scale
+
+                        let strikeLine1 =
+                            alist {
+                                let! c = center
+                                let! s = strikeLen
+                                yield c; yield c - s
+                            }
+
+                        let strikeLine2 = 
+                            alist {
+                                let! c = center
+                                let! s = strikeLen
+                                yield c; yield c + s
+                            }                                            
+
+                        yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant 3.0) posTrafo anno.key // strike1 vec
+                        yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant 3.0) posTrafo anno.key // strike2 vec
                     | None -> () 
                                
             } |> Sg.set
@@ -573,7 +651,7 @@ module DrawingApp =
                         | None -> ()
                 }
                 
-            let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color) 
+            let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color.c) 
             let thickness = Mod.bindOption anno 1.0              (fun a -> a.thickness.value) 
             let key       = Mod.bindOption anno Guid.Empty       (fun a -> a.key) 
             let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)          
@@ -597,7 +675,7 @@ module DrawingApp =
             let points = getPolyline anno
                        
             Sg.ofList [
-                lines points c anno.thickness.value anno.modelTrafo anno.key;                
+                lines points anno.color.c anno.thickness.value anno.modelTrafo anno.key;         
                 dots anno.points c view                    
             //    text anno
                 drawDns anno view conf |> Sg.onOff anno.showDns

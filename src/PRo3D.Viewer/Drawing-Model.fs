@@ -33,6 +33,8 @@ type Action =
     | Save              
     | Load             
     | Clear
+    | Undo
+    | Redo
     | QuickLoad
     | Select           of Guid
     | Nop
@@ -59,33 +61,14 @@ type DrawingModel = {
 
     pendingIntersections : ThreadPool<Action>
     config : ViewConfigModel
-    coordinates : ReferenceSystem
+    //coordinates : ReferenceSystem   
+
+    [<TreatAsValue>]
+    past : Option<DrawingModel> 
+
+    [<TreatAsValue>]
+    future : Option<DrawingModel>
 }
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
-module Model =
-    let initialdrawing = {
-        hoverPosition = None
-        draw = false                    
-
-        working = None
-        projection = Projection.Viewpoint
-        geometry = Geometry.Polyline
-        semantic = Semantic.Horizon3
-
-        annotations = PList.empty
-
-        exportPath = @"."
-
-        selected = HSet.empty
-        selectedAnnotation = None
-        pendingIntersections = ThreadPool.empty
-        config = ViewConfigModel.initial
-        coordinates = ReferenceSystem.initial
-    }
-
-
-
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
 module DrawingModel =
@@ -96,3 +79,25 @@ module DrawingModel =
         m.annotations.AsList 
             |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
             |> PList.ofList
+
+    let initialdrawing = {
+        hoverPosition = None
+        draw          = false                    
+
+        working     = None
+        projection  = Projection.Viewpoint
+        geometry    = Geometry.Polyline
+        semantic    = Semantic.Horizon3
+
+        annotations = PList.empty
+
+        exportPath  = @"."
+
+        selected                = HSet.empty
+        selectedAnnotation      = None
+        pendingIntersections    = ThreadPool.empty
+        config                  = ViewConfigModel.initial        
+
+        past    = None
+        future  = None
+    }

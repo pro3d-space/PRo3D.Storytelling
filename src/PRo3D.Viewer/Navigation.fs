@@ -26,18 +26,25 @@ module Navigation =
                         | ArcBallController.Message.Pick a ->
                             { model with navigationMode =  NavigationMode.ArcBall; exploreCenter = a }
                         | _ -> model
-                        
+                
                 { model with camera = ArcBallController.update model.camera a }
             | FreeFlyAction a ->
-                { model with camera = CameraController.update model.camera a }
+                let cam' = CameraController.update model.camera a 
+                { model with camera = { cam' with sensitivity = model.config.navigationSensitivity.value } }
             | SetNavigationMode mode ->
                 match mode with
-                    | NavigationMode.FreeFly -> 
+                    | NavigationMode.FreeFly -> // should set look at to center when in arcball mode?
                         let center = 
                             match model.camera.orbitCenter with
                                 | Some x ->  x
                                 | None   -> V3d.OOO
-                        let view' = CameraView.lookAt model.camera.view.Location center model.camera.view.Sky
+
+
+                        //let view' =
+                        //    CameraView.withUp model.config.coordinates.up.value model.camera.view
+                        let view' =
+                            CameraView.lookAt model.camera.view.Location center model.config.coordinates.up.value
+                        
                         { model with camera = { model.camera with view = view'}; navigationMode = mode} 
                     | _ ->  { model with navigationMode = mode }
                

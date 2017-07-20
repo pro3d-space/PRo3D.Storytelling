@@ -106,24 +106,24 @@ type Segment = {
 
 [<DomainType>]
 type Annotation = {
-    key : Guid
+    key         : Guid
 
-    modelTrafo : Trafo3d
+    modelTrafo  : Trafo3d
 
-    geometry : Geometry
-    projection : Projection
-    semantic : Semantic
+    geometry    : Geometry
+    projection  : Projection
+    semantic    : Semantic
 
-    points : plist<V3d>
-    segments : plist<Segment> 
-    color : C4b
-    thickness : NumericInput
-    results : Option<AnnotationResults>
-    dnsResults : Option<DipAndStrikeResults>
+    points      : plist<V3d>
+    segments    : plist<Segment> 
+    color       : ColorInput
+    thickness   : NumericInput
+    results     : Option<AnnotationResults>
+    dnsResults  : Option<DipAndStrikeResults>
 
-    visible : bool
-    showDns : bool
-    text : string
+    visible     : bool
+    showDns     : bool
+    text        : string
 
     surfaceName : string
 }
@@ -210,7 +210,7 @@ module Annotation =
             semantic = semantic
             points = plist.Empty
             segments = plist.Empty //[]
-            color = color
+            color = { c = color }
             thickness = { thickn with value = thickness}
             results = None
             dnsResults = None            
@@ -313,27 +313,71 @@ type MeasurementsImporterModel = {
 type Surface = {    
     
     [<PrimaryKey>]
-    guid : System.Guid
+    guid        : System.Guid
     
-    name : string
-    importPath : string
-    opcPaths : list<string>
+    name        : string
+    importPath  : string
+    opcPaths    : list<string>
     
-    fillMode  : FillMode
-    cullMode  : CullMode
-    isVisible : bool
+    fillMode    : FillMode
+    cullMode    : CullMode
+    isVisible   : bool
 }
 
 [<DomainType>]
+type ReferenceSystem = {    
+
+    origin      : V3d
+    north       : V3d
+    up          : V3dInput
+    isVisible   : bool
+    arrowScale  : NumericInput
+}
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module ReferenceSystem =
+    let initNum = {
+        value   = 0.0
+        min     = -1.0
+        max     = +1.0
+        step    = 0.1
+        format  = "{0:0.000}"
+    }
+
+    let setV3d (v : V3d) = {
+        x = { initNum with value = v.X }
+        y = { initNum with value = v.Y }
+        z = { initNum with value = v.Z }
+        value = v    
+    }
+
+    let initArrowSize = {
+        value   = 1.0
+        min     = 0.1
+        max     = 10.0
+        step    = 0.1
+        format  = "{0:0.0}"
+    }
+
+    let initial = {
+        origin = V3d.OOO
+        north = V3d.IOO
+        up = setV3d V3d.OOI
+        isVisible = true
+        arrowScale = initArrowSize
+        }
+
+[<DomainType>]
 type ViewConfigModel = {
-    nearPlane : NumericInput
-    farPlane : NumericInput
-    navigationSensitivity : NumericInput
-    arrowLength : NumericInput
-    arrowThickness : NumericInput
-    dnsPlaneSize : NumericInput
-    minDipAngle : NumericInput
-    maxDipAngle : NumericInput
+    nearPlane               : NumericInput
+    farPlane                : NumericInput
+    navigationSensitivity   : NumericInput
+    arrowLength             : NumericInput
+    arrowThickness          : NumericInput
+    dnsPlaneSize            : NumericInput
+    minDipAngle             : NumericInput
+    maxDipAngle             : NumericInput
+    coordinates             : ReferenceSystem
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -403,28 +447,9 @@ module ViewConfigModel =
         dnsPlaneSize = initPlaneSize
         minDipAngle = initMinAngle
         maxDipAngle = initMaxAngle
-        }
-
-[<DomainType>]
-type ReferenceSystem = {    
-
-    origin : V3d
-    north : V3d
-    up : V3d
-    isVisible : bool
-    config : ViewConfigModel
-}
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module ReferenceSystem =
-    let initial = {
-        origin = V3d.OOO
-        north = V3d.IOO
-        up = V3d.OOI        
-        isVisible = true
-        config = ViewConfigModel.initial
-        }
-
+        coordinates = ReferenceSystem.initial
+    }
+    
         
 [<DomainType>]
 type NavigationModel = {

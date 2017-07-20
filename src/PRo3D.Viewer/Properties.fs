@@ -47,6 +47,7 @@ module AnnotationProperties =
         | SetProjection   of Projection
         | SetSemantic     of Semantic
         | ChangeThickness of Numeric.Action
+        | ChangeColor     of ColorPicker.Action
         | SetText         of string
         | ToggleVisible
         | ToggleShowDns
@@ -67,6 +68,8 @@ module AnnotationProperties =
                 { model with visible = (not model.visible) }
             | ToggleShowDns ->
                 { model with showDns = (not model.showDns) }
+            | ChangeColor a ->
+                { model with color = ColorPicker.update model.color a }
 
     let view (model : MAnnotation) =   
         
@@ -83,12 +86,13 @@ module AnnotationProperties =
                 Html.row "Projection:"  [Incremental.text (model.projection |> Mod.map (fun x -> sprintf "%A" x ))]
                 Html.row "Semantic:"    [Html.SemUi.dropDown model.semantic SetSemantic]      
                 Html.row "Thickness:"   [Numeric.view' [InputBox] model.thickness |> UI.map ChangeThickness ]
+                Html.row "Color:"       [ColorPicker.view model.color |> UI.map ChangeColor ]
                 Html.row "Text:"        [Html.SemUi.textBox model.text SetText ]
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.visible ToggleVisible ]
                 Html.row "Show DnS:"    [Html.SemUi.toggleBox model.showDns ToggleShowDns ]
                 Html.row "Height:"      [Incremental.text (height   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
                 Html.row "HeightDelta:" [Incremental.text (heightD  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
-                Html.row "Lenght:"      [Incremental.text (length   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+                Html.row "Length:"      [Incremental.text (length   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
                 Html.row "WayLength:"   [Incremental.text (wLength  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
             ]
         )

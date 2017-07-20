@@ -144,13 +144,14 @@ module ViewerApp =
         | AddSg                     of ISg
         | PickSurface               of SceneHit*string
         | SaveScene
+        | SaveAs                    
         | OpenScene
         | NewScene
         | KeyDown                   of key : Aardvark.Application.Keys
         | KeyUp                     of key : Aardvark.Application.Keys      
         | SetInteraction            of Interactions
         | SelectSurface             of Guid
-        | FlyToSurface              of Guid
+        | FlyToSurface              of Guid      
                 
     let lookAtData m = 
         let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
@@ -194,6 +195,9 @@ module ViewerApp =
             |> Seq.map(fun d -> d.Value)
             |> Seq.sortByDescending(fun (t,n)-> t)
             |> Seq.tryHead
+
+    let stash (model : Model) =
+        { model with past = Some model.drawing; future = None }
     
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
@@ -210,7 +214,7 @@ module ViewerApp =
                 //                            | None -> Properties.NoProperties } 
                 //        | _ -> m
                 
-                { m with drawing = DrawingApp.update w bc m.drawing msg }
+                { m with drawing = DrawingApp.update w bc m.drawing msg } |> stash
             | SelectSurface id,_,_ ->
                 let surf = m.scene.surfaces |> Seq.tryFind(fun x -> x.guid = id)
                 let surf =
@@ -261,7 +265,7 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | Some x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x)}}
                     | None -> m   
-            | QuickLoad1,_,_ ->                
+            | QuickLoad1,_,_ ->
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
                 let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\Cape_Desire_RGB"
                 Surface.import' runtime signature [Surface.mk path] m |> lookAtData
@@ -293,11 +297,12 @@ module ViewerApp =
                         match m.interaction with
                             | Interactions.DrawAnnotation ->
                                 let drawing = DrawingApp.update w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,n))
-                                { m with drawing = drawing }
+                                { m with drawing = drawing } |> stash
                             | Interactions.PlaceCoordinateSystem -> 
                                 let refSystem = 
-                                    ReferenceSystemApp.update m.scene.referenceSystem (ReferenceSystemApp.Action.InferCoordSystem(hit))
-                                { m with scene = { m.scene with referenceSystem = refSystem }}
+                                    ReferenceSystemApp.update m.scene.config.coordinates (ReferenceSystemApp.Action.InferCoordSystem(hit))
+                                //(m, MScene. *. Config.Coordinates) <=== refSystem
+                                { m with scene = { m.scene with config = { m.scene.config with coordinates = refSystem }}}
                             | Interactions.PickExploreCenter ->
                                 let navigation = 
                                     Navigation.update m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
@@ -307,11 +312,22 @@ module ViewerApp =
                         Log.error ("no hit")
                         m
             | SaveScene, _,_ -> 
+                match m.scene.scenePath with
+                    | None ->                        
+                        match Dialogs.saveDialog w with
+                            | None -> m
+                            | Some p -> 
+                                Serialization.save "./last" m.scene |> ignore
+                                { m with scene = Serialization.save p { m.scene with scenePath = Some p} }
+                    | Some path ->
+                        Serialization.save "./last" m.scene |> ignore
+                        { m with scene = Serialization.save path m.scene }
+            | SaveAs,_,_ ->
                 match Dialogs.saveDialog w with
                     | None -> m
                     | Some p -> 
                         Serialization.save "./last" m.scene |> ignore
-                        {m with scene = Serialization.save p m.scene}
+                        { m with scene = Serialization.save p { m.scene with scenePath = Some p} }
             | OpenScene,_,_ ->
                 match Dialogs.openDialog w with
                     | None -> m
@@ -335,13 +351,12 @@ module ViewerApp =
          
                     let m =
                         match m.interaction with
-                            | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing a; picking = picking }
+                            | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing a; picking = picking } |> stash
                             | Interactions.PickExploreCenter -> {m with picking = picking}
                             | Interactions.PlaceCoordinateSystem -> {m with picking = picking}
                             | _ -> failwith "interaction does not exist"
 
-
-                    m
+                    m 
 
             | KeyUp k, _,_ ->
                     let d =
@@ -349,14 +364,30 @@ module ViewerApp =
                             | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update w bc m.drawing Drawing.Action.StopDrawing
                             | _ -> m.drawing
                     
-                    { m with drawing = d; picking = false }
+                    { m with drawing = d; picking = false } |> stash
             | SetInteraction t,_,_ -> { m with interaction = t }    
-            | ReferenceSystemMessage a,_,_ -> 
-                { m with scene = { m.scene with referenceSystem = ReferenceSystemApp.update m.scene.referenceSystem a } }
+            | ReferenceSystemMessage a,_,_ ->                 
+                let m = 
+                    { m with scene = { m.scene with config = { m.scene.config with coordinates = ReferenceSystemApp.update m.scene.config.coordinates a }}}
+
+                let m =
+                    match a with 
+                        | ReferenceSystemApp.Action.SetUp k->
+                            let cam = m.scene.navigation.camera
+                            //let view' = cam.view |> CameraView.withUp m.scene.config.coordinates.up.value 
+                            let view' = CameraView.lookAt cam.view.Location (cam.view.Location + cam.view.Forward) m.scene.config.coordinates.up.value
+                            let cam' = { cam with view = view' }
+                        
+                            (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam')                            
+                     
+                        | _ -> m
+
+                m
             | ConfigPropertiesMessage a,_,_ -> 
+                Log.line "config message %A" a
                 let c' = ConfigProperties.update m.scene.config a
                 { m with scene = { m.scene with config = c';
-                                                referenceSystem = { m.scene.referenceSystem with config = c'};
+                                                //referenceSystem = { m.scene.referenceSystem with config = c'};
                                                 navigation = { m.scene.navigation with config = c' } };
                          drawing = { m.drawing with config = c' } }
             | _ -> m
@@ -386,22 +417,22 @@ module ViewerApp =
                         |> Sg.uniform "selected" isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
                         |> Sg.onOff(surface.surface.isVisible)                             
-                        |> Sg.andAlso (Sg.wireBox' C4b.Red bb
-                                                            |> Sg.noEvents
-                                                            |> Sg.noEvents
-                                                            |> Sg.shader {
-                                                                    do! Shader.stableTrafo
-                                                                    do! DefaultSurfaces.vertexColor                                                                     
-                                                               }
-                                                        ) 
+                        |> Sg.andAlso (
+                            Sg.wireBox' C4b.Red bb
+                                    |> Sg.noEvents
+                                    |> Sg.noEvents
+                                    |> Sg.shader {
+                                            do! Shader.stableTrafo
+                                            do! DefaultSurfaces.vertexColor                                                                     
+                                        }
+                            ) 
                         |> Sg.pickable (PickShape.Box bb) 
                         |> Sg.withEvents [
                                 SceneEventKind.Down, (
                                     fun sceneHit -> 
                                         true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])
                                 //Sg.onMouseDownEvt (fun sceneHit -> PickSurface sceneHit)
-                            ]
-                        //|> Sg.andAlso pickable
+                            ]                        
                     yield sg
             }
         opcs 
@@ -409,8 +440,8 @@ module ViewerApp =
             |> Sg.effect [
                 Shader.stableTrafo |> toEffect
                 //DefaultSurfaces.constantColor C4f.White |> toEffect                            
-                DefaultSurfaces.diffuseTexture |> toEffect         
-                Shader.selectionColor |> toEffect                
+                DefaultSurfaces.diffuseTexture |> toEffect
+                Shader.selectionColor |> toEffect       
             ]
 
     let mkBrushISg color size trafo : ISg<Message> =
@@ -455,7 +486,7 @@ module ViewerApp =
                                 |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
 
                         let orientations =
-                            ReferenceSystemApp.Sg.view m.scene.referenceSystem m.scene.navigation.camera.view
+                            ReferenceSystemApp.Sg.view m.scene.config.coordinates m.scene.navigation.camera.view
 
                         let exploreCenter =
                             Navigation.Sg.view m.scene.navigation
@@ -464,32 +495,22 @@ module ViewerApp =
                             |> Sg.ofList
                          //   |> Sg.fillMode (Mod.constant FillMode.Fill)
                          //   |> Sg.cullMode (Mod.constant CullMode.None)      
-                    )       
-
-        //right side fixed tabbed menu
-        let interactTools = Html.SemUi.dropDown m.interaction SetInteraction
-            //div [clazz "ui"] [
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> SetInteraction Interactions.DrawAnnotation )] [
-                //    i [clazz "large rocket icon"][] 
-                //]
-                            
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> SetInteraction Interactions.PlaceCoordinateSystem)] [
-                //    i [clazz "large rocket icon"][] 
-                //]
-
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> SetInteraction Interactions.PickExploreCenter)] [
-                //    i [clazz "large rocket icon black inverted"][] 
-                //]
-            //]
+                    )              
 
         let sceneTools =
             div [clazz "ui buttons inverted"] [
                 button [clazz "ui icon button"; onMouseClick (fun _ -> SaveScene)] [
-                            i [clazz "save icon"] [] ]
+                            i [clazz "large save icon"] [] ]
+                button [clazz "ui icon button"; onMouseClick (fun _ -> SaveAs)] [
+                    i [clazz "large icons"] [
+                        i [clazz "save icon"] [] 
+                        i [clazz "top right corner arrow down icon"] [] 
+                    ]
+                ]
                 button [clazz "ui icon button"; onMouseClick (fun _ -> OpenScene)] [
-                            i [clazz "folder outline icon"] [] ]
+                            i [clazz "large folder outline icon"] [] ]
                 button [clazz "ui icon button"; onMouseClick (fun _ -> NewScene)] [
-                            i [clazz "file outline icon"] [] ]
+                            i [clazz "large file outline icon"] [] ]
             ]
             
         let openSurface =
@@ -611,15 +632,16 @@ module ViewerApp =
 
         let configUI =
             div[][
-                GuiEx.accordion "Camera" "Camera Retro" true [
-                    CameraProperties.view m.scene.navigation.camera
-                ]
-
-                GuiEx.accordion "Coordinate System" "Map Signs" true [
-                    ReferenceSystemApp.UI.view m.scene.referenceSystem |> UI.map ReferenceSystemMessage
-                ]
                 GuiEx.accordion "ViewerConfig" "Write" true [
                      Incremental.div AttributeMap.empty (AList.ofModSingle (config m))
+                ]
+
+                GuiEx.accordion "Coordinate System" "Map Signs" false [
+                    ReferenceSystemApp.UI.view m.scene.config.coordinates |> UI.map ReferenceSystemMessage
+                ]
+
+                GuiEx.accordion "Camera" "Camera Retro" false [
+                    CameraProperties.view m.scene.navigation.camera
                 ]
             ]
             
@@ -631,8 +653,13 @@ module ViewerApp =
                         ] "Data" 
       
         let topMenu = [
+             Html.Layout.horizontal [
+                Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
+                Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
+             ]
+
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
-             DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage 
+             DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
         ] 
                      
         let rest (model : MModel) = 
@@ -658,8 +685,7 @@ module ViewerApp =
 
         require (Html.semui @ [myCss]) (
             let sections = [
-                "blank", [div[style "height:15px"][]]
-                "Interactions", [interactTools]
+                "blank", [div[style "height:15px"][]]                
                 "Scene", [sceneTools]
                 "Add Surface", [openSurface]
                 "Import Measurements", [importMeasurements]]                              
@@ -676,30 +702,20 @@ module ViewerApp =
         //            let sg = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
         //            yield AddSg sg
         //    }
-
-        //ThreadPool.union 
-        //    (DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage) 
-        //    (DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage) 
+     
         let drawing =
             DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage
-
-        let freeFly = 
-            CameraController.threads m.scene.navigation.camera
-                |> ThreadPool.map Navigation.FreeFlyAction |> ThreadPool.map NavigationMessage
-
-        let arc =              
-            ArcBallController.threads m.scene.navigation.camera
-                |> ThreadPool.map Navigation.ArcBallAction |> ThreadPool.map NavigationMessage
-
-        //let nav =
-        //    if m.scene.navigation.navigationMode == NavigationMode.FreeFly then freeFly else arc
+       
         let nav =
             match m.scene.navigation.navigationMode with
-                | NavigationMode.FreeFly -> freeFly
-                | NavigationMode.ArcBall -> arc
+                | NavigationMode.FreeFly -> 
+                    CameraController.threads m.scene.navigation.camera
+                        |> ThreadPool.map Navigation.FreeFlyAction |> ThreadPool.map NavigationMessage
+                | NavigationMode.ArcBall ->
+                    ArcBallController.threads m.scene.navigation.camera
+                        |> ThreadPool.map Navigation.ArcBallAction |> ThreadPool.map NavigationMessage
                 | _ -> failwith "invalid nav mode"
-            
-        
+                    
         ThreadPool.union drawing nav
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =

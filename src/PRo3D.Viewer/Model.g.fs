@@ -227,7 +227,7 @@ module Mutable =
         let _semantic = ResetMod.Create(__initial.semantic)
         let _points = MList.Create(__initial.points)
         let _segments = MList.Create(__initial.segments, (fun v -> MSegment.Create(v)), (fun (m,v) -> MSegment.Update(m, v)), (fun v -> v))
-        let _color = ResetMod.Create(__initial.color)
+        let _color = Aardvark.UI.Mutable.MColorInput.Create(__initial.color)
         let _thickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.thickness)
         let _results = MOption.Create(__initial.results, (fun v -> MAnnotationResults.Create(v)), (fun (m,v) -> MAnnotationResults.Update(m, v)), (fun v -> v))
         let _dnsResults = MOption.Create(__initial.dnsResults, (fun v -> MDipAndStrikeResults.Create(v)), (fun (m,v) -> MDipAndStrikeResults.Update(m, v)), (fun v -> v))
@@ -243,7 +243,7 @@ module Mutable =
         member x.semantic = _semantic :> IMod<_>
         member x.points = _points :> alist<_>
         member x.segments = _segments :> alist<_>
-        member x.color = _color :> IMod<_>
+        member x.color = _color
         member x.thickness = _thickness
         member x.results = _results :> IMod<_>
         member x.dnsResults = _dnsResults :> IMod<_>
@@ -263,7 +263,7 @@ module Mutable =
                 ResetMod.Update(_semantic,v.semantic)
                 MList.Update(_points, v.points)
                 MList.Update(_segments, v.segments)
-                ResetMod.Update(_color,v.color)
+                Aardvark.UI.Mutable.MColorInput.Update(_color, v.color)
                 Aardvark.UI.Mutable.MNumericInput.Update(_thickness, v.thickness)
                 MOption.Update(_results, v.results)
                 MOption.Update(_dnsResults, v.dnsResults)
@@ -330,7 +330,7 @@ module Mutable =
                     override x.Update(r,f) = { r with segments = f r.segments }
                 }
             let color =
-                { new Lens<PRo3D.Annotation, Aardvark.Base.C4b>() with
+                { new Lens<PRo3D.Annotation, Aardvark.UI.ColorInput>() with
                     override x.Get(r) = r.color
                     override x.Set(r,v) = { r with color = v }
                     override x.Update(r,f) = { r with color = f r.color }
@@ -505,6 +505,78 @@ module Mutable =
                 }
     
     
+    type MReferenceSystem(__initial : PRo3D.ReferenceSystem) =
+        inherit obj()
+        let mutable __current = __initial
+        let _origin = ResetMod.Create(__initial.origin)
+        let _north = ResetMod.Create(__initial.north)
+        let _up = Aardvark.UI.Mutable.MV3dInput.Create(__initial.up)
+        let _isVisible = ResetMod.Create(__initial.isVisible)
+        let _arrowScale = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowScale)
+        
+        member x.origin = _origin :> IMod<_>
+        member x.north = _north :> IMod<_>
+        member x.up = _up
+        member x.isVisible = _isVisible :> IMod<_>
+        member x.arrowScale = _arrowScale
+        
+        member x.Update(v : PRo3D.ReferenceSystem) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_origin,v.origin)
+                ResetMod.Update(_north,v.north)
+                Aardvark.UI.Mutable.MV3dInput.Update(_up, v.up)
+                ResetMod.Update(_isVisible,v.isVisible)
+                Aardvark.UI.Mutable.MNumericInput.Update(_arrowScale, v.arrowScale)
+                
+        
+        static member Create(__initial : PRo3D.ReferenceSystem) : MReferenceSystem = MReferenceSystem(__initial)
+        static member Update(m : MReferenceSystem, v : PRo3D.ReferenceSystem) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.ReferenceSystem> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module ReferenceSystem =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let origin =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.origin
+                    override x.Set(r,v) = { r with origin = v }
+                    override x.Update(r,f) = { r with origin = f r.origin }
+                }
+            let north =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.north
+                    override x.Set(r,v) = { r with north = v }
+                    override x.Update(r,f) = { r with north = f r.north }
+                }
+            let up =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.UI.V3dInput>() with
+                    override x.Get(r) = r.up
+                    override x.Set(r,v) = { r with up = v }
+                    override x.Update(r,f) = { r with up = f r.up }
+                }
+            let isVisible =
+                { new Lens<PRo3D.ReferenceSystem, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.isVisible
+                    override x.Set(r,v) = { r with isVisible = v }
+                    override x.Update(r,f) = { r with isVisible = f r.isVisible }
+                }
+            let arrowScale =
+                { new Lens<PRo3D.ReferenceSystem, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.arrowScale
+                    override x.Set(r,v) = { r with arrowScale = v }
+                    override x.Update(r,f) = { r with arrowScale = f r.arrowScale }
+                }
+    
+    
     type MViewConfigModel(__initial : PRo3D.ViewConfigModel) =
         inherit obj()
         let mutable __current = __initial
@@ -516,6 +588,7 @@ module Mutable =
         let _dnsPlaneSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.dnsPlaneSize)
         let _minDipAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.minDipAngle)
         let _maxDipAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.maxDipAngle)
+        let _coordinates = MReferenceSystem.Create(__initial.coordinates)
         
         member x.nearPlane = _nearPlane
         member x.farPlane = _farPlane
@@ -525,6 +598,7 @@ module Mutable =
         member x.dnsPlaneSize = _dnsPlaneSize
         member x.minDipAngle = _minDipAngle
         member x.maxDipAngle = _maxDipAngle
+        member x.coordinates = _coordinates
         
         member x.Update(v : PRo3D.ViewConfigModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -538,6 +612,7 @@ module Mutable =
                 Aardvark.UI.Mutable.MNumericInput.Update(_dnsPlaneSize, v.dnsPlaneSize)
                 Aardvark.UI.Mutable.MNumericInput.Update(_minDipAngle, v.minDipAngle)
                 Aardvark.UI.Mutable.MNumericInput.Update(_maxDipAngle, v.maxDipAngle)
+                MReferenceSystem.Update(_coordinates, v.coordinates)
                 
         
         static member Create(__initial : PRo3D.ViewConfigModel) : MViewConfigModel = MViewConfigModel(__initial)
@@ -602,77 +677,11 @@ module Mutable =
                     override x.Set(r,v) = { r with maxDipAngle = v }
                     override x.Update(r,f) = { r with maxDipAngle = f r.maxDipAngle }
                 }
-    
-    
-    type MReferenceSystem(__initial : PRo3D.ReferenceSystem) =
-        inherit obj()
-        let mutable __current = __initial
-        let _origin = ResetMod.Create(__initial.origin)
-        let _north = ResetMod.Create(__initial.north)
-        let _up = ResetMod.Create(__initial.up)
-        let _isVisible = ResetMod.Create(__initial.isVisible)
-        let _config = MViewConfigModel.Create(__initial.config)
-        
-        member x.origin = _origin :> IMod<_>
-        member x.north = _north :> IMod<_>
-        member x.up = _up :> IMod<_>
-        member x.isVisible = _isVisible :> IMod<_>
-        member x.config = _config
-        
-        member x.Update(v : PRo3D.ReferenceSystem) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
-                
-                ResetMod.Update(_origin,v.origin)
-                ResetMod.Update(_north,v.north)
-                ResetMod.Update(_up,v.up)
-                ResetMod.Update(_isVisible,v.isVisible)
-                MViewConfigModel.Update(_config, v.config)
-                
-        
-        static member Create(__initial : PRo3D.ReferenceSystem) : MReferenceSystem = MReferenceSystem(__initial)
-        static member Update(m : MReferenceSystem, v : PRo3D.ReferenceSystem) = m.Update(v)
-        
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
-        interface IUpdatable<PRo3D.ReferenceSystem> with
-            member x.Update v = x.Update v
-    
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module ReferenceSystem =
-        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-        module Lens =
-            let origin =
-                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
-                    override x.Get(r) = r.origin
-                    override x.Set(r,v) = { r with origin = v }
-                    override x.Update(r,f) = { r with origin = f r.origin }
-                }
-            let north =
-                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
-                    override x.Get(r) = r.north
-                    override x.Set(r,v) = { r with north = v }
-                    override x.Update(r,f) = { r with north = f r.north }
-                }
-            let up =
-                { new Lens<PRo3D.ReferenceSystem, Aardvark.Base.V3d>() with
-                    override x.Get(r) = r.up
-                    override x.Set(r,v) = { r with up = v }
-                    override x.Update(r,f) = { r with up = f r.up }
-                }
-            let isVisible =
-                { new Lens<PRo3D.ReferenceSystem, Microsoft.FSharp.Core.bool>() with
-                    override x.Get(r) = r.isVisible
-                    override x.Set(r,v) = { r with isVisible = v }
-                    override x.Update(r,f) = { r with isVisible = f r.isVisible }
-                }
-            let config =
-                { new Lens<PRo3D.ReferenceSystem, PRo3D.ViewConfigModel>() with
-                    override x.Get(r) = r.config
-                    override x.Set(r,v) = { r with config = v }
-                    override x.Update(r,f) = { r with config = f r.config }
+            let coordinates =
+                { new Lens<PRo3D.ViewConfigModel, PRo3D.ReferenceSystem>() with
+                    override x.Get(r) = r.coordinates
+                    override x.Set(r,v) = { r with coordinates = v }
+                    override x.Update(r,f) = { r with coordinates = f r.coordinates }
                 }
     
     

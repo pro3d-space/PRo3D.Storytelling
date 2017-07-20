@@ -88,14 +88,14 @@ module Mutable =
         let _navigation = PRo3D.Mutable.MNavigationModel.Create(__initial.navigation)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _surfaces = ResetMod.Create(__initial.surfaces)
-        let _referenceSystem = PRo3D.Mutable.MReferenceSystem.Create(__initial.referenceSystem)
         let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
+        let _scenePath = MOption.Create(__initial.scenePath)
         
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
         member x.surfaces = _surfaces :> IMod<_>
-        member x.referenceSystem = _referenceSystem
         member x.config = _config
+        member x.scenePath = _scenePath :> IMod<_>
         
         member x.Update(v : PRo3D.Viewer.Scene) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -104,8 +104,8 @@ module Mutable =
                 PRo3D.Mutable.MNavigationModel.Update(_navigation, v.navigation)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_surfaces,v.surfaces)
-                PRo3D.Mutable.MReferenceSystem.Update(_referenceSystem, v.referenceSystem)
                 PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
+                MOption.Update(_scenePath, v.scenePath)
                 
         
         static member Create(__initial : PRo3D.Viewer.Scene) : MScene = MScene(__initial)
@@ -140,17 +140,17 @@ module Mutable =
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
                 }
-            let referenceSystem =
-                { new Lens<PRo3D.Viewer.Scene, PRo3D.ReferenceSystem>() with
-                    override x.Get(r) = r.referenceSystem
-                    override x.Set(r,v) = { r with referenceSystem = v }
-                    override x.Update(r,f) = { r with referenceSystem = f r.referenceSystem }
-                }
             let config =
                 { new Lens<PRo3D.Viewer.Scene, PRo3D.ViewConfigModel>() with
                     override x.Get(r) = r.config
                     override x.Set(r,v) = { r with config = v }
                     override x.Update(r,f) = { r with config = f r.config }
+                }
+            let scenePath =
+                { new Lens<PRo3D.Viewer.Scene, Microsoft.FSharp.Core.option<Microsoft.FSharp.Core.string>>() with
+                    override x.Get(r) = r.scenePath
+                    override x.Set(r,v) = { r with scenePath = v }
+                    override x.Update(r,f) = { r with scenePath = f r.scenePath }
                 }
     
     
@@ -164,6 +164,8 @@ module Mutable =
         let _properties = ResetMod.Create(__initial.properties)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _picking = ResetMod.Create(__initial.picking)
+        let _past = ResetMod.Create(__initial.past)
+        let _future = ResetMod.Create(__initial.future)
         
         member x.scene = _scene
         member x.drawing = _drawing
@@ -172,6 +174,8 @@ module Mutable =
         member x.properties = _properties :> IMod<_>
         member x.interaction = _interaction :> IMod<_>
         member x.picking = _picking :> IMod<_>
+        member x.past = _past :> IMod<_>
+        member x.future = _future :> IMod<_>
         
         member x.Update(v : PRo3D.Viewer.Model) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -184,6 +188,8 @@ module Mutable =
                 ResetMod.Update(_properties,v.properties)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_picking,v.picking)
+                _past.Update(v.past)
+                _future.Update(v.future)
                 
         
         static member Create(__initial : PRo3D.Viewer.Model) : MModel = MModel(__initial)
@@ -241,4 +247,16 @@ module Mutable =
                     override x.Get(r) = r.picking
                     override x.Set(r,v) = { r with picking = v }
                     override x.Update(r,f) = { r with picking = f r.picking }
+                }
+            let past =
+                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with
+                    override x.Get(r) = r.past
+                    override x.Set(r,v) = { r with past = v }
+                    override x.Update(r,f) = { r with past = f r.past }
+                }
+            let future =
+                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with
+                    override x.Get(r) = r.future
+                    override x.Set(r,v) = { r with future = v }
+                    override x.Update(r,f) = { r with future = f r.future }
                 }

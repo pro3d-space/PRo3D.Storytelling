@@ -105,7 +105,7 @@ module MeasurementsImporter =
                 semantic = Semantic.Horizon0
                 points = getPoints (m.Element(xname "Points")) anType |> PList.ofArray
                 segments = getSegments (m, anType) |> PList.ofList
-                color = style.color
+                color = { c = style.color }
                 thickness = style.thickness
                 results = None
                 dnsResults = None
