@@ -524,6 +524,8 @@ module DrawingApp =
                             DipAndStrike.dipColor x.dipAngle conf.minDipAngle.value conf.maxDipAngle.value
                                                                     
                         let scale = conf.arrowLength.value //computeInvariantScale view conf center
+                        let lineLengthScale = computeInvariantScale view conf center conf.arrowLength.value
+                        let lineThicknessScale = computeInvariantScale view conf center conf.arrowThickness.value
                                                 
                         
                         let radius = scale |> Mod.map(fun d -> d * 0.05)
@@ -538,6 +540,8 @@ module DrawingApp =
                             Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
 
                         yield discISg color conf.dnsPlaneSize.value height discTrafo 
+
+                         //yield discISg color (Mod.constant planeScale) (Mod.constant 0.001) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p)))  // disc
 
                         let! dip = x.dipDirection
                         //let! strike = x.strikeDirection
@@ -570,7 +574,7 @@ module DrawingApp =
                         ////let height = planeScale * 0.2
                         //let coneSize = lineLengthScale * 0.5
 
-                        //yield discISg color (Mod.constant planeScale) (Mod.constant 0.001) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p)))  // disc
+                       
                         //yield lines dipLine color (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
                         //yield coneISg color (Mod.constant radius) (Mod.constant coneSize) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(p + dlength))) 
                         //yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
