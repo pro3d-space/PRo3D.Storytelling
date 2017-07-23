@@ -30,12 +30,13 @@ module PatchLod =
 
     type RenderPatch =
         {
-            info        : PatchFileInfo
-            level       : int
-            trafo       : IMod<Trafo3d>
+            info            : PatchFileInfo
+            level           : int
+            triangleSize    : float
+            trafo           : IMod<Trafo3d>
         }
 
-    type LodDecider = AdaptiveToken -> IMod<Trafo3d> -> IMod<float> -> RenderPatch -> bool 
+    type LodDecider = AdaptiveToken -> IMod<Trafo3d> -> IMod<Trafo3d> -> RenderPatch -> bool 
 
     type PatchNode(signature : IFramebufferSignature, runner : Load.Runner, 
                    baseDir : string, decider : LodDecider, 
@@ -54,9 +55,10 @@ module PatchLod =
 
         let toRenderPatch (modelTrafoStack : list<IMod<Trafo3d>>) (p : Patch) =
             {
-                info        = p.info
-                level       = p.level
-                trafo       = flattenStack (Mod.constant p.info.Local2Global :: modelTrafoStack)
+                info         = p.info
+                level        = p.level
+                triangleSize = p.triangleSize
+                trafo        = flattenStack (Mod.constant p.info.Local2Global :: modelTrafoStack)
             }
 
         member x.RenderObjects(n : PatchNode) : aset<IRenderObject> =
@@ -74,7 +76,7 @@ module PatchLod =
             // prepare data for lod metric
             let vp   = Mod.map2 (*) n.ViewTrafo n.ProjTrafo
             let godeeper (self : AdaptiveToken) (p : RenderPatch) =
-                n.Decider self vp (Mod.constant 3.0) p 
+                n.Decider self n.ViewTrafo n.ProjTrafo p
 
             let preparePatch (p : RenderPatch) =
 
@@ -112,6 +114,7 @@ module PatchLod =
                             DefaultSemantic.DiffuseColorCoordinates, BufferView(Mod.constant (tc :> IBuffer), typeof<V2f>)
                         ]
 
+                    
                     let old = ro.Uniforms
                     ro.Uniforms <-
                         let t = Mod.constant tex :> IMod

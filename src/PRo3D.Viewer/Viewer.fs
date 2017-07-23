@@ -69,7 +69,7 @@ module Surface =
     let computeBBfromRoots (hierarchies : list<PatchHierarchy>) =
          hierarchies
             |> List.map(fun d -> d.tree |> QTree.getRoot)                  
-            |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)                                
+            |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)
             |> Box3d.ofSeq
     
     let createSgSurfaces runtime signature surfaces =
@@ -417,6 +417,7 @@ module ViewerApp =
                         |> Sg.dynamic          
                         |> Sg.uniform "selected" isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
+                     //   |> Sg.uniform "LodVisEnabled" (Mod.constant true)
                         |> Sg.onOff(surface.surface.isVisible)                             
                         |> Sg.andAlso (
                             Sg.wireBox' C4b.Red bb
@@ -442,8 +443,12 @@ module ViewerApp =
                 Shader.stableTrafo |> toEffect
                 //DefaultSurfaces.constantColor C4f.White |> toEffect                            
                 DefaultSurfaces.diffuseTexture |> toEffect
-                Shader.selectionColor |> toEffect       
+               // Shader.selectionColor |> toEffect       
+                Shader.LoDColor |> toEffect
             ]
+
+            |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
+            |> Sg.uniform "LodVisEnabled" (Mod.constant true)
 
     let mkBrushISg color size trafo : ISg<Message> =
         Sg.sphere 5 color size 
