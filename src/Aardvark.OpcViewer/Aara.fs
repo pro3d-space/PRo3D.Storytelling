@@ -126,13 +126,14 @@ module private Aara =
 
 type Patch =
     {
-        level : int
-        info : PatchFileInfo
+        level           : int
+        info            : PatchFileInfo
+        triangleSize    : float
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Patch =
-    let ofInfo (level : int) (p : PatchFileInfo) = { level = level; info = p }
+    let ofInfo (level : int) (size: float) (p : PatchFileInfo) = { level = level; info = p; triangleSize = size }
 
         
     let load (baseDir : string) (p : PatchFileInfo)  =
@@ -186,9 +187,18 @@ module PatchHierarchy =
 
     let private binarySerializer = FsPickler.CreateBinarySerializer()
 
+    let parseDouble d =
+        let mutable r = 0.0
+        if Double.TryParse(d,Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, &r) then r
+        else failwithf "could not parse int double:"
+
     let private ofDoc (x : XDocument) =
         let hierarchy = x.Descendants(xname "PatchHierarchy") |> Seq.head
         let rootPatch = hierarchy |> elem "RootPatch" |> xvalue
+
+        let geometrySizes = hierarchy |> elem "AvgGeometrySizes" |> xvalue 
+        let avgSizes = ((geometrySizes.[1..(geometrySizes.Length-2)]).Replace(" ","").Split [|','|]) |> Array.map parseDouble
+        Log.line "avgSizes %A" avgSizes
 
         let map = hierarchy |> elem' "SubPatchMap"
         let items = 
@@ -214,7 +224,8 @@ module PatchHierarchy =
                     Node(name, v |> Array.map mkTree)
                 | _ -> Leaf name
 
-        mkTree rootPatch
+        let tree = mkTree rootPatch
+        tree, avgSizes
 
 
     let load (fileName : string) =
@@ -222,17 +233,18 @@ module PatchHierarchy =
         let cachefile = Path.combine [dir; "hierarchy.cache" ]
         let loadAndCache () =
             Log.startTimed "loading from hierarchy"
+            let tree, sizes = 
+                XDocument.Load(fileName) |> ofDoc
             let hierarchy = 
-                XDocument.Load(fileName) 
-                    |> ofDoc
+                tree
                     |> QTree.mapLevel 0 (fun level p -> 
-                            p |> PatchFileInfo.load dir |> Patch.ofInfo level
+                            p |> PatchFileInfo.load dir |> Patch.ofInfo level sizes.[level]
                         )
             binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
             Log.stop()
             { baseDir = dir; tree = hierarchy }
 
-        if File.Exists cachefile then
+        if File.Exists cachefile && false then
             try
                 Log.startTimed "loading from cache file"
                 let r = { baseDir = dir; tree = File.readAllBytes cachefile |> binarySerializer.UnPickle }
@@ -243,12 +255,13 @@ module PatchHierarchy =
                 loadAndCache ()
         else
             Log.startTimed "loading from hierarchy"
+            let tree, sizes = 
+                XDocument.Load(fileName) |> ofDoc
             let hierarchy = 
-                XDocument.Load(fileName) 
-                    |> ofDoc
+                tree                    
                     |> QTree.mapLevel 0 (fun level p -> 
-                            p |> PatchFileInfo.load dir |> Patch.ofInfo level
-                       )
+                            p |> PatchFileInfo.load dir |> Patch.ofInfo level sizes.[level]
+                        )
             binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
             Log.stop()
             { baseDir = dir; tree = hierarchy }
