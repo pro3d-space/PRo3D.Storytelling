@@ -7,10 +7,11 @@ open PatchLod
 
 module DefaultMetrics =
 
-    let mars (self : AdaptiveToken) (v : IMod<Trafo3d>) (pr : IMod<Trafo3d>) (p : RenderPatch) =
+    let mars (self : AdaptiveToken) (v : IMod<Trafo3d>) (pr : IMod<Trafo3d>) (p : RenderPatch) (c : IMod<CameraParameters>) =
         let m = p.trafo.GetValue self
         let vp   = Mod.map2 (*) v pr
         let vp = vp.GetValue self
+        let cam = c.GetValue self
 
         let mvp = m * vp
         let area = computeScreenSpaceArea p.info.LocalBoundingBox mvp
@@ -19,11 +20,13 @@ module DefaultMetrics =
 
         let closest = p.info.GlobalBoundingBox.GetClosestPointOn(pos)
 
-        Log.warn "%A size %f dist %A" area p.triangleSize (closest - pos).Length
+        Log.warn "%A size" cam.frustum.left
+
+        //Log.warn "%A size %f dist %A" area p.triangleSize (closest - pos).Length
         log area > log 3.8
       //  true
 
-    let tunnel (self : AdaptiveToken) (v : IMod<Trafo3d>) (pr : IMod<Trafo3d>) (p : RenderPatch) =
+    let tunnel (self : AdaptiveToken) (v : IMod<Trafo3d>) (pr : IMod<Trafo3d>) (p : RenderPatch) (c : IMod<CameraParameters>)=
         let m = p.trafo.GetValue self
         let vp   = Mod.map2 (*) v pr
         let vp = vp.GetValue self

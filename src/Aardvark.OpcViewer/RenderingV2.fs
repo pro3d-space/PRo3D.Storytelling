@@ -6,6 +6,7 @@ open System.Threading
 
 open Aardvark.Base
 open Aardvark.Base.Incremental
+open Aardvark.Base.Ag
 open Aardvark.SceneGraph
 open Aardvark.Rendering.GL
 open Aardvark.Rendering.SceneGraph.HierarchicalLoD
@@ -16,6 +17,35 @@ open OpenTK.Graphics.OpenGL4
 module Helpers =
     let (<*>) (a : IMod<Trafo3d>) (b : IMod<Trafo3d>) = Mod.map2 (*) a b
     let inverse (m : IMod<Trafo3d>) = m |> Mod.map (fun t -> t.Inverse)
+
+
+
+type CameraParameters = { frustum : Frustum }
+
+module CameraParameters =    
+    let defaultParams = { frustum = Frustum.perspective 60.0 0.1 1000.0 (3.0 / 2.0) }
+
+[<AutoOpen>]
+module CameraParameterSg =
+
+    type CameraParametersApplicator(sg : IMod<ISg>, cam : IMod<CameraParameters>) =
+        inherit Sg.AbstractApplicator(sg)
+        member x.Cam = cam
+
+    [<Semantic>]
+    type CameraParametersSem() =
+        member x.CameraParameters(c : CameraParametersApplicator) =
+            c.Child?CameraParameters <- c.Cam
+        member x.CameraParameters(c : Root<ISg>) = 
+            c.Child?CameraParameters <- Mod.constant CameraParameters.defaultParams
+
+    type ISg with
+        member x.CameraParameters : IMod<CameraParameters> = x?CameraParameters
+
+    module Sg =
+        let cameraParameters (p : IMod<CameraParameters>) (sg : ISg) =
+            CameraParametersApplicator(Mod.constant sg, p) :> ISg
+
 
 module PatchLod =
     open Aardvark.Base.Rendering
@@ -36,7 +66,7 @@ module PatchLod =
             trafo           : IMod<Trafo3d>
         }
 
-    type LodDecider = AdaptiveToken -> IMod<Trafo3d> -> IMod<Trafo3d> -> RenderPatch -> bool 
+    type LodDecider = AdaptiveToken -> IMod<Trafo3d> -> IMod<Trafo3d> -> RenderPatch -> IMod<CameraParameters> -> bool 
 
     type PatchNode(signature : IFramebufferSignature, runner : Load.Runner, 
                    baseDir : string, decider : LodDecider, 
@@ -71,12 +101,13 @@ module PatchLod =
             let trafoStack     = n.ModelTrafoStack
             let v              = n.ViewTrafo
             let proj           = n.ProjTrafo
-            let ro             = RenderObject.ofScope scope
+            let ro             = RenderObject.ofScope scope      
+            let cameraParameters = n.CameraParameters            
 
             // prepare data for lod metric
             let vp   = Mod.map2 (*) n.ViewTrafo n.ProjTrafo
             let godeeper (self : AdaptiveToken) (p : RenderPatch) =
-                n.Decider self n.ViewTrafo n.ProjTrafo p
+                n.Decider self n.ViewTrafo n.ProjTrafo p cameraParameters
 
             let preparePatch (p : RenderPatch) =
 
