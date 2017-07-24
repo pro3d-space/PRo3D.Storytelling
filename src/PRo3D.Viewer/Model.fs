@@ -411,7 +411,7 @@ module ViewConfigModel =
         format  = "{0:0.00}"
     }
     let initArrowThickness = {
-        value   = 0.5
+        value   = 0.9
         min     = 0.01
         max     = 10.0
         step    = 0.01
