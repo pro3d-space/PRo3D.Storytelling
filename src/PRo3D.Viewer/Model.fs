@@ -322,6 +322,7 @@ type Surface = {
     fillMode    : FillMode
     cullMode    : CullMode
     isVisible   : bool
+    quality     : NumericInput
 }
 
 [<DomainType>]

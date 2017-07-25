@@ -225,7 +225,7 @@ module PatchHierarchy =
                 | _ -> Leaf name
 
         let tree = mkTree rootPatch
-        tree, avgSizes
+        tree, avgSizes |> Array.rev
 
 
     let load (fileName : string) =

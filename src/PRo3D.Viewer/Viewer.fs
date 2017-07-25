@@ -36,6 +36,15 @@ module PList =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]        
 module Surface =
+    let qualityInit = 
+        {
+            value = 1.0
+            min = 0.5
+            max = 10.0
+            step = 0.5
+            format = "{0:0.0}"
+        }
+
     let mk path = {
         guid = Guid.NewGuid()
         name = IO.Path.GetFileName path
@@ -44,6 +53,7 @@ module Surface =
         fillMode = FillMode.Fill
         cullMode = CullMode.None
         isVisible = true
+        quality = qualityInit
     }
 
     let toSg (s:Surface) sg bb kd = {
@@ -417,8 +427,17 @@ module ViewerApp =
                         |> Sg.dynamic          
                         |> Sg.uniform "selected" isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
-                     //   |> Sg.uniform "LodVisEnabled" (Mod.constant true)
+                     //   |> Sg.uniform "LodVisEnabled" (Mod.constant true)                        
                         |> Sg.onOff(surface.surface.isVisible)                             
+                        |> Sg.LodParameters( 
+                            adaptive {
+                                let! frustum = Navigation.UI.frustum m.scene.navigation
+                                let sizes = V2i(1024,768)
+                                let! quality = surface.surface.quality.value
+
+                                return { frustum = frustum; size = sizes; factor = quality }
+                            })                            
+                        |> Sg.noEvents
                         |> Sg.andAlso (
                             Sg.wireBox' C4b.Red bb
                                     |> Sg.noEvents

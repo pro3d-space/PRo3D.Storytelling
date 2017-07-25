@@ -207,9 +207,7 @@ module Viewer =
                 |> Sg.fillMode fillMode
                 |> Sg.cullMode (Mod.constant CullMode.None)
                 |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
-                |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)
-                |> Sg.cameraParameters( proj |> Mod.map( fun x -> {frustum = x } ))
-
+                |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)                
         sg
 
     let run (scene : OpcScene) =

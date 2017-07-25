@@ -15,6 +15,7 @@ module SurfaceProperties =
         | SetCullMode   of CullMode
         | SetName       of string
         | ToggleVisible 
+        | SetQuality    of Numeric.Action
 
     let update (model : Surface) (act : Action) =
         match act with
@@ -26,6 +27,8 @@ module SurfaceProperties =
                 { model with name = s }
             | ToggleVisible ->
                 { model with isVisible = not model.isVisible }
+            | SetQuality a ->
+                { model with quality = Numeric.update model.quality a }
 
     let view (model : MSurface) =    
         require Html.semui (
@@ -35,6 +38,7 @@ module SurfaceProperties =
                 Html.row "Cullmode:"    [Html.SemUi.dropDown model.cullMode SetCullMode]
                 Html.row "Name:"        [Html.SemUi.textBox model.name SetName ]
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
+                Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider] model.quality |> UI.map SetQuality ]
             ]
         )
 
