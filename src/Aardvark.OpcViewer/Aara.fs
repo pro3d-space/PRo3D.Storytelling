@@ -244,7 +244,7 @@ module PatchHierarchy =
             Log.stop()
             { baseDir = dir; tree = hierarchy }
 
-        if File.Exists cachefile && false then
+        if File.Exists cachefile then
             try
                 Log.startTimed "loading from cache file"
                 let r = { baseDir = dir; tree = File.readAllBytes cachefile |> binarySerializer.UnPickle }

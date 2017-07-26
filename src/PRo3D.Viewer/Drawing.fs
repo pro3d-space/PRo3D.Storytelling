@@ -414,7 +414,7 @@ module DrawingApp =
                 let! v = view
                 let! near = conf.nearPlane.value
                 let! size = conf.arrowSize.value
-                let hfov = 60.0
+                let hfov = (60.0).RadiansFromDegrees()
                
                 let wz = Fun.Tan(hfov / 2.0) * near * size * 0.5
                 let dist = V3d.Distance(p, v.Location)

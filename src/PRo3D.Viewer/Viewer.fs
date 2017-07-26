@@ -40,7 +40,7 @@ module Surface =
         {
             value = 1.0
             min = 0.5
-            max = 10.0
+            max = 100.0
             step = 0.5
             format = "{0:0.0}"
         }
@@ -467,7 +467,7 @@ module ViewerApp =
             ]
 
             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
-            |> Sg.uniform "LodVisEnabled" (Mod.constant true)
+            |> Sg.uniform "LodVisEnabled" (m.scene.config.lodColoring)
 
     let mkBrushISg color size trafo : ISg<Message> =
         Sg.sphere 5 color size 

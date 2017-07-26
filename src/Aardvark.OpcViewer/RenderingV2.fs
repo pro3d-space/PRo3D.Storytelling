@@ -158,7 +158,7 @@ module PatchLod =
                                             let min = 120.0
                                             let size = -120.0
                                             let factor = float p.level / (float height - 1.0)
-                                            let c = hsv2rgb 230.0 (1.0 - factor) 1.0
+                                            let c = hsv2rgb 0.0 factor 1.0
                                             //let c = hsv2rgb (min + factor * size) 0.6 1.0
                                             Mod.constant c :> IMod |> Some
                                         | "ModelTrafo" -> p.trafo :> IMod |> Some

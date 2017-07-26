@@ -378,6 +378,7 @@ type ViewConfigModel = {
     minDipAngle             : NumericInput
     maxDipAngle             : NumericInput
     coordinates             : ReferenceSystem
+    lodColoring             : bool
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -397,11 +398,11 @@ module ViewConfigModel =
         format  = "{0:0.0}"
     }
     let initNavSens = {
-        value   = 1.0
-        min     = 0.1
-        max     = 100.0
-        step    = 0.1
-        format  = "{0:0.0}"
+        value   = 0.0
+        min     = -8.0
+        max     = +8.0
+        step    = 0.25
+        format  = "{0:0.00}"
     }
     let initArrowSize = {
         value   = 1.0
@@ -440,6 +441,7 @@ module ViewConfigModel =
         minDipAngle = initMinAngle
         maxDipAngle = initMaxAngle
         coordinates = ReferenceSystem.initial
+        lodColoring = false
         }
     
     
