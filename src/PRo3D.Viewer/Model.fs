@@ -386,15 +386,15 @@ module ViewConfigModel =
     let initNearPlane = {
         value   = 0.1
         min     = 0.01
-        max     = 100.0
+        max     = 1000.0
         step    = 0.01
         format  = "{0:0.00}"
     }
     let initFarPlane = {
-        value   = 10000.0
+        value   = 5000.0
         min     = 1.0
-        max     = 1000000.0
-        step    = 1.0
+        max     = 10000000.0
+        step    = 10.0
         format  = "{0:0.0}"
     }
     let initNavSens = {

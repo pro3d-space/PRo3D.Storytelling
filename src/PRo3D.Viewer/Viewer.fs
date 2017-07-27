@@ -151,6 +151,7 @@ module ViewerApp =
         | ConfigPropertiesMessage   of ConfigProperties.Action
         | QuickLoad1
         | QuickLoad2
+        | DeleteLast
         | AddSg                     of ISg
         | PickSurface               of SceneHit*string
         | SaveScene
@@ -283,6 +284,9 @@ module ViewerApp =
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
                 let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\cape.scn"
                 loadScene path m runtime signature
+            | DeleteLast,_,_ -> 
+                File.Delete("./last") |> ignore
+                m
             | PickSurface (p,name), _ ,true ->                
                 Log.line "hit surface %s" name
                 let fray = p.globalRay.Ray
@@ -605,6 +609,7 @@ module ViewerApp =
             div[][
                 button [onClick (fun _ -> QuickLoad1)][text "Surface"]
                 button [onClick (fun _ -> QuickLoad2)][text "Scene"]
+                button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
                 GuiEx.accordion "Surfaces" "Cubes" true [
                     surfaceList
                 ]
