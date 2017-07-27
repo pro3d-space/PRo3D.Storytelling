@@ -98,13 +98,27 @@ module MeasurementsImporter =
                         | _ -> m.Element(xname "Closed").Value.ToBool()
         let style = (getStyle (m.Element(xname "LineAttributes")))
         let trafo = getTrafo (m.Element(xname "LocalToGlobal"))
+        let points = 
+            getPoints (m.Element(xname "Points")) anType 
+                |> PList.ofArray 
+                |> PList.map (fun x -> trafo.Forward.TransformPos x)
+
+        let segments = 
+            getSegments (m, anType) 
+                |> PList.ofList 
+                |> PList.map (
+                    fun s -> 
+                        let ps = s.points |> PList.map (fun x -> trafo.Forward.TransformPos x)
+                        {s with points = ps}
+                )
+
         let an = {
                 key = Guid.NewGuid()
                 geometry = getGeometry (anType, closed)
                 projection = Projection.Linear
                 semantic = Semantic.Horizon0
-                points = getPoints (m.Element(xname "Points")) anType |> PList.ofArray
-                segments = getSegments (m, anType) |> PList.ofList
+                points = points
+                segments = segments
                 color = { c = style.color }
                 thickness = style.thickness
                 results = None

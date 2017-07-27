@@ -18,7 +18,7 @@ module DefaultMetrics =
         let unitPxSize = lodParams.frustum.right / (float lodParams.size.X / 2.0)
         let px = (lodParams.frustum.near * p.triangleSize) / dist
                 
-        Log.warn "%f to %f - avgSize: %f" px (unitPxSize * lodParams.factor) p.triangleSize
+    //    Log.warn "%f to %f - avgSize: %f" px (unitPxSize * lodParams.factor) p.triangleSize
         px > unitPxSize * lodParams.factor
 
     let tunnel (self : AdaptiveToken) (v : IMod<Trafo3d>) (pr : IMod<Trafo3d>) (p : RenderPatch) (c : IMod<LodParameters>)=

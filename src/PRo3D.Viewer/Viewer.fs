@@ -282,8 +282,10 @@ module ViewerApp =
                 Surface.import' runtime signature [Surface.mk path] m |> lookAtData
             | QuickLoad2,_,_ ->                
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
-                let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\cape.scn"
-                loadScene path m runtime signature
+                (MeasurementsImporter.startImporter "D:\_WORK\Aardwork\Exomars\Cape Desire\cd.xml") |> ignore
+                //let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\cape.scn"
+                //loadScene path m runtime signature
+                m
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
                 m
