@@ -43,7 +43,7 @@ module Navigation =
                         //let view' =
                         //    CameraView.withUp model.config.coordinates.up.value model.camera.view
                         let view' =
-                            CameraView.lookAt model.camera.view.Location center model.config.coordinates.up.value
+                            CameraView.lookAt model.camera.view.Location center model.coordinates.up.value
                         
                         { model with camera = { model.camera with view = view'}; navigationMode = mode} 
                     | _ ->  { model with navigationMode = mode }

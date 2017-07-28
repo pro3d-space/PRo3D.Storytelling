@@ -33,6 +33,7 @@ type Scene = {
     surfaces        : list<Surface>    
     config          : ViewConfigModel
     scenePath       : option<string>
+    referenceSystem : ReferenceSystem
 }
 
 type Properties = 
@@ -77,6 +78,7 @@ module Viewer =
                 surfaces        = []                
                 config          = ViewConfigModel.initial
                 scenePath       = None
+                referenceSystem = ReferenceSystem.initial
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing

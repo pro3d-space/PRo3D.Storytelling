@@ -20,7 +20,7 @@ module ReferenceSystemApp =
         | SetUp            of Vector3d.Action       
         | SetNorth         of V3d
         | ToggleVisible
-        | SetArrowScale    of NumericInput
+        | SetViewConfig    of ViewConfigModel
  
     
     let upVector (point:V3d) = point.Normalized
@@ -42,9 +42,7 @@ module ReferenceSystemApp =
                 { model with up =  up'}
             | SetNorth  n     -> { model with north = n }
             | ToggleVisible   -> { model with isVisible = not model.isVisible}     
-
-            | SetArrowScale s -> { model with arrowScale = s }
-            //| SetConfig c          -> { model with config = c }
+            | SetViewConfig c -> { model with config = c }
 
     module Sg =
 
@@ -58,21 +56,37 @@ module ReferenceSystemApp =
                     }
                     |> Sg.trafo(trafo)
 
-        let directionMarker (pos:IMod<V3d>) (dir:IMod<V3d>) (color:IMod<C4b>) (length:IMod<float>) (cam:IMod<CameraView>) =
+        let directionMarker (pos:IMod<V3d>) (dir:IMod<V3d>) (color:IMod<C4b>) (conf:MViewConfigModel) (length:IMod<float>) (cam:IMod<CameraView>) =
             aset{
-                let! pos = pos
-                let! dir = dir
-                let! length = length
-                let scaledLength = dir * length
+               // let! pos = pos
+                let! dirs = dir
+                //let! length = length
+                let lineLengthScale = DrawingApp.Sg.computeInvariantScale cam conf pos conf.arrowLength.value (Mod.constant 60.0)
+                let scaledLength = 
+                    Mod.map2(fun (str:V3d) s -> str.Normalized * s) dir lineLengthScale
+
+                //let scaledLength = dir * length
                 let al = 
                     alist {
-                        yield pos
-                        yield pos + scaledLength
+                        let! p = pos
+                        let! length = scaledLength
+                        yield p
+                        yield p + length
                     }
-                let radius = length * 0.1
-                //let scale =  DrawingApp.Sg.computeScale cam (Mod.constant pos) 5.0
-                yield DrawingApp.Sg.lines al color (Mod.constant 1.0) (Mod.constant (Trafo3d.Translation(pos))) (Mod.constant Guid.Empty)
-                yield coneISg color (Mod.constant radius) (Mod.constant length) (Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + scaledLength))) // 
+
+                let posTrafo =
+                            pos |> Mod.map(fun d -> Trafo3d.Translation(d))
+
+                let coneTrafo = 
+                            Mod.map2(fun p s -> Trafo3d.RotateInto(V3d.ZAxis, dirs.Normalized) * Trafo3d.Translation(p + s)) pos scaledLength
+
+                //let radius = length * 0.1
+                //let scale =  DrawingApp.Sg.computeInvariantScale cam p 5.0
+                let radius = lineLengthScale |> Mod.map(fun d -> d * 0.05)
+                let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
+
+                yield DrawingApp.Sg.lines al color conf.arrowThickness.value posTrafo (Mod.constant Guid.Empty)
+                yield coneISg color radius coneSize coneTrafo //(Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + scaledLength))) // 
             } |> Sg.set 
                 
         
@@ -89,10 +103,8 @@ module ReferenceSystemApp =
             
                 Sg.ofList [
                     point model.origin (Mod.constant C4b.Red) cam
-                    //directionMarker model.origin model.up.value (Mod.constant C4b.Blue) cam
-                    //directionMarker model.origin model.north (Mod.constant C4b.Red) model.arrowScale.value cam
-                    //directionMarker model.origin model.up (Mod.constant C4b.Blue) model.arrowLength.value  model.config.arrowThickness.value cam
-                    //directionMarker model.origin model.north (Mod.constant C4b.Red) model.config.arrowLength.value model.config.arrowThickness.value cam
+                    directionMarker model.origin model.up.value (Mod.constant C4b.Blue) model.config model.config.arrowLength.value cam
+                    directionMarker model.origin model.north (Mod.constant C4b.Red)  model.config model.config.arrowLength.value cam
                 ] |> Sg.onOff(model.isVisible)
     module UI =
         let view (model:MReferenceSystem) =

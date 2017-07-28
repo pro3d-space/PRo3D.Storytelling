@@ -28,14 +28,15 @@ module DrawingApp =
 
     open MBrace.FsPickler.Json   
 
+
     let getFinishedAnnotation (model : DrawingModel) =
         match model.working with
             | Some w ->               
                 let dns = 
                     match w.points.Count with 
-                        | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points model.config.coordinates.up.value) //more acc. by using segments as well?
+                        | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points model.coordinates.up.value) //more acc. by using segments as well?
                         | _ -> None 
-                let results = Annotation.calculateAnnotationResults w model.config.coordinates.up.value
+                let results = Annotation.calculateAnnotationResults w model.coordinates.up.value
                 Some { w with dnsResults = dns ; results = Some results }
             | None -> None
 
@@ -408,15 +409,16 @@ module DrawingApp =
                 return distF * size / 800.0 //needs hfov at this point
             }
 
-        let computeInvariantScale (view : IMod<CameraView>) (conf:MViewConfigModel) (p:IMod<V3d>) (size:IMod<float>) =
+        let computeInvariantScale (view : IMod<CameraView>) (conf:MViewConfigModel) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
             adaptive {
                 let! p = p
                 let! v = view
                 let! near = conf.nearPlane.value
                 let! size = size
-                let hfov = 60.0
+                let! hfov = hfov
+                let hfov_rad = Conversion.RadiansFromDegrees(hfov)
                
-                let wz = Fun.Tan(hfov / 2.0) * near * size * 0.1
+                let wz = Fun.Tan(hfov_rad / 2.0) * near * size
                 let dist = V3d.Distance(p, v.Location)
 
                 return ( wz / near ) * dist
@@ -522,10 +524,10 @@ module DrawingApp =
                         let color = 
                             DipAndStrike.dipColor x.dipAngle conf.minDipAngle.value conf.maxDipAngle.value
                                                                     
-                        //let scale = conf.arrowLength.value //computeInvariantScale view conf center
-                        let lineLengthScale = computeInvariantScale view conf center conf.arrowLength.value
-                        let lineThicknessScale = computeInvariantScale view conf center conf.arrowThickness.value
-                        let planeScale = computeInvariantScale view conf center conf.dnsPlaneSize.value
+                        let lineLengthScale = computeInvariantScale view conf center conf.arrowLength.value (Mod.constant 60.0)
+                        //let lineThicknessScale = computeInvariantScale view conf center conf.arrowThickness.value
+                        //let lineThickness = lineThicknessScale //|> Mod.map(fun s -> s * 0.3)
+                        let planeScale = computeInvariantScale view conf center conf.dnsPlaneSize.value (Mod.constant 60.0)
                                                 
                         
                         let radius = lineLengthScale |> Mod.map(fun d -> d * 0.05)
@@ -541,22 +543,7 @@ module DrawingApp =
 
                         yield discISg color planeScale height discTrafo 
 
-                         //yield discISg color (Mod.constant planeScale) (Mod.constant 0.001) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, plane.Normal) * Trafo3d.Translation(p)))  // disc
-
                         let! dip = x.dipDirection
-                        
-                        //let radius = lts * 0.05
-                        //let! planeScale = computeInvariantScale view conf point conf.dnsPlaneSize.value
-                        //let lineThickness = lts * 0.3
-                        ////let height = planeScale * 0.2
-                        //let coneSize = lineLengthScale * 0.5
-                     
-                        //yield lines dipLine color (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // dip vec
-                        //yield coneISg color (Mod.constant radius) (Mod.constant coneSize) (Mod.constant (Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(p + dlength))) 
-                        //yield lines strikeLine1 (Mod.constant C4b.Red) (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike1 vec
-                        //yield lines strikeLine2 (Mod.constant C4b.Red) (Mod.constant lineThickness) (Mod.constant (Trafo3d.Translation(p))) anno.key // strike2 vec
-
-                        let lineThickness = lineThicknessScale //|> Mod.map(fun s -> s * 0.3)
 
                         // dip vec       
                         let dipLine = 
@@ -569,7 +556,7 @@ module DrawingApp =
                                 yield c + dip.Normalized * s //* f
                             }                            
 
-                        yield lines dipLine color lineThickness posTrafo anno.key 
+                        yield lines dipLine color conf.arrowThickness.value posTrafo anno.key 
 
                         let coneTrafo = 
                             Mod.map2(fun c s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(c + dip.Normalized * s)) center lineLengthScale
@@ -594,8 +581,8 @@ module DrawingApp =
                                 yield c; yield c + s
                             }                                            
 
-                        yield lines strikeLine1 (Mod.constant C4b.Red) lineThickness posTrafo anno.key // strike1 vec
-                        yield lines strikeLine2 (Mod.constant C4b.Red) lineThickness posTrafo anno.key // strike2 vec
+                        yield lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness.value posTrafo anno.key // strike1 vec
+                        yield lines strikeLine2 (Mod.constant C4b.Red) conf.arrowThickness.value posTrafo anno.key // strike2 vec
                     | None -> () 
                                
             } |> Sg.set

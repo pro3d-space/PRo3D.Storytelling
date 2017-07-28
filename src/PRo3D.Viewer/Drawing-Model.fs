@@ -61,7 +61,7 @@ type DrawingModel = {
 
     pendingIntersections : ThreadPool<Action>
     config : ViewConfigModel
-    //coordinates : ReferenceSystem   
+    coordinates : ReferenceSystem   
 
     [<TreatAsValue>]
     past : Option<DrawingModel> 
@@ -97,6 +97,7 @@ module DrawingModel =
         selectedAnnotation      = None
         pendingIntersections    = ThreadPool.empty
         config                  = ViewConfigModel.initial        
+        coordinates             = ReferenceSystem.initial
 
         past    = None
         future  = None
