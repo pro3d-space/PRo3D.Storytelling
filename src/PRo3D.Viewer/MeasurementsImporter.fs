@@ -109,7 +109,9 @@ module MeasurementsImporter =
                 |> PList.map (
                     fun s -> 
                         let ps = s.points |> PList.map (fun x -> trafo.Forward.TransformPos x)
-                        {s with points = ps}
+                        let startPoint = s.startPoint |> trafo.Forward.TransformPos 
+                        let endPoint = s.endPoint |> trafo.Forward.TransformPos 
+                        {s with startPoint = startPoint; endPoint = endPoint; points = ps}
                 )
 
         let an = {

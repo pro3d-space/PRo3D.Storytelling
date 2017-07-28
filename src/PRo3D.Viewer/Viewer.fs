@@ -34,13 +34,13 @@ module PList =
         doIt (PList.toList a)
 
 
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]        
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
     let qualityInit = 
         {
             value = 1.0
             min = 0.5
-            max = 100.0
+            max = 10.0
             step = 0.5
             format = "{0:0.0}"
         }
@@ -282,7 +282,7 @@ module ViewerApp =
                 Surface.import' runtime signature [Surface.mk path] m |> lookAtData
             | QuickLoad2,_,_ ->                
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
-                (MeasurementsImporter.startImporter "D:\_WORK\Aardwork\Exomars\Cape Desire\cd.xml") |> ignore
+                (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore
                 //let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\cape.scn"
                 //loadScene path m runtime signature
                 m
