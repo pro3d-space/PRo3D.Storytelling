@@ -6,6 +6,7 @@ open System.Threading
 
 open Aardvark.Base
 open Aardvark.Base.Incremental
+open Aardvark.Base.Ag
 open Aardvark.SceneGraph
 open Aardvark.Rendering.GL
 open Aardvark.Rendering.SceneGraph.HierarchicalLoD
@@ -16,6 +17,35 @@ open OpenTK.Graphics.OpenGL4
 module Helpers =
     let (<*>) (a : IMod<Trafo3d>) (b : IMod<Trafo3d>) = Mod.map2 (*) a b
     let inverse (m : IMod<Trafo3d>) = m |> Mod.map (fun t -> t.Inverse)
+
+
+
+type LodParameters = { frustum : Frustum; size : V2i; factor : float }
+
+module LodParameters =    
+    let defaultParams = { frustum = Frustum.perspective 60.0 0.1 1000.0 (3.0 / 2.0); size = V2i(800,600); factor = 1.0 }
+
+[<AutoOpen>]
+module LodParametersSg =
+
+    type LodParametersApplicator(sg : IMod<ISg>, cam : IMod<LodParameters>) =
+        inherit Sg.AbstractApplicator(sg)
+        member x.Cam = cam
+
+    [<Semantic>]
+    type LodParametersSem() =
+        member x.LodParameters(c : LodParametersApplicator) =
+            c.Child?LodParameters <- c.Cam
+        member x.LodParameters(c : Root<ISg>) = 
+            c.Child?LodParameters <- Mod.constant LodParameters.defaultParams
+
+    type ISg with
+        member x.LodParameters : IMod<LodParameters> = x?LodParameters
+
+    module Sg =
+        let LodParameters (p : IMod<LodParameters>) (sg : ISg) =
+            LodParametersApplicator(Mod.constant sg, p) :> ISg
+
 
 module PatchLod =
     open Aardvark.Base.Rendering
@@ -36,7 +66,7 @@ module PatchLod =
             trafo           : IMod<Trafo3d>
         }
 
-    type LodDecider = AdaptiveToken -> IMod<Trafo3d> -> IMod<Trafo3d> -> RenderPatch -> bool 
+    type LodDecider = AdaptiveToken -> IMod<Trafo3d> -> IMod<Trafo3d> -> RenderPatch -> IMod<LodParameters> -> bool 
 
     type PatchNode(signature : IFramebufferSignature, runner : Load.Runner, 
                    baseDir : string, decider : LodDecider, 
@@ -71,12 +101,13 @@ module PatchLod =
             let trafoStack     = n.ModelTrafoStack
             let v              = n.ViewTrafo
             let proj           = n.ProjTrafo
-            let ro             = RenderObject.ofScope scope
+            let ro             = RenderObject.ofScope scope      
+            let lodParameters = n.LodParameters            
 
             // prepare data for lod metric
             let vp   = Mod.map2 (*) n.ViewTrafo n.ProjTrafo
             let godeeper (self : AdaptiveToken) (p : RenderPatch) =
-                n.Decider self n.ViewTrafo n.ProjTrafo p
+                n.Decider self n.ViewTrafo n.ProjTrafo p lodParameters
 
             let preparePatch (p : RenderPatch) =
 
@@ -127,7 +158,7 @@ module PatchLod =
                                             let min = 120.0
                                             let size = -120.0
                                             let factor = float p.level / (float height - 1.0)
-                                            let c = hsv2rgb 230.0 (1.0 - factor) 1.0
+                                            let c = hsv2rgb 0.0 factor 1.0
                                             //let c = hsv2rgb (min + factor * size) 0.6 1.0
                                             Mod.constant c :> IMod |> Some
                                         | "ModelTrafo" -> p.trafo :> IMod |> Some

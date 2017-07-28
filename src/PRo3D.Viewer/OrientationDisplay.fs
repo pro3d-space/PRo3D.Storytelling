@@ -117,5 +117,6 @@ module ReferenceSystemApp =
                     Html.row "Pitch:"   [text "not implemented"] // same for pitch which relates to dip angle
                     Html.row "Height:"  [text "not implemented"]
                     Html.row "Visible:" [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
+                    
                 ]
             )

@@ -225,7 +225,7 @@ module PatchHierarchy =
                 | _ -> Leaf name
 
         let tree = mkTree rootPatch
-        tree, avgSizes
+        tree, avgSizes |> Array.rev
 
 
     let load (fileName : string) =
@@ -244,7 +244,7 @@ module PatchHierarchy =
             Log.stop()
             { baseDir = dir; tree = hierarchy }
 
-        if File.Exists cachefile && false then
+        if File.Exists cachefile then
             try
                 Log.startTimed "loading from cache file"
                 let r = { baseDir = dir; tree = File.readAllBytes cachefile |> binarySerializer.UnPickle }

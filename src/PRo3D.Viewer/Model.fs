@@ -322,6 +322,7 @@ type Surface = {
     fillMode    : FillMode
     cullMode    : CullMode
     isVisible   : bool
+    quality     : NumericInput
 }
 
 
@@ -335,6 +336,7 @@ type ViewConfigModel = {
     dnsPlaneSize            : NumericInput
     minDipAngle             : NumericInput
     maxDipAngle             : NumericInput
+    lodColoring             : bool
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -342,27 +344,27 @@ module ViewConfigModel =
     let initNearPlane = {
         value   = 0.1
         min     = 0.01
-        max     = 100.0
+        max     = 1000.0
         step    = 0.01
         format  = "{0:0.00}"
     }
     let initFarPlane = {
-        value   = 10000.0
+        value   = 5000.0
         min     = 1.0
-        max     = 1000000.0
-        step    = 1.0
+        max     = 10000000.0
+        step    = 10.0
         format  = "{0:0.0}"
     }
     let initNavSens = {
-        value   = 1.0
-        min     = 0.1
-        max     = 100.0
-        step    = 0.1
-        format  = "{0:0.0}"
+        value   = 0.0
+        min     = -8.0
+        max     = +8.0
+        step    = 0.25
+        format  = "{0:0.00}"
     }
     let initArrowLength = {
         value   = 0.5
-        min     = 0.01
+        min     = 0.00
         max     = 10.0
         step    = 0.01
         format  = "{0:0.00}"
@@ -404,8 +406,9 @@ module ViewConfigModel =
         dnsPlaneSize = initPlaneSize
         minDipAngle = initMinAngle
         maxDipAngle = initMaxAngle
+        lodColoring = false
     }
-
+      
 [<DomainType>]
 type ReferenceSystem = {    
 

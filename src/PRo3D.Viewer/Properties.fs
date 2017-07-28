@@ -15,6 +15,7 @@ module SurfaceProperties =
         | SetCullMode   of CullMode
         | SetName       of string
         | ToggleVisible 
+        | SetQuality    of Numeric.Action
 
     let update (model : Surface) (act : Action) =
         match act with
@@ -26,6 +27,8 @@ module SurfaceProperties =
                 { model with name = s }
             | ToggleVisible ->
                 { model with isVisible = not model.isVisible }
+            | SetQuality a ->
+                { model with quality = Numeric.update model.quality a }
 
     let view (model : MSurface) =    
         require Html.semui (
@@ -35,6 +38,7 @@ module SurfaceProperties =
                 Html.row "Cullmode:"    [Html.SemUi.dropDown model.cullMode SetCullMode]
                 Html.row "Name:"        [Html.SemUi.textBox model.name SetName ]
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
+                Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider] model.quality |> UI.map SetQuality ]
             ]
         )
 
@@ -111,7 +115,7 @@ module AnnotationProperties =
 
 module ConfigProperties =
     open Aardvark.Base
-    open Aardvark.Base.Rendering
+    open Aardvark.Base.Rendering    
 
     type Action =
         | SetNearPlane              of Numeric.Action
@@ -122,6 +126,7 @@ module ConfigProperties =
         | SetDnSPlaneSize           of Numeric.Action
         | SetMinDipAngle            of Numeric.Action
         | SetMaxDipAngle            of Numeric.Action
+        | ToggleLodColors           
 
     let update (model : ViewConfigModel) (act : Action) =
         match act with
@@ -141,18 +146,21 @@ module ConfigProperties =
                 { model with minDipAngle = Numeric.update model.minDipAngle s }
             | SetMaxDipAngle s ->
                 { model with maxDipAngle = Numeric.update model.maxDipAngle s }
+            | ToggleLodColors ->
+                { model with lodColoring = not model.lodColoring}
 
     let view (model : MViewConfigModel) =    
         require Html.semui (
             Html.table [      
-                Html.row "Near Plane:"  [Numeric.view' [InputBox] model.nearPlane |> UI.map SetNearPlane ]               
-                Html.row "Far Plane:"   [Numeric.view' [InputBox] model.farPlane |> UI.map SetFarPlane ]    
-                Html.row "Navigation Sensitivity:"   [Numeric.view' [InputBox] model.navigationSensitivity |> UI.map SetNavigationSensitivity ]    
-                Html.row "Arrow Length:"  [Numeric.view' [InputBox] model.arrowLength |> UI.map SetArrowLength ]  
-                Html.row "Arrow Thickness:"  [Numeric.view' [InputBox] model.arrowThickness |> UI.map SetArrowThickness ]  
-                Html.row "D+S Plane Size:"   [Numeric.view' [InputBox] model.dnsPlaneSize |> UI.map SetDnSPlaneSize ]    
-                Html.row "Min Dipping Angle:"   [Numeric.view' [InputBox] model.minDipAngle |> UI.map SetMinDipAngle ]
-                Html.row "Max Dipping Angle:"   [Numeric.view' [InputBox] model.maxDipAngle |> UI.map SetMaxDipAngle ]
+                Html.row "Near Plane:"              [Numeric.view' [InputBox] model.nearPlane             |> UI.map SetNearPlane ]               
+                Html.row "Far Plane:"               [Numeric.view' [InputBox] model.farPlane              |> UI.map SetFarPlane ]    
+                Html.row "Navigation Sensitivity:"  [Numeric.view' [Slider]   model.navigationSensitivity |> UI.map SetNavigationSensitivity ]    
+                Html.row "Arrow Length:"            [Numeric.view' [InputBox] model.arrowLength           |> UI.map SetArrowLength ] 
+                Html.row "Arrow Thickness:"         [Numeric.view' [InputBox] model.arrowThickness        |> UI.map SetArrowThickness ]   
+                Html.row "D+S Plane Size:"          [Numeric.view' [InputBox] model.dnsPlaneSize          |> UI.map SetDnSPlaneSize ]    
+                Html.row "Min Dipping Angle:"       [Numeric.view' [InputBox] model.minDipAngle           |> UI.map SetMinDipAngle ]
+                Html.row "Max Dipping Angle:"       [Numeric.view' [InputBox] model.maxDipAngle           |> UI.map SetMaxDipAngle ]
+                Html.row "Lod colors:"              [Html.SemUi.toggleBox model.lodColoring ToggleLodColors]
             ]
         )
 

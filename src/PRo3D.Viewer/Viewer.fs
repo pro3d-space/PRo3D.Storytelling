@@ -34,8 +34,17 @@ module PList =
         doIt (PList.toList a)
 
 
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]        
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
+    let qualityInit = 
+        {
+            value = 1.0
+            min = 0.5
+            max = 10.0
+            step = 0.5
+            format = "{0:0.0}"
+        }
+
     let mk path = {
         guid = Guid.NewGuid()
         name = IO.Path.GetFileName path
@@ -44,6 +53,7 @@ module Surface =
         fillMode = FillMode.Fill
         cullMode = CullMode.None
         isVisible = true
+        quality = qualityInit
     }
 
     let toSg (s:Surface) sg bb kd = {
@@ -141,6 +151,7 @@ module ViewerApp =
         | ConfigPropertiesMessage   of ConfigProperties.Action
         | QuickLoad1
         | QuickLoad2
+        | DeleteLast
         | AddSg                     of ISg
         | PickSurface               of SceneHit*string
         | SaveScene
@@ -271,8 +282,13 @@ module ViewerApp =
                 Surface.import' runtime signature [Surface.mk path] m |> lookAtData
             | QuickLoad2,_,_ ->                
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
-                let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\cape.scn"
-                loadScene path m runtime signature
+                (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore
+                //let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\cape.scn"
+                //loadScene path m runtime signature
+                m
+            | DeleteLast,_,_ -> 
+                File.Delete("./last") |> ignore
+                m
             | PickSurface (p,name), _ ,true ->                
                 Log.line "hit surface %s" name
                 let fray = p.globalRay.Ray
@@ -416,8 +432,17 @@ module ViewerApp =
                         |> Sg.dynamic          
                         |> Sg.uniform "selected" isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
-                     //   |> Sg.uniform "LodVisEnabled" (Mod.constant true)
+                     //   |> Sg.uniform "LodVisEnabled" (Mod.constant true)                        
                         |> Sg.onOff(surface.surface.isVisible)                             
+                        |> Sg.LodParameters( 
+                            adaptive {
+                                let! frustum = Navigation.UI.frustum m.scene.navigation
+                                let sizes = V2i(1024,768)
+                                let! quality = surface.surface.quality.value
+
+                                return { frustum = frustum; size = sizes; factor = quality }
+                            })                            
+                        |> Sg.noEvents
                         |> Sg.andAlso (
                             Sg.wireBox' C4b.Red bb
                                     |> Sg.noEvents
@@ -447,7 +472,7 @@ module ViewerApp =
             ]
 
             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
-            |> Sg.uniform "LodVisEnabled" (Mod.constant true)
+            |> Sg.uniform "LodVisEnabled" (m.scene.config.lodColoring)
 
     let mkBrushISg color size trafo : ISg<Message> =
         Sg.sphere 5 color size 
@@ -585,6 +610,7 @@ module ViewerApp =
             div[][
                 button [onClick (fun _ -> QuickLoad1)][text "Surface"]
                 button [onClick (fun _ -> QuickLoad2)][text "Scene"]
+                button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
                 GuiEx.accordion "Surfaces" "Cubes" true [
                     surfaceList
                 ]

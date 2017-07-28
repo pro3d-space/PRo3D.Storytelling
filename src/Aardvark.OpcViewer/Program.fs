@@ -129,8 +129,7 @@ module Viewer =
 
         let fillMode = Mod.init FillMode.Fill
         let lodVisEnabled = Mod.init false
-
-    
+            
         let patchHierarchies =
             [ for h in scene.patchHierarchies do
                 let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
@@ -208,8 +207,7 @@ module Viewer =
                 |> Sg.fillMode fillMode
                 |> Sg.cullMode (Mod.constant CullMode.None)
                 |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
-                |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)
-
+                |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)                
         sg
 
     let run (scene : OpcScene) =

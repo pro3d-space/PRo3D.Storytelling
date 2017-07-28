@@ -425,6 +425,7 @@ module Mutable =
         let _fillMode = ResetMod.Create(__initial.fillMode)
         let _cullMode = ResetMod.Create(__initial.cullMode)
         let _isVisible = ResetMod.Create(__initial.isVisible)
+        let _quality = Aardvark.UI.Mutable.MNumericInput.Create(__initial.quality)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
@@ -433,6 +434,7 @@ module Mutable =
         member x.fillMode = _fillMode :> IMod<_>
         member x.cullMode = _cullMode :> IMod<_>
         member x.isVisible = _isVisible :> IMod<_>
+        member x.quality = _quality
         
         member x.Update(v : PRo3D.Surface) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -445,6 +447,7 @@ module Mutable =
                 ResetMod.Update(_fillMode,v.fillMode)
                 ResetMod.Update(_cullMode,v.cullMode)
                 ResetMod.Update(_isVisible,v.isVisible)
+                Aardvark.UI.Mutable.MNumericInput.Update(_quality, v.quality)
                 
         
         static member Create(__initial : PRo3D.Surface) : MSurface = MSurface(__initial)
@@ -503,6 +506,12 @@ module Mutable =
                     override x.Set(r,v) = { r with isVisible = v }
                     override x.Update(r,f) = { r with isVisible = f r.isVisible }
                 }
+            let quality =
+                { new Lens<PRo3D.Surface, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.quality
+                    override x.Set(r,v) = { r with quality = v }
+                    override x.Update(r,f) = { r with quality = f r.quality }
+                }
     
     
     type MViewConfigModel(__initial : PRo3D.ViewConfigModel) =
@@ -516,6 +525,7 @@ module Mutable =
         let _dnsPlaneSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.dnsPlaneSize)
         let _minDipAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.minDipAngle)
         let _maxDipAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.maxDipAngle)
+        let _lodColoring = ResetMod.Create(__initial.lodColoring)
         
         member x.nearPlane = _nearPlane
         member x.farPlane = _farPlane
@@ -525,6 +535,7 @@ module Mutable =
         member x.dnsPlaneSize = _dnsPlaneSize
         member x.minDipAngle = _minDipAngle
         member x.maxDipAngle = _maxDipAngle
+        member x.lodColoring = _lodColoring :> IMod<_>
         
         member x.Update(v : PRo3D.ViewConfigModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -538,6 +549,7 @@ module Mutable =
                 Aardvark.UI.Mutable.MNumericInput.Update(_dnsPlaneSize, v.dnsPlaneSize)
                 Aardvark.UI.Mutable.MNumericInput.Update(_minDipAngle, v.minDipAngle)
                 Aardvark.UI.Mutable.MNumericInput.Update(_maxDipAngle, v.maxDipAngle)
+                ResetMod.Update(_lodColoring,v.lodColoring)
                 
         
         static member Create(__initial : PRo3D.ViewConfigModel) : MViewConfigModel = MViewConfigModel(__initial)
@@ -601,6 +613,12 @@ module Mutable =
                     override x.Get(r) = r.maxDipAngle
                     override x.Set(r,v) = { r with maxDipAngle = v }
                     override x.Update(r,f) = { r with maxDipAngle = f r.maxDipAngle }
+                }
+            let lodColoring =
+                { new Lens<PRo3D.ViewConfigModel, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.lodColoring
+                    override x.Set(r,v) = { r with lodColoring = v }
+                    override x.Update(r,f) = { r with lodColoring = f r.lodColoring }
                 }
     
     
