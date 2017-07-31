@@ -302,7 +302,11 @@ module JsonTypes =
     //let ofDrawing (m : Drawing) : list<_Annotation> =
     //    m.finished.AsList |> List.map ofAnnotation
 
-            
+[<DomainType>]
+type PathProxy = {
+    absolutePath : option<string>
+    relativePath : option<string>
+}
 
 [<DomainType>]
 type MeasurementsImporterModel = {
