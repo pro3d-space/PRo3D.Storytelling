@@ -10,78 +10,6 @@ module Mutable =
 
     
     
-    type MSgSurface(__initial : PRo3D.Viewer.SgSurface) =
-        inherit obj()
-        let mutable __current = __initial
-        let _guid = ResetMod.Create(__initial.guid)
-        let _surface = PRo3D.Mutable.MSurface.Create(__initial.surface)
-        let _globalBB = ResetMod.Create(__initial.globalBB)
-        let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
-        let _kdTree = ResetMod.Create(__initial.kdTree)
-        
-        member x.guid = _guid :> IMod<_>
-        member x.surface = _surface
-        member x.globalBB = _globalBB :> IMod<_>
-        member x.sceneGraph = _sceneGraph :> IMod<_>
-        member x.kdTree = _kdTree :> IMod<_>
-        
-        member x.Update(v : PRo3D.Viewer.SgSurface) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
-                
-                ResetMod.Update(_guid,v.guid)
-                PRo3D.Mutable.MSurface.Update(_surface, v.surface)
-                ResetMod.Update(_globalBB,v.globalBB)
-                ResetMod.Update(_sceneGraph,v.sceneGraph)
-                ResetMod.Update(_kdTree,v.kdTree)
-                
-        
-        static member Create(__initial : PRo3D.Viewer.SgSurface) : MSgSurface = MSgSurface(__initial)
-        static member Update(m : MSgSurface, v : PRo3D.Viewer.SgSurface) = m.Update(v)
-        
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
-        interface IUpdatable<PRo3D.Viewer.SgSurface> with
-            member x.Update v = x.Update v
-    
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module SgSurface =
-        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-        module Lens =
-            let guid =
-                { new Lens<PRo3D.Viewer.SgSurface, System.Guid>() with
-                    override x.Get(r) = r.guid
-                    override x.Set(r,v) = { r with guid = v }
-                    override x.Update(r,f) = { r with guid = f r.guid }
-                }
-            let surface =
-                { new Lens<PRo3D.Viewer.SgSurface, PRo3D.Surface>() with
-                    override x.Get(r) = r.surface
-                    override x.Set(r,v) = { r with surface = v }
-                    override x.Update(r,f) = { r with surface = f r.surface }
-                }
-            let globalBB =
-                { new Lens<PRo3D.Viewer.SgSurface, Aardvark.Base.Box3d>() with
-                    override x.Get(r) = r.globalBB
-                    override x.Set(r,v) = { r with globalBB = v }
-                    override x.Update(r,f) = { r with globalBB = f r.globalBB }
-                }
-            let sceneGraph =
-                { new Lens<PRo3D.Viewer.SgSurface, Aardvark.SceneGraph.ISg>() with
-                    override x.Get(r) = r.sceneGraph
-                    override x.Set(r,v) = { r with sceneGraph = v }
-                    override x.Update(r,f) = { r with sceneGraph = f r.sceneGraph }
-                }
-            let kdTree =
-                { new Lens<PRo3D.Viewer.SgSurface, Aardvark.VRVis.KdTreeSet>() with
-                    override x.Get(r) = r.kdTree
-                    override x.Set(r,v) = { r with kdTree = v }
-                    override x.Update(r,f) = { r with kdTree = f r.kdTree }
-                }
-    
-    
     type MScene(__initial : PRo3D.Viewer.Scene) =
         inherit obj()
         let mutable __current = __initial
@@ -138,7 +66,7 @@ module Mutable =
                     override x.Update(r,f) = { r with interaction = f r.interaction }
                 }
             let surfaces =
-                { new Lens<PRo3D.Viewer.Scene, Microsoft.FSharp.Collections.list<PRo3D.Surface>>() with
+                { new Lens<PRo3D.Viewer.Scene, Microsoft.FSharp.Collections.list<PRo3D.Surfaces.Surface>>() with
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
@@ -168,8 +96,8 @@ module Mutable =
         let mutable __current = __initial
         let _scene = MScene.Create(__initial.scene)
         let _drawing = PRo3D.Drawing.Mutable.MDrawingModel.Create(__initial.drawing)
-        let _surfaces = MSet.Create((fun (v : PRo3D.Viewer.SgSurface) -> v.guid :> obj), __initial.surfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
-        let _selectedSurface = MOption.Create(__initial.selectedSurface, (fun v -> PRo3D.Mutable.MSurface.Create(v)), (fun (m,v) -> PRo3D.Mutable.MSurface.Update(m, v)), (fun v -> v))
+        let _surfaces = MSet.Create((fun (v : PRo3D.Surfaces.SgSurface) -> v.guid :> obj), __initial.surfaces, (fun v -> PRo3D.Surfaces.Mutable.MSgSurface.Create(v)), (fun (m,v) -> PRo3D.Surfaces.Mutable.MSgSurface.Update(m, v)), (fun v -> v))
+        let _selectedSurface = MOption.Create(__initial.selectedSurface, (fun v -> PRo3D.Surfaces.Mutable.MSurface.Create(v)), (fun (m,v) -> PRo3D.Surfaces.Mutable.MSurface.Update(m, v)), (fun v -> v))
         let _properties = ResetMod.Create(__initial.properties)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _picking = ResetMod.Create(__initial.picking)
@@ -228,13 +156,13 @@ module Mutable =
                     override x.Update(r,f) = { r with drawing = f r.drawing }
                 }
             let surfaces =
-                { new Lens<PRo3D.Viewer.Model, Aardvark.Base.hset<PRo3D.Viewer.SgSurface>>() with
+                { new Lens<PRo3D.Viewer.Model, Aardvark.Base.hset<PRo3D.Surfaces.SgSurface>>() with
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
                 }
             let selectedSurface =
-                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.option<PRo3D.Surface>>() with
+                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.option<PRo3D.Surfaces.Surface>>() with
                     override x.Get(r) = r.selectedSurface
                     override x.Set(r,v) = { r with selectedSurface = v }
                     override x.Update(r,f) = { r with selectedSurface = f r.selectedSurface }

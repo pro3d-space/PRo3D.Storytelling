@@ -22,8 +22,8 @@ open Aardvark.VRVis
 open MBrace.FsPickler
 open System.IO
 
+open PRo3D.Surfaces
 open PRo3D.Viewer
-open PRo3D
 
 module PList =
     let append (a : plist<_>) (b : plist<_>) =
@@ -35,65 +35,11 @@ module PList =
 
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module Surface =
-    let qualityInit = 
-        {
-            value = 1.0
-            min = 0.5
-            max = 10.0
-            step = 0.5
-            format = "{0:0.0}"
-        }
-
-    let mk path = {
-        guid = Guid.NewGuid()
-        name = IO.Path.GetFileName path
-        importPath = path
-        opcPaths = OpcUtils.getOPCPaths path      
-        fillMode = FillMode.Fill
-        cullMode = CullMode.None
-        isVisible = true
-        quality = qualityInit
-    }
-
-    let toSg (s:Surface) sg bb kd = {
-        surface = s
-        guid = Guid.NewGuid()
-        sceneGraph = sg
-        globalBB = bb
-        kdTree = kd
-    }
-
-    let checkBB (bb:Box3d) = 
-        if(bb.IsInvalid) then 
-            failwith (sprintf "invalid bounding box %s" (bb.ToString()))
-        else bb
-
-    let computeBB (hierarchies : list<PatchHierarchy>) =
-         hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getLeaves)                  
-            |> Seq.map (fun p -> p |> Seq.map(fun d -> checkBB d.info.GlobalBoundingBox)) 
-            |> Seq.concat
-            |> Box3d.ofSeq
-
-    let computeBBfromRoots (hierarchies : list<PatchHierarchy>) =
-         hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getRoot)                  
-            |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)
-            |> Box3d.ofSeq
-    
-    let createSgSurfaces runtime signature surfaces =
-        surfaces
-            //|> List.map (fun (d : Surface) -> { d with guid = Guid.NewGuid() })
-            |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths })
-            |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
-            |> List.zip surfaces
-            |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> toSg surf sg (hierarchies |> computeBB) kdtree)
-            |> HSet.ofList
-
+module Scene =
+       
     let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : list<Surface>) (m : Model) =
                         
-        let surfSet = createSgSurfaces runtime signature surfaces
+        let surfSet = Surface.createSgSurfaces runtime signature surfaces
                                                 
         { m with 
             scene       =  { m.scene with surfaces = surfaces @ m.scene.surfaces }
@@ -101,7 +47,7 @@ module Surface =
 
     let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
         
-        let surfs = createSgSurfaces runtime signature s.surfaces
+        let surfs = Surface.createSgSurfaces runtime signature s.surfaces
         { m with scene = s; surfaces = surfs }
 
     let fileExists path =
@@ -267,8 +213,8 @@ module ViewerApp =
                     | [] -> m
                     | paths ->
                         let path = paths.Head
-                        if (path |> OpcUtils.isSurfaceFolder) then                            
-                            Surface.import' runtime signature [Surface.mk path] m |> lookAtData
+                        if (path |> Utils.isSurfaceFolder) then                     
+                            Scene.import' runtime signature [Surface.mk path] m |> lookAtData
                         else
                             Log.error "path %s does not point to surface folder" path
                             m   
@@ -279,7 +225,7 @@ module ViewerApp =
             | QuickLoad1,_,_ ->
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
                 let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\Cape_Desire_RGB"
-                Surface.import' runtime signature [Surface.mk path] m |> lookAtData
+                Scene.import' runtime signature [Surface.mk path] m |> lookAtData
             | QuickLoad2,_,_ ->                
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
                 (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore
@@ -289,7 +235,7 @@ module ViewerApp =
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
                 m
-            | PickSurface (p,name), _ ,true ->                
+            | PickSurface (p,name), _ ,true ->  
                 Log.line "hit surface %s" name
                 let fray = p.globalRay.Ray
                 let r = fray.Ray
@@ -347,7 +293,7 @@ module ViewerApp =
             | OpenScene,_,_ ->
                 match Dialogs.openDialog w with
                     | None -> m
-                    | Some path -> loadScene path m runtime signature
+                    | Some path -> Scene.loadScene path m runtime signature
             | NewScene,_,_ ->
                 PRo3D.Viewer.Viewer.initial     //   { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
             | KeyDown k, _, _ ->
@@ -751,7 +697,7 @@ module ViewerApp =
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        
-        let m = Surface.loadLastScene m runtime signature        
+        let m = Scene.loadLastScene m runtime signature        
        // let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\Cape_Desire_RGB"
         //let m = Surface.import' runtime signature [Surface.mk path] m |> lookAtData
         

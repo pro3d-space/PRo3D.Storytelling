@@ -12,19 +12,9 @@ open Aardvark.SceneGraph
 open Aardvark.VRVis
 
 open PRo3D
+open PRo3D.Surfaces
 
 
-[<DomainType>]
-type SgSurface = {
-    [<PrimaryKey>]
-    guid : System.Guid
-
-    surface : Surface    
-
-    globalBB : Box3d   
-    sceneGraph : ISg
-    kdTree : KdTreeSet    
-}
   
 [<DomainType>] 
 type Scene = {

@@ -14,33 +14,32 @@ open Aardvark.VRVis
 open PRo3D
 
 type Action =
-    | SetSemantic      of Semantic
-    | SetGeometry      of Geometry
-    | SetProjection    of Projection
-    | SetExportPath    of string
-    | Move             of V3d
-    | Exit    
-    | Send
-    | StartDrawing            
-    | StopDrawing
-    //| AddPoint         of V3d * (V3d -> Option<V3d>)
-    | AddPointAdv      of V3d * (V3d -> Option<V3d>) * string
-    | SetSegment       of int * Segment
-    | Finish
-    //| KeyDown          of key : Aardvark.Application.Keys
-    //| KeyUp            of key : Aardvark.Application.Keys      
-    | Export
-    | Save              
-    | Load             
-    | Clear
-    | Undo
-    | Redo
-    | QuickLoad
-    | Select           of Guid
-    | Nop
-    | AnnotationPropertiesMsg of AnnotationProperties.Action
-    | ToggleVisiblity of Guid
-
+        | SetSemantic      of Semantic
+        | SetGeometry      of Geometry
+        | SetProjection    of Projection
+        | SetExportPath    of string
+        | Move             of V3d
+        | Exit    
+        | Send
+        | StartDrawing            
+        | StopDrawing
+        //| AddPoint         of V3d * (V3d -> Option<V3d>)
+        | AddPointAdv      of V3d * (V3d -> Option<V3d>) * string
+        | SetSegment       of int * Segment
+        | Finish
+        //| KeyDown          of key : Aardvark.Application.Keys
+        //| KeyUp            of key : Aardvark.Application.Keys      
+        | Export
+        | Save              
+        | Load             
+        | Clear
+        | Undo
+        | Redo
+        | QuickLoad
+        | Select           of Guid
+        | Nop
+        | AnnotationPropertiesMsg of AnnotationProperties.Action
+        | ToggleVisiblity of Guid
 
 [<DomainType>]
 type DrawingModel = {

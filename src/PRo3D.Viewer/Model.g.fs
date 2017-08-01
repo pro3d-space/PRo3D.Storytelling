@@ -379,6 +379,51 @@ module Mutable =
                 }
     
     
+    type MPathProxy(__initial : PRo3D.PathProxy) =
+        inherit obj()
+        let mutable __current = __initial
+        let _absolutePath = MOption.Create(__initial.absolutePath)
+        let _relativePath = MOption.Create(__initial.relativePath)
+        
+        member x.absolutePath = _absolutePath :> IMod<_>
+        member x.relativePath = _relativePath :> IMod<_>
+        
+        member x.Update(v : PRo3D.PathProxy) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                MOption.Update(_absolutePath, v.absolutePath)
+                MOption.Update(_relativePath, v.relativePath)
+                
+        
+        static member Create(__initial : PRo3D.PathProxy) : MPathProxy = MPathProxy(__initial)
+        static member Update(m : MPathProxy, v : PRo3D.PathProxy) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.PathProxy> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module PathProxy =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let absolutePath =
+                { new Lens<PRo3D.PathProxy, Microsoft.FSharp.Core.option<Microsoft.FSharp.Core.string>>() with
+                    override x.Get(r) = r.absolutePath
+                    override x.Set(r,v) = { r with absolutePath = v }
+                    override x.Update(r,f) = { r with absolutePath = f r.absolutePath }
+                }
+            let relativePath =
+                { new Lens<PRo3D.PathProxy, Microsoft.FSharp.Core.option<Microsoft.FSharp.Core.string>>() with
+                    override x.Get(r) = r.relativePath
+                    override x.Set(r,v) = { r with relativePath = v }
+                    override x.Update(r,f) = { r with relativePath = f r.relativePath }
+                }
+    
+    
     type MMeasurementsImporterModel(__initial : PRo3D.MeasurementsImporterModel) =
         inherit obj()
         let mutable __current = __initial
@@ -412,105 +457,6 @@ module Mutable =
                     override x.Get(r) = r.annotations
                     override x.Set(r,v) = { r with annotations = v }
                     override x.Update(r,f) = { r with annotations = f r.annotations }
-                }
-    
-    
-    type MSurface(__initial : PRo3D.Surface) =
-        inherit obj()
-        let mutable __current = __initial
-        let _guid = ResetMod.Create(__initial.guid)
-        let _name = ResetMod.Create(__initial.name)
-        let _importPath = ResetMod.Create(__initial.importPath)
-        let _opcPaths = ResetMod.Create(__initial.opcPaths)
-        let _fillMode = ResetMod.Create(__initial.fillMode)
-        let _cullMode = ResetMod.Create(__initial.cullMode)
-        let _isVisible = ResetMod.Create(__initial.isVisible)
-        let _quality = Aardvark.UI.Mutable.MNumericInput.Create(__initial.quality)
-        
-        member x.guid = _guid :> IMod<_>
-        member x.name = _name :> IMod<_>
-        member x.importPath = _importPath :> IMod<_>
-        member x.opcPaths = _opcPaths :> IMod<_>
-        member x.fillMode = _fillMode :> IMod<_>
-        member x.cullMode = _cullMode :> IMod<_>
-        member x.isVisible = _isVisible :> IMod<_>
-        member x.quality = _quality
-        
-        member x.Update(v : PRo3D.Surface) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
-                
-                ResetMod.Update(_guid,v.guid)
-                ResetMod.Update(_name,v.name)
-                ResetMod.Update(_importPath,v.importPath)
-                ResetMod.Update(_opcPaths,v.opcPaths)
-                ResetMod.Update(_fillMode,v.fillMode)
-                ResetMod.Update(_cullMode,v.cullMode)
-                ResetMod.Update(_isVisible,v.isVisible)
-                Aardvark.UI.Mutable.MNumericInput.Update(_quality, v.quality)
-                
-        
-        static member Create(__initial : PRo3D.Surface) : MSurface = MSurface(__initial)
-        static member Update(m : MSurface, v : PRo3D.Surface) = m.Update(v)
-        
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
-        interface IUpdatable<PRo3D.Surface> with
-            member x.Update v = x.Update v
-    
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module Surface =
-        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-        module Lens =
-            let guid =
-                { new Lens<PRo3D.Surface, System.Guid>() with
-                    override x.Get(r) = r.guid
-                    override x.Set(r,v) = { r with guid = v }
-                    override x.Update(r,f) = { r with guid = f r.guid }
-                }
-            let name =
-                { new Lens<PRo3D.Surface, Microsoft.FSharp.Core.string>() with
-                    override x.Get(r) = r.name
-                    override x.Set(r,v) = { r with name = v }
-                    override x.Update(r,f) = { r with name = f r.name }
-                }
-            let importPath =
-                { new Lens<PRo3D.Surface, Microsoft.FSharp.Core.string>() with
-                    override x.Get(r) = r.importPath
-                    override x.Set(r,v) = { r with importPath = v }
-                    override x.Update(r,f) = { r with importPath = f r.importPath }
-                }
-            let opcPaths =
-                { new Lens<PRo3D.Surface, Microsoft.FSharp.Collections.list<Microsoft.FSharp.Core.string>>() with
-                    override x.Get(r) = r.opcPaths
-                    override x.Set(r,v) = { r with opcPaths = v }
-                    override x.Update(r,f) = { r with opcPaths = f r.opcPaths }
-                }
-            let fillMode =
-                { new Lens<PRo3D.Surface, Aardvark.Base.Rendering.FillMode>() with
-                    override x.Get(r) = r.fillMode
-                    override x.Set(r,v) = { r with fillMode = v }
-                    override x.Update(r,f) = { r with fillMode = f r.fillMode }
-                }
-            let cullMode =
-                { new Lens<PRo3D.Surface, Aardvark.Base.Rendering.CullMode>() with
-                    override x.Get(r) = r.cullMode
-                    override x.Set(r,v) = { r with cullMode = v }
-                    override x.Update(r,f) = { r with cullMode = f r.cullMode }
-                }
-            let isVisible =
-                { new Lens<PRo3D.Surface, Microsoft.FSharp.Core.bool>() with
-                    override x.Get(r) = r.isVisible
-                    override x.Set(r,v) = { r with isVisible = v }
-                    override x.Update(r,f) = { r with isVisible = f r.isVisible }
-                }
-            let quality =
-                { new Lens<PRo3D.Surface, Aardvark.UI.NumericInput>() with
-                    override x.Get(r) = r.quality
-                    override x.Set(r,v) = { r with quality = v }
-                    override x.Update(r,f) = { r with quality = f r.quality }
                 }
     
     

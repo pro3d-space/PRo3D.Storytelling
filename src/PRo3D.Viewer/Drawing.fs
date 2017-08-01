@@ -28,6 +28,7 @@ module DrawingApp =
 
     open MBrace.FsPickler.Json   
 
+    
 
     let getFinishedAnnotation (model : DrawingModel) =
         match model.working with
