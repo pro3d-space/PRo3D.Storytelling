@@ -15,14 +15,14 @@ module Mutable =
         let mutable __current = __initial
         let _navigation = PRo3D.Mutable.MNavigationModel.Create(__initial.navigation)
         let _interaction = ResetMod.Create(__initial.interaction)
-        let _surfaces = ResetMod.Create(__initial.surfaces)
+        let _surfaces = PRo3D.Surfaces.Mutable.MSurfaceModel.Create(__initial.surfaces)
         let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
         let _scenePath = MOption.Create(__initial.scenePath)
         let _referenceSystem = PRo3D.Mutable.MReferenceSystem.Create(__initial.referenceSystem)
         
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
-        member x.surfaces = _surfaces :> IMod<_>
+        member x.surfaces = _surfaces
         member x.config = _config
         member x.scenePath = _scenePath :> IMod<_>
         member x.referenceSystem = _referenceSystem
@@ -33,7 +33,7 @@ module Mutable =
                 
                 PRo3D.Mutable.MNavigationModel.Update(_navigation, v.navigation)
                 ResetMod.Update(_interaction,v.interaction)
-                ResetMod.Update(_surfaces,v.surfaces)
+                PRo3D.Surfaces.Mutable.MSurfaceModel.Update(_surfaces, v.surfaces)
                 PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
                 MOption.Update(_scenePath, v.scenePath)
                 PRo3D.Mutable.MReferenceSystem.Update(_referenceSystem, v.referenceSystem)
@@ -66,7 +66,7 @@ module Mutable =
                     override x.Update(r,f) = { r with interaction = f r.interaction }
                 }
             let surfaces =
-                { new Lens<PRo3D.Viewer.Scene, Microsoft.FSharp.Collections.list<PRo3D.Surfaces.Surface>>() with
+                { new Lens<PRo3D.Viewer.Scene, PRo3D.Surfaces.SurfaceModel>() with
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
@@ -97,7 +97,6 @@ module Mutable =
         let _scene = MScene.Create(__initial.scene)
         let _drawing = PRo3D.Drawing.Mutable.MDrawingModel.Create(__initial.drawing)
         let _surfaces = MSet.Create((fun (v : PRo3D.Surfaces.SgSurface) -> v.guid :> obj), __initial.surfaces, (fun v -> PRo3D.Surfaces.Mutable.MSgSurface.Create(v)), (fun (m,v) -> PRo3D.Surfaces.Mutable.MSgSurface.Update(m, v)), (fun v -> v))
-        let _selectedSurface = MOption.Create(__initial.selectedSurface, (fun v -> PRo3D.Surfaces.Mutable.MSurface.Create(v)), (fun (m,v) -> PRo3D.Surfaces.Mutable.MSurface.Update(m, v)), (fun v -> v))
         let _properties = ResetMod.Create(__initial.properties)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _picking = ResetMod.Create(__initial.picking)
@@ -107,7 +106,6 @@ module Mutable =
         member x.scene = _scene
         member x.drawing = _drawing
         member x.surfaces = _surfaces :> aset<_>
-        member x.selectedSurface = _selectedSurface :> IMod<_>
         member x.properties = _properties :> IMod<_>
         member x.interaction = _interaction :> IMod<_>
         member x.picking = _picking :> IMod<_>
@@ -121,7 +119,6 @@ module Mutable =
                 MScene.Update(_scene, v.scene)
                 PRo3D.Drawing.Mutable.MDrawingModel.Update(_drawing, v.drawing)
                 MSet.Update(_surfaces, v.surfaces)
-                MOption.Update(_selectedSurface, v.selectedSurface)
                 ResetMod.Update(_properties,v.properties)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_picking,v.picking)
@@ -160,12 +157,6 @@ module Mutable =
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
-                }
-            let selectedSurface =
-                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.option<PRo3D.Surfaces.Surface>>() with
-                    override x.Get(r) = r.selectedSurface
-                    override x.Set(r,v) = { r with selectedSurface = v }
-                    override x.Update(r,f) = { r with selectedSurface = f r.selectedSurface }
                 }
             let properties =
                 { new Lens<PRo3D.Viewer.Model, PRo3D.Viewer.Properties>() with

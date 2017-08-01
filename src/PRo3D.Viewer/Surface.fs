@@ -15,6 +15,12 @@ open PRo3D
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
 
+    let initial = {
+        surfaces = []
+        selectedSurface = None
+    }
+        
+
     module Utils =
     
         /// checks if "path" is a valid opc folder
@@ -114,3 +120,63 @@ module Surface =
             |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> toSg surf sg (hierarchies |> computeBB) kdtree)
             |> HSet.ofList
 
+ module SurfaceApp =
+    
+    type Action =
+        | SelectSurface of Guid
+        | FlyToSurface  of Guid
+
+    type Model = SurfaceModel
+
+    let update (model:SurfaceModel) (action:Action) = 
+        match action with
+            | SelectSurface id -> 
+                let surf = model.surfaces |> Seq.tryFind(fun x -> x.guid = id)
+                let surf =
+                    match surf, model.selectedSurface with
+                        | Some a, Some b -> if a.guid = b.guid then None else Some a
+                        | Some a, None   -> Some a
+                        | None, _        -> None
+
+                { model with selectedSurface = surf }
+            | FlyToSurface id -> model
+
+    let view (m:MSurfaceModel) (sgSurfaces : aset<MSgSurface>) = 
+            Incremental.div 
+                (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"]) (
+                    alist {
+                        for s in (sgSurfaces |> AList.ofASet) do
+
+                            let! selected = m.selectedSurface
+                            let! color =
+                                match selected with
+                                    | Some sel -> 
+                                        sel.guid |> Mod.map (fun g -> if g = (s.surface.guid |> Mod.force) then C4b.Blue else C4b.White)
+                                    | None -> Mod.constant C4b.White
+                            
+                            let bgc = sprintf "color: %s" (Html.ofC4b color)
+
+                            yield div [clazz "item"] [
+                                i [
+                                    clazz "large cube middle aligned icon"; 
+                                    style bgc
+                                    onClick (fun x -> SelectSurface (s.surface.guid |> Mod.force))
+                                ][]
+                                div [clazz "content"] [
+                                    div [clazz "header"] [
+                                        Incremental.text s.surface.name
+                                        text " "
+                                        i [
+                                            clazz "home icon"; 
+                                            onClick (fun x -> FlyToSurface (s.surface.guid |> Mod.force))
+                                        ][]     
+                                    ]
+                                    div [clazz "description"] [
+                                        Incremental.text (
+                                            s.globalBB 
+                                                |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
+                                    ]
+                                ]
+                            ]
+                    }
+            )

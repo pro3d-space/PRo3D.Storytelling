@@ -179,3 +179,48 @@ module Mutable =
                     override x.Set(r,v) = { r with kdTree = v }
                     override x.Update(r,f) = { r with kdTree = f r.kdTree }
                 }
+    
+    
+    type MSurfaceModel(__initial : PRo3D.Surfaces.SurfaceModel) =
+        inherit obj()
+        let mutable __current = __initial
+        let _surfaces = ResetMod.Create(__initial.surfaces)
+        let _selectedSurface = MOption.Create(__initial.selectedSurface, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
+        
+        member x.surfaces = _surfaces :> IMod<_>
+        member x.selectedSurface = _selectedSurface :> IMod<_>
+        
+        member x.Update(v : PRo3D.Surfaces.SurfaceModel) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_surfaces,v.surfaces)
+                MOption.Update(_selectedSurface, v.selectedSurface)
+                
+        
+        static member Create(__initial : PRo3D.Surfaces.SurfaceModel) : MSurfaceModel = MSurfaceModel(__initial)
+        static member Update(m : MSurfaceModel, v : PRo3D.Surfaces.SurfaceModel) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Surfaces.SurfaceModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module SurfaceModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let surfaces =
+                { new Lens<PRo3D.Surfaces.SurfaceModel, Microsoft.FSharp.Collections.list<PRo3D.Surfaces.Surface>>() with
+                    override x.Get(r) = r.surfaces
+                    override x.Set(r,v) = { r with surfaces = v }
+                    override x.Update(r,f) = { r with surfaces = f r.surfaces }
+                }
+            let selectedSurface =
+                { new Lens<PRo3D.Surfaces.SurfaceModel, Microsoft.FSharp.Core.option<PRo3D.Surfaces.Surface>>() with
+                    override x.Get(r) = r.selectedSurface
+                    override x.Set(r,v) = { r with selectedSurface = v }
+                    override x.Update(r,f) = { r with selectedSurface = f r.selectedSurface }
+                }

@@ -42,12 +42,12 @@ module Scene =
         let surfSet = Surface.createSgSurfaces runtime signature surfaces
                                                 
         { m with 
-            scene       =  { m.scene with surfaces = surfaces @ m.scene.surfaces }
+            scene       =  { m.scene with surfaces = { m.scene.surfaces with surfaces = (surfaces @ m.scene.surfaces.surfaces) }}
             surfaces    =  HSet.union surfSet m.surfaces }
 
     let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
         
-        let surfs = Surface.createSgSurfaces runtime signature s.surfaces
+        let surfs = Surface.createSgSurfaces runtime signature s.surfaces.surfaces
         { m with scene = s; surfaces = surfs }
 
     let fileExists path =
@@ -106,9 +106,9 @@ module ViewerApp =
         | NewScene
         | KeyDown                   of key : Aardvark.Application.Keys
         | KeyUp                     of key : Aardvark.Application.Keys      
-        | SetInteraction            of Interactions
-        | SelectSurface             of Guid
-        | FlyToSurface              of Guid      
+        | SetInteraction            of Interactions        
+        
+        | SurfaceActions            of SurfaceApp.Action
                 
     let lookAtData m = 
         let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
@@ -161,35 +161,22 @@ module ViewerApp =
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false -> 
                 { m with scene = { m.scene with navigation = Navigation.update m.scene.navigation msg }}                            
-            | DrawingMessage msg, Interactions.DrawAnnotation,_-> 
-                //let m = 
-                //    match msg with
-                //        | Drawing.Action.Select _ ->
-                //            { m with properties = 
-                //                        match m.drawing.selectedAnnotation with 
-                //                            | Some a -> Properties.AnnotationProperties a
-                //                            | None -> Properties.NoProperties } 
-                //        | _ -> m
-                
+            | DrawingMessage msg, Interactions.DrawAnnotation,_->                 
                 { m with drawing = DrawingApp.update w bc m.drawing msg } |> stash
-            | SelectSurface id,_,_ ->
-                let surf = m.scene.surfaces |> Seq.tryFind(fun x -> x.guid = id)
-                let surf =
-                    match surf, m.selectedSurface with
-                        | Some a, Some b -> if a.guid = b.guid then None else Some a
-                        | Some a, None   -> Some a
-                        | None, _        -> None
-
-                { m with selectedSurface = surf }
-            | FlyToSurface id,_,_ ->
-                lookAtSurface m id
+            | SurfaceActions msg,_,_ ->
+                match msg with
+                    | SurfaceApp.Action.FlyToSurface id -> 
+                        lookAtSurface m id
+                    | _ ->  
+                        let s = SurfaceApp.update m.scene.surfaces msg
+                        { m with scene = { m.scene with surfaces = s}}                                            
             | SurfacePropertiesMessage msg,_,_ ->
-                match m.selectedSurface with 
+                match m.scene.surfaces.selectedSurface with 
                     | Some s -> 
                         let s' = SurfaceProperties.update s msg
 
                         let surfaces' = 
-                            m.scene.surfaces |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')
+                            m.scene.surfaces.surfaces |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')
 
                         let sgSurfaces' =
                             m.surfaces 
@@ -197,7 +184,7 @@ module ViewerApp =
                                 |> List.updateIf (fun x -> x.surface.guid = s'.guid) (fun x -> { x with surface = s'})
                                 |> HSet.ofList
 
-                        {m with surfaces = sgSurfaces'; selectedSurface = Some s'; scene = {m.scene with surfaces = surfaces'}}
+                        { m with surfaces = sgSurfaces'; scene = {m.scene with surfaces = { m.scene.surfaces with surfaces = surfaces'; selectedSurface = Some s'}}}                        
                     | None -> m
             | AnnotationMessage msg,_,_ ->                
                     match m.drawing.selectedAnnotation with
@@ -364,7 +351,7 @@ module ViewerApp =
                             match selected with
                                 | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
                                 | None -> Mod.constant false
-                        ) surface.surface.guid m.selectedSurface
+                        ) surface.surface.guid m.scene.surfaces.selectedSurface
 
                     let createSg (sg : ISg) =
                         sg 
@@ -501,49 +488,11 @@ module ViewerApp =
                 onClick (fun _ -> ImportMeasurements)
              ] 
 
-        let surfaceList = 
-            Incremental.div 
-                (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"]) (
-                    alist {
-                        for s in (m.surfaces |> AList.ofASet) do
-
-                            let! selected = m.selectedSurface
-                            let! color =
-                                match selected with
-                                    | Some sel -> 
-                                        sel.guid |> Mod.map (fun g -> if g = (s.surface.guid |> Mod.force) then C4b.Blue else C4b.White)
-                                    | None -> Mod.constant C4b.White
-                            
-                            let bgc = sprintf "color: %s" (Html.ofC4b color)
-
-                            yield div [clazz "item"] [
-                                i [
-                                    clazz "large cube middle aligned icon"; 
-                                    style bgc
-                                    onClick (fun x -> SelectSurface (s.surface.guid |> Mod.force))
-                                ][]
-                                div [clazz "content"] [
-                                    div [clazz "header"] [
-                                        Incremental.text s.surface.name
-                                        text " "
-                                        i [
-                                            clazz "home icon"; 
-                                            onClick (fun x -> FlyToSurface (s.surface.guid |> Mod.force))
-                                        ][]     
-                                    ]
-                                    div [clazz "description"] [
-                                        Incremental.text (
-                                            s.globalBB 
-                                                |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
-                                    ]
-                                ]
-                            ]
-                    }
-            )
+        let surfaceList = SurfaceApp.view m.scene.surfaces m.surfaces
             
         let surfaceProperties (model:MModel) =
             adaptive {
-                let! bla = model.selectedSurface
+                let! bla = model.scene.surfaces.selectedSurface
                 let opt = 
                     match bla with
                         | Some s -> SurfaceProperties.view s
@@ -558,7 +507,7 @@ module ViewerApp =
                 button [onClick (fun _ -> QuickLoad2)][text "Scene"]
                 button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
                 GuiEx.accordion "Surfaces" "Cubes" true [
-                    surfaceList
+                    surfaceList |> UI.map SurfaceActions
                 ]
                 GuiEx.accordion "Properties" "Content" true [
                      Incremental.div AttributeMap.empty (AList.ofModSingle (surfaceProperties m))

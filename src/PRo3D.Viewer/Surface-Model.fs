@@ -10,8 +10,6 @@ open Aardvark.Opc
 open Aardvark.VRVis
 open Aardvark.SceneGraph
 
-
-
 [<DomainType>]
 type Surface = {    
     
@@ -40,6 +38,12 @@ type SgSurface = {
     kdTree : KdTreeSet    
 }
 
+[<DomainType>]
+type SurfaceModel = {
+    surfaces        : list<Surface>
+    selectedSurface : option<Surface>
+    //sgSurfaces : list<SgSurface>
+}
 
 
 
