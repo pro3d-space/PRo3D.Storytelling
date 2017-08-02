@@ -186,9 +186,11 @@ module Mutable =
         let mutable __current = __initial
         let _surfaces = ResetMod.Create(__initial.surfaces)
         let _selectedSurface = MOption.Create(__initial.selectedSurface, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
+        let _sgSurfaces = MSet.Create((fun (v : PRo3D.Surfaces.SgSurface) -> v.guid :> obj), __initial.sgSurfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
         
         member x.surfaces = _surfaces :> IMod<_>
         member x.selectedSurface = _selectedSurface :> IMod<_>
+        member x.sgSurfaces = _sgSurfaces :> aset<_>
         
         member x.Update(v : PRo3D.Surfaces.SurfaceModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -196,6 +198,7 @@ module Mutable =
                 
                 ResetMod.Update(_surfaces,v.surfaces)
                 MOption.Update(_selectedSurface, v.selectedSurface)
+                MSet.Update(_sgSurfaces, v.sgSurfaces)
                 
         
         static member Create(__initial : PRo3D.Surfaces.SurfaceModel) : MSurfaceModel = MSurfaceModel(__initial)
@@ -223,4 +226,10 @@ module Mutable =
                     override x.Get(r) = r.selectedSurface
                     override x.Set(r,v) = { r with selectedSurface = v }
                     override x.Update(r,f) = { r with selectedSurface = f r.selectedSurface }
+                }
+            let sgSurfaces =
+                { new Lens<PRo3D.Surfaces.SurfaceModel, Aardvark.Base.hset<PRo3D.Surfaces.SgSurface>>() with
+                    override x.Get(r) = r.sgSurfaces
+                    override x.Set(r,v) = { r with sgSurfaces = v }
+                    override x.Update(r,f) = { r with sgSurfaces = f r.sgSurfaces }
                 }

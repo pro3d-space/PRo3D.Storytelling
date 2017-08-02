@@ -36,20 +36,29 @@ module PList =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Scene =
-       
-    let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : list<Surface>) (m : Model) =
-                        
-        let surfSet = Surface.createSgSurfaces runtime signature surfaces
-                                                
-        { m with 
-            scene       =  { m.scene with surfaces = { m.scene.surfaces with surfaces = (surfaces @ m.scene.surfaces.surfaces) }}
-            surfaces    =  HSet.union surfSet m.surfaces }
+    
+    let surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
 
+    /// appends surfaces to existing surfaces
+    let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : list<Surface>) (m : Model) =
+                 
+        //append semantic surfaces
+        let surfaces = (surfaces @ m.scene.surfacesModel.surfaces)
+        let m = (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, surfaces)
+
+        //append sg surfaces
+        let surfSet = Surface.createSgSurfaces runtime signature surfaces
+        let sgSurfaces = HSet.union surfSet m.scene.surfacesModel.sgSurfaces
+                                                
+        (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)                    
+
+    /// loads surfaces given in scene - creates their sg pendants
     let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
         
-        let surfs = Surface.createSgSurfaces runtime signature s.surfaces.surfaces
-        { m with scene = s; surfaces = surfs }
-
+        let sgSurfaces = Surface.createSgSurfaces runtime signature s.surfacesModel.surfaces        
+        
+        (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
+        
     let fileExists path =
         if System.IO.File.Exists(path) then
             Some path
@@ -109,17 +118,24 @@ module ViewerApp =
         | SetInteraction            of Interactions        
         
         | SurfaceActions            of SurfaceApp.Action
-                
-    let lookAtData m = 
-        let bb = m.surfaces |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
+    
+    let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
+    let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces
+    let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
+    let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.selectedSurface
+
+    let _drawing = Model.Lens.drawing
+       
+    let lookAtData (m : Model) =         
+        let bb = _sgSurfaces.Get(m) |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
         let cam = 
             let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
             { CameraController.initial with view = view }            
 
         { m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
     
-    let lookAtSurface m id =
-        let surf = m.surfaces |> Seq.tryFind(fun x -> x.surface.guid = id)
+    let lookAtSurface (m : Model) id =
+        let surf = _sgSurfaces.Get(m) |> Seq.tryFind(fun x -> x.surface.guid = id)
         match surf with
             | Some s ->
                 let bb = s.globalBB
@@ -131,7 +147,7 @@ module ViewerApp =
             | None -> m
             
     let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) = 
-        m.surfaces 
+        _sgSurfaces.Get(m) 
             |> HSet.map (fun d -> d.kdTree, d.surface.name) 
             |> HSet.map (
                 fun (kd,n) ->            
@@ -168,32 +184,41 @@ module ViewerApp =
                     | SurfaceApp.Action.FlyToSurface id -> 
                         lookAtSurface m id
                     | _ ->  
-                        let s = SurfaceApp.update m.scene.surfaces msg
-                        { m with scene = { m.scene with surfaces = s}}                                            
+                        let s = SurfaceApp.update m.scene.surfacesModel msg
+                        { m with scene = { m.scene with surfacesModel = s}}                                            
             | SurfacePropertiesMessage msg,_,_ ->
-                match m.scene.surfaces.selectedSurface with 
+                match _selectedSurface.Get m with 
                     | Some s -> 
                         let s' = SurfaceProperties.update s msg
 
                         let surfaces' = 
-                            m.scene.surfaces.surfaces |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')
+                            _surfaces.Get(m) |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')
 
                         let sgSurfaces' =
-                            m.surfaces 
+                            _sgSurfaces.Get(m)
                                 |> HSet.toList 
                                 |> List.updateIf (fun x -> x.surface.guid = s'.guid) (fun x -> { x with surface = s'})
                                 |> HSet.ofList
 
-                        { m with surfaces = sgSurfaces'; scene = {m.scene with surfaces = { m.scene.surfaces with surfaces = surfaces'; selectedSurface = Some s'}}}                        
+                        let surfacesModel' = {
+                            surfaces = surfaces'
+                            selectedSurface = Some s'
+                            sgSurfaces = sgSurfaces'
+                        }
+
+                        _surfacesModel.Set(m, surfacesModel')                        
                     | None -> m
             | AnnotationMessage msg,_,_ ->                
                     match m.drawing.selectedAnnotation with
                         | Some a -> 
                             let a' = AnnotationProperties.update a msg
                             let annotations' = 
-                                m.drawing.annotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun x -> a')                                     
-                            { m with drawing = { m.drawing with selectedAnnotation = Some a'; annotations = annotations' |> PList.ofList }}
+                                m.drawing.annotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun x -> a')       
+                            
+                            let drawing' = 
+                                { m.drawing with selectedAnnotation = Some a'; annotations = annotations' |> PList.ofList }
 
+                            { m with drawing = drawing' }
                         | None -> m                                                
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolder w with
@@ -344,14 +369,15 @@ module ViewerApp =
     let scene (m : MModel) =
         let opcs =
             aset {                
-                for surface in m.surfaces do
+                
+                for surface in m.scene.surfacesModel.sgSurfaces do
                    
                     let isSelected = 
                         Mod.bind2 (fun guid (selected: Option<MSurface>) ->
                             match selected with
                                 | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
                                 | None -> Mod.constant false
-                        ) surface.surface.guid m.scene.surfaces.selectedSurface
+                        ) surface.surface.guid m.scene.surfacesModel.selectedSurface
 
                     let createSg (sg : ISg) =
                         sg 
@@ -488,11 +514,11 @@ module ViewerApp =
                 onClick (fun _ -> ImportMeasurements)
              ] 
 
-        let surfaceList = SurfaceApp.view m.scene.surfaces m.surfaces
+        let surfaceList = SurfaceApp.view m.scene.surfacesModel m.scene.surfacesModel.sgSurfaces
             
         let surfaceProperties (model:MModel) =
             adaptive {
-                let! bla = model.scene.surfaces.selectedSurface
+                let! bla = model.scene.surfacesModel.selectedSurface
                 let opt = 
                     match bla with
                         | Some s -> SurfaceProperties.view s

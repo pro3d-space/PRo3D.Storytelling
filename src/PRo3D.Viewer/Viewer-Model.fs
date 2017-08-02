@@ -20,7 +20,7 @@ open PRo3D.Surfaces
 type Scene = {
     navigation      : NavigationModel
     interaction     : InteractionMode
-    surfaces        : SurfaceModel  
+    surfacesModel   : SurfaceModel  
     config          : ViewConfigModel
     scenePath       : option<string>
     referenceSystem : ReferenceSystem
@@ -40,7 +40,7 @@ type Model = {
    
     scene           : Scene
     drawing         : Drawing.DrawingModel
-    surfaces        : hset<SgSurface>
+   // surfaces        : hset<SgSurface>
    // selectedSurface : option<Surface>
     properties      : Properties
     interaction     : Interactions
@@ -61,11 +61,11 @@ type Model = {
 module Viewer =
 
     let initial = {           
-        surfaces = HSet.empty                       
+       // surfaces = HSet.empty                       
         scene = {
                 navigation      = NavigationModel.initial
                 interaction     = InteractionMode.PickOrbitCenter
-                surfaces        = Surface.initial                
+                surfacesModel   = SurfaceModel.initial
                 config          = ViewConfigModel.initial
                 scenePath       = None
                 referenceSystem = ReferenceSystem.initial

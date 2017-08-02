@@ -42,8 +42,32 @@ type SgSurface = {
 type SurfaceModel = {
     surfaces        : list<Surface>
     selectedSurface : option<Surface>
-    //sgSurfaces : list<SgSurface>
+    sgSurfaces      : hset<SgSurface>
 }
+
+module SurfaceModel =
+    open MBrace.FsPickler
+    open MBrace.FsPickler.Combinators
+
+    let makeSurfaceModel a b =
+        {
+            surfaces = a
+            selectedSurface = b
+            sgSurfaces = hset.Empty
+        }
+
+    let surfaceModelPickler : Pickler<SurfaceModel> =
+        Pickler.product makeSurfaceModel
+        ^+ Pickler.field (fun s -> s.surfaces)          Pickler.auto<list<Surface>>
+        ^. Pickler.field (fun s -> s.selectedSurface)   Pickler.auto<option<Surface>>
+
+    let initial = {
+        surfaces        = []
+        selectedSurface = None
+        sgSurfaces      = hset.Empty
+    }
+
+    FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)
 
 
 

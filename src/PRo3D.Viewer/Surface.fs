@@ -15,12 +15,6 @@ open PRo3D
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
 
-    let initial = {
-        surfaces = []
-        selectedSurface = None
-    }
-        
-
     module Utils =
     
         /// checks if "path" is a valid opc folder
