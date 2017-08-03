@@ -124,6 +124,8 @@ module ViewerApp =
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
     let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.selectedSurface
 
+    let _surfaces2 =  Model.Lens.scene |. Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces    
+
     let _drawing = Model.Lens.drawing
        
     let lookAtData (m : Model) =         
@@ -143,7 +145,8 @@ module ViewerApp =
                     let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
                     { CameraController.initial with view = view }            
 
-                { m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
+                //{ m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
+                (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam)
             | None -> m
             
     let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) = 
@@ -189,7 +192,7 @@ module ViewerApp =
             | SurfacePropertiesMessage msg,_,_ ->
                 match _selectedSurface.Get m with 
                     | Some s -> 
-                        let s' = SurfaceProperties.update s msg
+                        let s' = SurfaceProperties.update s msg                            
 
                         let surfaces' = 
                             _surfaces.Get(m) |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')
