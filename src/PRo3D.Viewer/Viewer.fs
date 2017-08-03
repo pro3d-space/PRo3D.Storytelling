@@ -99,7 +99,7 @@ module ViewerApp =
         | NavigationMessage         of Navigation.Action
         | ReferenceSystemMessage    of ReferenceSystemApp.Action
         | AnnotationMessage         of AnnotationProperties.Action
-        | SurfacePropertiesMessage  of SurfaceProperties.Action
+        
         | ImportSurface 
         | ImportMeasurements 
         | DnSProperties             of PropertyActions
@@ -189,28 +189,6 @@ module ViewerApp =
                     | _ ->  
                         let s = SurfaceApp.update m.scene.surfacesModel msg
                         { m with scene = { m.scene with surfacesModel = s}}                                            
-            | SurfacePropertiesMessage msg,_,_ ->
-                match _selectedSurface.Get m with 
-                    | Some s -> 
-                        let s' = SurfaceProperties.update s msg                            
-
-                        let surfaces' = 
-                            _surfaces.Get(m) |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')
-
-                        let sgSurfaces' =
-                            _sgSurfaces.Get(m)
-                                |> HSet.toList 
-                                |> List.updateIf (fun x -> x.surface.guid = s'.guid) (fun x -> { x with surface = s'})
-                                |> HSet.ofList
-
-                        let surfacesModel' = {
-                            surfaces = surfaces'
-                            selectedSurface = Some s'
-                            sgSurfaces = sgSurfaces'
-                        }
-
-                        _surfacesModel.Set(m, surfacesModel')                        
-                    | None -> m
             | AnnotationMessage msg,_,_ ->                
                     match m.drawing.selectedAnnotation with
                         | Some a -> 
@@ -369,18 +347,18 @@ module ViewerApp =
                          drawing = { m.drawing with config = c' } }
             | _ -> m
 
-    let scene (m : MModel) =
+    let viewSurfacesSg (m : MSurfaceModel) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>)=
         let opcs =
             aset {                
                 
-                for surface in m.scene.surfacesModel.sgSurfaces do
+                for surface in m.sgSurfaces do
                    
                     let isSelected = 
                         Mod.bind2 (fun guid (selected: Option<MSurface>) ->
                             match selected with
                                 | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
                                 | None -> Mod.constant false
-                        ) surface.surface.guid m.scene.surfacesModel.selectedSurface
+                        ) surface.surface.guid m.selectedSurface
 
                     let createSg (sg : ISg) =
                         sg 
@@ -398,7 +376,7 @@ module ViewerApp =
                         |> Sg.onOff(surface.surface.isVisible)                             
                         |> Sg.LodParameters( 
                             adaptive {
-                                let! frustum = Navigation.UI.frustum m.scene.navigation
+                                let! frustum = frustum 
                                 let sizes = V2i(1024,768)
                                 let! quality = surface.surface.quality.value
 
@@ -434,7 +412,7 @@ module ViewerApp =
             ]
 
             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
-            |> Sg.uniform "LodVisEnabled" (m.scene.config.lodColoring)
+            |> Sg.uniform "LodVisEnabled" lodcolor //()
 
     let mkBrushISg color size trafo : ISg<Message> =
         Sg.sphere 5 color size 
@@ -483,8 +461,12 @@ module ViewerApp =
                         let exploreCenter =
                             Navigation.Sg.view m.scene.navigation
 
-                        [(scene m); annotations; orientations; exploreCenter] //; 
-                            |> Sg.ofList
+                        [
+                            viewSurfacesSg m.scene.surfacesModel (Navigation.UI.frustum m.scene.navigation) (m.scene.config.lodColoring)
+                            annotations
+                            orientations
+                            exploreCenter
+                        ] |> Sg.ofList
                          //   |> Sg.fillMode (Mod.constant FillMode.Fill)
                          //   |> Sg.cullMode (Mod.constant CullMode.None)      
                     )              
@@ -516,32 +498,6 @@ module ViewerApp =
                 clazz "ui button"
                 onClick (fun _ -> ImportMeasurements)
              ] 
-
-        let surfaceList = SurfaceApp.view m.scene.surfacesModel m.scene.surfacesModel.sgSurfaces
-            
-        let surfaceProperties (model:MModel) =
-            adaptive {
-                let! bla = model.scene.surfacesModel.selectedSurface
-                let opt = 
-                    match bla with
-                        | Some s -> SurfaceProperties.view s
-                        | None   -> div[][]
-
-                return (opt |> UI.map SurfacePropertiesMessage)
-            }
-
-        let surfaceUI =
-            div[][
-                button [onClick (fun _ -> QuickLoad1)][text "Surface"]
-                button [onClick (fun _ -> QuickLoad2)][text "Scene"]
-                button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
-                GuiEx.accordion "Surfaces" "Cubes" true [
-                    surfaceList |> UI.map SurfaceActions
-                ]
-                GuiEx.accordion "Properties" "Content" true [
-                     Incremental.div AttributeMap.empty (AList.ofModSingle (surfaceProperties m))
-                ]
-            ]
 
         let annotationProperties (model:MModel) =
             adaptive {
@@ -587,7 +543,7 @@ module ViewerApp =
 
         let configUI =
             div[][
-                GuiEx.accordion "ViewerConfig" "Write" true [
+                GuiEx.accordion "ViewerConfig" "Settings" true [
                      Incremental.div AttributeMap.empty (AList.ofModSingle (config m))
                 ]
 
@@ -598,11 +554,10 @@ module ViewerApp =
                 GuiEx.accordion "Camera" "Camera Retro" false [
                     CameraProperties.view m.scene.navigation.camera
                 ]
-            ]
-            
+            ]            
             
         let tabs = GuiEx.tabbed [clazz "ui inverted segment"] [
-                            ("Data", surfaceUI)
+                            ("Data", SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions)
                             ("Annotations", annotationUI)
                             ("Config", configUI)
                         ] "Data" 

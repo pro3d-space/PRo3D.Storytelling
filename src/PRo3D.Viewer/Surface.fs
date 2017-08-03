@@ -117,6 +117,7 @@ module Surface =
  module SurfaceApp =
     
     type Action =
+        | SurfacePropertiesMessage  of SurfaceProperties.Action
         | SelectSurface of Guid
         | FlyToSurface  of Guid
 
@@ -124,6 +125,26 @@ module Surface =
 
     let update (model:SurfaceModel) (action:Action) = 
         match action with
+            | SurfacePropertiesMessage msg ->
+                match model.selectedSurface with 
+                    | Some s -> 
+                        let s' = SurfaceProperties.update s msg                            
+
+                        let surfaces' = 
+                            model.surfaces |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')
+
+                        let sgSurfaces' =
+                            model.sgSurfaces
+                                |> HSet.toList 
+                                |> List.updateIf (fun x -> x.surface.guid = s'.guid) (fun x -> { x with surface = s'})
+                                |> HSet.ofList
+
+                        {
+                            surfaces = surfaces'
+                            selectedSurface = Some s'
+                            sgSurfaces = sgSurfaces'
+                        }                        
+                    | None -> model
             | SelectSurface id -> 
                 let surf = model.surfaces |> Seq.tryFind(fun x -> x.guid = id)
                 let surf =
@@ -135,11 +156,11 @@ module Surface =
                 { model with selectedSurface = surf }
             | FlyToSurface id -> model
 
-    let view (m:MSurfaceModel) (sgSurfaces : aset<MSgSurface>) = 
+    let viewSurfaceList (m:MSurfaceModel) = 
             Incremental.div 
                 (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"]) (
                     alist {
-                        for s in (sgSurfaces |> AList.ofASet) do
+                        for s in (m.sgSurfaces |> AList.ofASet) do
 
                             let! selected = m.selectedSurface
                             let! color =
@@ -174,3 +195,25 @@ module Surface =
                             ]
                     }
             )
+
+    let viewSurfaceProperties (model:MSurfaceModel) =
+        adaptive {
+            let! bla = model.selectedSurface
+            let opt = 
+                match bla with
+                    | Some s -> SurfaceProperties.view s
+                    | None   -> div[][]
+
+            return (opt |> UI.map SurfacePropertiesMessage)
+        }    
+                   
+    let surfaceUI (model:MSurfaceModel) =
+        div[][
+            //button [onClick (fun _ -> QuickLoad1)][text "Surface"]
+            //button [onClick (fun _ -> QuickLoad2)][text "Scene"]
+            //button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
+            GuiEx.accordion "Surfaces" "Cubes" true [ viewSurfaceList model ]
+            GuiEx.accordion "Properties" "Content" true [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle (viewSurfaceProperties model))
+            ]
+        ]

@@ -1,4 +1,4 @@
-﻿namespace ConfigTest
+﻿namespace ConfigLensTest
 
 open Aardvark.Base
 open Aardvark.Base.Incremental

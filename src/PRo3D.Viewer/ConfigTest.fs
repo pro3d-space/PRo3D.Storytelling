@@ -31,7 +31,7 @@ module LittleConfigTest =
 
 module BigConfigTest =
 
-   open ConfigTest
+   open ConfigLensTest
    open LittleConfigTest
    
    type Action = InnerAction of LittleConfigTest.Action
