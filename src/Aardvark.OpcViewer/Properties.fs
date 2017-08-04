@@ -1,12 +1,13 @@
 ﻿namespace Aardvark.Opc
 
+open System
 open Aardvark.Base
 open Aardvark.Base.Incremental
 
 open PatchLod
 
 module DefaultMetrics =
-
+    
     let mars (self : AdaptiveToken) (v : IMod<Trafo3d>) (pr : IMod<Trafo3d>) (p : RenderPatch) (c : IMod<LodParameters>) =
         let lodParams = c.GetValue self
        
@@ -19,7 +20,7 @@ module DefaultMetrics =
         let px = (lodParams.frustum.near * p.triangleSize) / dist
                 
     //    Log.warn "%f to %f - avgSize: %f" px (unitPxSize * lodParams.factor) p.triangleSize
-        px > unitPxSize * lodParams.factor
+        px > unitPxSize * (exp lodParams.factor)
 
     let tunnel (self : AdaptiveToken) (v : IMod<Trafo3d>) (pr : IMod<Trafo3d>) (p : RenderPatch) (c : IMod<LodParameters>)=
         let m = p.trafo.GetValue self

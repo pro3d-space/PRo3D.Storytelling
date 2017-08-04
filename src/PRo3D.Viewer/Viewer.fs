@@ -43,8 +43,8 @@ module Scene =
     let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : list<Surface>) (m : Model) =
                  
         //append semantic surfaces
-        let surfaces = (surfaces @ m.scene.surfacesModel.surfaces)
-        let m = (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, surfaces)
+        let surfaces' = (surfaces @ m.scene.surfacesModel.surfaces)
+        let m = (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, surfaces')
 
         //append sg surfaces
         let surfSet = Surface.createSgSurfaces runtime signature surfaces
@@ -149,28 +149,11 @@ module ViewerApp =
                 (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam)
             | None -> m
             
-    let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) = 
-        _sgSurfaces.Get(m) 
-            |> HSet.map (fun d -> d.kdTree, d.surface.name) 
-            |> HSet.map (
-                fun (kd,n) ->            
-                    Log.warn "do intersection for %s" n
-                    let kdi = kd |> KdIntersectionTree
-                    let mutable hit = ObjectRayHit.MaxRange
-                    let objFilter  a b = true
-                    let hitFilter a b c d = false
-                    if kdi.Intersect(r, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
-                        Log.warn "hit for %s" n
-                        Some (hit.RayHit.T, n)
-                    else
-                        Log.error "no hit for %s" n
-                        None //Double.MaxValue, n
-                )
-            |> HSet.toSeq
-            |> Seq.filter(fun d -> d.IsSome)
-            |> Seq.map(fun d -> d.Value)
-            |> Seq.sortByDescending(fun (t,n)-> t)
-            |> Seq.tryHead
+    let updateAllTheConfigs m c =
+        { m with scene = { m.scene with config = c;
+                                                referenceSystem = { m.scene.referenceSystem with config = c};
+                                                navigation = { m.scene.navigation with config = c } };
+                         drawing = { m.drawing with config = c } }
 
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
@@ -188,7 +171,7 @@ module ViewerApp =
                         lookAtSurface m id
                     | _ ->  
                         let s = SurfaceApp.update m.scene.surfacesModel msg
-                        { m with scene = { m.scene with surfacesModel = s}}                                            
+                        { m with scene = { m.scene with surfacesModel = s}}
             | AnnotationMessage msg,_,_ ->                
                     match m.drawing.selectedAnnotation with
                         | Some a -> 
@@ -229,25 +212,22 @@ module ViewerApp =
                 File.Delete("./last") |> ignore
                 m
             | PickSurface (p,name), _ ,true ->  
-                Log.line "hit surface %s" name
+               // Log.line "hit surface %s" name
                 let fray = p.globalRay.Ray
                 let r = fray.Ray
 
                 let cameraLocation = m.scene.navigation.camera.view.Location 
 
                 let hitF (p : V3d) = 
-                    let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)
-                    //let mutable a = 0
-                    //for i in 0 .. 60000000 do a <- a + 1
-                    //printfn "%A" 0
-                    match doKdTreeIntersection m Trafo3d.Identity ray with
+                    let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)   
+                    match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray with
                         | Some (t,n) -> ray.Ray.GetPointOnRay t |> Some
                         | None -> None
                                     
-                match doKdTreeIntersection m Trafo3d.Identity fray with
+                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray with
                     | Some (t,n) -> 
                         let hit = r.GetPointOnRay(t)
-                        Log.line "[PickSurface] %s %A" n hit
+                        //Log.line "[PickSurface] %s %A" n hit
                         
                         match m.interaction with
                             | Interactions.DrawAnnotation ->
@@ -255,8 +235,7 @@ module ViewerApp =
                                 { m with drawing = drawing } |> stash
                             | Interactions.PlaceCoordinateSystem -> 
                                 let refSystem = 
-                                    ReferenceSystemApp.update m.scene.referenceSystem (ReferenceSystemApp.Action.InferCoordSystem(hit))
-                                //(m, MScene. *. Config.Coordinates) <=== refSystem
+                                    ReferenceSystemApp.update m.scene.referenceSystem (ReferenceSystemApp.Action.InferCoordSystem(hit))                                
                                 { m with scene = { m.scene with referenceSystem = refSystem }}
                             | Interactions.PickExploreCenter ->
                                 let navigation = 
@@ -290,7 +269,7 @@ module ViewerApp =
             | NewScene,_,_ ->
                 PRo3D.Viewer.Viewer.initial     //   { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
             | KeyDown k, _, _ ->
-                    let a =
+                    let drawingAction =
                         match k with
                             | Aardvark.Application.Keys.Enter       -> Drawing.Action.Finish
                             | Aardvark.Application.Keys.LeftCtrl    -> Drawing.Action.StartDrawing
@@ -306,13 +285,23 @@ module ViewerApp =
          
                     let m =
                         match m.interaction with
-                            | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing a; picking = picking } |> stash
+                            | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing drawingAction; picking = picking } |> stash
                             | Interactions.PickExploreCenter -> {m with picking = picking}
                             | Interactions.PlaceCoordinateSystem -> {m with picking = picking}
                             | _ -> failwith "interaction does not exist"
 
-                    m 
+                    let sensitivity = m.scene.config.navigationSensitivity.value
+                    
+                    let configAction = 
+                        match k with 
+                            | Aardvark.Application.Keys.PageUp   -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity + 0.5))
+                            | Aardvark.Application.Keys.PageDown -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity - 0.5))
+                            | _ -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity))
 
+                    let c' = ConfigProperties.update m.scene.config configAction
+                    let m = updateAllTheConfigs m c'
+                    m
+                   
             | KeyUp k, _,_ ->
                     let d =
                         match k with
@@ -322,14 +311,14 @@ module ViewerApp =
                     { m with drawing = d; picking = false } |> stash
             | SetInteraction t,_,_ -> { m with interaction = t }    
             | ReferenceSystemMessage a,_,_ ->                 
-                //let m = 
-                //    { m with scene = { m.scene with config = { m.scene.config with coordinates = ReferenceSystemApp.update m.scene.config.coordinates a }}}
+                                
+                let refsystem' = ReferenceSystemApp.update m.scene.referenceSystem a
+                let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
 
                 let m =
                     match a with 
                         | ReferenceSystemApp.Action.SetUp k->
-                            let cam = m.scene.navigation.camera
-                            //let view' = cam.view |> CameraView.withUp m.scene.config.coordinates.up.value 
+                            let cam = m.scene.navigation.camera                            
                             let view' = CameraView.lookAt cam.view.Location (cam.view.Location + cam.view.Forward) m.scene.referenceSystem.up.value
                             let cam' = { cam with view = view' }
                         
@@ -341,11 +330,11 @@ module ViewerApp =
             | ConfigPropertiesMessage a,_,_ -> 
                 Log.line "config message %A" a
                 let c' = ConfigProperties.update m.scene.config a
-                { m with scene = { m.scene with config = c';
-                                                referenceSystem = { m.scene.referenceSystem with config = c'};
-                                                navigation = { m.scene.navigation with config = c' } };
-                         drawing = { m.drawing with config = c' } }
+                updateAllTheConfigs m c'                
             | _ -> m
+
+    
+        
 
     let viewSurfacesSg (m : MSurfaceModel) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>)=
         let opcs =
@@ -380,7 +369,7 @@ module ViewerApp =
                                 let sizes = V2i(1024,768)
                                 let! quality = surface.surface.quality.value
 
-                                return { frustum = frustum; size = sizes; factor = quality }
+                                return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality) }
                             })                            
                         |> Sg.noEvents
                         |> Sg.andAlso (

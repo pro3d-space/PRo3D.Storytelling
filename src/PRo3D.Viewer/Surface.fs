@@ -61,10 +61,10 @@ module Surface =
 
     let qualityInit = 
         {
-            value = 1.0
-            min = 0.5
-            max = 10.0
-            step = 0.5
+            value = 0.0
+            min =  -2.0
+            max = 5.0
+            step = 0.1
             format = "{0:0.0}"
         }
 
@@ -118,10 +118,34 @@ module Surface =
     
     type Action =
         | SurfacePropertiesMessage  of SurfaceProperties.Action
-        | SelectSurface of Guid
-        | FlyToSurface  of Guid
+        | SelectSurface             of Guid
+        | FlyToSurface              of Guid
+        | PickSurface               of SceneHit*string
 
     type Model = SurfaceModel
+
+    let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) = 
+        m.sgSurfaces
+            |> HSet.map (fun d -> d.kdTree, d.surface.name) 
+            |> HSet.map (
+                fun (kd,n) ->            
+                    Log.warn "do intersection for %s" n
+                    let kdi = kd |> KdIntersectionTree
+                    let mutable hit = ObjectRayHit.MaxRange
+                    let objFilter  a b = true
+                    let hitFilter a b c d = false
+                    if kdi.Intersect(r, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
+                        Log.warn "hit for %s" n
+                        Some (hit.RayHit.T, n)
+                    else
+                        Log.error "no hit for %s" n
+                        None //Double.MaxValue, n
+                )
+            |> HSet.toSeq
+            |> Seq.filter(fun d -> d.IsSome)
+            |> Seq.map(fun d -> d.Value)
+            |> Seq.sortByDescending(fun (t,n)-> t)
+            |> Seq.tryHead
 
     let update (model:SurfaceModel) (action:Action) = 
         match action with
@@ -155,6 +179,7 @@ module Surface =
 
                 { model with selectedSurface = surf }
             | FlyToSurface id -> model
+            | _ -> model
 
     let viewSurfaceList (m:MSurfaceModel) = 
             Incremental.div 
@@ -217,3 +242,5 @@ module Surface =
                     Incremental.div AttributeMap.empty (AList.ofModSingle (viewSurfaceProperties model))
             ]
         ]
+
+

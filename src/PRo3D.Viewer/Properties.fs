@@ -52,7 +52,7 @@ module ConfigProperties =
             Html.table [      
                 Html.row "Near Plane:"              [Numeric.view' [InputBox] model.nearPlane             |> UI.map SetNearPlane ]               
                 Html.row "Far Plane:"               [Numeric.view' [InputBox] model.farPlane              |> UI.map SetFarPlane ]    
-                Html.row "Navigation Sensitivity:"  [Numeric.view' [Slider]   model.navigationSensitivity |> UI.map SetNavigationSensitivity ]    
+                Html.row "Navigation Sensitivity:"  [Numeric.view' [Slider] model.navigationSensitivity |> UI.map SetNavigationSensitivity ]    
                 Html.row "Arrow Length:"            [Numeric.view' [InputBox] model.arrowLength           |> UI.map SetArrowLength ] 
                 Html.row "Arrow Thickness:"         [Numeric.view' [InputBox] model.arrowThickness        |> UI.map SetArrowThickness ]   
                 Html.row "D+S Plane Size:"          [Numeric.view' [InputBox] model.dnsPlaneSize          |> UI.map SetDnSPlaneSize ]    
