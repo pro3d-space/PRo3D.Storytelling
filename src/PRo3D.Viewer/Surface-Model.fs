@@ -18,7 +18,8 @@ type Surface = {
     
     name        : string
     importPath  : string
-    opcPaths    : list<string>
+    opcNames    : list<string>
+    opcPaths    : list<string>    
     
     fillMode    : FillMode
     cullMode    : CullMode

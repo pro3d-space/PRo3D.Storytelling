@@ -16,6 +16,7 @@ module Mutable =
         let _guid = ResetMod.Create(__initial.guid)
         let _name = ResetMod.Create(__initial.name)
         let _importPath = ResetMod.Create(__initial.importPath)
+        let _opcNames = ResetMod.Create(__initial.opcNames)
         let _opcPaths = ResetMod.Create(__initial.opcPaths)
         let _fillMode = ResetMod.Create(__initial.fillMode)
         let _cullMode = ResetMod.Create(__initial.cullMode)
@@ -25,6 +26,7 @@ module Mutable =
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
         member x.importPath = _importPath :> IMod<_>
+        member x.opcNames = _opcNames :> IMod<_>
         member x.opcPaths = _opcPaths :> IMod<_>
         member x.fillMode = _fillMode :> IMod<_>
         member x.cullMode = _cullMode :> IMod<_>
@@ -38,6 +40,7 @@ module Mutable =
                 ResetMod.Update(_guid,v.guid)
                 ResetMod.Update(_name,v.name)
                 ResetMod.Update(_importPath,v.importPath)
+                ResetMod.Update(_opcNames,v.opcNames)
                 ResetMod.Update(_opcPaths,v.opcPaths)
                 ResetMod.Update(_fillMode,v.fillMode)
                 ResetMod.Update(_cullMode,v.cullMode)
@@ -76,6 +79,12 @@ module Mutable =
                     override x.Get(r) = r.importPath
                     override x.Set(r,v) = { r with importPath = v }
                     override x.Update(r,f) = { r with importPath = f r.importPath }
+                }
+            let opcNames =
+                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Collections.list<Microsoft.FSharp.Core.string>>() with
+                    override x.Get(r) = r.opcNames
+                    override x.Set(r,v) = { r with opcNames = v }
+                    override x.Update(r,f) = { r with opcNames = f r.opcNames }
                 }
             let opcPaths =
                 { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Collections.list<Microsoft.FSharp.Core.string>>() with

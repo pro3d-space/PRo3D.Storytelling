@@ -49,6 +49,25 @@ module Surface =
                     |> Seq.toList 
             else []
 
+        /// returns all valid OPCs in "path"
+        let getOPCNames path = 
+            if path = String.Empty then failwith "encountered empty opcpath"
+
+            if isOPCPath path then
+               [path.Replace(@"\", @"\\\\")]
+            elif System.IO.Directory.Exists path then
+                System.IO.Directory.GetDirectories(path)
+                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
+                    |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
+                    |> Seq.map (fun a -> 
+                                    let bla = System.IO.Path.GetFileName a; 
+                                    bla )
+                    |> Seq.toList 
+            else []
+
+        let expandNamesToPaths (path : string) (names : List<string>) =
+            names |> List.map(fun a -> (Path.combine [path; a]).Replace(@"\", @"\\\\"))
+
         /// returns all valid surface folders in "path"   
         let discover path = 
             if System.IO.Directory.Exists path then
@@ -68,16 +87,20 @@ module Surface =
             format = "{0:0.0}"
         }
 
-    let mk path = {
-        guid = Guid.NewGuid()
-        name = IO.Path.GetFileName path
-        importPath = path
-        opcPaths = Utils.getOPCPaths path
-        fillMode = FillMode.Fill
-        cullMode = CullMode.None
-        isVisible = true
-        quality = qualityInit
-    }
+    let mk path = 
+        
+        let names = Utils.getOPCNames path                
+        {
+            guid = Guid.NewGuid()
+            name = IO.Path.GetFileName path
+            importPath = path
+            opcNames = names
+            opcPaths = names |> Utils.expandNamesToPaths path
+            fillMode = FillMode.Fill
+            cullMode = CullMode.None
+            isVisible = true
+            quality = qualityInit
+        }
 
     let checkBB (bb:Box3d) = 
         if(bb.IsInvalid) then 

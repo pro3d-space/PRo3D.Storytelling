@@ -82,6 +82,60 @@ module Scene =
                     System.IO.File.Delete path
                     m
             | _ -> m
+
+    let rec copyAll' (source : DirectoryInfo) (target : DirectoryInfo) skipExisting =
+        
+        // Check if the target directory exists, if not, create it.
+        if not(Directory.Exists target.FullName) then
+            Directory.CreateDirectory target.FullName |> ignore
+
+        // Copy each file into it's new directory.
+        for fi in source.GetFiles() do
+             let sourceFile = fi.FullName
+             let targetFile = Path.Combine(target.FullName, fi.Name)
+
+             if ((sourceFile.ToLower() == targetFile.ToLower()) || (skipExisting && File.Exists(targetFile))) then
+                Log.warn "Skipping %s, already exists" targetFile
+             else
+                Log.line "Copying to %s" targetFile
+                fi.CopyTo(Path.Combine((target.ToString()), fi.Name), true) |> ignore      
+                
+        // Copy each subdirectory using recursion.
+        for srcSubDir in source.GetDirectories() do
+            let nextTgtSubDir = target.CreateSubdirectory(srcSubDir.Name)
+            copyAll' srcSubDir nextTgtSubDir skipExisting
+
+    let copyAll source target skipExisting=
+        let s = DirectoryInfo(source)
+        let t = DirectoryInfo(target)
+
+        copyAll' s t skipExisting
+
+    let makeSurfaceRelative guid (scene : Scene) =
+        match scene.scenePath with
+            | Some p ->
+                let surf = scene.surfacesModel.surfaces |> List.tryFind (fun a -> a.guid = guid)
+                match surf with
+                    | Some s ->
+                        // create target dir
+                        let surfacesDirectory = Path.Combine(p,"Surfaces")
+                        if not (Directory.Exists surfacesDirectory) then
+                            Directory.CreateDirectory(surfacesDirectory) |> ignore
+
+                        // copy data
+                        let surfDirectory = Path.Combine(surfacesDirectory, s.name)
+                        copyAll p surfDirectory true 
+
+                        // update opc paths and scene
+                        let s' = { s with opcPaths = Surface.Utils.expandNamesToPaths surfacesDirectory s.opcNames }
+                        let surfaces' = scene.surfacesModel.surfaces |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')     
+                        (Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces).Set(scene, surfaces') // update sgsurfaces as well !!!
+                    | None ->
+                        Log.error "surface %s not found" (guid.ToString())
+                        scene
+            | None -> 
+                Log.error "can't make surface relative. scene has not been saved yet."
+                scene
     
 module ViewerApp =
     open Surface

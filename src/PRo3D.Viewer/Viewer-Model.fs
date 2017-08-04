@@ -25,6 +25,10 @@ type Scene = {
     scenePath       : option<string>
     referenceSystem : ReferenceSystem
 }
+ 
+//type ScenePaths = {
+//    SurfaceFolder : string
+//}
 
 type Properties = 
     | AnnotationProperties of Annotation
@@ -39,9 +43,7 @@ type Interactions =
 type Model = { 
    
     scene           : Scene
-    drawing         : Drawing.DrawingModel
-   // surfaces        : hset<SgSurface>
-   // selectedSurface : option<Surface>
+    drawing         : Drawing.DrawingModel   
     properties      : Properties
     interaction     : Interactions
     picking         : bool       
@@ -51,10 +53,6 @@ type Model = {
 
     [<TreatAsValue>]
     future : Option<Drawing.DrawingModel> 
-  
-    //measurementPath : string
-  //  draw    : bool 
-//    hoverPosition : option<Trafo3d>
 }
 
 
