@@ -18,6 +18,7 @@ module Mutable =
         let _importPath = ResetMod.Create(__initial.importPath)
         let _opcNames = ResetMod.Create(__initial.opcNames)
         let _opcPaths = ResetMod.Create(__initial.opcPaths)
+        let _relativePaths = ResetMod.Create(__initial.relativePaths)
         let _fillMode = ResetMod.Create(__initial.fillMode)
         let _cullMode = ResetMod.Create(__initial.cullMode)
         let _isVisible = ResetMod.Create(__initial.isVisible)
@@ -28,6 +29,7 @@ module Mutable =
         member x.importPath = _importPath :> IMod<_>
         member x.opcNames = _opcNames :> IMod<_>
         member x.opcPaths = _opcPaths :> IMod<_>
+        member x.relativePaths = _relativePaths :> IMod<_>
         member x.fillMode = _fillMode :> IMod<_>
         member x.cullMode = _cullMode :> IMod<_>
         member x.isVisible = _isVisible :> IMod<_>
@@ -42,6 +44,7 @@ module Mutable =
                 ResetMod.Update(_importPath,v.importPath)
                 ResetMod.Update(_opcNames,v.opcNames)
                 ResetMod.Update(_opcPaths,v.opcPaths)
+                ResetMod.Update(_relativePaths,v.relativePaths)
                 ResetMod.Update(_fillMode,v.fillMode)
                 ResetMod.Update(_cullMode,v.cullMode)
                 ResetMod.Update(_isVisible,v.isVisible)
@@ -91,6 +94,12 @@ module Mutable =
                     override x.Get(r) = r.opcPaths
                     override x.Set(r,v) = { r with opcPaths = v }
                     override x.Update(r,f) = { r with opcPaths = f r.opcPaths }
+                }
+            let relativePaths =
+                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.relativePaths
+                    override x.Set(r,v) = { r with relativePaths = v }
+                    override x.Update(r,f) = { r with relativePaths = f r.relativePaths }
                 }
             let fillMode =
                 { new Lens<PRo3D.Surfaces.Surface, Aardvark.Base.Rendering.FillMode>() with

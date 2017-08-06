@@ -99,6 +99,7 @@ module Surface =
             fillMode = FillMode.Fill
             cullMode = CullMode.None
             isVisible = true
+            relativePaths = false
             quality = qualityInit
         }
 
@@ -137,12 +138,65 @@ module Surface =
             |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> toSg surf sg (hierarchies |> computeBB) kdtree)
             |> HSet.ofList
 
+    let getSurface model guid =
+        model.surfaces |> List.tryFind (fun a -> a.guid = guid)
+    
+    let updateSurface model (s':Surface)  =
+        let surfaces' = model.surfaces |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')     
+
+        // update sgsurfaces as well !!!
+        let sgSurfaces' = 
+            model.sgSurfaces 
+                |> HSet.toList 
+                |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> { x with surface = s' })     
+                |> HSet.ofList
+        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
+
+    open System.IO
+    let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
+        match scenePath with
+            | Some p ->
+                let surf = getSurface surfaceModel guid
+                match surf with
+                    | Some s ->
+                        // create target dir
+                        let surfacesDirectory = Path.Combine((Path.GetDirectoryName p),"Surfaces")
+                        if not (Directory.Exists surfacesDirectory) then
+                            Directory.CreateDirectory(surfacesDirectory) |> ignore
+
+                        // copy data
+                        let surfDirectory = Path.Combine(surfacesDirectory, s.name)
+                        Copy.copyAll surfacesDirectory surfDirectory true
+
+                        // update opc paths and scene
+                        let s' = { s with opcPaths = Utils.expandNamesToPaths surfacesDirectory s.opcNames; relativePaths = true }
+
+                        updateSurface surfaceModel s'
+
+                        //let surfaces' = surfaceModel.surfaces |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')     
+
+                        //// update sgsurfaces as well !!!
+                        //let sgSurfaces' = 
+                        //    surfaceModel.sgSurfaces 
+                        //        |> HSet.toList 
+                        //        |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> { x with surface = s' })     
+                        //        |> HSet.ofList
+
+                        //{ surfaceModel with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
+                    | None ->
+                        Log.error "surface %s not found" (guid.ToString())
+                        surfaceModel
+            | None -> 
+                Log.error "can't make surface relative. not valid scene path has not been saved yet."
+                surfaceModel
+
  module SurfaceApp =
     
     type Action =
         | SurfacePropertiesMessage  of SurfaceProperties.Action
         | SelectSurface             of Guid
         | FlyToSurface              of Guid
+        | MakeRelative              of Guid
         | PickSurface               of SceneHit*string
 
     type Model = SurfaceModel
@@ -170,27 +224,15 @@ module Surface =
             |> Seq.sortByDescending(fun (t,n)-> t)
             |> Seq.tryHead
 
-    let update (model:SurfaceModel) (action:Action) = 
+    let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
         match action with
             | SurfacePropertiesMessage msg ->
                 match model.selectedSurface with 
                     | Some s -> 
                         let s' = SurfaceProperties.update s msg                            
-
-                        let surfaces' = 
-                            model.surfaces |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')
-
-                        let sgSurfaces' =
-                            model.sgSurfaces
-                                |> HSet.toList 
-                                |> List.updateIf (fun x -> x.surface.guid = s'.guid) (fun x -> { x with surface = s'})
-                                |> HSet.ofList
-
-                        {
-                            surfaces = surfaces'
-                            selectedSurface = Some s'
-                            sgSurfaces = sgSurfaces'
-                        }                        
+                        
+                        let model = Surface.updateSurface model s'
+                        { model with selectedSurface = Some s' }
                     | None -> model
             | SelectSurface id -> 
                 let surf = model.surfaces |> Seq.tryFind(fun x -> x.guid = id)
@@ -202,6 +244,19 @@ module Surface =
 
                 { model with selectedSurface = surf }
             | FlyToSurface id -> model
+            | MakeRelative id ->
+                
+                //let s = Surface.getSurface model id
+                
+                //match s with 
+                //    | Some k -> 
+                //        let s' = { k with relativePaths = not k.relativePaths }
+                //        Log.warn "importing surface %A relative %A" id s'.relativePaths
+                //        Surface.updateSurface model s'                        
+                //    | None -> 
+                //        model
+
+                Surface.makeSurfaceRelative id model scenePath
             | _ -> model
 
     let viewSurfaceList (m:MSurfaceModel) = 
@@ -218,6 +273,7 @@ module Surface =
                                     | None -> Mod.constant C4b.White
                             
                             let bgc = sprintf "color: %s" (Html.ofC4b color)
+                            let! icon = s.surface.relativePaths |> Mod.map(fun x -> if x then "suitcase icon" else "cloud download icon")
 
                             yield div [clazz "item"] [
                                 i [
@@ -233,12 +289,23 @@ module Surface =
                                             clazz "home icon"; 
                                             onClick (fun x -> FlyToSurface (s.surface.guid |> Mod.force))
                                         ][]     
+                                        Incremental.i (
+                                            AttributeMap.ofList [
+                                                clazz icon; 
+                                                onClick (fun x -> MakeRelative (s.surface.guid |> Mod.force))
+                                            ])
+                                            (AList.empty)
                                     ]
                                     div [clazz "description"] [
                                         Incremental.text (
                                             s.globalBB 
                                                 |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
                                     ]
+
+                                    //<i class="huge icons">
+                                    //    <i class="puzzle icon"></i>
+                                    //    <i class="corner add icon"></i>
+                                    //</i>
                                 ]
                             ]
                     }

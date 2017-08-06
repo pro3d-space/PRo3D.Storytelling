@@ -14,17 +14,18 @@ open Aardvark.SceneGraph
 type Surface = {    
     
     [<PrimaryKey>]
-    guid        : System.Guid
+    guid          : System.Guid
     
-    name        : string
-    importPath  : string
-    opcNames    : list<string>
-    opcPaths    : list<string>    
+    name          : string
+    importPath    : string
+    opcNames      : list<string>
+    opcPaths      : list<string>    
+    relativePaths : bool
     
-    fillMode    : FillMode
-    cullMode    : CullMode
-    isVisible   : bool
-    quality     : NumericInput
+    fillMode      : FillMode
+    cullMode      : CullMode
+    isVisible     : bool
+    quality       : NumericInput
 }
 
 [<DomainType>]
