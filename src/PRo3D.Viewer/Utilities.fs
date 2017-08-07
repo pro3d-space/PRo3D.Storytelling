@@ -109,7 +109,8 @@ module Copy =
                 fi.CopyTo(Path.Combine((target.ToString()), fi.Name), true) |> ignore      
                 
         // Copy each subdirectory using recursion.
-        for srcSubDir in source.GetDirectories() do
+        let bla = source.GetDirectories()
+        for srcSubDir in bla do
             let nextTgtSubDir = target.CreateSubdirectory(srcSubDir.Name)
             copyAll' srcSubDir nextTgtSubDir skipExisting
 

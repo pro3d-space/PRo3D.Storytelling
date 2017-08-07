@@ -48,7 +48,7 @@ module Scene =
 
         //append sg surfaces
         let surfSet = Surface.createSgSurfaces runtime signature surfaces
-        let sgSurfaces = HSet.union surfSet m.scene.surfacesModel.sgSurfaces
+        let sgSurfaces = HMap.union surfSet m.scene.surfacesModel.sgSurfaces
                                                 
         (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)                    
 
@@ -129,7 +129,7 @@ module ViewerApp =
     let _drawing = Model.Lens.drawing
        
     let lookAtData (m : Model) =         
-        let bb = _sgSurfaces.Get(m) |> Seq.map(fun x -> x.globalBB) |> Box3d.ofSeq
+        let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
         let cam = 
             let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
             { CameraController.initial with view = view }            
@@ -137,7 +137,7 @@ module ViewerApp =
         { m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
     
     let lookAtSurface (m : Model) id =
-        let surf = _sgSurfaces.Get(m) |> Seq.tryFind(fun x -> x.surface.guid = id)
+        let surf = _sgSurfaces.Get(m) |> HMap.tryFind id
         match surf with
             | Some s ->
                 let bb = s.globalBB
@@ -170,6 +170,7 @@ module ViewerApp =
                     | SurfaceApp.Action.FlyToSurface id -> 
                         lookAtSurface m id
                     | _ ->  
+                        Log.warn "%A" msg
                         let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
                         { m with scene = { m.scene with surfacesModel = s}}
             | AnnotationMessage msg,_,_ ->                
@@ -200,7 +201,7 @@ module ViewerApp =
                     | None -> m   
             | QuickLoad1,_,_ ->
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
-                let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\Cape_Desire_RGB"
+                let path = @"E:\Aardwork\Exomars\_NEWVIEWER\Surfaces\Cape_Desire_RGB"
                 Scene.import' runtime signature [Surface.mk path] m |> lookAtData
             | QuickLoad2,_,_ ->                
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
@@ -343,7 +344,7 @@ module ViewerApp =
         let opcs =
             aset {                
                 
-                for surface in m.sgSurfaces do
+                for (key,surface) in m.sgSurfaces |> AMap.toASet do
                    
                     let isSelected = 
                         Mod.bind2 (fun guid (selected: Option<MSurface>) ->
@@ -562,6 +563,9 @@ module ViewerApp =
 
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
              DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
+
+             button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
+             button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
         ] 
                      
         let rest (model : MModel) = 

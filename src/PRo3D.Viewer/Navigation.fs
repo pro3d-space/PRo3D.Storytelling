@@ -30,6 +30,7 @@ module Navigation =
                 { model with camera = ArcBallController.update model.camera a }
             | FreeFlyAction a ->
                 let cam' = CameraController.update model.camera a 
+               // Log.warn "%A" a
                 { model with camera = { cam' with sensitivity = model.config.navigationSensitivity.value } }
             | SetNavigationMode mode ->
                 match mode with
@@ -39,9 +40,6 @@ module Navigation =
                                 | Some x ->  x
                                 | None   -> V3d.OOO
 
-
-                        //let view' =
-                        //    CameraView.withUp model.config.coordinates.up.value model.camera.view
                         let view' =
                             CameraView.lookAt model.camera.view.Location center model.coordinates.up.value
                         

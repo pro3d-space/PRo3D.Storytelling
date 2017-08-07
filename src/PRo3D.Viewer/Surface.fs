@@ -122,8 +122,7 @@ module Surface =
             |> Box3d.ofSeq
 
     let toSg (s:Surface) sg bb kd = {
-        surface = s
-        guid = Guid.NewGuid()
+        surface = s       
         sceneGraph = sg
         globalBB = bb
         kdTree = kd
@@ -136,7 +135,8 @@ module Surface =
             |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
             |> List.zip surfaces
             |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> toSg surf sg (hierarchies |> computeBB) kdtree)
-            |> HSet.ofList
+            |> List.map (fun d -> (d.surface.guid, d))
+            |> HMap.ofList
 
     let getSurface model guid =
         model.surfaces |> List.tryFind (fun a -> a.guid = guid)
@@ -147,9 +147,11 @@ module Surface =
         // update sgsurfaces as well !!!
         let sgSurfaces' = 
             model.sgSurfaces 
-                |> HSet.toList 
-                |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> { x with surface = s' })     
-                |> HSet.ofList
+                |> HMap.alter s'.guid 
+                        (fun x -> match x with 
+                                    | Some k -> Some { k with surface = s' }
+                                    | None -> None)   
+
         { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
 
     open System.IO
@@ -160,16 +162,16 @@ module Surface =
                 match surf with
                     | Some s ->
                         // create target dir
-                        let surfacesDirectory = Path.Combine((Path.GetDirectoryName p),"Surfaces")
-                        if not (Directory.Exists surfacesDirectory) then
-                            Directory.CreateDirectory(surfacesDirectory) |> ignore
+                        let targetSurfaceDir = Path.Combine((Path.GetDirectoryName p),"Surfaces")
+                        if not (Directory.Exists targetSurfaceDir) then
+                            Directory.CreateDirectory(targetSurfaceDir) |> ignore
 
                         // copy data
-                        let surfDirectory = Path.Combine(surfacesDirectory, s.name)
-                        Copy.copyAll surfacesDirectory surfDirectory true
+                        let targetDir = Path.Combine(targetSurfaceDir, s.name)
+                        Copy.copyAll s.importPath targetDir true
 
                         // update opc paths and scene
-                        let s' = { s with opcPaths = Utils.expandNamesToPaths surfacesDirectory s.opcNames; relativePaths = true }
+                        let s' = { s with opcPaths = Utils.expandNamesToPaths targetDir s.opcNames; relativePaths = true }
 
                         updateSurface surfaceModel s'
 
@@ -197,15 +199,16 @@ module Surface =
         | SelectSurface             of Guid
         | FlyToSurface              of Guid
         | MakeRelative              of Guid
+        | RemoveSurface             of Guid
         | PickSurface               of SceneHit*string
 
     type Model = SurfaceModel
 
     let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) = 
         m.sgSurfaces
-            |> HSet.map (fun d -> d.kdTree, d.surface.name) 
-            |> HSet.map (
-                fun (kd,n) ->            
+            |> HMap.map (fun _ d -> d.kdTree, d.surface.name) 
+            |> HMap.map (
+                fun _ (kd,n) ->
                     Log.warn "do intersection for %s" n
                     let kdi = kd |> KdIntersectionTree
                     let mutable hit = ObjectRayHit.MaxRange
@@ -218,9 +221,9 @@ module Surface =
                         Log.error "no hit for %s" n
                         None //Double.MaxValue, n
                 )
-            |> HSet.toSeq
-            |> Seq.filter(fun d -> d.IsSome)
-            |> Seq.map(fun d -> d.Value)
+            |> HMap.toSeq
+            |> Seq.filter(fun (g,d) -> d.IsSome)
+            |> Seq.map(fun (g,d) -> d.Value)
             |> Seq.sortByDescending(fun (t,n)-> t)
             |> Seq.tryHead
 
@@ -244,26 +247,25 @@ module Surface =
 
                 { model with selectedSurface = surf }
             | FlyToSurface id -> model
-            | MakeRelative id ->
-                
-                //let s = Surface.getSurface model id
-                
-                //match s with 
-                //    | Some k -> 
-                //        let s' = { k with relativePaths = not k.relativePaths }
-                //        Log.warn "importing surface %A relative %A" id s'.relativePaths
-                //        Surface.updateSurface model s'                        
-                //    | None -> 
-                //        model
-
+            | MakeRelative id ->                
                 Surface.makeSurfaceRelative id model scenePath
+            | RemoveSurface id ->                
+                let toRemove = model.surfaces |> List.tryFindIndex (fun d -> d.guid = id)
+                match toRemove with
+                    | Some index ->
+                        let s' = model.surfaces |> PList.ofList |> PList.removeAt index |> PList.toList
+
+                        let sg' = model.sgSurfaces |> HMap.remove id
+                        
+                        { model with surfaces = s'; sgSurfaces = sg' }
+                    | None -> model                 
             | _ -> model
 
     let viewSurfaceList (m:MSurfaceModel) = 
             Incremental.div 
                 (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"]) (
-                    alist {
-                        for s in (m.sgSurfaces |> AList.ofASet) do
+                    alist {                        
+                        for (_,s) in m.sgSurfaces |> AMap.toASet |> AList.ofASet do
 
                             let! selected = m.selectedSurface
                             let! color =
@@ -295,11 +297,19 @@ module Surface =
                                                 onClick (fun x -> MakeRelative (s.surface.guid |> Mod.force))
                                             ])
                                             (AList.empty)
+                                        i [
+                                            clazz "Remove icon"; 
+                                            onClick (fun x -> RemoveSurface (s.surface.guid |> Mod.force))
+                                        ][]  
                                     ]
                                     div [clazz "description"] [
                                         Incremental.text (
                                             s.globalBB 
                                                 |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
+
+                                        Incremental.text (
+                                            s.surface.relativePaths
+                                                |> Mod.map (fun d -> sprintf " | local: %A" (d)))
                                     ]
 
                                     //<i class="huge icons">
@@ -326,7 +336,7 @@ module Surface =
         div[][
             //button [onClick (fun _ -> QuickLoad1)][text "Surface"]
             //button [onClick (fun _ -> QuickLoad2)][text "Scene"]
-            //button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
+          
             GuiEx.accordion "Surfaces" "Cubes" true [ viewSurfaceList model ]
             GuiEx.accordion "Properties" "Content" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle (viewSurfaceProperties model))

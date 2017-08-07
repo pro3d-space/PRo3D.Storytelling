@@ -19,27 +19,25 @@ type Action =
         | SetProjection    of Projection
         | SetExportPath    of string
         | Move             of V3d
-        | Exit    
-        | Send
+        | Exit            
         | StartDrawing            
-        | StopDrawing
-        //| AddPoint         of V3d * (V3d -> Option<V3d>)
+        | StopDrawing        
         | AddPointAdv      of V3d * (V3d -> Option<V3d>) * string
         | SetSegment       of int * Segment
-        | Finish
-        //| KeyDown          of key : Aardvark.Application.Keys
-        //| KeyUp            of key : Aardvark.Application.Keys      
+        | Finish                
+        | Undo
+        | Redo
+        | Select                  of Guid
+        | ToggleVisiblity         of Guid
+        | RemoveAnnotation        of Guid        
+        | Send
         | Export
         | Save              
         | Load             
-        | Clear
-        | Undo
-        | Redo
         | QuickLoad
-        | Select           of Guid
+        | Clear
         | Nop
         | AnnotationPropertiesMsg of AnnotationProperties.Action
-        | ToggleVisiblity of Guid
 
 [<DomainType>]
 type DrawingModel = {

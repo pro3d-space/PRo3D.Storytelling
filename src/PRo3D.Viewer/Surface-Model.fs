@@ -30,8 +30,8 @@ type Surface = {
 
 [<DomainType>]
 type SgSurface = {
-    [<PrimaryKey>]
-    guid : System.Guid
+    //[<PrimaryKey>]
+    //guid : System.Guid
 
     surface : Surface    
 
@@ -44,7 +44,7 @@ type SgSurface = {
 type SurfaceModel = {
     surfaces        : list<Surface>
     selectedSurface : option<Surface>
-    sgSurfaces      : hset<SgSurface>
+    sgSurfaces      : hmap<Guid,SgSurface>
 }
 
 module SurfaceModel =
@@ -55,7 +55,7 @@ module SurfaceModel =
         {
             surfaces = a
             selectedSurface = b
-            sgSurfaces = hset.Empty
+            sgSurfaces = hmap.Empty
         }
 
     let surfaceModelPickler : Pickler<SurfaceModel> =
@@ -66,7 +66,7 @@ module SurfaceModel =
     let initial = {
         surfaces        = []
         selectedSurface = None
-        sgSurfaces      = hset.Empty
+        sgSurfaces      = hmap.Empty
     }
 
     FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)

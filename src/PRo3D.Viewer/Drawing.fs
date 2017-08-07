@@ -172,8 +172,6 @@ module DrawingApp =
                     { model with draw = false; hoverPosition = None }
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
-            //| AddPoint(p,samplePoint), true ->                     
-            //        addPoint samplePoint p model |> fst               
             | AddPointAdv (point, samplePoint, name), true ->
                     let model, newSegment = addPoint samplePoint point model name bc
                     
@@ -229,10 +227,7 @@ module DrawingApp =
             | QuickLoad,_ ->                
                 let annotations = Serialization.loadAs<plist<PRo3D.Annotation>> "./lastMeasure"
                 { model with annotations = annotations }        
-            | Send, _ ->
-                        
-                
-
+            | Send, _ ->                                        
               //  let json = model.annotations |> PList.map JsonTypes.ofAnnotation |> pickler.PickleTyped
                 Log.line "Sending %i annotations" (model.annotations |> PList.count)
                 let json = model.annotations |> PList.toList |> List.map JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
@@ -257,13 +252,13 @@ module DrawingApp =
                 { model with selected = selection; selectedAnnotation = ann }  
             | Nop, _ -> model
             | AnnotationPropertiesMsg msg,_ ->                
-                    match model.selectedAnnotation with
-                        | Some a -> 
-                            let a' = AnnotationProperties.update a msg
-                            let annotations' = 
-                                model.annotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun x -> a')                                     
-                            { model with selectedAnnotation = Some a'; annotations = annotations' |> PList.ofList }
-                        | None -> model                        
+                match model.selectedAnnotation with
+                    | Some a ->
+                        let a' = AnnotationProperties.update a msg
+                        let annotations' = 
+                            model.annotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun x -> a')                                     
+                        { model with selectedAnnotation = Some a'; annotations = annotations' |> PList.ofList }
+                    | None -> model
                         
             | Undo, _ -> 
                 match model.past with
@@ -273,6 +268,20 @@ module DrawingApp =
                 match model.future with
                     | Some f -> f
                     | None -> model
+            | RemoveAnnotation id, _ ->
+                let toRemove = model.annotations.AsList |> List.tryFindIndex (fun d -> d.key = id)
+                match toRemove with
+                    | Some index ->
+                        let as' = model.annotations|> PList.removeAt index
+                        { model with annotations = as' } |> stash
+                    | None -> model             
+            | ToggleVisiblity id, _ ->
+                let a = model.annotations.AsList |> List.tryFind (fun d -> d.key = id)
+                let a' =
+                    match a with
+                        | Some k -> { k with visible = not k.visible  }
+                        | None -> failwith "annotation not found, can't happen"
+                { model with annotations = (model.annotations.AsList |> List.updateIf(fun d -> d.key = a'.key) (fun _ -> a')) |> PList.ofList}
             | _ -> model
 
     module UI =
@@ -345,7 +354,8 @@ module DrawingApp =
 
                                 let bgc = sprintf "color: %s" (Html.ofC4b c)
                                 
-                                let toggleVisibility = fun _ -> ToggleVisiblity (a.key |> Mod.force)
+                                let! visible = a.visible
+                                let visibleIcon = if visible then "unhide icon" else "hide icon"
                                 let select = fun _ -> Select (a.key |> Mod.force)
 
                                 yield div [clazz "item"] [
@@ -356,11 +366,9 @@ module DrawingApp =
                                             yield Incremental.div (AttributeMap.ofList [clazz "header"]) (
                                                 alist {
                                                     yield Incremental.text header
-
-                                                    let! visible = a.visible
-                                                    yield if visible
-                                                          then i [clazz "unhide icon"; onClick toggleVisibility][] 
-                                                          else i [clazz "hide icon"; onClick toggleVisibility] []
+                                                    yield i [clazz visibleIcon; onClick (fun _ -> ToggleVisiblity (a.key |> Mod.force))][] 
+                                                    yield i [clazz "Remove icon"; onClick (fun _ -> RemoveAnnotation (a.key |> Mod.force))][] 
+                                                    
                                                 } 
                                             ) 
                                             yield div [clazz "description"] [Incremental.text desc]      
