@@ -60,9 +60,9 @@ module Viewer =
 
     let navInit = 
         let init = NavigationModel.initial
-        let init = (NavigationModel.Lens.camera |. CameraControllerState.Lens.sensitivity).Set(init, 2.0)
-        let init = (NavigationModel.Lens.camera |. CameraControllerState.Lens.panFactor).Set(init, 0.003)
-        let init = (NavigationModel.Lens.camera |. CameraControllerState.Lens.zoomFactor).Set(init, 0.004)
+        let init = (NavigationModel.Lens.camera |. CameraControllerState.Lens.sensitivity).Set(init, 3.0)
+        let init = (NavigationModel.Lens.camera |. CameraControllerState.Lens.panFactor).Set(init, 0.0008)
+        let init = (NavigationModel.Lens.camera |. CameraControllerState.Lens.zoomFactor).Set(init, 0.0008)
         init        
 
     let initial = {           

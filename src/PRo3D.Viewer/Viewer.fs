@@ -564,8 +564,8 @@ module ViewerApp =
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
              DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
 
-             button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
-             button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
+             //button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
+             //button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
         ] 
                      
         let rest (model : MModel) = 
