@@ -59,14 +59,15 @@ module Surface =
                 System.IO.Directory.GetDirectories(path)
                     |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
                     |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
-                    |> Seq.map (fun a -> 
-                                    let bla = System.IO.Path.GetFileName a; 
-                                    bla )
+                    |> Seq.map (fun a -> System.IO.Path.GetFileName a; )
                     |> Seq.toList 
             else []
 
         let expandNamesToPaths (path : string) (names : List<string>) =
-            names |> List.map(fun a -> (Path.combine [path; a]).Replace(@"\", @"\\\\"))
+            names |> List.map(fun a -> 
+                let p = (Path.combine [path; a]).Replace(@"\", @"\\\\")
+                //Log.warn "%s" p
+                p)
 
         /// returns all valid surface folders in "path"   
         let discover path = 
@@ -153,6 +154,22 @@ module Surface =
                                     | None -> None)   
 
         { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
+
+    let updateSurfaces model (surfaces' : list<Surface>) =
+        let sgSurfaces =
+            surfaces' 
+                |> List.map (
+                    fun x -> 
+                        let update = 
+                            (fun (d : Option<SgSurface>) ->
+                                match d with 
+                                    | Some k -> Some { k with surface = x }
+                                    | None -> None)
+
+                        HMap.alter x.guid update model.sgSurfaces ) 
+                |> List.fold (fun a b -> HMap.union a b) HMap.empty
+
+        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces }
 
     open System.IO
     let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =

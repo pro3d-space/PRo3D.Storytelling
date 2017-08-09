@@ -36,8 +36,27 @@ module PList =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Scene =
+    open PRo3D.Surfaces.Surface
     
     let surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
+
+    let expandRelativePaths (m:Scene) =
+        // Surfaces        
+        
+        match m.scenePath with
+            | Some p ->         
+                let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
+                let surfaces = 
+                    m.surfacesModel.surfaces                     
+                    |> List.map(
+                        fun x -> 
+                            if x.relativePaths then
+                                let p'' = Path.Combine(p', x.name)
+                                { x with opcPaths = Utils.expandNamesToPaths p'' x.opcNames }
+                            else x
+                        )
+                { m with surfacesModel = Surface.updateSurfaces m.surfacesModel surfaces}
+            | None -> m        
 
     /// appends surfaces to existing surfaces
     let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : list<Surface>) (m : Model) =
@@ -55,6 +74,8 @@ module Scene =
     /// loads surfaces given in scene - creates their sg pendants
     let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
         
+        let s = s |> expandRelativePaths
+
         let sgSurfaces = Surface.createSgSurfaces runtime signature s.surfacesModel.surfaces        
         
         (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
@@ -66,7 +87,7 @@ module Scene =
             None
 
     let loadScene path m runtime signature =
-        let s = Serialization.loadAs<Scene> path
+        let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
         let m = { m with scene = s }
 
         load runtime signature s m
@@ -626,7 +647,7 @@ module ViewerApp =
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        
-        let m = Scene.loadLastScene m runtime signature        
+     //   let m = Scene.loadLastScene m runtime signature        
        // let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\Cape_Desire_RGB"
         //let m = Surface.import' runtime signature [Surface.mk path] m |> lookAtData
         
