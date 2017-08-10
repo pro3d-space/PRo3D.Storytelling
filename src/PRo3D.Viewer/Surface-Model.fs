@@ -29,15 +29,12 @@ type Surface = {
 }
 
 [<DomainType>]
-type SgSurface = {
-    //[<PrimaryKey>]
-    //guid : System.Guid
-
+type SgSurface = {    
     surface : Surface    
 
-    globalBB : Box3d   
-    sceneGraph : ISg
-    kdTree : KdTreeSet    
+    globalBB    : Box3d
+    sceneGraph  : ISg
+    kdTree      : hmap<Box3d,ConcreteKdIntersectionTree>
 }
 
 [<DomainType>]

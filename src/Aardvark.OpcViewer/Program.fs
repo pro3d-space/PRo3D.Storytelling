@@ -19,7 +19,8 @@ module Viewer =
 
     let mutable hackRunner = None
 
-    let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene) createKdTrees  =
+    let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene) (createKdTrees) 
+        : (ISg * list<PatchHierarchy> * hmap<Box3d,ConcreteKdIntersectionTree>) =
 
         let runner = 
             match hackRunner with
@@ -41,51 +42,57 @@ module Viewer =
                 yield PatchHierarchy.load p
             ] 
 
-
-        Log.startTimed "Creating KdTree"
-        let patch2KdTree (h : PatchHierarchy) : ConcreteKdIntersectionTree =
-                        
+        let getMasterKdTreePath (h:PatchHierarchy) =
             let rootpatch = h.tree |> QTree.getRoot 
             
-            let fileName = sprintf "%s-0.aakd" rootpatch.info.Name
-            
-            let path = Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]
+            //look for master KdTree0
+            let fileName = sprintf "%s-0.aakd" rootpatch.info.Name            
+            Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]
+
+        Log.startTimed "Creating KdTree"
+        let kdTreeFromHierarchy (h : PatchHierarchy) : hmap<Box3d,ConcreteKdIntersectionTree> =
+                        
+            let path = h |> getMasterKdTreePath
             
             match System.IO.File.Exists(path) with
                 | true -> 
                      use b = new Aardvark.VRVis.BinaryReadingCoder(System.IO.File.OpenRead(path))
                      let mutable treeOida = Unchecked.defaultof<KdIntersectionTree>
                      b.CodeT(&treeOida)
-                     ConcreteKdIntersectionTree(treeOida, Trafo3d.Identity)
+                     let tree = ConcreteKdIntersectionTree(treeOida, Trafo3d.Identity)
+                     
+                     HMap.add tree.KdIntersectionTree.BoundingBox3d tree HMap.empty
                 | false ->
-                     Log.warn "could not find kdtree"       
-                     ConcreteKdIntersectionTree()
+                     Log.warn "could not find master kdtree"
+                     HMap.empty
         
-        let opcTrees =
+        let mapsPerHierarchy =
             [| for h in patchHierarchies do
               //  yield! h.tree |> QTree.getLeaves |> Seq.map (fun p -> lazy patch2KdTree h p)    
-               if createKdTrees then   
-                 yield patch2KdTree h 
-               else yield ConcreteKdIntersectionTree()
-            |] 
+                   if createKdTrees then   
+                        yield kdTreeFromHierarchy h 
+                   else 
+                        yield HMap.empty
+            |]
 
-        let totalKdTrees = opcTrees.Length
+        let totalKdTrees = mapsPerHierarchy.Length
         Log.line "creating %d kdTrees" totalKdTrees
 
         let kdTrees = 
-            opcTrees 
+            mapsPerHierarchy       
+              //  |> Array.filter(fun x -> not x.IsEmpty)
                 |> Array.Parallel.mapi (fun i e ->
                     Log.start "creating kdtree #%d of %d" i totalKdTrees
                     let r = e
                     Log.stop()
                     r
                 )
-
-        let overallTree = KdTreeSet(kdTrees)
+                |> Array.fold (fun a b -> HMap.union a b) HMap.empty
 
         Log.stop()
 
 
+        // create level of detail hierarchy (Sg)
         let g = 
             patchHierarchies 
             |> List.map (fun h ->                     
@@ -111,7 +118,7 @@ module Viewer =
                // |> Sg.andAlso (box)
                 |> Sg.transform preTransform
                                 
-        sg, patchHierarchies, overallTree
+        sg, patchHierarchies, kdTrees
 
     let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcScene)  = 
     

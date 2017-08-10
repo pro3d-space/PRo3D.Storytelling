@@ -122,7 +122,7 @@ module Surface =
             |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)
             |> Box3d.ofSeq
 
-    let toSg (s:Surface) sg bb kd = {
+    let toSg (s:Surface) sg bb (kd:hmap<Box3d,ConcreteKdIntersectionTree>) = {
         surface = s       
         sceneGraph = sg
         globalBB = bb
@@ -221,26 +221,50 @@ module Surface =
 
     type Model = SurfaceModel
 
+    let intersectHMap (kdTreeMap: hmap<Box3d, ConcreteKdIntersectionTree>) bb ray name= 
+        let kdtree = kdTreeMap |> HMap.find bb
+        let kdi = KdTreeSet(kdtree) |> KdIntersectionTree
+        let mutable hit = ObjectRayHit.MaxRange
+
+        let objFilter a b = true
+        let hitFilter a b c d = false
+        if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
+            Log.warn "hit for %s" name
+            Some (hit.RayHit.T, name)
+        else
+            Log.error "no hit for %s" name
+            None
+
     let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) = 
         m.sgSurfaces
             |> HMap.map (fun _ d -> d.kdTree, d.surface.name) 
             |> HMap.map (
-                fun _ (kd,n) ->
-                    Log.warn "do intersection for %s" n
-                    let kdi = kd |> KdIntersectionTree
-                    let mutable hit = ObjectRayHit.MaxRange
-                    let objFilter  a b = true
-                    let hitFilter a b c d = false
-                    if kdi.Intersect(r, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
-                        Log.warn "hit for %s" n
-                        Some (hit.RayHit.T, n)
+                fun _ (kd ,n) ->                     
+                    if kd.IsEmpty 
+                    then 
+                        Log.error "no kdtree loaded for %s" n
+                        None
                     else
-                        Log.error "no hit for %s" n
-                        None //Double.MaxValue, n
-                )
-            |> HMap.toSeq
-            |> Seq.filter(fun (g,d) -> d.IsSome)
-            |> Seq.map(fun (g,d) -> d.Value)
+                        let boundingBoxes =
+                            kd  |> HMap.toSeq 
+                                |> Seq.map fst
+                                |> Seq.filter(
+                                    fun x -> 
+                                       let mutable t = 0.0
+                                       x.Intersects(r.Ray, &t)  
+                                )
+ 
+                        let intersection =
+                            boundingBoxes
+                                |> Seq.map(
+                                    fun bb -> intersectHMap kd bb r n)
+                                |> Seq.choose(fun x -> x)
+                                |> Seq.sortByDescending(fun (t,n)-> t)
+                                |> Seq.tryHead
+                        intersection
+                )                                               
+            |> Seq.filter(fun (_,d) -> d.IsSome)
+            |> Seq.map(fun (_,d) -> d.Value)
             |> Seq.sortByDescending(fun (t,n)-> t)
             |> Seq.tryHead
 
@@ -292,8 +316,21 @@ module Surface =
                                     | None -> Mod.constant C4b.White
                             
                             let bgc = sprintf "color: %s" (Html.ofC4b color)
-                            let! icon = s.surface.relativePaths |> Mod.map(fun x -> if x then "suitcase icon" else "cloud download icon")
-
+                            let! iconMap = 
+                                s.surface.relativePaths 
+                                    |> Mod.map(
+                                        fun x -> 
+                                            if x 
+                                            then 
+                                                AttributeMap.ofList [ clazz "suitcase icon" ]
+                                            else 
+                                                AttributeMap.ofList [
+                                                    clazz "cloud download icon";
+                                                    onClick (fun x -> MakeRelative (s.surface.guid |> Mod.force))
+                                                ] 
+                                                
+                                    )                            
+                                
                             yield div [clazz "item"] [
                                 i [
                                     clazz "large cube middle aligned icon"; 
@@ -308,12 +345,7 @@ module Surface =
                                             clazz "home icon"; 
                                             onClick (fun x -> FlyToSurface (s.surface.guid |> Mod.force))
                                         ][]     
-                                        Incremental.i (
-                                            AttributeMap.ofList [
-                                                clazz icon; 
-                                                onClick (fun x -> MakeRelative (s.surface.guid |> Mod.force))
-                                            ])
-                                            (AList.empty)
+                                        Incremental.i (iconMap)(AList.empty)
                                         i [
                                             clazz "Remove icon"; 
                                             onClick (fun x -> RemoveSurface (s.surface.guid |> Mod.force))
