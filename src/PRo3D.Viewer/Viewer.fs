@@ -221,9 +221,10 @@ module ViewerApp =
                     | Some x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x)}}
                     | None -> m   
             | QuickLoad1,_,_ ->
+                Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
-                let path = @"E:\Aardwork\Exomars\_NEWVIEWER\Surfaces\Cape_Desire_RGB"
-                Scene.import' runtime signature [Surface.mk path] m |> lookAtData
+                //let path = @"E:\Aardwork\Exomars\_NEWVIEWER\Surfaces\Cape_Desire_RGB"
+                //Scene.import' runtime signature [Surface.mk path] m |> lookAtData
             | QuickLoad2,_,_ ->                
                 //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
                 (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore
@@ -585,7 +586,7 @@ module ViewerApp =
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
              DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
 
-             //button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
+             button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
              //button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
         ] 
                      

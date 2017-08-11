@@ -122,7 +122,7 @@ module Surface =
             |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)
             |> Box3d.ofSeq
 
-    let toSg (s:Surface) sg bb (kd:hmap<Box3d,ConcreteKdIntersectionTree>) = {
+    let toSg (s:Surface) sg bb (kd:hmap<Box3d,LazyTree>) = {
         surface = s       
         sceneGraph = sg
         globalBB = bb
@@ -170,16 +170,33 @@ module Surface =
                 |> List.fold (fun a b -> HMap.union a b) HMap.empty
 
         { model with surfaces = surfaces'; sgSurfaces = sgSurfaces }
+    
+    //let checkPath p =
+    //    if File.Exists
+    //        Some p
 
     open System.IO
+    let getSurfaceFolder (surface:Surface) (scenePath:option<string>) =        
+        if surface.relativePaths 
+        then
+            match scenePath with
+                | Some sp -> 
+                    let x = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
+                    let relPath = Path.Combine(x, surface.name)
+                    if Directory.Exists relPath then Some relPath else None
+                | None -> None
+        else
+            let p = surface.importPath
+            if Directory.Exists p then Some p else None        
+
     let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
         match scenePath with
-            | Some p ->
+            | Some sp ->
                 let surf = getSurface surfaceModel guid
                 match surf with
                     | Some s ->
                         // create target dir
-                        let targetSurfaceDir = Path.Combine((Path.GetDirectoryName p),"Surfaces")
+                        let targetSurfaceDir = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
                         if not (Directory.Exists targetSurfaceDir) then
                             Directory.CreateDirectory(targetSurfaceDir) |> ignore
 
@@ -189,19 +206,8 @@ module Surface =
 
                         // update opc paths and scene
                         let s' = { s with opcPaths = Utils.expandNamesToPaths targetDir s.opcNames; relativePaths = true }
-
                         updateSurface surfaceModel s'
-
-                        //let surfaces' = surfaceModel.surfaces |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')     
-
-                        //// update sgsurfaces as well !!!
-                        //let sgSurfaces' = 
-                        //    surfaceModel.sgSurfaces 
-                        //        |> HSet.toList 
-                        //        |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> { x with surface = s' })     
-                        //        |> HSet.ofList
-
-                        //{ surfaceModel with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
+                    
                     | None ->
                         Log.error "surface %s not found" (guid.ToString())
                         surfaceModel
@@ -210,6 +216,7 @@ module Surface =
                 surfaceModel
 
  module SurfaceApp =
+    open System.Diagnostics
     
     type Action =
         | SurfacePropertiesMessage  of SurfaceProperties.Action
@@ -218,14 +225,17 @@ module Surface =
         | MakeRelative              of Guid
         | RemoveSurface             of Guid
         | PickSurface               of SceneHit*string
+        | OpenFolder                of Guid
 
     type Model = SurfaceModel
 
-    let intersectHMap (kdTreeMap: hmap<Box3d, ConcreteKdIntersectionTree>) bb ray name= 
+    let intersectHMap (kdTreeMap: hmap<Box3d, LazyTree>) bb ray name= 
         let kdtree = kdTreeMap |> HMap.find bb
-        let kdi = KdTreeSet(kdtree) |> KdIntersectionTree
+        let kdi = KdTreeSet(kdtree.kdTree) |> KdIntersectionTree
         let mutable hit = ObjectRayHit.MaxRange
-
+        
+        //Triangle3d(
+        //TriangleSet
         let objFilter a b = true
         let hitFilter a b c d = false
         if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
@@ -245,6 +255,7 @@ module Surface =
                         Log.error "no kdtree loaded for %s" n
                         None
                     else
+                        //get bbs that are hit
                         let boundingBoxes =
                             kd  |> HMap.toSeq 
                                 |> Seq.map fst
@@ -253,7 +264,8 @@ module Surface =
                                        let mutable t = 0.0
                                        x.Intersects(r.Ray, &t)  
                                 )
- 
+                        
+                        //intersect corresponding kdtrees
                         let intersection =
                             boundingBoxes
                                 |> Seq.map(
@@ -299,7 +311,18 @@ module Surface =
                         let sg' = model.sgSurfaces |> HMap.remove id
                         
                         { model with surfaces = s'; sgSurfaces = sg' }
-                    | None -> model                 
+                    | None -> model             
+            | OpenFolder id ->
+                let surf = id |> Surface.getSurface model
+                match surf with
+                    | Some s -> 
+                        let path = Surface.getSurfaceFolder s scenePath
+                        match path with
+                            | Some p -> 
+                                Process.Start("explorer.exe", p) |> ignore
+                                model
+                            | None -> model
+                    | None -> model
             | _ -> model
 
     let viewSurfaceList (m:MSurfaceModel) = 
@@ -316,7 +339,7 @@ module Surface =
                                     | None -> Mod.constant C4b.White
                             
                             let bgc = sprintf "color: %s" (Html.ofC4b color)
-                            let! iconMap = 
+                            let! absRelIcons = 
                                 s.surface.relativePaths 
                                     |> Mod.map(
                                         fun x -> 
@@ -345,9 +368,13 @@ module Surface =
                                             clazz "home icon"; 
                                             onClick (fun x -> FlyToSurface (s.surface.guid |> Mod.force))
                                         ][]     
-                                        Incremental.i (iconMap)(AList.empty)
+                                        Incremental.i (absRelIcons)(AList.empty)
                                         i [
-                                            clazz "Remove icon"; 
+                                            clazz "folder icon"
+                                            onClick (fun x -> OpenFolder (s.surface.guid |> Mod.force))
+                                        ][]
+                                        i [
+                                            clazz "Remove icon red"; 
                                             onClick (fun x -> RemoveSurface (s.surface.guid |> Mod.force))
                                         ][]  
                                     ]

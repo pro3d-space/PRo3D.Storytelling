@@ -13,14 +13,24 @@ open Aardvark.VRVis
 open Aardvark.Application
 open Aardvark.Application.WinForms
 
+[<AutoOpen>]
+module KdTrees =
+    open Aardvark.VRVis
+
+    type LazyTree = {
+        kdTree        : ConcreteKdIntersectionTree
+        objectSetPath : option<string>
+    }
+
 module Viewer = 
     open Aardvark.Base.Rendering.Effects
     open FShade
+    open DomainModel
 
     let mutable hackRunner = None
 
     let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene) (createKdTrees) 
-        : (ISg * list<PatchHierarchy> * hmap<Box3d,ConcreteKdIntersectionTree>) =
+        : (ISg * list<PatchHierarchy> * hmap<Box3d,LazyTree>) =
 
         let runner = 
             match hackRunner with
@@ -41,30 +51,51 @@ module Viewer =
                 let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
                 yield PatchHierarchy.load p
             ] 
+        
+        let getPatchKdTreePath (h:PatchHierarchy) patchName = 
+            let rootpatch = h.tree |> QTree.getRoot 
+
+            let fileName = sprintf "%s-0.aakd" patchName            
+            Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]
 
         let getMasterKdTreePath (h:PatchHierarchy) =
             let rootpatch = h.tree |> QTree.getRoot 
-            
-            //look for master KdTree0
+                                    
             let fileName = sprintf "%s-0.aakd" rootpatch.info.Name            
             Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]
 
+        let loadKdtree p =
+            use b = new Aardvark.VRVis.BinaryReadingCoder(System.IO.File.OpenRead(p))
+            let mutable treeOida = Unchecked.defaultof<KdIntersectionTree>
+            b.CodeT(&treeOida)
+          //  treeOida
+            ConcreteKdIntersectionTree(treeOida, Trafo3d.Identity)
+            
+
         Log.startTimed "Creating KdTree"
-        let kdTreeFromHierarchy (h : PatchHierarchy) : hmap<Box3d,ConcreteKdIntersectionTree> =
+        let kdTreeFromHierarchy (h : PatchHierarchy) : hmap<Box3d,LazyTree> =
                         
             let path = h |> getMasterKdTreePath
             
             match System.IO.File.Exists(path) with
                 | true -> 
-                     use b = new Aardvark.VRVis.BinaryReadingCoder(System.IO.File.OpenRead(path))
-                     let mutable treeOida = Unchecked.defaultof<KdIntersectionTree>
-                     b.CodeT(&treeOida)
-                     let tree = ConcreteKdIntersectionTree(treeOida, Trafo3d.Identity)
-                     
-                     HMap.add tree.KdIntersectionTree.BoundingBox3d tree HMap.empty
+                     let tree = loadKdtree path                     
+                     let lazyTree = { kdTree = tree; objectSetPath = None }
+                     HMap.add tree.KdIntersectionTree.BoundingBox3d lazyTree HMap.empty
                 | false ->
-                     Log.warn "could not find master kdtree"
-                     HMap.empty
+                     Log.warn "could not find master kdtree - looking for patches"
+                     let lvl0Paths = h.tree |> QTree.getLeaves |> Seq.map(fun x -> x.info.Name |> getPatchKdTreePath h)
+                     Log.line "%A" lvl0Paths
+                     
+                     lvl0Paths 
+                        |> Seq.map loadKdtree 
+                        |> Seq.zip lvl0Paths
+                        |> Seq.map(
+                            fun (p, tree) ->
+                                let lazyTree = { kdTree = tree; objectSetPath = Some p }
+                                (tree.KdIntersectionTree.BoundingBox3d, lazyTree)
+                        )
+                        |> HMap.ofSeq                     
         
         let mapsPerHierarchy =
             [| for h in patchHierarchies do

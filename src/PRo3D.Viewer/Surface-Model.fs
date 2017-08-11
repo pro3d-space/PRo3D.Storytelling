@@ -34,7 +34,7 @@ type SgSurface = {
 
     globalBB    : Box3d
     sceneGraph  : ISg
-    kdTree      : hmap<Box3d,ConcreteKdIntersectionTree>
+    kdTree      : hmap<Box3d,LazyTree>
 }
 
 [<DomainType>]

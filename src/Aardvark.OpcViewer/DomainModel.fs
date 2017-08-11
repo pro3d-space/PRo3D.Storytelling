@@ -3,10 +3,7 @@ open Aardvark.Base
 
 //type Group<'a, 'b> =
 //    | Group of list<Group<'a, 'b>> * 'b * 'a
-
-
-    
-
+ 
 [<AutoOpen>]
 module Navigations = 
     
@@ -63,6 +60,8 @@ module SceneObjects =
 
 [<AutoOpen>]
 module Surfaces = 
+    open Aardvark.VRVis
+  
     type OPC = {
         Id          : string
     }
