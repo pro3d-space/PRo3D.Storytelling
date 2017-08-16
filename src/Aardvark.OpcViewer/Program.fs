@@ -16,9 +16,10 @@ open Aardvark.Application.WinForms
 [<AutoOpen>]
 module KdTrees =
     open Aardvark.VRVis
-
+    
     type LazyTree = {
         kdTree        : ConcreteKdIntersectionTree
+        affine        : Trafo3d
         objectSetPath : option<string>
     }
 
@@ -58,6 +59,10 @@ module Viewer =
             let fileName = sprintf "%s-0.aakd" patchName            
             Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]
 
+        let getPatchPositionPath (h:PatchHierarchy) patchName =
+            let fileName = "positions.aara"
+            Path.combine [h.baseDir; "patches"; patchName; fileName]
+
         let getMasterKdTreePath (h:PatchHierarchy) =
             let rootpatch = h.tree |> QTree.getRoot 
                                     
@@ -75,27 +80,43 @@ module Viewer =
         Log.startTimed "Creating KdTree"
         let kdTreeFromHierarchy (h : PatchHierarchy) : hmap<Box3d,LazyTree> =
                         
-            let path = h |> getMasterKdTreePath
+            let path = 
+                h |> getMasterKdTreePath
             
-            match System.IO.File.Exists(path) with
-                | true -> 
+            let kd0Paths = 
+                h.tree |> QTree.getLeaves |> Seq.map(fun x -> x.info.Name |> getPatchKdTreePath h)
+
+            let kd0PathsExist = 
+                kd0Paths |> Seq.forall(System.IO.File.Exists)
+            
+            match (System.IO.File.Exists(path), kd0PathsExist) with
+                | (true, false) -> 
+                     Log.line "Found master kdtree"
                      let tree = loadKdtree path                     
-                     let lazyTree = { kdTree = tree; objectSetPath = None }
+                     let lazyTree = { kdTree = tree; objectSetPath = None; affine = Trafo3d.Identity }
                      HMap.add tree.KdIntersectionTree.BoundingBox3d lazyTree HMap.empty
-                | false ->
-                     Log.warn "could not find master kdtree - looking for patches"
-                     let lvl0Paths = h.tree |> QTree.getLeaves |> Seq.map(fun x -> x.info.Name |> getPatchKdTreePath h)
-                     Log.line "%A" lvl0Paths
-                     
-                     lvl0Paths 
+                | (true, true) ->                                    
+                     Log.line "%A" kd0Paths
+                     Log.line "Found master kdtree and patch trees"
+                     let patchPaths = 
+                        h.tree |> QTree.getLeaves |> Seq.map(fun x -> x.info.Name |> getPatchPositionPath h)
+
+                     let patchInfos =
+                         h.tree |> QTree.getLeaves |> Seq.map(fun x -> x.info)
+
+                     kd0Paths 
                         |> Seq.map loadKdtree 
-                        |> Seq.zip lvl0Paths
+                        |> Seq.zip patchInfos
                         |> Seq.map(
-                            fun (p, tree) ->
-                                let lazyTree = { kdTree = tree; objectSetPath = Some p }
+                            fun (info, tree) ->
+                                let p = info.Name |> getPatchPositionPath h
+                                let lazyTree = { kdTree = tree; objectSetPath = Some p; affine = info.Local2Global }
                                 (tree.KdIntersectionTree.BoundingBox3d, lazyTree)
                         )
                         |> HMap.ofSeq                     
+                | _ ->
+                    Log.warn "Could not find level 0 kdtrees"
+                    HMap.empty
         
         let mapsPerHierarchy =
             [| for h in patchHierarchies do

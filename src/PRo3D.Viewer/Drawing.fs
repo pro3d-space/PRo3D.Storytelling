@@ -653,7 +653,7 @@ module DrawingApp =
                        
             Sg.ofList [
                 lines points anno.color.c anno.thickness.value anno.modelTrafo anno.key;         
-            //    dots anno.points c view                    
+                dots anno.points c view                    
             //    text anno
                 drawDns anno view conf |> Sg.onOff anno.showDns
             ] |> Sg.onOff anno.visible

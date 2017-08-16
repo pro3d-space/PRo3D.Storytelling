@@ -227,11 +227,49 @@ module Surface =
         | PickSurface               of SceneHit*string
         | OpenFolder                of Guid
 
-    type Model = SurfaceModel
+    type Model = SurfaceModel    
+
+    let loadObjectSet (lazyTree : LazyTree) = 
+        
+        match lazyTree.objectSetPath, (lazyTree.kdTree.KdIntersectionTree.ObjectSet == Unchecked.defaultof<_>) with
+            | Some p, true -> 
+                let positions = p |> Aara.fromFile<V3f>
+
+                let data = 
+                    positions.Data |> Array.map (fun x ->  x.ToV3d() |> lazyTree.affine.Forward.TransformPos)
+
+                let index = Aara.createIndex (positions.AsMatrix())
+                
+                let triangles = 
+                    index 
+                        |> Seq.map(fun x -> data.[x])
+                        |> Seq.chunkBySize 3                               
+                        |> Seq.map(fun x -> Triangle3d(x))
+                        |> TriangleSet                                                                
+               
+                
+
+                //Triangle3d
+                let mutable kdTree' = lazyTree.kdTree                
+                kdTree'.KdIntersectionTree.ObjectSet <- triangles
+                kdTree'
+                //let bla = KdTreeSet([kdTree'])
+                //let bla = KdIntersectionTree(bla)
+                //let bla = ConcreteKdIntersectionTree(bla, Trafo3d.Identity)
+
+                //Log.warn "%A" positions                
+
+                //{ lazyTree with kdTree = bla }
+            | _, _ ->
+                lazyTree.kdTree
+
 
     let intersectHMap (kdTreeMap: hmap<Box3d, LazyTree>) bb ray name= 
-        let kdtree = kdTreeMap |> HMap.find bb
-        let kdi = KdTreeSet(kdtree.kdTree) |> KdIntersectionTree
+        Log.error "checking bb %A" bb
+
+        let kdtree = kdTreeMap |> HMap.find bb |> loadObjectSet        
+
+        let kdi = kdtree.KdIntersectionTree //KdTreeSet(kdtree.kdTree) |> KdIntersectionTree
         let mutable hit = ObjectRayHit.MaxRange
         
         //Triangle3d(
@@ -239,7 +277,8 @@ module Surface =
         let objFilter a b = true
         let hitFilter a b c d = false
         if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
-            Log.warn "hit for %s" name
+            let point = ray.Ray.GetPointOnRay(hit.RayHit.T)
+            Log.warn "hit for %s at %A" name point
             Some (hit.RayHit.T, name)
         else
             Log.error "no hit for %s" name
@@ -260,9 +299,9 @@ module Surface =
                             kd  |> HMap.toSeq 
                                 |> Seq.map fst
                                 |> Seq.filter(
-                                    fun x -> 
-                                       let mutable t = 0.0
-                                       x.Intersects(r.Ray, &t)  
+                                    fun x -> true
+                                       //let mutable t = 0.0
+                                       //x.Intersects(r.Ray, &t)  
                                 )
                         
                         //intersect corresponding kdtrees
@@ -274,7 +313,7 @@ module Surface =
                                 |> Seq.sortByDescending(fun (t,n)-> t)
                                 |> Seq.tryHead
                         intersection
-                )                                               
+                )
             |> Seq.filter(fun (_,d) -> d.IsSome)
             |> Seq.map(fun (_,d) -> d.Value)
             |> Seq.sortByDescending(fun (t,n)-> t)

@@ -17,7 +17,7 @@ open Aardvark.Base
 open Aardvark.Opc
 
 [<AutoOpen>]
-module private Aara =
+module Aara =
 
     let readerChars2String (f : Stream)  = 
         let cnt = f.ReadByte()
@@ -147,15 +147,17 @@ module Patch =
 
         let index = createIndex (positions.AsMatrix())
 
-        IndexedGeometry(
-            Mode = IndexedGeometryMode.TriangleList,
-            IndexArray = index,
-            IndexedAttributes =
-                SymDict.ofList [
-                    DefaultSemantic.Positions, positions.Data :> Array
-                    DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
-                ]
-        ), sw.MicroTime
+        let geometry =
+            IndexedGeometry(
+                Mode = IndexedGeometryMode.TriangleList,
+                IndexArray = index,
+                IndexedAttributes =
+                    SymDict.ofList [
+                        DefaultSemantic.Positions, positions.Data :> Array
+                        DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
+                    ])
+                    
+        geometry, sw.MicroTime
 
     let extractTexture (baseDir : string) (patchInfo : PatchFileInfo) =
         let t = patchInfo.Textures |> List.head
