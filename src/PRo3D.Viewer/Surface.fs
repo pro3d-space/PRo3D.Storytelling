@@ -264,7 +264,9 @@ module Surface =
                 lazyTree.kdTree
 
 
-    let intersectHMap (kdTreeMap: hmap<Box3d, LazyTree>) bb ray name= 
+    let intersectHMap (kdTreeMap: hmap<Box3d, LazyTree>) bb (ray : FastRay3d) name= 
+
+        Log.error "ray %A" ray.Ray
         Log.error "checking bb %A" bb
 
         let kdtree = kdTreeMap |> HMap.find bb |> loadObjectSet        
@@ -299,9 +301,9 @@ module Surface =
                             kd  |> HMap.toSeq 
                                 |> Seq.map fst
                                 |> Seq.filter(
-                                    fun x -> true
-                                       //let mutable t = 0.0
-                                       //x.Intersects(r.Ray, &t)  
+                                    fun x -> 
+                                       let mutable t = 0.0
+                                       x.Intersects(r.Ray, &t)
                                 )
                         
                         //intersect corresponding kdtrees

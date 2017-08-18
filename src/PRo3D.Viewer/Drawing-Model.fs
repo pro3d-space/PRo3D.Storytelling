@@ -83,7 +83,7 @@ module DrawingModel =
 
         working     = None
         projection  = Projection.Viewpoint
-        geometry    = Geometry.Polyline
+        geometry    = Geometry.Point
         semantic    = Semantic.Horizon3
 
         annotations = PList.empty

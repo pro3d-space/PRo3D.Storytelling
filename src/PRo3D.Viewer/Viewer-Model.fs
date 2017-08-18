@@ -26,9 +26,9 @@ type Scene = {
     referenceSystem : ReferenceSystem
 }
  
-//type ScenePaths = {
-//    SurfaceFolder : string
-//}
+type Recent = {
+    recentScenes : list<string>
+}
 
 type Properties = 
     | AnnotationProperties of Annotation
@@ -46,7 +46,8 @@ type Model = {
     drawing         : Drawing.DrawingModel   
     properties      : Properties
     interaction     : Interactions
-    picking         : bool       
+    picking         : bool
+    recent          : Recent
 
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
@@ -80,7 +81,9 @@ module Viewer =
         properties      = NoProperties
         interaction     = Interactions.DrawAnnotation
         picking         = false
-                
+        
+        recent          = { recentScenes = [] }
+
         past            = None
         future          = None
     }

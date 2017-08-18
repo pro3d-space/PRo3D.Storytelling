@@ -91,7 +91,8 @@ module Aara =
         use fs = File.OpenRead(s)
         loadFromStream<'a> fs
 
-    let inline isNan (v : V3f) = V3f.AnyEqual(nanf,v)
+    let inline isNan (v : V3f) = 
+        v.X.IsNaN() || v.Y.IsNaN() || v.Z.IsNaN()
 
     let createIndex (vi : Matrix<V3f>) =
         let dx = vi.Info.DX

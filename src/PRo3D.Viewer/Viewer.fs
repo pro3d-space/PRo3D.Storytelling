@@ -91,18 +91,25 @@ module Scene =
         let m = { m with scene = s }
 
         load runtime signature s m
-
+            
     let loadLastScene m runtime signature =
-        match fileExists "./last" with
+        match fileExists "./recent" with
             | Some path  ->
                 try 
-                   loadScene path m runtime signature
-
+                    let r = Serialization.loadAs<Recent> path
+                    match r.recentScenes |> List.tryHead with
+                        | Some scenePath ->
+                            loadScene scenePath m runtime signature                            
+                        | None -> 
+                            Log.warn("No recent scene found")
+                            m
                 with e ->
                     Aardvark.Base.Log.warn "could not restore %A. using empty scene" p
-                    System.IO.File.Delete path
+                  //  System.IO.File.Delete path
                     m
-            | _ -> m
+            | _ -> 
+                Log.warn("recent scene file does not exist (yet)")
+                m
  
 module ViewerApp =
     open Surface
@@ -178,6 +185,13 @@ module ViewerApp =
 
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
+
+    let stashAndSaveRecent p (model : Model) =
+        let scenePaths = p :: model.recent.recentScenes
+        let recent = { model.recent with recentScenes = scenePaths }
+        Serialization.save "./recent" recent |> ignore
+
+        {model with recent = recent}
     
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
@@ -274,24 +288,21 @@ module ViewerApp =
                         match Dialogs.saveDialog w with
                             | None -> m
                             | Some p -> 
-
-                                let s' = { m.scene with scenePath = Some p}
-                                Serialization.save "./last" s' |> ignore
-                                { m with scene = Serialization.save p s' }
-                    | Some path ->
-                        Serialization.save "./last" m.scene |> ignore
-                        { m with scene = Serialization.save path m.scene }
+                                let s' = { m.scene with scenePath = Some p}                               
+                                { m with scene = Serialization.save p s'; } |> stashAndSaveRecent p
+                    | Some path ->                        
+                        { m with scene = Serialization.save path m.scene } |> stashAndSaveRecent path
             | SaveAs,_,_ ->
                 match Dialogs.saveDialog w with
                     | None -> m
                     | Some p -> 
-                        let s' = { m.scene with scenePath = Some p}        
-                        Serialization.save "./last" s' |> ignore
-                        { m with scene = Serialization.save p s' }
+                        let s' = { m.scene with scenePath = Some p}                                
+                        { m with scene = Serialization.save p s' } |> stashAndSaveRecent p
             | OpenScene,_,_ ->
                 match Dialogs.openDialog w with
                     | None -> m
-                    | Some path -> Scene.loadScene path m runtime signature
+                    | Some path -> 
+                        Scene.loadScene path m runtime signature |> stashAndSaveRecent path
             | NewScene,_,_ ->
                 PRo3D.Viewer.Viewer.initial     //   { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
             | KeyDown k, _, _ ->
@@ -648,7 +659,7 @@ module ViewerApp =
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        
-     //   let m = Scene.loadLastScene m runtime signature        
+        let m = Scene.loadLastScene m runtime signature        
        // let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\Cape_Desire_RGB"
         //let m = Surface.import' runtime signature [Surface.mk path] m |> lookAtData
         
