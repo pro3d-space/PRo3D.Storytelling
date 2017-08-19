@@ -12,6 +12,7 @@ module ReferenceSystemApp =
 
     open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.SceneGraph.FShadeSceneGraph
+    open PRo3D.ReferenceSystem
    
     type Action =
         | InferCoordSystem of V3d
@@ -22,10 +23,11 @@ module ReferenceSystemApp =
         | SetArrowSize     of double
     //    | SetViewConfig    of ViewConfigModel
 
-    type InnerConfig<'a> =
-        {
-            arrowSize : Lens<'a,double>
-        } 
+    //type InnerConfig<'a> =
+    //    {
+    //        arrowLength    : Lens<'a,double>
+    //        arrowThickness : Lens<'a,double>
+    //    } 
     
     let upVector (point:V3d) = point.Normalized
     
@@ -33,7 +35,7 @@ module ReferenceSystemApp =
         let east = V3d.OOI.Cross(up)
         up.Cross(east)
     
-    let update<'a> (bigConfig : 'a) (innerConfig : InnerConfig<'a>) (model : ReferenceSystem) (act : Action) =
+    let update<'a> (bigConfig : 'a) (config : ReferenceSystemConfig<'a>) (model : ReferenceSystem) (act : Action) =
         match act with
             | InferCoordSystem p ->
                 let up = upVector p
@@ -45,7 +47,10 @@ module ReferenceSystemApp =
                 let up' = ReferenceSystem.setV3d up.value.Normalized
                 { model with up =  up'}
             | SetNorth  n     -> { model with north = n }
-            | ToggleVisible   -> { model with isVisible = not model.isVisible}         
+            | ToggleVisible   -> { model with isVisible = not model.isVisible}
+            //| SetArrowSize d -> // expected to return big config instead of model, not possible to hold own state
+            //    let blar = model.arrowLength.Set(bigConfig, d) 
+            //    mocel
             | _ -> model
 
     module Sg =
@@ -97,16 +102,17 @@ module ReferenceSystemApp =
         let point (pos:IMod<V3d>) (color:IMod<C4b>) (cam:IMod<CameraView>) =
             aset{
                 let! pos = pos
-                yield DrawingApp.Sg.dots (alist{yield pos}) color cam //there is also a method for drawing a single dot.
+                yield Sg.dots (alist{yield pos}) color cam //there is also a method for drawing a single dot.
             } |> Sg.set
 
-        let view (model:MReferenceSystem) (cam:IMod<CameraView>) =
+        let view (model:MReferenceSystem) (near : IMod<float>) (length : IMod<float>) (thickness : IMod<float>) (cam:IMod<CameraView>) =
                             
-                Sg.ofList [
-                    point model.origin (Mod.constant C4b.Red) cam
-                    directionMarker model.origin model.up.value (Mod.constant C4b.Blue) model.config.nearPlane.value model.config.arrowLength.value model.config.arrowThickness.value cam
-                    directionMarker model.origin model.north    (Mod.constant C4b.Red)  model.config.nearPlane.value model.config.arrowLength.value model.config.arrowThickness.value cam
-                ] |> Sg.onOff(model.isVisible)
+            Sg.ofList [
+                point model.origin (Mod.constant C4b.Red) cam
+                directionMarker model.origin model.up.value (Mod.constant C4b.Blue) near length thickness cam
+                directionMarker model.origin model.north    (Mod.constant C4b.Red)  near length thickness cam
+            ] |> Sg.onOff(model.isVisible)
+
     module UI =
         let view (model:MReferenceSystem) =
             require Html.semui (

@@ -11,6 +11,7 @@ module Navigation =
     open Aardvark.Base.Incremental
     open Aardvark.Base.Rendering
     open Aardvark.Base.Camera
+    open PRo3D.Navigation2
    // open Navigation.Sg
 
     type Action =
@@ -75,7 +76,7 @@ module Navigation =
             let point =
                 aset{
                 let! pos = model.exploreCenter
-                yield DrawingApp.Sg.dots (alist{yield pos}) (Mod.constant C4b.Magenta) model.camera.view
+                yield PRo3D.Sg.dots (AList.single pos) (Mod.constant C4b.Magenta) model.camera.view
                 } |> Sg.set
             Sg.ofList [point]
            

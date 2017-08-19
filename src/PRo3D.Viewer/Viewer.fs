@@ -22,6 +22,8 @@ open Aardvark.VRVis
 open MBrace.FsPickler
 open System.IO
 
+open PRo3D.Navigation2
+open PRo3D.ReferenceSystem
 open PRo3D.Surfaces
 open PRo3D.Viewer
 
@@ -179,7 +181,7 @@ module ViewerApp =
             
     let updateAllTheConfigs m c =
         { m with scene = { m.scene with config = c;
-                                                referenceSystem = { m.scene.referenceSystem with config = c};
+                                               // referenceSystem = { m.scene.referenceSystem with config = c};
                                                 navigation = { m.scene.navigation with config = c } };
                          drawing = { m.drawing with config = c } }
 
@@ -350,8 +352,11 @@ module ViewerApp =
             | SetInteraction t,_,_ -> { m with interaction = t }    
             | ReferenceSystemMessage a,_,_ ->                 
                 
-                let innerConfig : ReferenceSystemApp.InnerConfig<ViewConfigModel> =
-                        { arrowSize = ViewConfigModel.Lens.arrowLength |. NumericInput.Lens.value }
+                let innerConfig : ReferenceSystemConfig<ViewConfigModel> =
+                    { 
+                            arrowLength = ViewConfigModel.Lens.arrowLength |. NumericInput.Lens.value 
+                            arrowThickness = ViewConfigModel.Lens.arrowThickness |. NumericInput.Lens.value 
+                    }
 
                 let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
                 let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
@@ -401,8 +406,7 @@ module ViewerApp =
                         Mod.map createSg surface.sceneGraph 
                         |> Sg.dynamic          
                         |> Sg.uniform "selected" isSelected
-                        |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
-                     //   |> Sg.uniform "LodVisEnabled" (Mod.constant true)                        
+                        |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))                                 
                         |> Sg.onOff(surface.surface.isVisible)                             
                         |> Sg.LodParameters( 
                             adaptive {
@@ -486,7 +490,12 @@ module ViewerApp =
                                 |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
 
                         let orientations =
-                            ReferenceSystemApp.Sg.view m.scene.referenceSystem m.scene.navigation.camera.view
+                            ReferenceSystemApp.Sg.view 
+                                m.scene.referenceSystem 
+                                m.scene.config.nearPlane.value 
+                                m.scene.config.arrowLength.value 
+                                m.scene.config.arrowThickness.value 
+                                m.scene.navigation.camera.view
 
                         let exploreCenter =
                             Navigation.Sg.view m.scene.navigation

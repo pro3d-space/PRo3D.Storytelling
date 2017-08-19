@@ -272,8 +272,7 @@ type MeasurementsImporterModel = {
     annotations : plist<Annotation>
 }
 
-
-
+   
 
 [<DomainType>]
 type ViewConfigModel = {
@@ -357,67 +356,8 @@ module ViewConfigModel =
         maxDipAngle = initMaxAngle
         lodColoring = false
     }
-      
-[<DomainType>]
-type ReferenceSystem = {    
+              
 
-    origin      : V3d
-    north       : V3d
-    up          : V3dInput
-    isVisible   : bool
-    config      : ViewConfigModel
-}
 
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module ReferenceSystem =
-    let initNum = {
-        value   = 0.0
-        min     = -1.0
-        max     = +1.0
-        step    = 0.1
-        format  = "{0:0.000}"
-    }
-
-    let setV3d (v : V3d) = {
-        x = { initNum with value = v.X }
-        y = { initNum with value = v.Y }
-        z = { initNum with value = v.Z }
-        value = v    
-    }
-
-    let initArrowSize = {
-        value   = 1.0
-        min     = 0.1
-        max     = 10.0
-        step    = 0.1
-        format  = "{0:0.0}"
-    }
-
-    let initial = {
-        origin = V3d.OOO
-        north = V3d.IOO
-        up = setV3d V3d.OOI
-        isVisible = true
-        config = ViewConfigModel.initial
-        }   
-        
-[<DomainType>]
-type NavigationModel = {
-    camera : CameraControllerState
-    navigationMode : NavigationMode  
-    coordinates : ReferenceSystem
-    exploreCenter : V3d
-    config : ViewConfigModel
-}
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module NavigationModel =
-    let initial = {
-        camera = CameraController.initial  
-        navigationMode =  NavigationMode.FreeFly
-        coordinates = ReferenceSystem.initial
-        exploreCenter = V3d.Zero // make option
-        config = ViewConfigModel.initial
-        }
 
 

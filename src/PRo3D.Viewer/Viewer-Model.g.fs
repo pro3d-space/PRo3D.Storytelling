@@ -13,12 +13,12 @@ module Mutable =
     type MScene(__initial : PRo3D.Viewer.Scene) =
         inherit obj()
         let mutable __current = __initial
-        let _navigation = PRo3D.Mutable.MNavigationModel.Create(__initial.navigation)
+        let _navigation = PRo3D.Navigation2.Mutable.MNavigationModel.Create(__initial.navigation)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _surfacesModel = PRo3D.Surfaces.Mutable.MSurfaceModel.Create(__initial.surfacesModel)
         let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
         let _scenePath = MOption.Create(__initial.scenePath)
-        let _referenceSystem = PRo3D.Mutable.MReferenceSystem.Create(__initial.referenceSystem)
+        let _referenceSystem = PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Create(__initial.referenceSystem)
         
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
@@ -31,12 +31,12 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current, v)) then
                 __current <- v
                 
-                PRo3D.Mutable.MNavigationModel.Update(_navigation, v.navigation)
+                PRo3D.Navigation2.Mutable.MNavigationModel.Update(_navigation, v.navigation)
                 ResetMod.Update(_interaction,v.interaction)
                 PRo3D.Surfaces.Mutable.MSurfaceModel.Update(_surfacesModel, v.surfacesModel)
                 PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
                 MOption.Update(_scenePath, v.scenePath)
-                PRo3D.Mutable.MReferenceSystem.Update(_referenceSystem, v.referenceSystem)
+                PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Update(_referenceSystem, v.referenceSystem)
                 
         
         static member Create(__initial : PRo3D.Viewer.Scene) : MScene = MScene(__initial)
@@ -54,7 +54,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let navigation =
-                { new Lens<PRo3D.Viewer.Scene, PRo3D.NavigationModel>() with
+                { new Lens<PRo3D.Viewer.Scene, PRo3D.Navigation2.NavigationModel>() with
                     override x.Get(r) = r.navigation
                     override x.Set(r,v) = { r with navigation = v }
                     override x.Update(r,f) = { r with navigation = f r.navigation }
@@ -84,7 +84,7 @@ module Mutable =
                     override x.Update(r,f) = { r with scenePath = f r.scenePath }
                 }
             let referenceSystem =
-                { new Lens<PRo3D.Viewer.Scene, PRo3D.ReferenceSystem>() with
+                { new Lens<PRo3D.Viewer.Scene, PRo3D.ReferenceSystem.ReferenceSystem>() with
                     override x.Get(r) = r.referenceSystem
                     override x.Set(r,v) = { r with referenceSystem = v }
                     override x.Update(r,f) = { r with referenceSystem = f r.referenceSystem }
