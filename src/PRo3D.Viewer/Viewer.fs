@@ -263,12 +263,13 @@ module ViewerApp =
                                     
                 match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray with
                     | Some (t,n) -> 
-                        let hit = r.GetPointOnRay(t)
-                        //Log.line "[PickSurface] %s %A" n hit
+                        let hit = r.GetPointOnRay(t)                        
                         
                         match m.interaction with
                             | Interactions.DrawAnnotation ->
+                                Log.startTimed "kdtree intersect %s" n
                                 let drawing = DrawingApp.update w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,n))
+                                Log.stop()
                                 { m with drawing = drawing } |> stash
                             | Interactions.PlaceCoordinateSystem -> 
                                 let refSystem = 

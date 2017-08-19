@@ -29,8 +29,7 @@ module Navigation =
                 
                 { model with camera = ArcBallController.update model.camera a }
             | FreeFlyAction a ->
-                let cam' = CameraController.update model.camera a 
-               // Log.warn "%A" a
+                let cam' = CameraController.update model.camera a                
                 { model with camera = { cam' with sensitivity = model.config.navigationSensitivity.value } }
             | SetNavigationMode mode ->
                 match mode with

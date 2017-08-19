@@ -247,10 +247,8 @@ module Surface =
                 let data = 
                     positions.Data |> Array.map (fun x ->  x.ToV3d() |> lazyTree.affine.Forward.TransformPos)
 
-                let invalidIndices = getInvalidIndices data
-              //  let index = Aara.createIndex2 (positions.AsMatrix()) invalidIndices
-                let index = PRo3DCSharp.ComputeIndexArray(positions.Size.XY.ToV2i(), invalidIndices)
-                Log.warn "%A" invalidIndices.Length
+                let invalidIndices = getInvalidIndices data              
+                let index = PRo3DCSharp.ComputeIndexArray(positions.Size.XY.ToV2i(), invalidIndices)                
                 
                 let triangles = 
                     index 
@@ -259,44 +257,27 @@ module Surface =
                         |> Seq.map(fun x -> Triangle3d(x))
                         |> Seq.filter(fun x -> triangleIsNan x |> not) 
                         |> TriangleSet                                                                
-               
-                
 
-                //Triangle3d
                 let mutable kdTree' = lazyTree.kdTree                
                 kdTree'.KdIntersectionTree.ObjectSet <- triangles
-                kdTree'
-                //let bla = KdTreeSet([kdTree'])
-                //let bla = KdIntersectionTree(bla)
-                //let bla = ConcreteKdIntersectionTree(bla, Trafo3d.Identity)
-
-                //Log.warn "%A" positions                
-
-                //{ lazyTree with kdTree = bla }
+                kdTree'            
             | _, _ ->
                 lazyTree.kdTree
 
 
     let intersectHMap (kdTreeMap: hmap<Box3d, LazyTree>) bb (ray : FastRay3d) name= 
 
-        Log.error "ray %A" ray.Ray
-        Log.error "checking bb %A" bb
-
         let kdtree = kdTreeMap |> HMap.find bb |> loadObjectSet        
 
-        let kdi = kdtree.KdIntersectionTree //KdTreeSet(kdtree.kdTree) |> KdIntersectionTree
+        let kdi = kdtree.KdIntersectionTree 
         let mutable hit = ObjectRayHit.MaxRange
-        
-        //Triangle3d(
-        //TriangleSet
+                
         let objFilter a b = true
         let hitFilter a b c d = false
         if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
-            let point = ray.Ray.GetPointOnRay(hit.RayHit.T)
-            Log.warn "hit for %s at %A" name point
+            let point = ray.Ray.GetPointOnRay(hit.RayHit.T)            
             Some (hit.RayHit.T, name)
-        else
-            Log.error "no hit for %s" name
+        else            
             None
 
     let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) = 
@@ -309,6 +290,7 @@ module Surface =
                         Log.error "no kdtree loaded for %s" n
                         None
                     else
+                        
                         //get bbs that are hit
                         let boundingBoxes =
                             kd  |> HMap.toSeq 
@@ -327,6 +309,7 @@ module Surface =
                                 |> Seq.choose(fun x -> x)
                                 |> Seq.sortByDescending(fun (t,n)-> t)
                                 |> Seq.tryHead
+                        
                         intersection
                 )
             |> Seq.filter(fun (_,d) -> d.IsSome)
