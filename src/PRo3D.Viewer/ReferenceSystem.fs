@@ -8,8 +8,7 @@ module ReferenceSystemApp =
     open System
     
     open Aardvark.Base.Incremental
-    open Aardvark.Base.Rendering
-    open PRo3D.Drawing
+    open Aardvark.Base.Rendering    
 
     open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.SceneGraph.FShadeSceneGraph
@@ -67,7 +66,7 @@ module ReferenceSystemApp =
                 let! dirs = dir
                 
                 let lineLengthScale = 
-                        DrawingApp.Sg.computeInvariantScale cam near pos arrowLength (Mod.constant 60.0)
+                    Sg.computeInvariantScale cam near pos arrowLength (Mod.constant 60.0)
                 let scaledLength = 
                     Mod.map2(fun (str:V3d) s -> str.Normalized * s) dir lineLengthScale
 
@@ -91,7 +90,7 @@ module ReferenceSystemApp =
                 let radius = lineLengthScale |> Mod.map(fun d -> d * 0.05)
                 let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
 
-                yield DrawingApp.Sg.lines al color arrowThickness posTrafo (Mod.constant Guid.Empty)
+                yield PRo3D.Sg.lines al color arrowThickness posTrafo (Mod.constant Guid.Empty)
                 yield coneISg color radius coneSize coneTrafo //(Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + scaledLength))) // 
             } |> Sg.set 
                         

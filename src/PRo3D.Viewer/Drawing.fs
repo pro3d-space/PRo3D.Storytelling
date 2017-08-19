@@ -409,50 +409,6 @@ module DrawingApp =
                         }                       
                         |> Sg.trafo(trafo) 
 
-        let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =
-            adaptive {
-                let! p = p
-                let! v = view
-                let distV = p - v.Location
-                let distF = V3d.Dot(v.Forward, distV)
-                return distF * size / 800.0 //needs hfov at this point
-            }
-
-        let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
-            adaptive {
-                let! p = p
-                let! v = view
-                let! near = near
-                let! size = size
-                let! hfov = hfov
-                let hfov_rad = Conversion.RadiansFromDegrees(hfov)
-               
-                let wz = Fun.Tan(hfov_rad / 2.0) * near * size
-                let dist = V3d.Distance(p, v.Location)
-
-                return ( wz / near ) * dist
-            }
-
-        let mkDotISg color size trafo = 
-            Sg.sphere 5 color size
-               |> Sg.noEvents
-               |> Sg.trafo(trafo) 
-
-        let edgeLines (close : bool) (points : alist<V3d>) (trafo:IMod<Trafo3d>) =
-            points
-                |> AList.map(fun d -> trafo.GetValue().Backward.TransformPos d)
-                |> AList.toMod 
-                |> Mod.map (fun l ->
-                    let list = PList.toList l
-                    let head = list |> List.tryHead
-                    
-                    match head with
-                        | Some h -> if close then list @ [h] else list
-                                        |> List.pairwise
-                                        |> List.map (fun (a,b) -> new Line3d(a,b))
-                                        |> List.toArray
-                        | None -> [||])
-            
         let brush (hovered : IMod<Trafo3d option>) = 
             let trafo =
                 hovered |> Mod.map (fun o -> 
@@ -461,66 +417,12 @@ module DrawingApp =
                         | None -> Trafo3d.Scale(V3d.Zero)
                 )
 
-            mkDotISg (Mod.constant C4b.Red) (Mod.constant 0.05) trafo
+            Sg.mkDotISg (Mod.constant C4b.Red) (Mod.constant 0.05) trafo
             |> Sg.effect [
                 toEffect <| Aardvark.Opc.Shader.stableTrafo
                 toEffect <| DefaultSurfaces.vertexColor
                 toEffect <| DefaultSurfaces.simpleLighting
-            ]
-       
-        let dots (points : alist<V3d>) (color : IMod<C4b>) (view : IMod<CameraView>) = 
-            
-            aset {
-                for p in points |> ASet.ofAList do
-                    let scale = computeScale view (Mod.constant p) 5.0
-                    //let scale = Mod.constant 0.6
-                    yield mkDotISg color scale (Mod.constant (Trafo3d.Translation(p)))
-            } 
-            |> Sg.set
-            |> Sg.effect [
-                toEffect <| Aardvark.Opc.Shader.stableTrafo
-                toEffect <| DefaultSurfaces.vertexColor
-                toEffect <| DefaultSurfaces.simpleLighting
-            ]
-           
-        let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
-
-        let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
-            let box = points |> AList.toMod |> Mod.map (fun d -> if d.Count > 2 then Box3d d else Box3d.Unit)
-
-            let edges = edgeLines false points trafo
-
-            //invisible cylinders for polyline picking
-            let cylinders = 
-                edges 
-                    |> Mod.map (fun e ->
-                            [
-                                for edge in e do                                    
-                                    let v = edge.P1 - edge.P0
-                                    let c = Cylinder3d(edge.P0,v.Normalized, v.Length, 0.25)
-                                    yield 
-                                        Sg.ofList[]
-                                            |> Sg.noEvents                                                                                          
-                                            |> Sg.pickable (PickShape.Cylinder c)
-                                            |> Sg.trafo trafo
-                                            |> Sg.withEvents [
-                                                Sg.onMouseDownEvt (fun sceneHit -> Select (id |> Mod.force))]
-                            ] |> Sg.ofList)
-                    |> Sg.dynamic
-                                                            
-            edges
-                |> Sg.lines color
-                |> Sg.noEvents
-                |> Sg.shader {
-                    do! Aardvark.Opc.Shader.stableTrafo
-                    do! DefaultSurfaces.vertexColor
-                    do! DefaultSurfaces.thickLine    
-                }                               
-                |> Sg.trafo trafo
-                |> Sg.uniform "LineWidth" width
-                |> Sg.pass linePass
-                |> Sg.depthTest (Mod.constant DepthTestMode.None)
-              //  |> Sg.andAlso cylinders               
+            ]                                                       
         
         let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) (conf:MViewConfigModel)=                         
             aset {
@@ -534,10 +436,10 @@ module DrawingApp =
                             DipAndStrike.dipColor x.dipAngle conf.minDipAngle.value conf.maxDipAngle.value
                                                                     
                         let lineLengthScale = 
-                            computeInvariantScale view conf.nearPlane.value center conf.arrowLength.value (Mod.constant 60.0)
+                            Sg.computeInvariantScale view conf.nearPlane.value center conf.arrowLength.value (Mod.constant 60.0)
                         
                         let planeScale = 
-                            computeInvariantScale view conf.nearPlane.value center conf.dnsPlaneSize.value (Mod.constant 60.0)
+                            Sg.computeInvariantScale view conf.nearPlane.value center conf.dnsPlaneSize.value (Mod.constant 60.0)
                                                                         
                         let radius =   lineLengthScale |> Mod.map(fun d -> d * 0.05)
                         let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
@@ -565,7 +467,7 @@ module DrawingApp =
                                 yield c + dip.Normalized * s //* f
                             }                            
 
-                        yield lines dipLine color conf.arrowThickness.value posTrafo anno.key 
+                        yield Sg.lines dipLine color conf.arrowThickness.value posTrafo anno.key 
 
                         let coneTrafo = 
                             Mod.map2(fun c s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(c + dip.Normalized * s)) center lineLengthScale
@@ -590,8 +492,8 @@ module DrawingApp =
                                 yield c; yield c + s
                             }                                            
 
-                        yield lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness.value posTrafo anno.key // strike1 vec
-                        yield lines strikeLine2 (Mod.constant C4b.Red) conf.arrowThickness.value posTrafo anno.key // strike2 vec
+                        yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness.value posTrafo anno.key // strike1 vec
+                        yield Sg.lines strikeLine2 (Mod.constant C4b.Red) conf.arrowThickness.value posTrafo anno.key // strike2 vec
                     | None -> () 
                                
             } |> Sg.set
@@ -634,8 +536,8 @@ module DrawingApp =
             let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)          
                                    
             Sg.ofList [
-                lines polyPoints color thickness trafo key //polyline
-                dots points color view                     //support points
+                Sg.lines polyPoints color thickness trafo key //polyline
+                Sg.dots points color view                     //support points
             ]         
 
         let text (anno : MAnnotation) = 
@@ -652,9 +554,8 @@ module DrawingApp =
             let points = getPolyline anno
                        
             Sg.ofList [
-                lines points anno.color.c anno.thickness.value anno.modelTrafo anno.key;         
-                dots anno.points c view                    
-            //    text anno
+                Sg.lines points anno.color.c anno.thickness.value anno.modelTrafo anno.key;         
+                Sg.dots anno.points c view                                
                 drawDns anno view conf |> Sg.onOff anno.showDns
             ] |> Sg.onOff anno.visible
 

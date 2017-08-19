@@ -119,4 +119,105 @@ module Copy =
         let t = DirectoryInfo(target)
 
         copyAll' s t skipExisting
-    
+
+module Sg =
+    open Aardvark.Base.Incremental
+    open Aardvark.SceneGraph
+    open Aardvark.Base.Rendering
+    open Aardvark.UI
+
+    let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
+            adaptive {
+                let! p = p
+                let! v = view
+                let! near = near
+                let! size = size
+                let! hfov = hfov
+                let hfov_rad = Conversion.RadiansFromDegrees(hfov)
+               
+                let wz = Fun.Tan(hfov_rad / 2.0) * near * size
+                let dist = V3d.Distance(p, v.Location)
+
+                return ( wz / near ) * dist
+            }
+
+    let edgeLines (close : bool) (points : alist<V3d>) (trafo:IMod<Trafo3d>) =
+        points
+            |> AList.map(fun d -> trafo.GetValue().Backward.TransformPos d)
+            |> AList.toMod 
+            |> Mod.map (fun l ->
+                let list = PList.toList l
+                let head = list |> List.tryHead
+                    
+                match head with
+                    | Some h -> if close then list @ [h] else list
+                                    |> List.pairwise
+                                    |> List.map (fun (a,b) -> new Line3d(a,b))
+                                    |> List.toArray
+                    | None -> [||])
+
+    let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
+                    
+    let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
+        let box = points |> AList.toMod |> Mod.map (fun d -> if d.Count > 2 then Box3d d else Box3d.Unit)
+
+        let edges = edgeLines false points trafo
+
+        //invisible cylinders for polyline picking
+        let cylinders = 
+            edges 
+                |> Mod.map (fun e ->
+                        [
+                            for edge in e do                                    
+                                let v = edge.P1 - edge.P0
+                                let c = Cylinder3d(edge.P0,v.Normalized, v.Length, 0.25)
+                                yield 
+                                    Sg.ofList[]
+                                        |> Sg.noEvents                                                                                          
+                                        |> Sg.pickable (PickShape.Cylinder c)
+                                        |> Sg.trafo trafo
+                                        |> Sg.withEvents []
+                                            //Sg.onMouseDownEvt (fun sceneHit -> Select (id |> Mod.force))]
+                        ] |> Sg.ofList)
+                |> Sg.dynamic
+                                                            
+        edges
+            |> Sg.lines color
+            |> Sg.noEvents
+            |> Sg.shader {
+                do! Aardvark.Opc.Shader.stableTrafo
+                do! DefaultSurfaces.vertexColor
+                do! DefaultSurfaces.thickLine    
+            }                               
+            |> Sg.trafo trafo
+            |> Sg.uniform "LineWidth" width
+            |> Sg.pass linePass
+            |> Sg.depthTest (Mod.constant DepthTestMode.None)
+
+    let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =
+        adaptive {
+            let! p = p
+            let! v = view
+            let distV = p - v.Location
+            let distF = V3d.Dot(v.Forward, distV)
+            return distF * size / 800.0 //needs hfov at this point
+        }    
+
+    let mkDotISg color size trafo = 
+        Sg.sphere 5 color size
+            |> Sg.noEvents
+            |> Sg.trafo(trafo) 
+
+    let dots (points : alist<V3d>) (color : IMod<C4b>) (view : IMod<CameraView>) =             
+        aset {
+            for p in points |> ASet.ofAList do
+                let scale = computeScale view (Mod.constant p) 5.0
+                //let scale = Mod.constant 0.6
+                yield mkDotISg color scale (Mod.constant (Trafo3d.Translation(p)))
+        } 
+        |> Sg.set
+        |> Sg.effect [
+            toEffect <| Aardvark.Opc.Shader.stableTrafo
+            toEffect <| DefaultSurfaces.vertexColor
+            toEffect <| DefaultSurfaces.simpleLighting
+        ]
