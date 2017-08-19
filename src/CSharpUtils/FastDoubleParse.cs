@@ -1,6 +1,10 @@
 ﻿namespace FastDoubleParse
 {
+    using Aardvark.Base;
     using System;
+    using System.Linq;
+    using System.Collections.Generic;
+    
 
     public static class FastDoubleParse
     {
@@ -167,6 +171,8 @@
 
             goto ProcessFraction;
         }
+
+       
 
         private static readonly long[] _powLookup = new[]
         {

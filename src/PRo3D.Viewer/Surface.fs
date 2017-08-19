@@ -217,6 +217,9 @@ module Surface =
 
  module SurfaceApp =
     open System.Diagnostics
+    open Aardvark.Rendering.GL.Compiler
+
+    open PRo3DCompability
     
     type Action =
         | SurfacePropertiesMessage  of SurfaceProperties.Action
@@ -229,6 +232,12 @@ module Surface =
 
     type Model = SurfaceModel    
 
+    let triangleIsNan (t:Triangle3d) =
+        t.P0.AnyNaN || t.P1.AnyNaN || t.P2.AnyNaN
+
+    let getInvalidIndices (positions : V3d[]) =
+        positions |> List.ofArray |> List.mapi (fun i x -> if x.AnyNaN then Some i else None) |> List.choose id
+
     let loadObjectSet (lazyTree : LazyTree) = 
         
         match lazyTree.objectSetPath, (lazyTree.kdTree.KdIntersectionTree.ObjectSet == Unchecked.defaultof<_>) with
@@ -238,13 +247,17 @@ module Surface =
                 let data = 
                     positions.Data |> Array.map (fun x ->  x.ToV3d() |> lazyTree.affine.Forward.TransformPos)
 
-                let index = Aara.createIndex (positions.AsMatrix())
+                let invalidIndices = getInvalidIndices data
+              //  let index = Aara.createIndex2 (positions.AsMatrix()) invalidIndices
+                let index = PRo3DCSharp.ComputeIndexArray(positions.Size.XY.ToV2i(), invalidIndices)
+                Log.warn "%A" invalidIndices.Length
                 
                 let triangles = 
                     index 
                         |> Seq.map(fun x -> data.[x])
                         |> Seq.chunkBySize 3                               
                         |> Seq.map(fun x -> Triangle3d(x))
+                        |> Seq.filter(fun x -> triangleIsNan x |> not) 
                         |> TriangleSet                                                                
                
                 

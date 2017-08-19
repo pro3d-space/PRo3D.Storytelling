@@ -107,20 +107,67 @@ module Aara =
             let i01 = index + dx
             let i11 = index + dxy
 
-            let p00 = vi.[i00] |> isNan
-            let p01 = vi.[i10] |> isNan
-            let p10 = vi.[i01] |> isNan
-            let p11 = vi.[i11] |> isNan
+            //let p00 = vi.[i00] |> isNan
+            //let p01 = vi.[i10] |> isNan
+            //let p10 = vi.[i01] |> isNan
+            //let p11 = vi.[i11] |> isNan
 
-            if p00 || p01 || p10 || p11 then ()
-            else 
-                arr.[cnt + 0] <- (int i00)
-                arr.[cnt + 1] <- (int i10)
-                arr.[cnt + 2] <- (int i11)
-                arr.[cnt + 3] <- (int i00)
-                arr.[cnt + 4] <- (int i11)
-                arr.[cnt + 5] <- (int i01)
-                cnt <- cnt + 6
+            //if p00 || p01 || p10 || p11 then ()
+            //else 
+            arr.[cnt + 0] <- (int i00)
+            arr.[cnt + 1] <- (int i10)
+            arr.[cnt + 2] <- (int i11)
+            arr.[cnt + 3] <- (int i00)
+            arr.[cnt + 4] <- (int i11)
+            arr.[cnt + 5] <- (int i01)
+            cnt <- cnt + 6
+        )
+        Array.Resize(&arr, cnt)
+        arr
+
+    let createIndex2 (vi : Matrix<V3f>) (invalids : int64[])=
+
+        let invalids = invalids |> Array.map (fun x -> (x, x)) |> HMap.ofArray
+
+        let dx = vi.Info.DX
+        let dy = vi.Info.DY
+        let dxy = dx + dy
+        let mutable arr = Array.zeroCreate (int (vi.SX - 1L) * int (vi.SY - 1L) * 6)
+        let mutable cnt = 0
+        
+        vi.SubMatrix(V2l.Zero,vi.Size-V2l.II).ForeachXYIndex(fun x y index -> 
+
+            let inv = invalids |> HMap.tryFind index
+
+            match inv with
+                | Some _ ->
+                    arr.[cnt + 0] <- 0
+                    arr.[cnt + 1] <- 0
+                    arr.[cnt + 2] <- 0
+                    arr.[cnt + 3] <- 0
+                    arr.[cnt + 4] <- 0
+                    arr.[cnt + 5] <- 0
+                    cnt <- cnt + 6
+                | None ->                    
+                    let i00 = index
+                    let i10 = index + dy
+                    let i01 = index + dx
+                    let i11 = index + dxy
+
+                    //let p00 = vi.[i00] |> isNan
+                    //let p01 = vi.[i10] |> isNan
+                    //let p10 = vi.[i01] |> isNan
+                    //let p11 = vi.[i11] |> isNan
+
+                    //if p00 || p01 || p10 || p11 then ()
+                    //else 
+                    arr.[cnt + 0] <- (int i00)
+                    arr.[cnt + 1] <- (int i10)
+                    arr.[cnt + 2] <- (int i11)
+                    arr.[cnt + 3] <- (int i00)
+                    arr.[cnt + 4] <- (int i11)
+                    arr.[cnt + 5] <- (int i01)
+                    cnt <- cnt + 6
         )
         Array.Resize(&arr, cnt)
         arr

@@ -86,7 +86,7 @@
     <Compile Include="Surface-Properties.fs" />
     <Compile Include="Surface.fs" />
     <Compile Include="Properties.fs" />
-        <Compile Include="ConfigTestModel.fs" />
+    <Compile Include="ConfigTestModel.fs" />
     <Compile Include="ConfigTest.fs" />
     <Compile Include="Viewer-Model.fs" />
     <Compile Include="Viewer.fs" />
@@ -107,6 +107,11 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\CSharpUtils\CSharpUtils.csproj">
+      <Name>CSharpUtils</Name>
+      <Project>{64cde4e5-f90a-40c0-93b9-30b1ad02855c}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <Reference Include="mscorlib" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
