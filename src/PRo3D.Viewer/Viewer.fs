@@ -271,10 +271,10 @@ module ViewerApp =
                                 let drawing = DrawingApp.update w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,n))
                                 Log.stop()
                                 { m with drawing = drawing } |> stash
-                            | Interactions.PlaceCoordinateSystem -> 
-                                let refSystem = 
-                                    ReferenceSystemApp.update m.scene.referenceSystem (ReferenceSystemApp.Action.InferCoordSystem(hit))                                
-                                { m with scene = { m.scene with referenceSystem = refSystem }}
+                            //| Interactions.PlaceCoordinateSystem -> 
+                            //    let refSystem = 
+                            //        ReferenceSystemApp.update m.scene.referenceSystem (ReferenceSystemApp.Action.InferCoordSystem(hit))                                
+                            //    { m with scene = { m.scene with referenceSystem = refSystem }}
                             | Interactions.PickExploreCenter ->
                                 let navigation = 
                                     Navigation.update m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
@@ -349,8 +349,11 @@ module ViewerApp =
                     { m with drawing = d; picking = false } |> stash
             | SetInteraction t,_,_ -> { m with interaction = t }    
             | ReferenceSystemMessage a,_,_ ->                 
-                                
-                let refsystem' = ReferenceSystemApp.update m.scene.referenceSystem a
+                
+                let innerConfig : ReferenceSystemApp.InnerConfig<ViewConfigModel> =
+                        { arrowSize = ViewConfigModel.Lens.arrowLength |. NumericInput.Lens.value }
+
+                let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
                 let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
 
                 let m =

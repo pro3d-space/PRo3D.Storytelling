@@ -7,17 +7,14 @@ open Aardvark.Base
 open Aardvark.Base.Incremental
 
 module LittleConfigTest =
-    
-
+   
     type Action = SetArrowSize of double
 
     type InnerConfig<'a> =  
         {
             arrowSize : Lens<'a,double>
         }
-
     
-
     let update<'a> (bigConfig : 'a) (innerConfig : InnerConfig<'a>) (a : Action) : 'a =
         match a with
             | SetArrowSize d -> 
