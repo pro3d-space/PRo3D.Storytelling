@@ -403,15 +403,18 @@ module Surface =
                                         text " "
                                         i [
                                             clazz "home icon"; 
+                                            attribute "data-content" "Fly to Surface";
                                             onClick (fun x -> FlyToSurface (s.surface.guid |> Mod.force))
-                                        ][]     
+                                        ][]   
                                         Incremental.i (absRelIcons)(AList.empty)
                                         i [
                                             clazz "folder icon"
+                                            attribute "data-content" "Open Folder"
                                             onClick (fun x -> OpenFolder (s.surface.guid |> Mod.force))
                                         ][]
                                         i [
                                             clazz "Remove icon red"; 
+                                            attribute "data-content" "Remove Surface";
                                             onClick (fun x -> RemoveSurface (s.surface.guid |> Mod.force))
                                         ][]  
                                     ]

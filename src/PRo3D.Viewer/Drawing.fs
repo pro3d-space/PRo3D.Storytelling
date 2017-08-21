@@ -326,20 +326,34 @@ module DrawingApp =
             color
 
         let viewAnnotationImportExport =
-            div [clazz "ui buttons inverted"] [
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
-                        i [clazz "save icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
-                        i [clazz "folder outline icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
-                        i [clazz "file outline icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
-                        i [clazz "folder icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Send)] [
-                        i [clazz "send icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Undo)] [i [clazz "arrow left icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Redo)] [i [clazz "arrow right icon"] [] ]
-            ]
+           div [clazz "ui buttons inverted"] [
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Save Annotations"; onMouseClick (fun _ -> Save)] [
+                            i [clazz "save icon"] [] ] 
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Load Annotations"; onMouseClick (fun _ -> Load)] [
+                            i [clazz "folder outline icon"] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Clear Annotation List"; onMouseClick (fun _ -> Clear)] [
+                            i [clazz "file outline icon"] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Load recent Annotations"; onMouseClick (fun _ -> QuickLoad)] [
+                            i [clazz "folder icon"] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "???"; onMouseClick (fun _ -> Send)] [
+                            i [clazz "send icon"] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Undo"; onMouseClick (fun _ -> Undo)] [i [clazz "arrow left icon"] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Redo"; onMouseClick (fun _ -> Redo)] [i [clazz "arrow right icon"] [] ]
+                )
+            ] 
 
         let viewAnnotations (model:MDrawingModel) = 
                             

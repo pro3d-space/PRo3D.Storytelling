@@ -566,3 +566,84 @@ module Mutable =
                     override x.Set(r,v) = { r with lodColoring = v }
                     override x.Update(r,f) = { r with lodColoring = f r.lodColoring }
                 }
+    
+    
+    type MAnnotationGroup(__initial : PRo3D.AnnotationGroup) =
+        inherit obj()
+        let mutable __current = __initial
+        let _key = ResetMod.Create(__initial.key)
+        let _name = ResetMod.Create(__initial.name)
+        let _annotations = MList.Create(__initial.annotations, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
+        let _subGroups = MList.Create(__initial.subGroups, (fun v -> MAnnotationGroup.Create(v)), (fun (m,v) -> MAnnotationGroup.Update(m, v)), (fun v -> v))
+        let _parentKey = ResetMod.Create(__initial.parentKey)
+        let _visible = ResetMod.Create(__initial.visible)
+        
+        member x.key = _key :> IMod<_>
+        member x.name = _name :> IMod<_>
+        member x.annotations = _annotations :> alist<_>
+        member x.subGroups = _subGroups :> alist<_>
+        member x.parentKey = _parentKey :> IMod<_>
+        member x.visible = _visible :> IMod<_>
+        
+        member x.Update(v : PRo3D.AnnotationGroup) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_key,v.key)
+                ResetMod.Update(_name,v.name)
+                MList.Update(_annotations, v.annotations)
+                MList.Update(_subGroups, v.subGroups)
+                ResetMod.Update(_parentKey,v.parentKey)
+                ResetMod.Update(_visible,v.visible)
+                
+        
+        static member Create(__initial : PRo3D.AnnotationGroup) : MAnnotationGroup = MAnnotationGroup(__initial)
+        static member Update(m : MAnnotationGroup, v : PRo3D.AnnotationGroup) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.AnnotationGroup> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module AnnotationGroup =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let key =
+                { new Lens<PRo3D.AnnotationGroup, System.Guid>() with
+                    override x.Get(r) = r.key
+                    override x.Set(r,v) = { r with key = v }
+                    override x.Update(r,f) = { r with key = f r.key }
+                }
+            let name =
+                { new Lens<PRo3D.AnnotationGroup, Microsoft.FSharp.Core.string>() with
+                    override x.Get(r) = r.name
+                    override x.Set(r,v) = { r with name = v }
+                    override x.Update(r,f) = { r with name = f r.name }
+                }
+            let annotations =
+                { new Lens<PRo3D.AnnotationGroup, Aardvark.Base.plist<PRo3D.Annotation>>() with
+                    override x.Get(r) = r.annotations
+                    override x.Set(r,v) = { r with annotations = v }
+                    override x.Update(r,f) = { r with annotations = f r.annotations }
+                }
+            let subGroups =
+                { new Lens<PRo3D.AnnotationGroup, Aardvark.Base.plist<PRo3D.AnnotationGroup>>() with
+                    override x.Get(r) = r.subGroups
+                    override x.Set(r,v) = { r with subGroups = v }
+                    override x.Update(r,f) = { r with subGroups = f r.subGroups }
+                }
+            let parentKey =
+                { new Lens<PRo3D.AnnotationGroup, System.Guid>() with
+                    override x.Get(r) = r.parentKey
+                    override x.Set(r,v) = { r with parentKey = v }
+                    override x.Update(r,f) = { r with parentKey = f r.parentKey }
+                }
+            let visible =
+                { new Lens<PRo3D.AnnotationGroup, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.visible
+                    override x.Set(r,v) = { r with visible = v }
+                    override x.Update(r,f) = { r with visible = f r.visible }
+                }

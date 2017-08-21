@@ -357,7 +357,24 @@ module ViewConfigModel =
         lodColoring = false
     }
               
+[<DomainType>]
+type AnnotationGroup = {
+    key         : Guid
+    name        : string
+    annotations : plist<Annotation>
+    subGroups   : plist<AnnotationGroup>
+    parentKey   : Guid
+    visible     : bool
+    }
 
-
-
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module AnnotationGroup =
+    let initRoot = {
+        name = "Annotations"
+        key =  Guid.NewGuid()
+        annotations = plist.Empty
+        subGroups = plist.Empty
+        parentKey = Guid.Empty
+        visible = true
+        }
 

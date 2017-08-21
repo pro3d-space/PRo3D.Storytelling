@@ -119,6 +119,7 @@ module ViewerApp =
     open Aardvark.SceneGraph.SgFSharp.Sg
     open System.Collections.Concurrent
     open FShade.GLSL.AssemblerState
+    open Aardvark.Cef.WinForms
         
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -511,24 +512,33 @@ module ViewerApp =
                     )              
 
         let sceneTools =
-            div [clazz "ui buttons inverted"] [
-                button [clazz "ui icon button"; onMouseClick (fun _ -> SaveScene)] [
-                            i [clazz "large save icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> SaveAs)] [
-                    i [clazz "large icons"] [
-                        i [clazz "save icon"] [] 
-                        i [clazz "top right corner arrow down icon"] [] 
+            div [clazz "ui buttons inverted"] [ 
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Save Scene"; onMouseClick (fun _ -> SaveScene)] [
+                                i [clazz "large save icon" ] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Save Scene As"; onMouseClick (fun _ -> SaveAs)] [
+                        i [clazz "large icons"] [
+                            i [clazz "save icon"] [] 
+                            i [clazz "top right corner arrow down icon"] [] 
+                        ]
                     ]
-                ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> OpenScene)] [
-                            i [clazz "large folder outline icon"] [] ]
-                button [clazz "ui icon button"; onMouseClick (fun _ -> NewScene)] [
-                            i [clazz "large file outline icon"] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Open Scene"; onMouseClick (fun _ -> OpenScene)] [
+                                i [clazz "large folder outline icon" ] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "New Scene"; onMouseClick (fun _ -> NewScene)] [
+                                i [clazz "large file outline icon"] [] ]
+                )
             ]
             
         let openSurface =
             [ text "browse"] |> button [
                 clazz "ui button"
+                attribute "data-content" "text text text"
                 onClick (fun _ -> ImportSurface)
              ] 
 
