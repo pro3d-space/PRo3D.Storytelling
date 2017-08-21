@@ -266,7 +266,7 @@ module ViewerApp =
                                     
                 match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray with
                     | Some (t,n) -> 
-                        let hit = r.GetPointOnRay(t)                        
+                        let hit = r.GetPointOnRay(t)
                         
                         match m.interaction with
                             | Interactions.DrawAnnotation ->
@@ -292,7 +292,7 @@ module ViewerApp =
                         match Dialogs.saveDialog w with
                             | None -> m
                             | Some p -> 
-                                let s' = { m.scene with scenePath = Some p}                               
+                                let s' = { m.scene with scenePath = Some p}
                                 { m with scene = Serialization.save p s'; } |> stashAndSaveRecent p
                     | Some path ->                        
                         { m with scene = Serialization.save path m.scene } |> stashAndSaveRecent path
@@ -432,7 +432,7 @@ module ViewerApp =
                                 SceneEventKind.Down, (
                                     fun sceneHit -> 
                                         true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])
-                                //Sg.onMouseDownEvt (fun sceneHit -> PickSurface sceneHit)
+                               // Sg.onMouseDownEvt (fun sceneHit -> PickSurface (sceneHit,(surface.surface.name |> Mod.force)))
                             ]                        
                     yield sg
             }

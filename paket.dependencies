@@ -31,11 +31,11 @@ nuget FParsec   ~> 1.0.2
 nuget FsPickler       ~> 3.3.0
 nuget FsPickler.Json  ~> 3.3.0
 
-nuget Aardvark.UI            ~> 3.3.27
-nuget Aardvark.UI.Primitives ~> 3.3.27
-nuget Aardvark.Service       ~> 3.3.27
-nuget Aardvark.Cef.WinForms  ~> 3.3.27
-nuget Aardvark.Cef           ~> 3.3.27
+nuget Aardvark.UI            ~> 3.3.31
+nuget Aardvark.UI.Primitives ~> 3.3.31
+nuget Aardvark.Service       ~> 3.3.31
+nuget Aardvark.Cef.WinForms  ~> 3.3.31
+nuget Aardvark.Cef           ~> 3.3.31
 
 nuget Aether
 

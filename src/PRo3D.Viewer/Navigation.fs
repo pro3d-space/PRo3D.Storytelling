@@ -28,7 +28,11 @@ module Navigation =
                             { model with navigationMode =  NavigationMode.ArcBall; exploreCenter = a }
                         | _ -> model
                 
-                { model with camera = ArcBallController.update model.camera a }
+                let cam = ArcBallController.update model.camera a
+                match cam.orbitCenter with
+                    | Some oc -> { model with camera = cam; exploreCenter = oc}
+                    | None -> { model with camera = cam }
+                    
             | FreeFlyAction a ->
                 let cam' = CameraController.update model.camera a                
                 { model with camera = { cam' with sensitivity = model.config.navigationSensitivity.value } }
