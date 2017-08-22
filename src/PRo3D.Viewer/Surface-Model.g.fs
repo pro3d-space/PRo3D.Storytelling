@@ -133,12 +133,12 @@ module Mutable =
         let _surface = MSurface.Create(__initial.surface)
         let _globalBB = ResetMod.Create(__initial.globalBB)
         let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
-        let _kdTree = MMap.Create(__initial.kdTree)
+        let _kdTree = ResetMod.Create(__initial.kdTree)
         
         member x.surface = _surface
         member x.globalBB = _globalBB :> IMod<_>
         member x.sceneGraph = _sceneGraph :> IMod<_>
-        member x.kdTree = _kdTree :> amap<_,_>
+        member x.kdTree = _kdTree :> IMod<_>
         
         member x.Update(v : PRo3D.Surfaces.SgSurface) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -147,7 +147,7 @@ module Mutable =
                 MSurface.Update(_surface, v.surface)
                 ResetMod.Update(_globalBB,v.globalBB)
                 ResetMod.Update(_sceneGraph,v.sceneGraph)
-                MMap.Update(_kdTree, v.kdTree)
+                ResetMod.Update(_kdTree,v.kdTree)
                 
         
         static member Create(__initial : PRo3D.Surfaces.SgSurface) : MSgSurface = MSgSurface(__initial)
@@ -183,7 +183,7 @@ module Mutable =
                     override x.Update(r,f) = { r with sceneGraph = f r.sceneGraph }
                 }
             let kdTree =
-                { new Lens<PRo3D.Surfaces.SgSurface, Aardvark.Base.hmap<Aardvark.Base.Box3d,Aardvark.Opc.KdTrees.Level0KdTree>>() with
+                { new Lens<PRo3D.Surfaces.SgSurface, Microsoft.FSharp.Core.obj>() with
                     override x.Get(r) = r.kdTree
                     override x.Set(r,v) = { r with kdTree = v }
                     override x.Update(r,f) = { r with kdTree = f r.kdTree }
