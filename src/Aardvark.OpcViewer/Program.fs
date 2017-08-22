@@ -14,8 +14,54 @@ open Aardvark.Application
 open Aardvark.Application.WinForms
 
 [<AutoOpen>]
+module Serialization =
+    open MBrace.FsPickler
+    open System.IO
+    
+    let binarySerializer = FsPickler.CreateBinarySerializer()
+
+    let save path (d : 'a) =    
+        let arr = binarySerializer.Pickle d     
+        File.WriteAllBytes(path, arr);
+        d
+
+    let loadAs<'a> path : 'a =
+        let arr = File.ReadAllBytes(path)
+        binarySerializer.UnPickle arr
+
+    let writeToFile path (contents : string) =
+        System.IO.File.WriteAllText(path, contents)
+
+//[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+//module SurfaceModel =
+//    open MBrace.FsPickler
+//    open MBrace.FsPickler.Combinators
+
+//    let makeSurfaceModel a b =
+//        {
+//            surfaces = a
+//            selectedSurface = b
+//            sgSurfaces = hmap.Empty
+//        }
+
+//    let surfaceModelPickler : Pickler<SurfaceModel> =
+//        Pickler.product makeSurfaceModel
+//        ^+ Pickler.field (fun s -> s.surfaces)          Pickler.auto<list<Surface>>
+//        ^. Pickler.field (fun s -> s.selectedSurface)   Pickler.auto<option<Surface>>
+
+//    let initial = {
+//        surfaces        = []
+//        selectedSurface = None
+//        sgSurfaces      = hmap.Empty
+//    }
+
+//    FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)
+
+[<AutoOpen>]
 module KdTrees =
     open Aardvark.VRVis
+    open MBrace.FsPickler
+    open MBrace.FsPickler.Combinators
     
     type LazyKdTree = {
         kdTree        : option<ConcreteKdIntersectionTree>
@@ -33,6 +79,42 @@ module KdTrees =
     type Level0KdTree = 
         | LazyKdTree of LazyKdTree
         | InCoreKdTree of InCoreKdTree
+
+    let makeInCoreKd a = 
+        {
+            kdTree = new ConcreteKdIntersectionTree()
+            boundingBox = a
+        }
+
+    let makeLazyTree a b c d =
+        {
+            kdTree = None
+            affine    = a
+            boundingBox  = b
+            kdtreePath   = c
+            objectSetPath  = d    
+        }
+
+    let incorePickler : Pickler<InCoreKdTree> =
+        Pickler.product makeInCoreKd
+        ^. Pickler.field (fun s -> s.boundingBox)     Pickler.auto<Box3d>
+
+    let lazyPickler : Pickler<LazyKdTree> =
+        Pickler.product makeLazyTree
+        ^+ Pickler.field (fun (s:LazyKdTree) -> s.affine)       Pickler.auto<Trafo3d>
+        ^+ Pickler.field (fun (s:LazyKdTree) -> s.boundingBox)  Pickler.auto<Box3d>
+        ^+ Pickler.field (fun s -> s.kdtreePath)                Pickler.string
+        ^. Pickler.field (fun s -> s.objectSetPath)             Pickler.string
+
+    let level0KdTreePickler : Pickler<Level0KdTree> =
+        Pickler.sum (fun x k1 k2->
+            match x with
+                | InCoreKdTree k -> k1 k
+                | LazyKdTree k -> k2 k)
+        ^+ Pickler.case InCoreKdTree incorePickler
+        ^. Pickler.case LazyKdTree lazyPickler
+       
+    FsPickler.RegisterPicklerFactory (fun _ -> level0KdTreePickler )
 
     let loadKdtree p =
         Log.startTimed "loading tree"
@@ -88,63 +170,71 @@ module Viewer =
             let rootpatch = h.tree |> QTree.getRoot 
                                     
             let fileName = sprintf "%s-0.aakd" rootpatch.info.Name            
-            Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]
-
-        //let maketimed text (f : 'T->'U) =
-        //    Log.startTimed text
-        //    let bla = f
-        //    Log.stop()
-        //    bla
+            Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]      
 
         Log.startTimed "Creating KdTree"
-        let loadLegacyKdTrees (h : PatchHierarchy) : hmap<Box3d,Level0KdTree> =
+        let loadKdTrees (h : PatchHierarchy) : hmap<Box3d,Level0KdTree> =
                         
             let masterKdPath = 
                 h |> getMasterKdTreePath
-                        
-            let patchInfos =
-                h.tree |> QTree.getLeaves |> Seq.map(fun x -> x.info)
 
-            let kd0Paths = 
-                patchInfos |> Seq.map(fun x -> x.Name |> getPatchKdTreePath h)
+            let cacheFile = System.IO.Path.ChangeExtension(masterKdPath, ".cache")
 
-            let kd0PathsExist = 
-                kd0Paths |> Seq.forall(System.IO.File.Exists)
+            if System.IO.File.Exists(cacheFile) then
+                Log.line "Found lazy kdtree cache"
+                (Serialization.loadAs<array<Box3d*Level0KdTree>> cacheFile) |> HMap.ofArray
+            else
+                
+                Log.line "did not find lazy kdtree cache"
+                let patchInfos =
+                    h.tree |> QTree.getLeaves |> Seq.map(fun x -> x.info)
+
+                let kd0Paths = 
+                    patchInfos |> Seq.map(fun x -> x.Name |> getPatchKdTreePath h)
+
+                let kd0PathsExist = 
+                    kd0Paths |> Seq.forall(System.IO.File.Exists)
             
-            match (System.IO.File.Exists(masterKdPath), kd0PathsExist) with
-                | (true, false) -> 
-                     Log.line "Found master kdtree - loading incore"
-                     let tree = loadKdtree masterKdPath                     
-                     let kd = {
-                        kdTree = tree;
-                        boundingBox = tree.KdIntersectionTree.BoundingBox3d 
-                     }
-                     HMap.add kd.boundingBox (InCoreKdTree kd) HMap.empty
-                | (true, true) ->                                                        
-                     Log.line "Found master kdtree and patch trees"                                                               
-                     kd0Paths                         
-                        |> Seq.zip patchInfos
-                        |> Seq.map(
-                            fun (info, kdPath) ->                                
-                                let t = loadKdtree kdPath
-                                let lazyTree : LazyKdTree = {
-                                    kdTree        = None
-                                    objectSetPath = info.Name |> getPatchPositionPath h
-                                    kdtreePath    = kdPath
-                                    affine        = info.Local2Global
-                                    boundingBox   = t.KdIntersectionTree.BoundingBox3d
-                                }
-                                (lazyTree.boundingBox, (LazyKdTree lazyTree))
-                        )
-                        |> HMap.ofSeq
-                | _ ->
-                    Log.warn "Could not find level 0 kdtrees"
-                    HMap.empty
+                match (System.IO.File.Exists(masterKdPath), kd0PathsExist) with
+                    | (true, false) -> 
+                         Log.line "Found master kdtree - loading incore"
+                         let tree = loadKdtree masterKdPath                     
+                         let kd = {
+                            kdTree = tree;
+                            boundingBox = tree.KdIntersectionTree.BoundingBox3d 
+                         }
+                         HMap.add kd.boundingBox (InCoreKdTree kd) HMap.empty
+                    | (true, true) ->                                                        
+                         Log.line "Found master kdtree and patch trees"                                                               
+                                                  
+                         let bla = 
+                            kd0Paths
+                                |> Seq.zip patchInfos
+                                |> Seq.map(
+                                    fun (info, kdPath) ->                                
+                                        let t = loadKdtree kdPath
+                                        let lazyTree : LazyKdTree = {
+                                            kdTree        = None
+                                            objectSetPath = info.Name |> getPatchPositionPath h
+                                            kdtreePath    = kdPath
+                                            affine        = info.Local2Global
+                                            boundingBox   = t.KdIntersectionTree.BoundingBox3d
+                                        }
+                                        (lazyTree.boundingBox, (LazyKdTree lazyTree))
+                                )
+                                |> Seq.toArray 
+
+                         bla |> Serialization.save cacheFile |> ignore 
+                            
+                         bla |> HMap.ofArray
+                    | _ ->
+                        Log.warn "Could not find level 0 kdtrees"
+                        HMap.empty
         
         let kdTreesPerHierarchy =
             [| for h in patchHierarchies do
                 if createKdTrees then   
-                    let kdMap = loadLegacyKdTrees h 
+                    let kdMap = loadKdTrees h 
 
                     yield kdMap
                 else 
