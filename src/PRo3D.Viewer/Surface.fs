@@ -122,7 +122,7 @@ module Surface =
             |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)
             |> Box3d.ofSeq
 
-    let toSg (s:Surface) sg bb (kd:hmap<Box3d,LazyTree>) = {
+    let toSg (s:Surface) sg bb (kd:hmap<Box3d,Level0KdTree>) = {
         surface = s       
         sceneGraph = sg
         globalBB = bb
@@ -238,14 +238,17 @@ module Surface =
     let getInvalidIndices (positions : V3d[]) =
         positions |> List.ofArray |> List.mapi (fun i x -> if x.AnyNaN then Some i else None) |> List.choose id
 
-    let loadObjectSet (lazyTree : LazyTree) = 
-        
-        match lazyTree.objectSetPath, (lazyTree.kdTree.KdIntersectionTree.ObjectSet == Unchecked.defaultof<_>) with
-            | Some p, true -> 
-                let positions = p |> Aara.fromFile<V3f>
+    let loadObjectSet (lvl0Tree : Level0KdTree) =       
+    
+        match lvl0Tree with
+            | InCoreKdTree kd -> 
+                kd.kdTree
+            | LazyKdTree kd -> 
+            
+                let positions = kd.kdtreePath |> Aara.fromFile<V3f>
 
                 let data = 
-                    positions.Data |> Array.map (fun x ->  x.ToV3d() |> lazyTree.affine.Forward.TransformPos)
+                    positions.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
 
                 let invalidIndices = getInvalidIndices data              
                 let index = PRo3DCSharp.ComputeIndexArray(positions.Size.XY.ToV2i(), invalidIndices)                
@@ -256,16 +259,18 @@ module Surface =
                         |> Seq.chunkBySize 3                               
                         |> Seq.map(fun x -> Triangle3d(x))
                         |> Seq.filter(fun x -> triangleIsNan x |> not) 
-                        |> TriangleSet                                                                
-
-                let mutable kdTree' = lazyTree.kdTree                
+                        |> TriangleSet
+                        
+                let kdTree =
+                    match kd.kdTree with
+                        | Some k -> k
+                        | None -> KdTrees.loadKdtree kd.kdtreePath
+                            
+                let mutable kdTree' = kdTree               
                 kdTree'.KdIntersectionTree.ObjectSet <- triangles
-                kdTree'            
-            | _, _ ->
-                lazyTree.kdTree
+                kdTree'  
 
-
-    let intersectHMap (kdTreeMap: hmap<Box3d, LazyTree>) bb (ray : FastRay3d) name= 
+    let intersectHMap (kdTreeMap: hmap<Box3d, Level0KdTree>) bb (ray : FastRay3d) name= 
 
         let kdtree = kdTreeMap |> HMap.find bb |> loadObjectSet        
 

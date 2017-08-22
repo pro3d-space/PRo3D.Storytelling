@@ -145,11 +145,11 @@ module QTree =
             | Node(v,children) ->
                 Node(f l v, children |> Array.map (mapLevel (l + 1) f))
 
-    let rec getLeaves (tree : QTree<'a>) =
+    let rec getLeaves (tree : QTree<'a>) =      
         match tree with
-            | Leaf v -> Seq.singleton v
-            | Node(v,children) -> children |> Seq.collect getLeaves
-
+                | Leaf v -> Seq.singleton v
+                | Node(v,children) -> children |> Seq.collect getLeaves
+        
     let getRoot (tree : QTree<'a>) =
         match tree with
             | Leaf v -> v

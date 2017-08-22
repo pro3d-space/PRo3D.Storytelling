@@ -183,7 +183,7 @@ module Mutable =
                     override x.Update(r,f) = { r with sceneGraph = f r.sceneGraph }
                 }
             let kdTree =
-                { new Lens<PRo3D.Surfaces.SgSurface, Aardvark.Base.hmap<Aardvark.Base.Box3d,Aardvark.Opc.KdTrees.LazyTree>>() with
+                { new Lens<PRo3D.Surfaces.SgSurface, Aardvark.Base.hmap<Aardvark.Base.Box3d,Aardvark.Opc.KdTrees.Level0KdTree>>() with
                     override x.Get(r) = r.kdTree
                     override x.Set(r,v) = { r with kdTree = v }
                     override x.Update(r,f) = { r with kdTree = f r.kdTree }
