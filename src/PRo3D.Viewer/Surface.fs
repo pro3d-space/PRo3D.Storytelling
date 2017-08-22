@@ -382,10 +382,17 @@ module Surface =
                                         fun x -> 
                                             if x 
                                             then 
-                                                AttributeMap.ofList [ clazz "suitcase icon" ]
-                                            else 
+                                                AttributeMap.ofList [ clazz "suitcase icon";
+                                                                      attribute "data-content" "???"
+                                                                      attribute "data-position" "left center"
+                                                                      attribute "data-variation" "mini"
+                                                                    ]
+                                            else
                                                 AttributeMap.ofList [
                                                     clazz "cloud download icon";
+                                                    attribute "title" "Relative";
+                                                    attribute "data-position" "left center"
+                                                    attribute "data-variation" "mini"
                                                     onClick (fun x -> MakeRelative (s.surface.guid |> Mod.force))
                                                 ] 
                                                 
@@ -401,22 +408,36 @@ module Surface =
                                     div [clazz "header"] [
                                         Incremental.text s.surface.name
                                         text " "
-                                        i [
-                                            clazz "home icon"; 
-                                            attribute "data-content" "Fly to Surface";
-                                            onClick (fun x -> FlyToSurface (s.surface.guid |> Mod.force))
-                                        ][]   
-                                        Incremental.i (absRelIcons)(AList.empty)
-                                        i [
-                                            clazz "folder icon"
-                                            attribute "data-content" "Open Folder"
-                                            onClick (fun x -> OpenFolder (s.surface.guid |> Mod.force))
-                                        ][]
-                                        i [
-                                            clazz "Remove icon red"; 
-                                            attribute "data-content" "Remove Surface";
-                                            onClick (fun x -> RemoveSurface (s.surface.guid |> Mod.force))
-                                        ][]  
+                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                                            i [
+                                                clazz "home icon"
+                                                attribute "title" "FlyTo"
+                                                attribute "data-position" "left center"
+                                                attribute "data-variation" "mini"
+                                                onClick (fun x -> FlyToSurface (s.surface.guid |> Mod.force))
+                                            ][]  
+                                        )
+                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                                            Incremental.i (absRelIcons)(AList.empty)
+                                        )
+                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                                            i [
+                                                clazz "folder icon"
+                                                attribute "title" "Open Folder"
+                                                attribute "data-position" "left center"
+                                                attribute "data-variation" "mini"
+                                                onClick (fun x -> OpenFolder (s.surface.guid |> Mod.force))
+                                            ][]
+                                        )
+                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                                            i [
+                                                clazz "Remove icon red"; 
+                                                attribute "title" "Remove"
+                                                attribute "data-position" "left center"
+                                                attribute "data-variation" "mini"
+                                                onClick (fun x -> RemoveSurface (s.surface.guid |> Mod.force))
+                                            ][]  
+                                        )
                                     ]
                                     div [clazz "description"] [
                                         Incremental.text (

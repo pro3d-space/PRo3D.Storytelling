@@ -380,9 +380,22 @@ module DrawingApp =
                                             yield Incremental.div (AttributeMap.ofList [clazz "header"]) (
                                                 alist {
                                                     yield Incremental.text header
-                                                    yield i [clazz visibleIcon; onClick (fun _ -> ToggleVisiblity (a.key |> Mod.force))][] 
-                                                    yield i [clazz "Remove icon"; onClick (fun _ -> RemoveAnnotation (a.key |> Mod.force))][] 
-                                                    
+                                                    yield 
+                                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                                                            i [clazz visibleIcon
+                                                               attribute "title" "Toggle"
+                                                               attribute "data-position" "left center"
+                                                               attribute "data-variation" "mini"
+                                                               onClick (fun _ -> ToggleVisiblity (a.key |> Mod.force))][] 
+                                                        )
+                                                    yield 
+                                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                                                            i [clazz "Remove icon"
+                                                               attribute "title" "Remove"
+                                                               attribute "data-position" "left center"
+                                                               attribute "data-variation" "mini"
+                                                               onClick (fun _ -> RemoveAnnotation (a.key |> Mod.force))][] 
+                                                        )
                                                 } 
                                             ) 
                                             yield div [clazz "description"] [Incremental.text desc]      
