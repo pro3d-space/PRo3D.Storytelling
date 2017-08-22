@@ -44,6 +44,7 @@ type SurfaceModel = {
     sgSurfaces      : hmap<Guid,SgSurface>
 }
 
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module SurfaceModel =
     open MBrace.FsPickler
     open MBrace.FsPickler.Combinators

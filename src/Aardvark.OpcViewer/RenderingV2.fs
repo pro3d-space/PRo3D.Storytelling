@@ -22,6 +22,7 @@ module Helpers =
 
 type LodParameters = { frustum : Frustum; size : V2i; factor : float }
 
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module LodParameters =    
     let defaultParams = { frustum = Frustum.perspective 60.0 0.1 1000.0 (3.0 / 2.0); size = V2i(800,600); factor = 1.0 }
 
