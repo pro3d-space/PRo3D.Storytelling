@@ -13,6 +13,7 @@ module ReferenceSystemApp =
     open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.SceneGraph.FShadeSceneGraph
     open PRo3D.ReferenceSystem
+    //open Aardvark.UI.ChoiceModule
    
     type Action =
         | InferCoordSystem of V3d
@@ -40,18 +41,18 @@ module ReferenceSystemApp =
             | InferCoordSystem p ->
                 let up = upVector p
                 let n = northVector up
-                { model with origin = p; north = n; up = ReferenceSystem.setV3d up }
-            | SetOrigin p     -> { model with origin = p }
+                { model with origin = p; north = n; up = ReferenceSystem.setV3d up }, bigConfig
+            | SetOrigin p     -> { model with origin = p }, bigConfig
             | SetUp     up    ->    
                 let up = Vector3d.update model.up up
                 let up' = ReferenceSystem.setV3d up.value.Normalized
-                { model with up =  up'}
-            | SetNorth  n     -> { model with north = n }
-            | ToggleVisible   -> { model with isVisible = not model.isVisible}
-            //| SetArrowSize d -> // expected to return big config instead of model, not possible to hold own state
-            //    let blar = model.arrowLength.Set(bigConfig, d) 
-            //    mocel
-            | _ -> model
+                { model with up =  up'}, bigConfig
+            | SetNorth  n     -> { model with north = n }, bigConfig
+            | ToggleVisible   -> { model with isVisible = not model.isVisible}, bigConfig
+            | SetArrowSize d -> // expected to return big config instead of model, not possible to hold own state                
+                let big' = config.arrowLength.Set(bigConfig, d) 
+                model, big'
+           // | _ -> model, bigConfig
 
     module Sg =
 

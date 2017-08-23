@@ -119,7 +119,7 @@ module ViewerApp =
     open Aardvark.SceneGraph.SgFSharp.Sg
     open System.Collections.Concurrent
     open FShade.GLSL.AssemblerState
-    open Aardvark.Cef.WinForms
+    open Aardvark.Cef.WinForms    
         
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -181,10 +181,11 @@ module ViewerApp =
             | None -> m
             
     let updateAllTheConfigs m c =
-        { m with scene = { m.scene with config = c;
-                                               // referenceSystem = { m.scene.referenceSystem with config = c};
-                                                navigation = { m.scene.navigation with config = c } };
-                         drawing = { m.drawing with config = c } }
+        let m = (Model.Lens.scene   |. Scene.Lens.config).Set(m,c)
+        let m = (Model.Lens.scene   |. Scene.Lens.navigation |. NavigationModel.Lens.config).Set(m,c)        
+        let m = { m with drawing = { m.drawing with config = c } }
+
+        m        
 
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
@@ -283,7 +284,7 @@ module ViewerApp =
                             | Interactions.PlaceCoordinateSystem -> 
                                 //let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
                                 let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
-                                let refSystem' = 
+                                let (refSystem',_)= 
                                     ReferenceSystemApp.update m.scene.config innerConfig (m.scene.referenceSystem) refAction                             
                                 { m with scene = { m.scene with referenceSystem = refSystem' }}
                             | Interactions.PickExploreCenter ->
@@ -360,21 +361,18 @@ module ViewerApp =
                     { m with drawing = d; picking = false } |> stash
             | SetInteraction t,_,_ -> { m with interaction = t }    
             | ReferenceSystemMessage a,_,_ ->                 
-                
-                
-
-                let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
+                                
+                let refsystem',_ = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
                 let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
 
                 let m =
                     match a with 
-                        | ReferenceSystemApp.Action.SetUp k->
+                        | ReferenceSystemApp.Action.SetUp _->
                             let cam = m.scene.navigation.camera                            
                             let view' = CameraView.lookAt cam.view.Location (cam.view.Location + cam.view.Forward) m.scene.referenceSystem.up.value
                             let cam' = { cam with view = view' }
                         
-                            (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam')                            
-                     
+                            (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam')                                                 
                         | _ -> m
 
                 m

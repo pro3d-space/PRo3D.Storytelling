@@ -18,13 +18,14 @@ module DrawingApp =
     open Aardvark.UI
     open Aardvark.UI.Primitives
 
-    open PRo3D.Drawing
+    
     open System.Windows.Forms
     open System.Text
     open System.Net.WebSockets
     open System.Threading
     open PRo3D
     open System.Collections.Concurrent    
+    open PRo3D.Drawing
 
     open MBrace.FsPickler.Json   
 

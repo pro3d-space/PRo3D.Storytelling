@@ -9,12 +9,11 @@ type BigConfig =
         arrowSize : double
     }
 
-[<DomainType>]
-type BigModel =
-    {
-        [<TreatAsValue>]
-        bigConfig : BigConfig
-    }
+//[<DomainType>]
+//type BigModel =
+//    {        
+//        bigConfig : BigConfig
+//    }
 
 
 
