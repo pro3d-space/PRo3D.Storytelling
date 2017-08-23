@@ -378,3 +378,17 @@ module AnnotationGroup =
         visible = true
         }
 
+[<DomainType>]
+type AnnotationGroupsModel = {
+    rootGroup       : AnnotationGroup
+    activeSurface   : Guid
+    activeGroup     : Guid
+    }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module AnnotationGroupsModel =
+    let init = {
+        rootGroup = initRoot
+        activeSurface =  Guid.Empty
+        activeGroup = Guid.Empty
+        }
