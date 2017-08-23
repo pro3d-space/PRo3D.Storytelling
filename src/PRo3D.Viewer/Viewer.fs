@@ -195,6 +195,12 @@ module ViewerApp =
         Serialization.save "./recent" recent |> ignore
 
         {model with recent = recent}
+
+    let innerConfig : ReferenceSystemConfig<ViewConfigModel> =
+        { 
+                arrowLength = ViewConfigModel.Lens.arrowLength |. NumericInput.Lens.value 
+                arrowThickness = ViewConfigModel.Lens.arrowThickness |. NumericInput.Lens.value 
+        }
     
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
@@ -274,10 +280,12 @@ module ViewerApp =
                                 let drawing = DrawingApp.update w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,n))
                                 Log.stop()
                                 { m with drawing = drawing } |> stash
-                            //| Interactions.PlaceCoordinateSystem -> 
-                            //    let refSystem = 
-                            //        ReferenceSystemApp.update m.scene.referenceSystem (ReferenceSystemApp.Action.InferCoordSystem(hit))                                
-                            //    { m with scene = { m.scene with referenceSystem = refSystem }}
+                            | Interactions.PlaceCoordinateSystem -> 
+                                //let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
+                                let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
+                                let refSystem' = 
+                                    ReferenceSystemApp.update m.scene.config innerConfig (m.scene.referenceSystem) refAction                             
+                                { m with scene = { m.scene with referenceSystem = refSystem' }}
                             | Interactions.PickExploreCenter ->
                                 let navigation = 
                                     Navigation.update m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
@@ -353,11 +361,7 @@ module ViewerApp =
             | SetInteraction t,_,_ -> { m with interaction = t }    
             | ReferenceSystemMessage a,_,_ ->                 
                 
-                let innerConfig : ReferenceSystemConfig<ViewConfigModel> =
-                    { 
-                            arrowLength = ViewConfigModel.Lens.arrowLength |. NumericInput.Lens.value 
-                            arrowThickness = ViewConfigModel.Lens.arrowThickness |. NumericInput.Lens.value 
-                    }
+                
 
                 let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
                 let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')

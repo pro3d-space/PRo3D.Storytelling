@@ -39,6 +39,8 @@ type Action =
         | Clear
         | Nop
         | AnnotationPropertiesMsg of AnnotationProperties.Action
+        | UpVectorChanged         of V3d
+        | NorthVectorChanged      of V3d
 
 [<DomainType>]
 type DrawingModel = {

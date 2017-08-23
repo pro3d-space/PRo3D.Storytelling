@@ -35,7 +35,11 @@ module DrawingApp =
             | Some w ->               
                 let dns = 
                     match w.points.Count with 
-                        | x when x > 2 -> Some (DipAndStrike.calculateDipAndStrikeResults w.points model.coordinates.up.value) //more acc. by using segments as well?
+                        | x when x > 2 ->
+                            //let up = 
+                            //let north = up.Cross(V3d.OOI.Cross(up))
+                            let result = w.points |> DipAndStrike.calculateDipAndStrikeResults (model.coordinates.up.value) (model.coordinates.north)
+                            Some result //more acc. by using segments as well?
                         | _ -> None 
                 let results = Annotation.calculateAnnotationResults w model.coordinates.up.value
                 Some { w with dnsResults = dns ; results = Some results }
@@ -186,8 +190,6 @@ module DrawingApp =
                     | Some w ->                         
                         { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
 
-            //| KeyDown Aardvark.Application.Keys.Enter, _ -> 
-            //        model |> finishAndAppend
             | Finish, _ -> 
                     finishAndAppendAndSend model bc |> stash
             | Exit, _ -> 
@@ -273,6 +275,9 @@ module DrawingApp =
                 match toRemove with
                     | Some index ->
                         let as' = model.annotations|> PList.removeAt index
+
+                        //if removed is selected also remove selected copy
+
                         { model with annotations = as' } |> stash
                     | None -> model             
             | ToggleVisiblity id, _ ->
@@ -281,7 +286,7 @@ module DrawingApp =
                     match a with
                         | Some k -> { k with visible = not k.visible  }
                         | None -> failwith "annotation not found, can't happen"
-                { model with annotations = (model.annotations.AsList |> List.updateIf(fun d -> d.key = a'.key) (fun _ -> a')) |> PList.ofList}
+                { model with annotations = (model.annotations.AsList |> List.updateIf(fun d -> d.key = a'.key) (fun _ -> a')) |> PList.ofList}             
             | _ -> model
 
     module UI =
