@@ -232,6 +232,8 @@ module Surface =
 
     type Model = SurfaceModel    
 
+    let mutable kdtreeCache : hmap<Box3d, ConcreteKdIntersectionTree> = hmap.Empty
+
     let triangleIsNan (t:Triangle3d) =
         t.P0.AnyNaN || t.P1.AnyNaN || t.P2.AnyNaN
 
@@ -245,7 +247,7 @@ module Surface =
                 kd.kdTree
             | LazyKdTree kd -> 
             
-                let positions = kd.kdtreePath |> Aara.fromFile<V3f>
+                let positions = kd.objectSetPath |> Aara.fromFile<V3f>
 
                 let data = 
                     positions.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
@@ -264,7 +266,20 @@ module Surface =
                 let kdTree =
                     match kd.kdTree with
                         | Some k -> k
-                        | None -> KdTrees.loadKdtree kd.kdtreePath
+                        | None -> 
+                            let tree = kdtreeCache |> HMap.tryFind kd.boundingBox
+                            match tree with
+                                | Some t -> 
+                                    Log.line "cache hit %A" kd.boundingBox
+                                    t
+                                | None ->                                     
+                                    Log.warn "cache miss %A" kd.boundingBox
+
+                                    let t = KdTrees.loadKdtree kd.kdtreePath
+                                    let key = t.KdIntersectionTree.BoundingBox3d
+                                    
+                                    kdtreeCache <- (HMap.add key t kdtreeCache)
+                                    t
                             
                 let mutable kdTree' = kdTree               
                 kdTree'.KdIntersectionTree.ObjectSet <- triangles
@@ -310,7 +325,9 @@ module Surface =
                         let intersection =
                             boundingBoxes
                                 |> Seq.map(
-                                    fun bb -> intersectHMap kd bb r n)
+                                    fun bb -> 
+                                        Log.warn "intersecting hmap %A" bb
+                                        intersectHMap kd bb r n)
                                 |> Seq.choose(fun x -> x)
                                 |> Seq.sortByDescending(fun (t,n)-> t)
                                 |> Seq.tryHead
@@ -388,14 +405,14 @@ module Surface =
                                             if x 
                                             then 
                                                 AttributeMap.ofList [ clazz "suitcase icon";
-                                                                      attribute "data-content" "???"
+                                                                      attribute "data-content" "portable"
                                                                       attribute "data-position" "left center"
                                                                       attribute "data-variation" "mini"
                                                                     ]
                                             else
                                                 AttributeMap.ofList [
                                                     clazz "cloud download icon";
-                                                    attribute "title" "Relative";
+                                                    attribute "title" "absolute path";
                                                     attribute "data-position" "left center"
                                                     attribute "data-variation" "mini"
                                                     onClick (fun x -> MakeRelative (s.surface.guid |> Mod.force))

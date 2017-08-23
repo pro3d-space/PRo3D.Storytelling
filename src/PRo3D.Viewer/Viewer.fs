@@ -97,18 +97,18 @@ module Scene =
     let loadLastScene m runtime signature =
         match fileExists "./recent" with
             | Some path  ->
-                try 
-                    let r = Serialization.loadAs<Recent> path
-                    match r.recentScenes |> List.tryHead with
-                        | Some scenePath ->
-                            loadScene scenePath m runtime signature                            
-                        | None -> 
-                            Log.warn("No recent scene found")
-                            m
-                with e ->
-                    Aardvark.Base.Log.warn "could not restore %A. using empty scene" p
-                  //  System.IO.File.Delete path
-                    m
+              //  try 
+                let r = Serialization.loadAs<Recent> path
+                match r.recentScenes |> List.tryHead with
+                    | Some scenePath ->
+                        loadScene scenePath m runtime signature                            
+                    | None -> 
+                        Log.warn("No recent scene found")
+                        m
+                //with e ->
+                //    Aardvark.Base.Log.warn "could not restore %A. using empty scene" p
+                //  //  System.IO.File.Delete path
+                //    m
             | _ -> 
                 Log.warn("recent scene file does not exist (yet)")
                 m

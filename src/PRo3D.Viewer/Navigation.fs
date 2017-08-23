@@ -38,7 +38,7 @@ module Navigation =
                 { model with camera = { cam' with sensitivity = model.config.navigationSensitivity.value } }
             | SetNavigationMode mode ->
                 match mode with
-                    | NavigationMode.FreeFly -> // should set look at to center when in arcball mode?
+                    | NavigationMode.FreeFly ->
                         let center = 
                             match model.camera.orbitCenter with
                                 | Some x ->  x
