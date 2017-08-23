@@ -240,6 +240,26 @@ module Surface =
     let getInvalidIndices (positions : V3d[]) =
         positions |> List.ofArray |> List.mapi (fun i x -> if x.AnyNaN then Some i else None) |> List.choose id
 
+    let loadTriangles (kd : LazyKdTree) = 
+        
+        let positions = kd.objectSetPath |> Aara.fromFile<V3f>
+
+        let data = 
+            positions.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
+
+        let invalidIndices = getInvalidIndices data              
+        let index = PRo3DCSharp.ComputeIndexArray(positions.Size.XY.ToV2i(), invalidIndices)                
+                
+        let triangles =             
+            index 
+                |> Seq.map(fun x -> data.[x])
+                |> Seq.chunkBySize 3                               
+                |> Seq.map(fun x -> Triangle3d(x))
+                |> Seq.filter(fun x -> triangleIsNan x |> not) |> Seq.toArray
+                |> TriangleSet
+
+        triangles
+
     let loadObjectSet (lvl0Tree : Level0KdTree) =       
     
         match lvl0Tree with
@@ -247,22 +267,6 @@ module Surface =
                 kd.kdTree
             | LazyKdTree kd -> 
             
-                let positions = kd.objectSetPath |> Aara.fromFile<V3f>
-
-                let data = 
-                    positions.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
-
-                let invalidIndices = getInvalidIndices data              
-                let index = PRo3DCSharp.ComputeIndexArray(positions.Size.XY.ToV2i(), invalidIndices)                
-                
-                let triangles = 
-                    index 
-                        |> Seq.map(fun x -> data.[x])
-                        |> Seq.chunkBySize 3                               
-                        |> Seq.map(fun x -> Triangle3d(x))
-                        |> Seq.filter(fun x -> triangleIsNan x |> not) 
-                        |> TriangleSet
-                        
                 let kdTree =
                     match kd.kdTree with
                         | Some k -> k
@@ -270,20 +274,19 @@ module Surface =
                             let tree = kdtreeCache |> HMap.tryFind kd.boundingBox
                             match tree with
                                 | Some t -> 
-                                    Log.line "cache hit %A" kd.boundingBox
+                                    //Log.line "cache hit %A" kd.boundingBox
                                     t
                                 | None ->                                     
-                                    Log.warn "cache miss %A" kd.boundingBox
+                                    Log.line "cache miss - loading kdtree"
 
-                                    let t = KdTrees.loadKdtree kd.kdtreePath
-                                    let key = t.KdIntersectionTree.BoundingBox3d
+                                    let mutable tree = KdTrees.loadKdtree kd.kdtreePath                                    
+                                    tree.KdIntersectionTree.ObjectSet <- (kd |> loadTriangles)
+
+                                    let key = tree.KdIntersectionTree.BoundingBox3d
                                     
-                                    kdtreeCache <- (HMap.add key t kdtreeCache)
-                                    t
-                            
-                let mutable kdTree' = kdTree               
-                kdTree'.KdIntersectionTree.ObjectSet <- triangles
-                kdTree'  
+                                    kdtreeCache <- (HMap.add key tree kdtreeCache)
+                                    tree                                                          
+                kdTree  
 
     let intersectHMap (kdTreeMap: hmap<Box3d, Level0KdTree>) bb (ray : FastRay3d) name= 
 
@@ -326,7 +329,7 @@ module Surface =
                             boundingBoxes
                                 |> Seq.map(
                                     fun bb -> 
-                                        Log.warn "intersecting hmap %A" bb
+                                      //  Log.warn "intersecting hmap %A" bb
                                         intersectHMap kd bb r n)
                                 |> Seq.choose(fun x -> x)
                                 |> Seq.sortByDescending(fun (t,n)-> t)

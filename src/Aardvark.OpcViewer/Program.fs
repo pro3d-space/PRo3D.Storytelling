@@ -117,11 +117,11 @@ module KdTrees =
     FsPickler.RegisterPicklerFactory (fun _ -> level0KdTreePickler )
 
     let loadKdtree p =
-        Log.startTimed "loading tree"
+        //Log.startTimed "loading tree"
         use b = new Aardvark.VRVis.BinaryReadingCoder(System.IO.File.OpenRead(p))
         let mutable treeOida = Unchecked.defaultof<KdIntersectionTree>
         b.CodeT(&treeOida)
-        Log.stop()
+        //Log.stop()
         //  treeOida
         ConcreteKdIntersectionTree(treeOida, Trafo3d.Identity)
     

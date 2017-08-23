@@ -255,7 +255,7 @@ module ViewerApp =
                // Log.line "hit surface %s" name
                 let fray = p.globalRay.Ray
                 let r = fray.Ray
-
+                Log.startTimed "kdtree intersect %s" name
                 let cameraLocation = m.scene.navigation.camera.view.Location 
 
                 let hitF (p : V3d) = 
@@ -270,7 +270,7 @@ module ViewerApp =
                         
                         match m.interaction with
                             | Interactions.DrawAnnotation ->
-                                Log.startTimed "kdtree intersect %s" n
+                               
                                 let drawing = DrawingApp.update w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,n))
                                 Log.stop()
                                 { m with drawing = drawing } |> stash
