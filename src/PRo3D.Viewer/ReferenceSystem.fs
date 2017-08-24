@@ -24,11 +24,17 @@ module ReferenceSystemApp =
         | SetArrowSize     of double
     //    | SetViewConfig    of ViewConfigModel
 
-    //type InnerConfig<'a> =
-    //    {
-    //        arrowLength    : Lens<'a,double>
-    //        arrowThickness : Lens<'a,double>
-    //    } 
+    type InnerConfig<'a> =
+        {
+            arrowLength    : Lens<'a,float>
+            arrowThickness : Lens<'a,float>
+        } 
+
+    type MInnerConfig<'ma> =
+        {
+            getArrowLength    : 'ma -> IMod<float>
+            getArrowThickness : 'ma -> IMod<float>
+        }
     
     let upVector (point:V3d) = point.Normalized
     
@@ -42,17 +48,19 @@ module ReferenceSystemApp =
                 let up = upVector p
                 let n = northVector up
                 { model with origin = p; north = n; up = ReferenceSystem.setV3d up }, bigConfig
-            | SetOrigin p     -> { model with origin = p }, bigConfig
+            | SetOrigin p     -> 
+                { model with origin = p }, bigConfig
             | SetUp     up    ->    
                 let up = Vector3d.update model.up up
                 let up' = ReferenceSystem.setV3d up.value.Normalized
                 { model with up =  up'}, bigConfig
-            | SetNorth  n     -> { model with north = n }, bigConfig
-            | ToggleVisible   -> { model with isVisible = not model.isVisible}, bigConfig
-            | SetArrowSize d -> // expected to return big config instead of model, not possible to hold own state                
+            | SetNorth  n     -> 
+                { model with north = n }, bigConfig
+            | ToggleVisible   -> 
+                { model with isVisible = not model.isVisible}, bigConfig
+            | SetArrowSize d  ->
                 let big' = config.arrowLength.Set(bigConfig, d) 
-                model, big'
-           // | _ -> model, bigConfig
+                model, big'           
 
     module Sg =
 
@@ -103,11 +111,14 @@ module ReferenceSystemApp =
         let point (pos:IMod<V3d>) (color:IMod<C4b>) (cam:IMod<CameraView>) =
             aset{
                 let! pos = pos
-                yield Sg.dots (alist{yield pos}) color cam //there is also a method for drawing a single dot.
+                yield Sg.dots (AList.single pos) color cam //there is also a method for drawing a single dot.
             } |> Sg.set
 
-        let view (model:MReferenceSystem) (near : IMod<float>) (length : IMod<float>) (thickness : IMod<float>) (cam:IMod<CameraView>) =
-                            
+        let view<'ma> (mbigConfig : 'ma) (minnerConfig : MInnerConfig<'ma>) (model:MReferenceSystem) (near : IMod<float>) (cam:IMod<CameraView>) : ISg<Action> =
+                       
+            let length    = minnerConfig.getArrowLength   mbigConfig
+            let thickness = minnerConfig.getArrowThickness mbigConfig
+
             Sg.ofList [
                 point model.origin (Mod.constant C4b.Red) cam
                 directionMarker model.origin model.up.value (Mod.constant C4b.Blue) near length thickness cam

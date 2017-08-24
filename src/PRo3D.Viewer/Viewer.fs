@@ -328,17 +328,16 @@ module ViewerApp =
                             | Aardvark.Application.Keys.D2          -> Drawing.Action.SetSemantic Semantic.Horizon2
                             | Aardvark.Application.Keys.D3          -> Drawing.Action.SetSemantic Semantic.Horizon3       
                             | _                                     -> Drawing.Action.Nop
-                    let picking =
+                    let m =
                         match k with 
-                            | Aardvark.Application.Keys.LeftCtrl -> true
-                            |_                                   -> false
+                            | Aardvark.Application.Keys.LeftCtrl -> { m with picking = true }
+                            |_                                   -> { m with picking = false }
          
                     let m =
                         match m.interaction with
-                            | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing drawingAction; picking = picking } |> stash
-                            | Interactions.PickExploreCenter -> {m with picking = picking}
-                            | Interactions.PlaceCoordinateSystem -> {m with picking = picking}
-                            | _ -> failwith "interaction does not exist"
+                            | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing drawingAction; } |> stash
+                            | _ -> m
+                                                        
 
                     let sensitivity = m.scene.config.navigationSensitivity.value
                     
@@ -474,6 +473,12 @@ module ViewerApp =
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
+        let refSystemInner : ReferenceSystemApp.MInnerConfig<MViewConfigModel> =
+            {
+                getArrowLength    = fun (x:MViewConfigModel) -> x.arrowLength.value
+                getArrowThickness = fun (x:MViewConfigModel) -> x.arrowThickness.value
+            }
+
         let renderControl =
             Incremental.renderControl
                     (Mod.map2 Camera.create m.scene.navigation.camera.view (Navigation.UI.frustum m.scene.navigation)) //(Frustum.perspective 60.0 m.scene.config.nearPlane.value 100.0 1.0 |> Mod.constant)
@@ -494,11 +499,12 @@ module ViewerApp =
 
                         let orientations =
                             ReferenceSystemApp.Sg.view 
-                                m.scene.referenceSystem 
-                                m.scene.config.nearPlane.value 
-                                m.scene.config.arrowLength.value 
-                                m.scene.config.arrowThickness.value 
+                                m.scene.config
+                                refSystemInner
+                                m.scene.referenceSystem
+                                m.scene.config.nearPlane.value                                 
                                 m.scene.navigation.camera.view
+                            |> Sg.map ReferenceSystemMessage
 
                         let exploreCenter =
                             Navigation.Sg.view m.scene.navigation
