@@ -179,14 +179,7 @@ module ViewerApp =
                 //{ m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
                 (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam)
             | None -> m
-            
-    let updateAllTheConfigs m c =
-        let m = (Model.Lens.scene   |. Scene.Lens.config).Set(m,c)
-        let m = (Model.Lens.scene   |. Scene.Lens.navigation |. NavigationModel.Lens.config).Set(m,c)        
-        //let m = { m with drawing = { m.drawing with config = c } }
-
-        m        
-
+                    
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
 
@@ -197,7 +190,7 @@ module ViewerApp =
 
         {model with recent = recent}
 
-    let innerConfig : ReferenceSystemConfig<ViewConfigModel> =
+    let refConfig : ReferenceSystemConfig<ViewConfigModel> =
         { 
                 arrowLength = ViewConfigModel.Lens.arrowLength |. NumericInput.Lens.value 
                 arrowThickness = ViewConfigModel.Lens.arrowThickness |. NumericInput.Lens.value 
@@ -209,11 +202,21 @@ module ViewerApp =
             north = ReferenceSystem.Lens.north
         }
 
+    let navConf : Navigation.smallConfig<ViewConfigModel, ReferenceSystem> =
+        {
+            navigationSensitivity = ViewConfigModel.Lens.navigationSensitivity |. NumericInput.Lens.value
+            up                    = ReferenceSystem.Lens.up |. V3dInput.Lens.value
+        }
+
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false -> 
-                { m with scene = { m.scene with navigation = Navigation.update m.scene.navigation msg }}
+               
+                let c   = m.scene.config
+                let ref = m.scene.referenceSystem
+
+                { m with scene = { m.scene with navigation = Navigation.update c ref navConf m.scene.navigation msg }}
             | DrawingMessage msg, Interactions.DrawAnnotation,_->
                 { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg } |> stash
             | SurfaceActions msg,_,_ ->
@@ -291,12 +294,15 @@ module ViewerApp =
                                 //let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
                                 let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
                                 let (refSystem',_)= 
-                                    ReferenceSystemApp.update m.scene.config innerConfig (m.scene.referenceSystem) refAction                             
+                                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction                             
                                 { m with scene = { m.scene with referenceSystem = refSystem' }}
                             | Interactions.PickExploreCenter ->
-                                let navigation = 
-                                    Navigation.update m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
-                                { m with scene = {m.scene with navigation = navigation; } }
+                                let c   = m.scene.config
+                                let ref = m.scene.referenceSystem
+
+                                let navigation' = 
+                                    Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
+                                { m with scene = {m.scene with navigation = navigation'; } }
                             | _ -> m
                     | None -> 
                         Log.error ("no hit")
@@ -323,7 +329,7 @@ module ViewerApp =
                     | Some path -> 
                         Scene.loadScene path m runtime signature |> stashAndSaveRecent path
             | NewScene,_,_ ->
-                PRo3D.Viewer.Viewer.initial     //   { m with surfaces = hset.Empty ; scene = { m.scene with surfaces = [] }}
+                PRo3D.Viewer.Viewer.initial
             | KeyDown k, _, _ ->
                     let drawingAction =
                         match k with
@@ -334,6 +340,7 @@ module ViewerApp =
                             | Aardvark.Application.Keys.D2          -> Drawing.Action.SetSemantic Semantic.Horizon2
                             | Aardvark.Application.Keys.D3          -> Drawing.Action.SetSemantic Semantic.Horizon3       
                             | _                                     -> Drawing.Action.Nop
+
                     let m =
                         match k with 
                             | Aardvark.Application.Keys.LeftCtrl -> { m with picking = true }
@@ -346,7 +353,8 @@ module ViewerApp =
                             | _ -> m
                                                         
 
-                    let sensitivity = m.scene.config.navigationSensitivity.value
+                    let sensitivity = 
+                        m.scene.config.navigationSensitivity.value
                     
                     let configAction = 
                         match k with 
@@ -355,8 +363,7 @@ module ViewerApp =
                             | _ -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity))
 
                     let c' = ConfigProperties.update m.scene.config configAction
-                    let m = updateAllTheConfigs m c'
-                    m
+                    { m with scene = { m.scene with config = c' }}                    
                    
             | KeyUp k, _,_ ->
                     let d =
@@ -365,10 +372,10 @@ module ViewerApp =
                             | _ -> m.drawing
                     
                     { m with drawing = d; picking = false } |> stash
-            | SetInteraction t,_,_ -> { m with interaction = t }    
+            | SetInteraction t,_,_ -> { m with interaction = t }
             | ReferenceSystemMessage a,_,_ ->                 
                                 
-                let refsystem',_ = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
+                let refsystem',_ = ReferenceSystemApp.update m.scene.config refConfig m.scene.referenceSystem a
                 let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
 
                 let m =
@@ -383,17 +390,14 @@ module ViewerApp =
 
                 m
             | ConfigPropertiesMessage a,_,_ -> 
-                Log.line "config message %A" a
+                //Log.line "config message %A" a
                 let c' = ConfigProperties.update m.scene.config a
-                updateAllTheConfigs m c'                
+                (Model.Lens.scene |. Scene.Lens.config).Set(m,c')
             | _ -> m
-
-    
-        
 
     let viewSurfacesSg (m : MSurfaceModel) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>)=
         let opcs =
-            aset {                
+            aset {
                 
                 for (key,surface) in m.sgSurfaces |> AMap.toASet do
                    
@@ -469,14 +473,20 @@ module ViewerApp =
    
     let view (m : MModel) =
 
+        let frustum (m:MModel) =
+            let near = m.scene.config.nearPlane.value
+            let far = m.scene.config.farPlane.value
+            (Navigation.UI.frustum near far)
+
         let renderControlAttributes (model : MNavigationModel) =
             amap {
                 let! state = model.navigationMode
+                
                 match state with
                     | NavigationMode.FreeFly -> 
-                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction (Navigation.UI.frustum model)
+                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction (frustum m)
                     | NavigationMode.ArcBall -> 
-                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction (Navigation.UI.frustum model)
+                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction (frustum m)
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
@@ -491,7 +501,7 @@ module ViewerApp =
 
         let renderControl =
             Incremental.renderControl
-                    (Mod.map2 Camera.create m.scene.navigation.camera.view (Navigation.UI.frustum m.scene.navigation)) //(Frustum.perspective 60.0 m.scene.config.nearPlane.value 100.0 1.0 |> Mod.constant)
+                    (Mod.map2 Camera.create m.scene.navigation.camera.view (frustum m)) //(Frustum.perspective 60.0 m.scene.config.nearPlane.value 100.0 1.0 |> Mod.constant)
                     (AttributeMap.unionMany [
                         renderControlAttributes m.scene.navigation
                         [attribute "style" "width:70%; height: 100%; float:left"; ] |> AttributeMap.ofList
@@ -530,7 +540,7 @@ module ViewerApp =
                             Navigation.Sg.view m.scene.navigation
 
                         [
-                            viewSurfacesSg m.scene.surfacesModel (Navigation.UI.frustum m.scene.navigation) (m.scene.config.lodColoring)
+                            viewSurfacesSg m.scene.surfacesModel (frustum m) (m.scene.config.lodColoring)
                             annotations
                             orientations
                             exploreCenter

@@ -37,13 +37,13 @@ module DipAndStrike =
         //let p = v3dArray.[0]
        // let up = p.Normalized        
 
-        let mutable plane = PlaneFitting.FitPlane3dLS(v3dArray);
-        let bb = new Box3d(points);
+        let mutable plane = PlaneFitting.FitPlane3dLS(v3dArray)
+        let bb = new Box3d(points)
 
-        let horP = new Plane3d(up, V3d.Zero);
+        let horP = new Plane3d(up, V3d.Zero)
 
         //correct plane orientation - check if normals point in same direction
-        let height = horP.Height(plane.Normal);
+        let height = horP.Height(plane.Normal)
         let planeNormal = match height.Sign() with
                             | -1 -> plane.Normal.Negated
                             | _  -> plane.Normal
@@ -51,13 +51,13 @@ module DipAndStrike =
         plane.Normal <- planeNormal
 
         //strike
-        let strike = up.Cross(planeNormal).Normalized;
+        let strike = up.Cross(planeNormal).Normalized
 
         //dip vector 
-        let dip = strike.Cross(planeNormal).Normalized;
+        let dip = strike.Cross(planeNormal).Normalized
 
         //dip plane incline .. maximum dip angle
-        let v = strike.Cross(up).Normalized;
+        let v = strike.Cross(up).Normalized
 
         let dns = {
             plane = plane
