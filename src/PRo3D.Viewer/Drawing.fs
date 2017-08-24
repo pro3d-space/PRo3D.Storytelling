@@ -17,7 +17,6 @@ module DrawingApp =
 
     open Aardvark.UI
     open Aardvark.UI.Primitives
-
     
     open System.Windows.Forms
     open System.Text
@@ -28,10 +27,8 @@ module DrawingApp =
     open PRo3D.Drawing
 
     open MBrace.FsPickler.Json   
-
     
-
-    let getFinishedAnnotation (model : DrawingModel) =
+    let getFinishedAnnotation up north (model : DrawingModel) =
         match model.working with
             | Some w ->               
                 let dns = 
@@ -39,19 +36,19 @@ module DrawingApp =
                         | x when x > 2 ->
                             //let up = 
                             //let north = up.Cross(V3d.OOI.Cross(up))
-                            let result = w.points |> DipAndStrike.calculateDipAndStrikeResults (model.coordinates.up.value) (model.coordinates.north)
+                            let result = w.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
                             Some result //more acc. by using segments as well?
                         | _ -> None 
-                let results = Annotation.calculateAnnotationResults w model.coordinates.up.value
+                let results = Annotation.calculateAnnotationResults w up
                 Some { w with dnsResults = dns ; results = Some results }
             | None -> None
 
-    let finishAndAppendAndSend (model : DrawingModel) (bc : BlockingCollection<string>) = 
+    let finishAndAppendAndSend up north (model : DrawingModel) (bc : BlockingCollection<string>) = 
         //if there are at least 3 points do dns calculation (debug, dev). 
         //might take long for large number of points so created on demand?
 
         let anns = 
-            match getFinishedAnnotation model with
+            match getFinishedAnnotation up north model with
                 | Some a -> 
                     let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
                     Log.line "sending %A" a.semantic
@@ -62,7 +59,7 @@ module DrawingApp =
         
         { model with working = None; annotations = anns; pendingIntersections = ThreadPool.empty }
 
-    let addPoint samplePoint p model surfaceName bc =
+    let addPoint up north samplePoint p model surfaceName bc =
         let working, newSegment = 
             match model.working with
                 | Some w ->     
@@ -112,9 +109,9 @@ module DrawingApp =
 
         match (working.geometry, (working.points |> PList.count)) with
             | Geometry.Point, 1 -> 
-                finishAndAppendAndSend model bc, None
+                finishAndAppendAndSend up north model bc, None
             | Geometry.Line, 2 -> 
-                finishAndAppendAndSend model bc, None
+                finishAndAppendAndSend up north model bc, None
             | _ -> 
                 model, newSegment // returns current segment for async computations outside
 
@@ -169,7 +166,24 @@ module DrawingApp =
     let stash (model : DrawingModel) =
         { model with past = Some model; future = None }
 
-    let update (w : Form) (bc : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
+    type SmallConfig<'a> =
+        {
+            up    : Lens<'a,V3d>
+            north : Lens<'a,V3d>
+        }
+
+    type MSmallConfig<'ma> =
+        {            
+            getNearPlane       : 'ma -> IMod<float>
+            getHfov            : 'ma -> IMod<float>
+            getMaxDipAngle     : 'ma -> IMod<float>
+            getMinDipAngle     : 'ma -> IMod<float>
+            getArrowThickness  : 'ma -> IMod<float>
+            getArrowLength     : 'ma -> IMod<float>
+            getDnsPlaneSize    : 'ma -> IMod<float>
+        }
+
+    let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (w : Form) (bc : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
         match (act, model.draw) with
             | StartDrawing, _ ->                     
                     { model with draw = true }
@@ -178,7 +192,10 @@ module DrawingApp =
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
             | AddPointAdv (point, samplePoint, name), true ->
-                    let model, newSegment = addPoint samplePoint point model name bc
+                    let up    = smallConfig.up.Get(bigConfig)
+                    let north = smallConfig.north.Get(bigConfig)
+
+                    let model, newSegment = addPoint up north samplePoint point model name bc
                     
                     match newSegment with
                         | None         -> model
@@ -192,7 +209,10 @@ module DrawingApp =
                         { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
 
             | Finish, _ -> 
-                    finishAndAppendAndSend model bc |> stash
+                    let up    = smallConfig.up.Get(bigConfig)
+                    let north = smallConfig.north.Get(bigConfig)
+
+                    (finishAndAppendAndSend up north model bc) |> stash
             | Exit, _ -> 
                     { model with hoverPosition = None }
             | SetSemantic mode, _ ->
@@ -418,6 +438,7 @@ module DrawingApp =
     let threads (m : DrawingModel) = m.pendingIntersections
 
     module Sg =        
+        open ReferenceSystemApp
         
         //let distanceInvariantTrafo (view : IMod<CameraView>) (pos:V3d) (scale:float) =
         //    let pcam = 
@@ -457,7 +478,18 @@ module DrawingApp =
                 toEffect <| DefaultSurfaces.simpleLighting
             ]                                                       
         
-        let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) (conf:MViewConfigModel)=                         
+        type innerViewConfig =
+            {
+                nearPlane       : IMod<float>
+                hfov            : IMod<float>
+                maxDipAngle     : IMod<float>
+                minDipAngle     : IMod<float>
+                arrowThickness  : IMod<float>
+                arrowLength     : IMod<float>
+                dnsPlaneSize    : IMod<float>
+            }
+
+        let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) (conf:innerViewConfig)=                         
             aset {
                             
                 let! dns = anno.dnsResults 
@@ -466,13 +498,13 @@ module DrawingApp =
                         let center = anno.points |> AList.toMod |> Mod.map (fun list -> list.[PList.count list / 2])
 
                         let color = 
-                            DipAndStrike.dipColor x.dipAngle conf.minDipAngle.value conf.maxDipAngle.value
+                            DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
                                                                     
                         let lineLengthScale = 
-                            Sg.computeInvariantScale view conf.nearPlane.value center conf.arrowLength.value (Mod.constant 60.0)
+                            Sg.computeInvariantScale view conf.nearPlane center conf.arrowLength conf.hfov
                         
                         let planeScale = 
-                            Sg.computeInvariantScale view conf.nearPlane.value center conf.dnsPlaneSize.value (Mod.constant 60.0)
+                            Sg.computeInvariantScale view conf.nearPlane center conf.dnsPlaneSize conf.hfov
                                                                         
                         let radius =   lineLengthScale |> Mod.map(fun d -> d * 0.05)
                         let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
@@ -500,7 +532,7 @@ module DrawingApp =
                                 yield c + dip.Normalized * s //* f
                             }                            
 
-                        yield Sg.lines dipLine color conf.arrowThickness.value posTrafo anno.key 
+                        yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key 
 
                         let coneTrafo = 
                             Mod.map2(fun c s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(c + dip.Normalized * s)) center lineLengthScale
@@ -525,8 +557,8 @@ module DrawingApp =
                                 yield c; yield c + s
                             }                                            
 
-                        yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness.value posTrafo anno.key // strike1 vec
-                        yield Sg.lines strikeLine2 (Mod.constant C4b.Red) conf.arrowThickness.value posTrafo anno.key // strike2 vec
+                        yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key // strike1 vec
+                        yield Sg.lines strikeLine2 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key // strike2 vec
                     | None -> () 
                                
             } |> Sg.set
@@ -583,25 +615,36 @@ module DrawingApp =
                     |> Sg.trafo anno.modelTrafo
                     |> Sg.translate 0.0 0.0 3.0
 
-        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:MViewConfigModel) =
+        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) =
             let points = getPolyline anno
                        
             Sg.ofList [
-                Sg.lines points anno.color.c anno.thickness.value anno.modelTrafo anno.key;         
-                Sg.dots anno.points c view                                
+                Sg.lines points anno.color.c anno.thickness.value anno.modelTrafo anno.key
+                Sg.dots anno.points c view
                 drawDns anno view conf |> Sg.onOff anno.showDns
             ] |> Sg.onOff anno.visible
 
-        let view (model:MDrawingModel) (cam:IMod<CameraView>) =
+        let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) (cam:IMod<CameraView>) : ISg<Drawing.Action> =
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler
             let annoSet = ASet.ofAList model.annotations 
+
+            let config = 
+                {
+                    nearPlane      = msmallConfig.getNearPlane      mbigConfig
+                    hfov           = msmallConfig.getHfov           mbigConfig
+                    maxDipAngle    = msmallConfig.getMaxDipAngle    mbigConfig
+                    minDipAngle    = msmallConfig.getMinDipAngle    mbigConfig
+                    arrowLength    = msmallConfig.getArrowLength    mbigConfig
+                    arrowThickness = msmallConfig.getArrowThickness mbigConfig
+                    dnsPlaneSize   = msmallConfig.getDnsPlaneSize   mbigConfig
+                }
 
             let annotations =
                 aset {
                     for a in annoSet do
                        let c = UI.mkColor model a
-                       yield finishedAnnotation a cam c model.config
+                       yield finishedAnnotation a cam c config
                 } |> Sg.set
                                 
             Sg.ofList [

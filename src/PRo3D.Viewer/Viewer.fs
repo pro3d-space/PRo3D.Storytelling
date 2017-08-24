@@ -183,7 +183,7 @@ module ViewerApp =
     let updateAllTheConfigs m c =
         let m = (Model.Lens.scene   |. Scene.Lens.config).Set(m,c)
         let m = (Model.Lens.scene   |. Scene.Lens.navigation |. NavigationModel.Lens.config).Set(m,c)        
-        let m = { m with drawing = { m.drawing with config = c } }
+        //let m = { m with drawing = { m.drawing with config = c } }
 
         m        
 
@@ -203,13 +203,19 @@ module ViewerApp =
                 arrowThickness = ViewConfigModel.Lens.arrowThickness |. NumericInput.Lens.value 
         }
     
+    let drawingConfig : DrawingApp.SmallConfig<ReferenceSystem> =
+        { 
+            up    = (ReferenceSystem.Lens.up |. V3dInput.Lens.value)
+            north = ReferenceSystem.Lens.north
+        }
+
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false -> 
-                { m with scene = { m.scene with navigation = Navigation.update m.scene.navigation msg }}                            
-            | DrawingMessage msg, Interactions.DrawAnnotation,_->                 
-                { m with drawing = DrawingApp.update w bc m.drawing msg } |> stash
+                { m with scene = { m.scene with navigation = Navigation.update m.scene.navigation msg }}
+            | DrawingMessage msg, Interactions.DrawAnnotation,_->
+                { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg } |> stash
             | SurfaceActions msg,_,_ ->
                 match msg with
                     | SurfaceApp.Action.FlyToSurface id -> 
@@ -278,7 +284,7 @@ module ViewerApp =
                         match m.interaction with
                             | Interactions.DrawAnnotation ->
                                
-                                let drawing = DrawingApp.update w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,n))
+                                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,n))
                                 Log.stop()
                                 { m with drawing = drawing } |> stash
                             | Interactions.PlaceCoordinateSystem -> 
@@ -335,7 +341,8 @@ module ViewerApp =
          
                     let m =
                         match m.interaction with
-                            | Interactions.DrawAnnotation -> { m with drawing = DrawingApp.update w bc m.drawing drawingAction; } |> stash
+                            | Interactions.DrawAnnotation -> 
+                                { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing drawingAction; } |> stash
                             | _ -> m
                                                         
 
@@ -354,7 +361,7 @@ module ViewerApp =
             | KeyUp k, _,_ ->
                     let d =
                         match k with
-                            | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update w bc m.drawing Drawing.Action.StopDrawing
+                            | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing Drawing.Action.StopDrawing
                             | _ -> m.drawing
                     
                     { m with drawing = d; picking = false } |> stash
@@ -459,7 +466,7 @@ module ViewerApp =
                 }
                 |> Sg.noEvents
                 |> Sg.trafo(trafo)
-
+   
     let view (m : MModel) =
 
         let renderControlAttributes (model : MNavigationModel) =
@@ -477,7 +484,10 @@ module ViewerApp =
             {
                 getArrowLength    = fun (x:MViewConfigModel) -> x.arrowLength.value
                 getArrowThickness = fun (x:MViewConfigModel) -> x.arrowThickness.value
+                getNearDistance   = fun (x:MViewConfigModel) -> x.nearPlane.value
             }
+
+        
 
         let renderControl =
             Incremental.renderControl
@@ -490,9 +500,20 @@ module ViewerApp =
                             onKeyUp (KeyUp)
                             attribute "style" "width:70%; height: 100%; float:left"; ] 
                     ]) 
-                    (                                             
+                    (                        
+                        let sconf : DrawingApp.MSmallConfig<MViewConfigModel> =
+                            {            
+                                getNearPlane       = fun (x:MViewConfigModel) -> x.nearPlane.value
+                                getHfov            = fun (x:MViewConfigModel) -> ((Mod.init 60.0) :> IMod<float>)
+                                getMaxDipAngle     = fun (x:MViewConfigModel) -> x.maxDipAngle.value
+                                getMinDipAngle     = fun (x:MViewConfigModel) -> x.minDipAngle.value
+                                getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
+                                getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
+                                getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
+                            }
+
                         let annotations =
-                            DrawingApp.Sg.view m.drawing m.scene.navigation.camera.view
+                            DrawingApp.Sg.view m.scene.config sconf m.drawing m.scene.navigation.camera.view
                                 |> Sg.map DrawingMessage
                                 |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
                                 |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
@@ -501,8 +522,7 @@ module ViewerApp =
                             ReferenceSystemApp.Sg.view 
                                 m.scene.config
                                 refSystemInner
-                                m.scene.referenceSystem
-                                m.scene.config.nearPlane.value                                 
+                                m.scene.referenceSystem                                   
                                 m.scene.navigation.camera.view
                             |> Sg.map ReferenceSystemMessage
 

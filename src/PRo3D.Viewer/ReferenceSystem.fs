@@ -26,14 +26,15 @@ module ReferenceSystemApp =
 
     type InnerConfig<'a> =
         {
-            arrowLength    : Lens<'a,float>
-            arrowThickness : Lens<'a,float>
+            arrowLength     : Lens<'a,float>
+            arrowThickness  : Lens<'a,float>            
         } 
 
     type MInnerConfig<'ma> =
         {
             getArrowLength    : 'ma -> IMod<float>
             getArrowThickness : 'ma -> IMod<float>
+            getNearDistance   : 'ma -> IMod<float>
         }
     
     let upVector (point:V3d) = point.Normalized
@@ -48,9 +49,9 @@ module ReferenceSystemApp =
                 let up = upVector p
                 let n = northVector up
                 { model with origin = p; north = n; up = ReferenceSystem.setV3d up }, bigConfig
-            | SetOrigin p     -> 
+            | SetOrigin p -> 
                 { model with origin = p }, bigConfig
-            | SetUp     up    ->    
+            | SetUp up ->    
                 let up = Vector3d.update model.up up
                 let up' = ReferenceSystem.setV3d up.value.Normalized
                 { model with up =  up'}, bigConfig
@@ -114,10 +115,11 @@ module ReferenceSystemApp =
                 yield Sg.dots (AList.single pos) color cam //there is also a method for drawing a single dot.
             } |> Sg.set
 
-        let view<'ma> (mbigConfig : 'ma) (minnerConfig : MInnerConfig<'ma>) (model:MReferenceSystem) (near : IMod<float>) (cam:IMod<CameraView>) : ISg<Action> =
+        let view<'ma> (mbigConfig : 'ma) (minnerConfig : MInnerConfig<'ma>) (model:MReferenceSystem) (cam:IMod<CameraView>) : ISg<Action> =
                        
-            let length    = minnerConfig.getArrowLength   mbigConfig
+            let length    = minnerConfig.getArrowLength    mbigConfig
             let thickness = minnerConfig.getArrowThickness mbigConfig
+            let near      = minnerConfig.getNearDistance   mbigConfig
 
             Sg.ofList [
                 point model.origin (Mod.constant C4b.Red) cam
