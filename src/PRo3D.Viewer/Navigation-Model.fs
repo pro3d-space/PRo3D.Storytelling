@@ -9,18 +9,14 @@ open Aardvark.Base
 [<DomainType>]
 type NavigationModel = {
     camera : CameraControllerState
-    navigationMode : NavigationMode  
-    coordinates : ReferenceSystem
-    exploreCenter : V3d
-    config : ViewConfigModel
+    navigationMode : NavigationMode      
+    exploreCenter : V3d    
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module NavigationModel =
     let initial = {
         camera = CameraController.initial  
-        navigationMode =  NavigationMode.FreeFly
-        coordinates = ReferenceSystem.initial
-        exploreCenter = V3d.Zero // make option
-        config = ViewConfigModel.initial
+        navigationMode =  NavigationMode.FreeFly        
+        exploreCenter = V3d.Zero // make option        
         }

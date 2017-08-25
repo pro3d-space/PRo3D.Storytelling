@@ -44,39 +44,3 @@ module Mutable =
                     override x.Set(r,v) = { r with arrowSize = v }
                     override x.Update(r,f) = { r with arrowSize = f r.arrowSize }
                 }
-    
-    
-    type MBigModel(__initial : ConfigLensTest.BigModel) =
-        inherit obj()
-        let mutable __current = __initial
-        let _bigConfig = ResetMod.Create(__initial.bigConfig)
-        
-        member x.bigConfig = _bigConfig :> IMod<_>
-        
-        member x.Update(v : ConfigLensTest.BigModel) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
-                
-                _bigConfig.Update(v.bigConfig)
-                
-        
-        static member Create(__initial : ConfigLensTest.BigModel) : MBigModel = MBigModel(__initial)
-        static member Update(m : MBigModel, v : ConfigLensTest.BigModel) = m.Update(v)
-        
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
-        interface IUpdatable<ConfigLensTest.BigModel> with
-            member x.Update v = x.Update v
-    
-    
-    
-    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module BigModel =
-        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-        module Lens =
-            let bigConfig =
-                { new Lens<ConfigLensTest.BigModel, ConfigLensTest.BigConfig>() with
-                    override x.Get(r) = r.bigConfig
-                    override x.Set(r,v) = { r with bigConfig = v }
-                    override x.Update(r,f) = { r with bigConfig = f r.bigConfig }
-                }

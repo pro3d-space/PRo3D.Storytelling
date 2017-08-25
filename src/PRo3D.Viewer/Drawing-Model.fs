@@ -39,6 +39,8 @@ type Action =
         | Clear
         | Nop
         | AnnotationPropertiesMsg of AnnotationProperties.Action
+        | UpVectorChanged         of V3d
+        | NorthVectorChanged      of V3d
 
 [<DomainType>]
 type DrawingModel = {
@@ -58,8 +60,8 @@ type DrawingModel = {
     selectedAnnotation : option<Annotation>
 
     pendingIntersections : ThreadPool<Action>
-    config : ViewConfigModel
-    coordinates : ReferenceSystem
+    //config : ViewConfigModel
+  //  coordinates : ReferenceSystem
 
     [<TreatAsValue>]
     past : Option<DrawingModel> 
@@ -93,9 +95,7 @@ module DrawingModel =
 
         selected                = HSet.empty
         selectedAnnotation      = None
-        pendingIntersections    = ThreadPool.empty
-        config                  = ViewConfigModel.initial        
-        coordinates             = ReferenceSystem.initial
+        pendingIntersections    = ThreadPool.empty            
 
         past    = None
         future  = None

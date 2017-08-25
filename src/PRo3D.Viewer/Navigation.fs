@@ -19,7 +19,13 @@ module Navigation =
         | FreeFlyAction         of CameraController.Message
         | SetNavigationMode     of NavigationMode
 
-    let update (model : NavigationModel) (act : Action) =
+    type smallConfig<'a,'b> = 
+        {
+            navigationSensitivity : Lens<'a, float>
+            up                    : Lens<'b, V3d>
+        }
+
+    let update<'a,'b> (bigConfigA : 'a) (bigConfigB : 'b) (smallConfig : smallConfig<'a,'b>) (model : NavigationModel) (act : Action) =
         match act with            
             | ArcBallAction a -> 
                 let model = 
@@ -35,7 +41,7 @@ module Navigation =
                     
             | FreeFlyAction a ->
                 let cam' = CameraController.update model.camera a                
-                { model with camera = { cam' with sensitivity = model.config.navigationSensitivity.value } }
+                { model with camera = { cam' with sensitivity = smallConfig.navigationSensitivity.Get(bigConfigA) } }
             | SetNavigationMode mode ->
                 match mode with
                     | NavigationMode.FreeFly ->
@@ -45,7 +51,7 @@ module Navigation =
                                 | None   -> V3d.OOO
 
                         let view' =
-                            CameraView.lookAt model.camera.view.Location center model.coordinates.up.value
+                            CameraView.lookAt model.camera.view.Location center (smallConfig.up.Get(bigConfigB))
                         
                         { model with camera = { model.camera with view = view'}; navigationMode = mode} 
                     | _ ->  { model with navigationMode = mode }
@@ -53,19 +59,25 @@ module Navigation =
     module UI =
         open Aardvark.Base.Camera
 
-        let frustum (model : MNavigationModel) =
+        type smallConfig<'ma> = 
+            {
+                getNearPlane : 'ma -> IMod<float>
+                getFarPlane  : 'ma -> IMod<float>
+            }
+
+        let frustum near far =
             adaptive {
-                let! near = model.config.nearPlane.value
-                let! far = model.config.farPlane.value
+                let! near = near
+                let! far = far
                 return (Frustum.perspective 60.0 near far 1.0)
                 }
 
-        let renderControlAttributes (model : MNavigationModel) =
+        let renderControlAttributes (model : MNavigationModel) near far =
             amap {
                 let! state = model.navigationMode 
                 match state with
-                    | NavigationMode.FreeFly -> yield! CameraController.extractAttributes model.camera FreeFlyAction (frustum model)
-                    | NavigationMode.ArcBall -> yield! ArcBallController.extractAttributes model.camera ArcBallAction (frustum model)
+                    | NavigationMode.FreeFly -> yield! CameraController.extractAttributes model.camera FreeFlyAction (frustum near far)
+                    | NavigationMode.ArcBall -> yield! ArcBallController.extractAttributes model.camera ArcBallAction (frustum near far)
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap
 
