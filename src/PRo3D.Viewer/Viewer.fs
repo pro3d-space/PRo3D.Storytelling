@@ -496,58 +496,70 @@ module ViewerApp =
                 getArrowThickness = fun (x:MViewConfigModel) -> x.arrowThickness.value
                 getNearDistance   = fun (x:MViewConfigModel) -> x.nearPlane.value
             }
-
         
+        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view (frustum m)
 
-        let renderControl =
-            Incremental.renderControl
-                    (Mod.map2 Camera.create m.scene.navigation.camera.view (frustum m)) //(Frustum.perspective 60.0 m.scene.config.nearPlane.value 100.0 1.0 |> Mod.constant)
-                    (AttributeMap.unionMany [
-                        renderControlAttributes m.scene.navigation
-                        [attribute "style" "width:70%; height: 100%; float:left"; ] |> AttributeMap.ofList
-                        AttributeMap.ofList [
-                            onKeyDown (KeyDown)
-                            onKeyUp (KeyUp)
-                            attribute "style" "width:70%; height: 100%; float:left"; ] 
-                    ]) 
-                    (                        
-                        let sconf : DrawingApp.MSmallConfig<MViewConfigModel> =
-                            {            
-                                getNearPlane       = fun (x:MViewConfigModel) -> x.nearPlane.value
-                                getHfov            = fun (x:MViewConfigModel) -> ((Mod.init 60.0) :> IMod<float>)
-                                getMaxDipAngle     = fun (x:MViewConfigModel) -> x.maxDipAngle.value
-                                getMinDipAngle     = fun (x:MViewConfigModel) -> x.minDipAngle.value
-                                getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
-                                getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
-                                getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
-                            }
+        let att = 
+            AttributeMap.unionMany [
+                renderControlAttributes m.scene.navigation
+                [attribute "style" "width:70%; height: 100%; float:left"; ] |> AttributeMap.ofList
+                AttributeMap.ofList [
+                    onKeyDown (KeyDown)
+                    onKeyUp (KeyUp)
+                    attribute "style" "width:70%; height: 100%; float:left"; ] 
+            ]
 
-                        let annotations =
-                            DrawingApp.Sg.view m.scene.config sconf m.drawing m.scene.navigation.camera.view
-                                |> Sg.map DrawingMessage
-                                |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
-                                |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
+        let sconf : DrawingApp.MSmallConfig<MViewConfigModel> =
+            {            
+                getNearPlane       = fun (x:MViewConfigModel) -> x.nearPlane.value
+                getHfov            = fun (x:MViewConfigModel) -> ((Mod.init 60.0) :> IMod<float>)
+                getMaxDipAngle     = fun (x:MViewConfigModel) -> x.maxDipAngle.value
+                getMinDipAngle     = fun (x:MViewConfigModel) -> x.minDipAngle.value
+                getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
+                getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
+                getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
+            }
 
-                        let orientations =
-                            ReferenceSystemApp.Sg.view 
-                                m.scene.config
-                                refSystemInner
-                                m.scene.referenceSystem                                   
-                                m.scene.navigation.camera.view
-                            |> Sg.map ReferenceSystemMessage
+                
 
-                        let exploreCenter =
-                            Navigation.Sg.view m.scene.navigation
+        let sg = 
+            let annotations =
+                DrawingApp.Sg.view m.scene.config sconf m.drawing m.scene.navigation.camera.view
+                    |> Sg.map DrawingMessage
+                    |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
+                    |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
 
-                        [
-                            viewSurfacesSg m.scene.surfacesModel (frustum m) (m.scene.config.lodColoring)
-                            annotations
-                            orientations
-                            exploreCenter
-                        ] |> Sg.ofList
-                         //   |> Sg.fillMode (Mod.constant FillMode.Fill)
-                         //   |> Sg.cullMode (Mod.constant CullMode.None)      
-                    )              
+            let orientations =
+                ReferenceSystemApp.Sg.view 
+                    m.scene.config
+                    refSystemInner
+                    m.scene.referenceSystem                                   
+                    m.scene.navigation.camera.view
+                |> Sg.map ReferenceSystemMessage
+
+            let exploreCenter =
+                Navigation.Sg.view m.scene.navigation
+
+            [
+                viewSurfacesSg m.scene.surfacesModel (frustum m) (m.scene.config.lodColoring)
+                annotations
+                orientations
+                exploreCenter
+            ] |> Sg.ofList
+
+        //let renderControl =
+        //    Incremental.renderControl cam att 
+
+        let cmds = 
+            alist {
+                yield RenderCommand.SceneGraph sg
+            }
+
+        let control = 
+            DomNode.RenderControl(att, cam, cmds, None)
+
+        //let control =
+        //    CameraController.withControls m.scene.navigation.camera CameraAction (frustum m) control
 
         let sceneTools =
             div [clazz "ui buttons inverted"] [ 
@@ -664,7 +676,7 @@ module ViewerApp =
                      
         let rest (model : MModel) = 
             [             
-                renderControl
+                control
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden"] [
                     div[style "height:41px"][text "spacer"]
                     tabs                    

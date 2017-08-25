@@ -133,7 +133,7 @@ module Surface =
         surfaces
             //|> List.map (fun (d : Surface) -> { d with guid = Guid.NewGuid() })
             |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths })
-            |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
+            |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d false)
             |> List.zip surfaces
             |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> toSg surf sg (hierarchies |> computeBB) kdtree)
             |> List.map (fun d -> (d.surface.guid, d))
