@@ -388,7 +388,7 @@ type AnnotationGroupsModel = {
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AnnotationGroupsModel =
     let init = {
-        rootGroup = initRoot
+        rootGroup = AnnotationGroup.initRoot
         activeSurface =  Guid.Empty
         activeGroup = Guid.Empty
         }

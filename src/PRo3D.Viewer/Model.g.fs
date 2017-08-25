@@ -647,3 +647,57 @@ module Mutable =
                     override x.Set(r,v) = { r with visible = v }
                     override x.Update(r,f) = { r with visible = f r.visible }
                 }
+    
+    
+    type MAnnotationGroupsModel(__initial : PRo3D.AnnotationGroupsModel) =
+        inherit obj()
+        let mutable __current = __initial
+        let _rootGroup = MAnnotationGroup.Create(__initial.rootGroup)
+        let _activeSurface = ResetMod.Create(__initial.activeSurface)
+        let _activeGroup = ResetMod.Create(__initial.activeGroup)
+        
+        member x.rootGroup = _rootGroup
+        member x.activeSurface = _activeSurface :> IMod<_>
+        member x.activeGroup = _activeGroup :> IMod<_>
+        
+        member x.Update(v : PRo3D.AnnotationGroupsModel) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                MAnnotationGroup.Update(_rootGroup, v.rootGroup)
+                ResetMod.Update(_activeSurface,v.activeSurface)
+                ResetMod.Update(_activeGroup,v.activeGroup)
+                
+        
+        static member Create(__initial : PRo3D.AnnotationGroupsModel) : MAnnotationGroupsModel = MAnnotationGroupsModel(__initial)
+        static member Update(m : MAnnotationGroupsModel, v : PRo3D.AnnotationGroupsModel) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.AnnotationGroupsModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module AnnotationGroupsModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let rootGroup =
+                { new Lens<PRo3D.AnnotationGroupsModel, PRo3D.AnnotationGroup>() with
+                    override x.Get(r) = r.rootGroup
+                    override x.Set(r,v) = { r with rootGroup = v }
+                    override x.Update(r,f) = { r with rootGroup = f r.rootGroup }
+                }
+            let activeSurface =
+                { new Lens<PRo3D.AnnotationGroupsModel, System.Guid>() with
+                    override x.Get(r) = r.activeSurface
+                    override x.Set(r,v) = { r with activeSurface = v }
+                    override x.Update(r,f) = { r with activeSurface = f r.activeSurface }
+                }
+            let activeGroup =
+                { new Lens<PRo3D.AnnotationGroupsModel, System.Guid>() with
+                    override x.Get(r) = r.activeGroup
+                    override x.Set(r,v) = { r with activeGroup = v }
+                    override x.Update(r,f) = { r with activeGroup = f r.activeGroup }
+                }
