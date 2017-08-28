@@ -395,18 +395,18 @@ module ViewerApp =
                 (Model.Lens.scene |. Scene.Lens.config).Set(m,c')
             | _ -> m
 
-    let viewSurfacesSg (m : MSurfaceModel) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>)=
+    let viewSurfacesSg (sgSurfaces : amap<Guid,MSgSurface>) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>)=
         let opcs =
             aset {
                 
-                for (key,surface) in m.sgSurfaces |> AMap.toASet do
+                for (key,surface) in sgSurfaces |> AMap.toASet do
                    
                     let isSelected = 
                         Mod.bind2 (fun guid (selected: Option<MSurface>) ->
                             match selected with
                                 | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
                                 | None -> Mod.constant false
-                        ) surface.surface.guid m.selectedSurface
+                        ) surface.surface.guid (Mod.constant None)
 
                     let createSg (sg : ISg) =
                         sg 
@@ -520,16 +520,15 @@ module ViewerApp =
                 getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
             }
 
-                
-
-        let sg = 
+         
+        let overlayed =
             let annotations =
                 DrawingApp.Sg.view m.scene.config sconf m.drawing m.scene.navigation.camera.view
                     |> Sg.map DrawingMessage
                     |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
                     |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
 
-            let orientations =
+            let refSystem =
                 ReferenceSystemApp.Sg.view 
                     m.scene.config
                     refSystemInner
@@ -540,19 +539,43 @@ module ViewerApp =
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation
 
-            [
-                viewSurfacesSg m.scene.surfacesModel (frustum m) (m.scene.config.lodColoring)
+            [            
                 annotations
-                orientations
+                refSystem
                 exploreCenter
             ] |> Sg.ofList
 
+        //let surfaces2 =
+        //    //adaptive {
+
+        //    let sm = 
+        //        m.scene.surfacesModel.sgSurfaces 
+        //            |> AMap.toASet
+        //            |> ASet.groupBy(
+        //                fun (guid,(s:MSgSurface)) -> int (s.surface.priority.value |> Mod.force))
+        //            |> AMap.toASet
+        //            |> ASet.map(fun (p,set) -> p)
+                                    
+
+        //    sm
+            //}
+
+        let surfaces = 
+            viewSurfacesSg m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring)
+         
         //let renderControl =
         //    Incremental.renderControl cam att 
 
+        //surfaces |> group by priority |> (priority * sg)
+
         let cmds = 
+
+            //let abc = surfaces2
+            //Log.line "%A" abc
+
             alist {
-                yield RenderCommand.SceneGraph sg
+                yield RenderCommand.SceneGraph overlayed
+                yield RenderCommand.SceneGraph surfaces
             }
 
         let control = 

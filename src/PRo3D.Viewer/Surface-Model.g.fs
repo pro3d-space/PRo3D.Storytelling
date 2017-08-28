@@ -23,6 +23,7 @@ module Mutable =
         let _cullMode = ResetMod.Create(__initial.cullMode)
         let _isVisible = ResetMod.Create(__initial.isVisible)
         let _quality = Aardvark.UI.Mutable.MNumericInput.Create(__initial.quality)
+        let _priority = Aardvark.UI.Mutable.MNumericInput.Create(__initial.priority)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
@@ -34,6 +35,7 @@ module Mutable =
         member x.cullMode = _cullMode :> IMod<_>
         member x.isVisible = _isVisible :> IMod<_>
         member x.quality = _quality
+        member x.priority = _priority
         
         member x.Update(v : PRo3D.Surfaces.Surface) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -49,6 +51,7 @@ module Mutable =
                 ResetMod.Update(_cullMode,v.cullMode)
                 ResetMod.Update(_isVisible,v.isVisible)
                 Aardvark.UI.Mutable.MNumericInput.Update(_quality, v.quality)
+                Aardvark.UI.Mutable.MNumericInput.Update(_priority, v.priority)
                 
         
         static member Create(__initial : PRo3D.Surfaces.Surface) : MSurface = MSurface(__initial)
@@ -124,6 +127,12 @@ module Mutable =
                     override x.Get(r) = r.quality
                     override x.Set(r,v) = { r with quality = v }
                     override x.Update(r,f) = { r with quality = f r.quality }
+                }
+            let priority =
+                { new Lens<PRo3D.Surfaces.Surface, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.priority
+                    override x.Set(r,v) = { r with priority = v }
+                    override x.Update(r,f) = { r with priority = f r.priority }
                 }
     
     

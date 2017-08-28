@@ -88,6 +88,15 @@ module Surface =
             format = "{0:0.0}"
         }
 
+    let priorityInit = 
+        {
+            value = 0.0
+            min =  0.0
+            max = 10.0
+            step = 1.0
+            format = "{0:0}"
+        }
+
     let mk path = 
         
         let names = Utils.getOPCNames path                
@@ -102,6 +111,7 @@ module Surface =
             isVisible = true
             relativePaths = false
             quality = qualityInit
+            priority = priorityInit
         }
 
     let checkBB (bb:Box3d) = 
