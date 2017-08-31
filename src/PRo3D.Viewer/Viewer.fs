@@ -119,7 +119,7 @@ module ViewerApp =
     open Aardvark.SceneGraph.SgFSharp.Sg
     open System.Collections.Concurrent
     open FShade.GLSL.AssemblerState
-    open Aardvark.Cef.WinForms    
+    open Aardvark.Cef.WinForms
         
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -395,59 +395,61 @@ module ViewerApp =
                 (Model.Lens.scene |. Scene.Lens.config).Set(m,c')
             | _ -> m
 
+    let viewSingleSurfaceSg (surface : MSgSurface) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>) (globalBB : Box3d) =
+        let isSelected = 
+            Mod.bind2 (fun guid (selected: Option<MSurface>) ->
+                match selected with
+                    | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
+                    | None -> Mod.constant false
+            ) surface.surface.guid (Mod.constant None)
+
+        let createSg (sg : ISg) =
+            sg 
+            |> Sg.noEvents 
+            |> Sg.cullMode(surface.surface.cullMode) 
+            |> Sg.fillMode(surface.surface.fillMode)         
+                          
+        let sg = 
+            Mod.map createSg surface.sceneGraph 
+                |> Sg.dynamic          
+                |> Sg.uniform "selected" isSelected
+                |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))                                 
+                |> Sg.onOff(surface.surface.isVisible)                             
+                |> Sg.LodParameters( 
+                    adaptive {
+                        let! frustum = frustum 
+                        let sizes = V2i(1024,768)
+                        let! quality = surface.surface.quality.value
+
+                        return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality) }
+                    })                            
+                |> Sg.noEvents
+                |> Sg.andAlso (
+                    Sg.wireBox' C4b.Red globalBB
+                            |> Sg.noEvents
+                            |> Sg.noEvents
+                            |> Sg.shader {
+                                    do! Shader.stableTrafo
+                                    do! DefaultSurfaces.vertexColor                                                                     
+                                }
+                    ) 
+                |> Sg.pickable (PickShape.Box globalBB) 
+                |> Sg.withEvents [
+                        SceneEventKind.Down, (
+                            fun sceneHit -> 
+                                true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])
+                        // Sg.onMouseDownEvt (fun sceneHit -> PickSurface (sceneHit,(surface.surface.name |> Mod.force)))
+                    ]
+        sg
+                
     let viewSurfacesSg (sgSurfaces : amap<Guid,MSgSurface>) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>)=
         let opcs =
             aset {
-                
-                for (key,surface) in sgSurfaces |> AMap.toASet do
-                   
-                    let isSelected = 
-                        Mod.bind2 (fun guid (selected: Option<MSurface>) ->
-                            match selected with
-                                | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
-                                | None -> Mod.constant false
-                        ) surface.surface.guid (Mod.constant None)
-
-                    let createSg (sg : ISg) =
-                        sg 
-                        |> Sg.noEvents 
-                        |> Sg.cullMode(surface.surface.cullMode) 
-                        |> Sg.fillMode(surface.surface.fillMode)                         
-
-                    let! bb = surface.globalBB
-                    let sg = 
-                        Mod.map createSg surface.sceneGraph 
-                        |> Sg.dynamic          
-                        |> Sg.uniform "selected" isSelected
-                        |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))                                 
-                        |> Sg.onOff(surface.surface.isVisible)                             
-                        |> Sg.LodParameters( 
-                            adaptive {
-                                let! frustum = frustum 
-                                let sizes = V2i(1024,768)
-                                let! quality = surface.surface.quality.value
-
-                                return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality) }
-                            })                            
-                        |> Sg.noEvents
-                        |> Sg.andAlso (
-                            Sg.wireBox' C4b.Red bb
-                                    |> Sg.noEvents
-                                    |> Sg.noEvents
-                                    |> Sg.shader {
-                                            do! Shader.stableTrafo
-                                            do! DefaultSurfaces.vertexColor                                                                     
-                                        }
-                            ) 
-                        |> Sg.pickable (PickShape.Box bb) 
-                        |> Sg.withEvents [
-                                SceneEventKind.Down, (
-                                    fun sceneHit -> 
-                                        true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])
-                               // Sg.onMouseDownEvt (fun sceneHit -> PickSurface (sceneHit,(surface.surface.name |> Mod.force)))
-                            ]                        
-                    yield sg
+                for (_,surface) in sgSurfaces |> AMap.toASet do
+                   let! bb = surface.globalBB
+                   yield viewSingleSurfaceSg surface frustum lodcolor bb
             }
+
         opcs 
             |> Sg.set
             |> Sg.effect [
@@ -519,7 +521,6 @@ module ViewerApp =
                 getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
                 getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
             }
-
          
         let overlayed =
             let annotations =
@@ -545,21 +546,59 @@ module ViewerApp =
                 exploreCenter
             ] |> Sg.ofList
 
-        //let surfaces2 =
-        //    //adaptive {
+        let surfaces2 (sgSurfaces:amap<Guid,MSgSurface>) frustum lodcolor =                        
+            let bla =
+                sgSurfaces
+                    |> AMap.toASet
+                    |> ASet.map snd
+                    |> ASet.mapM(fun x -> x.surface.priority.value |> Mod.map(fun g -> (g,x))) 
+                    |> ASet.groupBy fst 
+                    |> AMap.toASet
 
-        //    let sm = 
-        //        m.scene.surfacesModel.sgSurfaces 
-        //            |> AMap.toASet
-        //            |> ASet.groupBy(
-        //                fun (guid,(s:MSgSurface)) -> int (s.surface.priority.value |> Mod.force))
-        //            |> AMap.toASet
-        //            |> ASet.map(fun (p,set) -> p)
-                                    
+            let bla =
+                bla
+                    |> ASet.map(
+                        fun (p, group) -> 
+                            aset {
+                                for (_,x) in group do
+                                    //yield 0
+                                    let! bb = x.globalBB
+                                    yield viewSingleSurfaceSg x frustum lodcolor bb
+                            }
+                    )
+            bla
 
-        //    sm
+        let cmds2 =
+            let nestedSgs =
+                surfaces2 m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring) |> AList.ofASet
+            
+            alist {
+                yield RenderCommand.SceneGraph overlayed
+
+                for set in nestedSgs do
+                    let sg = 
+                        set 
+                            |> Sg.set                            
+                            |> Sg.effect [
+                                Shader.stableTrafo |> toEffect
+                                //DefaultSurfaces.constantColor C4f.White |> toEffect                            
+                                DefaultSurfaces.diffuseTexture |> toEffect
+                               // Shader.selectionColor |> toEffect       
+                                Shader.LoDColor |> toEffect
+                            ]
+                            |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
+                            |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
+
+                    yield RenderCommand.SceneGraph sg
+                    yield RenderCommand.Clear(None,Some (Mod.constant 1.0))
+            }
+
+            //alist {
+            //    for groups in surfaces2 do
+            //        yield 0
+
             //}
-
+                       
         let surfaces = 
             viewSurfacesSg m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring)
          
@@ -579,7 +618,7 @@ module ViewerApp =
             }
 
         let control = 
-            DomNode.RenderControl(att, cam, cmds, None)
+            DomNode.RenderControl(att, cam, cmds2, None)
 
         //let control =
         //    CameraController.withControls m.scene.navigation.camera CameraAction (frustum m) control

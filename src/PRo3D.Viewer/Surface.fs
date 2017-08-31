@@ -186,7 +186,7 @@ module Surface =
     //        Some p
 
     open System.IO
-    let getSurfaceFolder (surface:Surface) (scenePath:option<string>) =        
+    let getSurfaceFolder (surface:Surface) (scenePath:option<string>) =
         if surface.relativePaths 
         then
             match scenePath with
