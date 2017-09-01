@@ -575,15 +575,17 @@ module Mutable =
         let _name = ResetMod.Create(__initial.name)
         let _annotations = MList.Create(__initial.annotations, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
         let _subGroups = MList.Create(__initial.subGroups, (fun v -> MAnnotationGroup.Create(v)), (fun (m,v) -> MAnnotationGroup.Update(m, v)), (fun v -> v))
-        let _parentKey = ResetMod.Create(__initial.parentKey)
         let _visible = ResetMod.Create(__initial.visible)
+        let _active = ResetMod.Create(__initial.active)
+        let _expanded = ResetMod.Create(__initial.expanded)
         
         member x.key = _key :> IMod<_>
         member x.name = _name :> IMod<_>
         member x.annotations = _annotations :> alist<_>
         member x.subGroups = _subGroups :> alist<_>
-        member x.parentKey = _parentKey :> IMod<_>
         member x.visible = _visible :> IMod<_>
+        member x.active = _active :> IMod<_>
+        member x.expanded = _expanded :> IMod<_>
         
         member x.Update(v : PRo3D.AnnotationGroup) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -593,8 +595,9 @@ module Mutable =
                 ResetMod.Update(_name,v.name)
                 MList.Update(_annotations, v.annotations)
                 MList.Update(_subGroups, v.subGroups)
-                ResetMod.Update(_parentKey,v.parentKey)
                 ResetMod.Update(_visible,v.visible)
+                ResetMod.Update(_active,v.active)
+                ResetMod.Update(_expanded,v.expanded)
                 
         
         static member Create(__initial : PRo3D.AnnotationGroup) : MAnnotationGroup = MAnnotationGroup(__initial)
@@ -635,15 +638,75 @@ module Mutable =
                     override x.Set(r,v) = { r with subGroups = v }
                     override x.Update(r,f) = { r with subGroups = f r.subGroups }
                 }
-            let parentKey =
-                { new Lens<PRo3D.AnnotationGroup, System.Guid>() with
-                    override x.Get(r) = r.parentKey
-                    override x.Set(r,v) = { r with parentKey = v }
-                    override x.Update(r,f) = { r with parentKey = f r.parentKey }
-                }
             let visible =
                 { new Lens<PRo3D.AnnotationGroup, Microsoft.FSharp.Core.bool>() with
                     override x.Get(r) = r.visible
                     override x.Set(r,v) = { r with visible = v }
                     override x.Update(r,f) = { r with visible = f r.visible }
+                }
+            let active =
+                { new Lens<PRo3D.AnnotationGroup, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.active
+                    override x.Set(r,v) = { r with active = v }
+                    override x.Update(r,f) = { r with active = f r.active }
+                }
+            let expanded =
+                { new Lens<PRo3D.AnnotationGroup, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.expanded
+                    override x.Set(r,v) = { r with expanded = v }
+                    override x.Update(r,f) = { r with expanded = f r.expanded }
+                }
+    
+    
+    type MAnnotationGroupsModel(__initial : PRo3D.AnnotationGroupsModel) =
+        inherit obj()
+        let mutable __current = __initial
+        let _rootGroup = MAnnotationGroup.Create(__initial.rootGroup)
+        let _activeSurface = ResetMod.Create(__initial.activeSurface)
+        let _activeGroup = ResetMod.Create(__initial.activeGroup)
+        
+        member x.rootGroup = _rootGroup
+        member x.activeSurface = _activeSurface :> IMod<_>
+        member x.activeGroup = _activeGroup :> IMod<_>
+        
+        member x.Update(v : PRo3D.AnnotationGroupsModel) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                MAnnotationGroup.Update(_rootGroup, v.rootGroup)
+                ResetMod.Update(_activeSurface,v.activeSurface)
+                ResetMod.Update(_activeGroup,v.activeGroup)
+                
+        
+        static member Create(__initial : PRo3D.AnnotationGroupsModel) : MAnnotationGroupsModel = MAnnotationGroupsModel(__initial)
+        static member Update(m : MAnnotationGroupsModel, v : PRo3D.AnnotationGroupsModel) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.AnnotationGroupsModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module AnnotationGroupsModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let rootGroup =
+                { new Lens<PRo3D.AnnotationGroupsModel, PRo3D.AnnotationGroup>() with
+                    override x.Get(r) = r.rootGroup
+                    override x.Set(r,v) = { r with rootGroup = v }
+                    override x.Update(r,f) = { r with rootGroup = f r.rootGroup }
+                }
+            let activeSurface =
+                { new Lens<PRo3D.AnnotationGroupsModel, System.Guid>() with
+                    override x.Get(r) = r.activeSurface
+                    override x.Set(r,v) = { r with activeSurface = v }
+                    override x.Update(r,f) = { r with activeSurface = f r.activeSurface }
+                }
+            let activeGroup =
+                { new Lens<PRo3D.AnnotationGroupsModel, System.Guid>() with
+                    override x.Get(r) = r.activeGroup
+                    override x.Set(r,v) = { r with activeGroup = v }
+                    override x.Update(r,f) = { r with activeGroup = f r.activeGroup }
                 }

@@ -127,6 +127,7 @@ module ViewerApp =
 
     type Action =                
         | DrawingMessage            of Drawing.Action
+        | AnnotationGroupsMessage   of AnnotationGroups.Action
         | NavigationMessage         of Navigation.Action
         | ReferenceSystemMessage    of ReferenceSystemApp.Action
         | AnnotationMessage         of AnnotationProperties.Action
@@ -692,6 +693,13 @@ module ViewerApp =
                     Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 
             ]
 
+        let annotationGroupsUI =
+            div [][
+                GuiEx.accordion "Annotations" "Write" true [
+                    DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map AnnotationGroupsMessage
+                ]
+            ]
+
         let config (model:MModel) =
             adaptive {
                 let opt = ConfigProperties.view model.scene.config
@@ -715,7 +723,7 @@ module ViewerApp =
             
         let tabs = GuiEx.tabbed [clazz "ui inverted segment"] [
                             ("Data", SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions)
-                            ("Annotations", annotationUI)
+                            ("Annotations", annotationUI) //  annotationGroupsUI
                             ("Config", configUI)
                         ] "Data" 
       

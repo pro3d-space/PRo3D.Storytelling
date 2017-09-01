@@ -53,6 +53,7 @@ type DrawingModel = {
     geometry : Geometry
     semantic : Semantic
 
+    annotationGroups: AnnotationGroupsModel
     annotations : plist<Annotation>
     exportPath : string
 
@@ -89,6 +90,7 @@ module DrawingModel =
         geometry    = Geometry.Point
         semantic    = Semantic.Horizon3
 
+        annotationGroups = AnnotationGroupsModel.init
         annotations = PList.empty
 
         exportPath  = @"."
