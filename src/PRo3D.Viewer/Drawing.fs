@@ -625,6 +625,7 @@ module DrawingApp =
                 Sg.lines points anno.color.c anno.thickness.value anno.modelTrafo anno.key
                 Sg.dots anno.points c view
                 drawDns anno view conf |> Sg.onOff anno.showDns
+                anno |> text
             ] |> Sg.onOff anno.visible
 
         let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) (cam:IMod<CameraView>) : ISg<Drawing.Action> =

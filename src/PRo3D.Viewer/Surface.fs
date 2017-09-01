@@ -88,6 +88,15 @@ module Surface =
             format = "{0:0.0}"
         }
 
+    let priorityInit = 
+        {
+            value = 0.0
+            min =  0.0
+            max = 10.0
+            step = 1.0
+            format = "{0:0}"
+        }
+
     let mk path = 
         
         let names = Utils.getOPCNames path                
@@ -102,6 +111,7 @@ module Surface =
             isVisible = true
             relativePaths = false
             quality = qualityInit
+            priority = priorityInit
         }
 
     let checkBB (bb:Box3d) = 
@@ -133,7 +143,7 @@ module Surface =
         surfaces
             //|> List.map (fun (d : Surface) -> { d with guid = Guid.NewGuid() })
             |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths })
-            |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
+            |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d false)
             |> List.zip surfaces
             |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> toSg surf sg (hierarchies |> computeBB) kdtree)
             |> List.map (fun d -> (d.surface.guid, d))
@@ -176,7 +186,7 @@ module Surface =
     //        Some p
 
     open System.IO
-    let getSurfaceFolder (surface:Surface) (scenePath:option<string>) =        
+    let getSurfaceFolder (surface:Surface) (scenePath:option<string>) =
         if surface.relativePaths 
         then
             match scenePath with

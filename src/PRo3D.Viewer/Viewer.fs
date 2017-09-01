@@ -119,7 +119,7 @@ module ViewerApp =
     open Aardvark.SceneGraph.SgFSharp.Sg
     open System.Collections.Concurrent
     open FShade.GLSL.AssemblerState
-    open Aardvark.Cef.WinForms    
+    open Aardvark.Cef.WinForms
         
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -396,59 +396,61 @@ module ViewerApp =
                 (Model.Lens.scene |. Scene.Lens.config).Set(m,c')
             | _ -> m
 
-    let viewSurfacesSg (m : MSurfaceModel) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>)=
+    let viewSingleSurfaceSg (surface : MSgSurface) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>) (globalBB : Box3d) =
+        let isSelected = 
+            Mod.bind2 (fun guid (selected: Option<MSurface>) ->
+                match selected with
+                    | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
+                    | None -> Mod.constant false
+            ) surface.surface.guid (Mod.constant None)
+
+        let createSg (sg : ISg) =
+            sg 
+            |> Sg.noEvents 
+            |> Sg.cullMode(surface.surface.cullMode) 
+            |> Sg.fillMode(surface.surface.fillMode)         
+                          
+        let sg = 
+            Mod.map createSg surface.sceneGraph 
+                |> Sg.dynamic          
+                |> Sg.uniform "selected" isSelected
+                |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))                                 
+                |> Sg.onOff(surface.surface.isVisible)                             
+                |> Sg.LodParameters( 
+                    adaptive {
+                        let! frustum = frustum 
+                        let sizes = V2i(1024,768)
+                        let! quality = surface.surface.quality.value
+
+                        return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality) }
+                    })                            
+                |> Sg.noEvents
+                |> Sg.andAlso (
+                    Sg.wireBox' C4b.Red globalBB
+                            |> Sg.noEvents
+                            |> Sg.noEvents
+                            |> Sg.shader {
+                                    do! Shader.stableTrafo
+                                    do! DefaultSurfaces.vertexColor                                                                     
+                                }
+                    ) 
+                |> Sg.pickable (PickShape.Box globalBB) 
+                |> Sg.withEvents [
+                        SceneEventKind.Down, (
+                            fun sceneHit -> 
+                                true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])
+                        // Sg.onMouseDownEvt (fun sceneHit -> PickSurface (sceneHit,(surface.surface.name |> Mod.force)))
+                    ]
+        sg
+                
+    let viewSurfacesSg (sgSurfaces : amap<Guid,MSgSurface>) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>)=
         let opcs =
             aset {
-                
-                for (key,surface) in m.sgSurfaces |> AMap.toASet do
-                   
-                    let isSelected = 
-                        Mod.bind2 (fun guid (selected: Option<MSurface>) ->
-                            match selected with
-                                | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
-                                | None -> Mod.constant false
-                        ) surface.surface.guid m.selectedSurface
-
-                    let createSg (sg : ISg) =
-                        sg 
-                        |> Sg.noEvents 
-                        |> Sg.cullMode(surface.surface.cullMode) 
-                        |> Sg.fillMode(surface.surface.fillMode)                         
-
-                    let! bb = surface.globalBB
-                    let sg = 
-                        Mod.map createSg surface.sceneGraph 
-                        |> Sg.dynamic          
-                        |> Sg.uniform "selected" isSelected
-                        |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))                                 
-                        |> Sg.onOff(surface.surface.isVisible)                             
-                        |> Sg.LodParameters( 
-                            adaptive {
-                                let! frustum = frustum 
-                                let sizes = V2i(1024,768)
-                                let! quality = surface.surface.quality.value
-
-                                return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality) }
-                            })                            
-                        |> Sg.noEvents
-                        |> Sg.andAlso (
-                            Sg.wireBox' C4b.Red bb
-                                    |> Sg.noEvents
-                                    |> Sg.noEvents
-                                    |> Sg.shader {
-                                            do! Shader.stableTrafo
-                                            do! DefaultSurfaces.vertexColor                                                                     
-                                        }
-                            ) 
-                        |> Sg.pickable (PickShape.Box bb) 
-                        |> Sg.withEvents [
-                                SceneEventKind.Down, (
-                                    fun sceneHit -> 
-                                        true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])
-                               // Sg.onMouseDownEvt (fun sceneHit -> PickSurface (sceneHit,(surface.surface.name |> Mod.force)))
-                            ]                        
-                    yield sg
+                for (_,surface) in sgSurfaces |> AMap.toASet do
+                   let! bb = surface.globalBB
+                   yield viewSingleSurfaceSg surface frustum lodcolor bb
             }
+
         opcs 
             |> Sg.set
             |> Sg.effect [
@@ -497,58 +499,130 @@ module ViewerApp =
                 getArrowThickness = fun (x:MViewConfigModel) -> x.arrowThickness.value
                 getNearDistance   = fun (x:MViewConfigModel) -> x.nearPlane.value
             }
-
         
+        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view (frustum m)
 
-        let renderControl =
-            Incremental.renderControl
-                    (Mod.map2 Camera.create m.scene.navigation.camera.view (frustum m)) //(Frustum.perspective 60.0 m.scene.config.nearPlane.value 100.0 1.0 |> Mod.constant)
-                    (AttributeMap.unionMany [
-                        renderControlAttributes m.scene.navigation
-                        [attribute "style" "width:70%; height: 100%; float:left"; ] |> AttributeMap.ofList
-                        AttributeMap.ofList [
-                            onKeyDown (KeyDown)
-                            onKeyUp (KeyUp)
-                            attribute "style" "width:70%; height: 100%; float:left"; ] 
-                    ]) 
-                    (                        
-                        let sconf : DrawingApp.MSmallConfig<MViewConfigModel> =
-                            {            
-                                getNearPlane       = fun (x:MViewConfigModel) -> x.nearPlane.value
-                                getHfov            = fun (x:MViewConfigModel) -> ((Mod.init 60.0) :> IMod<float>)
-                                getMaxDipAngle     = fun (x:MViewConfigModel) -> x.maxDipAngle.value
-                                getMinDipAngle     = fun (x:MViewConfigModel) -> x.minDipAngle.value
-                                getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
-                                getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
-                                getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
+        let att = 
+            AttributeMap.unionMany [
+                renderControlAttributes m.scene.navigation
+                [attribute "style" "width:70%; height: 100%; float:left"; ] |> AttributeMap.ofList
+                AttributeMap.ofList [
+                    onKeyDown (KeyDown)
+                    onKeyUp (KeyUp)
+                    attribute "style" "width:70%; height: 100%; float:left"; ] 
+            ]
+
+        let sconf : DrawingApp.MSmallConfig<MViewConfigModel> =
+            {            
+                getNearPlane       = fun (x:MViewConfigModel) -> x.nearPlane.value
+                getHfov            = fun (x:MViewConfigModel) -> ((Mod.init 60.0) :> IMod<float>)
+                getMaxDipAngle     = fun (x:MViewConfigModel) -> x.maxDipAngle.value
+                getMinDipAngle     = fun (x:MViewConfigModel) -> x.minDipAngle.value
+                getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
+                getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
+                getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
+            }
+         
+        let overlayed =
+            let annotations =
+                DrawingApp.Sg.view m.scene.config sconf m.drawing m.scene.navigation.camera.view
+                    |> Sg.map DrawingMessage
+                    |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
+                    |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
+
+            let refSystem =
+                ReferenceSystemApp.Sg.view 
+                    m.scene.config
+                    refSystemInner
+                    m.scene.referenceSystem                                   
+                    m.scene.navigation.camera.view
+                |> Sg.map ReferenceSystemMessage
+
+            let exploreCenter =
+                Navigation.Sg.view m.scene.navigation
+
+            [            
+                annotations
+                refSystem
+                exploreCenter
+            ] |> Sg.ofList
+
+        let surfaces2 (sgSurfaces:amap<Guid,MSgSurface>) frustum lodcolor =                        
+            let bla =
+                sgSurfaces
+                    |> AMap.toASet
+                    |> ASet.map snd
+                    |> ASet.mapM(fun x -> x.surface.priority.value |> Mod.map(fun g -> (g,x))) 
+                    |> ASet.groupBy fst 
+                    |> AMap.toASet
+
+            let bla =
+                bla
+                    |> ASet.map(
+                        fun (p, group) -> 
+                            aset {
+                                for (_,x) in group do
+                                    //yield 0
+                                    let! bb = x.globalBB
+                                    yield viewSingleSurfaceSg x frustum lodcolor bb
                             }
+                    )
+            bla
 
-                        let annotations =
-                            DrawingApp.Sg.view m.scene.config sconf m.drawing m.scene.navigation.camera.view
-                                |> Sg.map DrawingMessage
-                                |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
-                                |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
+        let cmds2 =
+            let nestedSgs =
+                surfaces2 m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring) |> AList.ofASet
+            
+            alist {
+                yield RenderCommand.SceneGraph overlayed
 
-                        let orientations =
-                            ReferenceSystemApp.Sg.view 
-                                m.scene.config
-                                refSystemInner
-                                m.scene.referenceSystem                                   
-                                m.scene.navigation.camera.view
-                            |> Sg.map ReferenceSystemMessage
+                for set in nestedSgs do
+                    let sg = 
+                        set 
+                            |> Sg.set                            
+                            |> Sg.effect [
+                                Shader.stableTrafo |> toEffect
+                                //DefaultSurfaces.constantColor C4f.White |> toEffect                            
+                                DefaultSurfaces.diffuseTexture |> toEffect
+                               // Shader.selectionColor |> toEffect       
+                                Shader.LoDColor |> toEffect
+                            ]
+                            |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
+                            |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
 
-                        let exploreCenter =
-                            Navigation.Sg.view m.scene.navigation
+                    yield RenderCommand.SceneGraph sg
+                    yield RenderCommand.Clear(None,Some (Mod.constant 1.0))
+            }
 
-                        [
-                            viewSurfacesSg m.scene.surfacesModel (frustum m) (m.scene.config.lodColoring)
-                            annotations
-                            orientations
-                            exploreCenter
-                        ] |> Sg.ofList
-                         //   |> Sg.fillMode (Mod.constant FillMode.Fill)
-                         //   |> Sg.cullMode (Mod.constant CullMode.None)      
-                    )              
+            //alist {
+            //    for groups in surfaces2 do
+            //        yield 0
+
+            //}
+                       
+        let surfaces = 
+            viewSurfacesSg m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring)
+         
+        //let renderControl =
+        //    Incremental.renderControl cam att 
+
+        //surfaces |> group by priority |> (priority * sg)
+
+        let cmds = 
+
+            //let abc = surfaces2
+            //Log.line "%A" abc
+
+            alist {
+                yield RenderCommand.SceneGraph overlayed
+                yield RenderCommand.SceneGraph surfaces
+            }
+
+        let control = 
+            DomNode.RenderControl(att, cam, cmds2, None)
+
+        //let control =
+        //    CameraController.withControls m.scene.navigation.camera CameraAction (frustum m) control
 
         let sceneTools =
             div [clazz "ui buttons inverted"] [ 
@@ -672,7 +746,7 @@ module ViewerApp =
                      
         let rest (model : MModel) = 
             [             
-                renderControl
+                control
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden"] [
                     div[style "height:41px"][text "spacer"]
                     tabs                    

@@ -26,6 +26,7 @@ type Surface = {
     cullMode      : CullMode
     isVisible     : bool
     quality       : NumericInput
+    priority      : NumericInput
 }
 
 [<DomainType>]
