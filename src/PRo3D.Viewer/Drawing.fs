@@ -382,7 +382,7 @@ module DrawingApp =
             ] 
 
         let viewAnnotations (model:MDrawingModel) = 
-                            
+                        
             Incremental.div 
                     (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (
                             
@@ -434,6 +434,9 @@ module DrawingApp =
             Html.SemUi.accordion "Annotations" "File Outline" true [
                 viewAnnotations model 
             ]
+
+        let viewAnnotationGroups (model:MDrawingModel) =
+            AnnotationGroups.view model.annotationGroups    
  
     let threads (m : DrawingModel) = m.pendingIntersections
 

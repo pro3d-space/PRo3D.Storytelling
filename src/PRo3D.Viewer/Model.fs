@@ -363,19 +363,103 @@ type AnnotationGroup = {
     name        : string
     annotations : plist<Annotation>
     subGroups   : plist<AnnotationGroup>
-    parentKey   : Guid
+    //parentKey   : Guid
     visible     : bool
+    active      : bool
+    expanded    : bool
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AnnotationGroup =
+    let Linear = {
+        name = "Linear"
+        key =  Guid.NewGuid()
+        annotations = plist.Empty
+        subGroups = plist.Empty
+        visible = true
+        active = false
+        expanded = true
+        }
+    let ViewPoint = {
+        name = "ViewPoint"
+        key =  Guid.NewGuid()
+        annotations = plist.Empty
+        subGroups = plist.Empty
+        visible = true
+        active = false
+        expanded = true
+        }
+    let Sky = {
+        name = "Sky"
+        key =  Guid.NewGuid()
+        annotations = plist.Empty
+        subGroups = plist.Empty
+        visible = true
+        active = false
+        expanded = true
+        }
+    let Point = {
+        name = "Point"
+        key =  Guid.NewGuid()
+        annotations = plist.Empty
+        subGroups = plist.Empty
+        visible = true
+        active = false
+        expanded = true
+        }
+    let Line = {
+        name = "Line"
+        key =  Guid.NewGuid()
+        annotations = plist.Empty
+        subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
+        visible = true
+        active = false
+        expanded = true
+        }
+    let Polyline = {
+        name = "Polyline"
+        key =  Guid.NewGuid()
+        annotations = plist.Empty
+        subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
+        visible = true
+        active = false
+        expanded = true
+        }
+    let Polygon = {
+        name = "Polygon"
+        key =  Guid.NewGuid()
+        annotations = plist.Empty
+        subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
+        visible = true
+        active = false
+        expanded = true
+        }
+    let surface1Group = {
+        name = "surface1"
+        key =  Guid.NewGuid()
+        annotations = plist.Empty
+        subGroups = [Point; Line; Polyline; Polygon] |> PList.ofList
+        visible = true
+        active = false
+        expanded = true
+        }
+    let surface2Group = {
+        name = "surface2"
+        key =  Guid.NewGuid()
+        annotations = plist.Empty
+        subGroups = [Point; Polyline] |> PList.ofList
+        visible = true
+        active = false
+        expanded = true
+        }
     let initRoot = {
         name = "Annotations"
         key =  Guid.NewGuid()
         annotations = plist.Empty
-        subGroups = plist.Empty
-        parentKey = Guid.Empty
+        subGroups = [surface1Group; surface2Group] |> PList.ofList
         visible = true
+        active = false
+        expanded = true
         }
 
 [<DomainType>]
