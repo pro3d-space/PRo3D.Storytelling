@@ -278,14 +278,12 @@ module ViewerApp =
                 let hitF (p : V3d) = 
                     let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)   
                     match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray with
-                        | Some (t,surf) -> 
-                            Log.error "intersection on %s priority %f" surf.name surf.priority.value
+                        | Some (t,surf) ->                             
                             ray.Ray.GetPointOnRay t |> Some
                         | None -> None
                                     
                 match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray with
-                    | Some (t,surf) -> 
-                        Log.error "intersection on %s priority %f" surf.name surf.priority.value
+                    | Some (t,surf) ->                         
                         let hit = r.GetPointOnRay(t)
                         
                         match m.interaction with
