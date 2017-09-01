@@ -143,7 +143,7 @@ module Surface =
         surfaces
             //|> List.map (fun (d : Surface) -> { d with guid = Guid.NewGuid() })
             |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths })
-            |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d false)
+            |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
             |> List.zip surfaces
             |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> toSg surf sg (hierarchies |> computeBB) kdtree)
             |> List.map (fun d -> (d.surface.guid, d))
@@ -298,7 +298,7 @@ module Surface =
                                     tree                                                          
                 kdTree  
 
-    let intersectHMap (kdTreeMap: hmap<Box3d, Level0KdTree>) bb (ray : FastRay3d) name= 
+    let intersectHMap (kdTreeMap: hmap<Box3d, Level0KdTree>) bb (ray : FastRay3d) surface = 
 
         let kdtree = kdTreeMap |> HMap.find bb |> loadObjectSet        
 
@@ -309,18 +309,18 @@ module Surface =
         let hitFilter a b c d = false
         if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
             let point = ray.Ray.GetPointOnRay(hit.RayHit.T)            
-            Some (hit.RayHit.T, name)
+            Some (hit.RayHit.T, surface)
         else            
             None
 
     let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) = 
         m.sgSurfaces
-            |> HMap.map (fun _ d -> d.kdTree, d.surface.name) 
+            |> HMap.map (fun _ d -> d.kdTree, d.surface) 
             |> HMap.map (
-                fun _ (kd ,n) ->                     
+                fun _ (kd ,surf) ->                     
                     if kd.IsEmpty 
                     then 
-                        Log.error "no kdtree loaded for %s" n
+                        Log.error "no kdtree loaded for %s" surf.name
                         None
                     else
                         
@@ -339,17 +339,18 @@ module Surface =
                             boundingBoxes
                                 |> Seq.map(
                                     fun bb -> 
-                                      //  Log.warn "intersecting hmap %A" bb
-                                        intersectHMap kd bb r n)
+                                        Log.line "intersection %s" surf.name
+                                        intersectHMap kd bb r surf)
                                 |> Seq.choose(fun x -> x)
-                                |> Seq.sortByDescending(fun (t,n)-> t)
+                                |> Seq.sortByDescending(fun (t,_)-> t)
                                 |> Seq.tryHead
                         
                         intersection
                 )
-            |> Seq.filter(fun (_,d) -> d.IsSome)
-            |> Seq.map(fun (_,d) -> d.Value)
-            |> Seq.sortByDescending(fun (t,n)-> t)
+            //|> Seq.filter(fun (_,d) -> d.IsSome)
+            |> Seq.choose(fun (_,d) -> d)
+            //|> Seq.map(fun (_,d) -> d)
+            |> Seq.sortByDescending(fun (t,surf)-> surf.priority.value)
             |> Seq.tryHead
 
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 

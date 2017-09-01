@@ -278,17 +278,20 @@ module ViewerApp =
                 let hitF (p : V3d) = 
                     let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)   
                     match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray with
-                        | Some (t,n) -> ray.Ray.GetPointOnRay t |> Some
+                        | Some (t,surf) -> 
+                            Log.error "intersection on %s priority %f" surf.name surf.priority.value
+                            ray.Ray.GetPointOnRay t |> Some
                         | None -> None
                                     
                 match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray with
-                    | Some (t,n) -> 
+                    | Some (t,surf) -> 
+                        Log.error "intersection on %s priority %f" surf.name surf.priority.value
                         let hit = r.GetPointOnRay(t)
                         
                         match m.interaction with
                             | Interactions.DrawAnnotation ->
                                
-                                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,n))
+                                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
                                 Log.stop()
                                 { m with drawing = drawing } |> stash
                             | Interactions.PlaceCoordinateSystem -> 
@@ -436,7 +439,7 @@ module ViewerApp =
                 |> pickable' pickable                 
                 |> Sg.noEvents
                 |> Sg.andAlso (
-                    Sg.wireBox (Mod.constant C4b.Red) globalBB
+                    Sg.wireBox (Mod.constant C4b.VRVisGreen) globalBB
                             |> Sg.noEvents
                             |> Sg.noEvents
                             |> Sg.shader {
@@ -572,8 +575,7 @@ module ViewerApp =
                 surfaces2 m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring)
             
             alist {
-                yield RenderCommand.SceneGraph overlayed
-
+                
                 for set in nestedSgs do
                     let sg = 
                         set |> HSet.toSeq
@@ -588,6 +590,8 @@ module ViewerApp =
 
                     yield RenderCommand.SceneGraph sg
                     yield RenderCommand.Clear(None,Some (Mod.constant 1.0))
+
+                yield RenderCommand.SceneGraph overlayed
             }
 
             //alist {

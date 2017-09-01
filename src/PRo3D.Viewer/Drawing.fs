@@ -51,7 +51,7 @@ module DrawingApp =
             match getFinishedAnnotation up north model with
                 | Some a -> 
                     let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
-                    Log.line "sending %A" a.semantic
+                 //   Log.line "sending %A" a.semantic
                     bc.Add json
 
                     model.annotations |> PList.prepend a
