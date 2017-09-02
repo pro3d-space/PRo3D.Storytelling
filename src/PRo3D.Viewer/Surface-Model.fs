@@ -27,6 +27,8 @@ type Surface = {
     isVisible     : bool
     quality       : NumericInput
     priority      : NumericInput
+
+    trafo         : Trafo3d
 }
 
 [<DomainType>]

@@ -112,6 +112,7 @@ module Surface =
             relativePaths = false
             quality = qualityInit
             priority = priorityInit
+            trafo = Trafo3d.Identity
         }
 
     let checkBB (bb:Box3d) = 
@@ -132,20 +133,26 @@ module Surface =
             |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)
             |> Box3d.ofSeq
 
-    let toSg (s:Surface) sg bb (kd:hmap<Box3d,Level0KdTree>) = {
+    let toSg (s:Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = {
         surface = s       
         sceneGraph = sg
         globalBB = bb
         kdTree = kd
     }
+
+    let transformBox (trafo:Trafo3d) (bb:Box3d) =
+        bb.Transformed(trafo)
       
     let createSgSurfaces runtime signature surfaces =
         surfaces
             //|> List.map (fun (d : Surface) -> { d with guid = Guid.NewGuid() })
-            |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths })
+            |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.trafo })
             |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
             |> List.zip surfaces
-            |> List.map (fun (surf, (sg, hierarchies, kdtree)) -> toSg surf sg (hierarchies |> computeBB) kdtree)
+            |> List.map (
+                fun (surf, (sg, hierarchies, kdtree)) -> 
+                    let bb = hierarchies |> computeBB |> transformBox surf.trafo
+                    toSg surf sg bb kdtree)
             |> List.map (fun d -> (d.surface.guid, d))
             |> HMap.ofList
 
@@ -257,7 +264,7 @@ module Surface =
         let data = 
             positions.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
 
-        let invalidIndices = getInvalidIndices data              
+        let invalidIndices = getInvalidIndices data
         let index = PRo3DCSharp.ComputeIndexArray(positions.Size.XY.ToV2i(), invalidIndices)                
                 
         let triangles =             
@@ -331,7 +338,8 @@ module Surface =
                                 |> Seq.filter(
                                     fun x -> 
                                        let mutable t = 0.0
-                                       x.Intersects(r.Ray, &t)
+                                       let r' = r.Ray.Transformed(surf.trafo.Backward)
+                                       x.Intersects(r', &t)
                                 )
                         
                         //intersect corresponding kdtrees
@@ -340,7 +348,8 @@ module Surface =
                                 |> Seq.map(
                                     fun bb -> 
                                         Log.line "intersection %s" surf.name
-                                        intersectHMap kd bb r surf)
+                                        let r' = r.Ray.Transformed(surf.trafo.Backward) |> FastRay3d
+                                        intersectHMap kd bb r' surf)
                                 |> Seq.choose(fun x -> x)
                                 |> Seq.sortByDescending(fun (t,_)-> t)
                                 |> Seq.tryHead

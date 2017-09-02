@@ -12,8 +12,8 @@ module DefaultMetrics =
         let lodParams = c.GetValue self
        
         let pos = (v.GetValue self).Backward.C3.XYZ
-
-        let closest = p.info.GlobalBoundingBox.GetClosestPointOn(pos)
+        let bb = p.info.GlobalBoundingBox.Transformed(lodParams.trafo)
+        let closest = bb.GetClosestPointOn(pos)
         let dist = (closest - pos).Length
 
         let unitPxSize = lodParams.frustum.right / (float lodParams.size.X / 2.0)

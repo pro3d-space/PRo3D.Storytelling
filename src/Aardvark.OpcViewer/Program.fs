@@ -146,8 +146,7 @@ module Viewer =
                 | Some h -> h
 
 
-        let bb = scene.boundingBox
-      //  let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
+        let bb = scene.boundingBox      
         let preTransform = scene.preTransform
     
         let patchHierarchies =
@@ -201,11 +200,11 @@ module Viewer =
                          let tree = loadKdtree masterKdPath                     
                          let kd = {
                             kdTree = tree;
-                            boundingBox = tree.KdIntersectionTree.BoundingBox3d 
+                            boundingBox = tree.KdIntersectionTree.BoundingBox3d.Transformed(scene.preTransform)
                          }
                          HMap.add kd.boundingBox (InCoreKdTree kd) HMap.empty
                     | (true, true) ->                                                        
-                         Log.line "Found master kdtree and patch trees"                                                               
+                         Log.line "Found master kdtree and patch trees"
                                                   
                          let bla = 
                             kd0Paths
@@ -218,7 +217,7 @@ module Viewer =
                                             objectSetPath = info.Name |> getPatchPositionPath h
                                             kdtreePath    = kdPath
                                             affine        = info.Local2Global
-                                            boundingBox   = t.KdIntersectionTree.BoundingBox3d
+                                            boundingBox   = t.KdIntersectionTree.BoundingBox3d.Transformed(scene.preTransform)
                                         }
                                         (lazyTree.boundingBox, (LazyKdTree lazyTree))
                                 )
@@ -271,18 +270,8 @@ module Viewer =
         
 
         let lodVisEnabled = Mod.init false
-
-        //let box = 
-        //    Sg.wireBox' C4b.White  ( Box3d.Parse("[[-2490137.081477872, 2285880.860800383, -271377.497591413], [-2490136.544600942, 2285881.420182895, -271376.955064115]]") )
-        //     |> Sg.effect [
-        //        DefaultSurfaces.trafo |> toEffect
-        //        DefaultSurfaces.constantColor C4f.White |> toEffect
-        //     ]
         
-        let sg =        
-            g   
-               // |> Sg.andAlso (box)
-                |> Sg.transform preTransform
+        let sg = g |> Sg.transform preTransform
                                 
         sg, patchHierarchies, kdTrees
 

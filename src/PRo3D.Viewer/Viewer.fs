@@ -39,6 +39,7 @@ module PList =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Scene =
     open PRo3D.Surfaces.Surface
+    open Aardvark.UI.Incremental.Svg
     
     let surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
 
@@ -60,9 +61,31 @@ module Scene =
                 { m with surfacesModel = Surface.updateSurfaces m.surfacesModel surfaces}
             | None -> m        
 
+    let readLine (filePath:string) =
+            use sr = new System.IO.StreamReader (filePath)
+            sr.ReadLine ()       
+
+    let fileExists filePath =
+        match System.IO.File.Exists filePath with
+            | true -> Some filePath
+            | false -> None
+
     /// appends surfaces to existing surfaces
     let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : list<Surface>) (m : Model) =
-                 
+            
+        //add legacy trafo on import
+        let surfaces =
+            surfaces 
+                |> List.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))                                 
+                |> List.map(fun(s,p) -> 
+                        match (fileExists p) with
+                            | Some path->
+                                let t = readLine path
+                                { s with trafo = Trafo3d.Parse(t) }
+                            | None ->
+                                s
+                            )
+                        
         //append semantic surfaces
         let surfaces' = (surfaces @ m.scene.surfacesModel.surfaces)
         let m = (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, surfaces')
@@ -86,13 +109,7 @@ module Scene =
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
         let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
-        surfaceModelLens.Set(m, grouped)
-        
-    let fileExists path =
-        if System.IO.File.Exists(path) then
-            Some path
-        else
-            None
+        surfaceModelLens.Set(m, grouped)            
 
     let loadScene path m runtime signature =
         let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
@@ -107,7 +124,12 @@ module Scene =
                 let r = Serialization.loadAs<Recent> path
                 match r.recentScenes |> List.tryHead with
                     | Some scenePath ->
-                        loadScene scenePath m runtime signature                            
+                        try
+                            loadScene scenePath m runtime signature        
+                        with
+                            | _ ->
+                                Log.warn("Error parsing last scene. loading empty")
+                                m
                     | None -> 
                         Log.warn("No recent scene found")
                         m
@@ -169,7 +191,7 @@ module ViewerApp =
     let lookAtData (m : Model) =         
         let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
         let cam = 
-            let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
+            let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value
             { CameraController.initial with view = view }            
 
         { m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
@@ -247,12 +269,12 @@ module ViewerApp =
                             { m with drawing = drawing' }
                         | None -> m                                                
             | ImportSurface,_,_ -> 
-                match Dialogs.openFolder w with
+                match Dialogs.openFolders w with
                     | [] -> m
                     | paths ->
                         let path = paths.Head
                         if (path |> Utils.isSurfaceFolder) then                     
-                            Scene.import' runtime signature [Surface.mk path] m |> lookAtData
+                            Scene.import' runtime signature [Surface.mk path] m //|> lookAtData
                         else
                             Log.error "path %s does not point to surface folder" path
                             m   
@@ -293,8 +315,7 @@ module ViewerApp =
                         let hit = r.GetPointOnRay(t)
                         
                         match m.interaction with
-                            | Interactions.DrawAnnotation ->
-                               
+                            | Interactions.DrawAnnotation ->                               
                                 let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
                                 Log.stop()
                                 { m with drawing = drawing } |> stash
@@ -307,7 +328,6 @@ module ViewerApp =
                             | Interactions.PickExploreCenter ->
                                 let c   = m.scene.config
                                 let ref = m.scene.referenceSystem
-
                                 let navigation' = 
                                     Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
                                 { m with scene = {m.scene with navigation = navigation'; } }
@@ -437,8 +457,9 @@ module ViewerApp =
                         let! frustum = frustum 
                         let sizes = V2i(1024,768)
                         let! quality = surface.surface.quality.value
+                        let! trafo = surface.surface.trafo
 
-                        return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality) }
+                        return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality); trafo = trafo }
                     })        
                 |> pickable' pickable                 
                 |> Sg.noEvents
