@@ -43,6 +43,7 @@ type SurfaceModel = {
     surfaces        : list<Surface>
     selectedSurface : option<Surface>
     sgSurfaces      : hmap<Guid,SgSurface>
+    sgGrouped       : plist<hmap<Guid,SgSurface>>
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -55,6 +56,7 @@ module SurfaceModel =
             surfaces = a
             selectedSurface = b
             sgSurfaces = hmap.Empty
+            sgGrouped = plist.Empty
         }
 
     let surfaceModelPickler : Pickler<SurfaceModel> =
@@ -62,11 +64,7 @@ module SurfaceModel =
         ^+ Pickler.field (fun s -> s.surfaces)          Pickler.auto<list<Surface>>
         ^. Pickler.field (fun s -> s.selectedSurface)   Pickler.auto<option<Surface>>
 
-    let initial = {
-        surfaces        = []
-        selectedSurface = None
-        sgSurfaces      = hmap.Empty
-    }
+    let initial = makeSurfaceModel [] None    
 
     FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)
 

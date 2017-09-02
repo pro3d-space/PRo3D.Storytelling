@@ -353,16 +353,30 @@ module Surface =
             |> Seq.sortByDescending(fun (t,surf)-> surf.priority.value)
             |> Seq.tryHead
 
+    let groupSurfaces (surfaces : hmap<Guid, SgSurface>) =
+        surfaces
+            |> HMap.toList
+            |> List.groupBy(fun (g,x) -> x.surface.priority.value)
+            |> List.map( fun (p,k) -> (p, k |> HMap.ofList))
+            |> List.sortBy fst
+            |> List.map snd
+            |> PList.ofList
+
+    let updateGrouping (model:SurfaceModel) =
+        { model with sgGrouped = (groupSurfaces model.sgSurfaces) }
+
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
         match action with
             | SurfacePropertiesMessage msg ->
-                match model.selectedSurface with 
-                    | Some s -> 
-                        let s' = SurfaceProperties.update s msg                            
-                        
-                        let model = Surface.updateSurface model s'
-                        { model with selectedSurface = Some s' }
-                    | None -> model
+                let m =
+                    match model.selectedSurface with 
+                        | Some s -> 
+                            let s' = SurfaceProperties.update s msg                        
+                            let model = Surface.updateSurface model s'
+                            { model with selectedSurface = Some s' }
+                        | None -> model
+
+                m |> updateGrouping
             | SelectSurface id -> 
                 let surf = model.surfaces |> Seq.tryFind(fun x -> x.guid = id)
                 let surf =

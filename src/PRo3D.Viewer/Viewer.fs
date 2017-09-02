@@ -70,8 +70,12 @@ module Scene =
         //append sg surfaces
         let surfSet = Surface.createSgSurfaces runtime signature surfaces
         let sgSurfaces = HMap.union surfSet m.scene.surfacesModel.sgSurfaces
-                                                
-        (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)                    
+                                       
+        let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
+
+        let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
+        surfaceModelLens.Set(m, grouped)
+        //m
 
     /// loads surfaces given in scene - creates their sg pendants
     let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
@@ -79,8 +83,10 @@ module Scene =
         let s = s |> expandRelativePaths
 
         let sgSurfaces = Surface.createSgSurfaces runtime signature s.surfacesModel.surfaces        
-        
-        (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
+        let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
+
+        let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
+        surfaceModelLens.Set(m, grouped)
         
     let fileExists path =
         if System.IO.File.Exists(path) then
@@ -571,13 +577,23 @@ module ViewerApp =
         let cmds2 =
             let nestedSgs =
                 surfaces2 m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring)
+
+            let grouped = 
+                m.scene.surfacesModel.sgGrouped 
+                    |> AList.map(
+                        fun x -> 
+                            (x 
+                                |> AMap.map(fun g sf -> viewSingleSurfaceSg sf (frustum m) (m.scene.config.lodColoring) sf.globalBB) 
+                                |> AMap.toASet 
+                                |> ASet.map snd 
+                            )
+                    )
             
-            alist {
-                
-                for set in nestedSgs do
+            alist {                
+                for set in grouped do
                     let sg = 
-                        set |> HSet.toSeq
-                            |> Sg.ofSeq
+                        set 
+                            |> Sg.set
                             |> Sg.effect [
                                 Shader.stableTrafo |> toEffect                  
                                 DefaultSurfaces.diffuseTexture |> toEffect
