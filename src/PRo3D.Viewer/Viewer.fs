@@ -441,13 +441,13 @@ module ViewerApp =
     let pickable' (pick :IMod<Pickable>) (sg: ISg) =
         Sg.PickableApplicator (pick, Mod.constant sg)
 
-    let viewSingleSurfaceSg (surface : MSgSurface) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>) (globalBB : IMod<Box3d>) =
+    let viewSingleSurfaceSg (surface : MSgSurface) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>) (selectedSurf : IMod<Option<MSurface>>) (globalBB : IMod<Box3d>) =
         let isSelected = 
             Mod.bind2 (fun guid (selected: Option<MSurface>) ->
                 match selected with
                     | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
                     | None -> Mod.constant false
-            ) surface.surface.guid (Mod.constant None)
+            ) surface.surface.guid selectedSurf
 
         let createSg (sg : ISg) =
             sg 
@@ -478,15 +478,15 @@ module ViewerApp =
                     })        
                 |> pickable' pickable                 
                 |> Sg.noEvents
-                |> Sg.andAlso (
-                    Sg.wireBox (Mod.constant C4b.VRVisGreen) globalBB
-                            |> Sg.noEvents
-                            |> Sg.noEvents
-                            |> Sg.shader {
-                                    do! Shader.stableTrafo
-                                    do! DefaultSurfaces.vertexColor                                                                     
-                                }
-                    ) 
+                //|> Sg.andAlso (
+                //    Sg.wireBox (Mod.constant C4b.VRVisGreen) globalBB
+                //            |> Sg.noEvents
+                //            |> Sg.noEvents
+                //            |> Sg.shader {
+                //                    do! Shader.stableTrafo
+                //                    do! DefaultSurfaces.vertexColor                                                                     
+                //                }
+                //    ) 
                 |> Sg.withEvents [
                         SceneEventKind.Down, (
                             fun sceneHit -> 
@@ -495,11 +495,11 @@ module ViewerApp =
                     ]
         sg
                 
-    let viewSurfacesSg (sgSurfaces : amap<Guid,MSgSurface>) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>)=
+    let viewSurfacesSg (sgSurfaces : amap<Guid,MSgSurface>) (frustum : IMod<Frustum>) (selectedSurf : IMod<Option<MSurface>>)(lodcolor : IMod<bool>)=
         let opcs =
             aset {
                 for (_,surface) in sgSurfaces |> AMap.toASet do                   
-                   yield viewSingleSurfaceSg surface frustum lodcolor surface.globalBB
+                   yield viewSingleSurfaceSg surface frustum lodcolor selectedSurf surface.globalBB
             }
 
         opcs 
@@ -508,8 +508,8 @@ module ViewerApp =
                 Shader.stableTrafo |> toEffect
                 //DefaultSurfaces.constantColor C4f.White |> toEffect                            
                 DefaultSurfaces.diffuseTexture |> toEffect
-               // Shader.selectionColor |> toEffect       
-                Shader.LoDColor |> toEffect
+                Shader.selectionColor |> toEffect       
+               // Shader.LoDColor |> toEffect
             ]
 
             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
@@ -602,7 +602,7 @@ module ViewerApp =
             sgSurfaces
                 |> AMap.toASet                
                 |> ASet.map(
-                    fun (g, s) -> viewSingleSurfaceSg s frustum lodcolor s.globalBB, s)
+                    fun (g, s) -> viewSingleSurfaceSg s frustum lodcolor m.scene.surfacesModel.selectedSurface s.globalBB, s)
                 |> ASet.mapM(fun (sg,x) -> x.surface.priority.value |> Mod.map(fun prior -> (prior,sg)))
                 |> ASet.groupBy fst
                 |> AMap.toASet
@@ -619,7 +619,7 @@ module ViewerApp =
                     |> AList.map(
                         fun x -> 
                             (x 
-                                |> AMap.map(fun g sf -> viewSingleSurfaceSg sf (frustum m) (m.scene.config.lodColoring) sf.globalBB) 
+                                |> AMap.map(fun g sf -> viewSingleSurfaceSg sf (frustum m) (m.scene.config.lodColoring) m.scene.surfacesModel.selectedSurface sf.globalBB) 
                                 |> AMap.toASet 
                                 |> ASet.map snd 
                             )
@@ -633,6 +633,7 @@ module ViewerApp =
                             |> Sg.effect [
                                 Shader.stableTrafo |> toEffect                  
                                 DefaultSurfaces.diffuseTexture |> toEffect
+                                Shader.selectionColor |> toEffect       
                                 Shader.LoDColor |> toEffect
                             ]
                             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
@@ -651,7 +652,7 @@ module ViewerApp =
             //}
                        
         let surfaces = 
-            viewSurfacesSg m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring)
+            viewSurfacesSg m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.surfacesModel.selectedSurface) (m.scene.config.lodColoring)
          
         //let renderControl =
         //    Incremental.renderControl cam att 
