@@ -295,7 +295,7 @@ module DrawingApp =
                 match toRemove with
                     | Some index ->
                         let as' = model.annotations|> PList.removeAt index
-
+                        Thread.Sleep(20)
                         //if removed is selected also remove selected copy
 
                         { model with annotations = as' } |> stash
@@ -617,12 +617,12 @@ module DrawingApp =
                     |> Sg.trafo anno.modelTrafo
                     |> Sg.translate 0.0 0.0 3.0
 
-        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) =
+        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
             let points = getPolyline anno
                        
             Sg.ofList [
                 Sg.lines points anno.color.c anno.thickness.value anno.modelTrafo anno.key
-                Sg.dots anno.points c view
+                Sg.dots anno.points c view |> Sg.onOff dots
                 drawDns anno view conf |> Sg.onOff anno.showDns
                 anno |> text
             ] |> Sg.onOff anno.visible
@@ -647,7 +647,12 @@ module DrawingApp =
                 aset {
                     for a in annoSet do
                        let c = UI.mkColor model a
-                       yield finishedAnnotation a cam c config
+                       let dots = a.geometry |> Mod.map(fun g -> 
+                                                            match g with
+                                                                | Geometry.Line | Geometry.Point -> true
+                                                                | _ -> false
+                                                            )
+                       yield finishedAnnotation a cam c config dots
                 } |> Sg.set
                                 
             Sg.ofList [

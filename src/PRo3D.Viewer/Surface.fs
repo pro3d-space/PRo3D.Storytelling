@@ -206,6 +206,37 @@ module Surface =
             let p = surface.importPath
             if Directory.Exists p then Some p else None        
 
+    let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, SgSurface>)=
+        match scenePath with
+            | Some sp -> 
+                surfaces 
+                    |> HMap.map(
+                        fun _ s -> 
+                            let path = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
+                            let kd =
+                                s.kdTree 
+                                    |> HMap.map(
+                                        fun _ k -> 
+                                            match k with 
+                                                | Level0KdTree.LazyKdTree lk -> 
+                                                    if(s.surface.relativePaths) 
+                                                    then                                                        
+                                                        let kdTreeSub =
+                                                            lk.kdtreePath.Split(Path.DirectorySeparatorChar) 
+                                                                |> List.ofArray |> List.rev |> List.take 5 |> List.rev |> Path.combine  
+                                                        let triangleSub =
+                                                            lk.objectSetPath.Split(Path.DirectorySeparatorChar) 
+                                                                |> List.ofArray |> List.rev |> List.take 5 |> List.rev |> Path.combine 
+                                                        let trianglePath' = Path.Combine(path, triangleSub)
+                                                        let kdtreePath' = Path.Combine(path, kdTreeSub)
+                                                        LazyKdTree { lk with kdtreePath = kdtreePath'; objectSetPath = trianglePath' }
+                                                    else LazyKdTree lk                                                    
+                                                | Level0KdTree.InCoreKdTree ik -> InCoreKdTree ik
+                                    )
+                            { s with kdTree = kd }
+                        )
+            | None -> surfaces
+
     let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
         match scenePath with
             | Some sp ->
@@ -397,7 +428,9 @@ module Surface =
                 { model with selectedSurface = surf }
             | FlyToSurface id -> model
             | MakeRelative id ->                
-                Surface.makeSurfaceRelative id model scenePath
+                let model = Surface.makeSurfaceRelative id model scenePath
+                let sgSurfaces = model.sgSurfaces |> Surface.expandLazyKdTreePaths scenePath
+                { model with sgSurfaces = sgSurfaces}
             | RemoveSurface id ->                
                 let toRemove = model.surfaces |> List.tryFindIndex (fun d -> d.guid = id)
                 match toRemove with

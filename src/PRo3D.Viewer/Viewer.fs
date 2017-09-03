@@ -69,7 +69,7 @@ module Scene =
         match System.IO.File.Exists filePath with
             | true -> Some filePath
             | false -> None
-
+    
     /// appends surfaces to existing surfaces
     let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : list<Surface>) (m : Model) =
             
@@ -89,10 +89,10 @@ module Scene =
         //append semantic surfaces
         let surfaces' = (surfaces @ m.scene.surfacesModel.surfaces)
         let m = (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, surfaces')
-
+        
         //append sg surfaces
         let surfSet = Surface.createSgSurfaces runtime signature surfaces
-        let sgSurfaces = HMap.union surfSet m.scene.surfacesModel.sgSurfaces
+        let sgSurfaces = HMap.union surfSet m.scene.surfacesModel.sgSurfaces |> expandLazyKdTreePaths m.scene.scenePath
                                        
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
@@ -105,7 +105,7 @@ module Scene =
         
         let s = s |> expandRelativePaths
 
-        let sgSurfaces = Surface.createSgSurfaces runtime signature s.surfacesModel.surfaces        
+        let sgSurfaces = Surface.createSgSurfaces runtime signature s.surfacesModel.surfaces |> expandLazyKdTreePaths m.scene.scenePath
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
         let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
