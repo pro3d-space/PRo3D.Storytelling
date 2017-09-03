@@ -272,12 +272,17 @@ module ViewerApp =
                 match Dialogs.openFolders w with
                     | [] -> m
                     | paths ->
-                        let path = paths.Head
-                        if (path |> Utils.isSurfaceFolder) then                     
-                            Scene.import' runtime signature [Surface.mk path] m //|> lookAtData
-                        else
-                            Log.error "path %s does not point to surface folder" path
-                            m   
+                        let surfaces = 
+                            paths 
+                                |> List.filter Utils.isSurfaceFolder 
+                                |> List.map Surface.mk
+
+                        Scene.import' runtime signature surfaces m
+                        //if (path |> Utils.isSurfaceFolder) then                     
+                        //    Scene.import' runtime signature [Surface.mk path] m //|> lookAtData
+                        //else
+                        //    Log.error "path %s does not point to surface folder" path
+                        //    m   
             | ImportMeasurements,_,_ ->
                 match Dialogs.openDialog w with
                     | Some x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x)}}
@@ -304,7 +309,17 @@ module ViewerApp =
                 let cameraLocation = m.scene.navigation.camera.view.Location 
 
                 let hitF (p : V3d) = 
-                    let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)   
+
+                    let ray =
+                        match m.drawing.projection with
+                            | Projection.Viewpoint -> 
+                                let dir = (p-cameraLocation).Normalized
+                                FastRay3d(cameraLocation, dir)  
+                            | Projection.Sky -> 
+                                let up = m.scene.referenceSystem.up.value
+                                FastRay3d(p + (up * 5000.0), -up)  
+                            | _ -> Log.error "projection started without proj mode"; FastRay3d()
+                    
                     match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray with
                         | Some (t,surf) ->                             
                             ray.Ray.GetPointOnRay t |> Some

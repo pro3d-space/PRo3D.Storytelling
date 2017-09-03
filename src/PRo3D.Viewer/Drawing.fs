@@ -81,13 +81,12 @@ module DrawingApp =
                                             { annotation with segments = PList.append newSegment annotation.segments }, Some (newSegment,segmentIndex)
                                         else
                                             let dir = newSegment.endPoint - newSegment.startPoint
-                                            let points = 
-                                                [ for s in 0 .. PRo3D.Config.sampleCount do
-                                                    let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
-                                                    match samplePoint p with
-                                                        | None -> ()
-                                                        | Some projectedPoint ->
-                                                            yield projectedPoint
+                                            let points = [ 
+                                                    for s in 0 .. PRo3D.Config.sampleCount do
+                                                        let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                                                        match samplePoint p with
+                                                            | None -> ()
+                                                            | Some projectedPoint -> yield projectedPoint
                                                 ]
                                             let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
                                             { annotation with segments = PList.append newSegment annotation.segments }, None

@@ -351,7 +351,7 @@ module Surface =
                                         let r' = r.Ray.Transformed(surf.trafo.Backward) |> FastRay3d
                                         intersectHMap kd bb r' surf)
                                 |> Seq.choose(fun x -> x)
-                                |> Seq.sortByDescending(fun (t,_)-> t)
+                                |> Seq.sortBy(fun (t,_)-> t)
                                 |> Seq.tryHead
                         
                         intersection

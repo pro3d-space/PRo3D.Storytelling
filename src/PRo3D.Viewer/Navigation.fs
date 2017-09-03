@@ -35,6 +35,7 @@ module Navigation =
                         | _ -> model
                 
                 let cam = ArcBallController.update model.camera a
+                let cam = { cam with sensitivity = smallConfig.navigationSensitivity.Get(bigConfigA) } 
                 match cam.orbitCenter with
                     | Some oc -> { model with camera = cam; exploreCenter = oc}
                     | None -> { model with camera = cam }
