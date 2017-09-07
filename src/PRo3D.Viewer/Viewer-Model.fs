@@ -25,9 +25,17 @@ type Scene = {
     scenePath       : option<string>
     referenceSystem : ReferenceSystem
 }
- 
+
+[<DomainType>] 
+type SceneHandle = {
+    path        : string
+    name        : string
+    writeDate   : DateTime
+}
+
+[<DomainType>] 
 type Recent = {
-    recentScenes : list<string>
+    recentScenes : plist<SceneHandle>
 }
 
 type Properties = 
@@ -82,7 +90,7 @@ module Viewer =
         interaction     = Interactions.DrawAnnotation
         picking         = false
         
-        recent          = { recentScenes = [] }
+        recent          = { recentScenes = PList.empty }
 
         past            = None
         future          = None

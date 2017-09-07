@@ -91,6 +91,96 @@ module Mutable =
                 }
     
     
+    type MSceneHandle(__initial : PRo3D.Viewer.SceneHandle) =
+        inherit obj()
+        let mutable __current = __initial
+        let _path = ResetMod.Create(__initial.path)
+        let _name = ResetMod.Create(__initial.name)
+        let _writeDate = ResetMod.Create(__initial.writeDate)
+        
+        member x.path = _path :> IMod<_>
+        member x.name = _name :> IMod<_>
+        member x.writeDate = _writeDate :> IMod<_>
+        
+        member x.Update(v : PRo3D.Viewer.SceneHandle) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_path,v.path)
+                ResetMod.Update(_name,v.name)
+                ResetMod.Update(_writeDate,v.writeDate)
+                
+        
+        static member Create(__initial : PRo3D.Viewer.SceneHandle) : MSceneHandle = MSceneHandle(__initial)
+        static member Update(m : MSceneHandle, v : PRo3D.Viewer.SceneHandle) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Viewer.SceneHandle> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module SceneHandle =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let path =
+                { new Lens<PRo3D.Viewer.SceneHandle, Microsoft.FSharp.Core.string>() with
+                    override x.Get(r) = r.path
+                    override x.Set(r,v) = { r with path = v }
+                    override x.Update(r,f) = { r with path = f r.path }
+                }
+            let name =
+                { new Lens<PRo3D.Viewer.SceneHandle, Microsoft.FSharp.Core.string>() with
+                    override x.Get(r) = r.name
+                    override x.Set(r,v) = { r with name = v }
+                    override x.Update(r,f) = { r with name = f r.name }
+                }
+            let writeDate =
+                { new Lens<PRo3D.Viewer.SceneHandle, System.DateTime>() with
+                    override x.Get(r) = r.writeDate
+                    override x.Set(r,v) = { r with writeDate = v }
+                    override x.Update(r,f) = { r with writeDate = f r.writeDate }
+                }
+    
+    
+    type MRecent(__initial : PRo3D.Viewer.Recent) =
+        inherit obj()
+        let mutable __current = __initial
+        let _recentScenes = MList.Create(__initial.recentScenes, (fun v -> MSceneHandle.Create(v)), (fun (m,v) -> MSceneHandle.Update(m, v)), (fun v -> v))
+        
+        member x.recentScenes = _recentScenes :> alist<_>
+        
+        member x.Update(v : PRo3D.Viewer.Recent) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                MList.Update(_recentScenes, v.recentScenes)
+                
+        
+        static member Create(__initial : PRo3D.Viewer.Recent) : MRecent = MRecent(__initial)
+        static member Update(m : MRecent, v : PRo3D.Viewer.Recent) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Viewer.Recent> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module Recent =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let recentScenes =
+                { new Lens<PRo3D.Viewer.Recent, Aardvark.Base.plist<PRo3D.Viewer.SceneHandle>>() with
+                    override x.Get(r) = r.recentScenes
+                    override x.Set(r,v) = { r with recentScenes = v }
+                    override x.Update(r,f) = { r with recentScenes = f r.recentScenes }
+                }
+    
+    
     type MModel(__initial : PRo3D.Viewer.Model) =
         inherit obj()
         let mutable __current = __initial
@@ -99,7 +189,7 @@ module Mutable =
         let _properties = ResetMod.Create(__initial.properties)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _picking = ResetMod.Create(__initial.picking)
-        let _recent = ResetMod.Create(__initial.recent)
+        let _recent = MRecent.Create(__initial.recent)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
         
@@ -108,7 +198,7 @@ module Mutable =
         member x.properties = _properties :> IMod<_>
         member x.interaction = _interaction :> IMod<_>
         member x.picking = _picking :> IMod<_>
-        member x.recent = _recent :> IMod<_>
+        member x.recent = _recent
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         
@@ -121,7 +211,7 @@ module Mutable =
                 ResetMod.Update(_properties,v.properties)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_picking,v.picking)
-                ResetMod.Update(_recent,v.recent)
+                MRecent.Update(_recent, v.recent)
                 _past.Update(v.past)
                 _future.Update(v.future)
                 

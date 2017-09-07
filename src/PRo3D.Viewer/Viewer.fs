@@ -122,10 +122,11 @@ module Scene =
             | Some path  ->
               //  try 
                 let r = Serialization.loadAs<Recent> path
-                match r.recentScenes |> List.tryHead with
+                let m = { m with recent = r}
+                match r.recentScenes |> PList.toList |> List.tryHead with
                     | Some scenePath ->
                         try
-                            loadScene scenePath m runtime signature        
+                            loadScene scenePath.path m runtime signature        
                         with
                             | _ ->
                                 Log.warn("Error parsing last scene. loading empty")
@@ -148,6 +149,7 @@ module ViewerApp =
     open System.Collections.Concurrent
     open FShade.GLSL.AssemblerState
     open Aardvark.Cef.WinForms    
+    open Scene
         
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -172,6 +174,7 @@ module ViewerApp =
         | SaveScene
         | SaveAs                    
         | OpenScene
+        | LoadScene                 of string
         | NewScene
         | KeyDown                   of key : Aardvark.Application.Keys
         | KeyUp                     of key : Aardvark.Application.Keys      
@@ -212,12 +215,32 @@ module ViewerApp =
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
 
-    let stashAndSaveRecent p (model : Model) =
-        let scenePaths = p :: model.recent.recentScenes
+    let addToListWithoutDup e f list =
+        match List.exists f list with
+            | true -> list
+            | false -> e :: list
+    
+    let stashAndSaveRecent (s : SceneHandle) (model : Model) =
+        let scenePaths = 
+            model.recent.recentScenes 
+                |> PList.toList 
+                |> addToListWithoutDup s (fun x -> x.path = s.path )
+                |> List.sortByDescending(fun x -> x.writeDate) 
+                |> PList.ofList
+
         let recent = { model.recent with recentScenes = scenePaths }
+
         Serialization.save "./recent" recent |> ignore
 
-        {model with recent = recent}
+        { model with recent = recent }
+
+    let stashAndSaveRecent' (path : string) (name : string) (model : Model) =
+        let handle = {
+            name = name
+            path = path
+            writeDate = DateTime.Now
+        }
+        stashAndSaveRecent handle model
 
     let refConfig : ReferenceSystemConfig<ViewConfigModel> =
         { 
@@ -357,20 +380,22 @@ module ViewerApp =
                             | None -> m
                             | Some p -> 
                                 let s' = { m.scene with scenePath = Some p}
-                                { m with scene = Serialization.save p s'; } |> stashAndSaveRecent p
+                                { m with scene = Serialization.save p s'; } |> stashAndSaveRecent' p (Path.GetFileName(p))
                     | Some path ->                        
-                        { m with scene = Serialization.save path m.scene } |> stashAndSaveRecent path
+                        { m with scene = Serialization.save path m.scene } |> stashAndSaveRecent' path (Path.GetFileName(path))
             | SaveAs,_,_ ->
                 match Dialogs.saveDialog w with
                     | None -> m
                     | Some p -> 
                         let s' = { m.scene with scenePath = Some p}                                
-                        { m with scene = Serialization.save p s' } |> stashAndSaveRecent p
+                        { m with scene = Serialization.save p s' } |> stashAndSaveRecent' p (Path.GetFileName(p))
             | OpenScene,_,_ ->
                 match Dialogs.openDialog w with
                     | None -> m
                     | Some path -> 
-                        Scene.loadScene path m runtime signature |> stashAndSaveRecent path
+                        Scene.loadScene path m runtime signature |> stashAndSaveRecent' path (Path.GetFileName(path))
+            | LoadScene path,_,_ ->
+                Scene.loadScene path m runtime signature |> stashAndSaveRecent' path (Path.GetFileName(path))
             | NewScene,_,_ ->
                 PRo3D.Viewer.Viewer.initial
             | KeyDown k, _, _ ->
@@ -689,10 +714,12 @@ module ViewerApp =
                         ]
                     ]
                 )
+                
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "Open Scene"; onMouseClick (fun _ -> OpenScene)] [
                                 i [clazz "large folder outline icon" ] [] ]
                 )
+
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "New Scene"; onMouseClick (fun _ -> NewScene)] [
                                 i [clazz "large file outline icon"] [] ]
@@ -816,10 +843,32 @@ module ViewerApp =
         //Sidebar adorner
         let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "./semui-overrides.css" }
 
+        let recentStuff =
+             div[] [
+                    onBoot """$('#__ID__').popup({inline:true,hoverable:true});""" (
+                            button [
+                                clazz "ui small button"; style "margin: 2px 0"                                
+                             ] [text "Recent scenes"]
+                    )
+
+                    div [clazz "ui flowing popup top left transition hidden"] [
+                        Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
+                                    alist {
+                                        for s in m.recent.recentScenes do                                             
+                                             yield a [clazz "item inverted";
+                                                      onClick (fun _ -> LoadScene (s.path |> Mod.force))] [
+                                                span [style "color:black"] [Incremental.text s.name]
+                                             ]
+                                    }
+                                )
+                    ]
+                ]
+
         require (Html.semui @ [myCss]) (
             let sections = [
                 "blank", [div[style "height:15px"][]]                
                 "Scene", [sceneTools]
+                "Recent", [recentStuff]
                 "Add Surface", [openSurface]
                 "Import Measurements", [importMeasurements]]                              
             onBoot usingContext (                            

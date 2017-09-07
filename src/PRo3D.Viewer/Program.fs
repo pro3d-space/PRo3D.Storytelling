@@ -15,6 +15,7 @@ open Suave.Operators
 open Suave.Filters
 
 open System.Collections.Concurrent
+open System.Diagnostics
 
 [<EntryPoint;STAThread>]
 let main argv = 
@@ -26,7 +27,7 @@ let main argv =
     use app = new OpenGlApplication()
     let runtime = app.Runtime    
 
-    use form = new Form(Width = 1280, Height = 800)
+    use form = new Form(Width = 0, Height = 0)
     let signature =
         runtime.CreateFramebufferSignature [
             DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba8; samples = 1 }
@@ -55,13 +56,18 @@ let main argv =
         Suave.Files.browseHome
     ] 
 
-    use ctrl = new AardvarkCefBrowser()
-    ctrl.Dock <- DockStyle.Fill
-    form.Controls.Add ctrl
-    ctrl.StartUrl <- "http://localhost:4321/"
+    //use ctrl = new AardvarkCefBrowser()
+    //ctrl.Dock <- DockStyle.Fill
+    
+    form.Controls.Add (new Label()) |> ignore
+    //ctrl.StartUrl <- "http://localhost:4321/"
+
+   
 
     //ctrl.ShowDevTools()
-
+    Process.Start("chrome.exe", "--app=http://localhost:4321/") |> ignore
     Application.Run form
+    //Console.WriteLine("I bims der Aardvark Fallback Forms")
+    //Console.ReadLine() |> ignore
     System.Environment.Exit 0
     0
