@@ -202,7 +202,7 @@ module ViewerApp =
             | Some s ->
                 let bb = s.globalBB
                 let cam = 
-                    let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
+                    let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value
                     { CameraController.initial with view = view }            
 
                 //{ m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
@@ -476,7 +476,7 @@ module ViewerApp =
 
                         return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality); trafo = trafo }
                     })        
-                |> pickable' pickable                 
+                |> pickable' pickable
                 |> Sg.noEvents
                 //|> Sg.andAlso (
                 //    Sg.wireBox (Mod.constant C4b.VRVisGreen) globalBB

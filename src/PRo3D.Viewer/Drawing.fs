@@ -346,7 +346,7 @@ module DrawingApp =
             let color =  
                 model.selected 
                     |> ASet.contains id 
-                    |> Mod.bind (function x -> if x then Mod.constant C4b.Red else a.color.c)
+                    |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
 
             color
 
@@ -621,10 +621,10 @@ module DrawingApp =
             let points = getPolyline anno
                        
             Sg.ofList [
-                Sg.lines points anno.color.c anno.thickness.value anno.modelTrafo anno.key
+                Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
                 Sg.dots anno.points c view |> Sg.onOff dots
                 drawDns anno view conf |> Sg.onOff anno.showDns
-                anno |> text
+            //    anno |> text
             ] |> Sg.onOff anno.visible
 
         let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) (cam:IMod<CameraView>) : ISg<Drawing.Action> =
