@@ -123,8 +123,8 @@ module Scene =
               //  try 
                 let r = Serialization.loadAs<Recent> path
                 let m = { m with recent = r}
-                match r.recentScenes |> PList.toList |> List.tryHead with
-                    | Some scenePath ->
+                match r.recentScenes |> HMap.toList |> List.sortBy (fun (_,v) -> v.writeDate) |> List.tryHead with
+                    | Some (_,scenePath) ->
                         try
                             loadScene scenePath.path m runtime signature        
                         with
@@ -222,11 +222,14 @@ module ViewerApp =
     
     let stashAndSaveRecent (s : SceneHandle) (model : Model) =
         let scenePaths = 
-            model.recent.recentScenes 
-                |> PList.toList 
-                |> addToListWithoutDup s (fun x -> x.path = s.path )
-                |> List.sortByDescending(fun x -> x.writeDate) 
-                |> PList.ofList
+            model.recent.recentScenes                 
+                |> HMap.update s.path 
+                    (
+                        fun v -> 
+                            match v with
+                                | Some x -> { x with writeDate = s.writeDate }
+                                | None -> s
+                    ) //addToListWithoutDup s (fun x -> x.path = s.path )                
 
         let recent = { model.recent with recentScenes = scenePaths }
 
@@ -234,9 +237,9 @@ module ViewerApp =
 
         { model with recent = recent }
 
-    let stashAndSaveRecent' (path : string) (name : string) (model : Model) =
+    let stashAndSaveRecent' (path : string) (model : Model) =
         let handle = {
-            name = name
+            name = Path.GetFileName(path)
             path = path
             writeDate = DateTime.Now
         }
@@ -380,22 +383,22 @@ module ViewerApp =
                             | None -> m
                             | Some p -> 
                                 let s' = { m.scene with scenePath = Some p}
-                                { m with scene = Serialization.save p s'; } |> stashAndSaveRecent' p (Path.GetFileName(p))
+                                { m with scene = Serialization.save p s'; } |> stashAndSaveRecent' p
                     | Some path ->                        
-                        { m with scene = Serialization.save path m.scene } |> stashAndSaveRecent' path (Path.GetFileName(path))
+                        { m with scene = Serialization.save path m.scene } |> stashAndSaveRecent' path
             | SaveAs,_,_ ->
                 match Dialogs.saveDialog w with
                     | None -> m
                     | Some p -> 
                         let s' = { m.scene with scenePath = Some p}                                
-                        { m with scene = Serialization.save p s' } |> stashAndSaveRecent' p (Path.GetFileName(p))
+                        { m with scene = Serialization.save p s' } |> stashAndSaveRecent' p
             | OpenScene,_,_ ->
                 match Dialogs.openDialog w with
                     | None -> m
                     | Some path -> 
-                        Scene.loadScene path m runtime signature |> stashAndSaveRecent' path (Path.GetFileName(path))
+                        Scene.loadScene path m runtime signature |> stashAndSaveRecent' path
             | LoadScene path,_,_ ->
-                Scene.loadScene path m runtime signature |> stashAndSaveRecent' path (Path.GetFileName(path))
+                Scene.loadScene path m runtime signature |> stashAndSaveRecent' path
             | NewScene,_,_ ->
                 PRo3D.Viewer.Viewer.initial
             | KeyDown k, _, _ ->
@@ -845,21 +848,21 @@ module ViewerApp =
 
         let recentStuff =
              div[] [
-                    onBoot """$('#__ID__').popup({inline:true,hoverable:true});""" (
+                    onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
                             button [
                                 clazz "ui small button"; style "margin: 2px 0"                                
-                             ] [text "Recent scenes"]
+                             ] [text "Scenes"]
                     )
 
-                    div [clazz "ui flowing popup top left transition hidden"] [
+                    div [clazz "ui flowing popup bottom left transition hidden"] [
                         Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
-                                    alist {
-                                        for s in m.recent.recentScenes do                                             
+                                    aset {
+                                        for (_,s) in (m.recent.recentScenes |> AMap.toASet) do
                                              yield a [clazz "item inverted";
                                                       onClick (fun _ -> LoadScene (s.path |> Mod.force))] [
                                                 span [style "color:black"] [Incremental.text s.name]
                                              ]
-                                    }
+                                    } |> AList.ofASet
                                 )
                     ]
                 ]

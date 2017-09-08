@@ -35,7 +35,7 @@ type SceneHandle = {
 
 [<DomainType>] 
 type Recent = {
-    recentScenes : plist<SceneHandle>
+    recentScenes : hmap<string,SceneHandle>
 }
 
 type Properties = 
@@ -90,7 +90,7 @@ module Viewer =
         interaction     = Interactions.DrawAnnotation
         picking         = false
         
-        recent          = { recentScenes = PList.empty }
+        recent          = { recentScenes = HMap.empty }
 
         past            = None
         future          = None

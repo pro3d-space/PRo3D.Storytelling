@@ -148,15 +148,15 @@ module Mutable =
     type MRecent(__initial : PRo3D.Viewer.Recent) =
         inherit obj()
         let mutable __current = __initial
-        let _recentScenes = MList.Create(__initial.recentScenes, (fun v -> MSceneHandle.Create(v)), (fun (m,v) -> MSceneHandle.Update(m, v)), (fun v -> v))
+        let _recentScenes = MMap.Create(__initial.recentScenes, (fun v -> MSceneHandle.Create(v)), (fun (m,v) -> MSceneHandle.Update(m, v)), (fun v -> v))
         
-        member x.recentScenes = _recentScenes :> alist<_>
+        member x.recentScenes = _recentScenes :> amap<_,_>
         
         member x.Update(v : PRo3D.Viewer.Recent) =
             if not (System.Object.ReferenceEquals(__current, v)) then
                 __current <- v
                 
-                MList.Update(_recentScenes, v.recentScenes)
+                MMap.Update(_recentScenes, v.recentScenes)
                 
         
         static member Create(__initial : PRo3D.Viewer.Recent) : MRecent = MRecent(__initial)
@@ -174,7 +174,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let recentScenes =
-                { new Lens<PRo3D.Viewer.Recent, Aardvark.Base.plist<PRo3D.Viewer.SceneHandle>>() with
+                { new Lens<PRo3D.Viewer.Recent, Aardvark.Base.hmap<Microsoft.FSharp.Core.string,PRo3D.Viewer.SceneHandle>>() with
                     override x.Get(r) = r.recentScenes
                     override x.Set(r,v) = { r with recentScenes = v }
                     override x.Update(r,f) = { r with recentScenes = f r.recentScenes }
