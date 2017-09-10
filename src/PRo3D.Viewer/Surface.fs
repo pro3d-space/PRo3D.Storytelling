@@ -113,6 +113,8 @@ module Surface =
             quality = qualityInit
             priority = priorityInit
             trafo = Trafo3d.Identity
+
+            attributeLayers = PList.empty
         }
 
     let checkBB (bb:Box3d) = 

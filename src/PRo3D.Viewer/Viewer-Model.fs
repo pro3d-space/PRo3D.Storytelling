@@ -75,7 +75,7 @@ module Viewer =
         init        
 
     let initial = {           
-       // surfaces = HSet.empty                       
+       // surfaces = HSet.empty
         scene = {
                 navigation      = navInit
                 interaction     = InteractionMode.PickOrbitCenter

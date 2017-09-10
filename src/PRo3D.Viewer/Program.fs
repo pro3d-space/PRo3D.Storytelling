@@ -16,6 +16,7 @@ open Suave.Filters
 
 open System.Collections.Concurrent
 open System.Diagnostics
+open System.Xml
 
 [<EntryPoint;STAThread>]
 let main argv = 
@@ -47,6 +48,17 @@ let main argv =
                 
                 do! webSocket.send Text s true
         }
+
+    //let doc = new XmlDocument() in 
+    //    doc.Load "NE_SyrtisE.opcx";
+        
+    //let layers =
+    //    doc.SelectNodes "/Aardvark/SurfaceAttributes/AttributeLayers/AttributeLayer"
+    //     |> Seq.cast<XmlNode>
+    //     |> Seq.map (fun node -> node.Name)         
+
+    //printf "%A" layers
+
 
     let a = PRo3D.ViewerApp.start form runtime signature bc   
 

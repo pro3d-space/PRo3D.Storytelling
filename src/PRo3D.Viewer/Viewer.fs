@@ -143,13 +143,9 @@ module Scene =
                 m
  
 module ViewerApp =
-    open Surface
-    open Aardvark.Base.Geometry.RayHit
-    open Aardvark.SceneGraph.SgFSharp.Sg
-    open System.Collections.Concurrent
-    open FShade.GLSL.AssemblerState
-    open Aardvark.Cef.WinForms    
-    open Scene
+    open Surface   
+    open System.Collections.Concurrent   
+    open Scene    
         
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -400,7 +396,7 @@ module ViewerApp =
             | LoadScene path,_,_ ->
                 Scene.loadScene path m runtime signature |> stashAndSaveRecent' path
             | NewScene,_,_ ->
-                PRo3D.Viewer.Viewer.initial
+                { PRo3D.Viewer.Viewer.initial with recent = m.recent }
             | KeyDown k, _, _ ->
                     let drawingAction =
                         match k with

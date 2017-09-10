@@ -11,6 +11,25 @@ open Aardvark.VRVis
 open Aardvark.SceneGraph
 
 [<DomainType>]
+type ScalarLayer = {
+    label        : string
+    actualRange  : Range1d
+    definedRange : Range1d
+}
+
+[<DomainType>]
+type TextureLayer = {
+    label: string
+}
+
+type AttributeLayer = ScalarLayer | TextureLayer
+
+//[<DomainType>]
+//type SurfaceAttributes = {
+//    attributeLayers : list<AttributeLayer>
+//}
+
+[<DomainType>]
 type Surface = {    
     
     [<PrimaryKey>]
@@ -29,6 +48,8 @@ type Surface = {
     priority      : NumericInput
 
     trafo         : Trafo3d
+
+    attributeLayers : plist<AttributeLayer>
 }
 
 [<DomainType>]
