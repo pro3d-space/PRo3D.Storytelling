@@ -1,6 +1,7 @@
 ﻿namespace PRo3D.Surfaces
 
 open System
+open System.IO
 open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.UI
@@ -15,69 +16,102 @@ open PRo3D
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
 
-    module Utils =
-    
-        /// checks if "path" is a valid opc folder
-        let isOPCPath (path : string) = 
-            let imagePath = Path.combine [path; "images"]
-            let patchPath = Path.combine [path; "patches"]
-            let dirsExist = (System.IO.Directory.Exists imagePath) && (System.IO.Directory.Exists patchPath)
-            let storageExists = System.IO.File.Exists(patchPath + "\\patchhierarchy.xml")
-            if dirsExist && storageExists then
-                true
-            else false
-
-        /// checks if "path" is a valid surface folder
-        let isSurfaceFolder (path : string) =
-            let mutable isValid = false
-            let subfolders = System.IO.Directory.GetDirectories(path)
-            for s in subfolders do
-                isValid <- (isOPCPath(s) || isValid)
-            isValid
+    module SurfaceAttributes = 
+        open System.Xml
             
-        
-        /// returns all valid OPCs in "path"
-        let getOPCPaths path = 
-            if path = String.Empty then failwith "encountered empty opcpath"
+        let get (name : string) (node : XmlNode)=
+            node.SelectSingleNode(name).InnerText.Trim()
 
-            if isOPCPath path then
-               [path.Replace(@"\", @"\\\\")]
-            elif System.IO.Directory.Exists path then
-                System.IO.Directory.GetDirectories(path)
-                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
-                    |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
-                    |> Seq.toList 
-            else []
+        let parseMap (node : XmlNode) : ScalarLayer =        
+            { 
+                label = node |> get "Label" 
+                actualRange = node |> get "ChannelsActualRange" |> Range1d.Parse
+                definedRange = node |> get "ChannelsDefinedRange" |> Range1d.Parse
+            }
 
-        /// returns all valid OPCs in "path"
-        let getOPCNames path = 
-            if path = String.Empty then failwith "encountered empty opcpath"
+        let parseTexture (node : XmlNode) : TextureLayer =        
+            { label = node |> get "Label" }
 
-            if isOPCPath path then
-               [path.Replace(@"\", @"\\\\")]
-            elif System.IO.Directory.Exists path then
-                System.IO.Directory.GetDirectories(path)
-                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
-                    |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
-                    |> Seq.map (fun a -> System.IO.Path.GetFileName a; )
-                    |> Seq.toList 
-            else []
+        let parseLayer (node : XmlNode) : AttributeLayer = 
+            let typ = node |> get "Type"
+            match typ with
+                | "Texture" -> TextureLayer (parseTexture node)
+                | "Map"     -> ScalarLayer (parseMap node)
+                | _         -> failwith "type not supported"
 
-        let expandNamesToPaths (path : string) (names : List<string>) =
-            names |> List.map(fun a -> 
-                let p = (Path.combine [path; a]).Replace(@"\", @"\\\\")
-                //Log.warn "%s" p
-                p)
+        let layers (doc : XmlDocument) =
+            doc.SelectNodes "/Aardvark/SurfaceAttributes/AttributeLayers/AttributeLayer"
+             |> Seq.cast<XmlNode>
+             |> Seq.map parseLayer
 
-        /// returns all valid surface folders in "path"   
-        let discover path = 
-            if System.IO.Directory.Exists path then
-                System.IO.Directory.EnumerateDirectories path 
-                   // |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
-                    |> Seq.filter (fun a -> isSurfaceFolder a)
-                    |> Seq.toList 
-            else []
+        let read (path:string) =
+            let doc = new XmlDocument() in doc.Load path
+            doc |> layers
 
+    /// checks if "path" is a valid opc folder
+    let isOPCPath (path : string) = 
+        let imagePath = Path.combine [path; "images"]
+        let patchPath = Path.combine [path; "patches"]
+        let dirsExist = (System.IO.Directory.Exists imagePath) && (System.IO.Directory.Exists patchPath)
+        let storageExists = System.IO.File.Exists(patchPath + "\\patchhierarchy.xml")
+        if dirsExist && storageExists then
+            true
+        else false
+
+    /// checks if "path" is a valid surface folder
+    let isSurfaceFolder (path : string) =
+        let mutable isValid = false
+        let subfolders = System.IO.Directory.GetDirectories(path)
+        for s in subfolders do
+            isValid <- (isOPCPath(s) || isValid)
+        isValid
+                    
+    /// returns all valid OPCs in "path"
+    let getOPCPaths path = 
+        if path = String.Empty then failwith "encountered empty opcpath"
+
+        if isOPCPath path then
+            [path.Replace(@"\", @"\\\\")]
+        elif System.IO.Directory.Exists path then
+            System.IO.Directory.GetDirectories(path)
+                |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
+                |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
+                |> Seq.toList 
+        else []
+
+    /// returns all valid OPCs in "path"
+    let getOPCNames path = 
+        if path = String.Empty then failwith "encountered empty opcpath"
+
+        if isOPCPath path then
+            [path.Replace(@"\", @"\\\\")]
+        elif System.IO.Directory.Exists path then
+            System.IO.Directory.GetDirectories(path)
+                |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
+                |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
+                |> Seq.map (fun a -> System.IO.Path.GetFileName a; )
+                |> Seq.toList 
+        else []
+
+    let expandNamesToPaths (path : string) (names : List<string>) =
+        names |> List.map(fun a -> 
+            let p = (Path.combine [path; a]).Replace(@"\", @"\\\\")
+            //Log.warn "%s" p
+            p)
+
+    /// returns all valid surface folders in "path"   
+    let discover path = 
+        if System.IO.Directory.Exists path then
+            System.IO.Directory.EnumerateDirectories path 
+                // |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
+                |> Seq.filter (fun a -> isSurfaceFolder a)
+                |> Seq.toList 
+        else []
+
+    let assertInvalidBB (bb:Box3d) = 
+        if(bb.IsInvalid) then 
+            failwith (sprintf "invalid bounding box %s" (bb.ToString()))
+        else bb
 
     let qualityInit = 
         {
@@ -97,15 +131,16 @@ module Surface =
             format = "{0:0}"
         }
 
+    /// creates a surface from opc folder path
     let mk path = 
         
-        let names = Utils.getOPCNames path                
+        let names = getOPCNames path                
         {
             guid = Guid.NewGuid()
             name = IO.Path.GetFileName path
             importPath = path
             opcNames = names
-            opcPaths = names |> Utils.expandNamesToPaths path
+            opcPaths = names |> expandNamesToPaths path
             fillMode = FillMode.Fill
             cullMode = CullMode.None
             isVisible = true
@@ -116,26 +151,21 @@ module Surface =
 
             attributeLayers = PList.empty
         }
-
-    let checkBB (bb:Box3d) = 
-        if(bb.IsInvalid) then 
-            failwith (sprintf "invalid bounding box %s" (bb.ToString()))
-        else bb
-
-    let computeBB (hierarchies : list<PatchHierarchy>) =
+    
+    let combineLeafBBs (hierarchies : list<PatchHierarchy>) =
          hierarchies
             |> List.map(fun d -> d.tree |> QTree.getLeaves)                  
-            |> Seq.map (fun p -> p |> Seq.map(fun d -> checkBB d.info.GlobalBoundingBox)) 
+            |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
             |> Seq.concat
             |> Box3d.ofSeq
 
-    let computeBBfromRoots (hierarchies : list<PatchHierarchy>) =
+    let combineRootBBs (hierarchies : list<PatchHierarchy>) =
          hierarchies
             |> List.map(fun d -> d.tree |> QTree.getRoot)                  
-            |> Seq.map (fun p -> checkBB p.info.GlobalBoundingBox)
+            |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
             |> Box3d.ofSeq
 
-    let toSg (s:Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = {
+    let sgOfSurface (s:Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = {
         surface = s       
         sceneGraph = sg
         globalBB = bb
@@ -146,15 +176,14 @@ module Surface =
         bb.Transformed(trafo)
       
     let createSgSurfaces runtime signature surfaces =
-        surfaces
-            //|> List.map (fun (d : Surface) -> { d with guid = Guid.NewGuid() })
+        surfaces            
             |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.trafo })
             |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
             |> List.zip surfaces
             |> List.map (
                 fun (surf, (sg, hierarchies, kdtree)) -> 
-                    let bb = hierarchies |> computeBB |> transformBox surf.trafo
-                    toSg surf sg bb kdtree)
+                    let bb = hierarchies |> combineLeafBBs |> transformBox surf.trafo
+                    sgOfSurface surf sg bb kdtree)
             |> List.map (fun d -> (d.surface.guid, d))
             |> HMap.ofList
 
@@ -190,11 +219,6 @@ module Surface =
 
         { model with surfaces = surfaces'; sgSurfaces = sgSurfaces }
     
-    //let checkPath p =
-    //    if File.Exists
-    //        Some p
-
-    open System.IO
     let getSurfaceFolder (surface:Surface) (scenePath:option<string>) =
         if surface.relativePaths 
         then
@@ -255,7 +279,7 @@ module Surface =
                         Copy.copyAll s.importPath targetDir true
 
                         // update opc paths and scene
-                        let s' = { s with opcPaths = Utils.expandNamesToPaths targetDir s.opcNames; relativePaths = true }
+                        let s' = { s with opcPaths = expandNamesToPaths targetDir s.opcNames; relativePaths = true }
                         updateSurface surfaceModel s'
                     
                     | None ->

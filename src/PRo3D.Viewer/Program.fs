@@ -17,6 +17,8 @@ open Suave.Filters
 open System.Collections.Concurrent
 open System.Diagnostics
 open System.Xml
+open PRo3D.Surfaces.Mutable
+open PRo3D.Surfaces
 
 [<EntryPoint;STAThread>]
 let main argv = 
@@ -47,18 +49,10 @@ let main argv =
                 let s = ByteSegment(System.Text.Encoding.UTF8.GetBytes str)
                 
                 do! webSocket.send Text s true
-        }
+        }        
 
-    //let doc = new XmlDocument() in 
-    //    doc.Load "NE_SyrtisE.opcx";
-        
-    //let layers =
-    //    doc.SelectNodes "/Aardvark/SurfaceAttributes/AttributeLayers/AttributeLayer"
-    //     |> Seq.cast<XmlNode>
-    //     |> Seq.map (fun node -> node.Name)         
-
-    //printf "%A" layers
-
+    //let attr = Surface.SurfaceAttributes.read "D:\_WORK\Aardwork\Exomars\_Scenes\VictoriaCrater_HiRISE_MER-B_PRoViDEData_MultiLayer\Surface\MER-B_PanCam_Sol1103-P2582_multilayer\MER-B_PanCam_Sol1103-P2582_multilayer.opcx"
+    //printf "%A" attr
 
     let a = PRo3D.ViewerApp.start form runtime signature bc   
 

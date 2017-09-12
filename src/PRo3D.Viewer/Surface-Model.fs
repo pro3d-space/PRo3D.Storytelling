@@ -22,7 +22,9 @@ type TextureLayer = {
     label: string
 }
 
-type AttributeLayer = ScalarLayer | TextureLayer
+type AttributeLayer = 
+    | ScalarLayer of ScalarLayer 
+    | TextureLayer of TextureLayer
 
 //[<DomainType>]
 //type SurfaceAttributes = {

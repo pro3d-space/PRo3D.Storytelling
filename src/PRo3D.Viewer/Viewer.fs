@@ -55,7 +55,7 @@ module Scene =
                         fun x -> 
                             if x.relativePaths then
                                 let p'' = Path.Combine(p', x.name)
-                                { x with opcPaths = Utils.expandNamesToPaths p'' x.opcNames }
+                                { x with opcPaths = expandNamesToPaths p'' x.opcNames }
                             else x
                         )
                 { m with surfacesModel = Surface.updateSurfaces m.surfacesModel surfaces}
@@ -76,12 +76,29 @@ module Scene =
         //add legacy trafo on import
         let surfaces =
             surfaces 
-                |> List.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))                                 
+                |> List.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))
                 |> List.map(fun(s,p) -> 
                         match (fileExists p) with
                             | Some path->
                                 let t = readLine path
                                 { s with trafo = Trafo3d.Parse(t) }
+                            | None ->
+                                s
+                            )
+
+        let getOPCxPath (surfacePath : string) = 
+            let name = Path.GetFileName surfacePath
+            let ocp = Path.ChangeExtension(Path.Combine(surfacePath, name), ".opcx")
+            printf "%s" ocp
+            ocp
+
+        let surfaces =
+            surfaces 
+                |> List.map(fun s -> s, s.importPath |> getOPCxPath)
+                |> List.map(fun(s,p) -> 
+                        match (fileExists p) with
+                            | Some path->                                
+                                { s with attributeLayers = Surface.SurfaceAttributes.read path |> PList.ofSeq }
                             | None ->
                                 s
                             )
@@ -123,13 +140,13 @@ module Scene =
               //  try 
                 let r = Serialization.loadAs<Recent> path
                 let m = { m with recent = r}
-                match r.recentScenes |> HMap.toList |> List.sortBy (fun (_,v) -> v.writeDate) |> List.tryHead with
+                match r.recentScenes |> HMap.toList |> List.sortByDescending (fun (_,v) -> v.writeDate) |> List.tryHead with
                     | Some (_,scenePath) ->
                         try
                             loadScene scenePath.path m runtime signature        
                         with
                             | _ ->
-                                Log.warn("Error parsing last scene. loading empty")
+                                Log.warn "Error parsing last scene: %s. loading empty" scenePath.path
                                 m
                     | None -> 
                         Log.warn("No recent scene found")
@@ -296,7 +313,7 @@ module ViewerApp =
                     | paths ->
                         let surfaces = 
                             paths 
-                                |> List.filter Utils.isSurfaceFolder 
+                                |> List.filter isSurfaceFolder 
                                 |> List.map Surface.mk
 
                         Scene.import' runtime signature surfaces m
