@@ -137,7 +137,7 @@ module Scene =
     let loadLastScene m runtime signature =
         match fileExists "./recent" with
             | Some path  ->
-              //  try 
+              try 
                 let r = Serialization.loadAs<Recent> path
                 let m = { m with recent = r}
                 match r.recentScenes |> HMap.toList |> List.sortByDescending (fun (_,v) -> v.writeDate) |> List.tryHead with
@@ -151,10 +151,11 @@ module Scene =
                     | None -> 
                         Log.warn("No recent scene found")
                         m
-                //with e ->
-                //    Aardvark.Base.Log.warn "could not restore %A. using empty scene" p
-                //  //  System.IO.File.Delete path
-                //    m
+                //m
+                with e ->
+                    Aardvark.Base.Log.warn "%A. deleting recent." e
+                    System.IO.File.Delete path
+                    m
             | _ -> 
                 Log.warn("recent scene file does not exist (yet)")
                 m
@@ -163,6 +164,7 @@ module ViewerApp =
     open Surface   
     open System.Collections.Concurrent   
     open Scene    
+    open Aardvark.SceneGraph.SgFSharp.Sg
         
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -197,12 +199,12 @@ module ViewerApp =
     
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces
+    let _surfaces2       =  Model.Lens.scene |. Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces    
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
     let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.selectedSurface
-
-    let _surfaces2 =  Model.Lens.scene |. Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces    
-
+    
     let _drawing = Model.Lens.drawing
+    let _camera= Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera
        
     let lookAtData (m : Model) =         
         let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -276,6 +278,12 @@ module ViewerApp =
             up                    = ReferenceSystem.Lens.up |. V3dInput.Lens.value
         }
 
+    let updateCameraUp m =
+        let cam = m.scene.navigation.camera                            
+        let view' = CameraView.lookAt cam.view.Location (cam.view.Location + cam.view.Forward) m.scene.referenceSystem.up.value
+        let cam' = { cam with view = view' }
+        _camera.Set(m,cam')
+
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
         match msg, m.interaction, m.picking with
@@ -327,15 +335,9 @@ module ViewerApp =
                     | Some x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x)}}
                     | None -> m   
             | QuickLoad1,_,_ ->
-                Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature
-                //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
-                //let path = @"E:\Aardwork\Exomars\_NEWVIEWER\Surfaces\Cape_Desire_RGB"
-                //Scene.import' runtime signature [Surface.mk path] m |> lookAtData
-            | QuickLoad2,_,_ ->                
-                //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
-                (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore
-                //let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\cape.scn"
-                //loadScene path m runtime signature
+                Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
+            | QuickLoad2,_,_ ->                                
+                (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore                
                 m
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
@@ -377,8 +379,12 @@ module ViewerApp =
                                 //let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
                                 let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
                                 let (refSystem',_)= 
-                                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction                             
-                                { m with scene = { m.scene with referenceSystem = refSystem' }}
+                                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
+                                                                
+                                let m = { m with scene = { m.scene with referenceSystem = refSystem' }}
+
+                                //update camera upvector
+                                updateCameraUp m
                             | Interactions.PickExploreCenter ->
                                 let c   = m.scene.config
                                 let ref = m.scene.referenceSystem
@@ -447,8 +453,7 @@ module ViewerApp =
                             | _ -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity))
 
                     let c' = ConfigProperties.update m.scene.config configAction
-                    { m with scene = { m.scene with config = c' }}                    
-                   
+                    { m with scene = { m.scene with config = c' }}                                       
             | KeyUp k, _,_ ->
                     let d =
                         match k with
@@ -464,12 +469,7 @@ module ViewerApp =
 
                 let m =
                     match a with 
-                        | ReferenceSystemApp.Action.SetUp _->
-                            let cam = m.scene.navigation.camera                            
-                            let view' = CameraView.lookAt cam.view.Location (cam.view.Location + cam.view.Forward) m.scene.referenceSystem.up.value
-                            let cam' = { cam with view = view' }
-                        
-                            (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam')                                                 
+                        | ReferenceSystemApp.Action.SetUp _-> updateCameraUp m
                         | _ -> m
 
                 m

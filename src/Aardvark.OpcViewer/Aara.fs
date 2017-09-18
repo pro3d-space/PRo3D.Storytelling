@@ -21,6 +21,7 @@ module Aara =
 
     let readerChars2String (f : Stream)  = 
         let cnt = f.ReadByte()
+        
         let target = Array.zeroCreate cnt
         let read = f.Read(target,0,cnt)
         if cnt <> read then failwith ""
