@@ -51,7 +51,7 @@ module DrawingApp =
             match getFinishedAnnotation up north model with
                 | Some a -> 
                     let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
-                    Log.line "sending %A" a.semantic
+                 //   Log.line "sending %A" a.semantic
                     bc.Add json
 
                     model.annotations |> PList.prepend a
@@ -81,13 +81,12 @@ module DrawingApp =
                                             { annotation with segments = PList.append newSegment annotation.segments }, Some (newSegment,segmentIndex)
                                         else
                                             let dir = newSegment.endPoint - newSegment.startPoint
-                                            let points = 
-                                                [ for s in 0 .. PRo3D.Config.sampleCount do
-                                                    let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
-                                                    match samplePoint p with
-                                                        | None -> ()
-                                                        | Some projectedPoint ->
-                                                            yield projectedPoint
+                                            let points = [ 
+                                                    for s in 0 .. PRo3D.Config.sampleCount do
+                                                        let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                                                        match samplePoint p with
+                                                            | None -> ()
+                                                            | Some projectedPoint -> yield projectedPoint
                                                 ]
                                             let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
                                             { annotation with segments = PList.append newSegment annotation.segments }, None
@@ -296,7 +295,7 @@ module DrawingApp =
                 match toRemove with
                     | Some index ->
                         let as' = model.annotations|> PList.removeAt index
-
+                        Thread.Sleep(20)
                         //if removed is selected also remove selected copy
 
                         { model with annotations = as' } |> stash
@@ -347,7 +346,7 @@ module DrawingApp =
             let color =  
                 model.selected 
                     |> ASet.contains id 
-                    |> Mod.bind (function x -> if x then Mod.constant C4b.Red else a.color.c)
+                    |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
 
             color
 
@@ -618,14 +617,14 @@ module DrawingApp =
                     |> Sg.trafo anno.modelTrafo
                     |> Sg.translate 0.0 0.0 3.0
 
-        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) =
+        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
             let points = getPolyline anno
                        
             Sg.ofList [
-                Sg.lines points anno.color.c anno.thickness.value anno.modelTrafo anno.key
-                Sg.dots anno.points c view
+                Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
+                Sg.dots anno.points c view |> Sg.onOff dots
                 drawDns anno view conf |> Sg.onOff anno.showDns
-                anno |> text
+            //    anno |> text
             ] |> Sg.onOff anno.visible
 
         let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) (cam:IMod<CameraView>) : ISg<Drawing.Action> =
@@ -648,7 +647,12 @@ module DrawingApp =
                 aset {
                     for a in annoSet do
                        let c = UI.mkColor model a
-                       yield finishedAnnotation a cam c config
+                       let dots = a.geometry |> Mod.map(fun g -> 
+                                                            match g with
+                                                                | Geometry.Line | Geometry.Point -> true
+                                                                | _ -> false
+                                                            )
+                       yield finishedAnnotation a cam c config dots
                 } |> Sg.set
                                 
             Sg.ofList [

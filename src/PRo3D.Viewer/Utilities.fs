@@ -191,8 +191,8 @@ module Sg =
             }                               
             |> Sg.trafo trafo
             |> Sg.uniform "LineWidth" width
-            |> Sg.pass linePass
-            |> Sg.depthTest (Mod.constant DepthTestMode.None)
+            //|> Sg.pass linePass
+            //|> Sg.depthTest (Mod.constant DepthTestMode.None)
 
     let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =
         adaptive {

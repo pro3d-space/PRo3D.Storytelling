@@ -177,7 +177,7 @@ module Annotation =
             visible = true
             text = ""
             modelTrafo = Trafo3d.Identity
-            showDns = true
+            showDns = match semantic with | Semantic.Crossbed -> true | _ -> false 
             surfaceName = surfName
         }
 

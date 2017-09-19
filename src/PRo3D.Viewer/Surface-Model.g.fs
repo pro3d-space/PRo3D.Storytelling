@@ -10,6 +10,96 @@ module Mutable =
 
     
     
+    type MScalarLayer(__initial : PRo3D.Surfaces.ScalarLayer) =
+        inherit obj()
+        let mutable __current = __initial
+        let _label = ResetMod.Create(__initial.label)
+        let _actualRange = ResetMod.Create(__initial.actualRange)
+        let _definedRange = ResetMod.Create(__initial.definedRange)
+        
+        member x.label = _label :> IMod<_>
+        member x.actualRange = _actualRange :> IMod<_>
+        member x.definedRange = _definedRange :> IMod<_>
+        
+        member x.Update(v : PRo3D.Surfaces.ScalarLayer) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_label,v.label)
+                ResetMod.Update(_actualRange,v.actualRange)
+                ResetMod.Update(_definedRange,v.definedRange)
+                
+        
+        static member Create(__initial : PRo3D.Surfaces.ScalarLayer) : MScalarLayer = MScalarLayer(__initial)
+        static member Update(m : MScalarLayer, v : PRo3D.Surfaces.ScalarLayer) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Surfaces.ScalarLayer> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module ScalarLayer =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let label =
+                { new Lens<PRo3D.Surfaces.ScalarLayer, Microsoft.FSharp.Core.string>() with
+                    override x.Get(r) = r.label
+                    override x.Set(r,v) = { r with label = v }
+                    override x.Update(r,f) = { r with label = f r.label }
+                }
+            let actualRange =
+                { new Lens<PRo3D.Surfaces.ScalarLayer, Aardvark.Base.Range1d>() with
+                    override x.Get(r) = r.actualRange
+                    override x.Set(r,v) = { r with actualRange = v }
+                    override x.Update(r,f) = { r with actualRange = f r.actualRange }
+                }
+            let definedRange =
+                { new Lens<PRo3D.Surfaces.ScalarLayer, Aardvark.Base.Range1d>() with
+                    override x.Get(r) = r.definedRange
+                    override x.Set(r,v) = { r with definedRange = v }
+                    override x.Update(r,f) = { r with definedRange = f r.definedRange }
+                }
+    
+    
+    type MTextureLayer(__initial : PRo3D.Surfaces.TextureLayer) =
+        inherit obj()
+        let mutable __current = __initial
+        let _label = ResetMod.Create(__initial.label)
+        
+        member x.label = _label :> IMod<_>
+        
+        member x.Update(v : PRo3D.Surfaces.TextureLayer) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_label,v.label)
+                
+        
+        static member Create(__initial : PRo3D.Surfaces.TextureLayer) : MTextureLayer = MTextureLayer(__initial)
+        static member Update(m : MTextureLayer, v : PRo3D.Surfaces.TextureLayer) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Surfaces.TextureLayer> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module TextureLayer =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let label =
+                { new Lens<PRo3D.Surfaces.TextureLayer, Microsoft.FSharp.Core.string>() with
+                    override x.Get(r) = r.label
+                    override x.Set(r,v) = { r with label = v }
+                    override x.Update(r,f) = { r with label = f r.label }
+                }
+    
+    
     type MSurface(__initial : PRo3D.Surfaces.Surface) =
         inherit obj()
         let mutable __current = __initial
@@ -24,6 +114,8 @@ module Mutable =
         let _isVisible = ResetMod.Create(__initial.isVisible)
         let _quality = Aardvark.UI.Mutable.MNumericInput.Create(__initial.quality)
         let _priority = Aardvark.UI.Mutable.MNumericInput.Create(__initial.priority)
+        let _trafo = ResetMod.Create(__initial.trafo)
+        let _attributeLayers = MList.Create(__initial.attributeLayers)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
@@ -36,6 +128,8 @@ module Mutable =
         member x.isVisible = _isVisible :> IMod<_>
         member x.quality = _quality
         member x.priority = _priority
+        member x.trafo = _trafo :> IMod<_>
+        member x.attributeLayers = _attributeLayers :> alist<_>
         
         member x.Update(v : PRo3D.Surfaces.Surface) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -52,6 +146,8 @@ module Mutable =
                 ResetMod.Update(_isVisible,v.isVisible)
                 Aardvark.UI.Mutable.MNumericInput.Update(_quality, v.quality)
                 Aardvark.UI.Mutable.MNumericInput.Update(_priority, v.priority)
+                ResetMod.Update(_trafo,v.trafo)
+                MList.Update(_attributeLayers, v.attributeLayers)
                 
         
         static member Create(__initial : PRo3D.Surfaces.Surface) : MSurface = MSurface(__initial)
@@ -134,6 +230,18 @@ module Mutable =
                     override x.Set(r,v) = { r with priority = v }
                     override x.Update(r,f) = { r with priority = f r.priority }
                 }
+            let trafo =
+                { new Lens<PRo3D.Surfaces.Surface, Aardvark.Base.Trafo3d>() with
+                    override x.Get(r) = r.trafo
+                    override x.Set(r,v) = { r with trafo = v }
+                    override x.Update(r,f) = { r with trafo = f r.trafo }
+                }
+            let attributeLayers =
+                { new Lens<PRo3D.Surfaces.Surface, Aardvark.Base.plist<PRo3D.Surfaces.AttributeLayer>>() with
+                    override x.Get(r) = r.attributeLayers
+                    override x.Set(r,v) = { r with attributeLayers = v }
+                    override x.Update(r,f) = { r with attributeLayers = f r.attributeLayers }
+                }
     
     
     type MSgSurface(__initial : PRo3D.Surfaces.SgSurface) =
@@ -205,10 +313,12 @@ module Mutable =
         let _surfaces = ResetMod.Create(__initial.surfaces)
         let _selectedSurface = MOption.Create(__initial.selectedSurface, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
         let _sgSurfaces = MMap.Create(__initial.sgSurfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
+        let _sgGrouped = MList.Create(__initial.sgGrouped, (fun v -> MMap.Create(v, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))), (fun (m,v) -> MMap.Update(m, v)), (fun v -> v :> amap<_,_>))
         
         member x.surfaces = _surfaces :> IMod<_>
         member x.selectedSurface = _selectedSurface :> IMod<_>
         member x.sgSurfaces = _sgSurfaces :> amap<_,_>
+        member x.sgGrouped = _sgGrouped :> alist<_>
         
         member x.Update(v : PRo3D.Surfaces.SurfaceModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -217,6 +327,7 @@ module Mutable =
                 ResetMod.Update(_surfaces,v.surfaces)
                 MOption.Update(_selectedSurface, v.selectedSurface)
                 MMap.Update(_sgSurfaces, v.sgSurfaces)
+                MList.Update(_sgGrouped, v.sgGrouped)
                 
         
         static member Create(__initial : PRo3D.Surfaces.SurfaceModel) : MSurfaceModel = MSurfaceModel(__initial)
@@ -250,4 +361,10 @@ module Mutable =
                     override x.Get(r) = r.sgSurfaces
                     override x.Set(r,v) = { r with sgSurfaces = v }
                     override x.Update(r,f) = { r with sgSurfaces = f r.sgSurfaces }
+                }
+            let sgGrouped =
+                { new Lens<PRo3D.Surfaces.SurfaceModel, Aardvark.Base.plist<Aardvark.Base.hmap<System.Guid,PRo3D.Surfaces.SgSurface>>>() with
+                    override x.Get(r) = r.sgGrouped
+                    override x.Set(r,v) = { r with sgGrouped = v }
+                    override x.Update(r,f) = { r with sgGrouped = f r.sgGrouped }
                 }

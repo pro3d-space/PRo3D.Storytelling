@@ -39,6 +39,7 @@ module PList =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Scene =
     open PRo3D.Surfaces.Surface
+    open Aardvark.UI.Incremental.Svg
     
     let surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
 
@@ -54,39 +55,78 @@ module Scene =
                         fun x -> 
                             if x.relativePaths then
                                 let p'' = Path.Combine(p', x.name)
-                                { x with opcPaths = Utils.expandNamesToPaths p'' x.opcNames }
+                                { x with opcPaths = expandNamesToPaths p'' x.opcNames }
                             else x
                         )
                 { m with surfacesModel = Surface.updateSurfaces m.surfacesModel surfaces}
             | None -> m        
 
+    let readLine (filePath:string) =
+            use sr = new System.IO.StreamReader (filePath)
+            sr.ReadLine ()       
+
+    let fileExists filePath =
+        match System.IO.File.Exists filePath with
+            | true -> Some filePath
+            | false -> None
+    
     /// appends surfaces to existing surfaces
     let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : list<Surface>) (m : Model) =
-                 
+            
+        //add legacy trafo on import
+        let surfaces =
+            surfaces 
+                |> List.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))
+                |> List.map(fun(s,p) -> 
+                        match (fileExists p) with
+                            | Some path->
+                                let t = readLine path
+                                { s with trafo = Trafo3d.Parse(t) }
+                            | None ->
+                                s
+                            )
+
+        let getOPCxPath (surfacePath : string) = 
+            let name = Path.GetFileName surfacePath
+            let ocp = Path.ChangeExtension(Path.Combine(surfacePath, name), ".opcx")
+            printf "%s" ocp
+            ocp
+
+        let surfaces =
+            surfaces 
+                |> List.map(fun s -> s, s.importPath |> getOPCxPath)
+                |> List.map(fun(s,p) -> 
+                        match (fileExists p) with
+                            | Some path->                                
+                                { s with attributeLayers = Surface.SurfaceAttributes.read path |> PList.ofSeq }
+                            | None ->
+                                s
+                            )
+                        
         //append semantic surfaces
         let surfaces' = (surfaces @ m.scene.surfacesModel.surfaces)
         let m = (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, surfaces')
-
+        
         //append sg surfaces
         let surfSet = Surface.createSgSurfaces runtime signature surfaces
-        let sgSurfaces = HMap.union surfSet m.scene.surfacesModel.sgSurfaces
-                                                
-        (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)                    
+        let sgSurfaces = HMap.union surfSet m.scene.surfacesModel.sgSurfaces |> expandLazyKdTreePaths m.scene.scenePath
+                                       
+        let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
+
+        let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
+        surfaceModelLens.Set(m, grouped)
+        //m
 
     /// loads surfaces given in scene - creates their sg pendants
     let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
         
         let s = s |> expandRelativePaths
 
-        let sgSurfaces = Surface.createSgSurfaces runtime signature s.surfacesModel.surfaces        
-        
-        (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
-        
-    let fileExists path =
-        if System.IO.File.Exists(path) then
-            Some path
-        else
-            None
+        let sgSurfaces = Surface.createSgSurfaces runtime signature s.surfacesModel.surfaces |> expandLazyKdTreePaths m.scene.scenePath
+        let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
+
+        let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
+        surfaceModelLens.Set(m, grouped)            
 
     let loadScene path m runtime signature =
         let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
@@ -97,29 +137,34 @@ module Scene =
     let loadLastScene m runtime signature =
         match fileExists "./recent" with
             | Some path  ->
-              //  try 
+              try 
                 let r = Serialization.loadAs<Recent> path
-                match r.recentScenes |> List.tryHead with
-                    | Some scenePath ->
-                        loadScene scenePath m runtime signature                            
+                let m = { m with recent = r}
+                match r.recentScenes |> HMap.toList |> List.sortByDescending (fun (_,v) -> v.writeDate) |> List.tryHead with
+                    | Some (_,scenePath) ->
+                        try
+                            loadScene scenePath.path m runtime signature        
+                        with
+                            | _ ->
+                                Log.warn "Error parsing last scene: %s. loading empty" scenePath.path
+                                m
                     | None -> 
                         Log.warn("No recent scene found")
                         m
-                //with e ->
-                //    Aardvark.Base.Log.warn "could not restore %A. using empty scene" p
-                //  //  System.IO.File.Delete path
-                //    m
+                //m
+                with e ->
+                    Aardvark.Base.Log.warn "%A. deleting recent." e
+                    System.IO.File.Delete path
+                    m
             | _ -> 
                 Log.warn("recent scene file does not exist (yet)")
                 m
  
 module ViewerApp =
-    open Surface
-    open Aardvark.Base.Geometry.RayHit
+    open Surface   
+    open System.Collections.Concurrent   
+    open Scene    
     open Aardvark.SceneGraph.SgFSharp.Sg
-    open System.Collections.Concurrent
-    open FShade.GLSL.AssemblerState
-    open Aardvark.Cef.WinForms
         
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -144,6 +189,7 @@ module ViewerApp =
         | SaveScene
         | SaveAs                    
         | OpenScene
+        | LoadScene                 of string
         | NewScene
         | KeyDown                   of key : Aardvark.Application.Keys
         | KeyUp                     of key : Aardvark.Application.Keys      
@@ -153,17 +199,17 @@ module ViewerApp =
     
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces
+    let _surfaces2       =  Model.Lens.scene |. Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces    
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
     let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.selectedSurface
-
-    let _surfaces2 =  Model.Lens.scene |. Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces    
-
+    
     let _drawing = Model.Lens.drawing
+    let _camera= Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera
        
     let lookAtData (m : Model) =         
         let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
         let cam = 
-            let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
+            let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value
             { CameraController.initial with view = view }            
 
         { m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
@@ -174,7 +220,7 @@ module ViewerApp =
             | Some s ->
                 let bb = s.globalBB
                 let cam = 
-                    let view = CameraView.lookAt bb.Max bb.Center bb.Center.Normalized
+                    let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value
                     { CameraController.initial with view = view }            
 
                 //{ m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
@@ -184,12 +230,35 @@ module ViewerApp =
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
 
-    let stashAndSaveRecent p (model : Model) =
-        let scenePaths = p :: model.recent.recentScenes
+    let addToListWithoutDup e f list =
+        match List.exists f list with
+            | true -> list
+            | false -> e :: list
+    
+    let stashAndSaveRecent (s : SceneHandle) (model : Model) =
+        let scenePaths = 
+            model.recent.recentScenes                 
+                |> HMap.update s.path 
+                    (
+                        fun v -> 
+                            match v with
+                                | Some x -> { x with writeDate = s.writeDate }
+                                | None -> s
+                    ) //addToListWithoutDup s (fun x -> x.path = s.path )                
+
         let recent = { model.recent with recentScenes = scenePaths }
+
         Serialization.save "./recent" recent |> ignore
 
-        {model with recent = recent}
+        { model with recent = recent }
+
+    let stashAndSaveRecent' (path : string) (model : Model) =
+        let handle = {
+            name = Path.GetFileName(path)
+            path = path
+            writeDate = DateTime.Now
+        }
+        stashAndSaveRecent handle model
 
     let refConfig : ReferenceSystemConfig<ViewConfigModel> =
         { 
@@ -208,6 +277,12 @@ module ViewerApp =
             navigationSensitivity = ViewConfigModel.Lens.navigationSensitivity |. NumericInput.Lens.value
             up                    = ReferenceSystem.Lens.up |. V3dInput.Lens.value
         }
+
+    let updateCameraUp m =
+        let cam = m.scene.navigation.camera                            
+        let view' = CameraView.lookAt cam.view.Location (cam.view.Location + cam.view.Forward) m.scene.referenceSystem.up.value
+        let cam' = { cam with view = view' }
+        _camera.Set(m,cam')
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
@@ -244,29 +319,28 @@ module ViewerApp =
                             { m with drawing = drawing' }
                         | None -> m                                                
             | ImportSurface,_,_ -> 
-                match Dialogs.openFolder w with
+                match Dialogs.openFolders w with
                     | [] -> m
                     | paths ->
-                        let path = paths.Head
-                        if (path |> Utils.isSurfaceFolder) then                     
-                            Scene.import' runtime signature [Surface.mk path] m |> lookAtData
-                        else
-                            Log.error "path %s does not point to surface folder" path
-                            m   
+                        let surfaces = 
+                            paths 
+                                |> List.filter isSurfaceFolder 
+                                |> List.map Surface.mk
+
+                        Scene.import' runtime signature surfaces m
+                        //if (path |> Utils.isSurfaceFolder) then                     
+                        //    Scene.import' runtime signature [Surface.mk path] m //|> lookAtData
+                        //else
+                        //    Log.error "path %s does not point to surface folder" path
+                        //    m   
             | ImportMeasurements,_,_ ->
                 match Dialogs.openDialog w with
                     | Some x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x)}}
                     | None -> m   
             | QuickLoad1,_,_ ->
-                Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature
-                //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
-                //let path = @"E:\Aardwork\Exomars\_NEWVIEWER\Surfaces\Cape_Desire_RGB"
-                //Scene.import' runtime signature [Surface.mk path] m |> lookAtData
-            | QuickLoad2,_,_ ->                
-                //loadScene "D:\_WORK\Aardwork\Exomars\Dingo\MSL_Mastcam_Sol_540_id_47621_X\dingo" m runtime signature
-                (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore
-                //let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\cape.scn"
-                //loadScene path m runtime signature
+                Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
+            | QuickLoad2,_,_ ->                                
+                (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore                
                 m
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
@@ -279,31 +353,44 @@ module ViewerApp =
                 let cameraLocation = m.scene.navigation.camera.view.Location 
 
                 let hitF (p : V3d) = 
-                    let ray = FastRay3d(cameraLocation,(p-cameraLocation).Normalized)   
+
+                    let ray =
+                        match m.drawing.projection with
+                            | Projection.Viewpoint -> 
+                                let dir = (p-cameraLocation).Normalized
+                                FastRay3d(cameraLocation, dir)  
+                            | Projection.Sky -> 
+                                let up = m.scene.referenceSystem.up.value
+                                FastRay3d(p + (up * 5000.0), -up)  
+                            | _ -> Log.error "projection started without proj mode"; FastRay3d()
+                    
                     match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray with
-                        | Some (t,n) -> ray.Ray.GetPointOnRay t |> Some
+                        | Some (t,surf) ->                             
+                            ray.Ray.GetPointOnRay t |> Some
                         | None -> None
                                     
                 match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray with
-                    | Some (t,n) -> 
+                    | Some (t,surf) ->                         
                         let hit = r.GetPointOnRay(t)
                         
                         match m.interaction with
-                            | Interactions.DrawAnnotation ->
-                               
-                                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,n))
+                            | Interactions.DrawAnnotation ->                               
+                                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
                                 Log.stop()
                                 { m with drawing = drawing } |> stash
                             | Interactions.PlaceCoordinateSystem -> 
                                 //let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
                                 let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
                                 let (refSystem',_)= 
-                                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction                             
-                                { m with scene = { m.scene with referenceSystem = refSystem' }}
+                                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
+                                                                
+                                let m = { m with scene = { m.scene with referenceSystem = refSystem' }}
+
+                                //update camera upvector
+                                updateCameraUp m
                             | Interactions.PickExploreCenter ->
                                 let c   = m.scene.config
                                 let ref = m.scene.referenceSystem
-
                                 let navigation' = 
                                     Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
                                 { m with scene = {m.scene with navigation = navigation'; } }
@@ -318,22 +405,24 @@ module ViewerApp =
                             | None -> m
                             | Some p -> 
                                 let s' = { m.scene with scenePath = Some p}
-                                { m with scene = Serialization.save p s'; } |> stashAndSaveRecent p
+                                { m with scene = Serialization.save p s'; } |> stashAndSaveRecent' p
                     | Some path ->                        
-                        { m with scene = Serialization.save path m.scene } |> stashAndSaveRecent path
+                        { m with scene = Serialization.save path m.scene } |> stashAndSaveRecent' path
             | SaveAs,_,_ ->
                 match Dialogs.saveDialog w with
                     | None -> m
                     | Some p -> 
                         let s' = { m.scene with scenePath = Some p}                                
-                        { m with scene = Serialization.save p s' } |> stashAndSaveRecent p
+                        { m with scene = Serialization.save p s' } |> stashAndSaveRecent' p
             | OpenScene,_,_ ->
                 match Dialogs.openDialog w with
                     | None -> m
                     | Some path -> 
-                        Scene.loadScene path m runtime signature |> stashAndSaveRecent path
+                        Scene.loadScene path m runtime signature |> stashAndSaveRecent' path
+            | LoadScene path,_,_ ->
+                Scene.loadScene path m runtime signature |> stashAndSaveRecent' path
             | NewScene,_,_ ->
-                PRo3D.Viewer.Viewer.initial
+                { PRo3D.Viewer.Viewer.initial with recent = m.recent }
             | KeyDown k, _, _ ->
                     let drawingAction =
                         match k with
@@ -367,8 +456,7 @@ module ViewerApp =
                             | _ -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity))
 
                     let c' = ConfigProperties.update m.scene.config configAction
-                    { m with scene = { m.scene with config = c' }}                    
-                   
+                    { m with scene = { m.scene with config = c' }}                                       
             | KeyUp k, _,_ ->
                     let d =
                         match k with
@@ -384,12 +472,7 @@ module ViewerApp =
 
                 let m =
                     match a with 
-                        | ReferenceSystemApp.Action.SetUp _->
-                            let cam = m.scene.navigation.camera                            
-                            let view' = CameraView.lookAt cam.view.Location (cam.view.Location + cam.view.Forward) m.scene.referenceSystem.up.value
-                            let cam' = { cam with view = view' }
-                        
-                            (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam')                                                 
+                        | ReferenceSystemApp.Action.SetUp _-> updateCameraUp m
                         | _ -> m
 
                 m
@@ -399,20 +482,29 @@ module ViewerApp =
                 (Model.Lens.scene |. Scene.Lens.config).Set(m,c')
             | _ -> m
 
-    let viewSingleSurfaceSg (surface : MSgSurface) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>) (globalBB : Box3d) =
+    let pickable' (pick :IMod<Pickable>) (sg: ISg) =
+        Sg.PickableApplicator (pick, Mod.constant sg)
+
+    let viewSingleSurfaceSg (surface : MSgSurface) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>) (selectedSurf : IMod<Option<MSurface>>) (globalBB : IMod<Box3d>) =
         let isSelected = 
             Mod.bind2 (fun guid (selected: Option<MSurface>) ->
                 match selected with
                     | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
                     | None -> Mod.constant false
-            ) surface.surface.guid (Mod.constant None)
+            ) surface.surface.guid selectedSurf
 
         let createSg (sg : ISg) =
             sg 
             |> Sg.noEvents 
             |> Sg.cullMode(surface.surface.cullMode) 
             |> Sg.fillMode(surface.surface.fillMode)         
-                          
+                
+        let pickable = 
+            adaptive {
+                let! bb = globalBB
+                return { shape = PickShape.Box bb; trafo = Trafo3d.Identity }
+            }
+
         let sg = 
             Mod.map createSg surface.sceneGraph 
                 |> Sg.dynamic          
@@ -424,20 +516,21 @@ module ViewerApp =
                         let! frustum = frustum 
                         let sizes = V2i(1024,768)
                         let! quality = surface.surface.quality.value
+                        let! trafo = surface.surface.trafo
 
-                        return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality) }
-                    })                            
+                        return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality); trafo = trafo }
+                    })        
+                |> pickable' pickable
                 |> Sg.noEvents
-                |> Sg.andAlso (
-                    Sg.wireBox' C4b.Red globalBB
-                            |> Sg.noEvents
-                            |> Sg.noEvents
-                            |> Sg.shader {
-                                    do! Shader.stableTrafo
-                                    do! DefaultSurfaces.vertexColor                                                                     
-                                }
-                    ) 
-                |> Sg.pickable (PickShape.Box globalBB) 
+                //|> Sg.andAlso (
+                //    Sg.wireBox (Mod.constant C4b.VRVisGreen) globalBB
+                //            |> Sg.noEvents
+                //            |> Sg.noEvents
+                //            |> Sg.shader {
+                //                    do! Shader.stableTrafo
+                //                    do! DefaultSurfaces.vertexColor                                                                     
+                //                }
+                //    ) 
                 |> Sg.withEvents [
                         SceneEventKind.Down, (
                             fun sceneHit -> 
@@ -446,12 +539,11 @@ module ViewerApp =
                     ]
         sg
                 
-    let viewSurfacesSg (sgSurfaces : amap<Guid,MSgSurface>) (frustum : IMod<Frustum>) (lodcolor : IMod<bool>)=
+    let viewSurfacesSg (sgSurfaces : amap<Guid,MSgSurface>) (frustum : IMod<Frustum>) (selectedSurf : IMod<Option<MSurface>>)(lodcolor : IMod<bool>)=
         let opcs =
             aset {
-                for (_,surface) in sgSurfaces |> AMap.toASet do
-                   let! bb = surface.globalBB
-                   yield viewSingleSurfaceSg surface frustum lodcolor bb
+                for (_,surface) in sgSurfaces |> AMap.toASet do                   
+                   yield viewSingleSurfaceSg surface frustum lodcolor selectedSurf surface.globalBB
             }
 
         opcs 
@@ -460,8 +552,8 @@ module ViewerApp =
                 Shader.stableTrafo |> toEffect
                 //DefaultSurfaces.constantColor C4f.White |> toEffect                            
                 DefaultSurfaces.diffuseTexture |> toEffect
-               // Shader.selectionColor |> toEffect       
-                Shader.LoDColor |> toEffect
+                Shader.selectionColor |> toEffect       
+               // Shader.LoDColor |> toEffect
             ]
 
             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
@@ -550,44 +642,42 @@ module ViewerApp =
                 exploreCenter
             ] |> Sg.ofList
 
-        let surfaces2 (sgSurfaces:amap<Guid,MSgSurface>) frustum lodcolor =                        
-            let bla =
-                sgSurfaces
-                    |> AMap.toASet
-                    |> ASet.map snd
-                    |> ASet.mapM(fun x -> x.surface.priority.value |> Mod.map(fun g -> (g,x))) 
-                    |> ASet.groupBy fst 
-                    |> AMap.toASet
-
-            let bla =
-                bla
-                    |> ASet.map(
-                        fun (p, group) -> 
-                            aset {
-                                for (_,x) in group do
-                                    //yield 0
-                                    let! bb = x.globalBB
-                                    yield viewSingleSurfaceSg x frustum lodcolor bb
-                            }
-                    )
-            bla
+        let surfaces2 (sgSurfaces:amap<Guid,MSgSurface>) frustum lodcolor =            
+            sgSurfaces
+                |> AMap.toASet                
+                |> ASet.map(
+                    fun (g, s) -> viewSingleSurfaceSg s frustum lodcolor m.scene.surfacesModel.selectedSurface s.globalBB, s)
+                |> ASet.mapM(fun (sg,x) -> x.surface.priority.value |> Mod.map(fun prior -> (prior,sg)))
+                |> ASet.groupBy fst
+                |> AMap.toASet
+                |> ASet.sortBy fst
+                |> AList.map snd         
+                |> AList.map (fun x -> x |> HSet.map snd)
 
         let cmds2 =
             let nestedSgs =
-                surfaces2 m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring) |> AList.ofASet
-            
-            alist {
-                yield RenderCommand.SceneGraph overlayed
+                surfaces2 m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring)
 
-                for set in nestedSgs do
+            let grouped = 
+                m.scene.surfacesModel.sgGrouped 
+                    |> AList.map(
+                        fun x -> 
+                            (x 
+                                |> AMap.map(fun g sf -> viewSingleSurfaceSg sf (frustum m) (m.scene.config.lodColoring) m.scene.surfacesModel.selectedSurface sf.globalBB) 
+                                |> AMap.toASet 
+                                |> ASet.map snd 
+                            )
+                    )
+            
+            alist {                
+                for set in grouped do
                     let sg = 
                         set 
-                            |> Sg.set                            
+                            |> Sg.set
                             |> Sg.effect [
-                                Shader.stableTrafo |> toEffect
-                                //DefaultSurfaces.constantColor C4f.White |> toEffect                            
+                                Shader.stableTrafo |> toEffect                  
                                 DefaultSurfaces.diffuseTexture |> toEffect
-                               // Shader.selectionColor |> toEffect       
+                                Shader.selectionColor |> toEffect       
                                 Shader.LoDColor |> toEffect
                             ]
                             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
@@ -595,6 +685,8 @@ module ViewerApp =
 
                     yield RenderCommand.SceneGraph sg
                     yield RenderCommand.Clear(None,Some (Mod.constant 1.0))
+
+                yield RenderCommand.SceneGraph overlayed
             }
 
             //alist {
@@ -604,7 +696,7 @@ module ViewerApp =
             //}
                        
         let surfaces = 
-            viewSurfacesSg m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring)
+            viewSurfacesSg m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.surfacesModel.selectedSurface) (m.scene.config.lodColoring)
          
         //let renderControl =
         //    Incremental.renderControl cam att 
@@ -641,10 +733,12 @@ module ViewerApp =
                         ]
                     ]
                 )
+                
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "Open Scene"; onMouseClick (fun _ -> OpenScene)] [
                                 i [clazz "large folder outline icon" ] [] ]
                 )
+
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "New Scene"; onMouseClick (fun _ -> NewScene)] [
                                 i [clazz "large file outline icon"] [] ]
@@ -768,10 +862,32 @@ module ViewerApp =
         //Sidebar adorner
         let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "./semui-overrides.css" }
 
+        let recentStuff =
+             div[] [
+                    onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
+                            button [
+                                clazz "ui small button"; style "margin: 2px 0"                                
+                             ] [text "Scenes"]
+                    )
+
+                    div [clazz "ui flowing popup bottom left transition hidden"] [
+                        Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
+                                    aset {
+                                        for (_,s) in (m.recent.recentScenes |> AMap.toASet) do
+                                             yield a [clazz "item inverted";
+                                                      onClick (fun _ -> LoadScene (s.path |> Mod.force))] [
+                                                span [style "color:black"] [Incremental.text s.name]
+                                             ]
+                                    } |> AList.ofASet
+                                )
+                    ]
+                ]
+
         require (Html.semui @ [myCss]) (
             let sections = [
                 "blank", [div[style "height:15px"][]]                
                 "Scene", [sceneTools]
+                "Recent", [recentStuff]
                 "Add Surface", [openSurface]
                 "Import Measurements", [importMeasurements]]                              
             onBoot usingContext (                            

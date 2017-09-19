@@ -15,6 +15,10 @@ open Suave.Operators
 open Suave.Filters
 
 open System.Collections.Concurrent
+open System.Diagnostics
+open System.Xml
+open PRo3D.Surfaces.Mutable
+open PRo3D.Surfaces
 
 [<EntryPoint;STAThread>]
 let main argv = 
@@ -26,7 +30,7 @@ let main argv =
     use app = new OpenGlApplication()
     let runtime = app.Runtime    
 
-    use form = new Form(Width = 1280, Height = 800)
+    use form = new Form(Width = 0, Height = 0)
     let signature =
         runtime.CreateFramebufferSignature [
             DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba8; samples = 1 }
@@ -45,7 +49,10 @@ let main argv =
                 let s = ByteSegment(System.Text.Encoding.UTF8.GetBytes str)
                 
                 do! webSocket.send Text s true
-        }
+        }        
+
+    //let attr = Surface.SurfaceAttributes.read "D:\_WORK\Aardwork\Exomars\_Scenes\VictoriaCrater_HiRISE_MER-B_PRoViDEData_MultiLayer\Surface\MER-B_PanCam_Sol1103-P2582_multilayer\MER-B_PanCam_Sol1103-P2582_multilayer.opcx"
+    //printf "%A" attr
 
     let a = PRo3D.ViewerApp.start form runtime signature bc   
 
@@ -55,13 +62,18 @@ let main argv =
         Suave.Files.browseHome
     ] 
 
-    use ctrl = new AardvarkCefBrowser()
-    ctrl.Dock <- DockStyle.Fill
-    form.Controls.Add ctrl
-    ctrl.StartUrl <- "http://localhost:4321/"
+    //use ctrl = new AardvarkCefBrowser()
+    //ctrl.Dock <- DockStyle.Fill
+    
+    form.Controls.Add (new Label()) |> ignore
+    //ctrl.StartUrl <- "http://localhost:4321/"
+
+   
 
     //ctrl.ShowDevTools()
-
+    Process.Start("chrome.exe", "--app=http://localhost:4321/") |> ignore
     Application.Run form
+    //Console.WriteLine("I bims der Aardvark Fallback Forms")
+    //Console.ReadLine() |> ignore
     System.Environment.Exit 0
     0

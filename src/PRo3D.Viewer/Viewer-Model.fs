@@ -26,9 +26,17 @@ type Scene = {
     referenceSystem : ReferenceSystem
     groups          : AnnotationGroupsModel
 }
- 
+
+[<DomainType>] 
+type SceneHandle = {
+    path        : string
+    name        : string
+    writeDate   : DateTime
+}
+
+[<DomainType>] 
 type Recent = {
-    recentScenes : list<string>
+    recentScenes : hmap<string,SceneHandle>
 }
 
 type Properties = 
@@ -68,7 +76,7 @@ module Viewer =
         init        
 
     let initial = {           
-       // surfaces = HSet.empty                       
+       // surfaces = HSet.empty
         scene = {
                 navigation      = navInit
                 interaction     = InteractionMode.PickOrbitCenter
@@ -84,7 +92,7 @@ module Viewer =
         interaction     = Interactions.DrawAnnotation
         picking         = false
         
-        recent          = { recentScenes = [] }
+        recent          = { recentScenes = HMap.empty }
 
         past            = None
         future          = None
