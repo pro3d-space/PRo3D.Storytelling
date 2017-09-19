@@ -363,9 +363,7 @@ type AnnotationGroup = {
     name        : string
     annotations : plist<Annotation>
     subGroups   : plist<AnnotationGroup>
-    //parentKey   : Guid
     visible     : bool
-    active      : bool
     expanded    : bool
     }
 
@@ -377,7 +375,6 @@ module AnnotationGroup =
         annotations = plist.Empty
         subGroups = plist.Empty
         visible = true
-        active = false
         expanded = true
         }
     let ViewPoint = {
@@ -386,7 +383,6 @@ module AnnotationGroup =
         annotations = plist.Empty
         subGroups = plist.Empty
         visible = true
-        active = false
         expanded = true
         }
     let Sky = {
@@ -395,7 +391,6 @@ module AnnotationGroup =
         annotations = plist.Empty
         subGroups = plist.Empty
         visible = true
-        active = false
         expanded = true
         }
     let Point = {
@@ -404,7 +399,6 @@ module AnnotationGroup =
         annotations = plist.Empty
         subGroups = plist.Empty
         visible = true
-        active = false
         expanded = true
         }
     let Line = {
@@ -413,7 +407,6 @@ module AnnotationGroup =
         annotations = plist.Empty
         subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
         visible = true
-        active = false
         expanded = true
         }
     let Polyline = {
@@ -422,7 +415,6 @@ module AnnotationGroup =
         annotations = plist.Empty
         subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
         visible = true
-        active = false
         expanded = true
         }
     let Polygon = {
@@ -431,7 +423,6 @@ module AnnotationGroup =
         annotations = plist.Empty
         subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
         visible = true
-        active = true
         expanded = true
         }
     let surface1Group = {
@@ -440,7 +431,6 @@ module AnnotationGroup =
         annotations = plist.Empty
         subGroups = [Point; Line; Polyline; Polygon] |> PList.ofList
         visible = true
-        active = false
         expanded = true
         }
     let surface2Group = {
@@ -449,7 +439,6 @@ module AnnotationGroup =
         annotations = plist.Empty
         subGroups = [Point; Polyline] |> PList.ofList
         visible = true
-        active = false
         expanded = true
         }
     let initRoot = {
@@ -458,21 +447,18 @@ module AnnotationGroup =
         annotations = plist.Empty
         subGroups = [surface1Group; surface2Group] |> PList.ofList
         visible = true
-        active = false
         expanded = true
         }
 
 [<DomainType>]
 type AnnotationGroupsModel = {
     rootGroup       : AnnotationGroup
-    activeSurface   : Guid
-    activeGroup     : Guid
+    activeKey       : Guid
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AnnotationGroupsModel =
     let initial = {
         rootGroup = AnnotationGroup.initRoot
-        activeSurface =  Guid.Empty
-        activeGroup = Guid.Empty
+        activeKey =  Guid.Empty
         }

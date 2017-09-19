@@ -576,7 +576,6 @@ module Mutable =
         let _annotations = MList.Create(__initial.annotations, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
         let _subGroups = MList.Create(__initial.subGroups, (fun v -> MAnnotationGroup.Create(v)), (fun (m,v) -> MAnnotationGroup.Update(m, v)), (fun v -> v))
         let _visible = ResetMod.Create(__initial.visible)
-        let _active = ResetMod.Create(__initial.active)
         let _expanded = ResetMod.Create(__initial.expanded)
         
         member x.key = _key :> IMod<_>
@@ -584,7 +583,6 @@ module Mutable =
         member x.annotations = _annotations :> alist<_>
         member x.subGroups = _subGroups :> alist<_>
         member x.visible = _visible :> IMod<_>
-        member x.active = _active :> IMod<_>
         member x.expanded = _expanded :> IMod<_>
         
         member x.Update(v : PRo3D.AnnotationGroup) =
@@ -596,7 +594,6 @@ module Mutable =
                 MList.Update(_annotations, v.annotations)
                 MList.Update(_subGroups, v.subGroups)
                 ResetMod.Update(_visible,v.visible)
-                ResetMod.Update(_active,v.active)
                 ResetMod.Update(_expanded,v.expanded)
                 
         
@@ -644,12 +641,6 @@ module Mutable =
                     override x.Set(r,v) = { r with visible = v }
                     override x.Update(r,f) = { r with visible = f r.visible }
                 }
-            let active =
-                { new Lens<PRo3D.AnnotationGroup, Microsoft.FSharp.Core.bool>() with
-                    override x.Get(r) = r.active
-                    override x.Set(r,v) = { r with active = v }
-                    override x.Update(r,f) = { r with active = f r.active }
-                }
             let expanded =
                 { new Lens<PRo3D.AnnotationGroup, Microsoft.FSharp.Core.bool>() with
                     override x.Get(r) = r.expanded
@@ -662,20 +653,17 @@ module Mutable =
         inherit obj()
         let mutable __current = __initial
         let _rootGroup = MAnnotationGroup.Create(__initial.rootGroup)
-        let _activeSurface = ResetMod.Create(__initial.activeSurface)
-        let _activeGroup = ResetMod.Create(__initial.activeGroup)
+        let _activeKey = ResetMod.Create(__initial.activeKey)
         
         member x.rootGroup = _rootGroup
-        member x.activeSurface = _activeSurface :> IMod<_>
-        member x.activeGroup = _activeGroup :> IMod<_>
+        member x.activeKey = _activeKey :> IMod<_>
         
         member x.Update(v : PRo3D.AnnotationGroupsModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
                 __current <- v
                 
                 MAnnotationGroup.Update(_rootGroup, v.rootGroup)
-                ResetMod.Update(_activeSurface,v.activeSurface)
-                ResetMod.Update(_activeGroup,v.activeGroup)
+                ResetMod.Update(_activeKey,v.activeKey)
                 
         
         static member Create(__initial : PRo3D.AnnotationGroupsModel) : MAnnotationGroupsModel = MAnnotationGroupsModel(__initial)
@@ -698,15 +686,9 @@ module Mutable =
                     override x.Set(r,v) = { r with rootGroup = v }
                     override x.Update(r,f) = { r with rootGroup = f r.rootGroup }
                 }
-            let activeSurface =
+            let activeKey =
                 { new Lens<PRo3D.AnnotationGroupsModel, System.Guid>() with
-                    override x.Get(r) = r.activeSurface
-                    override x.Set(r,v) = { r with activeSurface = v }
-                    override x.Update(r,f) = { r with activeSurface = f r.activeSurface }
-                }
-            let activeGroup =
-                { new Lens<PRo3D.AnnotationGroupsModel, System.Guid>() with
-                    override x.Get(r) = r.activeGroup
-                    override x.Set(r,v) = { r with activeGroup = v }
-                    override x.Update(r,f) = { r with activeGroup = f r.activeGroup }
+                    override x.Get(r) = r.activeKey
+                    override x.Set(r,v) = { r with activeKey = v }
+                    override x.Update(r,f) = { r with activeKey = f r.activeKey }
                 }

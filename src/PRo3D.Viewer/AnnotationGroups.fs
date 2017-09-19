@@ -31,7 +31,6 @@ module AnnotationGroups =
                                                 annotations = t.annotations
                                                 subGroups = PList.set x (go rest c) t.subGroups
                                                 visible = t.visible
-                                                active = t.active
                                                 expanded = t.expanded
                                                 }
                                             ag
@@ -52,7 +51,6 @@ module AnnotationGroups =
                                                             annotations = t.annotations
                                                             subGroups = PList.set x (go rest c) t.subGroups
                                                             visible = t.visible
-                                                            active = t.active
                                                             expanded = t.expanded
                                                             }
                                                         ag
@@ -65,23 +63,13 @@ module AnnotationGroups =
     let update (model : AnnotationGroupsModel) (action : Action) =
         printfn "action: %A" action
         match action with
-            | ActiveGroup g -> 
-                //let funcA = (function x -> { name = x.name
-                //                             key = x.key
-                //                             annotations = x.annotations
-                //                             subGroups = x.subGroups
-                //                             visible = x.visible
-                //                             active = not x.active
-                //                             expanded = x.expanded
-                //                             })
-                { model with activeGroup = g } // ; rootGroup = updateGroupAt p funcA model.rootGroup 
+            | ActiveGroup g -> { model with activeKey = g } 
             | ToggleExpand p -> 
                 let funcT = (function x -> { name = x.name
                                              key = x.key
                                              annotations = x.annotations
                                              subGroups = x.subGroups
                                              visible = x.visible
-                                             active = x.active
                                              expanded = not x.expanded
                                              })
                 { model with rootGroup = updateGroupAt p funcT model.rootGroup }
@@ -91,7 +79,6 @@ module AnnotationGroups =
                                     annotations = plist.Empty
                                     subGroups = plist.Empty
                                     visible = true
-                                    active = false
                                     expanded = true
                                     }
                 let func = (function x -> { name = x.name
@@ -99,7 +86,6 @@ module AnnotationGroups =
                                             annotations = x.annotations
                                             subGroups = PList.append newGroup x.subGroups
                                             visible = x.visible
-                                            active = x.active
                                             expanded = x.expanded
                                             })
                 { model with rootGroup = updateGroupAt p func model.rootGroup }
@@ -109,7 +95,6 @@ module AnnotationGroups =
                                                                     annotations = x.annotations
                                                                     subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups
                                                                     visible = x.visible
-                                                                    active = x.active
                                                                     expanded = x.expanded
                                                                 })
                 { model with rootGroup = deleteGroupAt p func model.rootGroup }
@@ -121,7 +106,7 @@ module AnnotationGroups =
     let rec viewTree path (group : MAnnotationGroup) (model : MAnnotationGroupsModel) =
         alist {
 
-            let! c = mkColor model.activeGroup group.key
+            let! c = mkColor model.activeKey group.key
             let color = sprintf "color: %s" (Html.ofC4b c)
             let c = sprintf "color: %s" (Html.ofC4b C4b.White)
             let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups
