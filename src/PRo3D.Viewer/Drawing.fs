@@ -435,8 +435,8 @@ module DrawingApp =
                 viewAnnotations model 
             ]
 
-        let viewAnnotationGroups (model:MDrawingModel) =
-            AnnotationGroups.view model.annotationGroups    
+        //let viewAnnotationGroups (model:MDrawingModel) =
+        //    AnnotationGroups.view model.annotationGroups    
  
     let threads (m : DrawingModel) = m.pendingIntersections
 

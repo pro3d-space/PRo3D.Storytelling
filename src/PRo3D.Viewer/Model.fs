@@ -431,7 +431,7 @@ module AnnotationGroup =
         annotations = plist.Empty
         subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
         visible = true
-        active = false
+        active = true
         expanded = true
         }
     let surface1Group = {
@@ -471,7 +471,7 @@ type AnnotationGroupsModel = {
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AnnotationGroupsModel =
-    let init = {
+    let initial = {
         rootGroup = AnnotationGroup.initRoot
         activeSurface =  Guid.Empty
         activeGroup = Guid.Empty

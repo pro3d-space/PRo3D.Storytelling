@@ -24,6 +24,7 @@ type Scene = {
     config          : ViewConfigModel
     scenePath       : option<string>
     referenceSystem : ReferenceSystem
+    groups          : AnnotationGroupsModel
 }
  
 type Recent = {
@@ -75,6 +76,7 @@ module Viewer =
                 config          = ViewConfigModel.initial
                 scenePath       = None
                 referenceSystem = ReferenceSystem.initial
+                groups          = AnnotationGroupsModel.initial
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing

@@ -19,7 +19,6 @@ module Mutable =
         let _projection = ResetMod.Create(__initial.projection)
         let _geometry = ResetMod.Create(__initial.geometry)
         let _semantic = ResetMod.Create(__initial.semantic)
-        let _annotationGroups = PRo3D.Mutable.MAnnotationGroupsModel.Create(__initial.annotationGroups)
         let _annotations = MList.Create(__initial.annotations, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
         let _exportPath = ResetMod.Create(__initial.exportPath)
         let _selected = MSet.Create(__initial.selected)
@@ -34,7 +33,6 @@ module Mutable =
         member x.projection = _projection :> IMod<_>
         member x.geometry = _geometry :> IMod<_>
         member x.semantic = _semantic :> IMod<_>
-        member x.annotationGroups = _annotationGroups
         member x.annotations = _annotations :> alist<_>
         member x.exportPath = _exportPath :> IMod<_>
         member x.selected = _selected :> aset<_>
@@ -53,7 +51,6 @@ module Mutable =
                 ResetMod.Update(_projection,v.projection)
                 ResetMod.Update(_geometry,v.geometry)
                 ResetMod.Update(_semantic,v.semantic)
-                PRo3D.Mutable.MAnnotationGroupsModel.Update(_annotationGroups, v.annotationGroups)
                 MList.Update(_annotations, v.annotations)
                 ResetMod.Update(_exportPath,v.exportPath)
                 MSet.Update(_selected, v.selected)
@@ -112,12 +109,6 @@ module Mutable =
                     override x.Get(r) = r.semantic
                     override x.Set(r,v) = { r with semantic = v }
                     override x.Update(r,f) = { r with semantic = f r.semantic }
-                }
-            let annotationGroups =
-                { new Lens<PRo3D.Drawing.DrawingModel, PRo3D.AnnotationGroupsModel>() with
-                    override x.Get(r) = r.annotationGroups
-                    override x.Set(r,v) = { r with annotationGroups = v }
-                    override x.Update(r,f) = { r with annotationGroups = f r.annotationGroups }
                 }
             let annotations =
                 { new Lens<PRo3D.Drawing.DrawingModel, Aardvark.Base.plist<PRo3D.Annotation>>() with

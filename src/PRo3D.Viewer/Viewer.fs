@@ -218,6 +218,9 @@ module ViewerApp =
                 let ref = m.scene.referenceSystem
 
                 { m with scene = { m.scene with navigation = Navigation.update c ref navConf m.scene.navigation msg }}
+            | AnnotationGroupsMessage msg,_,_ ->
+                let ag = m.scene.groups
+                { m with scene = { m.scene with groups = AnnotationGroups.update ag msg}}
             | DrawingMessage msg, Interactions.DrawAnnotation,_->
                 { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg } |> stash
             | SurfaceActions msg,_,_ ->
@@ -700,7 +703,7 @@ module ViewerApp =
         let annotationGroupsUI =
             div [][
                 GuiEx.accordion "Annotations" "Write" true [
-                    DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map AnnotationGroupsMessage
+                    AnnotationGroups.view m.scene.groups |> UI.map AnnotationGroupsMessage
                 ]
             ]
 
@@ -727,7 +730,7 @@ module ViewerApp =
             
         let tabs = GuiEx.tabbed [clazz "ui inverted segment"] [
                             ("Data", SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions)
-                            ("Annotations", annotationUI) //  annotationGroupsUI
+                            ("Annotations", annotationGroupsUI) //  annotationGroupsUI annotationUI
                             ("Config", configUI)
                         ] "Data" 
       
