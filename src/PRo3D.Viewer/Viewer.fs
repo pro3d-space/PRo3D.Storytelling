@@ -785,7 +785,7 @@ module ViewerApp =
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
                 
                 GuiEx.accordion "Annotations" "Write" true [
-                    DrawingApp.UI.viewAnnotations m.drawing |> UI.map DrawingMessage
+                    DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map AnnotationGroupsMessage //DrawingMessage //DrawingApp.UI.viewAnnotations
                 ]
                 GuiEx.accordion "Properties" "Content" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(annotationProperties m))
@@ -824,7 +824,7 @@ module ViewerApp =
             
         let tabs = GuiEx.tabbed [clazz "ui inverted segment"] [
                             ("Data", SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions)
-                            ("Annotations", annotationGroupsUI) //  annotationGroupsUI annotationUI
+                            ("Annotations", annotationUI) //  annotationGroupsUI annotationUI
                             ("Config", configUI)
                         ] "Data" 
       

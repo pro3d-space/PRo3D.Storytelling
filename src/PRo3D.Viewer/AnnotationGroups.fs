@@ -13,14 +13,17 @@ open PRo3D
 module AnnotationGroups =
    
     type Action =
-        | ActiveGroup    of Guid
+        | ActiveGroup    of Guid*list<Index>
         | ToggleExpand of list<Index>
         | AddGroup of list<Index>
         | RemoveGroup of list<Index>
+        | AddChild of list<Index>*Annotation    // TODO: change Annotation to ChildNode (|Annotation | Surface)
+        | RemoveChild of list<Index>*Annotation // TODO: change Annotation to ChildNode (|Annotation | Surface)
+        | ToggleChildVisibility of list<Index>
         | Nop
 
 
-    let updateGroupAt (p : list<Index>) (f : AnnotationGroup -> AnnotationGroup) (t : AnnotationGroup) = 
+    let updateItemAt (p : list<Index>) (f : AnnotationGroup -> AnnotationGroup) (t : AnnotationGroup) = 
         let rec go (p : list<Index>) (t : AnnotationGroup)  =
             match p with
                 | [] -> f t
@@ -37,7 +40,7 @@ module AnnotationGroups =
                                 | None   -> t
         go (List.rev p) t 
 
-    let deleteGroupAt (p : list<Index>) (f : AnnotationGroup -> Guid -> AnnotationGroup) (t : AnnotationGroup) = 
+    let deleteItemAt (p : list<Index>) (f : AnnotationGroup -> Guid -> AnnotationGroup) (t : AnnotationGroup) = 
         let rec go (p : list<Index>) (t : AnnotationGroup)  =
             match p with
                 | x::rest -> match rest with
@@ -59,11 +62,12 @@ module AnnotationGroups =
         go (List.rev p) t 
         
     let removeGroup (ag:AnnotationGroup) (id:Guid) = ag.subGroups |> PList.filter (fun x -> x.key <> id) 
+    let removeAnnotation (ans:plist<Annotation>) (id:Guid) = ans |> PList.filter (fun x -> x.key <> id) 
         
     let update (model : AnnotationGroupsModel) (action : Action) =
         printfn "action: %A" action
         match action with
-            | ActiveGroup g -> { model with activeKey = g } 
+            | ActiveGroup (g, p) -> { model with activeKey = g; activePath = p } 
             | ToggleExpand p -> 
                 let funcT = (function x -> { name = x.name
                                              key = x.key
@@ -72,7 +76,7 @@ module AnnotationGroups =
                                              visible = x.visible
                                              expanded = not x.expanded
                                              })
-                { model with rootGroup = updateGroupAt p funcT model.rootGroup }
+                { model with rootGroup = updateItemAt p funcT model.rootGroup }
             | AddGroup p -> 
                 let newGroup = {    name = "newGroup" // TODO: get group name from user
                                     key =  Guid.NewGuid()
@@ -88,7 +92,7 @@ module AnnotationGroups =
                                             visible = x.visible
                                             expanded = x.expanded
                                             })
-                { model with rootGroup = updateGroupAt p func model.rootGroup }
+                { model with rootGroup = updateItemAt p func model.rootGroup }
             | RemoveGroup p -> 
                 let func = (fun (x:AnnotationGroup) (id:Guid) -> {  name = x.name
                                                                     key = x.key
@@ -97,13 +101,33 @@ module AnnotationGroups =
                                                                     visible = x.visible
                                                                     expanded = x.expanded
                                                                 })
-                { model with rootGroup = deleteGroupAt p func model.rootGroup }
+                { model with rootGroup = deleteItemAt p func model.rootGroup }
+            | AddChild (p,c) -> 
+                let func = (function x -> {  name = x.name
+                                             key = x.key
+                                             annotations = x.annotations |> PList.prepend c
+                                             subGroups = x.subGroups
+                                             visible = x.visible
+                                             expanded = x.expanded
+                                             })
+                { model with rootGroup = updateItemAt p func model.rootGroup }
+            | RemoveChild (p,c) -> 
+                let func = (fun (x:AnnotationGroup) (id:Guid) -> {  name = x.name
+                                                                    key = x.key
+                                                                    annotations = if PList.count x.annotations > 0 then removeAnnotation x.annotations c.key else x.annotations
+                                                                    subGroups = x.subGroups
+                                                                    visible = x.visible
+                                                                    expanded = x.expanded
+                                                                    })
+                { model with rootGroup = deleteItemAt p func model.rootGroup }
+            | ToggleChildVisibility p -> model // TODO
             | _ -> model
     
     
     let mkColor (activeId : IMod<Guid>) (groupId : IMod<Guid>) = if activeId = groupId then Mod.constant C4b.Red else Mod.constant C4b.White
    
     let rec viewTree path (group : MAnnotationGroup) (model : MAnnotationGroupsModel) =
+
         alist {
 
             let! c = mkColor model.activeKey group.key
@@ -118,7 +142,7 @@ module AnnotationGroups =
                                 attribute "title" "Set active"
                                 attribute "data-position" "left center"
                                 attribute "data-variation" "mini"
-                                onClick (fun _ -> ActiveGroup (group.key |> Mod.force))] [] 
+                                onClick (fun _ -> ActiveGroup (group.key |> Mod.force, path))] [] 
                             )
                         onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
                             i [ clazz "plus icon" 
@@ -135,7 +159,8 @@ module AnnotationGroups =
                                 onMouseClick (fun _ -> RemoveGroup path)] [] 
                             )
                 ]
-           
+            
+     
             let itemAttributes =
                 amap {
                     yield onMouseClick (fun _ -> ToggleExpand path)

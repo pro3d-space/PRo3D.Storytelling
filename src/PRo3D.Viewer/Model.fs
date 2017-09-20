@@ -356,7 +356,12 @@ module ViewConfigModel =
         maxDipAngle = initMaxAngle
         lodColoring = false
     }
-              
+
+//([<DomainType>]
+//type Child = 
+//    | annotations of value : plist<Annotation>
+//    | surfaces of value : list<Surface>
+    
 [<DomainType>]
 type AnnotationGroup = {
     key         : Guid
@@ -454,6 +459,7 @@ module AnnotationGroup =
 type AnnotationGroupsModel = {
     rootGroup       : AnnotationGroup
     activeKey       : Guid
+    activePath      : list<Index>
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -461,4 +467,5 @@ module AnnotationGroupsModel =
     let initial = {
         rootGroup = AnnotationGroup.initRoot
         activeKey =  Guid.Empty
+        activePath = list.Empty
         }

@@ -306,7 +306,8 @@ module DrawingApp =
                     match a with
                         | Some k -> { k with visible = not k.visible  }
                         | None -> failwith "annotation not found, can't happen"
-                { model with annotations = (model.annotations.AsList |> List.updateIf(fun d -> d.key = a'.key) (fun _ -> a')) |> PList.ofList}             
+                { model with annotations = (model.annotations.AsList |> List.updateIf(fun d -> d.key = a'.key) (fun _ -> a')) |> PList.ofList}      
+           // | AnnotationGroupsMessage msg,_ -> { model with annotationGroups = AnnotationGroups.update model.annotationGroups msg}
             | _ -> model
 
     module UI =
@@ -428,6 +429,130 @@ module DrawingApp =
                                     ]
                         }     
                 ) 
+
+        let viewAnnotationsInGroup path (model:MDrawingModel) (annotations: alist<MAnnotation>) =
+                        
+            //Incremental.div 
+            //        (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (
+                            
+                        alist {                                                                     
+                            for a in annotations do 
+                                                                        
+                                let! sem = a.semantic
+                                let! c = mkColor model a
+
+                                let bgc = sprintf "color: %s" (Html.ofC4b c)
+                                
+                                let! visible = a.visible
+                                let visibleIcon = if visible then "unhide icon" else "hide icon"
+                                let select = fun _ -> Select (a.key |> Mod.force)
+
+                                yield div [clazz "item"] [
+                                        i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                                        div [clazz "content"] [
+                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
+                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
+                                            yield Incremental.div (AttributeMap.ofList [clazz "header"]) (
+                                                alist {
+                                                    yield Incremental.text header
+                                                    yield 
+                                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                                                            i [clazz visibleIcon
+                                                               attribute "title" "Toggle"
+                                                               attribute "data-position" "left center"
+                                                               attribute "data-variation" "mini"
+                                                               onClick (fun _ -> AnnotationGroups.ToggleChildVisibility path )][] 
+                                                        )
+                                                    yield 
+                                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                                                            i [clazz "Remove icon"
+                                                               attribute "title" "Remove"
+                                                               attribute "data-position" "left center"
+                                                               attribute "data-variation" "mini"
+                                                               onClick (fun _ -> AnnotationGroups.RemoveChild (path, a |> Mod.force))][] 
+                                                        )
+                                                } 
+                                            ) 
+                                            yield div [clazz "description"] [Incremental.text desc]      
+                                        ]
+                                    ]
+                        }     
+                //) 
+
+        let rec viewTree path (group : MAnnotationGroup) (model : MDrawingModel) =
+
+            alist {
+
+                let! c = AnnotationGroups.mkColor model.annotationGroups.activeKey group.key
+                let color = sprintf "color: %s" (Html.ofC4b c)
+                let c = sprintf "color: %s" (Html.ofC4b C4b.White)
+                let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups
+                let desc =
+                    div [style color] [
+                            Incremental.text group.name
+                            onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
+                                i [ clazz "circle thin icon" 
+                                    attribute "title" "Set active"
+                                    attribute "data-position" "left center"
+                                    attribute "data-variation" "mini"
+                                    onClick (fun _ -> AnnotationGroups.ActiveGroup (group.key |> Mod.force, path))] [] 
+                                )
+                            onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
+                                i [ clazz "plus icon" 
+                                    attribute "title" "Add Group"
+                                    attribute "data-position" "left center"
+                                    attribute "data-variation" "mini"
+                                    onMouseClick (fun _ -> AnnotationGroups.AddGroup path)] [] 
+                                )
+                            onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
+                                i [ clazz "remove icon" 
+                                    attribute "title" "Remove Group"
+                                    attribute "data-position" "left center"
+                                    attribute "data-variation" "mini" 
+                                    onMouseClick (fun _ -> AnnotationGroups.RemoveGroup path)] [] 
+                                )
+                    ]
+            
+     
+                let itemAttributes =
+                    amap {
+                        yield onMouseClick (fun _ -> AnnotationGroups.ToggleExpand path)
+                        let! selected = group.expanded
+                        if selected then yield clazz "icon large outline open folder"
+                        else             yield clazz "icon large outline folder"
+                    } |> AttributeMap.ofAMap
+
+            
+                let childrenAttribs =
+                    amap {
+                        yield clazz "list"
+                        let! isExpanded = group.expanded
+                        if isExpanded then yield style "visible"
+                        else yield style "hidden"
+                    }
+
+                yield div [ clazz "item" ] [
+                     Incremental.i itemAttributes AList.empty
+                     div [ clazz "content" ] [
+                         //div [ clazz "header"] [desc]
+                         div [ clazz "description noselect"] [desc]
+                         Incremental.div (AttributeMap.ofAMap childrenAttribs) 
+                            <| alist { 
+                                let! isExpanded = group.expanded
+                                if isExpanded then yield! children
+                            } 
+                         Incremental.div (AttributeMap.ofAMap childrenAttribs) 
+                            <| viewAnnotationsInGroup path model group.annotations
+                     ]
+                ]
+                
+            }
+
+        let viewAnnotationGroups (model:MDrawingModel) = 
+             require Html.semui (
+                TreeView.view [] (viewTree [] model.annotationGroups.rootGroup model)
+            )           
+           
             
         let viewAnnotationsAcc (model:MDrawingModel) = 
             Html.SemUi.accordion "Annotations" "File Outline" true [

@@ -654,9 +654,11 @@ module Mutable =
         let mutable __current = __initial
         let _rootGroup = MAnnotationGroup.Create(__initial.rootGroup)
         let _activeKey = ResetMod.Create(__initial.activeKey)
+        let _activePath = ResetMod.Create(__initial.activePath)
         
         member x.rootGroup = _rootGroup
         member x.activeKey = _activeKey :> IMod<_>
+        member x.activePath = _activePath :> IMod<_>
         
         member x.Update(v : PRo3D.AnnotationGroupsModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -664,6 +666,7 @@ module Mutable =
                 
                 MAnnotationGroup.Update(_rootGroup, v.rootGroup)
                 ResetMod.Update(_activeKey,v.activeKey)
+                ResetMod.Update(_activePath,v.activePath)
                 
         
         static member Create(__initial : PRo3D.AnnotationGroupsModel) : MAnnotationGroupsModel = MAnnotationGroupsModel(__initial)
@@ -691,4 +694,10 @@ module Mutable =
                     override x.Get(r) = r.activeKey
                     override x.Set(r,v) = { r with activeKey = v }
                     override x.Update(r,f) = { r with activeKey = f r.activeKey }
+                }
+            let activePath =
+                { new Lens<PRo3D.AnnotationGroupsModel, Microsoft.FSharp.Collections.list<Aardvark.Base.Index>>() with
+                    override x.Get(r) = r.activePath
+                    override x.Set(r,v) = { r with activePath = v }
+                    override x.Update(r,f) = { r with activePath = f r.activePath }
                 }
