@@ -6,6 +6,7 @@ open System.IO
 
 open System.Runtime.InteropServices
 open Aardvark.Base
+open Aardvark.Base.IO
 open Aardvark.Rendering.GL
 open OpenTK.Graphics.OpenGL4
 open FSharp.NativeInterop

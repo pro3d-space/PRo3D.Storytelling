@@ -4,6 +4,7 @@ open System
 open System.Threading
 open System.Threading.Tasks
 open Aardvark.Base
+open Aardvark.Base.IO
 open Aardvark.Base.Incremental
 open Aardvark.Base.Rendering
 open Aardvark.SceneGraph

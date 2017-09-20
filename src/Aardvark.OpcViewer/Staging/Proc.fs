@@ -4,6 +4,7 @@ open System
 open System.Collections.Generic
 open System.Collections.Concurrent
 open Aardvark.Base
+open Aardvark.Base.IO
 open Aardvark.Base.Monads.State
 open Aardvark.Base.Rendering
 

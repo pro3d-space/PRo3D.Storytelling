@@ -8,7 +8,7 @@ module DipAndStrike =
     open System
     
     open Aardvark.Base.Incremental
-    open Aardvark.VRVis
+    open Aardvark.Fitting
 
     open Aardvark.UI
     open Aardvark.UI.Primitives    
@@ -37,7 +37,7 @@ module DipAndStrike =
         //let p = v3dArray.[0]
        // let up = p.Normalized        
 
-        let mutable plane = PlaneFitting.FitPlane3dLS(v3dArray)
+        let mutable plane = PlaneFitting.FitPlane3dLeastSquares(v3dArray)
         let bb = new Box3d(points)
 
         let horP = new Plane3d(up, V3d.Zero)

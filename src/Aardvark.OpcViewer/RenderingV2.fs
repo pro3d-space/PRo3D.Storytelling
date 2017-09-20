@@ -5,6 +5,7 @@ open System.IO
 open System.Threading
 
 open Aardvark.Base
+open Aardvark.Base.IO
 open Aardvark.Base.Incremental
 open Aardvark.Base.Ag
 open Aardvark.SceneGraph

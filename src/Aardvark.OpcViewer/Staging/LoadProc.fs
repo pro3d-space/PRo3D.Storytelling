@@ -7,6 +7,7 @@ open System.Collections.Generic
 open System.Reactive.Subjects
 
 open Aardvark.Base
+open Aardvark.Base.IO
 open Aardvark.Base.Monads.State
 
 type ILoadTask<'a> =

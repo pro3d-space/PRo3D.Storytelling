@@ -3,12 +3,13 @@
 open System
 open System.Linq
 open Aardvark.Base
+open Aardvark.Base.IO
 open Aardvark.Base.Rendering
 open Aardvark.Base.Incremental
 open Aardvark.Rendering.NanoVg
 open Aardvark.SceneGraph
 open Aardvark.Base.Geometry
-open Aardvark.VRVis
+open Aardvark.Base.Coder
 
 open Aardvark.Application
 open Aardvark.Application.WinForms
@@ -59,10 +60,10 @@ module Serialization =
 
 [<AutoOpen>]
 module KdTrees =
-    open Aardvark.VRVis
     open MBrace.FsPickler
     open MBrace.FsPickler.Combinators
-    
+    open Aardvark.VRVis
+
     type LazyKdTree = {
         kdTree        : option<ConcreteKdIntersectionTree>
         affine        : Trafo3d
@@ -118,7 +119,7 @@ module KdTrees =
 
     let loadKdtree p =
         //Log.startTimed "loading tree"
-        use b = new Aardvark.VRVis.BinaryReadingCoder(System.IO.File.OpenRead(p))
+        use b = new BinaryReadingCoder(System.IO.File.OpenRead(p))
         let mutable treeOida = Unchecked.defaultof<KdIntersectionTree>
         b.CodeT(&treeOida)
         //Log.stop()

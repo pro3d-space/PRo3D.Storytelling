@@ -690,7 +690,8 @@ module ViewerApp =
                             |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
 
                     yield RenderCommand.SceneGraph sg
-                    yield RenderCommand.Clear(None,Some (Mod.constant 1.0))
+                    // TODO 2017-09-20 - API-change -> please repair! 
+                    //yield RenderCommand.Clear(None,Some (Mod.constant 1.0))
 
                 yield RenderCommand.SceneGraph overlayed
             }

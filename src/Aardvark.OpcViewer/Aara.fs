@@ -13,6 +13,7 @@ open System.IO
 open System.Runtime.InteropServices
 
 open Aardvark.Base
+open Aardvark.Base.IO
 
 open Aardvark.Opc
 

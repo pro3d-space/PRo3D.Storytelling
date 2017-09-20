@@ -12,6 +12,7 @@ open System.Xml
 open System.Xml.Linq
 
 open Aardvark.Base
+open Aardvark.Base.IO
 
 module private XmlHelpers = 
     

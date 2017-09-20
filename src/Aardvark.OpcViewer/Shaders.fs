@@ -3,6 +3,7 @@
 module Shader =
 
     open Aardvark.Base
+    open Aardvark.Base.IO
     open Aardvark.Base.Rendering
     open Aardvark.Base.Rendering.Effects
     

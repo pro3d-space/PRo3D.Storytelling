@@ -3,6 +3,7 @@
 open System
 open System.IO
 open Aardvark.Base
+open Aardvark.Base.IO
 open Aardvark.SceneGraph
 open Aardvark.Base.Incremental
 open Aardvark.SceneGraph.Semantics

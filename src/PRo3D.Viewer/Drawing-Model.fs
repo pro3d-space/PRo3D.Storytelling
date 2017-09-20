@@ -9,7 +9,6 @@ open Aardvark.UI.Primitives
 open Aardvark.Application
 open Aardvark.Opc
 open Aardvark.SceneGraph
-open Aardvark.VRVis
 open PRo3D.ReferenceSystem
 
 open PRo3D

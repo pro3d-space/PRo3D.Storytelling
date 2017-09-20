@@ -1,6 +1,7 @@
 ﻿namespace Aardvark.Opc
 
 open Aardvark.Base
+open Aardvark.Base.IO
 open Aardvark.Base.Incremental
 
 module Statistics = 

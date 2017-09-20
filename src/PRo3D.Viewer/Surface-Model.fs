@@ -7,7 +7,6 @@ open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Base.Rendering
 open Aardvark.Opc    
-open Aardvark.VRVis
 open Aardvark.SceneGraph
 
 [<DomainType>]

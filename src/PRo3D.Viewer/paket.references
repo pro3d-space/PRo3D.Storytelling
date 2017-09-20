@@ -8,15 +8,13 @@ Aardvark.SceneGraph
 Aardvark.Rendering.NanoVg
 
 Aardvark.Rendering.Text
+
+Aardvark.VRVis.Geometry
+Aardvark.Fitting.Planes
        
 Aardvark.UI.Primitives
 Aardvark.Service      
 Aardvark.Cef.WinForms
-
-Aardvark.VRVis.Processing
-
-Aardvark.VRVis.Base
-Aardvark.VRVis.Geometry
 
 Aardvark.Compiler.DomainTypes        
 Aardvark.Compiler.DomainTypes.MSBuild

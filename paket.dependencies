@@ -4,38 +4,37 @@ source https://api.nuget.org/v3/index.json
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://vrvis.myget.org/F/aardvark/api/v3/index.json
 
-nuget Aardvark.Base.Rendering              ~> 3.2.3
-nuget Aardvark.Application.WinForms.GL     ~> 3.2.3
-nuget Aardvark.SceneGraph                  ~> 3.2.3
-nuget Aardvark.SceneGraph.IO               ~> 3.2.3
-nuget Aardvark.Rendering.NanoVg            ~> 3.2.3
-nuget Aardvark.Rendering.Text              ~> 3.2.3
+nuget Aardvark.Base.Rendering               ~> 3.3.8
+nuget Aardvark.Application.WinForms.GL      ~> 3.3.8
+nuget Aardvark.SceneGraph                   ~> 3.3.8
+nuget Aardvark.SceneGraph.IO                ~> 3.3.8
+nuget Aardvark.Rendering.NanoVg             ~> 3.3.8
+nuget Aardvark.Rendering.Text               ~> 3.3.8
 
-nuget Aardvark.Base                  ~> 3.0.25    
-nuget Aardvark.Base.Incremental      ~> 3.0.25     
-nuget Aardvark.Base.FSharp           ~> 3.0.25     
-nuget Aardvark.Base.Essentials       ~> 3.0.25     
+nuget Aardvark.Base                         ~> 3.0.37    
+nuget Aardvark.Base.IO                      ~> 3.0.37  
+nuget Aardvark.Base.Incremental             ~> 3.0.37     
+nuget Aardvark.Base.FSharp                  ~> 3.0.37     
+nuget Aardvark.Base.Essentials              ~> 3.0.37     
                                              
 nuget Aardvark.Compiler.DomainTypes         ~> 0.2.1
 nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 0.2.1
 
+nuget Aardvark.VRVis.Geometry               ~> 3.1.10
+nuget Aardvark.Fitting.Planes               ~> 3.1.10
 
-nuget Aardvark.VRVis.Geometry ~> 3.0.2
-nuget Aardvark.VRVis.Base     ~> 3.0.2
-nuget Aardvark.VRVis.Processing     ~> 3.0.2
+nuget Newtonsoft.Json                       ~> 10.0.0
 
-nuget Newtonsoft.Json ~> 10.0.0
+nuget Fsunit                                ~> 2.3.2
+nuget FParsec                               ~> 1.0.2
+nuget FsPickler                             ~> 3.3.0
+nuget FsPickler.Json                        ~> 3.3.0
 
-nuget Fsunit    ~> 2.3.2
-nuget FParsec   ~> 1.0.2
-nuget FsPickler       ~> 3.3.0
-nuget FsPickler.Json  ~> 3.3.0
-
-nuget Aardvark.UI            ~> 3.3.31
-nuget Aardvark.UI.Primitives ~> 3.3.31
-nuget Aardvark.Service       ~> 3.3.31
-nuget Aardvark.Cef.WinForms  ~> 3.3.31
-nuget Aardvark.Cef           ~> 3.3.31
+nuget Aardvark.UI                           ~> 3.3.36
+nuget Aardvark.UI.Primitives                ~> 3.3.36
+nuget Aardvark.Service                      ~> 3.3.36
+nuget Aardvark.Cef.WinForms                 ~> 3.3.36
+nuget Aardvark.Cef                          ~> 3.3.36
 
 nuget Aether
 
@@ -51,4 +50,4 @@ source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://api.nuget.org/v3/index.json
 nuget FSharp.Core < 4.2
 
-github vrvis/Aardvark.Fake:standalone
+github aardvark-platform/aardvark.fake:standalone
