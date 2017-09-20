@@ -50,8 +50,8 @@ module Scene =
             | Some p ->         
                 let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
                 let surfaces = 
-                    m.surfacesModel.surfaces                     
-                    |> List.map(
+                    m.surfacesModel.surfaces                            
+                    |> PList.map(
                         fun x -> 
                             if x.relativePaths then
                                 let p'' = Path.Combine(p', x.name)
@@ -70,52 +70,57 @@ module Scene =
             | true -> Some filePath
             | false -> None
     
+    let addLegacyTrafos surfaces = 
+        surfaces 
+            |> PList.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))
+            |> PList.map(fun(s,p) -> 
+                    match (fileExists p) with
+                        | Some path->
+                            let t = readLine path
+                            { s with trafo = Trafo3d.Parse(t) }
+                        | None ->
+                            s
+                        )
+
+    let getOPCxPath (surfacePath : string) = 
+        let name = Path.GetFileName surfacePath
+        Path.ChangeExtension(Path.Combine(surfacePath, name), ".opcx")
+
+    let addSurfaceAttributes surfaces = 
+        surfaces 
+            |> PList.map(fun s -> s, s.importPath |> getOPCxPath)
+            |> PList.map(fun(s,p) -> 
+                    match (fileExists p) with
+                        | Some path->                                
+                            { s with attributeLayers = Surface.SurfaceAttributes.read path |> PList.ofSeq }
+                        | None ->
+                            s
+                        )
+
     /// appends surfaces to existing surfaces
-    let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : list<Surface>) (m : Model) =
+    let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : plist<Surface>) (m : Model) =
             
-        //add legacy trafo on import
-        let surfaces =
+        //handle semantic surfaces
+        let surfaces = 
             surfaces 
-                |> List.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))
-                |> List.map(fun(s,p) -> 
-                        match (fileExists p) with
-                            | Some path->
-                                let t = readLine path
-                                { s with trafo = Trafo3d.Parse(t) }
-                            | None ->
-                                s
-                            )
-
-        let getOPCxPath (surfacePath : string) = 
-            let name = Path.GetFileName surfacePath
-            let ocp = Path.ChangeExtension(Path.Combine(surfacePath, name), ".opcx")
-            printf "%s" ocp
-            ocp
-
-        let surfaces =
-            surfaces 
-                |> List.map(fun s -> s, s.importPath |> getOPCxPath)
-                |> List.map(fun(s,p) -> 
-                        match (fileExists p) with
-                            | Some path->                                
-                                { s with attributeLayers = Surface.SurfaceAttributes.read path |> PList.ofSeq }
-                            | None ->
-                                s
-                            )
-                        
-        //append semantic surfaces
-        let surfaces' = (surfaces @ m.scene.surfacesModel.surfaces)
-        let m = (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, surfaces')
+                |> addLegacyTrafos
+                |> addSurfaceAttributes
         
-        //append sg surfaces
-        let surfSet = Surface.createSgSurfaces runtime signature surfaces
-        let sgSurfaces = HMap.union surfSet m.scene.surfacesModel.sgSurfaces |> expandLazyKdTreePaths m.scene.scenePath
+        let surfaces = surfaces |> PList.append m.scene.surfacesModel.surfaces
+        let m = 
+            (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, surfaces)
+        
+        //handle sg surfaces
+        let sgSurfaces = 
+            surfaces
+                |> Surface.createSgSurfaces runtime signature
+                |> HMap.union m.scene.surfacesModel.sgSurfaces
+                |> expandLazyKdTreePaths m.scene.scenePath
                                        
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
         let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
-        surfaceModelLens.Set(m, grouped)
-        //m
+        surfaceModelLens.Set(m, grouped)        
 
     /// loads surfaces given in scene - creates their sg pendants
     let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
@@ -326,6 +331,7 @@ module ViewerApp =
                             paths 
                                 |> List.filter isSurfaceFolder 
                                 |> List.map Surface.mk
+                                |> PList.ofList
 
                         Scene.import' runtime signature surfaces m
                         //if (path |> Utils.isSurfaceFolder) then                     

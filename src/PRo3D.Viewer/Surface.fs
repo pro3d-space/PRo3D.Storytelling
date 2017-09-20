@@ -176,10 +176,11 @@ module Surface =
         bb.Transformed(trafo)
       
     let createSgSurfaces runtime signature surfaces =
-        surfaces            
+        surfaces          
+            |> PList.toList
             |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.trafo })
             |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
-            |> List.zip surfaces
+            |> List.zip (surfaces |> PList.toList)
             |> List.map (
                 fun (surf, (sg, hierarchies, kdtree)) -> 
                     let bb = hierarchies |> combineLeafBBs |> transformBox surf.trafo
@@ -188,10 +189,10 @@ module Surface =
             |> HMap.ofList
 
     let getSurface model guid =
-        model.surfaces |> List.tryFind (fun a -> a.guid = guid)
+        model.surfaces |> PList.toList |> List.tryFind (fun a -> a.guid = guid)
     
     let updateSurface model (s':Surface)  =
-        let surfaces' = model.surfaces |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s')     
+        let surfaces' = model.surfaces |> PList.toList |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s') |> PList.ofList
 
         // update sgsurfaces as well !!!
         let sgSurfaces' = 
@@ -203,9 +204,10 @@ module Surface =
 
         { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
 
-    let updateSurfaces model (surfaces' : list<Surface>) =
+    let updateSurfaces model (surfaces' : plist<Surface>) =
         let sgSurfaces =
             surfaces' 
+                |> PList.toList
                 |> List.map (
                     fun x -> 
                         let update = 
@@ -293,7 +295,7 @@ module Surface =
     open System.Diagnostics
     open Aardvark.Rendering.GL.Compiler
 
-    open PRo3DCompability
+    open PRo3DCompability    
     
     type Action =
         | SurfacePropertiesMessage  of SurfaceProperties.Action
@@ -458,10 +460,10 @@ module Surface =
                 let sgSurfaces = model.sgSurfaces |> Surface.expandLazyKdTreePaths scenePath
                 { model with sgSurfaces = sgSurfaces}
             | RemoveSurface id ->                
-                let toRemove = model.surfaces |> List.tryFindIndex (fun d -> d.guid = id)
+                let toRemove = model.surfaces |> PList.toList |> List.tryFindIndex (fun d -> d.guid = id)
                 match toRemove with
                     | Some index ->
-                        let s' = model.surfaces |> PList.ofList |> PList.removeAt index |> PList.toList
+                        let s' = model.surfaces |> PList.removeAt index
 
                         let sg' = model.sgSurfaces |> HMap.remove id
                         
@@ -585,16 +587,25 @@ module Surface =
                     | None   -> div[][]
 
             return (opt |> UI.map SurfacePropertiesMessage)
-        }    
-                   
+        }                          
+
     let surfaceUI (model:MSurfaceModel) =
-        div[][
-            //button [onClick (fun _ -> QuickLoad1)][text "Surface"]
-            //button [onClick (fun _ -> QuickLoad2)][text "Scene"]
+        div[][          
+            //let textures, scalars =
+            //    adaptive {
+            //        let! sur = model.surfaces |> Mod.map List.head   
+            //        let textures =
+            //            sur.attributeLayers |> PList.choose (fun x -> match x with | TextureLayer l -> Some l | _ -> None)
+
+            //        let scalars =
+            //            sur.attributeLayers |> PList.choose (fun x -> match x with | ScalarLayer l -> Some l | _ -> None)
+
+            //        return (textures, scalars)
+            //    }
           
-            GuiEx.accordion "Surfaces" "Cubes" true [ viewSurfaceList model ]
-            GuiEx.accordion "Properties" "Content" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle (viewSurfaceProperties model))
+            yield GuiEx.accordion "Surfaces" "Cubes" true [ viewSurfaceList model ]
+            yield GuiEx.accordion "Properties" "Content" true [
+                        Incremental.div AttributeMap.empty (AList.ofModSingle (viewSurfaceProperties model))
             ]
         ]
 

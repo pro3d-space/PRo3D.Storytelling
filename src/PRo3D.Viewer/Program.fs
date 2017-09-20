@@ -51,7 +51,7 @@ let main argv =
                 do! webSocket.send Text s true
         }        
 
-    //let attr = Surface.SurfaceAttributes.read "D:\_WORK\Aardwork\Exomars\_Scenes\VictoriaCrater_HiRISE_MER-B_PRoViDEData_MultiLayer\Surface\MER-B_PanCam_Sol1103-P2582_multilayer\MER-B_PanCam_Sol1103-P2582_multilayer.opcx"
+    //let attr = Surface.SurfaceAttributes.read "E:\Aardwork\Exomars\_SCENES\WP4200_4300_3400_DemoData\VictoriaCrater_HiRISE_MER-B_PRoViDEData_MultiLayer\Surface\MER-B_PanCam_Sol1103-P2582_multilayer\MER-B_PanCam_Sol1103-P2582_multilayer.opcx"
     //printf "%A" attr
 
     let a = PRo3D.ViewerApp.start form runtime signature bc   

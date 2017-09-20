@@ -37,6 +37,12 @@ module SurfaceProperties =
             | SetPriority a ->
                 { model with priority = Numeric.update model.priority a }
 
+    let getTextures (surface : MSurface) =
+        surface.attributeLayers |> AList.choose (fun x -> match x with | TextureLayer l -> Some l | _ -> None)
+
+    let getScalars (surface : MSurface) =
+        surface.attributeLayers |> AList.choose (fun x -> match x with | ScalarLayer l -> Some l | _ -> None)
+
     let view (model : MSurface) =
         require Html.semui (
             Html.table [                                            
@@ -46,6 +52,6 @@ module SurfaceProperties =
                 Html.row "Name:"        [Html.SemUi.textBox model.name SetName ]
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
                 Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider]   model.quality  |> UI.map SetQuality ]
-                Html.row "Priority:"    [Numeric.view' [NumericInputType.InputBox] model.priority |> UI.map SetPriority ]
+                Html.row "Priority:"    [Numeric.view' [NumericInputType.InputBox] model.priority |> UI.map SetPriority ]                
             ]
         )

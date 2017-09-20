@@ -22,6 +22,7 @@ type TextureLayer = {
     label: string
 }
 
+//[<DomainType>]
 type AttributeLayer = 
     | ScalarLayer of ScalarLayer 
     | TextureLayer of TextureLayer
@@ -65,7 +66,7 @@ type SgSurface = {
 
 [<DomainType>]
 type SurfaceModel = {
-    surfaces        : list<Surface>
+    surfaces        : plist<Surface>
     selectedSurface : option<Surface>
     sgSurfaces      : hmap<Guid,SgSurface>
     sgGrouped       : plist<hmap<Guid,SgSurface>>
@@ -86,10 +87,10 @@ module SurfaceModel =
 
     let surfaceModelPickler : Pickler<SurfaceModel> =
         Pickler.product makeSurfaceModel
-        ^+ Pickler.field (fun s -> s.surfaces)          Pickler.auto<list<Surface>>
+        ^+ Pickler.field (fun s -> s.surfaces)          Pickler.auto<plist<Surface>>
         ^. Pickler.field (fun s -> s.selectedSurface)   Pickler.auto<option<Surface>>
 
-    let initial = makeSurfaceModel [] None    
+    let initial = makeSurfaceModel PList.empty None    
 
     FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)
 

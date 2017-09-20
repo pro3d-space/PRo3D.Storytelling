@@ -310,12 +310,12 @@ module Mutable =
     type MSurfaceModel(__initial : PRo3D.Surfaces.SurfaceModel) =
         inherit obj()
         let mutable __current = __initial
-        let _surfaces = ResetMod.Create(__initial.surfaces)
+        let _surfaces = MList.Create(__initial.surfaces, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
         let _selectedSurface = MOption.Create(__initial.selectedSurface, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
         let _sgSurfaces = MMap.Create(__initial.sgSurfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
         let _sgGrouped = MList.Create(__initial.sgGrouped, (fun v -> MMap.Create(v, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))), (fun (m,v) -> MMap.Update(m, v)), (fun v -> v :> amap<_,_>))
         
-        member x.surfaces = _surfaces :> IMod<_>
+        member x.surfaces = _surfaces :> alist<_>
         member x.selectedSurface = _selectedSurface :> IMod<_>
         member x.sgSurfaces = _sgSurfaces :> amap<_,_>
         member x.sgGrouped = _sgGrouped :> alist<_>
@@ -324,7 +324,7 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current, v)) then
                 __current <- v
                 
-                ResetMod.Update(_surfaces,v.surfaces)
+                MList.Update(_surfaces, v.surfaces)
                 MOption.Update(_selectedSurface, v.selectedSurface)
                 MMap.Update(_sgSurfaces, v.sgSurfaces)
                 MList.Update(_sgGrouped, v.sgGrouped)
@@ -345,7 +345,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let surfaces =
-                { new Lens<PRo3D.Surfaces.SurfaceModel, Microsoft.FSharp.Collections.list<PRo3D.Surfaces.Surface>>() with
+                { new Lens<PRo3D.Surfaces.SurfaceModel, Aardvark.Base.plist<PRo3D.Surfaces.Surface>>() with
                     override x.Get(r) = r.surfaces
                     override x.Set(r,v) = { r with surfaces = v }
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
