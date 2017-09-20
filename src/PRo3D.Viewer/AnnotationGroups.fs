@@ -124,7 +124,8 @@ module AnnotationGroups =
             | _ -> model
     
     
-    let mkColor (activeId : IMod<Guid>) (groupId : IMod<Guid>) = if activeId = groupId then Mod.constant C4b.Red else Mod.constant C4b.White
+    let mkColor (activeId : IMod<Guid>) (groupId : IMod<Guid>) = 
+        if activeId = groupId then Mod.constant C4b.Red else Mod.constant C4b.White
    
     let rec viewTree path (group : MAnnotationGroup) (model : MAnnotationGroupsModel) =
 

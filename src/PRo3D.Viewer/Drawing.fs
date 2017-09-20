@@ -430,7 +430,7 @@ module DrawingApp =
                         }     
                 ) 
 
-        let viewAnnotationsInGroup path (model:MDrawingModel) (annotations: alist<MAnnotation>) =
+        let viewAnnotationsInGroup path (model:MDrawingModel) (annotations: alist<MAnnotation>) : alist<DomNode<AnnotationGroups.Action>> =
                         
             //Incremental.div 
             //        (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (
@@ -461,15 +461,15 @@ module DrawingApp =
                                                                attribute "title" "Toggle"
                                                                attribute "data-position" "left center"
                                                                attribute "data-variation" "mini"
-                                                               onClick (fun _ -> AnnotationGroups.ToggleChildVisibility path )][] 
+                                                               onClick (fun _ -> AnnotationGroups.ToggleChildVisibility path )][]
                                                         )
                                                     yield 
                                                         onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                                                             i [clazz "Remove icon"
                                                                attribute "title" "Remove"
                                                                attribute "data-position" "left center"
-                                                               attribute "data-variation" "mini"
-                                                               onClick (fun _ -> AnnotationGroups.RemoveChild (path, a |> Mod.force))][] 
+                                                               attribute "data-variation" "mini"][]
+                                                           //    onClick (fun _ -> AnnotationGroups.RemoveChild (path, a.key?))][] |> UI.map Action.AnnotationGroupsMessage
                                                         )
                                                 } 
                                             ) 
@@ -479,7 +479,7 @@ module DrawingApp =
                         }     
                 //) 
 
-        let rec viewTree path (group : MAnnotationGroup) (model : MDrawingModel) =
+        let rec viewTree path (group : MAnnotationGroup) (model : MDrawingModel) : alist<DomNode<AnnotationGroups.Action>> =
 
             alist {
 
@@ -531,18 +531,22 @@ module DrawingApp =
                         else yield style "hidden"
                     }
 
+                let viwbla = 
+                    viewAnnotationsInGroup path model group.annotations |> AList.map (fun x -> x)
+
                 yield div [ clazz "item" ] [
                      Incremental.i itemAttributes AList.empty
                      div [ clazz "content" ] [
                          //div [ clazz "header"] [desc]
                          div [ clazz "description noselect"] [desc]
-                         Incremental.div (AttributeMap.ofAMap childrenAttribs) 
-                            <| alist { 
+                         Incremental.div (AttributeMap.ofAMap childrenAttribs) (                          
+                            alist { 
                                 let! isExpanded = group.expanded
                                 if isExpanded then yield! children
-                            } 
-                         Incremental.div (AttributeMap.ofAMap childrenAttribs) 
-                            <| viewAnnotationsInGroup path model group.annotations
+                            }
+                         )                         
+                         Incremental.div (AttributeMap.ofAMap childrenAttribs) (
+                             viewAnnotationsInGroup path model group.annotations )
                      ]
                 ]
                 
