@@ -3,4 +3,5 @@ Aardvark.Base.Incremental
 Aardvark.Base.FSharp
 Aardvark.Base.Rendering
 
+FSharp.Core
 Aardvark.Compiler.DomainTypes.MSBuild

@@ -214,7 +214,8 @@ NUGET
     Another.Unofficial.Xilium.CefGlue.WindowsForms (0.0.13)
       Another.Unofficial.Xilium.CefGlue (0.0.13)
     CommonMark.NET (0.12)
-    FParsec (1.0.2)
+    FParsec (1.0.3)
+      FSharp.Core (>= 4.0.0.1)
     FSharp.Core (4.0.0.1)
     FSharp.Quotations.Evaluator (1.0.7)
     FsPickler (3.3)
@@ -252,7 +253,7 @@ NUGET
       WindowsAPICodePack-Core (>= 1.1.1)
     WindowsAPICodePack-ShellExtensions (1.1.1)
       WindowsAPICodePack-Shell (>= 1.1.1)
-  remote: https://vrvis.myget.org/F/aardvark/api/v3/index.json
+  remote: https://vrvis.myget.org/F/aardvark/auth/11394d4d-4fe9-44ec-87c8-f3e98909f975/api/v3/index.json
     Aardvark.Fitting.Base (3.1.10)
       Aardvark.Base (>= 3.0.37 < 3.1)
       Aardvark.Geometry.Clustering (>= 3.1.10)
@@ -284,11 +285,9 @@ RESTRICTION: == net45
 NUGET
   remote: https://api.nuget.org/v3/index.json
     FAKE (4.63.2) - content: none
-    FSharp.Core (4.1.17)
-      System.ValueTuple (>= 4.3)
+    FSharp.Core (4.1.18)
     Mono.Cecil (0.10.0-beta6) - content: none
     SourceLink.Fake (1.1) - content: none
-    System.ValueTuple (4.3.1)
 GITHUB
   remote: aardvark-platform/aardvark.fake
     FULLPROJECT (02934ce0408f1b142d08173c958a5501c36a8ff2)

@@ -7,6 +7,7 @@ Aardvark.Application.WinForms.GL
 Aardvark.SceneGraph
 Aardvark.Rendering.NanoVg
 
+FSharp.Core
 Fsunit
 FParsec
 FsPickler

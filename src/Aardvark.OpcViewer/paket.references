@@ -10,6 +10,7 @@ Aardvark.Rendering.NanoVg
 
 Aardvark.VRVis.Geometry
 
+FSharp.Core
 Fsunit
 FParsec
 FsPickler

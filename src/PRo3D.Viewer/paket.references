@@ -19,6 +19,8 @@ Aardvark.Cef.WinForms
 Aardvark.Compiler.DomainTypes        
 Aardvark.Compiler.DomainTypes.MSBuild
 
+FSharp.Core
+
 WindowsAPICodePack-Core
 WindowsAPICodePack-ShellExtensions
 
