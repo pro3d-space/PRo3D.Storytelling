@@ -9,14 +9,14 @@ open Aardvark.Base.Rendering
 open Aardvark.Opc    
 open Aardvark.SceneGraph
 
-[<DomainType>]
+//[<DomainType>]
 type ScalarLayer = {
     label        : string
     actualRange  : Range1d
     definedRange : Range1d
 }
 
-[<DomainType>]
+//[<DomainType>]
 type TextureLayer = {
     label: string
 }
@@ -51,7 +51,11 @@ type Surface = {
 
     trafo         : Trafo3d
 
-    attributeLayers : plist<AttributeLayer>
+    scalarLayers   : plist<ScalarLayer>
+    selectedScalar : option<ScalarLayer>
+
+    textureLayers   : plist<TextureLayer>
+    selectedTexture : option<TextureLayer>
 }
 
 [<DomainType>]

@@ -245,8 +245,7 @@ module Viewer =
         Log.line "creating %d kdTrees" totalKdTrees
 
         let kdTrees = 
-            kdTreesPerHierarchy       
-              //  |> Array.filter(fun x -> not x.IsEmpty)
+            kdTreesPerHierarchy                     
                 |> Array.Parallel.mapi (fun i e ->
                     Log.start "creating kdtree #%d of %d" i totalKdTrees
                     let r = e
@@ -265,6 +264,7 @@ module Viewer =
                     let sg = Sg.patchLod signature runner h.baseDir 
                                     scene.lodDecider scene.useCompressedTextures                                 
                                     (PatchLod.toRoseTree h.tree)
+                                    
                     sg
                ) 
             |> Sg.ofList
@@ -299,7 +299,7 @@ module Viewer =
                 yield PatchHierarchy.load p
             ] 
 
-
+   
 
         let g = 
             patchHierarchies 
@@ -307,6 +307,7 @@ module Viewer =
                     Sg.patchLod signature runner h.baseDir 
                                 scene.lodDecider scene.useCompressedTextures 
                                 (PatchLod.toRoseTree h.tree)
+                                
                ) 
             |> Sg.ofList
 

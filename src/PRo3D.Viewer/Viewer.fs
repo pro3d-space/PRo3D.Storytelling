@@ -55,7 +55,7 @@ module Scene =
                         fun x -> 
                             if x.relativePaths then
                                 let p'' = Path.Combine(p', x.name)
-                                { x with opcPaths = expandNamesToPaths p'' x.opcNames }
+                                { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
                             else x
                         )
                 { m with surfacesModel = Surface.updateSurfaces m.surfacesModel surfaces}
@@ -91,8 +91,12 @@ module Scene =
             |> PList.map(fun s -> s, s.importPath |> getOPCxPath)
             |> PList.map(fun(s,p) -> 
                     match (fileExists p) with
-                        | Some path->                                
-                            { s with attributeLayers = Surface.SurfaceAttributes.read path |> PList.ofSeq }
+                        | Some path->        
+                            let layers = Surface.SurfaceAttributes.read path
+                            { s with 
+                                scalarLayers  = SurfaceProperties.getScalars layers
+                                textureLayers = SurfaceProperties.getTextures layers 
+                            }
                         | None ->
                             s
                         )
@@ -115,7 +119,7 @@ module Scene =
             surfaces
                 |> Surface.createSgSurfaces runtime signature
                 |> HMap.union m.scene.surfacesModel.sgSurfaces
-                |> expandLazyKdTreePaths m.scene.scenePath
+                |> Files.expandLazyKdTreePaths m.scene.scenePath
                                        
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
@@ -127,7 +131,7 @@ module Scene =
         
         let s = s |> expandRelativePaths
 
-        let sgSurfaces = Surface.createSgSurfaces runtime signature s.surfacesModel.surfaces |> expandLazyKdTreePaths m.scene.scenePath
+        let sgSurfaces = Surface.createSgSurfaces runtime signature s.surfacesModel.surfaces |> Files.expandLazyKdTreePaths m.scene.scenePath
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
         let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
@@ -170,6 +174,7 @@ module ViewerApp =
     open System.Collections.Concurrent   
     open Scene    
     open Aardvark.SceneGraph.SgFSharp.Sg
+    open OpenCvSharp
         
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -329,16 +334,11 @@ module ViewerApp =
                     | paths ->
                         let surfaces = 
                             paths 
-                                |> List.filter isSurfaceFolder 
+                                |> List.filter Files.isSurfaceFolder
                                 |> List.map Surface.mk
                                 |> PList.ofList
 
-                        Scene.import' runtime signature surfaces m
-                        //if (path |> Utils.isSurfaceFolder) then                     
-                        //    Scene.import' runtime signature [Surface.mk path] m //|> lookAtData
-                        //else
-                        //    Log.error "path %s does not point to surface folder" path
-                        //    m   
+                        Scene.import' runtime signature surfaces m  
             | ImportMeasurements,_,_ ->
                 match Dialogs.openDialog w with
                     | Some x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x)}}
@@ -509,7 +509,7 @@ module ViewerApp =
             adaptive {
                 let! bb = globalBB
                 return { shape = PickShape.Box bb; trafo = Trafo3d.Identity }
-            }
+            }        
 
         let sg = 
             Mod.map createSg surface.sceneGraph 
@@ -525,7 +525,17 @@ module ViewerApp =
                         let! trafo = surface.surface.trafo
 
                         return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality); trafo = trafo }
-                    })        
+                    })   
+                |> Sg.AttributeParameters(
+                    adaptive {
+                        let! texture = surface.surface.selectedTexture 
+                        let! scalar = surface.surface.selectedScalar
+
+                        return { 
+                            selectedScalar = scalar |> Option.map(fun x -> x.label)
+                            selectedTexture = texture |> Option.map(fun x -> x.label)
+                        }
+                    })
                 |> pickable' pickable
                 |> Sg.noEvents
                 //|> Sg.andAlso (

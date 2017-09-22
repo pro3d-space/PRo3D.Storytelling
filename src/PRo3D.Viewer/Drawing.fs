@@ -430,7 +430,7 @@ module DrawingApp =
                         }     
                 ) 
 
-        let viewAnnotationsInGroup path (model:MDrawingModel) (annotations: alist<MAnnotation>) : alist<DomNode<Action>> =
+        let viewAnnotationsInGroup path (model:MDrawingModel)(select : MAnnotation -> 'outer)(lift : AnnotationGroups.Action -> 'outer) (annotations: alist<MAnnotation>) : alist<DomNode<'outer>> =
                         
             //Incremental.div 
             //        (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (
@@ -445,7 +445,7 @@ module DrawingApp =
                                 
                                 let! visible = a.visible
                                 let visibleIcon = if visible then "unhide icon" else "hide icon"
-                                let select = fun _ -> Select (a.key |> Mod.force)
+                                let select = fun _ -> select a
 
                                 yield div [clazz "item"] [
                                         i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
@@ -461,7 +461,7 @@ module DrawingApp =
                                                                attribute "title" "Toggle"
                                                                attribute "data-position" "left center"
                                                                attribute "data-variation" "mini"
-                                                               onClick (fun _ -> Action.AnnotationGroupsMessage (AnnotationGroups.ToggleChildVisibility path) )][]
+                                                               onClick (fun _ -> lift <| AnnotationGroups.ToggleChildVisibility path)][]
                                                         )
                                                     yield 
                                                         onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
@@ -469,7 +469,7 @@ module DrawingApp =
                                                                attribute "title" "Remove"
                                                                attribute "data-position" "left center"
                                                                attribute "data-variation" "mini"][]
-                                                               //onClick (fun _ -> AnnotationGroups.RemoveChild (path, a.key?))][]
+                                                               //onClick (fun _ -> lift <| AnnotationGroups.RemoveChild (path, a.))][]
                                                         )
                                                 } 
                                             ) 
@@ -543,11 +543,14 @@ module DrawingApp =
                             }
                          )                         
                          Incremental.div (AttributeMap.ofAMap childrenAttribs) (
-                             viewAnnotationsInGroup path model group.annotations )
+                            //viewanno
+                            viewAnnotationsInGroup path model (fun x -> x.key |> Mod.force |> Select) (fun x -> AnnotationGroupsMessage x) group.annotations 
+                         )
                      ]
                 ]
                 
             }
+
 
         let viewAnnotationGroups (model:MDrawingModel) = 
              require Html.semui (

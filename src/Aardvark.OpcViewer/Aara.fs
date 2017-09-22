@@ -209,8 +209,8 @@ module Patch =
                     
         geometry, sw.MicroTime
 
-    let extractTexture (baseDir : string) (patchInfo : PatchFileInfo) =
-        let t = patchInfo.Textures |> List.head
+    let extractTexturePath (baseDir : string) (patchInfo : PatchFileInfo) (texNumber : int) =
+        let t = patchInfo.Textures |> List.item texNumber
         let sourcePath = Path.combine [ baseDir; "Images"; t.fileName]
         let extensions = [ ".dds"; ".tif"; ".tiff"]
 

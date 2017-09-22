@@ -15,6 +15,43 @@ open PRo3D
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
 
+    let getSurface model guid =
+        model.surfaces |> PList.toList |> List.tryFind (fun a -> a.guid = guid)
+
+    let updateSingleSurface model (s':Surface)  =
+        let surfaces' = 
+            model.surfaces 
+                |> PList.toList 
+                |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s') 
+                |> PList.ofList
+
+        // update sgsurfaces as well !!!
+        let sgSurfaces' = 
+            model.sgSurfaces 
+                |> HMap.alter s'.guid 
+                        (fun x -> match x with 
+                                    | Some k -> Some { k with surface = s' }
+                                    | None -> None)   
+
+        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
+
+    let updateSurfaces model (surfaces' : plist<Surface>) =
+        let sgSurfaces' =
+            surfaces' 
+                |> PList.toList
+                |> List.map (
+                    fun x -> 
+                        let update = 
+                            (fun (d : Option<SgSurface>) ->
+                                match d with 
+                                    | Some k -> Some { k with surface = x }
+                                    | None -> None)
+
+                        HMap.alter x.guid update model.sgSurfaces ) 
+                |> List.fold (fun a b -> HMap.union a b) HMap.empty
+
+        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
+
     module SurfaceAttributes = 
         open System.Xml
             
@@ -46,66 +83,132 @@ module Surface =
         let read (path:string) =
             let doc = new XmlDocument() in doc.Load path
             doc |> layers
+    
+    module Files = 
 
-    /// checks if "path" is a valid opc folder
-    let isOPCPath (path : string) = 
-        let imagePath = Path.combine [path; "images"]
-        let patchPath = Path.combine [path; "patches"]
-        let dirsExist = (System.IO.Directory.Exists imagePath) && (System.IO.Directory.Exists patchPath)
-        let storageExists = System.IO.File.Exists(patchPath + "\\patchhierarchy.xml")
-        if dirsExist && storageExists then
-            true
-        else false
+        /// checks if "path" is a valid opc folder
+        let isOPCPath (path : string) = 
+            let imagePath = Path.combine [path; "images"]
+            let patchPath = Path.combine [path; "patches"]
+            let dirsExist = (System.IO.Directory.Exists imagePath) && (System.IO.Directory.Exists patchPath)
+            let storageExists = System.IO.File.Exists(patchPath + "\\patchhierarchy.xml")
+            if dirsExist && storageExists then
+                true
+            else false
 
-    /// checks if "path" is a valid surface folder
-    let isSurfaceFolder (path : string) =
-        let mutable isValid = false
-        let subfolders = System.IO.Directory.GetDirectories(path)
-        for s in subfolders do
-            isValid <- (isOPCPath(s) || isValid)
-        isValid
+        /// checks if "path" is a valid surface folder
+        let isSurfaceFolder (path : string) =
+            let mutable isValid = false
+            let subfolders = System.IO.Directory.GetDirectories(path)
+            for s in subfolders do
+                isValid <- (isOPCPath(s) || isValid)
+            isValid
                     
-    /// returns all valid OPCs in "path"
-    let getOPCPaths path = 
-        if path = String.Empty then failwith "encountered empty opcpath"
+        /// returns all valid OPCs in "path"
+        let getOPCPaths path = 
+            if path = String.Empty then failwith "encountered empty opcpath"
 
-        if isOPCPath path then
-            [path.Replace(@"\", @"\\\\")]
-        elif System.IO.Directory.Exists path then
-            System.IO.Directory.GetDirectories(path)
-                |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
-                |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
-                |> Seq.toList 
-        else []
+            if isOPCPath path then
+                [path.Replace(@"\", @"\\\\")]
+            elif System.IO.Directory.Exists path then
+                System.IO.Directory.GetDirectories(path)
+                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
+                    |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
+                    |> Seq.toList 
+            else []
 
-    /// returns all valid OPCs in "path"
-    let getOPCNames path = 
-        if path = String.Empty then failwith "encountered empty opcpath"
+        /// returns all valid OPCs in "path"
+        let getOPCNames path = 
+            if path = String.Empty then failwith "encountered empty opcpath"
 
-        if isOPCPath path then
-            [path.Replace(@"\", @"\\\\")]
-        elif System.IO.Directory.Exists path then
-            System.IO.Directory.GetDirectories(path)
-                |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
-                |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
-                |> Seq.map (fun a -> System.IO.Path.GetFileName a; )
-                |> Seq.toList 
-        else []
+            if isOPCPath path then
+                [path.Replace(@"\", @"\\\\")]
+            elif System.IO.Directory.Exists path then
+                System.IO.Directory.GetDirectories(path)
+                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
+                    |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
+                    |> Seq.map (fun a -> System.IO.Path.GetFileName a; )
+                    |> Seq.toList 
+            else []
 
-    let expandNamesToPaths (path : string) (names : List<string>) =
-        names |> List.map(fun a -> 
-            let p = (Path.combine [path; a]).Replace(@"\", @"\\\\")
-            //Log.warn "%s" p
-            p)
+        let expandNamesToPaths (path : string) (names : List<string>) =
+            names |> List.map(fun a -> 
+                let p = (Path.combine [path; a]).Replace(@"\", @"\\\\")
+                //Log.warn "%s" p
+                p)
 
-    /// returns all valid surface folders in "path"   
-    let discover path = 
-        if System.IO.Directory.Exists path then
-            System.IO.Directory.EnumerateDirectories path 
-                // |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
-                |> Seq.filter (fun a -> isSurfaceFolder a)
-                |> Seq.toList 
-        else []
+        /// returns all valid surface folders in "path"   
+        let discover path = 
+            if System.IO.Directory.Exists path then
+                System.IO.Directory.EnumerateDirectories path 
+                    // |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
+                    |> Seq.filter (fun a -> isSurfaceFolder a)
+                    |> Seq.toList 
+            else []
+
+        let getSurfaceFolder (surface:Surface) (scenePath:option<string>) =
+            if surface.relativePaths 
+            then
+                match scenePath with
+                    | Some sp -> 
+                        let x = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
+                        let relPath = Path.Combine(x, surface.name)
+                        if Directory.Exists relPath then Some relPath else None
+                    | None -> None
+            else
+                let p = surface.importPath
+                if Directory.Exists p then Some p else None
+
+        let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, SgSurface>)=
+            match scenePath with
+                | Some sp -> 
+                    surfaces |> HMap.map (fun _ s -> 
+                        let path = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
+                        let kd =
+                            s.kdTree |> HMap.map (fun _ k -> 
+                                match k with 
+                                    | Level0KdTree.LazyKdTree lk when s.surface.relativePaths -> 
+                                        let kdTreeSub =
+                                            lk.kdtreePath.Split(Path.DirectorySeparatorChar) 
+                                                |> List.ofArray |> List.rev |> List.take 5 |> List.rev |> Path.combine  
+                                        let triangleSub =
+                                            lk.objectSetPath.Split(Path.DirectorySeparatorChar) 
+                                                |> List.ofArray |> List.rev |> List.take 5 |> List.rev |> Path.combine 
+                                        let trianglePath' = Path.Combine(path, triangleSub)
+                                        let kdtreePath' = Path.Combine(path, kdTreeSub)
+                                        LazyKdTree { lk with kdtreePath = kdtreePath'; objectSetPath = trianglePath' }
+                                    | Level0KdTree.LazyKdTree lk -> LazyKdTree lk
+                                    | Level0KdTree.InCoreKdTree ik -> InCoreKdTree ik
+                            )
+                        { s with kdTree = kd }
+                    )
+                | None -> surfaces
+
+        let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
+            match scenePath with
+                | Some sp ->
+                    let surf = getSurface surfaceModel guid
+                    match surf with
+                        | Some s ->
+                            // create target dir
+                            let targetSurfaceDir = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
+                            if not (Directory.Exists targetSurfaceDir) then
+                                Directory.CreateDirectory(targetSurfaceDir) |> ignore
+
+                            // copy data
+                            let targetDir = Path.Combine(targetSurfaceDir, s.name)
+                            Copy.copyAll s.importPath targetDir true
+
+                            // update opc paths and scene
+                            let s' = { s with opcPaths = expandNamesToPaths targetDir s.opcNames; relativePaths = true }
+                            updateSingleSurface surfaceModel s'
+                    
+                        | None ->
+                            Log.error "surface %s not found" (guid.ToString())
+                            surfaceModel
+                | None -> 
+                    Log.error "can't make surface relative. not valid scene path has not been saved yet."
+                    surfaceModel
 
     let assertInvalidBB (bb:Box3d) = 
         if(bb.IsInvalid) then 
@@ -133,22 +236,26 @@ module Surface =
     /// creates a surface from opc folder path
     let mk path = 
         
-        let names = getOPCNames path                
+        let names = Files.getOPCNames path                
         {
-            guid = Guid.NewGuid()
-            name = IO.Path.GetFileName path
-            importPath = path
-            opcNames = names
-            opcPaths = names |> expandNamesToPaths path
-            fillMode = FillMode.Fill
-            cullMode = CullMode.None
-            isVisible = true
-            relativePaths = false
-            quality = qualityInit
-            priority = priorityInit
-            trafo = Trafo3d.Identity
+            guid            = Guid.NewGuid()
+            name            = IO.Path.GetFileName path
+            importPath      = path
+            opcNames        = names
+            opcPaths        = names |> Files.expandNamesToPaths path
+            fillMode        = FillMode.Fill
+            cullMode        = CullMode.None
+            isVisible       = true
+            relativePaths   = false
+            quality         = qualityInit
+            priority        = priorityInit
+            trafo           = Trafo3d.Identity
 
-            attributeLayers = PList.empty
+            scalarLayers    = PList.empty
+            selectedScalar  = None
+
+            textureLayers   = PList.empty
+            selectedTexture = None            
         }
     
     let combineLeafBBs (hierarchies : list<PatchHierarchy>) =
@@ -186,109 +293,10 @@ module Surface =
                     sgOfSurface surf sg bb kdtree)
             |> List.map (fun d -> (d.surface.guid, d))
             |> HMap.ofList
-
-    let getSurface model guid =
-        model.surfaces |> PList.toList |> List.tryFind (fun a -> a.guid = guid)
+        
     
-    let updateSurface model (s':Surface)  =
-        let surfaces' = model.surfaces |> PList.toList |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s') |> PList.ofList
-
-        // update sgsurfaces as well !!!
-        let sgSurfaces' = 
-            model.sgSurfaces 
-                |> HMap.alter s'.guid 
-                        (fun x -> match x with 
-                                    | Some k -> Some { k with surface = s' }
-                                    | None -> None)   
-
-        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
-
-    let updateSurfaces model (surfaces' : plist<Surface>) =
-        let sgSurfaces =
-            surfaces' 
-                |> PList.toList
-                |> List.map (
-                    fun x -> 
-                        let update = 
-                            (fun (d : Option<SgSurface>) ->
-                                match d with 
-                                    | Some k -> Some { k with surface = x }
-                                    | None -> None)
-
-                        HMap.alter x.guid update model.sgSurfaces ) 
-                |> List.fold (fun a b -> HMap.union a b) HMap.empty
-
-        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces }
     
-    let getSurfaceFolder (surface:Surface) (scenePath:option<string>) =
-        if surface.relativePaths 
-        then
-            match scenePath with
-                | Some sp -> 
-                    let x = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
-                    let relPath = Path.Combine(x, surface.name)
-                    if Directory.Exists relPath then Some relPath else None
-                | None -> None
-        else
-            let p = surface.importPath
-            if Directory.Exists p then Some p else None        
-
-    let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, SgSurface>)=
-        match scenePath with
-            | Some sp -> 
-                surfaces 
-                    |> HMap.map(
-                        fun _ s -> 
-                            let path = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
-                            let kd =
-                                s.kdTree 
-                                    |> HMap.map(
-                                        fun _ k -> 
-                                            match k with 
-                                                | Level0KdTree.LazyKdTree lk -> 
-                                                    if(s.surface.relativePaths) 
-                                                    then                                                        
-                                                        let kdTreeSub =
-                                                            lk.kdtreePath.Split(Path.DirectorySeparatorChar) 
-                                                                |> List.ofArray |> List.rev |> List.take 5 |> List.rev |> Path.combine  
-                                                        let triangleSub =
-                                                            lk.objectSetPath.Split(Path.DirectorySeparatorChar) 
-                                                                |> List.ofArray |> List.rev |> List.take 5 |> List.rev |> Path.combine 
-                                                        let trianglePath' = Path.Combine(path, triangleSub)
-                                                        let kdtreePath' = Path.Combine(path, kdTreeSub)
-                                                        LazyKdTree { lk with kdtreePath = kdtreePath'; objectSetPath = trianglePath' }
-                                                    else LazyKdTree lk                                                    
-                                                | Level0KdTree.InCoreKdTree ik -> InCoreKdTree ik
-                                    )
-                            { s with kdTree = kd }
-                        )
-            | None -> surfaces
-
-    let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
-        match scenePath with
-            | Some sp ->
-                let surf = getSurface surfaceModel guid
-                match surf with
-                    | Some s ->
-                        // create target dir
-                        let targetSurfaceDir = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
-                        if not (Directory.Exists targetSurfaceDir) then
-                            Directory.CreateDirectory(targetSurfaceDir) |> ignore
-
-                        // copy data
-                        let targetDir = Path.Combine(targetSurfaceDir, s.name)
-                        Copy.copyAll s.importPath targetDir true
-
-                        // update opc paths and scene
-                        let s' = { s with opcPaths = expandNamesToPaths targetDir s.opcNames; relativePaths = true }
-                        updateSurface surfaceModel s'
-                    
-                    | None ->
-                        Log.error "surface %s not found" (guid.ToString())
-                        surfaceModel
-            | None -> 
-                Log.error "can't make surface relative. not valid scene path has not been saved yet."
-                surfaceModel
+   
 
  module SurfaceApp =
     open System.Diagnostics
@@ -440,7 +448,7 @@ module Surface =
                     match model.selectedSurface with 
                         | Some s -> 
                             let s' = SurfaceProperties.update s msg                        
-                            let model = Surface.updateSurface model s'
+                            let model = Surface.updateSingleSurface model s'
                             { model with selectedSurface = Some s' }
                         | None -> model
 
@@ -456,8 +464,8 @@ module Surface =
                 { model with selectedSurface = surf }
             | FlyToSurface id -> model
             | MakeRelative id ->                
-                let model = Surface.makeSurfaceRelative id model scenePath
-                let sgSurfaces = model.sgSurfaces |> Surface.expandLazyKdTreePaths scenePath
+                let model = Surface.Files.makeSurfaceRelative id model scenePath
+                let sgSurfaces = model.sgSurfaces |> Surface.Files.expandLazyKdTreePaths scenePath
                 { model with sgSurfaces = sgSurfaces}
             | RemoveSurface id ->                
                 let toRemove = model.surfaces |> PList.toList |> List.tryFindIndex (fun d -> d.guid = id)
@@ -473,7 +481,7 @@ module Surface =
                 let surf = id |> Surface.getSurface model
                 match surf with
                     | Some s -> 
-                        let path = Surface.getSurfaceFolder s scenePath
+                        let path = Surface.Files.getSurfaceFolder s scenePath
                         match path with
                             | Some p -> 
                                 Process.Start("explorer.exe", p) |> ignore
@@ -590,19 +598,7 @@ module Surface =
         }                          
 
     let surfaceUI (model:MSurfaceModel) =
-        div[][          
-            //let textures, scalars =
-            //    adaptive {
-            //        let! sur = model.surfaces |> Mod.map List.head   
-            //        let textures =
-            //            sur.attributeLayers |> PList.choose (fun x -> match x with | TextureLayer l -> Some l | _ -> None)
-
-            //        let scalars =
-            //            sur.attributeLayers |> PList.choose (fun x -> match x with | ScalarLayer l -> Some l | _ -> None)
-
-            //        return (textures, scalars)
-            //    }
-          
+        div[][                            
             yield GuiEx.accordion "Surfaces" "Cubes" true [ viewSurfaceList model ]
             yield GuiEx.accordion "Properties" "Content" true [
                         Incremental.div AttributeMap.empty (AList.ofModSingle (viewSurfaceProperties model))

@@ -48,6 +48,33 @@ module LodParametersSg =
         let LodParameters (p : IMod<LodParameters>) (sg : ISg) =
             LodParametersApplicator(Mod.constant sg, p) :> ISg
 
+type AttributeParameters = { selectedTexture : option<string>; selectedScalar : option<string> }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module AttributeParameters =   
+    let defaultParams = { selectedTexture = None; selectedScalar = None }
+
+[<AutoOpen>]
+module AttributeParametersSg =
+
+    type AttributeParametersApplicator(sg : IMod<ISg>, state : IMod<AttributeParameters>) =
+        inherit Sg.AbstractApplicator(sg)
+        member x.State = state
+        
+    [<Semantic>]
+    type AttributeParametersSem() =
+        member x.AttributeParameters(c : AttributeParametersApplicator) =
+            c.Child?AttributeParameters <- c.State
+        member x.AttributeParameters(c : Root<ISg>) = 
+            c.Child?AttributeParameters <- Mod.constant AttributeParameters.defaultParams
+
+    type ISg with
+        member x.AttributeParameters : IMod<AttributeParameters> = x?AttributeParameters
+
+    module Sg =
+        let AttributeParameters (p : IMod<AttributeParameters>) (sg : ISg) =
+            AttributeParametersApplicator(Mod.constant sg, p) :> ISg
+
 
 module PatchLod =
     open Aardvark.Base.Rendering
@@ -74,7 +101,7 @@ module PatchLod =
                    baseDir : string, decider : LodDecider, 
                    useCompressedTextures : bool, p : RoseTree<Patch>) =
         interface ISg
-        member x.Tree = p
+        member x.Tree = p        
         member x.Signature = signature
         member x.Runner = runner
         member x.BaseDir = baseDir
@@ -98,13 +125,14 @@ module PatchLod =
             let height = n.Tree |> RoseTree.height
 
             // Grab inherited attributes
-            let runtime        = n.Runtime
-            let scope          = Ag.getContext()
-            let trafoStack     = n.ModelTrafoStack
-            let v              = n.ViewTrafo
-            let proj           = n.ProjTrafo
-            let ro             = RenderObject.ofScope scope      
-            let lodParameters = n.LodParameters            
+            let runtime         = n.Runtime
+            let scope           = Ag.getContext()
+            let trafoStack      = n.ModelTrafoStack
+            let v               = n.ViewTrafo
+            let proj            = n.ProjTrafo
+            let ro              = RenderObject.ofScope scope      
+            let lodParameters   = n.LodParameters          
+            let attributeParams = n.AttributeParameters
 
             // prepare data for lod metric
             let vp   = Mod.map2 (*) n.ViewTrafo n.ProjTrafo
@@ -118,8 +146,32 @@ module PatchLod =
 
                     let (g, elapsedIndex), createTime = timed (fun () -> 
                             Patch.load n.BaseDir p.info)
+                   
+                    let textureId : IMod<int> = Mod.constant 0
 
-                    let texturePath = Patch.extractTexture n.BaseDir p.info
+                    let oldTexture = ref None
+
+                    let tex =
+                        textureId |> Mod.map (fun id -> 
+                            //let path = p.info.Textures |> List.item id
+                            let texturePath = Patch.extractTexturePath n.BaseDir p.info id
+                            let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
+                            let tex,d =
+                                if n.UseCompressedTextures then
+                                    CompressedImage.load runtime texturePath config false
+                                else 
+                                    FileTexture(texturePath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
+                            match !oldTexture with
+                                | None -> 
+                                    oldTexture := Some d
+                                    tex,d
+                                | Some old -> 
+                                    oldTexture := Some d
+                                    old.Dispose()
+                                    tex, d
+                        )
+
+                    let texturePath = Patch.extractTexturePath n.BaseDir p.info 0
 
                     let tex,onTextureDispose = 
                         let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
@@ -192,6 +244,7 @@ module PatchLod =
                         { new IDisposable with
                             member x.Dispose() = 
                                 onTextureDispose.Dispose()
+                                !oldTexture |> Option.iter (fun d -> d.Dispose())
                                 runtime.DeleteBuffer(idx)
                                 runtime.DeleteBuffer(pos)
                                 runtime.DeleteBuffer(tc)
