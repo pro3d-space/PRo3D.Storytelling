@@ -14,11 +14,13 @@ type ScalarLayer = {
     label        : string
     actualRange  : Range1d
     definedRange : Range1d
+    index        : int
 }
 
 //[<DomainType>]
 type TextureLayer = {
-    label: string
+    label : string
+    index : int
 }
 
 //[<DomainType>]

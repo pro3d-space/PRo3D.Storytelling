@@ -58,27 +58,31 @@ module Surface =
         let get (name : string) (node : XmlNode)=
             node.SelectSingleNode(name).InnerText.Trim()
 
-        let parseMap (node : XmlNode) : ScalarLayer =        
+        let parseMap (index : int)(node : XmlNode) : ScalarLayer =        
             { 
                 label = node |> get "Label" 
                 actualRange = node |> get "ChannelsActualRange" |> Range1d.Parse
                 definedRange = node |> get "ChannelsDefinedRange" |> Range1d.Parse
+                index = index
             }
 
-        let parseTexture (node : XmlNode) : TextureLayer =        
-            { label = node |> get "Label" }
+        let parseTexture (index : int)(node : XmlNode) : TextureLayer =        
+            { 
+                label = node |> get "Label" 
+                index = index
+            }
 
-        let parseLayer (node : XmlNode) : AttributeLayer = 
+        let parseLayer (index : int)(node : XmlNode) : AttributeLayer = 
             let typ = node |> get "Type"
             match typ with
-                | "Texture" -> TextureLayer (parseTexture node)
-                | "Map"     -> ScalarLayer (parseMap node)
+                | "Texture" -> TextureLayer (parseTexture index node)
+                | "Map"     -> ScalarLayer (parseMap index node)
                 | _         -> failwith "type not supported"
 
         let layers (doc : XmlDocument) =
             doc.SelectNodes "/Aardvark/SurfaceAttributes/AttributeLayers/AttributeLayer"
              |> Seq.cast<XmlNode>
-             |> Seq.map parseLayer
+             |> Seq.mapi parseLayer
 
         let read (path:string) =
             let doc = new XmlDocument() in doc.Load path

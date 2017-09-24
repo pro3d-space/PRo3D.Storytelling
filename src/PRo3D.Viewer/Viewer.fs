@@ -135,7 +135,7 @@ module Scene =
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
         let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
-        surfaceModelLens.Set(m, grouped)            
+        surfaceModelLens.Set(m, grouped)
 
     let loadScene path m runtime signature =
         let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
@@ -532,8 +532,8 @@ module ViewerApp =
                         let! scalar = surface.surface.selectedScalar
 
                         return { 
-                            selectedScalar = scalar |> Option.map(fun x -> x.label)
-                            selectedTexture = texture |> Option.map(fun x -> x.label)
+                            selectedTexture = texture |> Option.map(fun x -> x.index)
+                            selectedScalar  = scalar  |> Option.map(fun x -> x.index)
                         }
                     })
                 |> pickable' pickable

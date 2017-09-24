@@ -73,7 +73,7 @@ module SurfaceProperties =
             | SetScalarMap a ->                
                 { model with selectedScalar = a }
             | SetTexturesMap a ->                
-                { model with selectedTexture = a }
+                { model with selectedTexture = a } |> Console.print
 
     let getTextures (layers : seq<AttributeLayer>) =
         layers |> Seq.choose (fun x -> match x with | TextureLayer l -> Some l | _ -> None) |> PList.ofSeq

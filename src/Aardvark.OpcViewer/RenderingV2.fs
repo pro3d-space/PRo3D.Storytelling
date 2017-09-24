@@ -48,7 +48,7 @@ module LodParametersSg =
         let LodParameters (p : IMod<LodParameters>) (sg : ISg) =
             LodParametersApplicator(Mod.constant sg, p) :> ISg
 
-type AttributeParameters = { selectedTexture : option<string>; selectedScalar : option<string> }
+type AttributeParameters = { selectedTexture : option<int>; selectedScalar : option<int> }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AttributeParameters =   
@@ -147,13 +147,19 @@ module PatchLod =
                     let (g, elapsedIndex), createTime = timed (fun () -> 
                             Patch.load n.BaseDir p.info)
                    
-                    let textureId : IMod<int> = Mod.constant 0
+                    let textureId : IMod<int> = 
+                        attributeParams 
+                          |> Mod.map(fun x ->
+                                match x.selectedTexture with
+                                  | Some i -> i - 1
+                                  | None -> 0
+                          )
 
                     let oldTexture = ref None
 
                     let tex =
                         textureId |> Mod.map (fun id -> 
-                            //let path = p.info.Textures |> List.item id
+                            let path = p.info.Textures |> List.item id
                             let texturePath = Patch.extractTexturePath n.BaseDir p.info id
                             let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
                             let tex,d =
@@ -164,21 +170,21 @@ module PatchLod =
                             match !oldTexture with
                                 | None -> 
                                     oldTexture := Some d
-                                    tex,d
+                                    tex
                                 | Some old -> 
                                     oldTexture := Some d
                                     old.Dispose()
-                                    tex, d
+                                    tex
                         )
 
-                    let texturePath = Patch.extractTexturePath n.BaseDir p.info 0
+                    //let texturePath = Patch.extractTexturePath n.BaseDir p.info 0
 
-                    let tex,onTextureDispose = 
-                        let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
-                        if n.UseCompressedTextures then
-                            CompressedImage.load runtime texturePath config false
-                        else 
-                            FileTexture(texturePath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
+                    //let tex,onTextureDispose = 
+                    //    let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
+                    //    if n.UseCompressedTextures then
+                    //        CompressedImage.load runtime texturePath config false
+                    //    else 
+                    //        FileTexture(texturePath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
 
                     let ro = RenderObject.Clone(ro)
 
@@ -202,7 +208,7 @@ module PatchLod =
                     
                     let old = ro.Uniforms
                     ro.Uniforms <-
-                        let t = Mod.constant tex :> IMod
+                        let t = tex :> IMod
                         { new IUniformProvider with
                             member x.TryGetUniform(scope, sem) =
                                 if sem = DefaultSemantic.DiffuseColorTexture then Some t
@@ -243,7 +249,7 @@ module PatchLod =
                     ro.Activate <- fun () -> 
                         { new IDisposable with
                             member x.Dispose() = 
-                                onTextureDispose.Dispose()
+                                //onTextureDispose.Dispose()
                                 !oldTexture |> Option.iter (fun d -> d.Dispose())
                                 runtime.DeleteBuffer(idx)
                                 runtime.DeleteBuffer(pos)

@@ -22,8 +22,10 @@ module Shader =
     let selectionColor (v : Vertex) =
         fragment {
             if uniform?selected then
-                let c : V4d = uniform?selectionColor
-                return c * v.c
+                //let c : V4d = uniform?selectionColor
+                //return c * v.c
+                let gamma = 1.3
+                return V4d(v.c.X ** (1.0 / gamma), v.c.Y ** (1.0 / gamma),v.c.Z ** (1.0 / gamma), 1.0)
             else return v.c
         }
 

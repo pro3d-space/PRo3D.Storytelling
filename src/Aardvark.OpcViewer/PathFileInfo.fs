@@ -31,6 +31,9 @@ module private XmlHelpers =
     let elems name (p : XElement) = 
         p.Elements (xname name) 
 
+    let children name (p : XElement) =
+        p.Descendants (xname name)
+
     let xvalue (p : XElement) = p.Value.Trim()
 
     let prop name (p : XElement) = 
@@ -90,43 +93,78 @@ module PatchFileInfo =
                 | [|Int32 x; Int32 y|] -> V2i(x,y)
                 | _ -> failwithf "Could not parse: %A" s 
 
-    let private ofXDoc (doc : XDocument) (name : string) =
-        let patch = doc.Descendants(xname "Aardvark").Descendants(xname "Patch") |> Seq.head
+    let node (name : string) (node : XmlNode) =
+        node.SelectSingleNode(name)
+
+    let nodes (name : string) (node : XmlNode) =        
+        node.SelectNodes(name) |> Seq.cast<XmlNode>
+
+    let childNodes (name : string) (node : XmlNode) =        
+        node.SelectSingleNode(name).ChildNodes |> Seq.cast<XmlNode>
+
+    let get (name : string) (node : XmlNode)=
+        node.SelectSingleNode(name).InnerText.Trim()
+
+    let xvalue (p : XmlNode) = p.Value.Trim()
+
+    let inner (node : XmlNode) = 
+        node.InnerText.Trim()
+    
+    let private ofXDoc (doc : XmlDocument) (name : string) =        
 
         let trafo (m : M44d) =
             Trafo3d(m, m.Inverse)
 
-        let getTex xs = 
-            { fileName = prop "DiffuseColor1Texture" xs
-              weights  = prop "DiffuseColor1Weights" xs }
+        let mkTexture tupel = 
+            let t,w = tupel
+            { fileName = inner t; weights = inner w }
+
+        let patch =
+          doc.SelectSingleNode "/Aardvark"
+            |> Seq.cast<XmlNode>             
+            |> Seq.head
+    
+        let textures = 
+            patch 
+              |> childNodes "Textures" 
+              |> Seq.chunkBySize 2 |> Seq.map(fun x -> x.[0], x.[1])
+              |> Seq.map mkTexture
+              |> Seq.toList
+
+        let coords = 
+            patch 
+              |> nodes "Coordinates" 
+              |> Seq.toList 
+              |> List.map (string << get "DiffuseColor1Coordinates")
+        
+        let split (s:string) =
+            (s.Split ' ') |> Array.toList
 
         {
             Name                = name
-            TagList             = patch |> elems "TagList" |> Seq.toList |> List.map xvalue   
+            TagList             = patch |> get "TagList" |> split
 
-            GeometryType        = patch |> prop "GeometryType"        |> geomtryType
+            GeometryType        = patch |> get "GeometryType"        |> geomtryType
             QuadVertexSortOrder = VertexOrder.ColumnMajor //patch |> prop "QuadVertexSortOrder" |> majority
                                                                       
-            Local2Global        = patch |> prop "Local2Global"        |> M44d.Parse |> trafo
-            GlobalBoundingBox   = patch |> prop "GlobalBoundingBox"   |> Box3d.Parse
-            LocalBoundingBox    = patch |> prop "LocalBoundingBox"    |> Box3d.Parse
+            Local2Global        = patch |> get "Local2Global"        |> M44d.Parse |> trafo
+            GlobalBoundingBox   = patch |> get "GlobalBoundingBox"   |> Box3d.Parse
+            LocalBoundingBox    = patch |> get "LocalBoundingBox"    |> Box3d.Parse
 
-            Local2Global2d      = patch |> prop "Local2Global"        |> M44d.Parse |> trafo
-            GlobalBoundingBox2d = patch |> prop "GlobalBoundingBox"   |> Box3d.Parse
-            LocalBoundingBox2d  = patch |> prop "LocalBoundingBox"    |> Box3d.Parse
+            Local2Global2d      = patch |> get "Local2Global"        |> M44d.Parse |> trafo
+            GlobalBoundingBox2d = patch |> get "GlobalBoundingBox"   |> Box3d.Parse
+            LocalBoundingBox2d  = patch |> get "LocalBoundingBox"    |> Box3d.Parse
 
-            Positions           = patch |> prop "Positions"   
+            Positions           = patch |> get "Positions"
             Positions2d         = ""
             Normals             = ""
             Offsets             = ""
-            Textures            =  patch |> elems "Textures" |> Seq.map getTex |> Seq.toList
-            Coordinates         =  
-                patch |> elems "Coordinates" |> Seq.toList 
-                      |> List.map (string << prop "DiffuseColor1Coordinates")
+            Textures            = textures
+            Coordinates         = coords              
         }    
 
     let load (dir : string) (f : string) =
-        let doc   = XDocument.Load (Path.combine [dir; "Patches"; f; "Patch.xml"])
+        let doc   = new XmlDocument() in doc.Load (Path.combine [dir; "Patches"; f; "Patch.xml"])
         ofXDoc doc f
 
 type QTree<'a> = Node of 'a * array<QTree<'a>>

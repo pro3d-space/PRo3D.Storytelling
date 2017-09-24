@@ -221,3 +221,9 @@ module Sg =
             toEffect <| DefaultSurfaces.vertexColor
             toEffect <| DefaultSurfaces.simpleLighting
         ]
+
+module Console =    
+
+    let print (x:'a) : 'a =
+        printfn "%A" x
+        x
