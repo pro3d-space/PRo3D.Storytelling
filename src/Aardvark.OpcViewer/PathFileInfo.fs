@@ -66,6 +66,7 @@ type PatchFileInfo =
 
         Coordinates         : list<DiffuseColorCoordinates>
         Textures            : list<Texture>
+        Attributes          : list<string>
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -137,6 +138,12 @@ module PatchFileInfo =
               |> Seq.toList 
               |> List.map (string << get "DiffuseColor1Coordinates")
         
+        //let attributes =
+        //    patch 
+        //      |> childNodes "Attributes" 
+        //      |> Seq.map inner
+        //      |> Seq.toList 
+
         let split (s:string) =
             (s.Split ' ') |> Array.toList
 
@@ -161,6 +168,7 @@ module PatchFileInfo =
             Offsets             = ""
             Textures            = textures
             Coordinates         = coords              
+            Attributes          = [] //attributes
         }    
 
     let load (dir : string) (f : string) =

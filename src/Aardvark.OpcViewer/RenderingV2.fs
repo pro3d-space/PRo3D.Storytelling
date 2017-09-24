@@ -196,6 +196,9 @@ module PatchLod =
                                     |> prepareBuffer
                     let tc      = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.DiffuseColorCoordinates]) 
                                     |> prepareBuffer
+
+                    //let scalar  = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.Normals]) 
+                    //                |> prepareBuffer                        
                           
                     ro.Indices <- BufferView(Mod.constant (idx :> IBuffer), typeof<int>) |> Some
 
@@ -203,6 +206,7 @@ module PatchLod =
                         AttributeProvider.ofList [ 
                             DefaultSemantic.Positions, BufferView(Mod.constant (pos :> IBuffer), typeof<V3f>)
                             DefaultSemantic.DiffuseColorCoordinates, BufferView(Mod.constant (tc :> IBuffer), typeof<V2f>)
+                            //DefaultSemantic.Normals, BufferView(Mod.constant (scalar :> IBuffer), typeof<float>)
                         ]
 
                     

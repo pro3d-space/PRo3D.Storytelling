@@ -76,6 +76,7 @@ module Aara =
                 match typeName with
                     | "V3d" -> f |> loadRaw<V3d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V3d>
                     | "V2d" -> f |> loadRaw<V2d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V2d>
+                    | "double" -> f |> loadRaw<double> elementCount |> PrimitiveValueConverter.arrayConverter typeof<double>
                     | _ -> failwith ""
 
 
@@ -191,6 +192,7 @@ module Patch =
         sw.Start()
         let positions = Path.combine [baseDir; "Patches"; p.Name; p.Positions] |> fromFile<V3f>
         let coordinates = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>
+  //      let scalars = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Attributes)] |> fromFile<float>
         sw.Stop()
 
         let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
@@ -205,6 +207,7 @@ module Patch =
                     SymDict.ofList [
                         DefaultSemantic.Positions, positions.Data :> Array
                         DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
+                    //    DefaultSemantic.Normals, scalars.Data :> Array
                     ])
                     
         geometry, sw.MicroTime
