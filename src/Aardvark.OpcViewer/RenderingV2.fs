@@ -48,11 +48,16 @@ module LodParametersSg =
         let LodParameters (p : IMod<LodParameters>) (sg : ISg) =
             LodParametersApplicator(Mod.constant sg, p) :> ISg
 
-type AttributeParameters = { selectedTexture : option<int>; selectedScalar : option<int> }
+type AttributeParameters = { 
+    selectedTexture : option<int>
+    selectedScalar  : option<int>
+    //minScalar       : float
+    //maxScalar       : float
+}
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AttributeParameters =   
-    let defaultParams = { selectedTexture = None; selectedScalar = None }
+    let defaultParams = { selectedTexture = None; selectedScalar = None } //; minScalar = 0.0; maxScalar = 1.0 }
 
 [<AutoOpen>]
 module AttributeParametersSg =
@@ -158,8 +163,7 @@ module PatchLod =
                     let oldTexture = ref None
 
                     let tex =
-                        textureId |> Mod.map (fun id -> 
-                            let path = p.info.Textures |> List.item id
+                        textureId |> Mod.map (fun id ->                            
                             let texturePath = Patch.extractTexturePath n.BaseDir p.info id
                             let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
                             let tex,d =
@@ -197,8 +201,8 @@ module PatchLod =
                     let tc      = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.DiffuseColorCoordinates]) 
                                     |> prepareBuffer
 
-                    //let scalar  = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.Normals]) 
-                    //                |> prepareBuffer                        
+                    let scalar  = ArrayBuffer(g.IndexedAttributes.[Sym.ofString("Scalar")]) 
+                                    |> prepareBuffer                        
                           
                     ro.Indices <- BufferView(Mod.constant (idx :> IBuffer), typeof<int>) |> Some
 
@@ -206,7 +210,7 @@ module PatchLod =
                         AttributeProvider.ofList [ 
                             DefaultSemantic.Positions, BufferView(Mod.constant (pos :> IBuffer), typeof<V3f>)
                             DefaultSemantic.DiffuseColorCoordinates, BufferView(Mod.constant (tc :> IBuffer), typeof<V2f>)
-                            //DefaultSemantic.Normals, BufferView(Mod.constant (scalar :> IBuffer), typeof<float>)
+                            Sym.ofString("Scalar"), BufferView(Mod.constant (scalar :> IBuffer), typeof<float32>)
                         ]
 
                     
@@ -226,11 +230,11 @@ module PatchLod =
                                             //let c = hsv2rgb (min + factor * size) 0.6 1.0
                                             Mod.constant c :> IMod |> Some
                                         | "ModelTrafo" -> p.trafo :> IMod |> Some
-                                        | "ModelViewTrafo" -> p.trafo <*> v :> IMod |> Some
-                                        | "ModelViewProjTrafo" -> p.trafo <*> vp :> IMod |> Some
-                                        | "ModelTrafoInv" -> p.trafo |> inverse :> IMod |> Some
-                                        | "ModelViewTrafoInv" -> p.trafo <*> v |> inverse :> IMod |> Some
-                                        | "ModelViewProjTrafoInv" -> p.trafo <*> vp |> inverse :> IMod |> Some
+                                        //| "ModelViewTrafo" -> p.trafo <*> v :> IMod |> Some
+                                        //| "ModelViewProjTrafo" -> p.trafo <*> vp :> IMod |> Some
+                                        //| "ModelTrafoInv" -> p.trafo |> inverse :> IMod |> Some
+                                        //| "ModelViewTrafoInv" -> p.trafo <*> v |> inverse :> IMod |> Some
+                                        //| "ModelViewProjTrafoInv" -> p.trafo <*> vp |> inverse :> IMod |> Some
                                         | _ -> 
                                             lock old (fun () -> old.TryGetUniform(scope, sem))
 

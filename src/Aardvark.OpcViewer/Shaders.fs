@@ -9,6 +9,16 @@ module Shader =
     
     open FShade
 
+    type Vertex =
+        {
+            [<Position>]           pos     : V4d            
+            [<WorldPosition>]      wp      : V4d
+            [<TexCoord>]           tc      : V2d
+            [<Color>]              c       : V4d
+            [<Normal>]             n       : V3d
+            [<Semantic("Scalar")>] scalar  : float
+        }
+
     let LoDColor  (v : Vertex) =
         fragment {
             if uniform?LodVisEnabled then
@@ -33,13 +43,24 @@ module Shader =
         vertex {
             let vp = uniform.ModelViewTrafo * v.pos
             let wp = uniform.ModelTrafo * v.pos
-            return {
-                pos = uniform.ProjTrafo * vp
-                wp = wp
-                n = uniform.NormalMatrix * v.n
-                b = uniform.NormalMatrix * v.b
-                t = uniform.NormalMatrix * v.t
-                c = v.c
-                tc = v.tc 
-            }
+            return { 
+                v with
+                    pos = uniform.ProjTrafo * vp
+                    wp = wp
+                    n = uniform.NormalMatrix * v.n                    
+            } 
         } 
+
+    let falseColor (v : Vertex) =
+        vertex {
+            if true then
+                let range : V2d = uniform?MinMax
+                let norm = (v.scalar - range.X) / (range.Y - range.X)            
+
+                return { 
+                    v with
+                        c = V4d(norm)
+                }
+            else
+                return  v
+        }

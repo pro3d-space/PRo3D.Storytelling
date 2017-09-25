@@ -511,11 +511,28 @@ module ViewerApp =
                 return { shape = PickShape.Box bb; trafo = Trafo3d.Identity }
             }        
 
+        let rangeToMinMax (s:MSgSurface) =
+            adaptive {
+                let! scalar = surface.surface.selectedScalar
+                return match scalar with 
+                          | Some s -> V2d(s.definedRange.Min, s.definedRange.Max)
+                          | None   -> V2d(0.0,1.0)
+            }
+
+        let hasFalseColors (s:MSgSurface) (active : IMod<bool>)=             
+            Mod.map2(fun x y->
+                match x with
+                  | Some _ -> true  && y
+                  | None   -> false && y
+            ) surface.surface.selectedScalar active
+
         let sg = 
             Mod.map createSg surface.sceneGraph 
                 |> Sg.dynamic          
-                |> Sg.uniform "selected" isSelected
-                |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))                                 
+                |> Sg.uniform "selected"       isSelected
+                |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
+                |> Sg.uniform "falseColors"    (hasFalseColors surface (Mod.constant true))
+                |> Sg.uniform "MinMax"         (surface |> rangeToMinMax)
                 |> Sg.onOff(surface.surface.isVisible)                             
                 |> Sg.LodParameters( 
                     adaptive {
@@ -534,6 +551,15 @@ module ViewerApp =
                         return { 
                             selectedTexture = texture |> Option.map(fun x -> x.index)
                             selectedScalar  = scalar  |> Option.map(fun x -> x.index)
+                            //minScalar = 
+                            //    match scalar with
+                            //        | Some s -> s.definedRange.Min
+                            //        | None -> 0.0
+                                     
+                            //maxScalar = 
+                            //    match scalar with
+                            //        | Some s -> s.definedRange.Max
+                            //        | None -> 1.0
                         }
                     })
                 |> pickable' pickable
@@ -568,8 +594,8 @@ module ViewerApp =
                 Shader.stableTrafo |> toEffect
                 //DefaultSurfaces.constantColor C4f.White |> toEffect                            
                 DefaultSurfaces.diffuseTexture |> toEffect
-                Shader.selectionColor |> toEffect       
-               // Shader.LoDColor |> toEffect
+               // Shader.selectionColor |> toEffect       
+               // Shader.falseColor |> toEffect               
             ]
 
             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
@@ -692,9 +718,10 @@ module ViewerApp =
                             |> Sg.set
                             |> Sg.effect [
                                 Shader.stableTrafo |> toEffect                  
-                                DefaultSurfaces.diffuseTexture |> toEffect
-                                Shader.selectionColor |> toEffect       
-                                Shader.LoDColor |> toEffect
+                              //  DefaultSurfaces.diffuseTexture |> toEffect
+                              //  Shader.selectionColor |> toEffect       
+                              //  Shader.LoDColor |> toEffect
+                                Shader.falseColor |> toEffect
                             ]
                             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                             |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()

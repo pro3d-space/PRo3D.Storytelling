@@ -103,6 +103,13 @@ module PatchFileInfo =
     let childNodes (name : string) (node : XmlNode) =        
         node.SelectSingleNode(name).ChildNodes |> Seq.cast<XmlNode>
 
+    let childNodes' (name : string) (node : XmlNode) =        
+        let n = node.SelectSingleNode(name)
+        if (n = null) then
+            [] |> Seq.cast<XmlNode>
+        else
+            n.ChildNodes |> Seq.cast<XmlNode>
+
     let get (name : string) (node : XmlNode)=
         node.SelectSingleNode(name).InnerText.Trim()
 
@@ -120,7 +127,7 @@ module PatchFileInfo =
             let t,w = tupel
             { fileName = inner t; weights = inner w }
 
-        let patch =
+        let patch =            
           doc.SelectSingleNode "/Aardvark"
             |> Seq.cast<XmlNode>             
             |> Seq.head
@@ -138,11 +145,11 @@ module PatchFileInfo =
               |> Seq.toList 
               |> List.map (string << get "DiffuseColor1Coordinates")
         
-        //let attributes =
-        //    patch 
-        //      |> childNodes "Attributes" 
-        //      |> Seq.map inner
-        //      |> Seq.toList 
+        let attributes =
+            patch 
+              |> childNodes' "Attributes" 
+              |> Seq.map inner
+              |> Seq.toList 
 
         let split (s:string) =
             (s.Split ' ') |> Array.toList
@@ -168,7 +175,7 @@ module PatchFileInfo =
             Offsets             = ""
             Textures            = textures
             Coordinates         = coords              
-            Attributes          = [] //attributes
+            Attributes          = attributes
         }    
 
     let load (dir : string) (f : string) =

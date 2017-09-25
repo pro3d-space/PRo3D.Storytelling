@@ -77,6 +77,7 @@ module Aara =
                     | "V3d" -> f |> loadRaw<V3d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V3d>
                     | "V2d" -> f |> loadRaw<V2d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V2d>
                     | "double" -> f |> loadRaw<double> elementCount |> PrimitiveValueConverter.arrayConverter typeof<double>
+                //    | "float" -> f |> loadRaw<float32> elementCount |> PrimitiveValueConverter.arrayConverter typeof<float32>
                     | _ -> failwith ""
 
 
@@ -192,12 +193,14 @@ module Patch =
         sw.Start()
         let positions = Path.combine [baseDir; "Patches"; p.Name; p.Positions] |> fromFile<V3f>
         let coordinates = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>
-  //      let scalars = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Attributes)] |> fromFile<float>
+        let scalars = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Attributes)] |> fromFile<double>
         sw.Stop()
 
         let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
 
         let index = createIndex (positions.AsMatrix())
+
+        let a : float = 0.0
 
         let geometry =
             IndexedGeometry(
@@ -207,7 +210,7 @@ module Patch =
                     SymDict.ofList [
                         DefaultSemantic.Positions, positions.Data :> Array
                         DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
-                    //    DefaultSemantic.Normals, scalars.Data :> Array
+                        Sym.ofString("Scalar"), scalars.Data |> Array.map (fun x -> float32 x) :> Array
                     ])
                     
         geometry, sw.MicroTime
