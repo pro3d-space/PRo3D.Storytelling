@@ -154,8 +154,9 @@ module Scene =
                         try
                             loadScene scenePath.path m runtime signature        
                         with
-                            | _ ->
+                            | e ->
                                 Log.warn "Error parsing last scene: %s. loading empty" scenePath.path
+                                Log.error "%A" e.Message
                                 m
                     | None -> 
                         Log.warn("No recent scene found")
@@ -518,20 +519,13 @@ module ViewerApp =
                           | Some s -> V2d(s.definedRange.Min, s.definedRange.Max)
                           | None   -> V2d(0.0,1.0)
             }
-
-        let hasFalseColors (s:MSgSurface) (active : IMod<bool>)=             
-            Mod.map2(fun x y->
-                match x with
-                  | Some _ -> true  && y
-                  | None   -> false && y
-            ) surface.surface.selectedScalar active
-
+        
         let sg = 
             Mod.map createSg surface.sceneGraph 
                 |> Sg.dynamic          
                 |> Sg.uniform "selected"       isSelected
                 |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
-                |> Sg.uniform "falseColors"    (hasFalseColors surface (Mod.constant true))
+                |> Sg.uniform "falseColors"    (surface.surface.selectedScalar |> Mod.map Option.isSome)
                 |> Sg.uniform "MinMax"         (surface |> rangeToMinMax)
                 |> Sg.onOff(surface.surface.isVisible)                             
                 |> Sg.LodParameters( 
@@ -595,7 +589,7 @@ module ViewerApp =
                 //DefaultSurfaces.constantColor C4f.White |> toEffect                            
                 DefaultSurfaces.diffuseTexture |> toEffect
                // Shader.selectionColor |> toEffect       
-               // Shader.falseColor |> toEffect               
+                Shader.falseColor |> toEffect               
             ]
 
             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
@@ -718,17 +712,16 @@ module ViewerApp =
                             |> Sg.set
                             |> Sg.effect [
                                 Shader.stableTrafo |> toEffect                  
-                              //  DefaultSurfaces.diffuseTexture |> toEffect
-                              //  Shader.selectionColor |> toEffect       
+                                DefaultSurfaces.diffuseTexture |> toEffect
+                                Shader.selectionColor |> toEffect       
                               //  Shader.LoDColor |> toEffect
                                 Shader.falseColor |> toEffect
                             ]
                             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                             |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
 
-                    yield RenderCommand.SceneGraph sg
-                    // TODO 2017-09-20 - API-change -> please repair! 
-                    //yield RenderCommand.Clear(None,Some (Mod.constant 1.0))
+                    yield RenderCommand.SceneGraph sg                    
+                    yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
 
                 yield RenderCommand.SceneGraph overlayed
             }

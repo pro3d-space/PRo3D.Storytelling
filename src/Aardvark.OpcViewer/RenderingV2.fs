@@ -160,6 +160,8 @@ module PatchLod =
                                   | None -> 0
                           )
 
+                    let scalarId : IMod<int> = Mod.constant 0
+
                     let oldTexture = ref None
 
                     let tex =
@@ -181,6 +183,16 @@ module PatchLod =
                                     tex
                         )
 
+                    let scl = 
+                        scalarId |> Mod.map ( fun id ->                                 
+                                let x = p.info.Attributes |> List.tryItem id
+                                match x with
+                                  | Some name ->
+                                        let arr = Path.combine [n.BaseDir; "Patches"; p.info.Name; name] |> fromFile<double>
+                                        ArrayBuffer(arr.Data |> Array.map float32) :> IBuffer
+                                  | None -> ArrayBuffer([||] |> Array.map float32) :> IBuffer
+                            )
+
                     //let texturePath = Patch.extractTexturePath n.BaseDir p.info 0
 
                     //let tex,onTextureDispose = 
@@ -200,18 +212,26 @@ module PatchLod =
                                     |> prepareBuffer
                     let tc      = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.DiffuseColorCoordinates]) 
                                     |> prepareBuffer
+                    
+                    //let bla =
+                    //    match (g.IndexedAttributes.TryGetValue (Sym.ofString("Scalar"))) with
+                    //      | true, value -> 0 (* do something with value *)
+                    //      | _           -> 0 (* handle the case of value not found *)
+
 
                     let scalar  = ArrayBuffer(g.IndexedAttributes.[Sym.ofString("Scalar")]) 
                                     |> prepareBuffer                        
                           
                     ro.Indices <- BufferView(Mod.constant (idx :> IBuffer), typeof<int>) |> Some
-
+                    
+                    let attributestList = [ 
+                        DefaultSemantic.Positions, BufferView(Mod.constant (pos :> IBuffer), typeof<V3f>)
+                        DefaultSemantic.DiffuseColorCoordinates, BufferView(Mod.constant (tc :> IBuffer), typeof<V2f>)    
+                       // Sym.ofString("Scalar"), BufferView(scl, typeof<float32>)
+                    ]
+                    
                     ro.VertexAttributes <- 
-                        AttributeProvider.ofList [ 
-                            DefaultSemantic.Positions, BufferView(Mod.constant (pos :> IBuffer), typeof<V3f>)
-                            DefaultSemantic.DiffuseColorCoordinates, BufferView(Mod.constant (tc :> IBuffer), typeof<V2f>)
-                            Sym.ofString("Scalar"), BufferView(Mod.constant (scalar :> IBuffer), typeof<float32>)
-                        ]
+                        AttributeProvider.ofList attributestList
 
                     
                     let old = ro.Uniforms

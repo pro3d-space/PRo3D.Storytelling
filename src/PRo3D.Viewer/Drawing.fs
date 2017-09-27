@@ -307,7 +307,7 @@ module DrawingApp =
                         | Some k -> { k with visible = not k.visible  }
                         | None -> failwith "annotation not found, can't happen"
                 { model with annotations = (model.annotations.AsList |> List.updateIf(fun d -> d.key = a'.key) (fun _ -> a')) |> PList.ofList}      
-           // | AnnotationGroupsMessage msg,_ -> { model with annotationGroups = AnnotationGroups.update model.annotationGroups msg}
+            | AnnotationGroupsMessage msg,_ -> { model with annotationGroups = AnnotationGroups.update model.annotationGroups msg}
             | _ -> model
 
     module UI =

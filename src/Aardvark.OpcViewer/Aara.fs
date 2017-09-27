@@ -192,8 +192,13 @@ module Patch =
         let sw = System.Diagnostics.Stopwatch()
         sw.Start()
         let positions = Path.combine [baseDir; "Patches"; p.Name; p.Positions] |> fromFile<V3f>
-        let coordinates = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>
-        let scalars = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Attributes)] |> fromFile<double>
+        let coordinates = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>        
+        
+
+        let scalars = 
+            List.tryHead p.Attributes 
+                |> Option.map(fun x -> Path.combine [baseDir; "Patches"; p.Name; x] |> fromFile<double>)       
+
         sw.Stop()
 
         let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
@@ -202,17 +207,27 @@ module Patch =
 
         let a : float = 0.0
 
+        let indexAttributes =
+            let def = [
+                DefaultSemantic.Positions, positions.Data :> Array
+                DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array            
+            ]
+
+            //let def = 
+            //    match scalars with
+            //      | Some a -> List.append def [Sym.ofString("Scalar"), (a.Data |> Array.map (fun x -> float32 x) :> Array)]
+            //      | None   -> def
+
+            def |> SymDict.ofList 
+
+
         let geometry =
             IndexedGeometry(
-                Mode = IndexedGeometryMode.TriangleList,
-                IndexArray = index,
-                IndexedAttributes =
-                    SymDict.ofList [
-                        DefaultSemantic.Positions, positions.Data :> Array
-                        DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
-                        Sym.ofString("Scalar"), scalars.Data |> Array.map (fun x -> float32 x) :> Array
-                    ])
-                    
+                Mode              = IndexedGeometryMode.TriangleList,
+                IndexArray        = index,
+                IndexedAttributes = indexAttributes
+            )
+                                        
         geometry, sw.MicroTime
 
     let extractTexturePath (baseDir : string) (patchInfo : PatchFileInfo) (texNumber : int) =

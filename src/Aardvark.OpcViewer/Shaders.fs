@@ -52,15 +52,12 @@ module Shader =
         } 
 
     let falseColor (v : Vertex) =
-        vertex {
-            if true then
+        fragment {           
+            if uniform?falseColors then
                 let range : V2d = uniform?MinMax
-                let norm = (v.scalar - range.X) / (range.Y - range.X)            
+                let norm = (v.scalar - range.X) / (range.Y - range.X)
 
-                return { 
-                    v with
-                        c = V4d(norm)
-                }
+                return v.c * V4d(norm)                
             else
-                return  v
+                return v.c
         }
