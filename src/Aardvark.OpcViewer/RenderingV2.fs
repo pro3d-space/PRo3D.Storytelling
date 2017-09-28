@@ -160,7 +160,13 @@ module PatchLod =
                                   | None -> 0
                           )
 
-                    let scalarId : IMod<int> = Mod.constant 0
+                    let scalarId : IMod<int> =
+                         attributeParams 
+                          |> Mod.map(fun x ->
+                                match x.selectedScalar with
+                                  | Some i -> i
+                                  | None -> -1
+                          )
 
                     let oldTexture = ref None
 

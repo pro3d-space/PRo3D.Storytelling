@@ -57,7 +57,7 @@ module Shader =
                 let range : V2d = uniform?MinMax
                 let norm = (v.scalar - range.X) / (range.Y - range.X)
 
-                return v.c * V4d(norm)                
+                return v.c * V4d(norm)
             else
                 return v.c
         }

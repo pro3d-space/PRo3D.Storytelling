@@ -714,8 +714,8 @@ module ViewerApp =
                                 Shader.stableTrafo |> toEffect                  
                                 DefaultSurfaces.diffuseTexture |> toEffect
                                 Shader.selectionColor |> toEffect       
-                              //  Shader.LoDColor |> toEffect
-                                Shader.falseColor |> toEffect
+                                Shader.LoDColor |> toEffect
+                              //  Shader.falseColor |> toEffect
                             ]
                             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                             |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()

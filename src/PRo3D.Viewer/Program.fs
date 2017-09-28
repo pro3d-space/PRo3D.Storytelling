@@ -30,7 +30,7 @@ let main argv =
     use app = new OpenGlApplication()
     let runtime = app.Runtime    
 
-    use form = new Form(Width = 0, Height = 0)
+   // use form = new Form(Width = 0, Height = 0)
     let signature =
         runtime.CreateFramebufferSignature [
             DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba8; samples = 1 }
@@ -54,6 +54,8 @@ let main argv =
     //let attr = Surface.SurfaceAttributes.read "E:\Aardwork\Exomars\_SCENES\WP4200_4300_3400_DemoData\VictoriaCrater_HiRISE_MER-B_PRoViDEData_MultiLayer\Surface\MER-B_PanCam_Sol1103-P2582_multilayer\MER-B_PanCam_Sol1103-P2582_multilayer.opcx"
     //printf "%A" attr
 
+    use form = new Form(Width = 1024, Height = 768)
+
     let a = PRo3D.ViewerApp.start form runtime signature bc   
 
     WebPart.startServer 4321 [ 
@@ -61,25 +63,27 @@ let main argv =
         path "/websocket" >=> handShake ws
         Suave.Files.browseHome
     ] 
-
-    //use ctrl = new AardvarkCefBrowser()
-    //ctrl.Dock <- DockStyle.Fill
     
-    form.WindowState <- FormWindowState.Minimized
-    form.Controls.Add (new Label()) |> ignore
-    //ctrl.StartUrl <- "http://localhost:4321/"
+    use ctrl = new AardvarkCefBrowser()
+    ctrl.Dock <- DockStyle.Fill
+    form.Controls.Add ctrl
+    //form.WindowState <- FormWindowState.Minimized
+    //form.Controls.Add (new Label()) |> ignore
+    ctrl.StartUrl <- "http://localhost:4321/"
 
    
 
-    //ctrl.ShowDevTools()
-    let p = Process.Start("chrome.exe", "--app=http://localhost:4321/")
-
-    p.Exited.Add(fun _ -> form.Close())
-
+    ctrl.ShowDevTools()
     Application.Run form
-    //Console.WriteLine("I bims der Aardvark Fallback Forms")
-    //Console.ReadLine() |> ignore
-    if p.HasExited |> not then p.Kill()
-    //sem.Wait()
+
+    //let p = Process.Start("chrome.exe", "--app=http://localhost:4321/")
+
+    //p.Exited.Add(fun _ -> form.Close())
+
+    //Application.Run form
+    ////Console.WriteLine("I bims der Aardvark Fallback Forms")
+    ////Console.ReadLine() |> ignore
+    //if p.HasExited |> not then p.Kill()
+    ////sem.Wait()
 
     0
