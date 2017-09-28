@@ -184,13 +184,16 @@ module PatchLod =
                         )
 
                     let scl = 
-                        scalarId |> Mod.map ( fun id ->                                 
+                        scalarId |> Mod.bind ( fun id ->                                 
                                 let x = p.info.Attributes |> List.tryItem id
                                 match x with
                                   | Some name ->
                                         let arr = Path.combine [n.BaseDir; "Patches"; p.info.Name; name] |> fromFile<double>
-                                        ArrayBuffer(arr.Data |> Array.map float32) :> IBuffer
-                                  | None -> ArrayBuffer([||] |> Array.map float32) :> IBuffer
+                                        let buffer = ArrayBuffer(arr.Data |> Array.map (fun a -> float32 a)) :> IBuffer
+                                        Mod.constant buffer 
+                                  | None -> 
+                                        let a  = SingleValueBuffer(Mod.constant V4f.OOOO) 
+                                        a :> IMod<_>
                             )
 
                     //let texturePath = Patch.extractTexturePath n.BaseDir p.info 0
@@ -219,15 +222,15 @@ module PatchLod =
                     //      | _           -> 0 (* handle the case of value not found *)
 
 
-                    let scalar  = ArrayBuffer(g.IndexedAttributes.[Sym.ofString("Scalar")]) 
-                                    |> prepareBuffer                        
+                    //let scalar  = ArrayBuffer(g.IndexedAttributes.[Sym.ofString("Scalar")]) 
+                    //                |> prepareBuffer                        
                           
                     ro.Indices <- BufferView(Mod.constant (idx :> IBuffer), typeof<int>) |> Some
                     
                     let attributestList = [ 
                         DefaultSemantic.Positions, BufferView(Mod.constant (pos :> IBuffer), typeof<V3f>)
                         DefaultSemantic.DiffuseColorCoordinates, BufferView(Mod.constant (tc :> IBuffer), typeof<V2f>)    
-                       // Sym.ofString("Scalar"), BufferView(scl, typeof<float32>)
+                        Sym.ofString("Scalar"), BufferView(scl, typeof<float32>)
                     ]
                     
                     ro.VertexAttributes <- 
