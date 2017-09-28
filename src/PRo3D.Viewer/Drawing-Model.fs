@@ -29,7 +29,7 @@ type Action =
         | Redo
         | Select                  of Guid
         | ToggleVisiblity         of Guid
-        | RemoveAnnotation        of Guid        
+        | RemoveAnnotation        of list<Index>*Guid       
         | Send
         | Export
         | Save              
@@ -54,7 +54,7 @@ type DrawingModel = {
     semantic : Semantic
 
     annotationGroups: AnnotationGroupsModel
-    annotations : plist<Annotation>
+    allAnnotations : plist<Annotation>
     exportPath : string
 
     selected : hset<Guid>
@@ -73,11 +73,19 @@ type DrawingModel = {
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
 module DrawingModel =
-    let tryGet (m:DrawingModel) key = 
-            m.annotations |> Seq.tryFind(fun x -> x.key = key)
+    //let tryGet (m:DrawingModel) key = 
+    //        m.annotations |> Seq.tryFind(fun x -> x.key = key)
 
-    let update (m : DrawingModel) (ann : Annotation) = 
-        m.annotations.AsList 
+    //let update (m : DrawingModel) (ann : Annotation) = 
+    //    m.annotations.AsList 
+    //        |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
+    //        |> PList.ofList
+
+    let tryGet (ans:plist<Annotation>) key = 
+            ans |> Seq.tryFind(fun x -> x.key = key)
+
+    let update (ans:plist<Annotation>) (ann : Annotation) = 
+        ans.AsList 
             |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
             |> PList.ofList
 
@@ -91,7 +99,7 @@ module DrawingModel =
         semantic    = Semantic.Horizon3
 
         annotationGroups = AnnotationGroupsModel.initial
-        annotations = PList.empty
+        allAnnotations = PList.empty
 
         exportPath  = @"."
 

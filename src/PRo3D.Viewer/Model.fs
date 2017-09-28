@@ -374,6 +374,23 @@ type AnnotationGroup = {
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AnnotationGroup =
+
+    let rec getAllAnnotations (root:AnnotationGroup) =
+        let anns = root.annotations
+        let l = (root.subGroups |> PList.map(fun x -> getAllAnnotations(x))) |> PList.toSeq |> Seq.concat |> Seq.concat |> PList.ofSeq
+        l |> PList.map(fun x -> anns |> PList.append x) 
+             
+
+    let tryGetChild (ag:AnnotationGroup) key = 
+        let annos = getAllAnnotations ag |> PList.toSeq |> Seq.concat |> PList.ofSeq
+        annos |> Seq.tryFind(fun x -> x.key = key)
+        
+
+    let update (ans:plist<Annotation>) (ann : Annotation) = 
+        ans.AsList 
+            |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
+            |> PList.ofList
+
     let Linear = {
         name = "Linear"
         key =  Guid.NewGuid()
@@ -458,14 +475,18 @@ module AnnotationGroup =
 [<DomainType>]
 type AnnotationGroupsModel = {
     rootGroup       : AnnotationGroup
-    activeKey       : Guid
-    activePath      : list<Index>
+    activeGroupKey       : Guid
+    activeGroupPath      : list<Index>
+    activeChildKey       : Guid
+    activeChildPath      : list<Index>
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AnnotationGroupsModel =
     let initial = {
         rootGroup = AnnotationGroup.initRoot
-        activeKey =  Guid.Empty
-        activePath = list.Empty
+        activeGroupKey =  Guid.Empty
+        activeGroupPath = list.Empty
+        activeChildKey = Guid.Empty
+        activeChildPath = list.Empty
         }
