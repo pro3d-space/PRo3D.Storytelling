@@ -25,6 +25,19 @@ module List =
                 else x :: updateIf p f xs
             | [] -> []
 
+    let addWithoutDup e f list =
+        match List.exists f list with
+            | true -> list
+            | false -> e :: list
+
+module PList =
+    let append' (a : plist<_>) (b : plist<_>) =
+        let rec doIt xs =
+            match xs with
+                | x::xs -> PList.prepend x (doIt xs)
+                | [] -> b
+        doIt (PList.toList a)
+
 
 
 type Points = list<V3d>

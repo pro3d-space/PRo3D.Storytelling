@@ -28,158 +28,13 @@ open PRo3D.Surfaces
 open PRo3D.Viewer
 //open Viewer.Mutable.ModelModule.Lens
 //open Mutable.AnnotationGroupModule.Lens
-
-module PList =
-    let append (a : plist<_>) (b : plist<_>) =
-        let rec doIt xs =
-            match xs with
-                | x::xs -> PList.prepend x (doIt xs)
-                | [] -> b
-        doIt (PList.toList a)
-
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module Scene =
-    open PRo3D.Surfaces.Surface
-    open Aardvark.UI.Incremental.Svg
-    
-    let surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
-
-    let expandRelativePaths (m:Scene) =
-        // Surfaces        
-        
-        match m.scenePath with
-            | Some p ->         
-                let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
-                let surfaces = 
-                    m.surfacesModel.surfaces                            
-                    |> PList.map(
-                        fun x -> 
-                            if x.relativePaths then
-                                let p'' = Path.Combine(p', x.name)
-                                { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
-                            else x
-                        )
-                { m with surfacesModel = Surface.updateSurfaces m.surfacesModel surfaces}
-            | None -> m        
-
-    let readLine (filePath:string) =
-            use sr = new System.IO.StreamReader (filePath)
-            sr.ReadLine ()       
-
-    let fileExists filePath =
-        match System.IO.File.Exists filePath with
-            | true -> Some filePath
-            | false -> None
-    
-    let addLegacyTrafos surfaces = 
-        surfaces 
-            |> PList.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))
-            |> PList.map(fun(s,p) -> 
-                    match (fileExists p) with
-                        | Some path->
-                            let t = readLine path
-                            { s with trafo = Trafo3d.Parse(t) }
-                        | None ->
-                            s
-                        )
-
-    let getOPCxPath (surfacePath : string) = 
-        let name = Path.GetFileName surfacePath
-        Path.ChangeExtension(Path.Combine(surfacePath, name), ".opcx")
-
-    let addSurfaceAttributes surfaces = 
-        surfaces 
-            |> PList.map(fun s -> s, s.importPath |> getOPCxPath)
-            |> PList.map(fun(s,p) -> 
-                    match (fileExists p) with
-                        | Some path->        
-                            let layers = Surface.SurfaceAttributes.read path
-                            { s with 
-                                scalarLayers  = SurfaceProperties.getScalars layers
-                                textureLayers = SurfaceProperties.getTextures layers 
-                            }
-                        | None ->
-                            s
-                        )
-
-    /// appends surfaces to existing surfaces
-    let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : plist<Surface>) (m : Model) =
-            
-        //handle semantic surfaces
-        let surfaces = 
-            surfaces 
-                |> addLegacyTrafos
-                |> addSurfaceAttributes
-        
-        let surfaces = surfaces |> PList.append m.scene.surfacesModel.surfaces
-        let m = 
-            (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, surfaces)
-        
-        //handle sg surfaces
-        let sgSurfaces = 
-            surfaces
-                |> Surface.createSgSurfaces runtime signature
-                |> HMap.union m.scene.surfacesModel.sgSurfaces
-                |> Files.expandLazyKdTreePaths m.scene.scenePath
-                                       
-        let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
-
-        let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
-        surfaceModelLens.Set(m, grouped)        
-
-    /// loads surfaces given in scene - creates their sg pendants
-    let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
-        
-        let s = s |> expandRelativePaths
-
-        let sgSurfaces = Surface.createSgSurfaces runtime signature s.surfacesModel.surfaces |> Files.expandLazyKdTreePaths m.scene.scenePath
-        let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
-
-        let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
-        surfaceModelLens.Set(m, grouped)
-
-    let loadScene path m runtime signature =
-        let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
-        let m = { m with scene = s }
-
-        load runtime signature s m
-            
-    let loadLastScene m runtime signature =
-        match fileExists "./recent" with
-            | Some path  ->
-              try 
-                let r = Serialization.loadAs<Recent> path
-                let m = { m with recent = r}
-                match r.recentScenes |> HMap.toList |> List.sortByDescending (fun (_,v) -> v.writeDate) |> List.tryHead with
-                    | Some (_,scenePath) ->
-                        try
-                            loadScene scenePath.path m runtime signature        
-                        with
-                            | e ->
-                                Log.warn "Error parsing last scene: %s. loading empty" scenePath.path
-                                Log.error "%A" e.Message
-                                m
-                    | None -> 
-                        Log.warn("No recent scene found")
-                        m
-                //m
-                with e ->
-                    Aardvark.Base.Log.warn "%A. deleting recent." e
-                    System.IO.File.Delete path
-                    m
-            | _ -> 
-                Log.warn("recent scene file does not exist (yet)")
-                m
  
 module ViewerApp =
     open Surface   
     open System.Collections.Concurrent   
     open Scene    
     open Aardvark.SceneGraph.SgFSharp.Sg
-    open OpenCvSharp
-    //open Drawing.Mutable.DrawingModelModule.Lens
-    //open Viewer.Mutable.ModelModule.Lens
+    open OpenCvSharp    
         
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -244,12 +99,7 @@ module ViewerApp =
                     
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
-
-    let addToListWithoutDup e f list =
-        match List.exists f list with
-            | true -> list
-            | false -> e :: list
-    
+       
     let stashAndSaveRecent (s : SceneHandle) (model : Model) =
         let scenePaths = 
             model.recent.recentScenes                 
@@ -277,8 +127,15 @@ module ViewerApp =
 
     let refConfig : ReferenceSystemConfig<ViewConfigModel> =
         { 
-                arrowLength = ViewConfigModel.Lens.arrowLength |. NumericInput.Lens.value 
-                arrowThickness = ViewConfigModel.Lens.arrowThickness |. NumericInput.Lens.value 
+            arrowLength = ViewConfigModel.Lens.arrowLength |. NumericInput.Lens.value 
+            arrowThickness = ViewConfigModel.Lens.arrowThickness |. NumericInput.Lens.value 
+        }
+
+    let mrefConfig : ReferenceSystemApp.MInnerConfig<MViewConfigModel> =
+        {
+            getArrowLength    = fun (x:MViewConfigModel) -> x.arrowLength.value
+            getArrowThickness = fun (x:MViewConfigModel) -> x.arrowThickness.value
+            getNearDistance   = fun (x:MViewConfigModel) -> x.nearPlane.value
         }
     
     let drawingConfig : DrawingApp.SmallConfig<ReferenceSystem> =
@@ -286,6 +143,19 @@ module ViewerApp =
             up    = (ReferenceSystem.Lens.up |. V3dInput.Lens.value)
             north = ReferenceSystem.Lens.north
         }
+
+    let mdrawingConfig : DrawingApp.MSmallConfig<MViewConfigModel> =
+        {            
+            getNearPlane       = fun (x:MViewConfigModel) -> x.nearPlane.value
+            getHfov            = fun (x:MViewConfigModel) -> ((Mod.init 60.0) :> IMod<float>)
+            getMaxDipAngle     = fun (x:MViewConfigModel) -> x.maxDipAngle.value
+            getMinDipAngle     = fun (x:MViewConfigModel) -> x.minDipAngle.value
+            getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
+            getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
+            getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
+        }
+
+    
 
     let navConf : Navigation.smallConfig<ViewConfigModel, ReferenceSystem> =
         {
@@ -325,11 +195,11 @@ module ViewerApp =
                     match m.drawing.selectedAnnotation with
                         | Some a -> 
                             let a' = AnnotationProperties.update a msg
-                            //let annotations' = 
-                            //    m.drawing.annotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun x -> a')       
+                            let annotations' = 
+                                m.drawing.allAnnotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a') |> PList.ofList   
                             
                             let drawing' = 
-                                { m.drawing with selectedAnnotation = Some a'} //; annotations = annotations' |> PList.ofList }
+                                { m.drawing with selectedAnnotation = Some a'; allAnnotations = annotations'} //; annotations = annotations' |> PList.ofList }
 
                             { m with drawing = drawing' }
                         | None -> m                                                
@@ -347,7 +217,7 @@ module ViewerApp =
             | ImportMeasurements,_,_ ->
                 match Dialogs.openDialog w with
                     | Some x -> 
-                        let newAnnotations = m.drawing.annotationGroups.rootGroup.annotations |> PList.append (MeasurementsImporter.startImporter x)
+                        let newAnnotations = m.drawing.annotationGroups.rootGroup.annotations |> PList.append' (MeasurementsImporter.startImporter x)
                         let drawing' = {m.drawing with annotationGroups = { m.drawing.annotationGroups with rootGroup = { m.drawing.annotationGroups.rootGroup with annotations = newAnnotations}}}
                         { m with drawing = drawing' }
                     | None -> m   
@@ -479,7 +349,7 @@ module ViewerApp =
                     
                     { m with drawing = d; picking = false } |> stash
             | SetInteraction t,_,_ -> { m with interaction = t }
-            | ReferenceSystemMessage a,_,_ ->                 
+            | ReferenceSystemMessage a,_,_ ->
                                 
                 let refsystem',_ = ReferenceSystemApp.update m.scene.config refConfig m.scene.referenceSystem a
                 let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
@@ -551,34 +421,15 @@ module ViewerApp =
 
                         return { 
                             selectedTexture = texture |> Option.map(fun x -> x.index)
-                            selectedScalar  = scalar  |> Option.map(fun x -> x.index)
-                            //minScalar = 
-                            //    match scalar with
-                            //        | Some s -> s.definedRange.Min
-                            //        | None -> 0.0
-                                     
-                            //maxScalar = 
-                            //    match scalar with
-                            //        | Some s -> s.definedRange.Max
-                            //        | None -> 1.0
+                            selectedScalar  = scalar  |> Option.map(fun x -> x.index)                           
                         }
                     })
                 |> pickable' pickable
-                |> Sg.noEvents
-                //|> Sg.andAlso (
-                //    Sg.wireBox (Mod.constant C4b.VRVisGreen) globalBB
-                //            |> Sg.noEvents
-                //            |> Sg.noEvents
-                //            |> Sg.shader {
-                //                    do! Shader.stableTrafo
-                //                    do! DefaultSurfaces.vertexColor                                                                     
-                //                }
-                //    ) 
+                |> Sg.noEvents                
                 |> Sg.withEvents [
                         SceneEventKind.Down, (
                             fun sceneHit -> 
-                                true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])
-                        // Sg.onMouseDownEvt (fun sceneHit -> PickSurface (sceneHit,(surface.surface.name |> Mod.force)))
+                                true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])                        
                     ]
         sg
                 
@@ -631,12 +482,7 @@ module ViewerApp =
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
-        let refSystemInner : ReferenceSystemApp.MInnerConfig<MViewConfigModel> =
-            {
-                getArrowLength    = fun (x:MViewConfigModel) -> x.arrowLength.value
-                getArrowThickness = fun (x:MViewConfigModel) -> x.arrowThickness.value
-                getNearDistance   = fun (x:MViewConfigModel) -> x.nearPlane.value
-            }
+        
         
         let cam = Mod.map2 Camera.create m.scene.navigation.camera.view (frustum m)
 
@@ -650,40 +496,25 @@ module ViewerApp =
                     attribute "style" "width:70%; height: 100%; float:left"; ] 
             ]
 
-        let sconf : DrawingApp.MSmallConfig<MViewConfigModel> =
-            {            
-                getNearPlane       = fun (x:MViewConfigModel) -> x.nearPlane.value
-                getHfov            = fun (x:MViewConfigModel) -> ((Mod.init 60.0) :> IMod<float>)
-                getMaxDipAngle     = fun (x:MViewConfigModel) -> x.maxDipAngle.value
-                getMinDipAngle     = fun (x:MViewConfigModel) -> x.minDipAngle.value
-                getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
-                getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
-                getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
-            }
-         
         let overlayed =
             let annotations =
-                DrawingApp.Sg.view m.scene.config sconf m.drawing m.scene.navigation.camera.view
+                DrawingApp.Sg.view m.scene.config mdrawingConfig m.drawing m.scene.navigation.camera.view
                     |> Sg.map DrawingMessage
-                    |> Sg.fillMode (Mod.constant FillMode.Fill)//m.rendering.fillMode
-                    |> Sg.cullMode (Mod.constant CullMode.None)//m.rendering.cullMode
+                    |> Sg.fillMode (Mod.constant FillMode.Fill)
+                    |> Sg.cullMode (Mod.constant CullMode.None)
 
             let refSystem =
-                ReferenceSystemApp.Sg.view 
+                ReferenceSystemApp.Sg.view
                     m.scene.config
-                    refSystemInner
-                    m.scene.referenceSystem                                   
+                    mrefConfig
+                    m.scene.referenceSystem
                     m.scene.navigation.camera.view
                 |> Sg.map ReferenceSystemMessage
 
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation
 
-            [            
-                annotations
-                refSystem
-                exploreCenter
-            ] |> Sg.ofList
+            [ annotations; refSystem; exploreCenter] |> Sg.ofList
 
         let surfaces2 (sgSurfaces:amap<Guid,MSgSurface>) frustum lodcolor =            
             sgSurfaces
@@ -731,77 +562,11 @@ module ViewerApp =
                     yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
 
                 yield RenderCommand.SceneGraph overlayed
-            }
-
-            //alist {
-            //    for groups in surfaces2 do
-            //        yield 0
-
-            //}
-                       
-        let surfaces = 
-            viewSurfacesSg m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.surfacesModel.selectedSurface) (m.scene.config.lodColoring)
-         
-        //let renderControl =
-        //    Incremental.renderControl cam att 
-
-        //surfaces |> group by priority |> (priority * sg)
-
-        let cmds = 
-
-            //let abc = surfaces2
-            //Log.line "%A" abc
-
-            alist {
-                yield RenderCommand.SceneGraph overlayed
-                yield RenderCommand.SceneGraph surfaces
-            }
+            }                                           
 
         let control = 
             DomNode.RenderControl(att, cam, cmds2, None)
-
-        //let control =
-        //    CameraController.withControls m.scene.navigation.camera CameraAction (frustum m) control
-
-        let sceneTools =
-            div [clazz "ui buttons inverted"] [ 
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Save Scene"; onMouseClick (fun _ -> SaveScene)] [
-                                i [clazz "large save icon" ] [] ]
-                )
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Save Scene As"; onMouseClick (fun _ -> SaveAs)] [
-                        i [clazz "large icons"] [
-                            i [clazz "save icon"] [] 
-                            i [clazz "top right corner arrow down icon"] [] 
-                        ]
-                    ]
-                )
-                
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Open Scene"; onMouseClick (fun _ -> OpenScene)] [
-                                i [clazz "large folder outline icon" ] [] ]
-                )
-
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "New Scene"; onMouseClick (fun _ -> NewScene)] [
-                                i [clazz "large file outline icon"] [] ]
-                )
-            ]
-            
-        let openSurface =
-            [ text "browse"] |> button [
-                clazz "ui button"
-                attribute "data-content" "text text text"
-                onClick (fun _ -> ImportSurface)
-             ] 
-
-        let importMeasurements =
-            [ text "browse"] |> button [ 
-                clazz "ui button"
-                onClick (fun _ -> ImportMeasurements)
-             ] 
-
+        
         let annotationProperties (model:MModel) =
             adaptive {
                 let! bla = model.drawing.selectedAnnotation
@@ -818,7 +583,7 @@ module ViewerApp =
                 let! bla = model.drawing.selectedAnnotation
                 let opt = 
                     match bla with
-                        | Some a -> DipAndStrike.view a
+                        | Some a -> DipAndStrike.viewUI a
                         | None   -> div[][]
 
                 return (opt |> UI.map DnSProperties)
@@ -829,7 +594,7 @@ module ViewerApp =
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
                 
                 GuiEx.accordion "Annotations" "Write" true [
-                    DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
+                    DrawingApp.UI.viewAnnotations m.drawing |> UI.map DrawingMessage
                 ]
                 GuiEx.accordion "Properties" "Content" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(annotationProperties m))
@@ -866,11 +631,12 @@ module ViewerApp =
                 ]
             ]            
             
-        let tabs = GuiEx.tabbed [clazz "ui inverted segment"] [
-                            ("Data", SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions)
-                            ("Annotations", annotationUI) //  annotationGroupsUI annotationUI
-                            ("Config", configUI)
-                        ] "Data" 
+        let tabs = 
+            GuiEx.tabbed [clazz "ui inverted segment"] [
+                ("Data", SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions)
+                ("Annotations", annotationUI) //  annotationGroupsUI annotationUI
+                ("Config", configUI)
+            ] "Data" 
       
         let topMenu = [
              Html.Layout.horizontal [
@@ -881,7 +647,7 @@ module ViewerApp =
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
              DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
 
-             button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
+             //button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
              //button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
         ] 
                      
@@ -894,6 +660,50 @@ module ViewerApp =
                 ]            
             ]
         
+        //Sidebar adorner
+                
+        let sceneTools =
+            div [clazz "ui buttons inverted"] [ 
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Save Scene"; onMouseClick (fun _ -> SaveScene)] [
+                                i [clazz "large save icon" ] [] 
+                    ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Save Scene As"; onMouseClick (fun _ -> SaveAs)] [
+                        i [clazz "large icons"] [
+                            i [clazz "save icon"] [] 
+                            i [clazz "top right corner arrow down icon"] [] 
+                        ]
+                    ]
+                )
+                
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Open Scene"; onMouseClick (fun _ -> OpenScene)] [
+                        i [clazz "large folder outline icon" ] [] 
+                    ]
+                )
+
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "New Scene"; onMouseClick (fun _ -> NewScene)] [
+                        i [clazz "large file outline icon"] [] 
+                    ]
+                )
+            ]
+
+        let openSurface =
+            [ text "browse"] |> button [
+                clazz "ui button"
+                attribute "data-content" "text text text"
+                onClick (fun _ -> ImportSurface)
+            ] 
+
+        let importMeasurements =
+            [ text "browse"] |> button [ 
+                clazz "ui button"
+                onClick (fun _ -> ImportMeasurements)
+            ] 
+
         let usingContext =             
             "$('.context.example .ui.sidebar')
               .sidebar({
@@ -902,11 +712,10 @@ module ViewerApp =
               .sidebar('attach events', '.context.example .menu.blarg .item.blarg')
               .sidebar('setting', 'transition', 'Overlay')
             ;"
-
-        //Sidebar adorner
+        
         let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "./semui-overrides.css" }
 
-        let recentStuff =
+        let recentScenes =
              div[] [
                     onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
                             button [
@@ -931,13 +740,14 @@ module ViewerApp =
             let sections = [
                 "blank", [div[style "height:15px"][]]                
                 "Scene", [sceneTools]
-                "Recent", [recentStuff]
+                "Recent", [recentScenes]
                 "Add Surface", [openSurface]
                 "Import Measurements", [importMeasurements]]                              
             onBoot usingContext (                            
                 body [clazz "context example"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
         ))
-                                                              
+               
+    /// Thread Pool stuff
     let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =         
         //let imports =
         //    proclist {
@@ -965,9 +775,7 @@ module ViewerApp =
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        
-        let m = Scene.loadLastScene m runtime signature        
-       // let path = @"D:\Aardwork\Exomars\cd - Copy\Surface\Cape_Desire_RGB"
-        //let m = Surface.import' runtime signature [Surface.mk path] m |> lookAtData
+        let m = Scene.loadLastScene m runtime signature       
         
         App.start {
             unpersist = Unpersist.instance

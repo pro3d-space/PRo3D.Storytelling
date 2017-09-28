@@ -295,7 +295,8 @@ module DrawingApp =
                             HSet.add id hset.Empty, AnnotationGroup.tryGetChild model.annotationGroups.rootGroup id //DrawingModel.tryGet model id
                     else
                         HSet.add id selected, AnnotationGroup.tryGetChild model.annotationGroups.rootGroup id //DrawingModel.tryGet model id
-                        
+
+                let ann = DrawingModel.tryGet model.allAnnotations id   
                 { model with selected = selection; selectedAnnotation = ann }  
             | Nop, _ -> model
             | AnnotationPropertiesMsg msg,_ ->                
@@ -407,54 +408,56 @@ module DrawingApp =
                 )
             ] 
 
-        //let viewAnnotations (model:MDrawingModel) = 
+        let viewAnnotations (model:MDrawingModel) = 
                         
-        //    Incremental.div 
-        //            (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (
-                            
-        //                alist {                                                                     
-        //                    for a in model.annotations do 
+            Incremental.div 
+                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (                      
+                        alist {                                                                     
+                            for a in model.allAnnotations do 
                                                                         
-        //                        let! sem = a.semantic
-        //                        let! c = mkColor model a
+                                let! sem = a.semantic
+                                let! c = mkColor model a
 
-        //                        let bgc = sprintf "color: %s" (Html.ofC4b c)
+                                let bgc = sprintf "color: %s" (Html.ofC4b c)
                                 
-        //                        let! visible = a.visible
-        //                        let visibleIcon = if visible then "unhide icon" else "hide icon"
-        //                        let select = fun _ -> Select (a.key |> Mod.force)
+                                let! visible = a.visible
+                                let visibleIcon = if visible then "unhide icon" else "hide icon"
+                                let select = fun _ -> Select (a.key |> Mod.force)
 
-        //                        yield div [clazz "item"] [
-        //                                i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
-        //                                div [clazz "content"] [
-        //                                    let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
-        //                                    let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
-        //                                    yield Incremental.div (AttributeMap.ofList [clazz "header"]) (
-        //                                        alist {
-        //                                            yield Incremental.text header
-        //                                            yield 
-        //                                                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-        //                                                    i [clazz visibleIcon
-        //                                                       attribute "title" "Toggle"
-        //                                                       attribute "data-position" "left center"
-        //                                                       attribute "data-variation" "mini"
-        //                                                       onClick (fun _ -> ToggleVisiblity (a.key |> Mod.force))][] 
-        //                                                )
-        //                                            yield 
-        //                                                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-        //                                                    i [clazz "Remove icon"
-        //                                                       attribute "title" "Remove"
-        //                                                       attribute "data-position" "left center"
-        //                                                       attribute "data-variation" "mini"
-        //                                                       onClick (fun _ -> RemoveAnnotation (a.key |> Mod.force))][] 
-        //                                                )
-        //                                        } 
-        //                                    ) 
-        //                                    yield div [clazz "description"] [Incremental.text desc]      
-        //                                ]
-        //                            ]
-        //                }     
-        //        ) 
+                                yield div [clazz "item"] [
+                                        i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                                        div [clazz "content"] [
+                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
+                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
+                                            yield Incremental.div (AttributeMap.ofList [clazz "header"]) (
+                                                alist {
+                                                    yield Incremental.text header
+                                                    yield 
+                                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                                                            i [clazz visibleIcon
+                                                               attribute "title" "Toggle"
+                                                               attribute "data-position" "left center"
+                                                               attribute "data-variation" "mini"
+                                                               onClick (fun _ -> ToggleVisiblity (a.key |> Mod.force))][] 
+                                                        )
+                                                    yield 
+                                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                                                            i [clazz "Remove icon"
+                                                               attribute "title" "Remove"
+                                                               attribute "data-position" "left center"
+                                                               attribute "data-variation" "mini"
+                                                            ][]
+                                                              // onClick (fun _ -> RemoveAnnotation (a.key |> Mod.force))][] 
+                                                        )
+                                                } 
+                                            ) 
+                                            yield div [clazz "description"] [Incremental.text desc]      
+                                        ]
+                                    ]
+                        }     
+                ) 
+
+        
 
         let viewAnnotationsInGroup (path:list<Index>) (model:MDrawingModel)(select : MAnnotation -> 'outer)(lift : AnnotationGroups.Action -> 'outer) (annotations: alist<MAnnotation>) : alist<DomNode<'outer>> =
                         
@@ -595,8 +598,9 @@ module DrawingApp =
                             }
                          )                         
                          Incremental.div (AttributeMap.ofAMap childrenAttribs) (
+                            AList.empty
                             //viewanno
-                            viewAnnotationsInGroup path model (fun x -> x.key |> Mod.force |> Select) (fun x -> AnnotationGroupsMessage x) group.annotations 
+                            //viewAnnotationsInGroup path model (fun x -> x.key |> Mod.force |> Select) (fun x -> AnnotationGroupsMessage x) group.annotations 
                             //alist { 
                             // let! isExpanded = group.expanded
                             // if isExpanded then yield! viewAnnotationsInGroup path model (fun x -> x.key |> Mod.force |> Select) (fun x -> AnnotationGroupsMessage x) group.annotations 

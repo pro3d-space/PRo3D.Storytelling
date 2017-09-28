@@ -2,7 +2,7 @@
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>    
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>db616eb9-d27b-4a71-9e60-bda7cba59692</ProjectGuid>
@@ -85,6 +85,7 @@
     <Compile Include="ConfigTestModel.fs" />
     <Compile Include="ConfigTest.fs" />
     <Compile Include="Viewer-Model.fs" />
+    <Compile Include="Scene.fs" />
     <Compile Include="Viewer.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />

@@ -169,6 +169,19 @@ module AnnotationGroups =
     let mkColor (activeId : IMod<Guid>) (groupId : IMod<Guid>) = 
         if activeId = groupId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
    
+    let wrapToolTip (text:string) (dom:DomNode<'a>) : DomNode<'a> =
+
+        let attr = 
+            [ attribute "title" text
+              attribute "data-position" "left center"
+              attribute "data-variation" "mini" ] 
+                |> AttributeMap.ofList
+                |> AttributeMap.union dom.Attributes                
+                
+        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
+            dom.WithAttributes attr     
+        )
+
     let rec viewTree path (group : MAnnotationGroup) (model : MAnnotationGroupsModel) =
 
         alist {
@@ -194,15 +207,17 @@ module AnnotationGroups =
                                 attribute "data-variation" "mini"
                                 onMouseClick (fun _ -> AddGroup path)] [] 
                             )
-                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
-                            i [ clazz "remove icon" 
-                                attribute "title" "Remove Group"
-                                attribute "data-position" "left center"
-                                attribute "data-variation" "mini" 
-                                onMouseClick (fun _ -> RemoveGroup path)] [] 
-                            )
+                        //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
+                        //    i [ clazz "remove icon" 
+                        //        attribute "title" "Remove Group"
+                        //        attribute "data-position" "left center"
+                        //        attribute "data-variation" "mini" 
+                        //        onMouseClick (fun _ -> RemoveGroup path)] [] 
+                        //    )
+
+                        i [ clazz "remove icon"; onMouseClick (fun _ -> RemoveGroup path)] [] |> wrapToolTip "Remove Group"
                 ]
-            
+                        
      
             let itemAttributes =
                 amap {
