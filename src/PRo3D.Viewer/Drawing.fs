@@ -465,6 +465,7 @@ module DrawingApp =
                             for a in annotations do 
                                                                         
                                 //let! sem = a.semantic
+
                                 let! c = mkColor model a
 
                                 let bgc = sprintf "color: %s" (Html.ofC4b c)

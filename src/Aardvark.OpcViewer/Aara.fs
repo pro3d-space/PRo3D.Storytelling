@@ -77,6 +77,7 @@ module Aara =
                     | "V3d" -> f |> loadRaw<V3d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V3d>
                     | "V2d" -> f |> loadRaw<V2d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V2d>
                     | "double" -> f |> loadRaw<double> elementCount |> PrimitiveValueConverter.arrayConverter typeof<double>
+                //    | "float" -> f |> loadRaw<float32> elementCount |> PrimitiveValueConverter.arrayConverter typeof<float32>
                     | _ -> failwith ""
 
 
@@ -191,25 +192,42 @@ module Patch =
         let sw = System.Diagnostics.Stopwatch()
         sw.Start()
         let positions = Path.combine [baseDir; "Patches"; p.Name; p.Positions] |> fromFile<V3f>
-        let coordinates = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>
-  //      let scalars = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Attributes)] |> fromFile<float>
+        let coordinates = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>        
+        
+
+        let scalars = 
+            List.tryHead p.Attributes 
+                |> Option.map(fun x -> Path.combine [baseDir; "Patches"; p.Name; x] |> fromFile<double>)       
+
         sw.Stop()
 
         let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
 
         let index = createIndex (positions.AsMatrix())
 
+        let a : float = 0.0
+
+        let indexAttributes =
+            let def = [
+                DefaultSemantic.Positions, positions.Data :> Array
+                DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array            
+            ]
+
+            //let def = 
+            //    match scalars with
+            //      | Some a -> List.append def [Sym.ofString("Scalar"), (a.Data |> Array.map (fun x -> float32 x) :> Array)]
+            //      | None   -> def
+
+            def |> SymDict.ofList 
+
+
         let geometry =
             IndexedGeometry(
-                Mode = IndexedGeometryMode.TriangleList,
-                IndexArray = index,
-                IndexedAttributes =
-                    SymDict.ofList [
-                        DefaultSemantic.Positions, positions.Data :> Array
-                        DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
-                    //    DefaultSemantic.Normals, scalars.Data :> Array
-                    ])
-                    
+                Mode              = IndexedGeometryMode.TriangleList,
+                IndexArray        = index,
+                IndexedAttributes = indexAttributes
+            )
+                                        
         geometry, sw.MicroTime
 
     let extractTexturePath (baseDir : string) (patchInfo : PatchFileInfo) (texNumber : int) =

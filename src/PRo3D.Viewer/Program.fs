@@ -65,15 +65,21 @@ let main argv =
     //use ctrl = new AardvarkCefBrowser()
     //ctrl.Dock <- DockStyle.Fill
     
+    form.WindowState <- FormWindowState.Minimized
     form.Controls.Add (new Label()) |> ignore
     //ctrl.StartUrl <- "http://localhost:4321/"
 
    
 
     //ctrl.ShowDevTools()
-    Process.Start("chrome.exe", "--app=http://localhost:4321/") |> ignore
+    let p = Process.Start("chrome.exe", "--app=http://localhost:4321/")
+
+    p.Exited.Add(fun _ -> form.Close())
+
     Application.Run form
     //Console.WriteLine("I bims der Aardvark Fallback Forms")
     //Console.ReadLine() |> ignore
-    System.Environment.Exit 0
+    if p.HasExited |> not then p.Kill()
+    //sem.Wait()
+
     0
