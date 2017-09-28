@@ -26,6 +26,8 @@ open PRo3D.Navigation2
 open PRo3D.ReferenceSystem
 open PRo3D.Surfaces
 open PRo3D.Viewer
+//open Viewer.Mutable.ModelModule.Lens
+//open Mutable.AnnotationGroupModule.Lens
 
 module PList =
     let append (a : plist<_>) (b : plist<_>) =
@@ -176,6 +178,8 @@ module ViewerApp =
     open Scene    
     open Aardvark.SceneGraph.SgFSharp.Sg
     open OpenCvSharp
+    //open Drawing.Mutable.DrawingModelModule.Lens
+    //open Viewer.Mutable.ModelModule.Lens
         
     type PropertyActions =
         | DrawingMessage    of Drawing.Action
@@ -321,11 +325,11 @@ module ViewerApp =
                     match m.drawing.selectedAnnotation with
                         | Some a -> 
                             let a' = AnnotationProperties.update a msg
-                            let annotations' = 
-                                m.drawing.annotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun x -> a')       
+                            //let annotations' = 
+                            //    m.drawing.annotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun x -> a')       
                             
                             let drawing' = 
-                                { m.drawing with selectedAnnotation = Some a'; annotations = annotations' |> PList.ofList }
+                                { m.drawing with selectedAnnotation = Some a'} //; annotations = annotations' |> PList.ofList }
 
                             { m with drawing = drawing' }
                         | None -> m                                                
@@ -342,7 +346,10 @@ module ViewerApp =
                         Scene.import' runtime signature surfaces m  
             | ImportMeasurements,_,_ ->
                 match Dialogs.openDialog w with
-                    | Some x -> { m with drawing = {m.drawing with annotations = m.drawing.annotations |> PList.append (MeasurementsImporter.startImporter x)}}
+                    | Some x -> 
+                        let newAnnotations = m.drawing.annotationGroups.rootGroup.annotations |> PList.append (MeasurementsImporter.startImporter x)
+                        let drawing' = {m.drawing with annotationGroups = { m.drawing.annotationGroups with rootGroup = { m.drawing.annotationGroups.rootGroup with annotations = newAnnotations}}}
+                        { m with drawing = drawing' }
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     

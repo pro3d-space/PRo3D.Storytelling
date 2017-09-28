@@ -17,9 +17,10 @@ module AnnotationGroups =
         | ToggleExpand of list<Index>
         | AddGroup of list<Index>
         | RemoveGroup of list<Index>
-        | AddChild of list<Index>*Annotation    // TODO: change Annotation to ChildNode (|Annotation | Surface)
-        | RemoveChild of list<Index>*Annotation // TODO: change Annotation to ChildNode (|Annotation | Surface)
-        | ToggleChildVisibility of list<Index>
+        | AddChild of list<Index>*plist<Annotation>    // TODO: change Annotation to ChildNode (|Annotation | Surface)
+        | RemoveChild of Guid*list<Index> // TODO: change Annotation to ChildNode (|Annotation | Surface)
+        | ToggleChildVisibility of Guid*list<Index> // TODO: change Annotation to ChildNode (|Annotation | Surface)
+        | ActiveChild    of Guid*list<Index>
         | Nop
 
 
@@ -63,11 +64,30 @@ module AnnotationGroups =
         
     let removeGroup (ag:AnnotationGroup) (id:Guid) = ag.subGroups |> PList.filter (fun x -> x.key <> id) 
     let removeAnnotation (ans:plist<Annotation>) (id:Guid) = ans |> PList.filter (fun x -> x.key <> id) 
+    let toggleAnnotation (ans:plist<Annotation>) (id:Guid) = 
+        ans |> PList.map( fun x -> if x.key = id then { key = x.key
+                                                        modelTrafo = x.modelTrafo
+                                                        geometry = x.geometry
+                                                        projection = x.projection
+                                                        semantic = x.semantic
+                                                        points = x.points
+                                                        segments = x.segments
+                                                        color = x.color
+                                                        thickness = x.thickness
+                                                        results = x.results
+                                                        dnsResults = x.dnsResults
+                                                        visible = not x.visible
+                                                        showDns = x.showDns
+                                                        text = x.text
+                                                        surfaceName = x.surfaceName
+                                                    }
+                                                else x )
         
     let update (model : AnnotationGroupsModel) (action : Action) =
         printfn "action: %A" action
         match action with
-            | ActiveGroup (g, p) -> { model with activeKey = g; activePath = p } 
+            | ActiveGroup (g, p) -> { model with activeGroupKey = g; activeGroupPath = p } 
+            | ActiveChild (g, p) -> { model with activeChildKey = g; activeChildPath = p } 
             | ToggleExpand p -> 
                 let funcT = (function x -> { name = x.name
                                              key = x.key
@@ -105,33 +125,55 @@ module AnnotationGroups =
             | AddChild (p,c) -> 
                 let func = (function x -> {  name = x.name
                                              key = x.key
-                                             annotations = x.annotations |> PList.prepend c
+                                             annotations = c //x.annotations |> PList.prepend c
                                              subGroups = x.subGroups
                                              visible = x.visible
                                              expanded = x.expanded
                                              })
                 { model with rootGroup = updateItemAt p func model.rootGroup }
-            | RemoveChild (p,c) -> 
-                let func = (fun (x:AnnotationGroup) (id:Guid) -> {  name = x.name
-                                                                    key = x.key
-                                                                    annotations = if PList.count x.annotations > 0 then removeAnnotation x.annotations c.key else x.annotations
-                                                                    subGroups = x.subGroups
-                                                                    visible = x.visible
-                                                                    expanded = x.expanded
-                                                                    })
-                { model with rootGroup = deleteItemAt p func model.rootGroup }
-            | ToggleChildVisibility p -> model // TODO
+            | RemoveChild (k,p) -> 
+                let func = (fun x -> {  name = x.name
+                                        key = x.key
+                                        annotations = if PList.count x.annotations > 0 then removeAnnotation x.annotations k else x.annotations
+                                        subGroups = x.subGroups
+                                        visible = x.visible
+                                        expanded = x.expanded
+                                        })
+                { model with rootGroup = updateItemAt p func model.rootGroup }
+            | ToggleChildVisibility (c,p) -> 
+                let func = (fun x -> {  name = x.name
+                                        key = x.key
+                                        annotations = if PList.count x.annotations > 0 then toggleAnnotation x.annotations c else x.annotations
+                                        subGroups = x.subGroups
+                                        visible = x.visible
+                                        expanded = x.expanded
+                                        })
+                { model with rootGroup = updateItemAt p func model.rootGroup }
             | _ -> model
     
+    let rec getAllAnnotationsFromSubGroups (root:MAnnotationGroup) = 
+        let anns = root.annotations //|> AList.map(fun x -> Mod.force)
+        let l = (root.subGroups |> AList.map(fun x -> getAllAnnotationsFromSubGroups(x))) |> AList.concat 
+        l    
     
+    let getAllAnnotations (root:MAnnotationGroup) =
+        let subAnnos = getAllAnnotationsFromSubGroups root
+        let anns = root.annotations //|> AList.map(fun x -> Mod.force)
+        subAnnos |> AList.map (fun x -> anns |> AList.append x) |> AList.concat
+
+    //let tryGetChild (ag:AnnotationGroup) key = 
+    //    let annos = getAllAnnotations ag |> PList.toSeq |> Seq.concat |> PList.ofSeq
+    //    annos |> Seq.tryFind(fun x -> x.key = key)
+        
+
     let mkColor (activeId : IMod<Guid>) (groupId : IMod<Guid>) = 
-        if activeId = groupId then Mod.constant C4b.Red else Mod.constant C4b.White
+        if activeId = groupId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
    
     let rec viewTree path (group : MAnnotationGroup) (model : MAnnotationGroupsModel) =
 
         alist {
 
-            let! c = mkColor model.activeKey group.key
+            let! c = mkColor model.activeGroupKey group.key
             let color = sprintf "color: %s" (Html.ofC4b c)
             let c = sprintf "color: %s" (Html.ofC4b C4b.White)
             let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups

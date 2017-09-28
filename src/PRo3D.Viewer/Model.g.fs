@@ -653,20 +653,26 @@ module Mutable =
         inherit obj()
         let mutable __current = __initial
         let _rootGroup = MAnnotationGroup.Create(__initial.rootGroup)
-        let _activeKey = ResetMod.Create(__initial.activeKey)
-        let _activePath = ResetMod.Create(__initial.activePath)
+        let _activeGroupKey = ResetMod.Create(__initial.activeGroupKey)
+        let _activeGroupPath = ResetMod.Create(__initial.activeGroupPath)
+        let _activeChildKey = ResetMod.Create(__initial.activeChildKey)
+        let _activeChildPath = ResetMod.Create(__initial.activeChildPath)
         
         member x.rootGroup = _rootGroup
-        member x.activeKey = _activeKey :> IMod<_>
-        member x.activePath = _activePath :> IMod<_>
+        member x.activeGroupKey = _activeGroupKey :> IMod<_>
+        member x.activeGroupPath = _activeGroupPath :> IMod<_>
+        member x.activeChildKey = _activeChildKey :> IMod<_>
+        member x.activeChildPath = _activeChildPath :> IMod<_>
         
         member x.Update(v : PRo3D.AnnotationGroupsModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
                 __current <- v
                 
                 MAnnotationGroup.Update(_rootGroup, v.rootGroup)
-                ResetMod.Update(_activeKey,v.activeKey)
-                ResetMod.Update(_activePath,v.activePath)
+                ResetMod.Update(_activeGroupKey,v.activeGroupKey)
+                ResetMod.Update(_activeGroupPath,v.activeGroupPath)
+                ResetMod.Update(_activeChildKey,v.activeChildKey)
+                ResetMod.Update(_activeChildPath,v.activeChildPath)
                 
         
         static member Create(__initial : PRo3D.AnnotationGroupsModel) : MAnnotationGroupsModel = MAnnotationGroupsModel(__initial)
@@ -689,15 +695,27 @@ module Mutable =
                     override x.Set(r,v) = { r with rootGroup = v }
                     override x.Update(r,f) = { r with rootGroup = f r.rootGroup }
                 }
-            let activeKey =
+            let activeGroupKey =
                 { new Lens<PRo3D.AnnotationGroupsModel, System.Guid>() with
-                    override x.Get(r) = r.activeKey
-                    override x.Set(r,v) = { r with activeKey = v }
-                    override x.Update(r,f) = { r with activeKey = f r.activeKey }
+                    override x.Get(r) = r.activeGroupKey
+                    override x.Set(r,v) = { r with activeGroupKey = v }
+                    override x.Update(r,f) = { r with activeGroupKey = f r.activeGroupKey }
                 }
-            let activePath =
+            let activeGroupPath =
                 { new Lens<PRo3D.AnnotationGroupsModel, Microsoft.FSharp.Collections.list<Aardvark.Base.Index>>() with
-                    override x.Get(r) = r.activePath
-                    override x.Set(r,v) = { r with activePath = v }
-                    override x.Update(r,f) = { r with activePath = f r.activePath }
+                    override x.Get(r) = r.activeGroupPath
+                    override x.Set(r,v) = { r with activeGroupPath = v }
+                    override x.Update(r,f) = { r with activeGroupPath = f r.activeGroupPath }
+                }
+            let activeChildKey =
+                { new Lens<PRo3D.AnnotationGroupsModel, System.Guid>() with
+                    override x.Get(r) = r.activeChildKey
+                    override x.Set(r,v) = { r with activeChildKey = v }
+                    override x.Update(r,f) = { r with activeChildKey = f r.activeChildKey }
+                }
+            let activeChildPath =
+                { new Lens<PRo3D.AnnotationGroupsModel, Microsoft.FSharp.Collections.list<Aardvark.Base.Index>>() with
+                    override x.Get(r) = r.activeChildPath
+                    override x.Set(r,v) = { r with activeChildPath = v }
+                    override x.Update(r,f) = { r with activeChildPath = f r.activeChildPath }
                 }

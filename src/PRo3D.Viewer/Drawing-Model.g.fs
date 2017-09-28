@@ -20,7 +20,7 @@ module Mutable =
         let _geometry = ResetMod.Create(__initial.geometry)
         let _semantic = ResetMod.Create(__initial.semantic)
         let _annotationGroups = PRo3D.Mutable.MAnnotationGroupsModel.Create(__initial.annotationGroups)
-        let _annotations = MList.Create(__initial.annotations, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
+        let _allAnnotations = MList.Create(__initial.allAnnotations, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
         let _exportPath = ResetMod.Create(__initial.exportPath)
         let _selected = MSet.Create(__initial.selected)
         let _selectedAnnotation = MOption.Create(__initial.selectedAnnotation, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
@@ -35,7 +35,7 @@ module Mutable =
         member x.geometry = _geometry :> IMod<_>
         member x.semantic = _semantic :> IMod<_>
         member x.annotationGroups = _annotationGroups
-        member x.annotations = _annotations :> alist<_>
+        member x.allAnnotations = _allAnnotations :> alist<_>
         member x.exportPath = _exportPath :> IMod<_>
         member x.selected = _selected :> aset<_>
         member x.selectedAnnotation = _selectedAnnotation :> IMod<_>
@@ -54,7 +54,7 @@ module Mutable =
                 ResetMod.Update(_geometry,v.geometry)
                 ResetMod.Update(_semantic,v.semantic)
                 PRo3D.Mutable.MAnnotationGroupsModel.Update(_annotationGroups, v.annotationGroups)
-                MList.Update(_annotations, v.annotations)
+                MList.Update(_allAnnotations, v.allAnnotations)
                 ResetMod.Update(_exportPath,v.exportPath)
                 MSet.Update(_selected, v.selected)
                 MOption.Update(_selectedAnnotation, v.selectedAnnotation)
@@ -119,11 +119,11 @@ module Mutable =
                     override x.Set(r,v) = { r with annotationGroups = v }
                     override x.Update(r,f) = { r with annotationGroups = f r.annotationGroups }
                 }
-            let annotations =
+            let allAnnotations =
                 { new Lens<PRo3D.Drawing.DrawingModel, Aardvark.Base.plist<PRo3D.Annotation>>() with
-                    override x.Get(r) = r.annotations
-                    override x.Set(r,v) = { r with annotations = v }
-                    override x.Update(r,f) = { r with annotations = f r.annotations }
+                    override x.Get(r) = r.allAnnotations
+                    override x.Set(r,v) = { r with allAnnotations = v }
+                    override x.Update(r,f) = { r with allAnnotations = f r.allAnnotations }
                 }
             let exportPath =
                 { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.string>() with
