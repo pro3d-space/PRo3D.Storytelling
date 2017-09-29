@@ -89,14 +89,8 @@ module AnnotationGroups =
             | ActiveGroup (g, p) -> { model with activeGroupKey = g; activeGroupPath = p } 
             | ActiveChild (g, p) -> { model with activeChildKey = g; activeChildPath = p } 
             | ToggleExpand p -> 
-                let funcT = (function x -> { name = x.name
-                                             key = x.key
-                                             annotations = x.annotations
-                                             subGroups = x.subGroups
-                                             visible = x.visible
-                                             expanded = not x.expanded
-                                             })
-                { model with rootGroup = updateItemAt p funcT model.rootGroup }
+                let func = (function (x:AnnotationGroup) -> { x with expanded = not x.expanded })
+                { model with rootGroup = updateItemAt p func model.rootGroup }
             | AddGroup p -> 
                 let newGroup = {    name = "newGroup" // TODO: get group name from user
                                     key =  Guid.NewGuid()
@@ -105,49 +99,19 @@ module AnnotationGroups =
                                     visible = true
                                     expanded = true
                                     }
-                let func = (function x -> { name = x.name
-                                            key = x.key
-                                            annotations = x.annotations
-                                            subGroups = PList.append newGroup x.subGroups
-                                            visible = x.visible
-                                            expanded = x.expanded
-                                            })
+                let func = (function (x:AnnotationGroup) -> { x with subGroups = PList.append newGroup x.subGroups })
                 { model with rootGroup = updateItemAt p func model.rootGroup }
             | RemoveGroup p -> 
-                let func = (fun (x:AnnotationGroup) (id:Guid) -> {  name = x.name
-                                                                    key = x.key
-                                                                    annotations = x.annotations
-                                                                    subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups
-                                                                    visible = x.visible
-                                                                    expanded = x.expanded
-                                                                })
+                let func = (fun (x:AnnotationGroup) (id:Guid) -> { x with subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups })
                 { model with rootGroup = deleteItemAt p func model.rootGroup }
             | AddChild (p,c) -> 
-                let func = (function x -> {  name = x.name
-                                             key = x.key
-                                             annotations = c //x.annotations |> PList.prepend c
-                                             subGroups = x.subGroups
-                                             visible = x.visible
-                                             expanded = x.expanded
-                                             })
+                let func = (function (x:AnnotationGroup) -> { x with annotations = c })
                 { model with rootGroup = updateItemAt p func model.rootGroup }
             | RemoveChild (k,p) -> 
-                let func = (fun x -> {  name = x.name
-                                        key = x.key
-                                        annotations = if PList.count x.annotations > 0 then removeAnnotation x.annotations k else x.annotations
-                                        subGroups = x.subGroups
-                                        visible = x.visible
-                                        expanded = x.expanded
-                                        })
+                let func = (function (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then removeAnnotation x.annotations k else x.annotations })
                 { model with rootGroup = updateItemAt p func model.rootGroup }
             | ToggleChildVisibility (c,p) -> 
-                let func = (fun x -> {  name = x.name
-                                        key = x.key
-                                        annotations = if PList.count x.annotations > 0 then toggleAnnotation x.annotations c else x.annotations
-                                        subGroups = x.subGroups
-                                        visible = x.visible
-                                        expanded = x.expanded
-                                        })
+                let func = (function (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then toggleAnnotation x.annotations c else x.annotations })
                 { model with rootGroup = updateItemAt p func model.rootGroup }
             | _ -> model
     
