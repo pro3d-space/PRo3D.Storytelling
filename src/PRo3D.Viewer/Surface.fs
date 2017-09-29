@@ -452,12 +452,15 @@ module Surface =
                 let m =
                     match model.selectedSurface with 
                         | Some s -> 
-                            let s' = SurfaceProperties.update s msg                        
+                            let s' = SurfaceProperties.update s msg 
                             let model = Surface.updateSingleSurface model s'
                             { model with selectedSurface = Some s' }
                         | None -> model
 
-                m |> updateGrouping
+                match msg with
+                  | SurfaceProperties.SetPriority _ -> m |> updateGrouping 
+                  | _ -> m
+                
             | SelectSurface id -> 
                 let surf = model.surfaces |> Seq.tryFind(fun x -> x.guid = id)
                 let surf =

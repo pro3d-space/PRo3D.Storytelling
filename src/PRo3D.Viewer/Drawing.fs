@@ -466,9 +466,7 @@ module DrawingApp =
                             
                         alist {                                                                     
                             for a in annotations do 
-                                                                        
-                                //let! sem = a.semantic
-
+                                                                                                        
                                 let! c = mkColor model a
 
                                 let bgc = sprintf "color: %s" (Html.ofC4b c)
@@ -479,36 +477,20 @@ module DrawingApp =
                                 let! key = a.key
 
                                 yield div [clazz "item"] [
-                                        i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
-                                        div [clazz "content"] [
-                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
-                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
-                                            yield Incremental.div (AttributeMap.ofList [clazz "header"]) (
-                                                alist {
-                                                    yield Incremental.text header
-                                                    yield 
-                                                        i [ clazz visibleIcon; onClick (fun _ -> lift <| AnnotationGroups.ToggleChildVisibility (key,path))] [] |> AnnotationGroups.wrapToolTip "Toggle"
-                                                        //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                                                        //    i [clazz visibleIcon
-                                                        //       attribute "title" "Toggle"
-                                                        //       attribute "data-position" "left center"
-                                                        //       attribute "data-variation" "mini"
-                                                        //       onClick (fun _ -> lift <| AnnotationGroups.ToggleChildVisibility (key,path))][]
-                                                        //)
-                                                    yield
-                                                        i [ clazz "Remove icon"; onClick (fun _ -> lift <| AnnotationGroups.RemoveChild (key,path))] [] |> AnnotationGroups.wrapToolTip "Remove"
-                                                        //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                                                        //    i [clazz "Remove icon"
-                                                        //       attribute "title" "Remove"
-                                                        //       attribute "data-position" "left center"
-                                                        //       attribute "data-variation" "mini"
-                                                        //       onClick (fun _ -> lift <| (AnnotationGroups.RemoveChild (key,path)))][]
-                                                        //)
-                                                } 
-                                            ) 
-                                            yield div [clazz "description"] [Incremental.text desc]      
-                                        ]
+                                    i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                                    div [clazz "content"] [
+                                        let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
+                                        let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
+                                        yield Incremental.div (AttributeMap.ofList [clazz "header"]) (
+                                            alist {
+                                                yield Incremental.text header
+                                                yield i [ clazz visibleIcon; onClick (fun _ -> lift <| AnnotationGroups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"                                                                                                                
+                                                yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| AnnotationGroups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
+                                            } 
+                                        ) 
+                                        yield div [clazz "description"] [Incremental.text desc]      
                                     ]
+                                ]
                         }     
                 //) 
 
@@ -528,35 +510,14 @@ module DrawingApp =
                             //alist {
                                 yield Incremental.text group.name
                                 yield 
-                                   i [ clazz icon; onClick (fun _ -> Action.AnnotationGroupsMessage( AnnotationGroups.ActiveGroup (group.key |> Mod.force, path)))] [] |> AnnotationGroups.wrapToolTip "Set active"
-                                       
-                                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
-                                    //    i [ clazz icon 
-                                    //        attribute "title" "Set active"
-                                    //        attribute "data-position" "left center"
-                                    //        attribute "data-variation" "mini"
-                                    //        onClick (fun _ -> Action.AnnotationGroupsMessage( AnnotationGroups.ActiveGroup (group.key |> Mod.force, path)))] [] 
-                                    //    )
+                                   i [ clazz icon;
+                                       onClick (fun _ -> 
+                                            AnnotationGroupsMessage(AnnotationGroups.ActiveGroup (group.key |> Mod.force, path)))
+                                     ] [] |> UI.wrapToolTip "Set active"                                                                           
                                 yield
-                                    i [ clazz "plus icon"; onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.AddGroup path))] [] |> AnnotationGroups.wrapToolTip "Add Group"
-                                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
-                                    //    i [ clazz "plus icon" 
-                                    //        attribute "title" "Add Group"
-                                    //        attribute "data-position" "left center"
-                                    //        attribute "data-variation" "mini"
-                                    //        onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.AddGroup path))] [] 
-                                    //    )
+                                    i [ clazz "plus icon"; onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.AddGroup path))] [] |> UI.wrapToolTip "Add Group"                                    
                                 yield
-                                    i [ clazz "remove icon red"; onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.RemoveGroup path))] [] |> AnnotationGroups.wrapToolTip "Remove Group"
-                                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
-                                    //    i [ clazz "remove icon red" 
-                                    //        attribute "title" "Remove Group"
-                                    //        attribute "data-position" "left center"
-                                    //        attribute "data-variation" "mini" 
-                                    //        onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.RemoveGroup path))] [] 
-                                    //    )
-                                   // }
-                            //)
+                                    i [ clazz "remove icon red"; onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.RemoveGroup path))] [] |> UI.wrapToolTip "Remove Group"                               
                     ]
             
      
