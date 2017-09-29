@@ -156,7 +156,7 @@ module PatchLod =
                         attributeParams 
                           |> Mod.map(fun x ->
                                 match x.selectedTexture with
-                                  | Some i -> i - 1
+                                  | Some i -> i
                                   | None -> 0
                           )
 
@@ -191,7 +191,7 @@ module PatchLod =
 
                     let scl = 
                         scalarId |> Mod.bind ( fun id ->                                 
-                                let x = p.info.Attributes |> List.tryItem id
+                                let x = p.info.Attributes |> List.rev |> List.tryItem id
                                 match x with
                                   | Some name ->
                                         let arr = Path.combine [n.BaseDir; "Patches"; p.info.Name; name] |> fromFile<double>

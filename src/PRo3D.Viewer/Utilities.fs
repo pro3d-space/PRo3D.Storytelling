@@ -222,6 +222,22 @@ module Sg =
             toEffect <| DefaultSurfaces.simpleLighting
         ]
 
+module UI =
+    open Aardvark.UI
+
+    let wrapToolTip (text:string) (dom:DomNode<'a>) : DomNode<'a> =
+
+        let attr = 
+            [ attribute "title" text
+              attribute "data-position" "left center"
+              attribute "data-variation" "mini" ] 
+                |> AttributeMap.ofList
+                |> AttributeMap.union dom.Attributes                
+                
+        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
+            dom.WithAttributes attr     
+        )
+
 module Console =    
 
     let print (x:'a) : 'a =

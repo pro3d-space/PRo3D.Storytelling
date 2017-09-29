@@ -38,6 +38,9 @@ module PList =
                 | [] -> b
         doIt (PList.toList a)
 
+    let tryHead (a: plist<_>) =
+        a |> PList.tryAt 0
+
 
 
 type Points = list<V3d>

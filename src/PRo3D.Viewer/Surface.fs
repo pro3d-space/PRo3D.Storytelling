@@ -80,7 +80,8 @@ module Surface =
                 | _         -> failwith "type not supported"
 
         let layers (doc : XmlDocument) =
-            doc.SelectNodes "/Aardvark/SurfaceAttributes/AttributeLayers/AttributeLayer"
+            let nodes = doc.SelectNodes "/Aardvark/SurfaceAttributes/AttributeLayers/AttributeLayer"
+            nodes
              |> Seq.cast<XmlNode>
              |> Seq.mapi parseLayer
 
