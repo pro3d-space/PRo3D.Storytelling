@@ -8,6 +8,7 @@ open Aardvark.UI.Primitives
 open Aardvark.Base.Rendering
 open Aardvark.Opc    
 open Aardvark.SceneGraph
+open DevILSharp.ILU
 
 //[<DomainType>]
 type ScalarLayer = {
@@ -100,4 +101,22 @@ module SurfaceModel =
     FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)
 
 
+module Init =
+    let quality = 
+            {
+                value = 0.0
+                min =  -2.0
+                max = 5.0
+                step = 0.1
+                format = "{0:0.0}"
+            }
+
+    let priority = 
+        {
+            value = 0.0
+            min =  0.0
+            max = 10.0
+            step = 1.0
+            format = "{0:0}"
+        }
 

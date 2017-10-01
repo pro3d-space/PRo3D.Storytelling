@@ -14,6 +14,7 @@ open PRo3D
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
+    open Aardvark.SceneGraph.SgFSharp.Sg
 
     let getSurface model guid =
         model.surfaces |> PList.toList |> List.tryFind (fun a -> a.guid = guid)
@@ -35,6 +36,34 @@ module Surface =
 
         { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
 
+    let updateSingleSurface' model (s':Surface)  =
+        let surfaces' = 
+            model.surfaces 
+                |> PList.toList 
+                |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s') 
+                |> PList.ofList
+
+        // update sgsurfaces as well !!!
+        let sgSurfaces' = 
+            model.sgSurfaces 
+                |> HMap.alter s'.guid 
+                        (fun x -> match x with 
+                                    | Some k -> Some { k with surface = s' }
+                                    | None -> None)   
+
+        // update sggroup as well !!!
+        let group' = 
+            model.sgGrouped
+              |> PList.map(fun surfs ->
+                surfs
+                |> HMap.alter s'.guid 
+                        (fun x -> match x with 
+                                    | Some k -> Some { k with surface = s' }
+                                    | None -> None)
+                )
+
+        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces'; sgGrouped = group' }
+
     let updateSurfaces model (surfaces' : plist<Surface>) =
         let sgSurfaces' =
             surfaces' 
@@ -51,6 +80,27 @@ module Surface =
                 |> List.fold (fun a b -> HMap.union a b) HMap.empty
 
         { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
+
+    let groupSurfaces (sgSurfaces : hmap<Guid, SgSurface>) =
+        sgSurfaces
+            |> HMap.toList
+            |> List.groupBy(fun (g,x) -> x.surface.priority.value)
+            |> List.map( fun (p,k) -> (p, k |> HMap.ofList))
+            |> List.sortBy fst
+            |> List.map snd
+            |> PList.ofList
+
+    let updateGrouping' (model:SurfaceModel) (s':Surface) =
+        let group' = 
+            model.sgGrouped
+              |> PList.map(fun surfs ->
+                surfs
+                |> HMap.alter s'.guid 
+                        (fun x -> match x with 
+                                    | Some k -> Some { k with surface = s' }
+                                    | None -> None)
+                )
+        { model with sgGrouped = group' }
 
     module SurfaceAttributes = 
         open System.Xml
@@ -219,25 +269,7 @@ module Surface =
         if(bb.IsInvalid) then 
             failwith (sprintf "invalid bounding box %s" (bb.ToString()))
         else bb
-
-    let qualityInit = 
-        {
-            value = 0.0
-            min =  -2.0
-            max = 5.0
-            step = 0.1
-            format = "{0:0.0}"
-        }
-
-    let priorityInit = 
-        {
-            value = 0.0
-            min =  0.0
-            max = 10.0
-            step = 1.0
-            format = "{0:0}"
-        }
-
+   
     /// creates a surface from opc folder path
     let mk path = 
         
@@ -252,8 +284,8 @@ module Surface =
             cullMode        = CullMode.None
             isVisible       = true
             relativePaths   = false
-            quality         = qualityInit
-            priority        = priorityInit
+            quality         = Init.quality
+            priority        = Init.priority
             trafo           = Trafo3d.Identity
 
             scalarLayers    = PList.empty
@@ -298,11 +330,7 @@ module Surface =
                     sgOfSurface surf sg bb kdtree)
             |> List.map (fun d -> (d.surface.guid, d))
             |> HMap.ofList
-        
-    
-    
-   
-
+                  
  module SurfaceApp =
     open System.Diagnostics
     open Aardvark.Rendering.GL.Compiler
@@ -434,17 +462,10 @@ module Surface =
             |> Seq.sortByDescending(fun (t,surf)-> surf.priority.value)
             |> Seq.tryHead
 
-    let groupSurfaces (surfaces : hmap<Guid, SgSurface>) =
-        surfaces
-            |> HMap.toList
-            |> List.groupBy(fun (g,x) -> x.surface.priority.value)
-            |> List.map( fun (p,k) -> (p, k |> HMap.ofList))
-            |> List.sortBy fst
-            |> List.map snd
-            |> PList.ofList
+    
 
     let updateGrouping (model:SurfaceModel) =
-        { model with sgGrouped = (groupSurfaces model.sgSurfaces) }
+        { model with sgGrouped = (Surface.groupSurfaces model.sgSurfaces) }
 
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
         match action with
@@ -453,7 +474,7 @@ module Surface =
                     match model.selectedSurface with 
                         | Some s -> 
                             let s' = SurfaceProperties.update s msg 
-                            let model = Surface.updateSingleSurface model s'
+                            let model = Surface.updateSingleSurface' model s'
                             { model with selectedSurface = Some s' }
                         | None -> model
 
@@ -498,101 +519,79 @@ module Surface =
                     | None -> model
             | _ -> model
 
+    let absRelIcons (m : MSurface)=
+        adaptive {
+            let! absRelIcons = 
+                m.relativePaths 
+                    |> Mod.map(fun x ->                                 
+                        let icon = if x then "suitcase icon" else "cloud download icon"                                
+                        AttributeMap.ofList [
+                            clazz icon;                                                    
+                            onClick (fun x -> MakeRelative (m.guid |> Mod.force))
+                        ]         
+                    )
+            return absRelIcons
+        }
+
+    let viewSurfaceHeader (m:MSurface) absRelIcons =         
+        [
+            Incremental.text m.name; text " "
+
+            i [clazz "home icon"                                                
+               onClick (fun _ -> FlyToSurface (m.guid |> Mod.force))
+            ][] |> UI.wrapToolTip "FlyTo"                                                                                
+
+            Incremental.i (absRelIcons)(AList.empty) |> UI.wrapToolTip "portable"                                        
+
+            i [clazz "folder icon"                                                
+               onClick (fun _ -> OpenFolder (m.guid |> Mod.force))
+            ][] |> UI.wrapToolTip "open folder"                                                                                
+
+            i [clazz "Remove icon red";                                             
+                onClick (fun _ -> RemoveSurface (m.guid |> Mod.force))
+            ][] |> UI.wrapToolTip "Remove"                                         
+        ]    
+
     let viewSurfaceList (m:MSurfaceModel) = 
-            Incremental.div 
-                (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"]) (
-                    alist {                        
-                        for (_,s) in m.sgSurfaces |> AMap.toASet |> AList.ofASet do
+        let listAttr = AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"]
+        Incremental.div listAttr (
+            alist {                        
+                for (_,s) in m.sgSurfaces |> AMap.toASet |> AList.ofASet do
 
-                            let! selected = m.selectedSurface
-                            let! color =
-                                match selected with
-                                    | Some sel -> 
-                                        sel.guid |> Mod.map (fun g -> if g = (s.surface.guid |> Mod.force) then C4b.Blue else C4b.White)
-                                    | None -> Mod.constant C4b.White
-                            
-                            let bgc = sprintf "color: %s" (Html.ofC4b color)
-                            let! absRelIcons = 
-                                s.surface.relativePaths 
-                                    |> Mod.map(
-                                        fun x -> 
-                                            if x 
-                                            then 
-                                                AttributeMap.ofList [ clazz "suitcase icon";
-                                                                      attribute "data-content" "portable"
-                                                                      attribute "data-position" "left center"
-                                                                      attribute "data-variation" "mini"
-                                                                    ]
-                                            else
-                                                AttributeMap.ofList [
-                                                    clazz "cloud download icon";
-                                                    attribute "title" "absolute path";
-                                                    attribute "data-position" "left center"
-                                                    attribute "data-variation" "mini"
-                                                    onClick (fun x -> MakeRelative (s.surface.guid |> Mod.force))
-                                                ] 
-                                                
-                                    )                            
-                                
-                            yield div [clazz "item"] [
-                                i [
-                                    clazz "large cube middle aligned icon"; 
-                                    style bgc
-                                    onClick (fun x -> SelectSurface (s.surface.guid |> Mod.force))
-                                ][]
-                                div [clazz "content"] [
-                                    div [clazz "header"] [
-                                        Incremental.text s.surface.name
-                                        text " "
-                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                                            i [
-                                                clazz "home icon"
-                                                attribute "title" "FlyTo"
-                                                attribute "data-position" "left center"
-                                                attribute "data-variation" "mini"
-                                                onClick (fun x -> FlyToSurface (s.surface.guid |> Mod.force))
-                                            ][]  
-                                        )
-                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                                            Incremental.i (absRelIcons)(AList.empty)
-                                        )
-                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                                            i [
-                                                clazz "folder icon"
-                                                attribute "title" "Open Folder"
-                                                attribute "data-position" "left center"
-                                                attribute "data-variation" "mini"
-                                                onClick (fun x -> OpenFolder (s.surface.guid |> Mod.force))
-                                            ][]
-                                        )
-                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                                            i [
-                                                clazz "Remove icon red"; 
-                                                attribute "title" "Remove"
-                                                attribute "data-position" "left center"
-                                                attribute "data-variation" "mini"
-                                                onClick (fun x -> RemoveSurface (s.surface.guid |> Mod.force))
-                                            ][]  
-                                        )
-                                    ]
-                                    div [clazz "description"] [
-                                        Incremental.text (
-                                            s.globalBB 
-                                                |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
+                    let! selected = m.selectedSurface
+                    let! color =
+                        match selected with
+                          | Some sel -> 
+                            sel.guid |> Mod.map (fun g -> if g = (s.surface.guid |> Mod.force) then C4b.Blue else C4b.White)
+                          | None -> Mod.constant C4b.White
+                                                                                    
+                    let! absRelIcons = absRelIcons s.surface
+                    
+                    let bgc = color |> Html.ofC4b |> sprintf "color: %s"
 
-                                        Incremental.text (
-                                            s.surface.relativePaths
-                                                |> Mod.map (fun d -> sprintf " | local: %A" (d)))
-                                    ]
+                    yield div [clazz "item"] [
+                        i [
+                            clazz "large cube middle aligned icon"; 
+                            style bgc
+                            onClick (fun _ -> SelectSurface (s.surface.guid |> Mod.force))
+                        ][]
+                        div [clazz "content"] [
+                            div [clazz "header"] (
+                                viewSurfaceHeader s.surface absRelIcons
+                            )
+                            div [clazz "description"] [
+                                Incremental.text (
+                                    s.globalBB 
+                                        |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
 
-                                    //<i class="huge icons">
-                                    //    <i class="puzzle icon"></i>
-                                    //    <i class="corner add icon"></i>
-                                    //</i>
-                                ]
-                            ]
-                    }
-            )
+                                Incremental.text (
+                                    s.surface.relativePaths
+                                        |> Mod.map (fun d -> sprintf " | local: %A" (d)))
+                            ]                                    
+                        ]
+                    ]
+            }
+        )
 
     let viewSurfaceProperties (model:MSurfaceModel) =
         adaptive {
