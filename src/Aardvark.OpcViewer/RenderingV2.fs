@@ -86,6 +86,7 @@ module PatchLod =
     open Aardvark.Base.Ag
     open Aardvark.SceneGraph.Semantics
     open Aardvark.SceneGraph.Semantics.TrafoSemantics
+    open Aardvark.Base.MultimethodTest
 
     let rec toRoseTree (p : QTree<'a>) =
         match p with
@@ -309,13 +310,43 @@ module PatchLod =
                     return res
                 } |> n.Runner.Enqueue
 
+            let rec flattenHorizon (t : RoseTree<RenderPatch>) =
+                match t with
+                    | Empty -> []
+                    | Leaf v -> [v]
+                    | Node(c,[]) -> [c]
+                    | Node(c,xs) -> xs |> List.collect flattenHorizon 
+                
 
-            n.Tree
-                |> RoseTree.map (toRenderPatch trafoStack)
-                |> Mod.constant
-                |> RoseTree.filter godeeper
-                |> RoseTree.mapAsync prepare
-                |> RoseTree.flatten (fun p -> p :> IRenderObject)
+            let syncRenderObjects =
+                let lodedTree =
+                    n.Tree
+                    |> RoseTree.map (toRenderPatch trafoStack)
+                    |> Mod.constant
+                    |> RoseTree.filter godeeper
+                let objects = ASet.custom (fun token state ->
+                    let currentTree = lodedTree.GetValue token
+                    let currentObjects = flattenHorizon currentTree |> HRefSet.ofList
+                    let delta = HRefSet.computeDelta state currentObjects 
+                    printfn "delta=%A" delta.Count
+                    delta
+                )
+                objects 
+                    |> ASet.mapUse (fun a -> use __ = runtime.ContextLock in preparePatch a)
+                    |> ASet.map (fun a -> a :> IRenderObject)
+
+            let asyncRenderObjects =
+                n.Tree
+                    |> RoseTree.map (toRenderPatch trafoStack)
+                    |> Mod.constant
+                    |> RoseTree.filter godeeper
+                    |> RoseTree.mapAsync prepare
+                    |> RoseTree.flatten (fun p -> p :> IRenderObject)
+
+            let useAsyncLoading = true
+            match useAsyncLoading with
+                | false -> syncRenderObjects
+                | true -> asyncRenderObjects
 
 
 module Sg =

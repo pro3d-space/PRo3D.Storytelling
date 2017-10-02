@@ -46,6 +46,8 @@ module ViewerApp =
         | NavigationMessage         of Navigation.Action
         | ReferenceSystemMessage    of ReferenceSystemApp.Action
         | AnnotationMessage         of AnnotationProperties.Action
+
+        | SetCamera of CameraView
         
         | ImportSurface 
         | ImportMeasurements 
