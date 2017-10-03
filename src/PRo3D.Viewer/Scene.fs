@@ -65,9 +65,12 @@ module Scene =
                     match (fileExists p) with
                         | Some path->        
                             let layers = Surface.SurfaceAttributes.read path
+                            let textures = layers |> SurfaceProperties.getTextures
+
                             { s with 
-                                scalarLayers  = SurfaceProperties.getScalars layers
-                                textureLayers = SurfaceProperties.getTextures layers 
+                                scalarLayers  = layers |> SurfaceProperties.getScalars
+                                textureLayers = textures
+                                selectedTexture = textures |> PList.tryHead
                             }
                         | None ->
                             s

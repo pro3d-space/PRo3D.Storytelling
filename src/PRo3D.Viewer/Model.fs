@@ -38,6 +38,9 @@ module PList =
                 | [] -> b
         doIt (PList.toList a)
 
+    let tryHead (a: plist<_>) =
+        a |> PList.tryAt 0
+
 
 
 type Points = list<V3d>
@@ -374,12 +377,26 @@ module ViewConfigModel =
 //type Child = 
 //    | annotations of value : plist<Annotation>
 //    | surfaces of value : list<Surface>
-    
+
+//type Groupable =
+//    | Annotations of plist<Annotation>
+//    | Surfaces    of plist<Surface>
+
+//[<DomainType>]
+//type Group<'a> = {
+//    key         : Guid
+//    name        : string
+//    content     : plist<'a> 
+//    subGroups   : plist<Group<'a>>
+//    visible     : bool
+//    expanded    : bool
+//    }
+   
 [<DomainType>]
 type AnnotationGroup = {
     key         : Guid
     name        : string
-    annotations : plist<Annotation>
+    annotations : plist<Annotation> 
     subGroups   : plist<AnnotationGroup>
     visible     : bool
     expanded    : bool
@@ -440,7 +457,8 @@ module AnnotationGroup =
         name = "Line"
         key =  Guid.NewGuid()
         annotations = plist.Empty
-        subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
+        //subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
+        subGroups = PList.empty
         visible = true
         expanded = true
         }
@@ -448,7 +466,8 @@ module AnnotationGroup =
         name = "Polyline"
         key =  Guid.NewGuid()
         annotations = plist.Empty
-        subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
+       // subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
+        subGroups = PList.empty
         visible = true
         expanded = true
         }
@@ -456,7 +475,8 @@ module AnnotationGroup =
         name = "Polygon"
         key =  Guid.NewGuid()
         annotations = plist.Empty
-        subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
+        //subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
+        subGroups = PList.empty
         visible = true
         expanded = true
         }
@@ -480,7 +500,7 @@ module AnnotationGroup =
         name = "Annotations"
         key =  Guid.NewGuid()
         annotations = plist.Empty
-        subGroups = [surface1Group; surface2Group] |> PList.ofList
+        subGroups = [surface1Group; ] |> PList.ofList //surface2Group
         visible = true
         expanded = true
         }

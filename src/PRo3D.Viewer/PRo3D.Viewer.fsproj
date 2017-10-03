@@ -86,7 +86,9 @@
     <Compile Include="ConfigTest.fs" />
     <Compile Include="Viewer-Model.fs" />
     <Compile Include="Scene.fs" />
+    <Compile Include="RemoteControlModel.fs" />
     <Compile Include="Viewer.fs" />
+    <Compile Include="RemoteControlApp.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />

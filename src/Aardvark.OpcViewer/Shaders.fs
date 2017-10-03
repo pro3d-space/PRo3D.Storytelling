@@ -51,13 +51,23 @@ module Shader =
             } 
         } 
 
+    let private colormap =
+        sampler2d {
+            texture uniform?ColorMapTexture
+            filter Filter.MinMagMipLinear
+            addressU WrapMode.Wrap
+            addressV WrapMode.Wrap
+    }
+
     let falseColor (v : Vertex) =
         fragment {           
             if uniform?falseColors then
                 let range : V2d = uniform?MinMax
-                let norm = (v.scalar - range.X) / (range.Y - range.X)
+                let norm = V2d((v.scalar - range.X)/ (range.Y - range.X), 0.5)
 
-                return v.c * V4d(norm)
+                let c = colormap.Sample(norm).XYZ
+
+                return v.c * V4d(c.X, c.Y, c.Z, 1.0)
             else
                 return v.c
         }

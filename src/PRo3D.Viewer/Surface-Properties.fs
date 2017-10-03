@@ -71,15 +71,21 @@ module SurfaceProperties =
             | SetPriority a ->
                 { model with priority = Numeric.update model.priority a }
             | SetScalarMap a ->                
-                { model with selectedScalar = a }
+                { model with selectedScalar = a } |> Console.print
             | SetTexturesMap a ->                
                 { model with selectedTexture = a } |> Console.print
 
     let getTextures (layers : seq<AttributeLayer>) =
-        layers |> Seq.choose (fun x -> match x with | TextureLayer l -> Some l | _ -> None) |> PList.ofSeq
+        layers 
+          |> Seq.choose (fun x -> match x with | TextureLayer l -> Some l | _ -> None) 
+          |> Seq.mapi(fun i x -> { x with index = i}) 
+          |> PList.ofSeq
 
     let getScalars (layers : seq<AttributeLayer>) =
-        layers |> Seq.choose (fun x -> match x with | ScalarLayer l -> Some l | _ -> None) |> PList.ofSeq
+        layers 
+          |> Seq.choose (fun x -> match x with | ScalarLayer l -> Some l | _ -> None) 
+          |> Seq.mapi(fun i x -> { x with index = i}) 
+          |> PList.ofSeq
 
     let view (model : MSurface) =
         
@@ -92,7 +98,7 @@ module SurfaceProperties =
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
                 Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider]   model.quality  |> UI.map SetQuality ]
                 Html.row "Priority:"    [Numeric.view' [NumericInputType.InputBox] model.priority |> UI.map SetPriority ]       
-                Html.row "Scalars:"     [dropDown'' model.scalarLayers model.selectedScalar (fun x -> SetScalarMap x) (fun x -> x.label)]
-                Html.row "Textures:"    [dropDown'' model.textureLayers model.selectedTexture (fun x -> SetTexturesMap x) (fun x -> x.label)]
+                Html.row "Scalars:"     [dropDown'' model.scalarLayers  model.selectedScalar   (fun x -> SetScalarMap x)   (fun x -> x.label)]
+                Html.row "Textures:"    [dropDown'' model.textureLayers model.selectedTexture  (fun x -> SetTexturesMap x) (fun x -> x.label)]
             ]
         )

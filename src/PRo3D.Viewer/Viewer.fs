@@ -46,6 +46,8 @@ module ViewerApp =
         | NavigationMessage         of Navigation.Action
         | ReferenceSystemMessage    of ReferenceSystemApp.Action
         | AnnotationMessage         of AnnotationProperties.Action
+
+        | SetCamera of CameraView
         
         | ImportSurface 
         | ImportMeasurements 
@@ -155,7 +157,9 @@ module ViewerApp =
             getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
         }
 
-    
+    let colormap = 
+        let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
+        FileTexture("HueColorMap.png",config) :> ITexture //, { new IDisposable with member x.Dispose() = () }
 
     let navConf : Navigation.smallConfig<ViewConfigModel, ReferenceSystem> =
         {
@@ -396,14 +400,16 @@ module ViewerApp =
                           | Some s -> V2d(s.definedRange.Min, s.definedRange.Max)
                           | None   -> V2d(0.0,1.0)
             }
-        
+                
         let sg = 
-            Mod.map createSg surface.sceneGraph 
-                |> Sg.dynamic          
+            surface.sceneGraph 
+                |> Mod.map createSg
+                |> Sg.dynamic
                 |> Sg.uniform "selected"       isSelected
                 |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
                 |> Sg.uniform "falseColors"    (surface.surface.selectedScalar |> Mod.map Option.isSome)
-                |> Sg.uniform "MinMax"         (surface |> rangeToMinMax)
+                |> Sg.uniform "MinMax"         (surface |> rangeToMinMax)             
+                |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
                 |> Sg.onOff(surface.surface.isVisible)                             
                 |> Sg.LodParameters( 
                     adaptive {
@@ -432,27 +438,7 @@ module ViewerApp =
                                 true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])                        
                     ]
         sg
-                
-    let viewSurfacesSg (sgSurfaces : amap<Guid,MSgSurface>) (frustum : IMod<Frustum>) (selectedSurf : IMod<Option<MSurface>>)(lodcolor : IMod<bool>)=
-        let opcs =
-            aset {
-                for (_,surface) in sgSurfaces |> AMap.toASet do                   
-                   yield viewSingleSurfaceSg surface frustum lodcolor selectedSurf surface.globalBB
-            }
-
-        opcs 
-            |> Sg.set
-            |> Sg.effect [
-                Shader.stableTrafo |> toEffect
-                //DefaultSurfaces.constantColor C4f.White |> toEffect                            
-                DefaultSurfaces.diffuseTexture |> toEffect
-               // Shader.selectionColor |> toEffect       
-                Shader.falseColor |> toEffect               
-            ]
-
-            |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
-            |> Sg.uniform "LodVisEnabled" lodcolor //()
-
+                                   
     let mkBrushISg color size trafo : ISg<Message> =
         Sg.sphere 5 color size 
                 |> Sg.shader {
@@ -482,8 +468,6 @@ module ViewerApp =
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
-        
-        
         let cam = Mod.map2 Camera.create m.scene.navigation.camera.view (frustum m)
 
         let att = 
@@ -516,32 +500,17 @@ module ViewerApp =
 
             [ annotations; refSystem; exploreCenter] |> Sg.ofList
 
-        let surfaces2 (sgSurfaces:amap<Guid,MSgSurface>) frustum lodcolor =            
-            sgSurfaces
-                |> AMap.toASet                
-                |> ASet.map(
-                    fun (g, s) -> viewSingleSurfaceSg s frustum lodcolor m.scene.surfacesModel.selectedSurface s.globalBB, s)
-                |> ASet.mapM(fun (sg,x) -> x.surface.priority.value |> Mod.map(fun prior -> (prior,sg)))
-                |> ASet.groupBy fst
-                |> AMap.toASet
-                |> ASet.sortBy fst
-                |> AList.map snd         
-                |> AList.map (fun x -> x |> HSet.map snd)
-
         let cmds2 =
-            let nestedSgs =
-                surfaces2 m.scene.surfacesModel.sgSurfaces (frustum m) (m.scene.config.lodColoring)
 
             let grouped = 
-                m.scene.surfacesModel.sgGrouped 
-                    |> AList.map(
-                        fun x -> 
-                            (x 
-                                |> AMap.map(fun g sf -> viewSingleSurfaceSg sf (frustum m) (m.scene.config.lodColoring) m.scene.surfacesModel.selectedSurface sf.globalBB) 
-                                |> AMap.toASet 
-                                |> ASet.map snd 
-                            )
+                m.scene.surfacesModel.sgGrouped |> AList.map(
+                    fun x -> ( x 
+                        |> AMap.map(fun _ sf -> 
+                            viewSingleSurfaceSg sf (frustum m) (m.scene.config.lodColoring) m.scene.surfacesModel.selectedSurface sf.globalBB)
+                        |> AMap.toASet 
+                        |> ASet.map snd 
                     )
+                )
             
             alist {                
                 for set in grouped do
@@ -553,7 +522,7 @@ module ViewerApp =
                                 DefaultSurfaces.diffuseTexture |> toEffect
                                 Shader.selectionColor |> toEffect       
                                 Shader.LoDColor |> toEffect
-                              //  Shader.falseColor |> toEffect
+                                Shader.falseColor |> toEffect
                             ]
                             |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                             |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()

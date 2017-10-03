@@ -19,6 +19,7 @@ open System.Diagnostics
 open System.Xml
 open PRo3D.Surfaces.Mutable
 open PRo3D.Surfaces
+open RemoteControlModel
 
 [<EntryPoint;STAThread>]
 let main argv = 
@@ -54,12 +55,25 @@ let main argv =
     //let attr = Surface.SurfaceAttributes.read "E:\Aardwork\Exomars\_SCENES\WP4200_4300_3400_DemoData\VictoriaCrater_HiRISE_MER-B_PRoViDEData_MultiLayer\Surface\MER-B_PanCam_Sol1103-P2582_multilayer\MER-B_PanCam_Sol1103-P2582_multilayer.opcx"
     //printf "%A" attr
 
-    use form = new Form(Width = 1024, Height = 768)
+    use form = new Form(Width = 1280, Height = 768)
 
-    let a = PRo3D.ViewerApp.start form runtime signature bc   
+    let mainApp = PRo3D.ViewerApp.start form runtime signature bc   
+
+    let send msg =
+        match msg with
+            | RemoteAction.SetViewpoint cv -> 
+                let bla = PRo3D.ViewerApp.Action.SetCamera cv |> Seq.singleton
+                mainApp.update Guid.Empty bla
+    let remoteApp = 
+        PRo3D.RemoteControlApp.app "http://localhost:4321" send
+    
+    WebPart.startServer 1234 [ 
+        MutableApp.toWebPart runtime (App.start remoteApp)
+        Suave.Files.browseHome
+    ] 
 
     WebPart.startServer 4321 [ 
-        MutableApp.toWebPart runtime a
+        MutableApp.toWebPart runtime mainApp
         path "/websocket" >=> handShake ws
         Suave.Files.browseHome
     ] 

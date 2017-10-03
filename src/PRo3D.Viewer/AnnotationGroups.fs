@@ -13,32 +13,25 @@ open PRo3D
 module AnnotationGroups =
    
     type Action =
-        | ActiveGroup    of Guid*list<Index>
-        | ToggleExpand of list<Index>
-        | AddGroup of list<Index>
-        | RemoveGroup of list<Index>
-        | AddChild of list<Index>*plist<Annotation>    // TODO: change Annotation to ChildNode (|Annotation | Surface)
-        | RemoveChild of Guid*list<Index> // TODO: change Annotation to ChildNode (|Annotation | Surface)
+        | ActiveGroup           of Guid*list<Index>
+        | ToggleExpand          of list<Index>
+        | AddGroup              of list<Index>
+        | RemoveGroup           of list<Index>
+        | AddChild              of list<Index>*plist<Annotation>    // TODO: change Annotation to ChildNode (|Annotation | Surface)
+        | RemoveChild           of Guid*list<Index> // TODO: change Annotation to ChildNode (|Annotation | Surface)
         | ToggleChildVisibility of Guid*list<Index> // TODO: change Annotation to ChildNode (|Annotation | Surface)
-        | ActiveChild    of Guid*list<Index>
+        | ActiveChild           of Guid*list<Index>
         | Nop
 
-
+    //
     let updateItemAt (p : list<Index>) (f : AnnotationGroup -> AnnotationGroup) (t : AnnotationGroup) = 
-        let rec go (p : list<Index>) (t : AnnotationGroup)  =
+        let rec go (p : list<Index>) (t : AnnotationGroup) =
             match p with
-                | [] -> f t
-                | x::rest -> match PList.tryGet x t.subGroups with
-                                | Some c -> let ag = {
-                                                name = t.name
-                                                key = t.key
-                                                annotations = t.annotations
-                                                subGroups = PList.set x (go rest c) t.subGroups
-                                                visible = t.visible
-                                                expanded = t.expanded
-                                                }
-                                            ag
-                                | None   -> t
+              | [] -> f t
+              | x::rest ->
+                    match PList.tryGet x t.subGroups with
+                      | Some c -> { t with subGroups = PList.set x (go rest c) t.subGroups }                                                  
+                      | None   -> t
         go (List.rev p) t 
 
     let deleteItemAt (p : list<Index>) (f : AnnotationGroup -> Guid -> AnnotationGroup) (t : AnnotationGroup) = 
@@ -133,18 +126,7 @@ module AnnotationGroups =
     let mkColor (activeId : IMod<Guid>) (groupId : IMod<Guid>) = 
         if activeId = groupId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
    
-    let wrapToolTip (text:string) (dom:DomNode<'a>) : DomNode<'a> =
-
-        let attr = 
-            [ attribute "title" text
-              attribute "data-position" "left center"
-              attribute "data-variation" "mini" ] 
-                |> AttributeMap.ofList
-                |> AttributeMap.union dom.Attributes                
-                
-        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
-            dom.WithAttributes attr     
-        )
+    
 
     let rec viewTree path (group : MAnnotationGroup) (model : MAnnotationGroupsModel) =
 
@@ -179,7 +161,7 @@ module AnnotationGroups =
                         //        onMouseClick (fun _ -> RemoveGroup path)] [] 
                         //    )
 
-                        i [ clazz "remove icon"; onMouseClick (fun _ -> RemoveGroup path)] [] |> wrapToolTip "Remove Group"
+                        i [ clazz "remove icon"; onMouseClick (fun _ -> RemoveGroup path)] [] |> UI.wrapToolTip "Remove Group"
                 ]
                         
      
@@ -187,8 +169,10 @@ module AnnotationGroups =
                 amap {
                     yield onMouseClick (fun _ -> ToggleExpand path)
                     let! selected = group.expanded
-                    if selected then yield clazz "icon large outline open folder"
-                    else             yield clazz "icon large outline folder"
+                    if selected then 
+                        yield clazz "icon large outline open folder"
+                    else
+                        yield clazz "icon large outline folder"                    
                 } |> AttributeMap.ofAMap
 
             
