@@ -315,8 +315,8 @@ module PatchLod =
                     | Empty -> []
                     | Leaf v -> [v]
                     | Node(c,[]) -> [c]
-                    | Node(c,xs) -> xs |> List.collect flattenHorizon 
-                
+                    | Node(c,xs) ->
+                        xs |> List.collect flattenHorizon                
 
             let syncRenderObjects =
                 let lodedTree =

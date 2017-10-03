@@ -66,13 +66,7 @@ module DrawingApp =
                  //   Log.line "sending %A" a.semantic
                     bc.Add json
 
-                    let func = (function x -> {  name = x.name
-                                                 key = x.key
-                                                 annotations = x.annotations |> PList.prepend a
-                                                 subGroups = x.subGroups
-                                                 visible = x.visible
-                                                 expanded = x.expanded
-                                                 })
+                    let func = (fun (x : AnnotationGroup) -> {  x with annotations = x.annotations |> PList.prepend a })
                     AnnotationGroups.updateItemAt model.annotationGroups.activeGroupPath func model.annotationGroups.rootGroup
                 | None -> model.annotationGroups.rootGroup
                 
@@ -502,15 +496,33 @@ module DrawingApp =
                 let color = sprintf "color: %s" (Html.ofC4b c)                
                 let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups
                 let icon = if (model.annotationGroups.activeGroupKey = group.key) then "circle icon green" else "circle thin icon"
-                                                                                                                                                                   
+
+                let icon =
+                    adaptive {
+                        let! active = model.annotationGroups.activeGroupKey
+                        let! group  =  group.key
+
+                        return if (active = group) then "circle icon green" else "circle thin icon"
+                    }
+                      
+                let map = 
+                    amap {
+                        let! icon = icon
+                        yield clazz icon
+                        yield onClick (fun _ -> AnnotationGroupsMessage(AnnotationGroups.ActiveGroup (group.key |> Mod.force, path)))
+                    } |> AttributeMap.ofAMap
+                
+
                 let desc =
                     div [style color] [                        
                         Incremental.text group.name
+                                                
+                        Incremental.i map AList.empty |> UI.wrapToolTip "Set active"
                         
-                        i [clazz icon
-                           onClick (fun _ -> 
-                             AnnotationGroupsMessage(AnnotationGroups.ActiveGroup (group.key |> Mod.force, path)))][] 
-                        |> UI.wrapToolTip "Set active"
+                        //i [clazz icon
+                        //   onClick (fun _ -> 
+                        //     AnnotationGroupsMessage(AnnotationGroups.ActiveGroup (group.key |> Mod.force, path)))][] 
+                        //|> 
                         
                         i [clazz "plus icon"
                            onMouseClick (fun _ -> 
