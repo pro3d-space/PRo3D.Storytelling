@@ -494,15 +494,14 @@ module DrawingApp =
 
                 let! c = AnnotationGroups.mkColor model.annotationGroups.activeGroupKey group.key
                 let color = sprintf "color: %s" (Html.ofC4b c)                
-                let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups
-                let icon = if (model.annotationGroups.activeGroupKey = group.key) then "circle icon green" else "circle thin icon"
+                let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups              
 
                 let icon =
                     adaptive {
                         let! active = model.annotationGroups.activeGroupKey
                         let! group  =  group.key
 
-                        return if (active = group) then "circle icon green" else "circle thin icon"
+                        return if (active = group) then "circle icon" else "circle thin icon"
                     }
                       
                 let map = 
@@ -551,6 +550,10 @@ module DrawingApp =
                         else yield style "hidden"
                     }         
 
+
+                let select = fun (a:MAnnotation) -> Select (a.key |> Mod.force)
+                let lift   = fun (a:AnnotationGroups.Action) -> (AnnotationGroupsMessage a)
+
                 yield div [ clazz "item" ] [
                      Incremental.i itemAttributes AList.empty
                      div [ clazz "content" ] [                         
@@ -560,9 +563,10 @@ module DrawingApp =
                                 let! isExpanded = group.expanded
                                 if isExpanded then yield! children
 
+                                yield! viewAnnotationsInGroup path model select lift group.annotations
                             }
                          )  
-                         //viewAnnotations model                         
+                                
                      ]
                 ]
                 

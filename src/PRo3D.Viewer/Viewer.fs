@@ -173,6 +173,8 @@ module ViewerApp =
         let cam' = { cam with view = view' }
         _camera.Set(m,cam')
 
+    let mutable wayPoints : Waypoints = []
+
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
         match msg, m.interaction, m.picking with
@@ -182,6 +184,14 @@ module ViewerApp =
                 let ref = m.scene.referenceSystem
 
                 { m with scene = { m.scene with navigation = Navigation.update c ref navConf m.scene.navigation msg }}
+            | SetCamera cv,_,false ->
+                let lens = (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera)
+                let cam = lens.Get m
+                let c' = { cam with view = cv }
+
+                let m = lens.Set(m, c')
+
+                m
             | AnnotationGroupsMessage msg,_,_ ->
                 let ag = m.scene.groups
                 { m with scene = { m.scene with groups = AnnotationGroups.update ag msg}}
@@ -344,6 +354,18 @@ module ViewerApp =
                             | _ -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity))
 
                     let c' = ConfigProperties.update m.scene.config configAction
+
+                    let m = 
+                        match k with 
+                          | Aardvark.Application.Keys.Space -> 
+                            
+                            let cv = (_camera.Get m).view
+                            wayPoints <- cv :: wayPoints
+                            Log.line "saving waypoints %A" wayPoints
+                            Serialization.save "./waypoints.wps" wayPoints |> ignore
+                            m
+                          | _ -> m
+
                     { m with scene = { m.scene with config = c' }}                                       
             | KeyUp k, _,_ ->
                     let d =

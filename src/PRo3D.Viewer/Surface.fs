@@ -110,10 +110,10 @@ module Surface =
 
         let parseMap (index : int)(node : XmlNode) : ScalarLayer =        
             { 
-                label = node |> get "Label" 
-                actualRange = node |> get "ChannelsActualRange" |> Range1d.Parse
+                label        = node |> get "Label" 
+                actualRange  = node |> get "ChannelsActualRange"  |> Range1d.Parse
                 definedRange = node |> get "ChannelsDefinedRange" |> Range1d.Parse
-                index = index
+                index        = index
             }
 
         let parseTexture (index : int)(node : XmlNode) : TextureLayer =        

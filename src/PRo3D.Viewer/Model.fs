@@ -43,6 +43,8 @@ module PList =
 
 
 
+type Waypoints = list<CameraView>
+
 type Points = list<V3d>
 
 type Projection = Linear = 0 | Viewpoint = 1 | Sky = 2
