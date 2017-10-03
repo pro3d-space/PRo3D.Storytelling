@@ -488,22 +488,8 @@ module DrawingApp =
                                                     yield Incremental.text header
                                                     yield 
                                                         i [ clazz visibleIcon; onClick (fun _ -> lift <| AnnotationGroups.ToggleChildVisibility (key,path))] [] |> AnnotationGroups.wrapToolTip "Toggle"
-                                                        //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                                                        //    i [clazz visibleIcon
-                                                        //       attribute "title" "Toggle"
-                                                        //       attribute "data-position" "left center"
-                                                        //       attribute "data-variation" "mini"
-                                                        //       onClick (fun _ -> lift <| AnnotationGroups.ToggleChildVisibility (key,path))][]
-                                                        //)
                                                     yield
                                                         i [ clazz "Remove icon"; onClick (fun _ -> lift <| AnnotationGroups.RemoveChild (key,path))] [] |> AnnotationGroups.wrapToolTip "Remove"
-                                                        //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                                                        //    i [clazz "Remove icon"
-                                                        //       attribute "title" "Remove"
-                                                        //       attribute "data-position" "left center"
-                                                        //       attribute "data-variation" "mini"
-                                                        //       onClick (fun _ -> lift <| (AnnotationGroups.RemoveChild (key,path)))][]
-                                                        //)
                                                 } 
                                             ) 
                                             yield div [clazz "description"] [Incremental.text desc]      
@@ -528,33 +514,11 @@ module DrawingApp =
                             //alist {
                                 yield Incremental.text group.name
                                 yield 
-                                   i [ clazz icon; onClick (fun _ -> Action.AnnotationGroupsMessage( AnnotationGroups.ActiveGroup (group.key |> Mod.force, path)))] [] |> AnnotationGroups.wrapToolTip "Set active"
-                                       
-                                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
-                                    //    i [ clazz icon 
-                                    //        attribute "title" "Set active"
-                                    //        attribute "data-position" "left center"
-                                    //        attribute "data-variation" "mini"
-                                    //        onClick (fun _ -> Action.AnnotationGroupsMessage( AnnotationGroups.ActiveGroup (group.key |> Mod.force, path)))] [] 
-                                    //    )
+                                   i [ clazz icon; onClick (fun _ -> Action.AnnotationGroupsMessage( AnnotationGroups.ActiveGroup (group.key |> Mod.force, path)))] [] |> AnnotationGroups.wrapToolTip "Set active" 
                                 yield
                                     i [ clazz "plus icon"; onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.AddGroup path))] [] |> AnnotationGroups.wrapToolTip "Add Group"
-                                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
-                                    //    i [ clazz "plus icon" 
-                                    //        attribute "title" "Add Group"
-                                    //        attribute "data-position" "left center"
-                                    //        attribute "data-variation" "mini"
-                                    //        onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.AddGroup path))] [] 
-                                    //    )
                                 yield
                                     i [ clazz "remove icon red"; onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.RemoveGroup path))] [] |> AnnotationGroups.wrapToolTip "Remove Group"
-                                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
-                                    //    i [ clazz "remove icon red" 
-                                    //        attribute "title" "Remove Group"
-                                    //        attribute "data-position" "left center"
-                                    //        attribute "data-variation" "mini" 
-                                    //        onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.RemoveGroup path))] [] 
-                                    //    )
                                    // }
                             //)
                     ]
