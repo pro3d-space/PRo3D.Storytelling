@@ -655,14 +655,18 @@ module Mutable =
         let _rootGroup = MAnnotationGroup.Create(__initial.rootGroup)
         let _activeGroupKey = ResetMod.Create(__initial.activeGroupKey)
         let _activeGroupPath = ResetMod.Create(__initial.activeGroupPath)
+        let _activeGroupName = ResetMod.Create(__initial.activeGroupName)
         let _activeChildKey = ResetMod.Create(__initial.activeChildKey)
         let _activeChildPath = ResetMod.Create(__initial.activeChildPath)
+        let _flattenChild = MList.Create(__initial.flattenChild, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
         
         member x.rootGroup = _rootGroup
         member x.activeGroupKey = _activeGroupKey :> IMod<_>
         member x.activeGroupPath = _activeGroupPath :> IMod<_>
+        member x.activeGroupName = _activeGroupName :> IMod<_>
         member x.activeChildKey = _activeChildKey :> IMod<_>
         member x.activeChildPath = _activeChildPath :> IMod<_>
+        member x.flattenChild = _flattenChild :> alist<_>
         
         member x.Update(v : PRo3D.AnnotationGroupsModel) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -671,8 +675,10 @@ module Mutable =
                 MAnnotationGroup.Update(_rootGroup, v.rootGroup)
                 ResetMod.Update(_activeGroupKey,v.activeGroupKey)
                 ResetMod.Update(_activeGroupPath,v.activeGroupPath)
+                ResetMod.Update(_activeGroupName,v.activeGroupName)
                 ResetMod.Update(_activeChildKey,v.activeChildKey)
                 ResetMod.Update(_activeChildPath,v.activeChildPath)
+                MList.Update(_flattenChild, v.flattenChild)
                 
         
         static member Create(__initial : PRo3D.AnnotationGroupsModel) : MAnnotationGroupsModel = MAnnotationGroupsModel(__initial)
@@ -707,6 +713,12 @@ module Mutable =
                     override x.Set(r,v) = { r with activeGroupPath = v }
                     override x.Update(r,f) = { r with activeGroupPath = f r.activeGroupPath }
                 }
+            let activeGroupName =
+                { new Lens<PRo3D.AnnotationGroupsModel, Microsoft.FSharp.Core.string>() with
+                    override x.Get(r) = r.activeGroupName
+                    override x.Set(r,v) = { r with activeGroupName = v }
+                    override x.Update(r,f) = { r with activeGroupName = f r.activeGroupName }
+                }
             let activeChildKey =
                 { new Lens<PRo3D.AnnotationGroupsModel, System.Guid>() with
                     override x.Get(r) = r.activeChildKey
@@ -718,4 +730,10 @@ module Mutable =
                     override x.Get(r) = r.activeChildPath
                     override x.Set(r,v) = { r with activeChildPath = v }
                     override x.Update(r,f) = { r with activeChildPath = f r.activeChildPath }
+                }
+            let flattenChild =
+                { new Lens<PRo3D.AnnotationGroupsModel, Aardvark.Base.plist<PRo3D.Annotation>>() with
+                    override x.Get(r) = r.flattenChild
+                    override x.Set(r,v) = { r with flattenChild = v }
+                    override x.Update(r,f) = { r with flattenChild = f r.flattenChild }
                 }

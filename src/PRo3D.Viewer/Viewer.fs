@@ -557,6 +557,18 @@ module ViewerApp =
 
         let control = 
             DomNode.RenderControl(att, cam, cmds2, None)
+
+
+        let annotationGroupProperties (model:MModel) =
+            adaptive {
+                let bla = Some model.scene.groups
+                let opt = 
+                    match bla with
+                        | Some a -> AnnotationGroups.viewUI a
+                        | None   -> div[][]
+
+                return (opt |> UI.map AnnotationGroupsMessage)
+            } 
         
         let annotationProperties (model:MModel) =
             adaptive {
@@ -587,6 +599,9 @@ module ViewerApp =
                 GuiEx.accordion "Annotations" "Write" true [
                     DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
+                GuiEx.accordion "Group Properties" "Content" true [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(annotationGroupProperties m))
+                ] 
                 GuiEx.accordion "Properties" "Content" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(annotationProperties m))
                 ] 

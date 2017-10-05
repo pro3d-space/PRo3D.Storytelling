@@ -506,22 +506,33 @@ module AnnotationGroup =
         visible = true
         expanded = true
         }
-
+    let initRoot2 = {
+        name = "Annotations"
+        key =  Guid.NewGuid()
+        annotations = plist.Empty
+        subGroups = plist.Empty
+        visible = true
+        expanded = true
+        }
 [<DomainType>]
 type AnnotationGroupsModel = {
     rootGroup       : AnnotationGroup
     activeGroupKey       : Guid
     activeGroupPath      : list<Index>
+    activeGroupName      : string
     activeChildKey       : Guid
     activeChildPath      : list<Index>
+    flattenChild         : plist<Annotation>
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AnnotationGroupsModel =
     let initial = {
-        rootGroup = AnnotationGroup.initRoot
+        rootGroup = AnnotationGroup.initRoot2
         activeGroupKey =  Guid.Empty
         activeGroupPath = list.Empty
+        activeGroupName  = ""
         activeChildKey = Guid.Empty
         activeChildPath = list.Empty
+        flattenChild = plist.Empty
         }
