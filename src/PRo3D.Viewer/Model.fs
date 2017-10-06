@@ -407,21 +407,21 @@ type AnnotationGroup = {
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AnnotationGroup =
 
-    let rec getAllAnnotations (root:AnnotationGroup) =
-        let anns = root.annotations
-        let l = (root.subGroups |> PList.map(fun x -> getAllAnnotations(x))) |> PList.toSeq |> Seq.concat |> Seq.concat |> PList.ofSeq
-        l |> PList.map(fun x -> anns |> PList.append x) 
+    //let rec getAllAnnotations (root:AnnotationGroup) =
+    //    let anns = root.annotations
+    //    let l = (root.subGroups |> PList.map(fun x -> getAllAnnotations(x))) |> PList.toSeq |> Seq.concat |> Seq.concat |> PList.ofSeq
+    //    l |> PList.map(fun x -> anns |> PList.append x) 
              
 
-    let tryGetChild (ag:AnnotationGroup) key = 
-        let annos = getAllAnnotations ag |> PList.toSeq |> Seq.concat |> PList.ofSeq
-        annos |> Seq.tryFind(fun x -> x.key = key)
+    //let tryGetChild (ag:AnnotationGroup) key = 
+    //    let annos = getAllAnnotations ag |> PList.toSeq |> Seq.concat |> PList.ofSeq
+    //    annos |> Seq.tryFind(fun x -> x.key = key)
         
 
-    let update (ans:plist<Annotation>) (ann : Annotation) = 
-        ans.AsList 
-            |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
-            |> PList.ofList
+    //let update (ans:plist<Annotation>) (ann : Annotation) = 
+    //    ans.AsList 
+    //        |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
+    //        |> PList.ofList
 
     let Linear = {
         name = "Linear"
@@ -533,6 +533,6 @@ module AnnotationGroupsModel =
         activeGroupPath = list.Empty
         activeGroupName  = ""
         activeChildKey = Guid.Empty
-        activeChildPath = list.Empty
+        activeChildPath = list.Empty // (is path of parent group!)
         flattenChild = plist.Empty
         }

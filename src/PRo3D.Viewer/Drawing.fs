@@ -278,7 +278,9 @@ module DrawingApp =
                 //let annotations = Serialization.loadAs<plist<PRo3D.Annotation>> "./lastMeasure"
                 //{ model with annotations = annotations } 
                 let annotationGroups = Serialization.loadAs<PRo3D.AnnotationGroupsModel> "./lastMeasure"
-                { model with annotationGroups = annotationGroups; allAnnotations = (AnnotationGroup.getAllAnnotations model.annotationGroups.rootGroup |> PList.toSeq |> Seq.concat |> PList.ofSeq) }
+                let flatA = AnnotationGroups.flattenAnnotations model.annotationGroups.rootGroup |> PList.ofList
+                let root = {annotationGroups with flattenChild = flatA}
+                { model with annotationGroups = root; allAnnotations = flatA }
             | Send, _ ->                                        
               // // let json = model.annotations |> PList.map JsonTypes.ofAnnotation |> pickler.PickleTyped
                 //Log.line "Sending %i annotations" (model.annotations |> PList.count)
@@ -288,7 +290,7 @@ module DrawingApp =
                 model
             | Clear,_ ->
                 { model with annotationGroups = AnnotationGroupsModel.initial; allAnnotations = PList.empty }
-            | Select id, false ->
+            | Select (p,id), false ->
                 let selected = if (not model.selected.IsEmpty) then hset.Empty else model.selected
 
                 let selection, ann =         
@@ -297,13 +299,13 @@ module DrawingApp =
                         then 
                             HSet.remove id selected, None 
                         else 
-                            HSet.add id hset.Empty, AnnotationGroup.tryGetChild model.annotationGroups.rootGroup id //DrawingModel.tryGet model id
+                            HSet.add id hset.Empty, AnnotationGroups.tryGetChild model.annotationGroups.rootGroup id //DrawingModel.tryGet model id
                     else
-                        HSet.add id selected, AnnotationGroup.tryGetChild model.annotationGroups.rootGroup id //DrawingModel.tryGet model id
-
+                        HSet.add id selected, AnnotationGroups.tryGetChild model.annotationGroups.rootGroup id //DrawingModel.tryGet model id
+                
                 let ann = DrawingModel.tryGet model.allAnnotations id   
                 let ann1 = DrawingModel.tryGet model.annotationGroups.flattenChild id   
-                { model with selected = selection; selectedAnnotation = ann1; }  
+                { model with selected = selection; selectedAnnotation = ann1; annotationGroups = {model.annotationGroups with activeChildKey = id; activeChildPath = p} }  
             | Nop, _ -> model
             | AnnotationPropertiesMsg msg,_ ->                
                 match model.selectedAnnotation with
@@ -432,7 +434,7 @@ module DrawingApp =
                                 
                                 let! visible = a.visible
                                 let visibleIcon = if visible then "unhide icon" else "hide icon"
-                                let select = fun _ -> Select (a.key |> Mod.force)
+                                let select = fun _ -> Select ([], a.key |> Mod.force)
 
                                 yield div [clazz "item"] [
                                         i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
@@ -469,7 +471,7 @@ module DrawingApp =
 
         
 
-        let viewAnnotationsInGroup (path:list<Index>) (model:MDrawingModel)(select : MAnnotation -> 'outer)(lift : AnnotationGroups.Action -> 'outer) (annotations: alist<MAnnotation>) : alist<DomNode<'outer>> =
+        let viewAnnotationsInGroup (path:list<Index>) (model:MDrawingModel)(select : MAnnotation*list<Index> -> 'outer)(lift : AnnotationGroups.Action -> 'outer) (annotations: alist<MAnnotation>) : alist<DomNode<'outer>> =
                         
             //Incremental.div 
             //        (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (
@@ -483,7 +485,7 @@ module DrawingApp =
                                 
                                 let! visible = a.visible
                                 let visibleIcon = if visible then "unhide icon" else "hide icon"
-                                let select = fun _ -> select a
+                                let select = fun _ -> select (a,path)
                                 let! key = a.key
 
                                 yield div [clazz "item"] [
@@ -562,7 +564,7 @@ module DrawingApp =
                     }         
 
 
-                let select = fun (a:MAnnotation) -> Select (a.key |> Mod.force)
+                let select = fun (a:MAnnotation,path:list<Index>) -> Select (path, a.key |> Mod.force)
                 let lift   = fun (a:AnnotationGroups.Action) -> (AnnotationGroupsMessage a)
 
                 yield div [ clazz "item" ] [

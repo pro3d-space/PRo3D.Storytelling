@@ -27,7 +27,7 @@ type Action =
         | Finish                
         | Undo
         | Redo
-        | Select                  of Guid
+        | Select                  of list<Index>*Guid      
         | ToggleVisiblity         of Guid
         | RemoveAnnotation        of list<Index>*Guid       
         | Send
