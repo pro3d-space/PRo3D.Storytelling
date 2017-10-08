@@ -42,9 +42,6 @@ module PList =
         a |> PList.tryAt 0
 
 
-
-type Waypoints = list<CameraView>
-
 type Points = list<V3d>
 
 type Projection = Linear = 0 | Viewpoint = 1 | Sky = 2

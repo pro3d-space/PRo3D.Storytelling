@@ -8,10 +8,11 @@ type RemoteAction =
     | SetViewpoint of CameraView
 
 type Action = 
-    | MakeScreenshot
+    | MakeScreenshot of CameraView
+    | UpdateCamera of CameraView
 
 [<DomainType>]
 type Model =
     {
-        viewPoints : list<CameraView>
+        viewPoints : plist<CameraView>
     }

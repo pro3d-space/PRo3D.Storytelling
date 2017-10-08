@@ -26,6 +26,11 @@ module Serialization =
     let writeToFile path (contents : string) =
         System.IO.File.WriteAllText(path, contents)
 
+    let fileExists filePath =
+        match System.IO.File.Exists filePath with
+            | true -> Some filePath
+            | false -> None
+
 module Dialogs =
     open Microsoft.WindowsAPICodePack.Dialogs    
 
