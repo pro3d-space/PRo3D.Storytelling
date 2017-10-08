@@ -34,6 +34,10 @@ module AnnotationGroups =
             | (c, sg)  -> let sga = sg |> List.collect flattenAnnotations
                           c@sga
 
+    let tryGetChild (ag:AnnotationGroup) key = 
+        let annos = flattenAnnotations ag 
+        annos |> Seq.tryFind(fun x -> x.key = key)
+
     let updateItemAt (p : list<Index>) (f : AnnotationGroup -> AnnotationGroup) (t : AnnotationGroup) = 
         let rec go (p : list<Index>) (t : AnnotationGroup) =
             match p with

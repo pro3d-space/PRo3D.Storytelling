@@ -172,9 +172,17 @@ module ViewerApp =
                             let a' = AnnotationProperties.update a msg
                             let annotations' = 
                                 m.drawing.allAnnotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a') |> PList.ofList   
-                            
+
+                            let flatAnnos = 
+                                m.drawing.annotationGroups.flattenChild.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a') |> PList.ofList
+
+                            let func = (fun (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then AnnotationGroups.updateChild x.annotations a else x.annotations })
+                            let path = m.drawing.annotationGroups.activeChildPath
+                            let root = AnnotationGroups.updateItemAt path func m.drawing.annotationGroups.rootGroup
+                         
                             let drawing' = 
-                                { m.drawing with selectedAnnotation = Some a'; allAnnotations = annotations'} //; annotations = annotations' |> PList.ofList }
+                                { m.drawing with selectedAnnotation = Some a'; allAnnotations = annotations'; 
+                                                annotationGroups = {m.drawing.annotationGroups with flattenChild = flatAnnos; rootGroup = root }} //; annotations = annotations' |> PList.ofList }
 
                             { m with drawing = drawing' }
                         | None -> m                                                
