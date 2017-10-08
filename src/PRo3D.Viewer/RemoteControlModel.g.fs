@@ -12,14 +12,15 @@ module Mutable =
     
     type MModel(__initial : RemoteControlModel.Model) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<RemoteControlModel.Model> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _viewPoints = MList.Create(__initial.viewPoints)
         
         member x.viewPoints = _viewPoints :> alist<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : RemoteControlModel.Model) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 MList.Update(_viewPoints, v.viewPoints)
                 
@@ -27,8 +28,8 @@ module Mutable =
         static member Create(__initial : RemoteControlModel.Model) : MModel = MModel(__initial)
         static member Update(m : MModel, v : RemoteControlModel.Model) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<RemoteControlModel.Model> with
             member x.Update v = x.Update v
     

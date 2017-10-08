@@ -28,16 +28,14 @@ nuget Newtonsoft.Json                       ~> 10.0.0
 nuget FSharp.Core                           ~> 4.0.0
 nuget Fsunit                                ~> 2.3.2
 nuget FParsec                               ~> 1.0.2
-nuget FsPickler                             ~> 3.3.0
-nuget FsPickler.Json                        ~> 3.3.0
+nuget FsPickler                             ~> 4.0.0
+nuget FsPickler.Json                        ~> 4.0.0
 
-nuget Aardvark.UI                           ~> 3.3.36
-nuget Aardvark.UI.Primitives                ~> 3.3.36
-nuget Aardvark.Service                      ~> 3.3.36
-nuget Aardvark.Cef.WinForms                 ~> 3.3.36
-nuget Aardvark.Cef                          ~> 3.3.36
-
-nuget Aether
+nuget Aardvark.UI                           ~> 3.3.37
+nuget Aardvark.UI.Primitives                ~> 3.3.37
+nuget Aardvark.Service                      ~> 3.3.37
+nuget Aardvark.Cef.WinForms                 ~> 3.3.37
+nuget Aardvark.Cef                          ~> 3.3.37
 
 nuget WindowsAPICodePack-Core
 nuget WindowsAPICodePack-ShellExtensions

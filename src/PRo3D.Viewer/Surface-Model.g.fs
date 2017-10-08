@@ -12,7 +12,7 @@ module Mutable =
     
     type MSurface(__initial : PRo3D.Surfaces.Surface) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Surfaces.Surface> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _guid = ResetMod.Create(__initial.guid)
         let _name = ResetMod.Create(__initial.name)
         let _importPath = ResetMod.Create(__initial.importPath)
@@ -47,9 +47,10 @@ module Mutable =
         member x.textureLayers = _textureLayers :> alist<_>
         member x.selectedTexture = _selectedTexture :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.Surface) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_guid,v.guid)
                 ResetMod.Update(_name,v.name)
@@ -72,8 +73,8 @@ module Mutable =
         static member Create(__initial : PRo3D.Surfaces.Surface) : MSurface = MSurface(__initial)
         static member Update(m : MSurface, v : PRo3D.Surfaces.Surface) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.Surfaces.Surface> with
             member x.Update v = x.Update v
     
@@ -183,7 +184,7 @@ module Mutable =
     
     type MSgSurface(__initial : PRo3D.Surfaces.SgSurface) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Surfaces.SgSurface> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _surface = MSurface.Create(__initial.surface)
         let _globalBB = ResetMod.Create(__initial.globalBB)
         let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
@@ -194,9 +195,10 @@ module Mutable =
         member x.sceneGraph = _sceneGraph :> IMod<_>
         member x.kdTree = _kdTree :> amap<_,_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.SgSurface) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 MSurface.Update(_surface, v.surface)
                 ResetMod.Update(_globalBB,v.globalBB)
@@ -207,8 +209,8 @@ module Mutable =
         static member Create(__initial : PRo3D.Surfaces.SgSurface) : MSgSurface = MSgSurface(__initial)
         static member Update(m : MSgSurface, v : PRo3D.Surfaces.SgSurface) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.Surfaces.SgSurface> with
             member x.Update v = x.Update v
     
@@ -246,7 +248,7 @@ module Mutable =
     
     type MSurfaceModel(__initial : PRo3D.Surfaces.SurfaceModel) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Surfaces.SurfaceModel> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _surfaces = MList.Create(__initial.surfaces, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
         let _selectedSurface = MOption.Create(__initial.selectedSurface, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
         let _sgSurfaces = MMap.Create(__initial.sgSurfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
@@ -257,9 +259,10 @@ module Mutable =
         member x.sgSurfaces = _sgSurfaces :> amap<_,_>
         member x.sgGrouped = _sgGrouped :> alist<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.SurfaceModel) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 MList.Update(_surfaces, v.surfaces)
                 MOption.Update(_selectedSurface, v.selectedSurface)
@@ -270,8 +273,8 @@ module Mutable =
         static member Create(__initial : PRo3D.Surfaces.SurfaceModel) : MSurfaceModel = MSurfaceModel(__initial)
         static member Update(m : MSurfaceModel, v : PRo3D.Surfaces.SurfaceModel) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.Surfaces.SurfaceModel> with
             member x.Update v = x.Update v
     

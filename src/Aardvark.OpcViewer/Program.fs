@@ -114,8 +114,11 @@ module KdTrees =
                 | LazyKdTree k -> k2 k)
         ^+ Pickler.case InCoreKdTree incorePickler
         ^. Pickler.case LazyKdTree lazyPickler
-       
-    FsPickler.RegisterPicklerFactory (fun _ -> level0KdTreePickler )
+    
+    let registry = new CustomPicklerRegistry()
+
+    //FsPickler.RegisterPicklerFactory (fun _ -> level0KdTreePickler )
+    do registry.RegisterFactory (fun _ -> level0KdTreePickler)
 
     let loadKdtree p =
         //Log.startTimed "loading tree"

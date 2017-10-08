@@ -12,7 +12,7 @@ module Mutable =
     
     type MDrawingModel(__initial : PRo3D.Drawing.DrawingModel) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Drawing.DrawingModel> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _draw = ResetMod.Create(__initial.draw)
         let _hoverPosition = MOption.Create(__initial.hoverPosition)
         let _working = MOption.Create(__initial.working, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
@@ -43,9 +43,10 @@ module Mutable =
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Drawing.DrawingModel) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_draw,v.draw)
                 MOption.Update(_hoverPosition, v.hoverPosition)
@@ -66,8 +67,8 @@ module Mutable =
         static member Create(__initial : PRo3D.Drawing.DrawingModel) : MDrawingModel = MDrawingModel(__initial)
         static member Update(m : MDrawingModel, v : PRo3D.Drawing.DrawingModel) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.Drawing.DrawingModel> with
             member x.Update v = x.Update v
     

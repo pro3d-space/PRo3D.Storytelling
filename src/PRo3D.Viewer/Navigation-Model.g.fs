@@ -12,7 +12,7 @@ module Mutable =
     
     type MNavigationModel(__initial : PRo3D.Navigation2.NavigationModel) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Navigation2.NavigationModel> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _camera = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.camera)
         let _navigationMode = ResetMod.Create(__initial.navigationMode)
         let _exploreCenter = ResetMod.Create(__initial.exploreCenter)
@@ -21,9 +21,10 @@ module Mutable =
         member x.navigationMode = _navigationMode :> IMod<_>
         member x.exploreCenter = _exploreCenter :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Navigation2.NavigationModel) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_camera, v.camera)
                 ResetMod.Update(_navigationMode,v.navigationMode)
@@ -33,8 +34,8 @@ module Mutable =
         static member Create(__initial : PRo3D.Navigation2.NavigationModel) : MNavigationModel = MNavigationModel(__initial)
         static member Update(m : MNavigationModel, v : PRo3D.Navigation2.NavigationModel) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.Navigation2.NavigationModel> with
             member x.Update v = x.Update v
     

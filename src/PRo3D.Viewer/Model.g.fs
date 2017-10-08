@@ -12,7 +12,7 @@ module Mutable =
     
     type MDipAndStrikeResults(__initial : PRo3D.DipAndStrikeResults) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.DipAndStrikeResults> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _plane = ResetMod.Create(__initial.plane)
         let _dipAngle = ResetMod.Create(__initial.dipAngle)
         let _dipDirection = ResetMod.Create(__initial.dipDirection)
@@ -29,9 +29,10 @@ module Mutable =
         member x.strikeAzimuth = _strikeAzimuth :> IMod<_>
         member x.centerOfMass = _centerOfMass :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.DipAndStrikeResults) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_plane,v.plane)
                 ResetMod.Update(_dipAngle,v.dipAngle)
@@ -45,8 +46,8 @@ module Mutable =
         static member Create(__initial : PRo3D.DipAndStrikeResults) : MDipAndStrikeResults = MDipAndStrikeResults(__initial)
         static member Update(m : MDipAndStrikeResults, v : PRo3D.DipAndStrikeResults) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.DipAndStrikeResults> with
             member x.Update v = x.Update v
     
@@ -102,7 +103,7 @@ module Mutable =
     
     type MAnnotationResults(__initial : PRo3D.AnnotationResults) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.AnnotationResults> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _height = ResetMod.Create(__initial.height)
         let _heightDelta = ResetMod.Create(__initial.heightDelta)
         let _length = ResetMod.Create(__initial.length)
@@ -113,9 +114,10 @@ module Mutable =
         member x.length = _length :> IMod<_>
         member x.wayLength = _wayLength :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.AnnotationResults) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_height,v.height)
                 ResetMod.Update(_heightDelta,v.heightDelta)
@@ -126,8 +128,8 @@ module Mutable =
         static member Create(__initial : PRo3D.AnnotationResults) : MAnnotationResults = MAnnotationResults(__initial)
         static member Update(m : MAnnotationResults, v : PRo3D.AnnotationResults) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.AnnotationResults> with
             member x.Update v = x.Update v
     
@@ -165,7 +167,7 @@ module Mutable =
     
     type MSegment(__initial : PRo3D.Segment) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Segment> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _startPoint = ResetMod.Create(__initial.startPoint)
         let _endPoint = ResetMod.Create(__initial.endPoint)
         let _points = MList.Create(__initial.points)
@@ -174,9 +176,10 @@ module Mutable =
         member x.endPoint = _endPoint :> IMod<_>
         member x.points = _points :> alist<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Segment) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_startPoint,v.startPoint)
                 ResetMod.Update(_endPoint,v.endPoint)
@@ -186,8 +189,8 @@ module Mutable =
         static member Create(__initial : PRo3D.Segment) : MSegment = MSegment(__initial)
         static member Update(m : MSegment, v : PRo3D.Segment) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.Segment> with
             member x.Update v = x.Update v
     
@@ -219,7 +222,7 @@ module Mutable =
     
     type MAnnotation(__initial : PRo3D.Annotation) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Annotation> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _key = ResetMod.Create(__initial.key)
         let _modelTrafo = ResetMod.Create(__initial.modelTrafo)
         let _geometry = ResetMod.Create(__initial.geometry)
@@ -252,9 +255,10 @@ module Mutable =
         member x.text = _text :> IMod<_>
         member x.surfaceName = _surfaceName :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Annotation) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_key,v.key)
                 ResetMod.Update(_modelTrafo,v.modelTrafo)
@@ -276,8 +280,8 @@ module Mutable =
         static member Create(__initial : PRo3D.Annotation) : MAnnotation = MAnnotation(__initial)
         static member Update(m : MAnnotation, v : PRo3D.Annotation) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.Annotation> with
             member x.Update v = x.Update v
     
@@ -381,16 +385,17 @@ module Mutable =
     
     type MPathProxy(__initial : PRo3D.PathProxy) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.PathProxy> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _absolutePath = MOption.Create(__initial.absolutePath)
         let _relativePath = MOption.Create(__initial.relativePath)
         
         member x.absolutePath = _absolutePath :> IMod<_>
         member x.relativePath = _relativePath :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.PathProxy) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 MOption.Update(_absolutePath, v.absolutePath)
                 MOption.Update(_relativePath, v.relativePath)
@@ -399,8 +404,8 @@ module Mutable =
         static member Create(__initial : PRo3D.PathProxy) : MPathProxy = MPathProxy(__initial)
         static member Update(m : MPathProxy, v : PRo3D.PathProxy) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.PathProxy> with
             member x.Update v = x.Update v
     
@@ -426,14 +431,15 @@ module Mutable =
     
     type MMeasurementsImporterModel(__initial : PRo3D.MeasurementsImporterModel) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.MeasurementsImporterModel> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _annotations = MList.Create(__initial.annotations, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
         
         member x.annotations = _annotations :> alist<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.MeasurementsImporterModel) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 MList.Update(_annotations, v.annotations)
                 
@@ -441,8 +447,8 @@ module Mutable =
         static member Create(__initial : PRo3D.MeasurementsImporterModel) : MMeasurementsImporterModel = MMeasurementsImporterModel(__initial)
         static member Update(m : MMeasurementsImporterModel, v : PRo3D.MeasurementsImporterModel) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.MeasurementsImporterModel> with
             member x.Update v = x.Update v
     
@@ -462,7 +468,7 @@ module Mutable =
     
     type MViewConfigModel(__initial : PRo3D.ViewConfigModel) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.ViewConfigModel> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _nearPlane = Aardvark.UI.Mutable.MNumericInput.Create(__initial.nearPlane)
         let _farPlane = Aardvark.UI.Mutable.MNumericInput.Create(__initial.farPlane)
         let _navigationSensitivity = Aardvark.UI.Mutable.MNumericInput.Create(__initial.navigationSensitivity)
@@ -483,9 +489,10 @@ module Mutable =
         member x.maxDipAngle = _maxDipAngle
         member x.lodColoring = _lodColoring :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.ViewConfigModel) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 Aardvark.UI.Mutable.MNumericInput.Update(_nearPlane, v.nearPlane)
                 Aardvark.UI.Mutable.MNumericInput.Update(_farPlane, v.farPlane)
@@ -501,8 +508,8 @@ module Mutable =
         static member Create(__initial : PRo3D.ViewConfigModel) : MViewConfigModel = MViewConfigModel(__initial)
         static member Update(m : MViewConfigModel, v : PRo3D.ViewConfigModel) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.ViewConfigModel> with
             member x.Update v = x.Update v
     
@@ -570,7 +577,7 @@ module Mutable =
     
     type MAnnotationGroup(__initial : PRo3D.AnnotationGroup) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.AnnotationGroup> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _key = ResetMod.Create(__initial.key)
         let _name = ResetMod.Create(__initial.name)
         let _annotations = MList.Create(__initial.annotations, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
@@ -585,9 +592,10 @@ module Mutable =
         member x.visible = _visible :> IMod<_>
         member x.expanded = _expanded :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.AnnotationGroup) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_key,v.key)
                 ResetMod.Update(_name,v.name)
@@ -600,8 +608,8 @@ module Mutable =
         static member Create(__initial : PRo3D.AnnotationGroup) : MAnnotationGroup = MAnnotationGroup(__initial)
         static member Update(m : MAnnotationGroup, v : PRo3D.AnnotationGroup) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.AnnotationGroup> with
             member x.Update v = x.Update v
     
@@ -651,7 +659,7 @@ module Mutable =
     
     type MAnnotationGroupsModel(__initial : PRo3D.AnnotationGroupsModel) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.AnnotationGroupsModel> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _rootGroup = MAnnotationGroup.Create(__initial.rootGroup)
         let _activeGroupKey = ResetMod.Create(__initial.activeGroupKey)
         let _activeGroupPath = ResetMod.Create(__initial.activeGroupPath)
@@ -668,9 +676,10 @@ module Mutable =
         member x.activeChildPath = _activeChildPath :> IMod<_>
         member x.flattenChild = _flattenChild :> alist<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.AnnotationGroupsModel) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 MAnnotationGroup.Update(_rootGroup, v.rootGroup)
                 ResetMod.Update(_activeGroupKey,v.activeGroupKey)
@@ -684,8 +693,8 @@ module Mutable =
         static member Create(__initial : PRo3D.AnnotationGroupsModel) : MAnnotationGroupsModel = MAnnotationGroupsModel(__initial)
         static member Update(m : MAnnotationGroupsModel, v : PRo3D.AnnotationGroupsModel) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.AnnotationGroupsModel> with
             member x.Update v = x.Update v
     

@@ -12,7 +12,7 @@ module Mutable =
     
     type MReferenceSystem(__initial : PRo3D.ReferenceSystem.ReferenceSystem) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.ReferenceSystem.ReferenceSystem> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _origin = ResetMod.Create(__initial.origin)
         let _north = ResetMod.Create(__initial.north)
         let _up = Aardvark.UI.Mutable.MV3dInput.Create(__initial.up)
@@ -23,9 +23,10 @@ module Mutable =
         member x.up = _up
         member x.isVisible = _isVisible :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.ReferenceSystem.ReferenceSystem) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_origin,v.origin)
                 ResetMod.Update(_north,v.north)
@@ -36,8 +37,8 @@ module Mutable =
         static member Create(__initial : PRo3D.ReferenceSystem.ReferenceSystem) : MReferenceSystem = MReferenceSystem(__initial)
         static member Update(m : MReferenceSystem, v : PRo3D.ReferenceSystem.ReferenceSystem) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.ReferenceSystem.ReferenceSystem> with
             member x.Update v = x.Update v
     
