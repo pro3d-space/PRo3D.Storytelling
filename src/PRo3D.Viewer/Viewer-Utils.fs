@@ -120,10 +120,13 @@ module ViewerUtils =
                         let! texture = surface.surface.selectedTexture 
                         let! scalar = surface.surface.selectedScalar
 
-                        return { 
-                            selectedTexture = texture |> Option.map(fun x -> x.index)
-                            selectedScalar  = scalar  |> Option.map(fun x -> x.index)                           
-                        }
+                        let attr : Aardvark.Opc.AttributeParameters = 
+                            {
+                                selectedTexture = texture |> Option.map(fun x -> x.index)
+                                selectedScalar  = scalar  |> Option.map(fun x -> x.index)                           
+                            }
+
+                        return attr
                     })
                 |> pickable' pickable
                 |> Sg.noEvents                

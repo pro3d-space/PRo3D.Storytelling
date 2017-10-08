@@ -56,7 +56,7 @@ module SurfaceProperties =
         | SetScalarMap   of Option<ScalarLayer>
         | SetTexturesMap of Option<TextureLayer>
 
-    let update (model : Surface) (act : Action) =
+    let update (model : PRo3D.Surfaces.Surface) (act : Action) =
         match act with
             | SetFillMode mode ->
                 { model with fillMode = mode }

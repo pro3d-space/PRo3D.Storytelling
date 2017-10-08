@@ -19,7 +19,7 @@ module Surface =
     let getSurface model guid =
         model.surfaces |> PList.toList |> List.tryFind (fun a -> a.guid = guid)
 
-    let updateSingleSurface model (s':Surface)  =
+    let updateSingleSurface model (s': PRo3D.Surfaces.Surface)  =
         let surfaces' = 
             model.surfaces 
                 |> PList.toList 
@@ -36,7 +36,7 @@ module Surface =
 
         { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
 
-    let updateSingleSurface' model (s':Surface)  =
+    let updateSingleSurface' model (s':PRo3D.Surfaces.Surface)  =
         let surfaces' = 
             model.surfaces 
                 |> PList.toList 
@@ -64,7 +64,7 @@ module Surface =
 
         { model with surfaces = surfaces'; sgSurfaces = sgSurfaces'; sgGrouped = group' }
 
-    let updateSurfaces model (surfaces' : plist<Surface>) =
+    let updateSurfaces model (surfaces' : plist<PRo3D.Surfaces.Surface>) =
         let sgSurfaces' =
             surfaces' 
                 |> PList.toList
@@ -90,7 +90,7 @@ module Surface =
             |> List.map snd
             |> PList.ofList
 
-    let updateGrouping' (model:SurfaceModel) (s':Surface) =
+    let updateGrouping' (model:SurfaceModel) (s':PRo3D.Surfaces.Surface) =
         let group' = 
             model.sgGrouped
               |> PList.map(fun surfs ->
@@ -201,7 +201,7 @@ module Surface =
                     |> Seq.toList 
             else []
 
-        let getSurfaceFolder (surface:Surface) (scenePath:option<string>) =
+        let getSurfaceFolder (surface:PRo3D.Surfaces.Surface) (scenePath:option<string>) =
             if surface.relativePaths 
             then
                 match scenePath with
@@ -308,7 +308,7 @@ module Surface =
             |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
             |> Box3d.ofSeq
 
-    let sgOfSurface (s:Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = {
+    let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = {
         surface = s       
         sceneGraph = sg
         globalBB = bb
