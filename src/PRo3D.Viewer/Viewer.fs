@@ -327,9 +327,13 @@ module ViewerApp =
                     let m = 
                         match k with 
                           | Aardvark.Application.Keys.Space -> 
-                            
-                            let cv = (_camera.Get m).view
-                            let waypoints = PList.append cv m.waypoints
+                                                        
+                            let wp = {
+                                name = sprintf "wp %d" m.waypoints.Count
+                                cv = (_camera.Get m).view
+                            }
+
+                            let waypoints = PList.append wp m.waypoints
                             Log.line "saving waypoints %A" waypoints
                             Serialization.save "./waypoints.wps" waypoints |> ignore
                             { m with waypoints = waypoints }
@@ -648,7 +652,7 @@ module ViewerApp =
     let loadWaypoints m = 
         match Serialization.fileExists "./waypoints.wps" with
           | Some path -> 
-                let wp = Serialization.loadAs<plist<CameraView>> path
+                let wp = Serialization.loadAs<plist<WayPoint>> path
                 { m with waypoints = wp }
           | None -> m
 

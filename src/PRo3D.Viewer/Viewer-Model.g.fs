@@ -283,7 +283,7 @@ module Mutable =
                     override x.Update(r,f) = { r with recent = f r.recent }
                 }
             let waypoints =
-                { new Lens<PRo3D.Viewer.Model, Aardvark.Base.plist<Aardvark.Base.CameraView>>() with
+                { new Lens<PRo3D.Viewer.Model, Aardvark.Base.plist<PRo3D.Viewer.WayPoint>>() with
                     override x.Get(r) = r.waypoints
                     override x.Set(r,v) = { r with waypoints = v }
                     override x.Update(r,f) = { r with waypoints = f r.waypoints }

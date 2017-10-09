@@ -18,8 +18,11 @@ open Aardvark.Application.WinForms
 module Serialization =
     open MBrace.FsPickler
     open System.IO
-    
-    let binarySerializer = FsPickler.CreateBinarySerializer()
+        
+    let registry = new CustomPicklerRegistry()    
+    let cache = PicklerCache.FromCustomPicklerRegistry registry
+
+    let binarySerializer = FsPickler.CreateBinarySerializer(picklerResolver = cache)
 
     let save path (d : 'a) =    
         let arr = binarySerializer.Pickle d     
@@ -115,7 +118,7 @@ module KdTrees =
         ^+ Pickler.case InCoreKdTree incorePickler
         ^. Pickler.case LazyKdTree lazyPickler
     
-    let registry = new CustomPicklerRegistry()
+    
 
     //FsPickler.RegisterPicklerFactory (fun _ -> level0KdTreePickler )
     do registry.RegisterFactory (fun _ -> level0KdTreePickler)
