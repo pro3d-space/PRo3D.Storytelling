@@ -24,7 +24,8 @@ type Scene = {
     config          : ViewConfigModel
     scenePath       : option<string>
     referenceSystem : ReferenceSystem
-    groups          : AnnotationGroupsModel
+    bookmarksModel  : BookmarksModel
+    //groups          : AnnotationGroupsModel
 }
 
 [<DomainType>] 
@@ -84,7 +85,8 @@ module Viewer =
                 config          = ViewConfigModel.initial
                 scenePath       = None
                 referenceSystem = ReferenceSystem.initial
-                groups          = AnnotationGroupsModel.initial
+                bookmarksModel  = BookmarksModel.initial
+                //groups          = AnnotationGroupsModel.initial
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing

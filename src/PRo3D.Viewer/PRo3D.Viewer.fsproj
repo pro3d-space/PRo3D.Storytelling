@@ -85,6 +85,7 @@
     <Compile Include="ConfigTestModel.fs" />
     <Compile Include="ConfigTest.fs" />
     <Compile Include="Viewer-Model.fs" />
+    <Compile Include="Bookmarks.fs" />
     <Compile Include="Scene.fs" />
     <Compile Include="RemoteControlModel.fs" />
     <Compile Include="Viewer.fs" />

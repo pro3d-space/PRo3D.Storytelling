@@ -19,7 +19,7 @@ module Mutable =
         let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
         let _scenePath = MOption.Create(__initial.scenePath)
         let _referenceSystem = PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Create(__initial.referenceSystem)
-        let _groups = PRo3D.Mutable.MAnnotationGroupsModel.Create(__initial.groups)
+        let _bookmarksModel = PRo3D.Mutable.MBookmarksModel.Create(__initial.bookmarksModel)
         
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
@@ -27,7 +27,7 @@ module Mutable =
         member x.config = _config
         member x.scenePath = _scenePath :> IMod<_>
         member x.referenceSystem = _referenceSystem
-        member x.groups = _groups
+        member x.bookmarksModel = _bookmarksModel
         
         member x.Update(v : PRo3D.Viewer.Scene) =
             if not (System.Object.ReferenceEquals(__current, v)) then
@@ -39,7 +39,7 @@ module Mutable =
                 PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
                 MOption.Update(_scenePath, v.scenePath)
                 PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Update(_referenceSystem, v.referenceSystem)
-                PRo3D.Mutable.MAnnotationGroupsModel.Update(_groups, v.groups)
+                PRo3D.Mutable.MBookmarksModel.Update(_bookmarksModel, v.bookmarksModel)
                 
         
         static member Create(__initial : PRo3D.Viewer.Scene) : MScene = MScene(__initial)
@@ -92,11 +92,11 @@ module Mutable =
                     override x.Set(r,v) = { r with referenceSystem = v }
                     override x.Update(r,f) = { r with referenceSystem = f r.referenceSystem }
                 }
-            let groups =
-                { new Lens<PRo3D.Viewer.Scene, PRo3D.AnnotationGroupsModel>() with
-                    override x.Get(r) = r.groups
-                    override x.Set(r,v) = { r with groups = v }
-                    override x.Update(r,f) = { r with groups = f r.groups }
+            let bookmarksModel =
+                { new Lens<PRo3D.Viewer.Scene, PRo3D.BookmarksModel>() with
+                    override x.Get(r) = r.bookmarksModel
+                    override x.Set(r,v) = { r with bookmarksModel = v }
+                    override x.Update(r,f) = { r with bookmarksModel = f r.bookmarksModel }
                 }
     
     

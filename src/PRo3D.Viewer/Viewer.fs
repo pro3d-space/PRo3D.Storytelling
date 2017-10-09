@@ -46,6 +46,7 @@ module ViewerApp =
         | NavigationMessage         of Navigation.Action
         | ReferenceSystemMessage    of ReferenceSystemApp.Action
         | AnnotationMessage         of AnnotationProperties.Action
+        | BookmarkMessage           of Bookmarks.Action
 
         | SetCamera of CameraView
         
@@ -96,6 +97,15 @@ module ViewerApp =
                     { CameraController.initial with view = view }            
 
                 //{ m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
+                (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam)
+            | None -> m
+
+    let goToBookmark (m : Model) id =
+        let bm = Bookmarks.tryGet m.scene.bookmarksModel.bookmarks id
+        match bm with
+            | Some b ->
+                let cam = b.camState
+                   // { CameraController.initial with view = view }            
                 (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam)
             | None -> m
                     
@@ -192,9 +202,9 @@ module ViewerApp =
                 let m = lens.Set(m, c')
 
                 m
-            | AnnotationGroupsMessage msg,_,_ ->
-                let ag = m.scene.groups
-                { m with scene = { m.scene with groups = AnnotationGroups.update ag msg}}
+            //| AnnotationGroupsMessage msg,_,_ ->
+            //    let ag = m.scene.groups
+            //    { m with scene = { m.scene with groups = AnnotationGroups.update ag msg}}
             | DrawingMessage msg, Interactions.DrawAnnotation,_->
                 { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg } |> stash
             | SurfaceActions msg,_,_ ->
@@ -224,7 +234,18 @@ module ViewerApp =
                                                 annotationGroups = {m.drawing.annotationGroups with flattenChild = flatAnnos; rootGroup = root }} //; annotations = annotations' |> PList.ofList }
 
                             { m with drawing = drawing' }
-                        | None -> m                                                
+                        | None -> m       
+            | BookmarkMessage msg,_,_ ->    
+                match msg with
+                    | Bookmarks.Action.UpdateCam id -> 
+                        goToBookmark m id
+                    | Bookmarks.Action.AddBookmark -> 
+                        let newBm = Bookmarks.getNewBookmark (m.scene.navigation.camera) (m.scene.bookmarksModel.bookmarks.Count)
+                        let bookmarks' = m.scene.bookmarksModel.bookmarks |> PList.prepend newBm
+                        { m with scene = { m.scene with bookmarksModel = {m.scene.bookmarksModel with bookmarks = bookmarks'}}}
+                    | _ ->  
+                        let b = Bookmarks.update m.scene.bookmarksModel msg
+                        { m with scene = { m.scene with bookmarksModel = b}}
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolders w with
                     | [] -> m
@@ -569,7 +590,7 @@ module ViewerApp =
 
         let annotationGroupProperties (model:MModel) =
             adaptive {
-                let bla = Some model.scene.groups
+                let bla = Some model.drawing.annotationGroups
                 let opt = 
                     match bla with
                         | Some a -> AnnotationGroups.viewUI a
@@ -600,6 +621,17 @@ module ViewerApp =
                 return (opt |> UI.map DnSProperties)
             } 
 
+        let bookmarkProperties (model:MModel) =
+            adaptive {
+                let! bla = model.scene.bookmarksModel.selectedBookmark
+                let opt = 
+                    match bla with
+                        | Some a -> Bookmarks.UI.view a
+                        | None   -> div[][]
+
+                return (opt |> UI.map BookmarkMessage)
+            } 
+
         let annotationUI = 
             div [][
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
@@ -617,12 +649,12 @@ module ViewerApp =
                     Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 
             ]
 
-        let annotationGroupsUI =
-            div [][
-                GuiEx.accordion "Annotations" "Write" true [
-                    AnnotationGroups.view m.scene.groups |> UI.map AnnotationGroupsMessage
-                ]
-            ]
+        //let annotationGroupsUI =
+        //    div [][
+        //        GuiEx.accordion "Annotations" "Write" true [
+        //            AnnotationGroups.view m.scene.groups |> UI.map AnnotationGroupsMessage
+        //        ]
+        //    ]
 
         let config (model:MModel) =
             adaptive {
@@ -643,13 +675,26 @@ module ViewerApp =
                 GuiEx.accordion "Camera" "Camera Retro" false [
                     CameraProperties.view m.scene.navigation.camera
                 ]
-            ]            
+            ]          
+            
+        let bookmarkUI = 
+            div [][
+                Bookmarks.viewGUI |> UI.map BookmarkMessage
+
+                GuiEx.accordion "Bookmarks" "Write" true [
+                    Bookmarks.view m.scene.bookmarksModel |> UI.map BookmarkMessage 
+                ]
+                GuiEx.accordion "Properties" "Content" true [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(bookmarkProperties m))
+                ]
+            ]
             
         let tabs = 
             GuiEx.tabbed [clazz "ui inverted segment"] [
                 ("Data", SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions)
                 ("Annotations", annotationUI) //  annotationGroupsUI annotationUI
                 ("Config", configUI)
+                ("Bookmarks", bookmarkUI)
             ] "Data" 
       
         let topMenu = [

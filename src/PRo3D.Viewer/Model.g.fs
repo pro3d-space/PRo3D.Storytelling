@@ -737,3 +737,111 @@ module Mutable =
                     override x.Set(r,v) = { r with flattenChild = v }
                     override x.Update(r,f) = { r with flattenChild = f r.flattenChild }
                 }
+    
+    
+    type MBookmark(__initial : PRo3D.Bookmark) =
+        inherit obj()
+        let mutable __current = __initial
+        let _key = ResetMod.Create(__initial.key)
+        let _name = ResetMod.Create(__initial.name)
+        let _camState = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.camState)
+        
+        member x.key = _key :> IMod<_>
+        member x.name = _name :> IMod<_>
+        member x.camState = _camState
+        
+        member x.Update(v : PRo3D.Bookmark) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                ResetMod.Update(_key,v.key)
+                ResetMod.Update(_name,v.name)
+                Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_camState, v.camState)
+                
+        
+        static member Create(__initial : PRo3D.Bookmark) : MBookmark = MBookmark(__initial)
+        static member Update(m : MBookmark, v : PRo3D.Bookmark) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.Bookmark> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module Bookmark =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let key =
+                { new Lens<PRo3D.Bookmark, System.Guid>() with
+                    override x.Get(r) = r.key
+                    override x.Set(r,v) = { r with key = v }
+                    override x.Update(r,f) = { r with key = f r.key }
+                }
+            let name =
+                { new Lens<PRo3D.Bookmark, Microsoft.FSharp.Core.string>() with
+                    override x.Get(r) = r.name
+                    override x.Set(r,v) = { r with name = v }
+                    override x.Update(r,f) = { r with name = f r.name }
+                }
+            let camState =
+                { new Lens<PRo3D.Bookmark, Aardvark.UI.Primitives.CameraControllerState>() with
+                    override x.Get(r) = r.camState
+                    override x.Set(r,v) = { r with camState = v }
+                    override x.Update(r,f) = { r with camState = f r.camState }
+                }
+    
+    
+    type MBookmarksModel(__initial : PRo3D.BookmarksModel) =
+        inherit obj()
+        let mutable __current = __initial
+        let _bookmarkCamera = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.bookmarkCamera)
+        let _bookmarks = MList.Create(__initial.bookmarks, (fun v -> MBookmark.Create(v)), (fun (m,v) -> MBookmark.Update(m, v)), (fun v -> v))
+        let _selectedBookmark = MOption.Create(__initial.selectedBookmark, (fun v -> MBookmark.Create(v)), (fun (m,v) -> MBookmark.Update(m, v)), (fun v -> v))
+        
+        member x.bookmarkCamera = _bookmarkCamera
+        member x.bookmarks = _bookmarks :> alist<_>
+        member x.selectedBookmark = _selectedBookmark :> IMod<_>
+        
+        member x.Update(v : PRo3D.BookmarksModel) =
+            if not (System.Object.ReferenceEquals(__current, v)) then
+                __current <- v
+                
+                Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_bookmarkCamera, v.bookmarkCamera)
+                MList.Update(_bookmarks, v.bookmarks)
+                MOption.Update(_selectedBookmark, v.selectedBookmark)
+                
+        
+        static member Create(__initial : PRo3D.BookmarksModel) : MBookmarksModel = MBookmarksModel(__initial)
+        static member Update(m : MBookmarksModel, v : PRo3D.BookmarksModel) = m.Update(v)
+        
+        override x.ToString() = __current.ToString()
+        member x.AsString = sprintf "%A" __current
+        interface IUpdatable<PRo3D.BookmarksModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module BookmarksModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let bookmarkCamera =
+                { new Lens<PRo3D.BookmarksModel, Aardvark.UI.Primitives.CameraControllerState>() with
+                    override x.Get(r) = r.bookmarkCamera
+                    override x.Set(r,v) = { r with bookmarkCamera = v }
+                    override x.Update(r,f) = { r with bookmarkCamera = f r.bookmarkCamera }
+                }
+            let bookmarks =
+                { new Lens<PRo3D.BookmarksModel, Aardvark.Base.plist<PRo3D.Bookmark>>() with
+                    override x.Get(r) = r.bookmarks
+                    override x.Set(r,v) = { r with bookmarks = v }
+                    override x.Update(r,f) = { r with bookmarks = f r.bookmarks }
+                }
+            let selectedBookmark =
+                { new Lens<PRo3D.BookmarksModel, Microsoft.FSharp.Core.option<PRo3D.Bookmark>>() with
+                    override x.Get(r) = r.selectedBookmark
+                    override x.Set(r,v) = { r with selectedBookmark = v }
+                    override x.Update(r,f) = { r with selectedBookmark = f r.selectedBookmark }
+                }

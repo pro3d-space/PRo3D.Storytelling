@@ -536,3 +536,25 @@ module AnnotationGroupsModel =
         activeChildPath = list.Empty // (is path of parent group!)
         flattenChild = plist.Empty
         }
+
+[<DomainType>]
+type Bookmark = {
+    key         : Guid
+    name        : string
+    camState    : CameraControllerState
+}
+
+[<DomainType>]
+type BookmarksModel = {
+    bookmarkCamera   : CameraControllerState
+    bookmarks        : plist<Bookmark>
+    selectedBookmark : option<Bookmark>
+}
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module BookmarksModel =
+    let initial = {
+        bookmarkCamera   = CameraController.initial  
+        bookmarks        = plist.Empty
+        selectedBookmark = None
+        }

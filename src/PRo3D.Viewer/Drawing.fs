@@ -424,7 +424,7 @@ module DrawingApp =
                         
             Incremental.div 
                     (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (                      
-                        alist {                                                                     
+                        alist {
                             for a in model.allAnnotations do 
                                                                         
                                 let! sem = a.semantic
@@ -512,7 +512,7 @@ module DrawingApp =
 
                 let! c = AnnotationGroups.mkColor model.annotationGroups.activeGroupKey group.key
                 let color = sprintf "color: %s" (Html.ofC4b c)                
-                let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups              
+                let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
 
                 let icon =
                     adaptive {
@@ -528,12 +528,10 @@ module DrawingApp =
                         yield clazz icon
                         yield onClick (fun _ -> AnnotationGroupsMessage(AnnotationGroups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                     } |> AttributeMap.ofAMap
-                
-
+               
                 let desc =
-                    div [style color] [                        
+                    div [style color] [       
                         Incremental.text group.name
-                                                
                         Incremental.i map AList.empty |> UI.wrapToolTip "Set active"
                         
                         i [clazz "plus icon"

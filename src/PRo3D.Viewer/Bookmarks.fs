@@ -1,0 +1,117 @@
+﻿namespace PRo3D
+
+open Aardvark.Base
+open Aardvark.Application
+open Aardvark.UI
+open Aardvark.UI.Primitives
+open Aardvark.Base.Incremental
+
+open System
+
+open PRo3D
+
+module Bookmarks = 
+    open Aardvark.UI.Primitives.Mutable
+
+    type Action =
+        | AddBookmark 
+        | UpdateCam of Guid  
+        | Select of Guid
+        | Remove of Guid
+    
+    let tryGet (ans:plist<Bookmark>) key = 
+            ans |> Seq.tryFind(fun x -> x.key = key)
+
+    let getNewBookmark (ccs:CameraControllerState) (count:int)= 
+        let name = sprintf "bm%d" count
+        {
+            key = Guid.NewGuid()
+            name = name
+            camState = ccs
+        }
+        
+
+    let update (model : BookmarksModel) (act : Action) =
+        match act with
+            | AddBookmark -> model // implemented in Viewer.Action.BookmarkMessage
+            | UpdateCam id -> model    // implemented in Viewer.Action.BookmarkMessage
+            | Select id ->
+                let sb = tryGet model.bookmarks id   
+                { model with selectedBookmark = sb }
+            | Remove id ->
+                let toRemove = model.bookmarks |> PList.toList |> List.tryFindIndex (fun d -> d.key = id)
+                match toRemove with
+                    | Some index ->
+                        let b' = model.bookmarks |> PList.removeAt index
+                        { model with bookmarks = b'}
+                    | None -> model     
+
+    let mkColor (activeId : IMod<Guid>) (bmId : IMod<Guid>) = 
+        if activeId = bmId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
+
+
+    let viewGUI = 
+        
+         div [clazz "ui buttons inverted"] [
+                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                        button [clazz "ui icon button"; attribute "data-content" "Add Bookmark"; onMouseClick (fun _ -> AddBookmark)] [
+                                i [clazz "plus icon"] [] ] 
+                    )
+                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    //    button [clazz "ui icon button"; attribute "data-content" "Clear Bookmarks"; onMouseClick (fun _ -> Clear)] [
+                    //            i [clazz "file outline icon"] [] ]
+                    //)
+                ] 
+
+    let view (model : MBookmarksModel) =
+    
+      Incremental.div 
+                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (                      
+                        alist {
+                            for b in model.bookmarks do
+                                
+                                let! bm = model.selectedBookmark
+                                let key = match bm with
+                                            | Some x -> x.key
+                                            | None -> Guid.Empty |> Mod.constant
+
+                                let! c = mkColor key b.key
+                                let bgc = sprintf "color: %s" (Html.ofC4b c)
+
+                                let select = fun _ -> Select (b.key |> Mod.force)
+
+                                yield div [clazz "item"] [
+                                        i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                                        div [clazz "content"] [
+                                            let desc = b.name
+                                            yield Incremental.div (AttributeMap.ofList [clazz "header"])(
+                                                alist {
+                                                    yield i [clazz "home icon"                                                
+                                                             onClick (fun _ -> UpdateCam (b.key |> Mod.force))
+                                                             ][] |> UI.wrapToolTip "FlyTo"               
+                                                    yield i [clazz "Remove icon"
+                                                             onClick (fun _ -> Remove (b.key |> Mod.force))
+                                                             ][]  |> UI.wrapToolTip "Remove"          
+                                                              
+                                                    } 
+                                            ) 
+                                            yield div [clazz "description"] [Incremental.text desc]      
+                                        ]
+                                    ]
+                               
+                        }     
+                ) 
+
+    module UI =
+        let view (model:MBookmark) =
+            let view = model.camState.view |> Mod.force
+            require Html.semui (
+                Html.table [                                                
+                    Html.row "Pos:"     [Incremental.text (view.Location.ToString("0.00") |> Mod.constant )]
+                    Html.row "LookAt:"  [text (view.Forward.ToString("0.00"))]
+                    Html.row "Up:"      [text (view.Up.ToString("0.00"))]
+                    Html.row "Sky:"     [text (view.Sky.ToString("0.00"))]
+                ]
+            )
+
+      

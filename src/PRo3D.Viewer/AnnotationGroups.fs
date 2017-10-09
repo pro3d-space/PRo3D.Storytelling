@@ -119,20 +119,6 @@ module AnnotationGroups =
                 { model with rootGroup = updateItemAt model.activeGroupPath func model.rootGroup; activeGroupName = t }
             | _ -> model
     
-    let rec getAllAnnotationsFromSubGroups (root:MAnnotationGroup) = 
-        let anns = root.annotations //|> AList.map(fun x -> Mod.force)
-        let l = (root.subGroups |> AList.map(fun x -> getAllAnnotationsFromSubGroups(x))) |> AList.concat 
-        l    
-    
-    let getAllAnnotations (root:MAnnotationGroup) =
-        let subAnnos = getAllAnnotationsFromSubGroups root
-        let anns = root.annotations //|> AList.map(fun x -> Mod.force)
-        subAnnos |> AList.map (fun x -> anns |> AList.append x) |> AList.concat
-
-    //let tryGetChild (ag:AnnotationGroup) key = 
-    //    let annos = getAllAnnotations ag |> PList.toSeq |> Seq.concat |> PList.ofSeq
-    //    annos |> Seq.tryFind(fun x -> x.key = key)
-
 
     let mkColor (activeId : IMod<Guid>) (groupId : IMod<Guid>) = 
         if activeId = groupId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
