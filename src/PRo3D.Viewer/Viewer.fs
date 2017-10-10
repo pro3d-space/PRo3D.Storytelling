@@ -245,7 +245,8 @@ module ViewerApp =
                         let bookmarks' = m.scene.bookmarksModel.bookmarks |> PList.append newBm
                         { m with scene = { m.scene with bookmarksModel = {m.scene.bookmarksModel with bookmarks = bookmarks'}}}
                     | _ ->  
-                        let b = Bookmarks.update m.scene.bookmarksModel msg
+                        let lift   = fun (a:AnnotationGroups.Action) -> (AnnotationGroupsMessage a)
+                        let b = Bookmarks.update m.scene.bookmarksModel msg _camera m
                         { m with scene = { m.scene with bookmarksModel = b}}
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolders w with

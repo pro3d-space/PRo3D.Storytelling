@@ -31,10 +31,19 @@ module Bookmarks =
         }
         
 
-    let update (model : BookmarksModel) (act : Action) =
+    let update (model : BookmarksModel) (act : Action) (cam : Lens<'a,CameraControllerState>) (outerModel:Viewer.Model) =
         match act with
-            | AddBookmark -> model // implemented in Viewer.Action.BookmarkMessage
-            | UpdateCam id -> model    // implemented in Viewer.Action.BookmarkMessage
+            | AddBookmark -> 
+                let newBm = getNewBookmark (cam.Get outerModel) model.bookmarks.Count
+                let bookmarks' = model.bookmarks |> PList.append newBm
+                { model with bookmarks = bookmarks' }
+            | UpdateCam id -> 
+                let bm = tryGet model.bookmarks id
+                match bm with
+                    | Some b ->
+                        let cam' = b.camState
+                        cam.Set(outerModel,cam')
+                    | None -> outerModel
             | Select id ->
                 let sb = tryGet model.bookmarks id   
                 { model with selectedBookmark = sb }
@@ -70,14 +79,14 @@ module Bookmarks =
                         alist {
                             for b in model.bookmarks do
                              
-                                let bgc = sprintf "color: %s" (Html.ofC4b C4b.White)
+                                //let bgc = sprintf "color: %s" (Html.ofC4b C4b.White)
 
                                 let icon =
                                     adaptive {
                                         let! active = model.selectedBookmark
                                         let key = match active with
-                                            | Some x -> x.key
-                                            | None -> Guid.Empty |> Mod.constant
+                                                    | Some x -> x.key
+                                                    | None -> Guid.Empty |> Mod.constant
                                         let! key= key
                                         let! bm  =  b.key
 
