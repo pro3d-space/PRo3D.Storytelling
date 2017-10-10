@@ -69,23 +69,37 @@ module Bookmarks =
                     (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (                      
                         alist {
                             for b in model.bookmarks do
-                                
-                                let! bm = model.selectedBookmark
-                                let key = match bm with
+                             
+                                let bgc = sprintf "color: %s" (Html.ofC4b C4b.White)
+
+                                let icon =
+                                    adaptive {
+                                        let! active = model.selectedBookmark
+                                        let key = match active with
                                             | Some x -> x.key
                                             | None -> Guid.Empty |> Mod.constant
+                                        let! key= key
+                                        let! bm  =  b.key
 
-                                let! c = mkColor key b.key
-                                let bgc = sprintf "color: %s" (Html.ofC4b c)
+                                        return if (key = bm) then "circle icon" else "circle thin icon"
+                                    }
+                      
+                                let map = 
+                                    amap {
+                                        let! icon = icon
+                                        yield clazz icon
+                                        yield onClick (fun _ -> Select (b.key |> Mod.force))
+                                    } |> AttributeMap.ofAMap
 
-                                let select = fun _ -> Select (b.key |> Mod.force)
+                                //let select = fun _ -> Select (b.key |> Mod.force)
 
                                 yield div [clazz "item"] [
-                                        i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                                        //i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
                                         div [clazz "content"] [
                                             let desc = b.name
                                             yield Incremental.div (AttributeMap.ofList [clazz "header"])(
                                                 alist {
+                                                    yield Incremental.i map AList.empty |> UI.wrapToolTip "Set active"
                                                     yield i [clazz "home icon"                                                
                                                              onClick (fun _ -> UpdateCam (b.key |> Mod.force))
                                                              ][] |> UI.wrapToolTip "FlyTo"               

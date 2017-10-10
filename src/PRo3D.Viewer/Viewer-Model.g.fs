@@ -12,7 +12,7 @@ module Mutable =
     
     type MScene(__initial : PRo3D.Viewer.Scene) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Viewer.Scene> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _navigation = PRo3D.Navigation2.Mutable.MNavigationModel.Create(__initial.navigation)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _surfacesModel = PRo3D.Surfaces.Mutable.MSurfaceModel.Create(__initial.surfacesModel)
@@ -29,9 +29,10 @@ module Mutable =
         member x.referenceSystem = _referenceSystem
         member x.bookmarksModel = _bookmarksModel
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.Scene) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 PRo3D.Navigation2.Mutable.MNavigationModel.Update(_navigation, v.navigation)
                 ResetMod.Update(_interaction,v.interaction)
@@ -45,8 +46,8 @@ module Mutable =
         static member Create(__initial : PRo3D.Viewer.Scene) : MScene = MScene(__initial)
         static member Update(m : MScene, v : PRo3D.Viewer.Scene) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.Viewer.Scene> with
             member x.Update v = x.Update v
     
@@ -102,7 +103,7 @@ module Mutable =
     
     type MSceneHandle(__initial : PRo3D.Viewer.SceneHandle) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Viewer.SceneHandle> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _path = ResetMod.Create(__initial.path)
         let _name = ResetMod.Create(__initial.name)
         let _writeDate = ResetMod.Create(__initial.writeDate)
@@ -111,9 +112,10 @@ module Mutable =
         member x.name = _name :> IMod<_>
         member x.writeDate = _writeDate :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.SceneHandle) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_path,v.path)
                 ResetMod.Update(_name,v.name)
@@ -123,8 +125,8 @@ module Mutable =
         static member Create(__initial : PRo3D.Viewer.SceneHandle) : MSceneHandle = MSceneHandle(__initial)
         static member Update(m : MSceneHandle, v : PRo3D.Viewer.SceneHandle) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.Viewer.SceneHandle> with
             member x.Update v = x.Update v
     
@@ -156,14 +158,15 @@ module Mutable =
     
     type MRecent(__initial : PRo3D.Viewer.Recent) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Viewer.Recent> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _recentScenes = MMap.Create(__initial.recentScenes, (fun v -> MSceneHandle.Create(v)), (fun (m,v) -> MSceneHandle.Update(m, v)), (fun v -> v))
         
         member x.recentScenes = _recentScenes :> amap<_,_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.Recent) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 MMap.Update(_recentScenes, v.recentScenes)
                 
@@ -171,8 +174,8 @@ module Mutable =
         static member Create(__initial : PRo3D.Viewer.Recent) : MRecent = MRecent(__initial)
         static member Update(m : MRecent, v : PRo3D.Viewer.Recent) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.Viewer.Recent> with
             member x.Update v = x.Update v
     
@@ -192,7 +195,7 @@ module Mutable =
     
     type MModel(__initial : PRo3D.Viewer.Model) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Viewer.Model> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _scene = MScene.Create(__initial.scene)
         let _drawing = PRo3D.Drawing.Mutable.MDrawingModel.Create(__initial.drawing)
         let _properties = ResetMod.Create(__initial.properties)
@@ -213,9 +216,10 @@ module Mutable =
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.Model) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 MScene.Update(_scene, v.scene)
                 PRo3D.Drawing.Mutable.MDrawingModel.Update(_drawing, v.drawing)
@@ -231,8 +235,8 @@ module Mutable =
         static member Create(__initial : PRo3D.Viewer.Model) : MModel = MModel(__initial)
         static member Update(m : MModel, v : PRo3D.Viewer.Model) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<PRo3D.Viewer.Model> with
             member x.Update v = x.Update v
     
@@ -279,7 +283,7 @@ module Mutable =
                     override x.Update(r,f) = { r with recent = f r.recent }
                 }
             let waypoints =
-                { new Lens<PRo3D.Viewer.Model, Aardvark.Base.plist<Aardvark.Base.CameraView>>() with
+                { new Lens<PRo3D.Viewer.Model, Aardvark.Base.plist<PRo3D.Viewer.WayPoint>>() with
                     override x.Get(r) = r.waypoints
                     override x.Set(r,v) = { r with waypoints = v }
                     override x.Update(r,f) = { r with waypoints = f r.waypoints }

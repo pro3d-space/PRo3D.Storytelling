@@ -49,6 +49,11 @@ type Interactions =
     | PlaceCoordinateSystem = 1  // compute up north vector at that point
     | DrawAnnotation        = 2
 
+type WayPoint = {
+    name : string
+    cv   : CameraView
+}
+
 [<DomainType>]
 type Model = { 
    
@@ -58,7 +63,7 @@ type Model = {
     interaction     : Interactions
     picking         : bool
     recent          : Recent
-    waypoints       : plist<CameraView>
+    waypoints       : plist<WayPoint>
 
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 

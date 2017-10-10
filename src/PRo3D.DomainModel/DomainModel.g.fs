@@ -12,14 +12,15 @@ module Mutable =
     
     type MUrdar(__initial : Aardvark.PRo3d.Urdar) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<Aardvark.PRo3d.Urdar> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _urdar = ResetMod.Create(__initial.urdar)
         
         member x.urdar = _urdar :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : Aardvark.PRo3d.Urdar) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_urdar,v.urdar)
                 
@@ -27,8 +28,8 @@ module Mutable =
         static member Create(__initial : Aardvark.PRo3d.Urdar) : MUrdar = MUrdar(__initial)
         static member Update(m : MUrdar, v : Aardvark.PRo3d.Urdar) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<Aardvark.PRo3d.Urdar> with
             member x.Update v = x.Update v
     
@@ -48,7 +49,7 @@ module Mutable =
     
     type MModel(__initial : Aardvark.PRo3d.Model) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<Aardvark.PRo3d.Model> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _boxHovered = ResetMod.Create(__initial.boxHovered)
         let _dragging = ResetMod.Create(__initial.dragging)
         let _lastName = MOption.Create(__initial.lastName)
@@ -65,9 +66,10 @@ module Mutable =
         member x.boxScale = _boxScale :> IMod<_>
         member x.objects = _objects :> amap<_,_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : Aardvark.PRo3d.Model) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_boxHovered,v.boxHovered)
                 ResetMod.Update(_dragging,v.dragging)
@@ -81,8 +83,8 @@ module Mutable =
         static member Create(__initial : Aardvark.PRo3d.Model) : MModel = MModel(__initial)
         static member Update(m : MModel, v : Aardvark.PRo3d.Model) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<Aardvark.PRo3d.Model> with
             member x.Update v = x.Update v
     
@@ -138,7 +140,7 @@ module Mutable =
     
     type MCameraControllerState(__initial : Aardvark.PRo3d.CameraControllerState) =
         inherit obj()
-        let mutable __current = __initial
+        let mutable __current : Aardvark.Base.Incremental.ModRef<Aardvark.PRo3d.CameraControllerState> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _view = ResetMod.Create(__initial.view)
         let _dragStart = ResetMod.Create(__initial.dragStart)
         let _look = ResetMod.Create(__initial.look)
@@ -165,9 +167,10 @@ module Mutable =
         member x.lastTime = _lastTime :> IMod<_>
         member x.stash = _stash :> IMod<_>
         
+        member x.Current = __current :> IMod<_>
         member x.Update(v : Aardvark.PRo3d.CameraControllerState) =
-            if not (System.Object.ReferenceEquals(__current, v)) then
-                __current <- v
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
                 
                 ResetMod.Update(_view,v.view)
                 ResetMod.Update(_dragStart,v.dragStart)
@@ -186,8 +189,8 @@ module Mutable =
         static member Create(__initial : Aardvark.PRo3d.CameraControllerState) : MCameraControllerState = MCameraControllerState(__initial)
         static member Update(m : MCameraControllerState, v : Aardvark.PRo3d.CameraControllerState) = m.Update(v)
         
-        override x.ToString() = __current.ToString()
-        member x.AsString = sprintf "%A" __current
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
         interface IUpdatable<Aardvark.PRo3d.CameraControllerState> with
             member x.Update v = x.Update v
     

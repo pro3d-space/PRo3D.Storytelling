@@ -88,6 +88,8 @@ module PatchLod =
     open Aardvark.SceneGraph.Semantics.TrafoSemantics
     open Aardvark.Base.MultimethodTest
 
+    let mutable useAsyncLoading = true
+
     let rec toRoseTree (p : QTree<'a>) =
         match p with
             | QTree.Leaf v -> Leaf v
@@ -343,7 +345,7 @@ module PatchLod =
                     |> RoseTree.mapAsync prepare
                     |> RoseTree.flatten (fun p -> p :> IRenderObject)
 
-            let useAsyncLoading = true
+            
             match useAsyncLoading with
                 | false -> syncRenderObjects
                 | true -> asyncRenderObjects

@@ -81,9 +81,7 @@ type SurfaceModel = {
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module SurfaceModel =
     open MBrace.FsPickler
-    open MBrace.FsPickler.Combinators
-
-    let registry = new CustomPicklerRegistry()
+    open MBrace.FsPickler.Combinators    
 
     let makeSurfaceModel a b =
         {
@@ -101,7 +99,7 @@ module SurfaceModel =
     let initial = makeSurfaceModel PList.empty None    
 
     
-    do registry.RegisterFactory (fun _ -> surfaceModelPickler)
+    registry.RegisterFactory (fun _ -> surfaceModelPickler)
 
     //FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)
 

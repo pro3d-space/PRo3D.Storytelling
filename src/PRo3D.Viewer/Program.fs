@@ -55,6 +55,8 @@ let main argv =
     //let attr = Surface.SurfaceAttributes.read "E:\Aardwork\Exomars\_SCENES\WP4200_4300_3400_DemoData\VictoriaCrater_HiRISE_MER-B_PRoViDEData_MultiLayer\Surface\MER-B_PanCam_Sol1103-P2582_multilayer\MER-B_PanCam_Sol1103-P2582_multilayer.opcx"
     //printf "%A" attr
 
+    Aardvark.Opc.PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
+
     use form = new Form(Width = 1280, Height = 768)
 
     let mainApp = PRo3D.ViewerApp.start form runtime signature bc   
@@ -62,7 +64,7 @@ let main argv =
     let send msg =
         match msg with
             | RemoteAction.SetViewpoint cv -> 
-                let bla = PRo3D.ViewerAction.SetCamera cv |> Seq.singleton
+                let bla = PRo3D.ViewerApp.Action.SetCamera cv |> Seq.singleton
                 mainApp.update Guid.Empty bla
     let remoteApp = 
         PRo3D.RemoteControlApp.app "http://localhost:4321" send

@@ -183,7 +183,7 @@ module ViewerApp =
         let cam' = { cam with view = view' }
         _camera.Set(m,cam')
 
-    let mutable wayPoints : Waypoints = []
+    let mutable wayPoints : list<CameraView> = []
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : Action) =
         
@@ -202,9 +202,10 @@ module ViewerApp =
                 let m = lens.Set(m, c')
 
                 m
-            //| AnnotationGroupsMessage msg,_,_ ->
-            //    let ag = m.scene.groups
-            //    { m with scene = { m.scene with groups = AnnotationGroups.update ag msg}}
+            | AnnotationGroupsMessage msg,_,_ ->
+                let ag = m.drawing.annotationGroups //m.scene.groups
+                { m with drawing = { m.drawing with annotationGroups = AnnotationGroups.update ag msg}}
+                //{ m with scene = { m.scene with groups = AnnotationGroups.update ag msg}}
             | DrawingMessage msg, Interactions.DrawAnnotation,_->
                 { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg } |> stash
             | SurfaceActions msg,_,_ ->
@@ -241,7 +242,7 @@ module ViewerApp =
                         goToBookmark m id
                     | Bookmarks.Action.AddBookmark -> 
                         let newBm = Bookmarks.getNewBookmark (m.scene.navigation.camera) (m.scene.bookmarksModel.bookmarks.Count)
-                        let bookmarks' = m.scene.bookmarksModel.bookmarks |> PList.prepend newBm
+                        let bookmarks' = m.scene.bookmarksModel.bookmarks |> PList.append newBm
                         { m with scene = { m.scene with bookmarksModel = {m.scene.bookmarksModel with bookmarks = bookmarks'}}}
                     | _ ->  
                         let b = Bookmarks.update m.scene.bookmarksModel msg
@@ -387,6 +388,16 @@ module ViewerApp =
                     let m = 
                         match k with 
                           | Aardvark.Application.Keys.Space -> 
+                                                        
+                            let wp = {
+                                name = sprintf "wp %d" m.waypoints.Count
+                                cv = (_camera.Get m).view
+                            }
+
+                            let waypoints = PList.append wp m.waypoints
+                            Log.line "saving waypoints %A" waypoints
+                            Serialization.save "./waypoints.wps" waypoints |> ignore
+                            { m with waypoints = waypoints }
                             
                             let cv = (_camera.Get m).view
                             wayPoints <- cv :: wayPoints
@@ -623,9 +634,9 @@ module ViewerApp =
 
         let bookmarkProperties (model:MModel) =
             adaptive {
-                let! bla = model.scene.bookmarksModel.selectedBookmark
+                let! sbm = model.scene.bookmarksModel.selectedBookmark
                 let opt = 
-                    match bla with
+                    match sbm with
                         | Some a -> Bookmarks.UI.view a
                         | None   -> div[][]
 
@@ -832,9 +843,17 @@ module ViewerApp =
                     
         ThreadPool.union drawing nav
 
+    let loadWaypoints m = 
+        match Serialization.fileExists "./waypoints.wps" with
+          | Some path -> 
+                let wp = Serialization.loadAs<plist<WayPoint>> path
+                { m with waypoints = wp }
+          | None -> m
+
+
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        
-        let m = Scene.loadLastScene m runtime signature       
+        let m = Scene.loadLastScene runtime signature m       
         
         App.start {
             unpersist = Unpersist.instance
