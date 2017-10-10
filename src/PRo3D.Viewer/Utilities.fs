@@ -5,17 +5,18 @@ open System.IO
 open System.Windows.Forms
 
 open MBrace.FsPickler
-
 open Aardvark.Base
-
 open PRo3D
+open Aardvark.Opc
 
 module Serialization =
     
-    let binarySerializer = FsPickler.CreateBinarySerializer()
+    let cache = Serialization.cache
+
+    let binarySerializer = FsPickler.CreateBinarySerializer(picklerResolver = cache)
 
     let save path (d : 'a) =    
-        let arr = binarySerializer.Pickle d     
+        let arr =  binarySerializer.Pickle d
         File.WriteAllBytes(path, arr);
         d
 
