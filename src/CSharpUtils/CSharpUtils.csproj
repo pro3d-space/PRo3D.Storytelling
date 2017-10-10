@@ -49,6 +49,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="FastDoubleParse.cs" />
+    <Compile Include="InstrumentDll\IPWrapper.Conversions.cs" />
+    <Compile Include="InstrumentDll\IPWrapper.cs" />
+    <Compile Include="InstrumentDll\IPWrapper.Structs.cs" />
     <Compile Include="PRo3DCompability.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
