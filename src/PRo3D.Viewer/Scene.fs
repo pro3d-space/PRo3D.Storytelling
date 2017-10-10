@@ -37,16 +37,13 @@ module Scene =
             use sr = new System.IO.StreamReader (filePath)
             sr.ReadLine ()       
 
-    let fileExists filePath =
-        match System.IO.File.Exists filePath with
-            | true -> Some filePath
-            | false -> None
+    
     
     let addLegacyTrafos surfaces = 
         surfaces 
             |> PList.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))
             |> PList.map(fun(s,p) -> 
-                    match (fileExists p) with
+                    match (Serialization.fileExists p) with
                         | Some path->
                             let t = readLine path
                             { s with trafo = Trafo3d.Parse(t) }
@@ -62,7 +59,7 @@ module Scene =
         surfaces 
             |> PList.map(fun s -> s, s.importPath |> getOPCxPath)
             |> PList.map(fun(s,p) -> 
-                    match (fileExists p) with
+                    match (Serialization.fileExists p) with
                         | Some path->        
                             let layers = Surface.SurfaceAttributes.read path
                             let textures = layers |> SurfaceProperties.getTextures
@@ -118,8 +115,8 @@ module Scene =
 
         load runtime signature s m
             
-    let loadLastScene m runtime signature =
-        match fileExists "./recent" with
+    let loadLastScene runtime signature m =
+        match Serialization.fileExists "./recent" with
             | Some path  ->
               try 
                 let r = Serialization.loadAs<Recent> path

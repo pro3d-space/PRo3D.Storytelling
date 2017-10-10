@@ -87,8 +87,10 @@
     <Compile Include="Viewer-Model.fs" />
     <Compile Include="Bookmarks.fs" />
     <Compile Include="Scene.fs" />
-    <Compile Include="RemoteControlModel.fs" />
+    <Compile Include="LensConfigs.fs" />
+    <Compile Include="Viewer-Utils.fs" />
     <Compile Include="Viewer.fs" />
+    <Compile Include="RemoteControlModel.fs" />
     <Compile Include="RemoteControlApp.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />

@@ -58,6 +58,7 @@ type Model = {
     interaction     : Interactions
     picking         : bool
     recent          : Recent
+    waypoints       : plist<CameraView>
 
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
@@ -95,6 +96,7 @@ module Viewer =
         picking         = false
         
         recent          = { recentScenes = HMap.empty }
+        waypoints       = PList.empty
 
         past            = None
         future          = None

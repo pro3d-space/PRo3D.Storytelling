@@ -199,6 +199,7 @@ module Mutable =
         let _interaction = ResetMod.Create(__initial.interaction)
         let _picking = ResetMod.Create(__initial.picking)
         let _recent = MRecent.Create(__initial.recent)
+        let _waypoints = MList.Create(__initial.waypoints)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
         
@@ -208,6 +209,7 @@ module Mutable =
         member x.interaction = _interaction :> IMod<_>
         member x.picking = _picking :> IMod<_>
         member x.recent = _recent
+        member x.waypoints = _waypoints :> alist<_>
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         
@@ -221,6 +223,7 @@ module Mutable =
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_picking,v.picking)
                 MRecent.Update(_recent, v.recent)
+                MList.Update(_waypoints, v.waypoints)
                 _past.Update(v.past)
                 _future.Update(v.future)
                 
@@ -274,6 +277,12 @@ module Mutable =
                     override x.Get(r) = r.recent
                     override x.Set(r,v) = { r with recent = v }
                     override x.Update(r,f) = { r with recent = f r.recent }
+                }
+            let waypoints =
+                { new Lens<PRo3D.Viewer.Model, Aardvark.Base.plist<Aardvark.Base.CameraView>>() with
+                    override x.Get(r) = r.waypoints
+                    override x.Set(r,v) = { r with waypoints = v }
+                    override x.Update(r,f) = { r with waypoints = f r.waypoints }
                 }
             let past =
                 { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with
