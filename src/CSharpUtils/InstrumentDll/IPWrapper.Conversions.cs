@@ -7,9 +7,9 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using Exomars.Base.ViewPlanner;
+using ViewPlanner;
 
-namespace Exomars.Base.ViewPlanner
+namespace ViewPlanner
 {
     public static class IPWrapperConversions
     {

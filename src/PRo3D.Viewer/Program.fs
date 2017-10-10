@@ -21,6 +21,7 @@ open PRo3D.Surfaces.Mutable
 open PRo3D.Surfaces
 open RemoteControlModel
 open PRo3D
+open ViewPlanner
 
 [<EntryPoint;STAThread>]
 let main argv = 
@@ -88,7 +89,9 @@ let main argv =
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"
 
-   
+    //let directory = @"C:\_work\PRo3D\bin\Debug\InstrumentStuff"
+    //let errorCode = IPWrapper.Init(directory, directory)
+    //printfn "%A" errorCode
 
     ctrl.ShowDevTools()
     Application.Run form

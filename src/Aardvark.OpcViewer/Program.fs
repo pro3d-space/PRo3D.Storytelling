@@ -36,31 +36,6 @@ module Serialization =
     let writeToFile path (contents : string) =
         System.IO.File.WriteAllText(path, contents)
 
-//[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-//module SurfaceModel =
-//    open MBrace.FsPickler
-//    open MBrace.FsPickler.Combinators
-
-//    let makeSurfaceModel a b =
-//        {
-//            surfaces = a
-//            selectedSurface = b
-//            sgSurfaces = hmap.Empty
-//        }
-
-//    let surfaceModelPickler : Pickler<SurfaceModel> =
-//        Pickler.product makeSurfaceModel
-//        ^+ Pickler.field (fun s -> s.surfaces)          Pickler.auto<list<Surface>>
-//        ^. Pickler.field (fun s -> s.selectedSurface)   Pickler.auto<option<Surface>>
-
-//    let initial = {
-//        surfaces        = []
-//        selectedSurface = None
-//        sgSurfaces      = hmap.Empty
-//    }
-
-//    FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)
-
 [<AutoOpen>]
 module KdTrees =
     open MBrace.FsPickler

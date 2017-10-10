@@ -6,7 +6,7 @@ using Aardvark.Base;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Exomars.Base.ViewPlanner
+namespace ViewPlanner
 {
     public static partial class IPWrapper
     {

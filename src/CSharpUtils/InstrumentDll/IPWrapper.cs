@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Exomars.Base.ViewPlanner
+namespace ViewPlanner
 {
     /// <summary>
     /// Contains functions and marshalling structs to call routines from the InstrumentPlatforms.dll 
