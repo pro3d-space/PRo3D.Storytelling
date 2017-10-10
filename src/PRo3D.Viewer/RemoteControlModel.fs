@@ -6,13 +6,7 @@ open Aardvark.Base.Incremental
 open PRo3D.Viewer
 open System.Drawing.Printing
 
-type RemoteAction = 
-    | SetViewpoint of CameraView
 
-type Action = 
-    | MakeScreenshot of CameraView
-    | UpdateCamera   of CameraView
-    | Play
 
 //PTU values sequence
 //isntrument model
@@ -57,15 +51,36 @@ module Shot =
             pph     = 0
             ppv     = 0
             id      = Guid.NewGuid().ToString()
-            folder  = @".\shots"
+            folder  = "./shots"
         }
 
     let getCamera (s : Shot) : CameraView =
         CameraView.LookAt(s.pos |> Xyz.toV3d, s.lookAt |> Xyz.toV3d, s.up |> Xyz.toV3d)
 
+    
+
+    let fromCamera (cv : CameraView) : Shot =
+        { init with 
+                pos     = cv.Location |> Xyz.fromV3d
+                up      = cv.Up |> Xyz.fromV3d
+                lookAt  = (cv.Location + cv.Forward) |> Xyz.fromV3d  }
+
+    let fromWp (wp : WayPoint) : Shot =        
+        { fromCamera wp.cv with id = wp.name }
+
 [<DomainType>]
 type Model =
     {
-        viewPoints : plist<WayPoint>
+        //viewPoints : plist<WayPoint>
         shots      : plist<Shot>
     }
+
+type RemoteAction = 
+    | SetViewpoint of CameraView
+
+type Action = 
+    | MakeScreenshot of Shot
+    | UpdateCamera   of Shot
+    | Play
+    | Load
+    | OpenFolder of string

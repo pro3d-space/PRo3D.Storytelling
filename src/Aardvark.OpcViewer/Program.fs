@@ -22,7 +22,7 @@ module Serialization =
     let registry = new CustomPicklerRegistry()    
     let cache = PicklerCache.FromCustomPicklerRegistry registry
 
-    let binarySerializer = FsPickler.CreateBinarySerializer(picklerResolver = cache)
+    let binarySerializer = FsPickler.CreateBinarySerializer(picklerResolver = cache)    
 
     let save path (d : 'a) =    
         let arr = binarySerializer.Pickle d     

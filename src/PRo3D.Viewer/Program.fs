@@ -22,6 +22,7 @@ open PRo3D.Surfaces
 open RemoteControlModel
 open PRo3D
 open ViewPlanner
+open System.Runtime.InteropServices
 
 [<EntryPoint;STAThread>]
 let main argv = 
@@ -91,6 +92,19 @@ let main argv =
 
     //let directory = @"C:\_work\PRo3D\bin\Debug\InstrumentStuff"
     //let errorCode = IPWrapper.Init(directory, directory)
+
+    //let numberOfPlatforms = IPWrapper.GetNrOfAvailablePlatforms();
+    //Report.Line("Number of Plattforms: {0}", numberOfPlatforms);
+    
+    //let pointerArray : IntPtr array = Array.zeroCreate (int numberOfPlatforms)
+    //IPWrapper.GetAvailablePlatforms(pointerArray, numberOfPlatforms);
+
+    //let names = pointerArray |> Array.map(fun x -> Marshal.PtrToStringAnsi(x))
+    
+    //printfn "%A" names
+
+    //IPWrapper.GetAvailablePlatforms(pointerArray, numberOfPlatforms);
+
     //printfn "%A" errorCode
 
     ctrl.ShowDevTools()

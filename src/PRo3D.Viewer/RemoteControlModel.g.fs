@@ -13,10 +13,8 @@ module Mutable =
     type MModel(__initial : RemoteControlModel.Model) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.ModRef<RemoteControlModel.Model> = Aardvark.Base.Incremental.Mod.init(__initial)
-        let _viewPoints = MList.Create(__initial.viewPoints)
         let _shots = MList.Create(__initial.shots)
         
-        member x.viewPoints = _viewPoints :> alist<_>
         member x.shots = _shots :> alist<_>
         
         member x.Current = __current :> IMod<_>
@@ -24,7 +22,6 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
-                MList.Update(_viewPoints, v.viewPoints)
                 MList.Update(_shots, v.shots)
                 
         
@@ -42,12 +39,6 @@ module Mutable =
     module Model =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
-            let viewPoints =
-                { new Lens<RemoteControlModel.Model, Aardvark.Base.plist<PRo3D.Viewer.WayPoint>>() with
-                    override x.Get(r) = r.viewPoints
-                    override x.Set(r,v) = { r with viewPoints = v }
-                    override x.Update(r,f) = { r with viewPoints = f r.viewPoints }
-                }
             let shots =
                 { new Lens<RemoteControlModel.Model, Aardvark.Base.plist<RemoteControlModel.Shot>>() with
                     override x.Get(r) = r.shots
