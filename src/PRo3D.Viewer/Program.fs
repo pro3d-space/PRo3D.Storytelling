@@ -20,6 +20,7 @@ open System.Xml
 open PRo3D.Surfaces.Mutable
 open PRo3D.Surfaces
 open RemoteControlModel
+open PRo3D
 
 [<EntryPoint;STAThread>]
 let main argv = 
@@ -64,7 +65,7 @@ let main argv =
     let send msg =
         match msg with
             | RemoteAction.SetViewpoint cv -> 
-                let bla = PRo3D.ViewerApp.Action.SetCamera cv |> Seq.singleton
+                let bla = ViewerAction.SetCamera cv |> Seq.singleton
                 mainApp.update Guid.Empty bla
     let remoteApp = 
         PRo3D.RemoteControlApp.app "http://localhost:4321" send

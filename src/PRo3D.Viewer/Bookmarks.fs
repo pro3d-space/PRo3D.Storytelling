@@ -43,7 +43,8 @@ module Bookmarks =
                     | Some b ->
                         let cam' = b.camState
                         cam.Set(outerModel,cam')
-                    | None -> outerModel
+                        model
+                    | None -> model
             | Select id ->
                 let sb = tryGet model.bookmarks id   
                 { model with selectedBookmark = sb }

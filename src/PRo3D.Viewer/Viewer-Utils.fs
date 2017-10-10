@@ -35,9 +35,8 @@ type ViewerAction =
     | NavigationMessage         of Navigation.Action
     | ReferenceSystemMessage    of ReferenceSystemApp.Action
     | AnnotationMessage         of AnnotationProperties.Action
-
-    | SetCamera of CameraView
-        
+    | BookmarkMessage           of Bookmarks.Action
+    | SetCamera of CameraView        
     | ImportSurface 
     | ImportMeasurements 
     | DnSProperties             of PropertyActions
