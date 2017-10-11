@@ -117,15 +117,15 @@ let main argv =
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"
 
-    let directory = @"C:\_Work\_REPOS\PRo3D\bin\Debug\InstrumentStuff"
-    let errorCode = IPWrapper.Init(directory, directory)
-    printfn "%A" errorCode
+    //let directory = @"C:\_Work\_REPOS\PRo3D\bin\Debug\InstrumentStuff"
+    //let errorCode = IPWrapper.Init(directory, directory)
+    //printfn "%A" errorCode
 
-    let names = RoverProvider.platformNames()    
-    printfn "%A" names
+    //let names = RoverProvider.platformNames()    
+    //printfn "%A" names
 
-    let rover = RoverProvider.initRover (names |> Array.head)
-    printfn "%A" rover
+    //let rover = RoverProvider.initRover (names |> Array.head)
+    //printfn "%A" rover
 
     //IPWrapper.GetAvailablePlatforms(pointerArray, numberOfPlatforms);
 
