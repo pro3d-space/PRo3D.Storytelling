@@ -23,7 +23,7 @@ open PRo3D.Surfaces
 open RemoteControlModel
 open PRo3D
 open ViewPlanner
-open System.Runtime.InteropServices
+
 open Suave.Json
 open System.Runtime.Serialization
 
@@ -98,21 +98,9 @@ let main argv =
         remoteApp.update Guid.Empty act
         { result = shot.folder }
 
-    let app =
-        choose 
-            [ GET >=> choose
-                [ path "/hello" >=> OK "Hello GET"
-                  path "/goodbye" >=> OK "Good bye GET" ]
-              POST >=> choose
-                [ path "/hello" >=> OK "Hello POST"
-                  path "/goodbye" >=> OK "Good bye POST"
-                  path "/shots" >=> mapJson doStuff
-                ]
-            ]
-    
     WebPart.startServer 1234 [ 
         MutableApp.toWebPart runtime (remoteApp)        
-        app
+        POST >=> path "/shots" >=> mapJson doStuff
         Suave.Files.browseHome
     ] 
 
@@ -129,18 +117,15 @@ let main argv =
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"
 
-    //let directory = @"C:\_work\PRo3D\bin\Debug\InstrumentStuff"
-    //let errorCode = IPWrapper.Init(directory, directory)
+    let directory = @"C:\_work\PRo3D\bin\Debug\InstrumentStuff"
+    let errorCode = IPWrapper.Init(directory, directory)
+    printfn "%A" errorCode
 
-    //let numberOfPlatforms = IPWrapper.GetNrOfAvailablePlatforms();
-    //Report.Line("Number of Plattforms: {0}", numberOfPlatforms);
-    
-    //let pointerArray : IntPtr array = Array.zeroCreate (int numberOfPlatforms)
-    //IPWrapper.GetAvailablePlatforms(pointerArray, numberOfPlatforms);
+    let names = RoverProvider.platformNames()    
+    printfn "%A" names
 
-    //let names = pointerArray |> Array.map(fun x -> Marshal.PtrToStringAnsi(x))
-    
-    //printfn "%A" names
+    let rover = RoverProvider.initRover (names |> Array.head)
+    printfn "%A" rover
 
     //IPWrapper.GetAvailablePlatforms(pointerArray, numberOfPlatforms);
 

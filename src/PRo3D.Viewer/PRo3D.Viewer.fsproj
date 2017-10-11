@@ -82,6 +82,8 @@
     <Compile Include="Surface-Model.fs" />
     <Compile Include="Surface-Properties.fs" />
     <Compile Include="Surface.fs" />
+    <Compile Include="Rover-Model.fs" />
+    <Compile Include="Rover.fs" />
     <Compile Include="Properties.fs" />
     <Compile Include="ConfigTestModel.fs" />
     <Compile Include="ConfigTest.fs" />
