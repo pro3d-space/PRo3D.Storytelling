@@ -22,7 +22,7 @@ module Bookmarks =
     let tryGet (ans:plist<Bookmark>) key = 
             ans |> Seq.tryFind(fun x -> x.key = key)
 
-    let getNewBookmark (ccs:CameraControllerState) (count:int)= 
+    let getNewBookmark (ccs:CameraControllerState) (count:int) = 
         let name = sprintf "bm%d" count
         {
             key = Guid.NewGuid()
@@ -30,21 +30,32 @@ module Bookmarks =
             camState = ccs
         }
         
-
-    let update (model : BookmarksModel) (act : Action) =
+    
+    let update (model : BookmarksModel) (act : Action) (cam : Lens<'a,CameraControllerState>) (outerModel:'a) : ('a*BookmarksModel) = 
         match act with
-            | AddBookmark -> model // implemented in Viewer.Action.BookmarkMessage
-            | UpdateCam id -> model    // implemented in Viewer.Action.BookmarkMessage
+            | AddBookmark -> 
+                let newBm = getNewBookmark (cam.Get outerModel) model.bookmarks.Count
+                (outerModel,{ model with bookmarks = model.bookmarks |> PList.append newBm})
+                
+            | UpdateCam id -> 
+                let bm = tryGet model.bookmarks id
+                match bm with
+                    | Some b ->
+                        let cam' = b.camState
+                        let newOuterModel = cam.Set(outerModel,cam')
+                        (newOuterModel,model)                      
+                    | None -> (outerModel,model)
             | Select id ->
                 let sb = tryGet model.bookmarks id   
-                { model with selectedBookmark = sb }
+                (outerModel,{ model with selectedBookmark = sb })
             | Remove id ->
                 let toRemove = model.bookmarks |> PList.toList |> List.tryFindIndex (fun d -> d.key = id)
                 match toRemove with
                     | Some index ->
                         let b' = model.bookmarks |> PList.removeAt index
-                        { model with bookmarks = b'}
-                    | None -> model     
+                        (outerModel, { model with bookmarks = b'})
+                    | None -> (outerModel, model)     
+
 
     let mkColor (activeId : IMod<Guid>) (bmId : IMod<Guid>) = 
         if activeId = bmId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
@@ -70,14 +81,14 @@ module Bookmarks =
                         alist {
                             for b in model.bookmarks do
                              
-                                let bgc = sprintf "color: %s" (Html.ofC4b C4b.White)
+                                //let bgc = sprintf "color: %s" (Html.ofC4b C4b.White)
 
                                 let icon =
                                     adaptive {
                                         let! active = model.selectedBookmark
                                         let key = match active with
-                                            | Some x -> x.key
-                                            | None -> Guid.Empty |> Mod.constant
+                                                    | Some x -> x.key
+                                                    | None -> Guid.Empty |> Mod.constant
                                         let! key= key
                                         let! bm  =  b.key
 
@@ -127,5 +138,20 @@ module Bookmarks =
                     Html.row "Sky:"     [text (view.Sky.ToString("0.00"))]
                 ]
             )
+
+        let view2 (model:MBookmarksModel) =
+            let selected = model.selectedBookmark |> Mod.force
+            match selected with
+                | Some x ->
+                    let view = x.camState.view |> Mod.force
+                    require Html.semui (
+                        Html.table [                                                
+                            Html.row "Pos:"     [Incremental.text (view.Location.ToString("0.00") |> Mod.constant )]
+                            Html.row "LookAt:"  [text (view.Forward.ToString("0.00"))]
+                            Html.row "Up:"      [text (view.Up.ToString("0.00"))]
+                            Html.row "Sky:"     [text (view.Sky.ToString("0.00"))]
+                        ]
+                    )
+                | None -> div[][]
 
       
