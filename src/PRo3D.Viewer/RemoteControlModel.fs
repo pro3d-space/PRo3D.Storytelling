@@ -5,6 +5,7 @@ open Aardvark.Base.Rendering
 open Aardvark.Base.Incremental
 open PRo3D.Viewer
 open System.Drawing.Printing
+open System.Runtime.Serialization
 
 
 
@@ -12,11 +13,16 @@ open System.Drawing.Printing
 //isntrument model
 //instrument pose
 
+[<DataContract>]
 type Xyz = {
+    [<field: DataMember(Name = "x")>]
     x : float
+    [<field: DataMember(Name = "y")>]
     y : float
+    [<field: DataMember(Name = "z")>]
     z : float
 }
+
 
 module Xyz =
     let fromV3d (v : V3d) =
@@ -25,16 +31,25 @@ module Xyz =
     let toV3d (v : Xyz) : V3d =
         V3d(v.x, v.y, v.z)
 
-
+[<DataContract>]
 type Shot = {    
+    [<field: DataMember(Name = "pos")>]
     pos     : Xyz
+    [<field: DataMember(Name = "lookAt")>]
     lookAt  : Xyz
+    [<field: DataMember(Name = "up")>]
     up      : Xyz
+    [<field: DataMember(Name = "col")>]    
     col     : int
+    [<field: DataMember(Name = "row")>]
     row     : int
+    [<field: DataMember(Name = "pph")>]
     pph     : int
+    [<field: DataMember(Name = "ppv")>]
     ppv     : int
+    [<field: DataMember(Name = "id")>]
     id      : string
+    [<field: DataMember(Name = "folder")>]
     folder  : string
 }
 

@@ -13,6 +13,7 @@ open Suave.Sockets.Control
 open Suave.WebSocket
 open Suave.Operators
 open Suave.Filters
+open Suave.Successful
 
 open System.Collections.Concurrent
 open System.Diagnostics
@@ -23,6 +24,25 @@ open RemoteControlModel
 open PRo3D
 open ViewPlanner
 open System.Runtime.InteropServices
+open Suave.Json
+open System.Runtime.Serialization
+
+[<DataContract>]
+type Calc =
+   { 
+      [<field: DataMember(Name = "a")>]
+      a : int;
+      [<field: DataMember(Name = "b")>]
+      b : int;
+   }
+ 
+
+ [<DataContract>]
+type Result =
+   { 
+      [<field: DataMember(Name = "result")>]
+      result : string;
+   }
 
 [<EntryPoint;STAThread>]
 let main argv = 
@@ -69,11 +89,30 @@ let main argv =
             | RemoteAction.SetViewpoint cv -> 
                 let bla = ViewerAction.SetCamera cv |> Seq.singleton
                 mainApp.update Guid.Empty bla
+
     let remoteApp = 
-        PRo3D.RemoteControlApp.app "http://localhost:4321" send
+        App.start (PRo3D.RemoteControlApp.app "http://localhost:4321" send)
+
+    let doStuff (shot:Shot) =   
+        let act = MakeScreenshot shot |> Seq.singleton
+        remoteApp.update Guid.Empty act
+        { result = shot.folder }
+
+    let app =
+        choose 
+            [ GET >=> choose
+                [ path "/hello" >=> OK "Hello GET"
+                  path "/goodbye" >=> OK "Good bye GET" ]
+              POST >=> choose
+                [ path "/hello" >=> OK "Hello POST"
+                  path "/goodbye" >=> OK "Good bye POST"
+                  path "/shots" >=> mapJson doStuff
+                ]
+            ]
     
     WebPart.startServer 1234 [ 
-        MutableApp.toWebPart runtime (App.start remoteApp)
+        MutableApp.toWebPart runtime (remoteApp)        
+        app
         Suave.Files.browseHome
     ] 
 

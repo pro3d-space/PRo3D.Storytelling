@@ -23,7 +23,7 @@ module RemoteControlApp =
     open System.Diagnostics
     
         
-    let jsonSerializer = FsPickler.Json.JsonSerializer(indent=true)
+    let jsonSerializer = FsPickler.Json.JsonSerializer(indent=false)
 
     let view (m : MModel) : DomNode<RemoteControlModel.Action> =
         
