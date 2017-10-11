@@ -81,9 +81,16 @@ module RoverProvider =
 
         let instruments = 
             IPWrapper.UnMarshalArray<IPWrapper.SInstrument>(platform.m_poPlatformInstruments, (int)platform.m_nNrOfPlatformInstruments) |> toInstruments
-
-        wheels, axes, instruments
-
+                
+        {
+            id              = platform.m_pcPlatformId.ToStrAnsi()
+            platform2Ground = platform.m_oPlatform2Ground.m_oHelmertTransfMatrix.ToM44d()
+            wheelPositions  = wheels |> List.ofSeq
+            instruments     = instruments |> List.map(fun x -> x.id, x) |> HMap.ofList
+            axes            = axes |> List.map(fun x -> x.id, x) |> HMap.ofList
+            box             = platform.m_oBoundingBox.ToBox3d()
+        }
+        
     let platformNames () =
         let numberOfPlatforms = IPWrapper.GetNrOfAvailablePlatforms();
         Log.line "Number of Plattforms: %d" numberOfPlatforms
@@ -92,7 +99,6 @@ module RoverProvider =
         IPWrapper.GetAvailablePlatforms(pointerArray, numberOfPlatforms);
        
         pointerArray |> Array.map(fun x -> Marshal.PtrToStringAnsi(x))
-
 
     let initRover platformId =
         //Get various counts to initialize respective arrays
@@ -104,7 +110,8 @@ module RoverProvider =
         Log.line "Wheels: %d, Instruments: %d, Axes: %d" numWheelPoints numInstruments numAxis
 
         //create and empty platform struct to be filled by the backend
-        let mutable platform = IPWrapper.SPlatform.CreateEmpty(numWheelPoints, numInstruments, numAxis)
+        let mutable platform = 
+            IPWrapper.SPlatform.CreateEmpty(numWheelPoints, numInstruments, numAxis)
 
         //crucial for backend to know which platform / rover to take
         platform.m_pcPlatformId <- platformId.ToPtr();
@@ -114,8 +121,5 @@ module RoverProvider =
         if (errorCode <> 0) then failwith "init platform failed" else ()
 
         //convert initialised platform to rover and add to database
-        let rover = platform |> toRover
-        //RoverDatabase.Add(platformId, rover);
-        //PlatformDatabase.Add(platformId, platform);
-        rover
+        platform |> toRover        
         

@@ -53,6 +53,8 @@ type Shot = {
     folder  : string
 }
 
+//instrument shot 
+
 module Shot =
     open System
 

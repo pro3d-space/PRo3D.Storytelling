@@ -117,7 +117,7 @@ let main argv =
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"
 
-    let directory = @"C:\_work\PRo3D\bin\Debug\InstrumentStuff"
+    let directory = @"C:\_Work\_REPOS\PRo3D\bin\Debug\InstrumentStuff"
     let errorCode = IPWrapper.Init(directory, directory)
     printfn "%A" errorCode
 

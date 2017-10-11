@@ -1,6 +1,7 @@
 namespace PRo3d
 
 open Aardvark.Base
+open Aardvark.Base.Incremental
 
 type Intrinsics = {
     horizontalFieldOfView           : double
@@ -54,4 +55,20 @@ type Axis = {
     currentAngle : double
 
     index        : int
+}
+
+type Rover = {
+    id               : string
+    platform2Ground  : M44d
+    wheelPositions   : list<V3d>
+    instruments      : hmap<string, Instrument>
+    axes             : hmap<string, Axis>
+    box              : Box3d   
+}
+
+[<DomainType>]
+type RoverModel = {
+
+    Rovers : hmap<string, Rover>
+
 }
