@@ -67,15 +67,7 @@ module ViewerApp =
                 (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam)
             | None -> m
 
-    let goToBookmark (m : Model) id =
-        let bm = Bookmarks.tryGet m.scene.bookmarksModel.bookmarks id
-        match bm with
-            | Some b ->
-                let cam = b.camState
-                   // { CameraController.initial with view = view }            
-                (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam)
-            | None -> m
-                    
+    
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
        
@@ -200,19 +192,8 @@ module ViewerApp =
                             { m with drawing = drawing' }
                         | None -> m       
             | BookmarkMessage msg,_,_ ->    
-                let b = Bookmarks.update m.scene.bookmarksModel msg _camera m
-                { m with scene = { m.scene with bookmarksModel = b}}
-                //match msg with
-                //    | Bookmarks.Action.UpdateCam id -> 
-                //        goToBookmark m id
-                //    | Bookmarks.Action.AddBookmark -> 
-                //        let newBm = Bookmarks.getNewBookmark (m.scene.navigation.camera) (m.scene.bookmarksModel.bookmarks.Count)
-                //        let bookmarks' = m.scene.bookmarksModel.bookmarks |> PList.append newBm
-                //        { m with scene = { m.scene with bookmarksModel = {m.scene.bookmarksModel with bookmarks = bookmarks'}}}
-                //    | _ ->  
-                //        let lift   = fun (a:AnnotationGroups.Action) -> (AnnotationGroupsMessage a)
-                //        let b = Bookmarks.update m.scene.bookmarksModel msg _camera m
-                //        { m with scene = { m.scene with bookmarksModel = b}}
+                let model, bm = Bookmarks.update m.scene.bookmarksModel msg _camera m
+                { m with scene = { m.scene with bookmarksModel = bm; navigation = {m.scene.navigation with camera = model.scene.navigation.camera}}}
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolders w with
                     | [] -> m
@@ -551,13 +532,13 @@ module ViewerApp =
                     Incremental.div AttributeMap.empty (AList.ofModSingle(bookmarkProperties m))
                 ]
             ]
-            
+          
         let tabs = 
             GuiEx.tabbed [clazz "ui inverted segment"] [
-                ("Data", SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions)
-                ("Annotations", annotationUI) //  annotationGroupsUI annotationUI
-                ("Config", configUI)
-                ("Bookmarks", bookmarkUI)
+                ("Data", SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions) 
+                ("Annotations", annotationUI) 
+                ("Config", configUI)            
+                ("Bookmarks", bookmarkUI)      
             ] "Data" 
       
         let topMenu = [
