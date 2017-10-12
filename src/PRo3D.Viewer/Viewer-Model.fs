@@ -14,7 +14,9 @@ open Aardvark.VRVis
 open PRo3D
 open PRo3D.Surfaces
 open PRo3D.Navigation2
+open PRo3D.BookmarksX
 open PRo3D.ReferenceSystem
+
   
 [<DomainType>] 
 type Scene = {

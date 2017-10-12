@@ -24,9 +24,11 @@ open System.IO
 
 open PRo3D
 open PRo3D.Navigation2
+open PRo3D.BookmarksX
 open PRo3D.ReferenceSystem
 open PRo3D.Surfaces
 open PRo3D.Viewer
+
 //open Viewer.Mutable.ModelModule.Lens
 //open Mutable.AnnotationGroupModule.Lens
  
@@ -36,6 +38,7 @@ module ViewerApp =
     open Scene    
     open Aardvark.SceneGraph.SgFSharp.Sg
     open OpenCvSharp    
+    
                 
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces
@@ -45,6 +48,7 @@ module ViewerApp =
     
     let _drawing = Model.Lens.drawing
     let _camera= Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera
+    let _navigation= Model.Lens.scene |. Scene.Lens.navigation
        
     let lookAtData (m : Model) =         
         let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -192,8 +196,8 @@ module ViewerApp =
                             { m with drawing = drawing' }
                         | None -> m       
             | BookmarkMessage msg,_,_ ->    
-                let model, bm = Bookmarks.update m.scene.bookmarksModel msg _camera m
-                { m with scene = { m.scene with bookmarksModel = bm; navigation = {m.scene.navigation with camera = model.scene.navigation.camera}}}
+                let model, bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
+                { m with scene = { m.scene with bookmarksModel = bm; navigation = model.scene.navigation }} //{m.scene.navigation with camera = model.scene.navigation.camera}}}
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolders w with
                     | [] -> m
