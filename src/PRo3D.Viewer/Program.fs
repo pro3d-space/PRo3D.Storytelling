@@ -13,6 +13,7 @@ open Suave.Sockets.Control
 open Suave.WebSocket
 open Suave.Operators
 open Suave.Filters
+open Suave.Successful
 
 open System.Collections.Concurrent
 open System.Diagnostics
@@ -21,6 +22,27 @@ open PRo3D.Surfaces.Mutable
 open PRo3D.Surfaces
 open RemoteControlModel
 open PRo3D
+open ViewPlanner
+
+open Suave.Json
+open System.Runtime.Serialization
+
+[<DataContract>]
+type Calc =
+   { 
+      [<field: DataMember(Name = "a")>]
+      a : int;
+      [<field: DataMember(Name = "b")>]
+      b : int;
+   }
+ 
+
+ [<DataContract>]
+type Result =
+   { 
+      [<field: DataMember(Name = "result")>]
+      result : string;
+   }
 
 [<EntryPoint;STAThread>]
 let main argv = 
@@ -67,11 +89,18 @@ let main argv =
             | RemoteAction.SetViewpoint cv -> 
                 let bla = ViewerAction.SetCamera cv |> Seq.singleton
                 mainApp.update Guid.Empty bla
+
     let remoteApp = 
-        PRo3D.RemoteControlApp.app "http://localhost:4321" send
-    
+        App.start (PRo3D.RemoteControlApp.app "http://localhost:4321" send)
+
+    let doStuff (shot:Shot) =   
+        let act = MakeScreenshot shot |> Seq.singleton
+        remoteApp.update Guid.Empty act
+        { result = shot.folder }
+
     WebPart.startServer 1234 [ 
-        MutableApp.toWebPart runtime (App.start remoteApp)
+        MutableApp.toWebPart runtime (remoteApp)        
+        POST >=> path "/shots" >=> mapJson doStuff
         Suave.Files.browseHome
     ] 
 
@@ -88,7 +117,19 @@ let main argv =
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"
 
-   
+    //let directory = @"C:\_Work\_REPOS\PRo3D\bin\Debug\InstrumentStuff"
+    //let errorCode = IPWrapper.Init(directory, directory)
+    //printfn "%A" errorCode
+
+    //let names = RoverProvider.platformNames()    
+    //printfn "%A" names
+
+    //let rover = RoverProvider.initRover (names |> Array.head)
+    //printfn "%A" rover
+
+    //IPWrapper.GetAvailablePlatforms(pointerArray, numberOfPlatforms);
+
+    //printfn "%A" errorCode
 
     ctrl.ShowDevTools()
     Application.Run form

@@ -18,7 +18,13 @@ type ClientStatistics =
 
 module RemoteControlApp =
     open Aardvark.Base.Incremental    
+    open MBrace
+    open MBrace.FsPickler.Json
+    open System.Diagnostics
+    
         
+    let jsonSerializer = FsPickler.Json.JsonSerializer(indent=false)
+
     let view (m : MModel) : DomNode<RemoteControlModel.Action> =
         
         require Html.semui (
@@ -27,11 +33,15 @@ module RemoteControlApp =
                     i [clazz "play icon"][]
                     text "play"
                 ]
+                button [clazz "ui labeled icon button"; onClick (fun _ -> Load)] [
+                    i [clazz "Eject icon"][]
+                    text "load"
+                ]
                 Incremental.div 
                     (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
                     (                
                         alist {                                                                     
-                            for vp in m.viewPoints do 
+                            for sh in m.shots do 
                                 yield div [clazz "item"] [
                                     div [clazz "content"] [
                                         //div [clazz "header"] [ text (sprintf "%A" vp.Location) ]
@@ -40,8 +50,9 @@ module RemoteControlApp =
                                         //    button [clazz "ui inverted"; style "color:black"; onClick (fun _ -> MakeScreenshot vp)] [text "goto"]
                                         //]
                                          div [clazz "header"] [                                        
-                                            text vp.name
-                                            i [clazz "ui inverted icon map pin"; onClick (fun _ -> MakeScreenshot vp.cv)] []
+                                            text sh.id
+                                            i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCamera sh)] []
+                                            i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
                                         ]
                                     ]
                                 ]
@@ -54,7 +65,7 @@ module RemoteControlApp =
 //        sprintf "%d%d%d_%d%d%d" dt.Year dt.Month dt.Day dt.Hour dt.Minute dt.Second
         dt.ToString("yyyymmdd_hhmmss")
 
-    let takeScreenshot baseAddress filename=
+    let takeScreenshot baseAddress shot =
         let wc = new System.Net.WebClient()
         let path = "screenshots"
         if System.IO.Directory.Exists path |> not then
@@ -70,47 +81,56 @@ module RemoteControlApp =
                 | x::[] -> x
                 | _ -> failwith "doent know"
         let screenshot =
-            let w = 1024
-            let h = 1024
+            let w = shot.col
+            let h = shot.row
             sprintf "%s/rendering/screenshot/%s?w=%d&h=%d" baseAddress clientStatistic.name w h
         Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
+
+        match System.IO.Directory.Exists shot.folder with
+          | true -> ()
+          | false -> System.IO.Directory.CreateDirectory shot.folder |> ignore
                
-        wc.DownloadFile(screenshot,Path.combine [path; filename])
-
-    let update (baseAddress : string) (send : RemoteAction -> unit) (m : Model) (a : RemoteControlModel.Action) =
-        match a with
-            | MakeScreenshot cv ->
-                send <| RemoteAction.SetViewpoint cv
-
-                let filename = System.IO.Path.ChangeExtension ((DateTime.Now |> fromDate),".jpg")
-                try takeScreenshot baseAddress filename with e -> printfn "error: %A" e
-                m
-            | UpdateCamera cv ->
-                send <| RemoteAction.SetViewpoint cv
-                m
-            | Play ->
-                for wp in m.viewPoints do
-                    send <| RemoteAction.SetViewpoint wp.cv
-                    let fileName = System.IO.Path.ChangeExtension (wp.name,".jpg")
-                    try takeScreenshot baseAddress fileName with e -> printfn "error: %A" e
-                m
-
-    let threads (m : Model) : ThreadPool<RemoteControlModel.Action> =
-        ThreadPool.empty
+        let filename = System.IO.Path.ChangeExtension (shot.id,".jpg")
+        wc.DownloadFile(screenshot,Path.combine [shot.folder; filename])
 
     let loadWaypoints m = 
         match Serialization.fileExists "./waypoints.wps" with
           | Some path -> 
                 let wp = Serialization.loadAs<plist<PRo3D.Viewer.WayPoint>> path
 
-                let shots = wp |> PList.map(fun x ->
-                        { Shot.init with 
-                            pos     = x.cv.Location |> Xyz.fromV3d
-                            up      = x.cv.Up |> Xyz.fromV3d
-                            lookAt  = (x.cv.Location + x.cv.Forward) |> Xyz.fromV3d  }
-                    )
-                { m with viewPoints = wp; shots = shots }
+                let shots = wp |> PList.map Shot.fromWp
+                let pshots = shots |> PList.toList |> jsonSerializer.PickleToString
+
+                System.IO.File.WriteAllText("./waypoints.json", pshots)
+
+                { m with shots = shots }
           | None -> m
+
+    let update (baseAddress : string) (send : RemoteAction -> unit) (m : Model) (a : RemoteControlModel.Action) =
+        match a with
+            | MakeScreenshot sh ->
+                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
+                
+                try takeScreenshot baseAddress sh with e -> printfn "error: %A" e
+                m
+            | UpdateCamera sh ->
+                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
+                m
+            | Play ->
+                for sh in m.shots do
+                    send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                  
+                    try takeScreenshot baseAddress sh with e -> printfn "error: %A" e
+                m
+            | Load ->
+                loadWaypoints m
+            | OpenFolder path ->
+                Process.Start("explorer.exe", path) |> ignore
+                m
+
+    let threads (m : Model) : ThreadPool<RemoteControlModel.Action> =
+        ThreadPool.empty
+
+    
 
     let app baseAddress send =
         {
@@ -118,6 +138,5 @@ module RemoteControlApp =
             threads = threads
             view = view
             update = update baseAddress send
-            initial = { viewPoints = PList.empty; shots = PList.empty } |> loadWaypoints
-
+            initial = { shots = PList.empty } |> loadWaypoints
         }

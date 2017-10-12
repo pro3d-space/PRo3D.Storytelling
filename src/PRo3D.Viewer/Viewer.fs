@@ -140,9 +140,7 @@ module ViewerApp =
         let cam = m.scene.navigation.camera                            
         let view' = CameraView.lookAt cam.view.Location (cam.view.Location + cam.view.Forward) m.scene.referenceSystem.up.value
         let cam' = { cam with view = view' }
-        _camera.Set(m,cam')
-
-    let mutable wayPoints : list<CameraView> = []
+        _camera.Set(m,cam')    
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =
         
@@ -389,7 +387,8 @@ module ViewerApp =
    
     let view (m : MModel) =        
 
-        let renderControlAttributes (model : MNavigationModel) =
+        let renderControlAttributes (model : MNavigationModel) =            
+
             amap {
                 let! state = model.navigationMode
                 
