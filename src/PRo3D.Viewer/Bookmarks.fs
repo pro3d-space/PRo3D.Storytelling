@@ -43,8 +43,7 @@ module Bookmarks =
                 let bm = tryGet model.bookmarks id
                 match bm with
                     | Some b ->
-                        //let nav = (navigation.Get outerModel)
-                        let navigation' = b.navigationState // { nav with camera = b.navigationState.camera; navigationMode = b.navigationState.navigationMode }
+                        let navigation' = b.navigationState 
                         let newOuterModel = navigation.Set(outerModel,navigation')
                         (newOuterModel,model)                      
                     | None -> (outerModel,model)
@@ -78,10 +77,6 @@ module Bookmarks =
                         button [clazz "ui icon button"; attribute "data-content" "Add Bookmark"; onMouseClick (fun _ -> AddBookmark)] [
                                 i [clazz "plus icon"] [] ] 
                     )
-                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    //    button [clazz "ui icon button"; attribute "data-content" "Clear Bookmarks"; onMouseClick (fun _ -> Clear)] [
-                    //            i [clazz "file outline icon"] [] ]
-                    //)
                 ] 
 
     let view (model : MBookmarksModel) =
@@ -116,13 +111,13 @@ module Bookmarks =
                                             let desc = b.name
                                             yield Incremental.div (AttributeMap.ofList [clazz "header"])(
                                                 alist {
-                                                    yield Incremental.i map AList.empty |> UI.wrapToolTip "Set active"
+                                                    yield Incremental.i map AList.empty |> UI.wrapToolTipRight "Set active"
                                                     yield i [clazz "home icon"                                                
                                                              onClick (fun _ -> UpdateCam (b.key |> Mod.force))
-                                                             ][] |> UI.wrapToolTip "FlyTo"               
+                                                             ][] |> UI.wrapToolTipRight "FlyTo"               
                                                     yield i [clazz "Remove icon"
                                                              onClick (fun _ -> Remove (b.key |> Mod.force))
-                                                             ][]  |> UI.wrapToolTip "Remove"          
+                                                             ][]  |> UI.wrapToolTipRight "Remove"          
                                                               
                                                     } 
                                             ) 

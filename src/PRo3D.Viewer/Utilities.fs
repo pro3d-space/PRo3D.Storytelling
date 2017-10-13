@@ -244,6 +244,19 @@ module UI =
             dom.WithAttributes attr     
         )
 
+    let wrapToolTipRight (text:string) (dom:DomNode<'a>) : DomNode<'a> =
+
+        let attr = 
+            [ attribute "title" text
+              attribute "data-position" "right center"
+              attribute "data-variation" "mini" ] 
+                |> AttributeMap.ofList
+                |> AttributeMap.union dom.Attributes                
+                
+        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
+            dom.WithAttributes attr     
+        )
+
 module Console =    
 
     let print (x:'a) : 'a =
