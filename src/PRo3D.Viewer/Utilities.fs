@@ -249,7 +249,7 @@ module UI =
         let attr = 
             [ attribute "title" text
               attribute "data-position" "right center"
-              attribute "data-variation" "mini" ] 
+              attribute "data-variation" "mini"] 
                 |> AttributeMap.ofList
                 |> AttributeMap.union dom.Attributes                
                 

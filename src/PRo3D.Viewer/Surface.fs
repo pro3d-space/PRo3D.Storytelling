@@ -553,7 +553,7 @@ module Surface =
         ]    
 
     let viewSurfaceList (m:MSurfaceModel) = 
-        let listAttr = AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"]
+        let listAttr = AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : visible;max-height: 30%"]
         Incremental.div listAttr (
             alist {                        
                 for (_,s) in m.sgSurfaces |> AMap.toASet |> AList.ofASet do

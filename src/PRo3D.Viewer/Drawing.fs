@@ -423,7 +423,7 @@ module DrawingApp =
         let viewAnnotations (model:MDrawingModel) = 
                         
             Incremental.div 
-                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (                      
+                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : visible;max-height: 30%"    ]) (                      
                         alist {
                             for a in model.allAnnotations do 
                                                                         
@@ -482,7 +482,7 @@ module DrawingApp =
                                 let! c = mkColor model a
 
                                 let bgc = sprintf "color: %s" (Html.ofC4b c)
-                                
+                                let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
                                 let! visible = a.visible
                                 let visibleIcon = if visible then "unhide icon" else "hide icon"
                                 let select = fun _ -> select (a,path)
@@ -493,14 +493,14 @@ module DrawingApp =
                                     div [clazz "content"] [
                                         let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
                                         let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
-                                        yield Incremental.div (AttributeMap.ofList [clazz "header"]) (
+                                        yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
                                             alist {
                                                 yield Incremental.text header
-                                                yield i [ clazz visibleIcon; onClick (fun _ -> lift <| AnnotationGroups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"                                                                                                                
+                                                yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| AnnotationGroups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"                                                                                                                
                                                 yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| AnnotationGroups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
                                             } 
                                         ) 
-                                        yield div [clazz "description"] [Incremental.text desc]      
+                                        yield div [clazz "description";style ac ] [Incremental.text desc]      
                                     ]
                                 ]
                         }     
@@ -551,6 +551,7 @@ module DrawingApp =
                         if selected 
                         then yield clazz "icon large outline open folder"
                         else yield clazz "icon large outline folder"
+                        yield style "overflow-y : visible"
                     } |> AttributeMap.ofAMap
             
                 let childrenAttribs =

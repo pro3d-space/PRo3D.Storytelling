@@ -82,7 +82,7 @@ module Bookmarks =
     let view (model : MBookmarksModel) =
     
       Incremental.div 
-                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (                      
+                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : visible;max-height: 30%" ]) (                      
                         alist {
                             for b in model.bookmarks do
 
