@@ -21,6 +21,7 @@ module RemoteControlApp =
     open MBrace
     open MBrace.FsPickler.Json
     open System.Diagnostics
+    open ViewPlanner
     
         
     let jsonSerializer = FsPickler.Json.JsonSerializer(indent=false)
@@ -72,7 +73,22 @@ module RemoteControlApp =
                 { m with shots = shots }
           | None -> m
 
-    let update (baseAddress : string) (send : RemoteAction -> unit) (m : Model) (a : RemoteControlModel.Action) =
+    let roverStuff (m : RemoteModel) =
+        let directory = @".\InstrumentStuff"
+        let errorCode = IPWrapper.Init(directory, directory)
+        printfn "%A" errorCode
+
+        let names = RoverProvider.platformNames()    
+        printfn "%A" names
+
+        let rovs =
+            names |> Array.map RoverProvider.initRover |> PList.ofArray
+        printfn "found rover(s): %d" (rovs |> PList.count)
+
+        { m with rovers = rovs }
+              
+
+    let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
         match a with
             | MakeScreenshot sh ->
                 send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
@@ -92,39 +108,81 @@ module RemoteControlApp =
             | OpenFolder path ->
                 Process.Start("explorer.exe", path) |> ignore
                 m
+            | SelectRover r ->
+                { m with selectedRover = r }
 
-    let view (m : MModel) : DomNode<RemoteControlModel.Action> =
-        
-        require Html.semui (
-            div[] [
-                button [clazz "ui labeled icon button"; onClick (fun _ -> Play)] [
-                    i [clazz "play icon"][]
-                    text "play"
-                ]
-                button [clazz "ui labeled icon button"; onClick (fun _ -> Load)] [
-                    i [clazz "Eject icon"][]
-                    text "load"
-                ]
-                Incremental.div 
-                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
-                    (                
-                        alist {                                                                     
-                            for sh in m.shots do 
-                                yield div [clazz "item"] [
-                                    div [clazz "content"] [                                        
-                                         div [clazz "header"] [                                        
-                                            text sh.id
-                                            i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCamera sh)] []
-                                            i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
-                                        ]
-                                    ]
+    let viewShots (m:MRemoteModel) = 
+        Incremental.div 
+            (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
+            (                
+                alist {                                                                     
+                    for sh in m.shots do 
+                        yield div [clazz "item"] [
+                            div [clazz "content"] [                                        
+                                div [clazz "header"] [
+                                    text sh.id
+                                    i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCamera sh)] []
+                                    i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
                                 ]
-                        }
-                    )
+                            ]
+                        ]
+                }
+            )
+
+    let viewRovers (m:MRemoteModel) = 
+        Incremental.div 
+            (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
+            (                
+                alist {                                                                     
+                    for r in m.rovers do 
+                        yield div [clazz "item"] [
+                            div [clazz "content"] [                                        
+                                div [clazz "header"] [
+                                    text r.id
+                                    
+                                ]
+                                div [clazz "description"] [
+                                    text (sprintf "instr: %d | axes: %d  | wheels: %d" r.instruments.Count r.axes.Count r.wheelPositions.Length)
+                                ]
+                            ]
+                        ]
+                }
+            )
+
+    let view (m : MRemoteModel) : DomNode<RemoteControlModel.Action> =
+        
+  //      <div class="ui three column grid">
+  //<div class="column">
+  //  <div class="ui segment">
+
+        require Html.semui (
+            div[clazz "ui two column grid"] [
+                div[clazz "column"] [
+                    div[clazz "ui segment"] [
+                        h2 [clazz "ui header"][text "Waypoints"]
+                        button [clazz "ui labeled icon button"; onClick (fun _ -> Play)] [
+                            i [clazz "play icon"][]
+                            text "play"
+                        ]
+                        button [clazz "ui labeled icon button"; onClick (fun _ -> Load)] [
+                            i [clazz "Eject icon"][]
+                            text "load"
+                        ]
+                        viewShots m
+                    ]
+                    div[clazz "ui segment"] [
+                        h2 [clazz "ui header"][text "Rovers"]
+                        viewRovers m
+                        br[]
+                        UI.dropDown'' m.rovers  m.selectedRover SelectRover (fun x -> x.id)
+                    ]
+                ]
+                div[clazz "column"] []
+                
             ]    
         )
 
-    let threads (m : Model) : ThreadPool<RemoteControlModel.Action> =
+    let threads (m : RemoteModel) : ThreadPool<RemoteControlModel.Action> =
         ThreadPool.empty
 
     
@@ -135,5 +193,5 @@ module RemoteControlApp =
             threads = threads
             view = view
             update = update baseAddress send
-            initial = { shots = PList.empty } |> loadWaypoints
+            initial = { shots = PList.empty; rovers = PList.empty; selectedRover = None } |> loadWaypoints |> roverStuff
         }

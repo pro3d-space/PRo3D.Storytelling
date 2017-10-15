@@ -100,7 +100,7 @@ module RoverProvider =
        
         pointerArray |> Array.map(fun x -> Marshal.PtrToStringAnsi(x))
 
-    let initRover platformId =
+    let initRover platformId : Rover =
         //Get various counts to initialize respective arrays
         let numWheelPoints = uint32 6 // IPWrapper.GetNrOfPlatformPointsOnGround(platformId)
         let numInstruments = IPWrapper.GetNrOfPlatformInstruments(platformId)

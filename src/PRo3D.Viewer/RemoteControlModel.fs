@@ -6,6 +6,7 @@ open Aardvark.Base.Incremental
 open PRo3D.Viewer
 open System.Drawing.Printing
 open System.Runtime.Serialization
+open PRo3d
 
 
 
@@ -86,14 +87,17 @@ module Shot =
         { fromCamera wp.cv with id = wp.name }
 
 [<DomainType>]
-type Model =
+type RemoteModel =
     {
         //viewPoints : plist<WayPoint>
-        shots      : plist<Shot>
+        shots         : plist<Shot>
+        rovers        : plist<Rover>
+        selectedRover : option<Rover>
     }
 
 type RemoteAction = 
     | SetViewpoint of CameraView
+    
 
 type Action = 
     | MakeScreenshot of Shot
@@ -101,3 +105,4 @@ type Action =
     | Play
     | Load
     | OpenFolder of string
+    | SelectRover  of option<Rover>

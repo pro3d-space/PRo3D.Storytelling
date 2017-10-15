@@ -117,9 +117,9 @@ let main argv =
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"
 
-    let directory = @".\InstrumentStuff"
-    let errorCode = IPWrapper.Init(directory, directory)
-    printfn "%A" errorCode
+    //let directory = @".\InstrumentStuff"
+    //let errorCode = IPWrapper.Init(directory, directory)
+    //printfn "%A" errorCode
 
     //let names = RoverProvider.platformNames()    
     //printfn "%A" names
