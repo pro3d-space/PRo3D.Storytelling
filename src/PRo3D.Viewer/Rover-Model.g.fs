@@ -12,7 +12,7 @@ module Mutable =
     
     type MRoverModel(__initial : PRo3d.RoverModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3d.RoverModel> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.RoverModel> = Aardvark.Base.Incremental.EqModRef<PRo3d.RoverModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.RoverModel>
         let _Rovers = MMap.Create(__initial.Rovers)
         
         member x.Rovers = _Rovers :> amap<_,_>

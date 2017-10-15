@@ -12,7 +12,7 @@ module Mutable =
     
     type MDipAndStrikeResults(__initial : PRo3D.DipAndStrikeResults) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.DipAndStrikeResults> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.DipAndStrikeResults> = Aardvark.Base.Incremental.EqModRef<PRo3D.DipAndStrikeResults>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.DipAndStrikeResults>
         let _plane = ResetMod.Create(__initial.plane)
         let _dipAngle = ResetMod.Create(__initial.dipAngle)
         let _dipDirection = ResetMod.Create(__initial.dipDirection)
@@ -103,7 +103,7 @@ module Mutable =
     
     type MAnnotationResults(__initial : PRo3D.AnnotationResults) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.AnnotationResults> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.AnnotationResults> = Aardvark.Base.Incremental.EqModRef<PRo3D.AnnotationResults>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.AnnotationResults>
         let _height = ResetMod.Create(__initial.height)
         let _heightDelta = ResetMod.Create(__initial.heightDelta)
         let _length = ResetMod.Create(__initial.length)
@@ -167,7 +167,7 @@ module Mutable =
     
     type MSegment(__initial : PRo3D.Segment) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Segment> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Segment> = Aardvark.Base.Incremental.EqModRef<PRo3D.Segment>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Segment>
         let _startPoint = ResetMod.Create(__initial.startPoint)
         let _endPoint = ResetMod.Create(__initial.endPoint)
         let _points = MList.Create(__initial.points)
@@ -222,7 +222,7 @@ module Mutable =
     
     type MAnnotation(__initial : PRo3D.Annotation) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Annotation> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Annotation> = Aardvark.Base.Incremental.EqModRef<PRo3D.Annotation>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Annotation>
         let _key = ResetMod.Create(__initial.key)
         let _modelTrafo = ResetMod.Create(__initial.modelTrafo)
         let _geometry = ResetMod.Create(__initial.geometry)
@@ -385,7 +385,7 @@ module Mutable =
     
     type MPathProxy(__initial : PRo3D.PathProxy) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.PathProxy> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.PathProxy> = Aardvark.Base.Incremental.EqModRef<PRo3D.PathProxy>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.PathProxy>
         let _absolutePath = MOption.Create(__initial.absolutePath)
         let _relativePath = MOption.Create(__initial.relativePath)
         
@@ -431,7 +431,7 @@ module Mutable =
     
     type MMeasurementsImporterModel(__initial : PRo3D.MeasurementsImporterModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.MeasurementsImporterModel> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.MeasurementsImporterModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.MeasurementsImporterModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.MeasurementsImporterModel>
         let _annotations = MList.Create(__initial.annotations, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
         
         member x.annotations = _annotations :> alist<_>
@@ -468,7 +468,7 @@ module Mutable =
     
     type MViewConfigModel(__initial : PRo3D.ViewConfigModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.ViewConfigModel> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.ViewConfigModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.ViewConfigModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.ViewConfigModel>
         let _nearPlane = Aardvark.UI.Mutable.MNumericInput.Create(__initial.nearPlane)
         let _farPlane = Aardvark.UI.Mutable.MNumericInput.Create(__initial.farPlane)
         let _navigationSensitivity = Aardvark.UI.Mutable.MNumericInput.Create(__initial.navigationSensitivity)
@@ -577,7 +577,7 @@ module Mutable =
     
     type MAnnotationGroup(__initial : PRo3D.AnnotationGroup) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.AnnotationGroup> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.AnnotationGroup> = Aardvark.Base.Incremental.EqModRef<PRo3D.AnnotationGroup>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.AnnotationGroup>
         let _key = ResetMod.Create(__initial.key)
         let _name = ResetMod.Create(__initial.name)
         let _annotations = MList.Create(__initial.annotations, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
@@ -659,7 +659,7 @@ module Mutable =
     
     type MAnnotationGroupsModel(__initial : PRo3D.AnnotationGroupsModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.AnnotationGroupsModel> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.AnnotationGroupsModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.AnnotationGroupsModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.AnnotationGroupsModel>
         let _rootGroup = MAnnotationGroup.Create(__initial.rootGroup)
         let _activeGroupKey = ResetMod.Create(__initial.activeGroupKey)
         let _activeGroupPath = ResetMod.Create(__initial.activeGroupPath)

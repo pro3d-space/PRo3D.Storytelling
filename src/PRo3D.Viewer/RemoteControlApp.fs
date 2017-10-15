@@ -25,41 +25,7 @@ module RemoteControlApp =
         
     let jsonSerializer = FsPickler.Json.JsonSerializer(indent=false)
 
-    let view (m : MModel) : DomNode<RemoteControlModel.Action> =
-        
-        require Html.semui (
-            div[] [
-                button [clazz "ui labeled icon button"; onClick (fun _ -> Play)] [
-                    i [clazz "play icon"][]
-                    text "play"
-                ]
-                button [clazz "ui labeled icon button"; onClick (fun _ -> Load)] [
-                    i [clazz "Eject icon"][]
-                    text "load"
-                ]
-                Incremental.div 
-                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
-                    (                
-                        alist {                                                                     
-                            for sh in m.shots do 
-                                yield div [clazz "item"] [
-                                    div [clazz "content"] [
-                                        //div [clazz "header"] [ text (sprintf "%A" vp.Location) ]
-                                        //div [clazz "description"] [
-                                        //    text (sprintf "%A" vp.Forward)
-                                        //    button [clazz "ui inverted"; style "color:black"; onClick (fun _ -> MakeScreenshot vp)] [text "goto"]
-                                        //]
-                                         div [clazz "header"] [                                        
-                                            text sh.id
-                                            i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCamera sh)] []
-                                            i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
-                                        ]
-                                    ]
-                                ]
-                        }
-                    )
-            ]    
-        )
+    
 
     let fromDate (dt : DateTime) =
 //        sprintf "%d%d%d_%d%d%d" dt.Year dt.Month dt.Day dt.Hour dt.Minute dt.Second
@@ -126,6 +92,37 @@ module RemoteControlApp =
             | OpenFolder path ->
                 Process.Start("explorer.exe", path) |> ignore
                 m
+
+    let view (m : MModel) : DomNode<RemoteControlModel.Action> =
+        
+        require Html.semui (
+            div[] [
+                button [clazz "ui labeled icon button"; onClick (fun _ -> Play)] [
+                    i [clazz "play icon"][]
+                    text "play"
+                ]
+                button [clazz "ui labeled icon button"; onClick (fun _ -> Load)] [
+                    i [clazz "Eject icon"][]
+                    text "load"
+                ]
+                Incremental.div 
+                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
+                    (                
+                        alist {                                                                     
+                            for sh in m.shots do 
+                                yield div [clazz "item"] [
+                                    div [clazz "content"] [                                        
+                                         div [clazz "header"] [                                        
+                                            text sh.id
+                                            i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCamera sh)] []
+                                            i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
+                                        ]
+                                    ]
+                                ]
+                        }
+                    )
+            ]    
+        )
 
     let threads (m : Model) : ThreadPool<RemoteControlModel.Action> =
         ThreadPool.empty

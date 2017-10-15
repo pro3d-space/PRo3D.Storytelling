@@ -12,7 +12,7 @@ module Mutable =
     
     type MModel(__initial : RemoteControlModel.Model) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<RemoteControlModel.Model> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<RemoteControlModel.Model> = Aardvark.Base.Incremental.EqModRef<RemoteControlModel.Model>(__initial) :> Aardvark.Base.Incremental.IModRef<RemoteControlModel.Model>
         let _shots = MList.Create(__initial.shots)
         
         member x.shots = _shots :> alist<_>
