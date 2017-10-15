@@ -7,6 +7,7 @@ open PRo3D.Viewer
 open System.Drawing.Printing
 open System.Runtime.Serialization
 open PRo3d
+open PRo3D
 
 
 
@@ -91,8 +92,7 @@ type RemoteModel =
     {
         //viewPoints : plist<WayPoint>
         shots         : plist<Shot>
-        rovers        : plist<Rover>
-        selectedRover : option<Rover>
+        Rover         : RoverModel
     }
 
 type RemoteAction = 
@@ -104,5 +104,5 @@ type Action =
     | UpdateCamera   of Shot
     | Play
     | Load
-    | OpenFolder of string
-    | SelectRover  of option<Rover>
+    | OpenFolder     of string
+    | RoverMessage   of RoverApp.Action

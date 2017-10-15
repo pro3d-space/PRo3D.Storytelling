@@ -2,6 +2,7 @@ namespace PRo3d
 
 open Aardvark.Base
 open Aardvark.Base.Incremental
+open Aardvark.UI
 
 type Intrinsics = {
     horizontalFieldOfView           : double
@@ -17,6 +18,7 @@ type Intrinsics = {
     vignettingMap                   : string    
 }
 
+[<DomainType>]
 type Extrinsics = {
     position    : V3d
     camUp       : V3d
@@ -35,6 +37,7 @@ type InstrumentType =
     | RIM        // Rover Inspection Mirror
     | Undefined
 
+[<DomainType>]
 type Instrument = {
     id                      : string
     iType                   : InstrumentType
@@ -45,6 +48,7 @@ type Instrument = {
     index                   : int
 }
 
+[<DomainType>]
 type Axis = {
     id           : string
     description  : string
@@ -57,6 +61,7 @@ type Axis = {
     index        : int
 }
 
+[<DomainType>]
 type Rover = {
     id               : string
     platform2Ground  : M44d
@@ -68,7 +73,9 @@ type Rover = {
 
 [<DomainType>]
 type RoverModel = {
-
-    Rovers : hmap<string, Rover>
-
+    rovers             : hmap<string, Rover>
+    selectedRover      : option<Rover>
+    selectedInstrument : option<Instrument>
+    selectedAxis       : option<Axis>
+    currentAngle       : NumericInput
 }

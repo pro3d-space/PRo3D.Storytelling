@@ -22,6 +22,7 @@ module RemoteControlApp =
     open MBrace.FsPickler.Json
     open System.Diagnostics
     open ViewPlanner
+    open PRo3d
     
         
     let jsonSerializer = FsPickler.Json.JsonSerializer(indent=false)
@@ -82,10 +83,12 @@ module RemoteControlApp =
         printfn "%A" names
 
         let rovs =
-            names |> Array.map RoverProvider.initRover |> PList.ofArray
-        printfn "found rover(s): %d" (rovs |> PList.count)
+            names |> Array.map RoverProvider.initRover |> List.ofArray |> List.map(fun x -> x.id, x) |> HMap.ofList
+        printfn "found rover(s): %d" (rovs |> HMap.count)
 
-        { m with rovers = rovs }
+        let r = { RoverApp.initial with rovers = rovs }
+
+        { m with Rover = r }
               
 
     let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
@@ -108,8 +111,8 @@ module RemoteControlApp =
             | OpenFolder path ->
                 Process.Start("explorer.exe", path) |> ignore
                 m
-            | SelectRover r ->
-                { m with selectedRover = r }
+            | RoverMessage a ->
+                { m with Rover = RoverApp.update m.Rover a }
 
     let viewShots (m:MRemoteModel) = 
         Incremental.div 
@@ -129,25 +132,7 @@ module RemoteControlApp =
                 }
             )
 
-    let viewRovers (m:MRemoteModel) = 
-        Incremental.div 
-            (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
-            (                
-                alist {                                                                     
-                    for r in m.rovers do 
-                        yield div [clazz "item"] [
-                            div [clazz "content"] [                                        
-                                div [clazz "header"] [
-                                    text r.id
-                                    
-                                ]
-                                div [clazz "description"] [
-                                    text (sprintf "instr: %d | axes: %d  | wheels: %d" r.instruments.Count r.axes.Count r.wheelPositions.Length)
-                                ]
-                            ]
-                        ]
-                }
-            )
+    
 
     let view (m : MRemoteModel) : DomNode<RemoteControlModel.Action> =
         
@@ -172,9 +157,7 @@ module RemoteControlApp =
                     ]
                     div[clazz "ui segment"] [
                         h2 [clazz "ui header"][text "Rovers"]
-                        viewRovers m
-                        br[]
-                        UI.dropDown'' m.rovers  m.selectedRover SelectRover (fun x -> x.id)
+                        RoverApp.view m.Rover |> UI.map RoverMessage
                     ]
                 ]
                 div[clazz "column"] []
@@ -193,5 +176,5 @@ module RemoteControlApp =
             threads = threads
             view = view
             update = update baseAddress send
-            initial = { shots = PList.empty; rovers = PList.empty; selectedRover = None } |> loadWaypoints |> roverStuff
+            initial = { shots = PList.empty; Rover = RoverApp.initial } |> loadWaypoints |> roverStuff
         }
