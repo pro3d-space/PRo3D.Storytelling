@@ -667,6 +667,7 @@ module Mutable =
         let _activeChildKey = ResetMod.Create(__initial.activeChildKey)
         let _activeChildPath = ResetMod.Create(__initial.activeChildPath)
         let _flattenChild = MList.Create(__initial.flattenChild, (fun v -> MAnnotation.Create(v)), (fun (m,v) -> MAnnotation.Update(m, v)), (fun v -> v))
+        let _lastSelectedItem = ResetMod.Create(__initial.lastSelectedItem)
         
         member x.rootGroup = _rootGroup
         member x.activeGroupKey = _activeGroupKey :> IMod<_>
@@ -675,6 +676,7 @@ module Mutable =
         member x.activeChildKey = _activeChildKey :> IMod<_>
         member x.activeChildPath = _activeChildPath :> IMod<_>
         member x.flattenChild = _flattenChild :> alist<_>
+        member x.lastSelectedItem = _lastSelectedItem :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.AnnotationGroupsModel) =
@@ -688,6 +690,7 @@ module Mutable =
                 ResetMod.Update(_activeChildKey,v.activeChildKey)
                 ResetMod.Update(_activeChildPath,v.activeChildPath)
                 MList.Update(_flattenChild, v.flattenChild)
+                ResetMod.Update(_lastSelectedItem,v.lastSelectedItem)
                 
         
         static member Create(__initial : PRo3D.AnnotationGroupsModel) : MAnnotationGroupsModel = MAnnotationGroupsModel(__initial)
@@ -745,4 +748,10 @@ module Mutable =
                     override x.Get(r) = r.flattenChild
                     override x.Set(r,v) = { r with flattenChild = v }
                     override x.Update(r,f) = { r with flattenChild = f r.flattenChild }
+                }
+            let lastSelectedItem =
+                { new Lens<PRo3D.AnnotationGroupsModel, PRo3D.SelectedItem>() with
+                    override x.Get(r) = r.lastSelectedItem
+                    override x.Set(r,v) = { r with lastSelectedItem = v }
+                    override x.Update(r,f) = { r with lastSelectedItem = f r.lastSelectedItem }
                 }

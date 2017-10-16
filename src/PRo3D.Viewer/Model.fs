@@ -511,6 +511,9 @@ module AnnotationGroup =
         visible = true
         expanded = true
         }
+
+type SelectedItem = Annotation = 0 | AnnotationGroup = 1
+
 [<DomainType>]
 type AnnotationGroupsModel = {
     rootGroup       : AnnotationGroup
@@ -520,6 +523,7 @@ type AnnotationGroupsModel = {
     activeChildKey       : Guid
     activeChildPath      : list<Index>
     flattenChild         : plist<Annotation>
+    lastSelectedItem     : SelectedItem
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -532,5 +536,6 @@ module AnnotationGroupsModel =
         activeChildKey = Guid.Empty
         activeChildPath = list.Empty // (is path of parent group!)
         flattenChild = plist.Empty
+        lastSelectedItem = SelectedItem.Annotation
         }
 

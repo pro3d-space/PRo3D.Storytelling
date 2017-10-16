@@ -28,6 +28,7 @@ open PRo3D.BookmarksX
 open PRo3D.ReferenceSystem
 open PRo3D.Surfaces
 open PRo3D.Viewer
+open PRo3D.Drawing
 
 //open Viewer.Mutable.ModelModule.Lens
 //open Mutable.AnnotationGroupModule.Lens
@@ -36,8 +37,6 @@ module ViewerApp =
     open Surface   
     open System.Collections.Concurrent   
     open Scene    
-    open Aardvark.SceneGraph.SgFSharp.Sg
-    open OpenCvSharp    
     
                 
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
@@ -49,6 +48,8 @@ module ViewerApp =
     let _drawing = Model.Lens.drawing
     let _camera= Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera
     let _navigation= Model.Lens.scene |. Scene.Lens.navigation
+
+    let _annotations = Model.Lens.drawing |. DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.annotations
        
     let lookAtData (m : Model) =         
         let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -159,10 +160,9 @@ module ViewerApp =
                 let m = lens.Set(m, c')
 
                 m
-            | AnnotationGroupsMessage msg,_,_ ->
-                let ag = m.drawing.annotationGroups //m.scene.groups
+            | AnnotationGroupsMessageViewer msg,_,_ ->
+                let ag = m.drawing.annotationGroups 
                 { m with drawing = { m.drawing with annotationGroups = AnnotationGroups.update ag msg}}
-                //{ m with scene = { m.scene with groups = AnnotationGroups.update ag msg}}
             | DrawingMessage msg, Interactions.DrawAnnotation,_->
                 { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg } |> stash
             | SurfaceActions msg,_,_ ->
@@ -186,16 +186,15 @@ module ViewerApp =
                             let func = (fun (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then AnnotationGroups.updateChild x.annotations a else x.annotations })
                             let path = m.drawing.annotationGroups.activeChildPath
                             let root = AnnotationGroups.updateItemAt path func m.drawing.annotationGroups.rootGroup
-                         
-                            let drawing' = 
-                                { m.drawing with selectedAnnotation = Some a'; allAnnotations = annotations'; 
-                                                annotationGroups = {m.drawing.annotationGroups with flattenChild = flatAnnos; rootGroup = root }} //; annotations = annotations' |> PList.ofList }
+                            let groups = AnnotationGroups.updateGroups m.drawing.annotationGroups root flatAnnos
+
+                            let drawing' = { m.drawing with selectedAnnotation = Some a'; allAnnotations = annotations'; annotationGroups = groups }
 
                             { m with drawing = drawing' }
                         | None -> m       
             | BookmarkMessage msg,_,_ ->    
                 let model, bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
-                { m with scene = { m.scene with bookmarksModel = bm; navigation = model.scene.navigation }} //{m.scene.navigation with camera = model.scene.navigation.camera}}}
+                { m with scene = { m.scene with bookmarksModel = bm; navigation = model.scene.navigation }} 
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolders w with
                     | [] -> m
@@ -211,8 +210,8 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | Some x -> 
                         let newAnnotations = m.drawing.annotationGroups.rootGroup.annotations |> PList.append' (MeasurementsImporter.startImporter x)
-                        let drawing' = {m.drawing with annotationGroups = { m.drawing.annotationGroups with rootGroup = { m.drawing.annotationGroups.rootGroup with annotations = newAnnotations}}}
-                        { m with drawing = drawing' }
+                        let m' = _annotations.Set(m, newAnnotations) 
+                        m'
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
@@ -443,7 +442,7 @@ module ViewerApp =
                         | Some a -> AnnotationGroups.viewUI a
                         | None   -> div[][]
 
-                return (opt |> UI.map AnnotationGroupsMessage)
+                return (opt |> UI.map AnnotationGroupsMessageViewer)
             } 
         
         let annotationProperties (model:MModel) =
@@ -480,17 +479,22 @@ module ViewerApp =
             } 
 
         let annotationUI = 
+            let item2 = m.drawing.annotationGroups.lastSelectedItem 
+                            |> Mod.map( fun x -> match x with 
+                                                    | SelectedItem.AnnotationGroup -> annotationGroupProperties m
+                                                    | _ -> annotationProperties m //SelectedItem.Annotation
+                                                    )
+            
             div [][
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
-                
+                    
                 GuiEx.accordion "Annotations" "Write" true [
                     DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
-                GuiEx.accordion "Group Properties" "Content" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle(annotationGroupProperties m))
-                ] 
                 GuiEx.accordion "Properties" "Content" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle(annotationProperties m))
+                    Incremental.div AttributeMap.empty (alist{ let! item = item2
+                                                               let! i = item
+                                                               yield i})
                 ] 
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 

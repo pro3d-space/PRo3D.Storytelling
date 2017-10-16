@@ -29,6 +29,10 @@ module DrawingApp =
     open MBrace.FsPickler.Json   
     
     //open Mutable.AnnotationGroupsModelModule.Lens
+
+    //let _annotationGroups   = DrawingModel.Lens.annotationGroups
+    //let _flattenChild   = DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.flattenChild
+    //let _rootGroup = DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.rootGroup
     
     let getFinishedAnnotation up north (model : DrawingModel) =
         match model.working with
@@ -79,7 +83,9 @@ module DrawingApp =
                     model.annotationGroups.flattenChild |> PList.prepend a
                 | None -> model.annotationGroups.flattenChild
         
-        { model with allAnnotations = anns; working = None; pendingIntersections = ThreadPool.empty; annotationGroups = {model.annotationGroups with rootGroup = rootGroup; flattenChild = flatAnnos }} 
+        let groups = AnnotationGroups.updateGroups model.annotationGroups rootGroup flatAnnos
+        { model with allAnnotations = anns; working = None; pendingIntersections = ThreadPool.empty; 
+                    annotationGroups = groups } 
 
     let addPoint up north samplePoint p model surfaceName bc =
         let working, newSegment = 
@@ -270,17 +276,12 @@ module DrawingApp =
                     | Some path -> 
                         //let annotations = Serialization.loadAs<plist<PRo3D.Annotation>> path
                         //{ model with annotations = annotations }
-                        let annotationGroups = Serialization.loadAs<PRo3D.AnnotationGroupsModel> path
-                        let flatA = AnnotationGroups.flattenAnnotations annotationGroups.rootGroup |> PList.ofList
-                        let annotationGroups' = { annotationGroups with flattenChild = flatA } 
-                        { model with annotationGroups = annotationGroups'}
+                        { model with annotationGroups = AnnotationGroups.loadAnnotationGroups path }
             | QuickLoad,_ ->                
                 //let annotations = Serialization.loadAs<plist<PRo3D.Annotation>> "./lastMeasure"
                 //{ model with annotations = annotations } 
-                let annotationGroups = Serialization.loadAs<PRo3D.AnnotationGroupsModel> "./lastMeasure"
-                let flatA = AnnotationGroups.flattenAnnotations model.annotationGroups.rootGroup |> PList.ofList
-                let root = {annotationGroups with flattenChild = flatA}
-                { model with annotationGroups = root; allAnnotations = flatA }
+                let groups = AnnotationGroups.loadAnnotationGroups "./lastMeasure" 
+                { model with annotationGroups = groups; allAnnotations = groups.flattenChild  }
             | Send, _ ->                                        
               // // let json = model.annotations |> PList.map JsonTypes.ofAnnotation |> pickler.PickleTyped
                 //Log.line "Sending %i annotations" (model.annotations |> PList.count)
@@ -305,7 +306,7 @@ module DrawingApp =
                 
                 let ann = DrawingModel.tryGet model.allAnnotations id   
                 let ann1 = DrawingModel.tryGet model.annotationGroups.flattenChild id   
-                { model with selected = selection; selectedAnnotation = ann1; annotationGroups = {model.annotationGroups with activeChildKey = id; activeChildPath = p} }  
+                { model with selected = selection; selectedAnnotation = ann1; annotationGroups = {model.annotationGroups with activeChildKey = id; activeChildPath = p; lastSelectedItem = SelectedItem.Annotation} }  
             | Nop, _ -> model
             | AnnotationPropertiesMsg msg,_ ->                
                 match model.selectedAnnotation with
@@ -566,7 +567,7 @@ module DrawingApp =
                 let select = fun (a:MAnnotation,path:list<Index>) -> Select (path, a.key |> Mod.force)
                 let lift   = fun (a:AnnotationGroups.Action) -> (AnnotationGroupsMessage a)
 
-                yield div [ clazz "item" ] [
+                yield div [ clazz "item"] [
                      Incremental.i itemAttributes AList.empty
                      div [ clazz "content" ] [                         
                          div [ clazz "description noselect"] [desc]

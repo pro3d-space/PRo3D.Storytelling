@@ -26,6 +26,10 @@ module AnnotationGroups =
         | Nop
 
     //
+         
+    let updateGroups (model:AnnotationGroupsModel) (root:AnnotationGroup) (flat:plist<Annotation>) =
+        {model with rootGroup = root; flattenChild = flat}
+        
     let rec flattenAnnotations (g:AnnotationGroup) =
         match ((PList.toList g.annotations), (PList.toList g.subGroups)) with
             | ([], []) -> []
@@ -33,6 +37,11 @@ module AnnotationGroups =
             | ([], sg) -> sg |> List.collect flattenAnnotations
             | (c, sg)  -> let sga = sg |> List.collect flattenAnnotations
                           c@sga
+
+    let loadAnnotationGroups (path:string) =
+        let annotationGroups = Serialization.loadAs<PRo3D.AnnotationGroupsModel> path
+        let flatA = flattenAnnotations annotationGroups.rootGroup |> PList.ofList
+        { annotationGroups with flattenChild = flatA } 
 
     let tryGetChild (ag:AnnotationGroup) key = 
         let annos = flattenAnnotations ag 
@@ -79,8 +88,8 @@ module AnnotationGroups =
     let update (model : AnnotationGroupsModel) (action : Action) =
         printfn "action: %A" action
         match action with
-            | ActiveGroup (g, p, s) -> { model with activeGroupKey = g; activeGroupPath = p; activeGroupName = s } 
-            | ActiveChild (g, p) -> { model with activeChildKey = g; activeChildPath = p } 
+            | ActiveGroup (g, p, s) -> { model with activeGroupKey = g; activeGroupPath = p; activeGroupName = s; lastSelectedItem = SelectedItem.AnnotationGroup } 
+            | ActiveChild (g, p) -> { model with activeChildKey = g; activeChildPath = p; lastSelectedItem = SelectedItem.Annotation} 
             | ToggleExpand p -> 
                 let func = (function (x:AnnotationGroup) -> { x with expanded = not x.expanded })
                 { model with rootGroup = updateItemAt p func model.rootGroup }
