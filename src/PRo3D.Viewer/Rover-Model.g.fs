@@ -12,7 +12,7 @@ module Mutable =
     
     type MExtrinsics(__initial : PRo3d.Extrinsics) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.Extrinsics> = Aardvark.Base.Incremental.EqModRef<PRo3d.Extrinsics>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.Extrinsics>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3d.Extrinsics> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _position = ResetMod.Create(__initial.position)
         let _camUp = ResetMod.Create(__initial.camUp)
         let _camLookAt = ResetMod.Create(__initial.camLookAt)
@@ -76,11 +76,11 @@ module Mutable =
     
     type MInstrument(__initial : PRo3d.Instrument) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.Instrument> = Aardvark.Base.Incremental.EqModRef<PRo3d.Instrument>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.Instrument>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3d.Instrument> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _id = ResetMod.Create(__initial.id)
         let _iType = ResetMod.Create(__initial.iType)
         let _calibratedFocalLengths = ResetMod.Create(__initial.calibratedFocalLengths)
-        let _currentFocalLength = ResetMod.Create(__initial.currentFocalLength)
+        let _focal = Aardvark.UI.Mutable.MNumericInput.Create(__initial.focal)
         let _intrinsics = ResetMod.Create(__initial.intrinsics)
         let _extrinsics = MExtrinsics.Create(__initial.extrinsics)
         let _index = ResetMod.Create(__initial.index)
@@ -88,7 +88,7 @@ module Mutable =
         member x.id = _id :> IMod<_>
         member x.iType = _iType :> IMod<_>
         member x.calibratedFocalLengths = _calibratedFocalLengths :> IMod<_>
-        member x.currentFocalLength = _currentFocalLength :> IMod<_>
+        member x.focal = _focal
         member x.intrinsics = _intrinsics :> IMod<_>
         member x.extrinsics = _extrinsics
         member x.index = _index :> IMod<_>
@@ -101,7 +101,7 @@ module Mutable =
                 ResetMod.Update(_id,v.id)
                 ResetMod.Update(_iType,v.iType)
                 ResetMod.Update(_calibratedFocalLengths,v.calibratedFocalLengths)
-                ResetMod.Update(_currentFocalLength,v.currentFocalLength)
+                Aardvark.UI.Mutable.MNumericInput.Update(_focal, v.focal)
                 ResetMod.Update(_intrinsics,v.intrinsics)
                 MExtrinsics.Update(_extrinsics, v.extrinsics)
                 ResetMod.Update(_index,v.index)
@@ -139,11 +139,11 @@ module Mutable =
                     override x.Set(r,v) = { r with calibratedFocalLengths = v }
                     override x.Update(r,f) = { r with calibratedFocalLengths = f r.calibratedFocalLengths }
                 }
-            let currentFocalLength =
-                { new Lens<PRo3d.Instrument, Microsoft.FSharp.Core.double>() with
-                    override x.Get(r) = r.currentFocalLength
-                    override x.Set(r,v) = { r with currentFocalLength = v }
-                    override x.Update(r,f) = { r with currentFocalLength = f r.currentFocalLength }
+            let focal =
+                { new Lens<PRo3d.Instrument, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.focal
+                    override x.Set(r,v) = { r with focal = v }
+                    override x.Update(r,f) = { r with focal = f r.focal }
                 }
             let intrinsics =
                 { new Lens<PRo3d.Instrument, PRo3d.Intrinsics>() with
@@ -167,24 +167,20 @@ module Mutable =
     
     type MAxis(__initial : PRo3d.Axis) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.Axis> = Aardvark.Base.Incremental.EqModRef<PRo3d.Axis>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.Axis>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3d.Axis> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _id = ResetMod.Create(__initial.id)
         let _description = ResetMod.Create(__initial.description)
         let _startPoint = ResetMod.Create(__initial.startPoint)
         let _endPoint = ResetMod.Create(__initial.endPoint)
-        let _minAngle = ResetMod.Create(__initial.minAngle)
-        let _maxAngle = ResetMod.Create(__initial.maxAngle)
-        let _currentAngle = ResetMod.Create(__initial.currentAngle)
         let _index = ResetMod.Create(__initial.index)
+        let _angle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.angle)
         
         member x.id = _id :> IMod<_>
         member x.description = _description :> IMod<_>
         member x.startPoint = _startPoint :> IMod<_>
         member x.endPoint = _endPoint :> IMod<_>
-        member x.minAngle = _minAngle :> IMod<_>
-        member x.maxAngle = _maxAngle :> IMod<_>
-        member x.currentAngle = _currentAngle :> IMod<_>
         member x.index = _index :> IMod<_>
+        member x.angle = _angle
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3d.Axis) =
@@ -195,10 +191,8 @@ module Mutable =
                 ResetMod.Update(_description,v.description)
                 ResetMod.Update(_startPoint,v.startPoint)
                 ResetMod.Update(_endPoint,v.endPoint)
-                ResetMod.Update(_minAngle,v.minAngle)
-                ResetMod.Update(_maxAngle,v.maxAngle)
-                ResetMod.Update(_currentAngle,v.currentAngle)
                 ResetMod.Update(_index,v.index)
+                Aardvark.UI.Mutable.MNumericInput.Update(_angle, v.angle)
                 
         
         static member Create(__initial : PRo3d.Axis) : MAxis = MAxis(__initial)
@@ -239,35 +233,23 @@ module Mutable =
                     override x.Set(r,v) = { r with endPoint = v }
                     override x.Update(r,f) = { r with endPoint = f r.endPoint }
                 }
-            let minAngle =
-                { new Lens<PRo3d.Axis, Microsoft.FSharp.Core.double>() with
-                    override x.Get(r) = r.minAngle
-                    override x.Set(r,v) = { r with minAngle = v }
-                    override x.Update(r,f) = { r with minAngle = f r.minAngle }
-                }
-            let maxAngle =
-                { new Lens<PRo3d.Axis, Microsoft.FSharp.Core.double>() with
-                    override x.Get(r) = r.maxAngle
-                    override x.Set(r,v) = { r with maxAngle = v }
-                    override x.Update(r,f) = { r with maxAngle = f r.maxAngle }
-                }
-            let currentAngle =
-                { new Lens<PRo3d.Axis, Microsoft.FSharp.Core.double>() with
-                    override x.Get(r) = r.currentAngle
-                    override x.Set(r,v) = { r with currentAngle = v }
-                    override x.Update(r,f) = { r with currentAngle = f r.currentAngle }
-                }
             let index =
                 { new Lens<PRo3d.Axis, Microsoft.FSharp.Core.int>() with
                     override x.Get(r) = r.index
                     override x.Set(r,v) = { r with index = v }
                     override x.Update(r,f) = { r with index = f r.index }
                 }
+            let angle =
+                { new Lens<PRo3d.Axis, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.angle
+                    override x.Set(r,v) = { r with angle = v }
+                    override x.Update(r,f) = { r with angle = f r.angle }
+                }
     
     
     type MRover(__initial : PRo3d.Rover) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.Rover> = Aardvark.Base.Incremental.EqModRef<PRo3d.Rover>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.Rover>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3d.Rover> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _id = ResetMod.Create(__initial.id)
         let _platform2Ground = ResetMod.Create(__initial.platform2Ground)
         let _wheelPositions = ResetMod.Create(__initial.wheelPositions)
@@ -349,7 +331,7 @@ module Mutable =
     
     type MRoverModel(__initial : PRo3d.RoverModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.RoverModel> = Aardvark.Base.Incremental.EqModRef<PRo3d.RoverModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.RoverModel>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3d.RoverModel> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _rovers = MMap.Create(__initial.rovers, (fun v -> MRover.Create(v)), (fun (m,v) -> MRover.Update(m, v)), (fun v -> v))
         let _selectedRover = MOption.Create(__initial.selectedRover, (fun v -> MRover.Create(v)), (fun (m,v) -> MRover.Update(m, v)), (fun v -> v))
         let _selectedInstrument = MOption.Create(__initial.selectedInstrument, (fun v -> MInstrument.Create(v)), (fun (m,v) -> MInstrument.Update(m, v)), (fun v -> v))

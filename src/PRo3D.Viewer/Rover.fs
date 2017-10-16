@@ -44,14 +44,24 @@ module RoverProvider =
                 vignettingMap                 = String.Empty
             }
 
+       // let focalToNumeric (focals : list<double>) (current : double) : NumericInput =
+
         let instrument = {
             index                  = i
             id                     = inst.m_pcInstrumentName.ToStrAnsi()
             calibratedFocalLengths = focals |> Array.toList
-            currentFocalLength     = inst.m_dCurrentFocalLengthInMm
+            //currentFocalLength     = inst.m_dCurrentFocalLengthInMm
             intrinsics             = intrinsics
             extrinsics             = extrinsics
             iType                  = InstrumentType.Undefined
+
+            focal = {
+                        value  = inst.m_dCurrentFocalLengthInMm
+                        min    = focals |> Array.head 
+                        max    = focals |> Array.last
+                        step   = 0.1
+                        format = "{0:0.0}"
+            }
         }        
 
         instrument
@@ -67,9 +77,18 @@ module RoverProvider =
                 description  = x.m_pcAxisDescription.ToStrAnsi()
                 startPoint   = x.m_oStartPoint.ToV3d()
                 endPoint     = x.m_oEndPoint.ToV3d()
-                minAngle     = x.m_fMinAngle.DegreesFromGons()
-                maxAngle     = x.m_fMaxAngle.DegreesFromGons()
-                currentAngle = x.m_fCurrentAngle.DegreesFromGons()
+                //minAngle     = x.m_fMinAngle.DegreesFromGons()
+                //maxAngle     = x.m_fMaxAngle.DegreesFromGons()
+                //currentAngle = x.m_fCurrentAngle.DegreesFromGons()
+
+                angle = {
+                            value  = x.m_fCurrentAngle.DegreesFromGons()
+                            min    = x.m_fMinAngle.DegreesFromGons()
+                            max    = x.m_fMaxAngle.DegreesFromGons()
+                            step   = 0.1
+                            format = "{0:0.0}"
+                        }
+
             }) |> Array.toList
 
     let toRover (platform : IPWrapper.SPlatform) =
@@ -128,27 +147,59 @@ module RoverProvider =
 module RoverApp = 
     open Aardvark.Base
     open Aardvark.Base.Incremental
-   
+    open Aardvark.UI.UI            
 
     type Action =
-        | ChangeAngle      of string*NumericInput        
-        | SetFocalLength   of double
+        | ChangeAngle      of string * Numeric.Action
+        | ChangeFocal      of string * Numeric.Action
         | SelectRover      of option<Rover>
         | SelectInstrument of option<Instrument>
         | SelectAxis       of option<Axis>
 
+    let updateRovers (r : Rover) (m : RoverModel) = 
+        let rovers' = 
+            m.rovers 
+                |> HMap.update r.id (fun x -> 
+                    match x with 
+                        | Some _ -> r
+                        | None   -> failwith "rover not found")
+        
+        { m with selectedRover = Some r; rovers = rovers' }
 
     let update (m : RoverModel) (a:Action) =
         match a with
           | SelectRover r      -> { m with selectedRover = r }
           | SelectInstrument i -> { m with selectedInstrument = i }
           | SelectAxis a       -> { m with selectedAxis = a }
-          | ChangeAngle (id,a) -> m
-            //match m.selectedRover with
-            //  | Some r -> { m with currentAngle = NumericInput }
-            //  | None -> m
+          | ChangeAngle (id,a) ->            
+                match m.selectedRover with 
+                  | Some r -> 
+                     let axes' = r.axes |> HMap.update id (fun x -> 
+                        match x with
+                          | Some ax -> { ax with angle = Numeric.update ax.angle a }
+                          | None    -> failwith "axis not found"                 
+                     )                      
 
-            
+                     m |> updateRovers { r with axes= axes' }                                         
+                     
+                  | None -> m        
+          | ChangeFocal (id, f) ->
+             match m.selectedRover with 
+                  | Some r -> 
+                      match m.selectedInstrument with
+                        | Some inst ->             
+                            
+                            let inst' =  { inst with focal = Numeric.update inst.focal f }
+
+                            let instruments' = 
+                                r.instruments |> HMap.update id (fun x -> 
+                                    match x with
+                                      | Some _ -> inst'
+                                      | None   -> failwith "axis not found")                       
+
+                            { m with selectedInstrument = Some inst' } |> updateRovers { r with instruments = instruments' }                            
+                        | None -> m                                        
+                  | None -> m                                
           | _ -> m
 
     let angle = 
@@ -202,13 +253,30 @@ module RoverApp =
                         ]
                 }
             )    
+
+    let focalGui (i : MInstrument) (m : MRoverModel) =
+        let nodes =
+            alist {
+                
+                let! focals = i.calibratedFocalLengths
+                if focals.Length > 1 then                    
+                    yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] i.focal |> UI.map (fun x -> ChangeFocal (i.id |> Mod.force,x))
+                else
+                    yield Incremental.text (i.focal.value |> Mod.map string)
+            }
+
+        Incremental.div AttributeMap.Empty nodes
     
+    
+
     let instrumentProperties(i : MInstrument) (m : MRoverModel) =
+
+        let sensor = i.intrinsics |> Mod.map(fun x -> sprintf "%d X %d" x.horizontalResolution x.verticalResolution)
+
         require Html.semui (
-            Html.table [
-                Html.row "Name:"     [ Incremental.text i.id ]
-                Html.row "SensorX:"  [ Incremental.text (i.intrinsics |> Mod.map(fun x -> x.horizontalResolution.ToString() )) ]
-                Html.row "SensorY:"  [ Incremental.text (i.intrinsics |> Mod.map(fun x -> x.verticalResolution.ToString() )) ]
+            Html.table [                
+                Html.row "Sensor (px):"  [ Incremental.text sensor ]
+                Html.row "Focal (mm):"    [ focalGui i m ]
             ]
         )
 
@@ -220,25 +288,14 @@ module RoverApp =
                   | None ->   div[][])
 
     let instrumentsDd (r:MRover) (m : MRoverModel) = 
-        UI.dropDown'' (r.instruments |> mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )
+        UI.dropDown'' (r.instruments |> mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )   
 
-    let axisProperties(a : MAxis) (m : MRoverModel) =
-        require Html.semui (
-            Html.table [
-               Html.row "Name:"  [ Incremental.text a.id ]
-               //Html.row "Angle:" [ Numeric.view' [NumericInputType.Slider] a.currentAngle ]
-            ]
-        )
-
-    let viewAxisProperties (m : MRoverModel) = 
-        m.selectedAxis 
-            |> Mod.map(fun x ->
-                match x with 
-                  | Some a -> axisProperties a m
-                  | None ->   div[][])
-
-    let axesDd (r:MRover) (m : MRoverModel) = 
-        UI.dropDown'' (r.axes |> mapTolist) m.selectedAxis (fun x -> SelectAxis (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )
+    let viewAxesList (r : MRover) (m : MRoverModel) =
+        alist {
+            for axis in (r.axes |> mapTolist) do
+                yield div[][Incremental.text axis.id; text "(deg)"]
+                yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (axis.id |> Mod.force,x))
+        }
 
     let viewRoverProperties' (r : MRover) (m : MRoverModel) =
 
@@ -251,9 +308,8 @@ module RoverApp =
                     instrumentsDd r m 
                     Incremental.div AttributeMap.empty (AList.ofModSingle (viewInstrumentProperties m))                    
                  ]
-                 Html.row "Axes:" [
-                    axesDd r m 
-                    Incremental.div AttributeMap.empty (AList.ofModSingle (viewAxisProperties m))
+                 Html.row "Axes:" [                    
+                    Incremental.div AttributeMap.empty (viewAxesList r m)
                  ]
             ]
         )
