@@ -12,7 +12,7 @@ module Mutable =
     
     type MReferenceSystem(__initial : PRo3D.ReferenceSystem.ReferenceSystem) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.ReferenceSystem.ReferenceSystem> = Aardvark.Base.Incremental.EqModRef<PRo3D.ReferenceSystem.ReferenceSystem>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.ReferenceSystem.ReferenceSystem>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.ReferenceSystem.ReferenceSystem> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _origin = ResetMod.Create(__initial.origin)
         let _north = ResetMod.Create(__initial.north)
         let _up = Aardvark.UI.Mutable.MV3dInput.Create(__initial.up)

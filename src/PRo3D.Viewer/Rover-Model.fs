@@ -42,7 +42,8 @@ type Instrument = {
     id                      : string
     iType                   : InstrumentType
     calibratedFocalLengths  : list<double>
-    currentFocalLength      : double
+    //currentFocalLength      : double
+    focal                   : NumericInput
     intrinsics              : Intrinsics
     extrinsics              : Extrinsics   
     index                   : int
@@ -54,11 +55,12 @@ type Axis = {
     description  : string
     startPoint   : V3d
     endPoint     : V3d
-    minAngle     : double
-    maxAngle     : double
-    currentAngle : double
+    //minAngle     : double
+    //maxAngle     : double
+    //currentAngle : double
 
     index        : int
+    angle        : NumericInput
 }
 
 [<DomainType>]

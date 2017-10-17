@@ -12,7 +12,7 @@ module Mutable =
     
     type MSurface(__initial : PRo3D.Surfaces.Surface) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Surface> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.Surface>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Surface>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Surfaces.Surface> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _guid = ResetMod.Create(__initial.guid)
         let _name = ResetMod.Create(__initial.name)
         let _importPath = ResetMod.Create(__initial.importPath)
@@ -184,7 +184,7 @@ module Mutable =
     
     type MSgSurface(__initial : PRo3D.Surfaces.SgSurface) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurface> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.SgSurface>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurface>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Surfaces.SgSurface> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _surface = MSurface.Create(__initial.surface)
         let _globalBB = ResetMod.Create(__initial.globalBB)
         let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
@@ -248,7 +248,7 @@ module Mutable =
     
     type MSurfaceModel(__initial : PRo3D.Surfaces.SurfaceModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SurfaceModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.SurfaceModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SurfaceModel>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Surfaces.SurfaceModel> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _surfaces = MList.Create(__initial.surfaces, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
         let _selectedSurface = MOption.Create(__initial.selectedSurface, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
         let _sgSurfaces = MMap.Create(__initial.sgSurfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
