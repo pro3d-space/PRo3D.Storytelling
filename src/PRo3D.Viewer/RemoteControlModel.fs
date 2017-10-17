@@ -32,7 +32,7 @@ module Xyz =
 
     let toV3d (v : Xyz) : V3d =
         V3d(v.x, v.y, v.z)
-
+        
 [<DataContract>]
 type Shot = {    
     [<field: DataMember(Name = "pos")>]
@@ -55,8 +55,23 @@ type Shot = {
     folder  : string
 }
 
+[<DataContract>]
+type InstrumentPlatform = {    
+    [<field: DataMember(Name = "rover")>]
+    rover      : string
+    [<field: DataMember(Name = "instrument")>]
+    instrument : string
+    [<field: DataMember(Name = "focal")>]
+    focal      : double
+    [<field: DataMember(Name = "pan")>] //"Pan Axis"
+    pan        : double
+    [<field: DataMember(Name = "tilt")>] //"Tilt Axis"
+    tilt       : double
+}
+
 //instrument shot 
 
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Shot =
     open System
 
@@ -86,6 +101,38 @@ module Shot =
 
     let fromWp (wp : WayPoint) : Shot =        
         { fromCamera wp.cv with id = wp.name }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module InstrumentPlatform =
+
+    let init = 
+        {
+            rover      = "ExoMarsRover_VariousCameras"
+            instrument = "MastcamZL"
+            focal      = 0.0
+            pan        = 0.0
+            tilt       = 0.0
+        }
+
+    let fromRoverModel (rm : RoverModel) : option<InstrumentPlatform> =
+
+        let result = init
+
+        let result =
+            rm.selectedRover 
+                |> Option.bind (fun r -> 
+                    let result' = { result with rover = r.id }
+                    let result' = 
+                        rm.selectedInstrument |> Option.map(fun x -> { result' with instrument = x.id; focal = x.focal.value })
+
+
+                    result')
+        
+        result
+
+
+
+
 
 [<DomainType>]
 type RemoteModel =

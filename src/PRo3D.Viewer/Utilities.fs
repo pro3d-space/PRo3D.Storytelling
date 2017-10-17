@@ -217,15 +217,14 @@ module Sg =
     let dots (points : alist<V3d>) (color : IMod<C4b>) (view : IMod<CameraView>) =             
         aset {
             for p in points |> ASet.ofAList do
-                let scale = computeScale view (Mod.constant p) 5.0
-                //let scale = Mod.constant 0.6
+                let scale = computeScale view (Mod.constant p) 5.0          
                 yield mkDotISg color scale (Mod.constant (Trafo3d.Translation(p)))
         } 
         |> Sg.set
         |> Sg.effect [
             toEffect <| Aardvark.Opc.Shader.stableTrafo
             toEffect <| DefaultSurfaces.vertexColor
-            toEffect <| DefaultSurfaces.simpleLighting
+           // toEffect <| DefaultSurfaces.simpleLighting
         ]
 
 module UI =
