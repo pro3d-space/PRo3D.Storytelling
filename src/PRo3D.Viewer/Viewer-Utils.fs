@@ -39,6 +39,7 @@ type ViewerAction =
     | SetCamera of CameraView        
     | ImportSurface 
     | ImportMeasurements 
+    | ImportAnnotationGroups
     | DnSProperties             of PropertyActions
     | ConfigPropertiesMessage   of ConfigProperties.Action
     | QuickLoad1

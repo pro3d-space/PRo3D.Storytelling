@@ -36,7 +36,7 @@ open PRo3D.Drawing
 module ViewerApp =
     open Surface   
     open System.Collections.Concurrent   
-    open Scene    
+    open Scene   
     
                 
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
@@ -50,6 +50,8 @@ module ViewerApp =
     let _navigation= Model.Lens.scene |. Scene.Lens.navigation
 
     let _annotations = Model.Lens.drawing |. DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.annotations
+    let _flatAnnotations = Model.Lens.drawing |. DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.annotationsFlat
+    let _groups = Model.Lens.drawing |. DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.subGroups
        
     let lookAtData (m : Model) =         
         let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -212,6 +214,15 @@ module ViewerApp =
                         let newAnnotations = m.drawing.annotationGroups.rootGroup.annotations |> PList.append' (MeasurementsImporter.startImporter x)
                         let m' = _annotations.Set(m, newAnnotations) 
                         m'
+                    | None -> m   
+            | ImportAnnotationGroups,_,_ ->
+                match Dialogs.openDialog w with
+                    | Some x -> 
+                        let newGroups = m.drawing.annotationGroups.rootGroup.subGroups |> PList.append' (AnnotationGroupsImporter.startImporter x)
+                        let m' = _groups.Set(m, newGroups)
+                        let flatA = AnnotationGroups.flattenAnnotations m'.drawing.annotationGroups.rootGroup |> PList.ofList
+                        let m'' = _flatAnnotations.Set(m', flatA)
+                        m''
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
@@ -614,6 +625,12 @@ module ViewerApp =
                 onClick (fun _ -> ImportMeasurements)
             ] 
 
+        let importAnnotationGroups =
+            [ text "browse"] |> button [ 
+                clazz "ui button"
+                onClick (fun _ -> ImportAnnotationGroups)
+            ] 
+
         let usingContext =             
             "$('.context.example .ui.sidebar')
               .sidebar({
@@ -652,7 +669,8 @@ module ViewerApp =
                 "Scene", [sceneTools]
                 "Recent", [recentScenes]
                 "Add Surface", [openSurface]
-                "Import Measurements", [importMeasurements]]                              
+                "Import Annotations", [importMeasurements]
+                "Import AnnotationGroups", [importAnnotationGroups]]                              
             onBoot usingContext (                            
                 body [clazz "context example"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
         ))

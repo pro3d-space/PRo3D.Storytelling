@@ -12,7 +12,7 @@ module Mutable =
     
     type MScene(__initial : PRo3D.Viewer.Scene) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Viewer.Scene> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Scene> = Aardvark.Base.Incremental.EqModRef<PRo3D.Viewer.Scene>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Scene>
         let _navigation = PRo3D.Navigation2.Mutable.MNavigationModel.Create(__initial.navigation)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _surfacesModel = PRo3D.Surfaces.Mutable.MSurfaceModel.Create(__initial.surfacesModel)
@@ -103,7 +103,7 @@ module Mutable =
     
     type MSceneHandle(__initial : PRo3D.Viewer.SceneHandle) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Viewer.SceneHandle> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.SceneHandle> = Aardvark.Base.Incremental.EqModRef<PRo3D.Viewer.SceneHandle>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.SceneHandle>
         let _path = ResetMod.Create(__initial.path)
         let _name = ResetMod.Create(__initial.name)
         let _writeDate = ResetMod.Create(__initial.writeDate)
@@ -158,7 +158,7 @@ module Mutable =
     
     type MRecent(__initial : PRo3D.Viewer.Recent) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Viewer.Recent> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Recent> = Aardvark.Base.Incremental.EqModRef<PRo3D.Viewer.Recent>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Recent>
         let _recentScenes = MMap.Create(__initial.recentScenes, (fun v -> MSceneHandle.Create(v)), (fun (m,v) -> MSceneHandle.Update(m, v)), (fun v -> v))
         
         member x.recentScenes = _recentScenes :> amap<_,_>
@@ -195,7 +195,7 @@ module Mutable =
     
     type MModel(__initial : PRo3D.Viewer.Model) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Viewer.Model> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Model> = Aardvark.Base.Incremental.EqModRef<PRo3D.Viewer.Model>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Model>
         let _scene = MScene.Create(__initial.scene)
         let _drawing = PRo3D.Drawing.Mutable.MDrawingModel.Create(__initial.drawing)
         let _properties = ResetMod.Create(__initial.properties)

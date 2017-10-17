@@ -539,3 +539,7 @@ module AnnotationGroupsModel =
         lastSelectedItem = SelectedItem.Annotation
         }
 
+[<DomainType>]
+type AnnotationGroupsImporterModel = {
+    rootGroupI       : plist<AnnotationGroup>
+}
