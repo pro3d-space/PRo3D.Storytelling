@@ -26,6 +26,10 @@ module AnnotationGroups =
         | Nop
 
     //
+         
+    let updateGroups (model:AnnotationGroupsModel) (root:AnnotationGroup) (flat:plist<Annotation>) =
+        {model with rootGroup = root; annotationsFlat = flat}
+        
     let rec flattenAnnotations (g:AnnotationGroup) =
         match ((PList.toList g.annotations), (PList.toList g.subGroups)) with
             | ([], []) -> []
@@ -33,6 +37,11 @@ module AnnotationGroups =
             | ([], sg) -> sg |> List.collect flattenAnnotations
             | (c, sg)  -> let sga = sg |> List.collect flattenAnnotations
                           c@sga
+
+    let loadAnnotationGroups (path:string) =
+        let annotationGroups = Serialization.loadAs<PRo3D.AnnotationGroupsModel> path
+        let flatA = flattenAnnotations annotationGroups.rootGroup |> PList.ofList
+        { annotationGroups with annotationsFlat = flatA } 
 
     let tryGetChild (ag:AnnotationGroup) key = 
         let annos = flattenAnnotations ag 
@@ -79,8 +88,8 @@ module AnnotationGroups =
     let update (model : AnnotationGroupsModel) (action : Action) =
         printfn "action: %A" action
         match action with
-            | ActiveGroup (g, p, s) -> { model with activeGroupKey = g; activeGroupPath = p; activeGroupName = s } 
-            | ActiveChild (g, p) -> { model with activeChildKey = g; activeChildPath = p } 
+            | ActiveGroup (g, p, s) -> { model with activeGroupKey = g; activeGroupPath = p; activeGroupName = s; lastSelectedItem = SelectedItem.AnnotationGroup } 
+            | ActiveChild (g, p) -> { model with activeChildKey = g; activeChildPath = p; lastSelectedItem = SelectedItem.Annotation} 
             | ToggleExpand p -> 
                 let func = (function (x:AnnotationGroup) -> { x with expanded = not x.expanded })
                 { model with rootGroup = updateItemAt p func model.rootGroup }
@@ -98,22 +107,22 @@ module AnnotationGroups =
                 let func = (fun (x:AnnotationGroup) (id:Guid) -> { x with subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups })
                 let newRoot = deleteItemAt p func model.rootGroup
                 let flatAnnos = flattenAnnotations newRoot |> PList.ofList
-                { model with rootGroup = newRoot; flattenChild = flatAnnos}
+                { model with rootGroup = newRoot; annotationsFlat = flatAnnos}
             | AddChild (p,c) -> 
                 let func = (function (x:AnnotationGroup) -> { x with annotations = c })
-                { model with rootGroup = updateItemAt p func model.rootGroup; flattenChild = c }
+                { model with rootGroup = updateItemAt p func model.rootGroup; annotationsFlat = c }
             | RemoveChild (k,p) -> 
                 let func = (function (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then removeAnnotation x.annotations k else x.annotations })
-                let flatAnnos = removeAnnotation model.flattenChild k
-                { model with rootGroup = updateItemAt p func model.rootGroup; flattenChild = flatAnnos }
+                let flatAnnos = removeAnnotation model.annotationsFlat k
+                { model with rootGroup = updateItemAt p func model.rootGroup; annotationsFlat = flatAnnos }
             | ToggleChildVisibility (c,p) -> 
                 let func = (function (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then toggleAnnotation x.annotations c else x.annotations })
-                let flatAnnos = toggleAnnotation model.flattenChild c
-                { model with rootGroup = updateItemAt p func model.rootGroup; flattenChild = flatAnnos }
+                let flatAnnos = toggleAnnotation model.annotationsFlat c
+                { model with rootGroup = updateItemAt p func model.rootGroup; annotationsFlat = flatAnnos }
             | UpdateChildProperties (a,p) ->
                 let func = (fun (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then updateChild x.annotations a else x.annotations })
-                let flatA = model.flattenChild.AsList |> List.updateIf (fun x -> x.key = a.key) (fun _ -> a) |> PList.ofList  
-                { model with rootGroup = updateItemAt p func model.rootGroup; flattenChild = flatA }
+                let flatA = model.annotationsFlat.AsList |> List.updateIf (fun x -> x.key = a.key) (fun _ -> a) |> PList.ofList  
+                { model with rootGroup = updateItemAt p func model.rootGroup; annotationsFlat = flatA }
             | SetGroupName t -> 
                 let func = (fun (x:AnnotationGroup) -> { x with name = t })
                 { model with rootGroup = updateItemAt model.activeGroupPath func model.rootGroup; activeGroupName = t }

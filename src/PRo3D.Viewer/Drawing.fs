@@ -28,8 +28,6 @@ module DrawingApp =
 
     open MBrace.FsPickler.Json   
     
-    //open Mutable.AnnotationGroupsModelModule.Lens
-    
     let getFinishedAnnotation up north (model : DrawingModel) =
         match model.working with
             | Some w ->               
@@ -66,20 +64,21 @@ module DrawingApp =
                  //   Log.line "sending %A" a.semantic
                     bc.Add json
 
-                    let flatAnnos = model.annotationGroups.flattenChild |> PList.prepend a
+                    let flatAnnos = model.annotationGroups.annotationsFlat |> PList.prepend a
 
                     let func = (fun (x : AnnotationGroup) -> {  x with annotations = x.annotations |> PList.prepend a })
                     AnnotationGroups.updateItemAt model.annotationGroups.activeGroupPath func model.annotationGroups.rootGroup
-                    //model.annotationGroups.flattenChild |> PList.prepend a
                 | None -> model.annotationGroups.rootGroup
 
         let flatAnnos = 
             match getFinishedAnnotation up north model with
                 | Some a -> 
-                    model.annotationGroups.flattenChild |> PList.prepend a
-                | None -> model.annotationGroups.flattenChild
+                    model.annotationGroups.annotationsFlat |> PList.prepend a
+                | None -> model.annotationGroups.annotationsFlat
         
-        { model with allAnnotations = anns; working = None; pendingIntersections = ThreadPool.empty; annotationGroups = {model.annotationGroups with rootGroup = rootGroup; flattenChild = flatAnnos }} 
+        let groups = AnnotationGroups.updateGroups model.annotationGroups rootGroup flatAnnos
+        { model with allAnnotations = anns; working = None; pendingIntersections = ThreadPool.empty; 
+                    annotationGroups = groups } 
 
     let addPoint up north samplePoint p model surfaceName bc =
         let working, newSegment = 
@@ -260,27 +259,16 @@ module DrawingApp =
                 match Dialogs.saveDialog w with
                     | None -> model
                     | Some p -> 
-                        //Serialization.save "./lastMeasure" model.annotations |> ignore
-                        //{ model with annotations = Serialization.save p model.annotations }
                         Serialization.save "./lastMeasure" model.annotationGroups |> ignore
                         { model with annotationGroups = Serialization.save p model.annotationGroups }
             | Load,_ ->                
                 match Dialogs.openDialog w with
                     | None -> model
                     | Some path -> 
-                        //let annotations = Serialization.loadAs<plist<PRo3D.Annotation>> path
-                        //{ model with annotations = annotations }
-                        let annotationGroups = Serialization.loadAs<PRo3D.AnnotationGroupsModel> path
-                        let flatA = AnnotationGroups.flattenAnnotations annotationGroups.rootGroup |> PList.ofList
-                        let annotationGroups' = { annotationGroups with flattenChild = flatA } 
-                        { model with annotationGroups = annotationGroups'}
-            | QuickLoad,_ ->                
-                //let annotations = Serialization.loadAs<plist<PRo3D.Annotation>> "./lastMeasure"
-                //{ model with annotations = annotations } 
-                let annotationGroups = Serialization.loadAs<PRo3D.AnnotationGroupsModel> "./lastMeasure"
-                let flatA = AnnotationGroups.flattenAnnotations model.annotationGroups.rootGroup |> PList.ofList
-                let root = {annotationGroups with flattenChild = flatA}
-                { model with annotationGroups = root; allAnnotations = flatA }
+                        { model with annotationGroups = AnnotationGroups.loadAnnotationGroups path }
+            | QuickLoad,_ ->  
+                let groups = AnnotationGroups.loadAnnotationGroups "./lastMeasure" 
+                { model with annotationGroups = groups; allAnnotations = groups.annotationsFlat  }
             | Send, _ ->                                        
               // // let json = model.annotations |> PList.map JsonTypes.ofAnnotation |> pickler.PickleTyped
                 //Log.line "Sending %i annotations" (model.annotations |> PList.count)
@@ -304,8 +292,8 @@ module DrawingApp =
                         HSet.add id selected, AnnotationGroups.tryGetChild model.annotationGroups.rootGroup id //DrawingModel.tryGet model id
                 
                 let ann = DrawingModel.tryGet model.allAnnotations id   
-                let ann1 = DrawingModel.tryGet model.annotationGroups.flattenChild id   
-                { model with selected = selection; selectedAnnotation = ann1; annotationGroups = {model.annotationGroups with activeChildKey = id; activeChildPath = p} }  
+                let ann1 = DrawingModel.tryGet model.annotationGroups.annotationsFlat id   
+                { model with selected = selection; selectedAnnotation = ann1; annotationGroups = {model.annotationGroups with activeChildKey = id; activeChildPath = p; lastSelectedItem = SelectedItem.Annotation} }  
             | Nop, _ -> model
             | AnnotationPropertiesMsg msg,_ ->                
                 match model.selectedAnnotation with
@@ -314,10 +302,8 @@ module DrawingApp =
                         let annotations' = 
                             model.allAnnotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a')     
                         let flatAnnos = 
-                            model.annotationGroups.flattenChild.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a')    
-                        //let func = (fun (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then updateChild x.annotations a else x.annotations })
-                        //let root = AnnotationGroups.updateItemAt model.annotationGroups.se func model.rootGroup; flattenChild = flatA }
-                        { model with selectedAnnotation = Some a'; allAnnotations = annotations' |> PList.ofList; annotationGroups = {model.annotationGroups with flattenChild = flatAnnos |> PList.ofList} }
+                            model.annotationGroups.annotationsFlat.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a')  
+                        { model with selectedAnnotation = Some a'; allAnnotations = annotations' |> PList.ofList; annotationGroups = {model.annotationGroups with annotationsFlat = flatAnnos |> PList.ofList} }
                     | None -> model
                         
             | Undo, _ -> 
@@ -339,13 +325,7 @@ module DrawingApp =
 
                         { model with allAnnotations = as' } |> stash
                     | None -> model             
-            | ToggleVisiblity id, _ -> model // TODO in AnnotationGroups
-                //let a = model.annotations.AsList |> List.tryFind (fun d -> d.key = id)
-                //let a' =
-                //    match a with
-                //        | Some k -> { k with visible = not k.visible  }
-                //        | None -> failwith "annotation not found, can't happen"
-                //{ model with annotations = (model.annotations.AsList |> List.updateIf(fun d -> d.key = a'.key) (fun _ -> a')) |> PList.ofList}      
+            | ToggleVisiblity id, _ -> model // implemented in AnnotationGroups   
             | AnnotationGroupsMessage msg,_ -> { model with annotationGroups = AnnotationGroups.update model.annotationGroups msg}
             | _ -> model
 
@@ -566,7 +546,7 @@ module DrawingApp =
                 let select = fun (a:MAnnotation,path:list<Index>) -> Select (path, a.key |> Mod.force)
                 let lift   = fun (a:AnnotationGroups.Action) -> (AnnotationGroupsMessage a)
 
-                yield div [ clazz "item" ] [
+                yield div [ clazz "item"] [
                      Incremental.i itemAttributes AList.empty
                      div [ clazz "content" ] [                         
                          div [ clazz "description noselect"] [desc]
@@ -780,7 +760,7 @@ module DrawingApp =
         let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) (cam:IMod<CameraView>) : ISg<Drawing.Action> =
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler           
-            let annoSet = ASet.ofAList model.annotationGroups.flattenChild //model.allAnnotations
+            let annoSet = ASet.ofAList model.annotationGroups.annotationsFlat //model.allAnnotations
 
             let config = 
                 {

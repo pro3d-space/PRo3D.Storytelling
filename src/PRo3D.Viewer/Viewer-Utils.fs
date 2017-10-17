@@ -31,7 +31,7 @@ type PropertyActions =
 
 type ViewerAction =                
     | DrawingMessage            of Drawing.Action
-    | AnnotationGroupsMessage   of AnnotationGroups.Action
+    | AnnotationGroupsMessageViewer   of AnnotationGroups.Action
     | NavigationMessage         of Navigation.Action
     | ReferenceSystemMessage    of ReferenceSystemApp.Action
     | AnnotationMessage         of AnnotationProperties.Action
@@ -39,6 +39,7 @@ type ViewerAction =
     | SetCamera of CameraView        
     | ImportSurface 
     | ImportMeasurements 
+    | ImportAnnotationGroups
     | DnSProperties             of PropertyActions
     | ConfigPropertiesMessage   of ConfigProperties.Action
     | QuickLoad1

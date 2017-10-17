@@ -86,32 +86,32 @@ module Bookmarks =
                         alist {
                             for b in model.bookmarks do
 
-                                let icon =
-                                    adaptive {
-                                        let! active = model.selectedBookmark
-                                        let key = match active with
-                                                    | Some x -> x.key
-                                                    | None -> Guid.Empty |> Mod.constant
-                                        let! key= key
-                                        let! bm  =  b.key
+                                //let icon =
+                                //    adaptive {
+                                //        let! active = model.selectedBookmark
+                                //        let key = match active with
+                                //                    | Some x -> x.key
+                                //                    | None -> Guid.Empty |> Mod.constant
+                                //        let! key= key
+                                //        let! bm  =  b.key
 
-                                        return if (key = bm) then "circle icon" else "circle thin icon"
-                                    }
+                                //        return if (key = bm) then "circle icon" else "circle thin icon"
+                                //    }
                       
-                                let map = 
-                                    amap {
-                                        let! icon = icon
-                                        yield clazz icon
-                                        yield onClick (fun _ -> Select (b.key |> Mod.force))
-                                    } |> AttributeMap.ofAMap
+                                //let map = 
+                                //    amap {
+                                //        let! icon = icon
+                                //        yield clazz icon
+                                //        //yield onClick (fun _ -> Select (b.key |> Mod.force))
+                                //    } |> AttributeMap.ofAMap
 
                               
-                                yield div [clazz "item"] [
+                                yield div [clazz "item"; onClick (fun _ -> Select (b.key |> Mod.force))] [
                                         div [clazz "content"] [
                                             let desc = b.name
                                             yield Incremental.div (AttributeMap.ofList [clazz "header"])(
                                                 alist {
-                                                    yield Incremental.i map AList.empty |> UI.wrapToolTipRight "Set active"
+                                                    //yield Incremental.i map AList.empty |> UI.wrapToolTipRight "Set active"
                                                     yield i [clazz "home icon"                                                
                                                              onClick (fun _ -> UpdateCam (b.key |> Mod.force))
                                                              ][] |> UI.wrapToolTipRight "FlyTo"               
@@ -130,14 +130,14 @@ module Bookmarks =
 
     module UI =
         let view (model:MBookmark) =
-            let view = model.navigationState.camera.view |> Mod.force
+            let view = model.navigationState.camera.view
             require Html.semui (
                 Html.table [  
                     Html.row "Change Name:"[Html.SemUi.textBox model.name SetBookmarkName ]
-                    Html.row "Pos:"     [Incremental.text (view.Location.ToString("0.00") |> Mod.constant )]
-                    Html.row "LookAt:"  [text (view.Forward.ToString("0.00"))]
-                    Html.row "Up:"      [text (view.Up.ToString("0.00"))]
-                    Html.row "Sky:"     [text (view.Sky.ToString("0.00"))]
+                    Html.row "Pos:"     [Incremental.text (view |> Mod.map (fun x -> x.Location.ToString("0.00")))] 
+                    Html.row "LookAt:"  [Incremental.text (view |> Mod.map (fun x -> x.Forward.ToString("0.00")))]
+                    Html.row "Up:"      [Incremental.text (view |> Mod.map (fun x -> x.Up.ToString("0.00")))]
+                    Html.row "Sky:"     [Incremental.text (view |> Mod.map (fun x -> x.Sky.ToString("0.00")))]
                 ]
             )
 

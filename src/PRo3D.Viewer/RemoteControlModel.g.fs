@@ -12,7 +12,7 @@ module Mutable =
     
     type MRemoteModel(__initial : RemoteControlModel.RemoteModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<RemoteControlModel.RemoteModel> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<RemoteControlModel.RemoteModel> = Aardvark.Base.Incremental.EqModRef<RemoteControlModel.RemoteModel>(__initial) :> Aardvark.Base.Incremental.IModRef<RemoteControlModel.RemoteModel>
         let _shots = MList.Create(__initial.shots)
         let _Rover = PRo3d.Mutable.MRoverModel.Create(__initial.Rover)
         
