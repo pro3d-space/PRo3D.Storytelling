@@ -95,9 +95,15 @@ module RemoteControlApp =
         match a with
             | MakeScreenshot sh ->
 
-                //build camera view from shot
-
                 //let platform = RemoteControlModel.InstrumentPlatform.fromRoverModel m.Rover
+
+                //get actual instrument params from shot
+
+                //build camera view/ frustum from shot
+                //set camera/frustum remote
+                //take screenshot (width and height)
+
+                
 
                 send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
                 

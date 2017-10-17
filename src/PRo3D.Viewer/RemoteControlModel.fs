@@ -32,7 +32,21 @@ module Xyz =
 
     let toV3d (v : Xyz) : V3d =
         V3d(v.x, v.y, v.z)
-        
+   
+[<DataContract>]
+type InstrumentPlatform = {    
+    [<field: DataMember(Name = "rover")>]
+    rover      : string
+    [<field: DataMember(Name = "instrument")>]
+    instrument : string
+    [<field: DataMember(Name = "focal")>]
+    focal      : double
+    [<field: DataMember(Name = "pan")>] //"Pan Axis"
+    pan        : double
+    [<field: DataMember(Name = "tilt")>] //"Tilt Axis"
+    tilt       : double
+}
+
 [<DataContract>]
 type Shot = {    
     [<field: DataMember(Name = "pos")>]
@@ -53,27 +67,26 @@ type Shot = {
     id      : string
     [<field: DataMember(Name = "folder")>]
     folder  : string
+    [<field: DataMember(Name = "platform")>]
+    platform : InstrumentPlatform
 }
 
-[<DataContract>]
-type InstrumentPlatform = {    
-    [<field: DataMember(Name = "rover")>]
-    rover      : string
-    [<field: DataMember(Name = "instrument")>]
-    instrument : string
-    [<field: DataMember(Name = "focal")>]
-    focal      : double
-    [<field: DataMember(Name = "pan")>] //"Pan Axis"
-    pan        : double
-    [<field: DataMember(Name = "tilt")>] //"Tilt Axis"
-    tilt       : double
-}
+
 
 //instrument shot 
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Shot =
     open System
+
+    let instInit = 
+        {
+            rover      = ""
+            instrument = ""
+            focal      = 0.0
+            pan        = 0.0
+            tilt       = 0.0
+        }
 
     let init = 
         {
@@ -86,6 +99,7 @@ module Shot =
             ppv     = 0
             id      = Guid.NewGuid().ToString()
             folder  = "./shots"
+            platform = instInit
         }
 
     let getCamera (s : Shot) : CameraView =
@@ -107,8 +121,8 @@ module InstrumentPlatform =
 
     let init = 
         {
-            rover      = "ExoMarsRover_VariousCameras"
-            instrument = "MastcamZL"
+            rover      = ""
+            instrument = ""
             focal      = 0.0
             pan        = 0.0
             tilt       = 0.0

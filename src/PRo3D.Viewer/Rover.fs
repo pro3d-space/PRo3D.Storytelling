@@ -199,8 +199,7 @@ module RoverApp =
 
                             { m with selectedInstrument = Some inst' } |> updateRovers { r with instruments = instruments' }                            
                         | None -> m                                        
-                  | None -> m                                
-          | _ -> m
+                  | None -> m          
 
     let angle = 
         {
