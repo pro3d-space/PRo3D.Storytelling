@@ -94,15 +94,25 @@ module RemoteControlApp =
     let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
         match a with
             | MakeScreenshot sh ->
+
+                //build camera view from shot
+
+                //let platform = RemoteControlModel.InstrumentPlatform.fromRoverModel m.Rover
+
                 send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
                 
                 try takeScreenshot baseAddress sh with e -> printfn "error: %A" e
                 m
             | UpdateCamera sh ->
+
+                let platform = RemoteControlModel.InstrumentPlatform.fromRoverModel m.Rover
+                printfn "%A" platform
+
                 send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
                 m
             | Play ->
-                for sh in m.shots do
+                
+                for sh in m.shots do                   
                     send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                  
                     try takeScreenshot baseAddress sh with e -> printfn "error: %A" e
                 m

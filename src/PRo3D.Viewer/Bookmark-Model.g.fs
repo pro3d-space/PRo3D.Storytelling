@@ -12,7 +12,7 @@ module Mutable =
     
     type MBookmark(__initial : PRo3D.BookmarksX.Bookmark) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.BookmarksX.Bookmark> = Aardvark.Base.Incremental.EqModRef<PRo3D.BookmarksX.Bookmark>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.BookmarksX.Bookmark>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.BookmarksX.Bookmark> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _key = ResetMod.Create(__initial.key)
         let _name = ResetMod.Create(__initial.name)
         let _navigationState = PRo3D.Navigation2.Mutable.MNavigationModel.Create(__initial.navigationState)
@@ -67,7 +67,7 @@ module Mutable =
     
     type MBookmarksModel(__initial : PRo3D.BookmarksX.BookmarksModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.BookmarksX.BookmarksModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.BookmarksX.BookmarksModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.BookmarksX.BookmarksModel>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.BookmarksX.BookmarksModel> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _bookmarks = MList.Create(__initial.bookmarks, (fun v -> MBookmark.Create(v)), (fun (m,v) -> MBookmark.Update(m, v)), (fun v -> v))
         let _selectedBookmark = MOption.Create(__initial.selectedBookmark, (fun v -> MBookmark.Create(v)), (fun (m,v) -> MBookmark.Update(m, v)), (fun v -> v))
         

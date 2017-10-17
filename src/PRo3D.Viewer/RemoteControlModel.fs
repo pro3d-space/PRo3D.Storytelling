@@ -115,18 +115,32 @@ module InstrumentPlatform =
         }
 
     let fromRoverModel (rm : RoverModel) : option<InstrumentPlatform> =
+        
+        let getRover (rover : option<Rover>) (result : InstrumentPlatform)  : option<InstrumentPlatform> =
+            rover |> Option.map (fun r -> { result with rover = r.id })
 
-        let result = init
+        let getInstrument (instrument : option<Instrument>) (result : InstrumentPlatform) : option<InstrumentPlatform> =
+            instrument |> Option.map (fun i -> { result with instrument = i.id; focal = i.focal.value })
 
-        let result =
-            rm.selectedRover 
-                |> Option.bind (fun r -> 
-                    let result' = { result with rover = r.id }
-                    let result' = 
-                        rm.selectedInstrument |> Option.map(fun x -> { result' with instrument = x.id; focal = x.focal.value })
+        let getAxes (rover : option<Rover>) (result : InstrumentPlatform) : option<InstrumentPlatform> =
+            match rover with 
+              | None -> None
+              | Some r ->
 
+                let panAx =
+                    r.axes.TryFind "Pan Axis" |> Option.map(fun x ->  { result with pan = x.angle.value } )
 
-                    result')
+                let tiltAx = panAx |> Option.bind(fun x -> 
+                    r.axes.TryFind "Tilt Axis" |> Option.map(fun y -> { x with tilt = y.angle.value } ))
+                    
+                tiltAx
+                
+
+        let result = 
+            Some init 
+              |> Option.bind(fun x -> getRover rm.selectedRover x)
+              |> Option.bind(fun x -> getInstrument rm.selectedInstrument x)
+              |> Option.bind(fun x -> getAxes rm.selectedRover x)
         
         result
 

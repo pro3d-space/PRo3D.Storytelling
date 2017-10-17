@@ -11,13 +11,30 @@ module Shader =
 
     type Vertex =
         {
-            [<Position>]           pos     : V4d            
-            [<WorldPosition>]      wp      : V4d
-            [<TexCoord>]           tc      : V2d
-            [<Color>]              c       : V4d
-            [<Normal>]             n       : V3d
-            [<Semantic("Scalar")>] scalar  : float
+            [<Position>]                pos     : V4d            
+            [<WorldPosition>]           wp      : V4d
+            [<TexCoord>]                tc      : V2d
+            [<Color>]                   c       : V4d
+            [<Normal>]                  n       : V3d
+            [<Semantic("Scalar")>]      scalar  : float
+            [<Semantic("LightDir")>]    ldir    : V3d
         }
+
+    [<ReflectedDefinition>]
+    let transformNormal (n : V3d) =
+        uniform.ModelViewTrafoInv.Transposed * V4d(n, 0.0)
+            |> Vec.xyz
+            |> Vec.normalize
+
+    //type Vertex = {
+    //    [<Position>]                pos     : V4d
+    //    [<Normal>]                  n       : V3d
+    //    [<BiNormal>]                b       : V3d
+    //    [<Tangent>]                 t       : V3d
+    //    [<Color>]                   c       : V4d
+    //    [<TexCoord>]                tc      : V2d
+    //    [<Semantic("LightDir")>]    ldir    : V3d
+    //}
 
     let LoDColor  (v : Vertex) =
         fragment {
@@ -45,11 +62,22 @@ module Shader =
             let wp = uniform.ModelTrafo * v.pos
             return { 
                 v with
-                    pos = uniform.ProjTrafo * vp
-                    wp = wp
-                    n = uniform.NormalMatrix * v.n                    
+                    pos  = uniform.ProjTrafo * vp
+                    wp   = wp
+                    n    = transformNormal v.n
+                    ldir = V3d.Zero - vp.XYZ |> Vec.normalize
             } 
         } 
+
+    let stableLight (v : Vertex) =
+        fragment {
+            let n = v.n |> Vec.normalize
+            let c = v.ldir |> Vec.normalize
+             
+            let diffuse = Vec.dot c n |> abs            
+ 
+            return V4d(v.c.XYZ * diffuse, v.c.W)
+        }
 
     let private colormap =
         sampler2d {

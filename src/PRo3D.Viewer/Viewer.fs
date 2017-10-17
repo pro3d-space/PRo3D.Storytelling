@@ -415,7 +415,7 @@ module ViewerApp =
         let att = 
             AttributeMap.unionMany [
                 renderControlAttributes m.scene.navigation
-                [attribute "style" "width:70%; height: 100%; float:left"; ] |> AttributeMap.ofList
+                [attribute "style" "width:70%; height: 100%; float:left"; attribute "data-samples" "8" ] |> AttributeMap.ofList
                 AttributeMap.ofList [
                     onKeyDown (KeyDown)
                     onKeyUp (KeyUp)

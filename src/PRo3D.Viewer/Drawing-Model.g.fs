@@ -12,7 +12,7 @@ module Mutable =
     
     type MDrawingModel(__initial : PRo3D.Drawing.DrawingModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Drawing.DrawingModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Drawing.DrawingModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Drawing.DrawingModel>
+        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Drawing.DrawingModel> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _draw = ResetMod.Create(__initial.draw)
         let _hoverPosition = MOption.Create(__initial.hoverPosition)
         let _working = MOption.Create(__initial.working, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
