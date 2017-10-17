@@ -181,7 +181,7 @@ module ViewerApp =
                                 m.drawing.allAnnotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a') |> PList.ofList   
 
                             let flatAnnos = 
-                                m.drawing.annotationGroups.flattenChild.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a') |> PList.ofList
+                                m.drawing.annotationGroups.annotationsFlat.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a') |> PList.ofList
 
                             let func = (fun (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then AnnotationGroups.updateChild x.annotations a else x.annotations })
                             let path = m.drawing.annotationGroups.activeChildPath

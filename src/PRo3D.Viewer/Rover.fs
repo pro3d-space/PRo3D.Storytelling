@@ -1,14 +1,15 @@
 namespace PRo3D
 
 open System
-open System.Runtime.InteropServices
 
 open Aardvark.Base
+open Aardvark.UI
 open ViewPlanner
-
 open PRo3d
 
 module RoverProvider =
+    open System.Runtime.InteropServices
+    
     
     let toInstrument i (inst : IPWrapper.SInstrument) = 
         let pos    = inst.m_oInstrumentExtrinsics.m_oPosition.ToV3d()
@@ -28,7 +29,7 @@ module RoverProvider =
                 box       = box
             }
 
-        let intrinsics =
+        let intrinsics : Intrinsics =
             {
                 horizontalFieldOfView         = inst.m_oInstrumentIntrinsics.m_dFieldOfViewH
                 verticalFieldOfView           = inst.m_oInstrumentIntrinsics.m_dFieldOfViewV
@@ -100,7 +101,7 @@ module RoverProvider =
        
         pointerArray |> Array.map(fun x -> Marshal.PtrToStringAnsi(x))
 
-    let initRover platformId =
+    let initRover platformId : Rover =
         //Get various counts to initialize respective arrays
         let numWheelPoints = uint32 6 // IPWrapper.GetNrOfPlatformPointsOnGround(platformId)
         let numInstruments = IPWrapper.GetNrOfPlatformInstruments(platformId)
@@ -123,3 +124,151 @@ module RoverProvider =
         //convert initialised platform to rover and add to database
         platform |> toRover        
         
+
+module RoverApp = 
+    open Aardvark.Base
+    open Aardvark.Base.Incremental
+   
+
+    type Action =
+        | ChangeAngle      of string*NumericInput        
+        | SetFocalLength   of double
+        | SelectRover      of option<Rover>
+        | SelectInstrument of option<Instrument>
+        | SelectAxis       of option<Axis>
+
+
+    let update (m : RoverModel) (a:Action) =
+        match a with
+          | SelectRover r      -> { m with selectedRover = r }
+          | SelectInstrument i -> { m with selectedInstrument = i }
+          | SelectAxis a       -> { m with selectedAxis = a }
+          | ChangeAngle (id,a) -> m
+            //match m.selectedRover with
+            //  | Some r -> { m with currentAngle = NumericInput }
+            //  | None -> m
+
+            
+          | _ -> m
+
+    let angle = 
+        {
+            value = 0.0
+            min =  -90.0
+            max = 90.0
+            step = 0.1
+            format = "{0:0.0}"
+        }
+
+    let initial =
+        {
+            rovers = hmap.Empty
+            selectedInstrument = None
+            selectedRover = None
+            selectedAxis = None
+            currentAngle = angle
+        }
+
+    let mapTolist (input : amap<_,'a>) : alist<'a> = 
+        input |> AMap.toASet |> AList.ofASet |> AList.map snd    
+    
+    let roversList (m:MRoverModel) = 
+        (m.rovers |> mapTolist)
+
+    let toText (r : MRover) =
+        adaptive {
+            let! instr  = r.instruments |> mapTolist |> AList.count
+            let! axes   = r.axes |> mapTolist |> AList.count
+            let! wheels = r.wheelPositions |> Mod.map(fun x -> x.Length)
+
+            return sprintf "instr: %d | axes: %d  | wheels: %d" instr axes wheels
+        }
+
+    let viewRovers (m:MRoverModel) = 
+        Incremental.div 
+            (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
+            (                  
+                alist {                                                                                         
+                    for r in (roversList m) do
+                        yield div [clazz "item"] [
+                            div [clazz "content"] [                                        
+                                div [clazz "header"] [
+                                    Incremental.text r.id                                    
+                                ]
+                                div [clazz "description"] [
+                                   Incremental.text (r |> toText)
+                                ]
+                            ]
+                        ]
+                }
+            )    
+    
+    let instrumentProperties(i : MInstrument) (m : MRoverModel) =
+        require Html.semui (
+            Html.table [
+                Html.row "Name:"     [ Incremental.text i.id ]
+                Html.row "SensorX:"  [ Incremental.text (i.intrinsics |> Mod.map(fun x -> x.horizontalResolution.ToString() )) ]
+                Html.row "SensorY:"  [ Incremental.text (i.intrinsics |> Mod.map(fun x -> x.verticalResolution.ToString() )) ]
+            ]
+        )
+
+    let viewInstrumentProperties (m : MRoverModel) = 
+        m.selectedInstrument 
+            |> Mod.map(fun x ->
+                match x with 
+                  | Some i -> instrumentProperties i m
+                  | None ->   div[][])
+
+    let instrumentsDd (r:MRover) (m : MRoverModel) = 
+        UI.dropDown'' (r.instruments |> mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )
+
+    let axisProperties(a : MAxis) (m : MRoverModel) =
+        require Html.semui (
+            Html.table [
+               Html.row "Name:"  [ Incremental.text a.id ]
+               //Html.row "Angle:" [ Numeric.view' [NumericInputType.Slider] a.currentAngle ]
+            ]
+        )
+
+    let viewAxisProperties (m : MRoverModel) = 
+        m.selectedAxis 
+            |> Mod.map(fun x ->
+                match x with 
+                  | Some a -> axisProperties a m
+                  | None ->   div[][])
+
+    let axesDd (r:MRover) (m : MRoverModel) = 
+        UI.dropDown'' (r.axes |> mapTolist) m.selectedAxis (fun x -> SelectAxis (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )
+
+    let viewRoverProperties' (r : MRover) (m : MRoverModel) =
+
+       // let bla = UI.dropDown'' (roversList m)  m.selectedInstrument SelectRover (fun x -> x.id )
+
+        require Html.semui (
+            Html.table [
+                 Html.row "Name:"       [ Incremental.text r.id ]
+                 Html.row "Instrument:" [ 
+                    instrumentsDd r m 
+                    Incremental.div AttributeMap.empty (AList.ofModSingle (viewInstrumentProperties m))                    
+                 ]
+                 Html.row "Axes:" [
+                    axesDd r m 
+                    Incremental.div AttributeMap.empty (AList.ofModSingle (viewAxisProperties m))
+                 ]
+            ]
+        )
+
+    let viewRoverProperties (m : MRoverModel) = 
+        m.selectedRover 
+            |> Mod.map(fun x ->
+                match x with 
+                  | Some r -> viewRoverProperties' r m
+                  | None ->   div[][])
+                     
+    let view (m : MRoverModel) : DomNode<Action> =
+        Static.div[][
+            viewRovers m
+            br[]
+            UI.dropDown'' (roversList m)  m.selectedRover (fun x -> SelectRover (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )
+            Incremental.div AttributeMap.empty (AList.ofModSingle (viewRoverProperties m))
+        ]

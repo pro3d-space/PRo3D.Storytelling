@@ -6,6 +6,8 @@ open Aardvark.Base.Incremental
 open PRo3D.Viewer
 open System.Drawing.Printing
 open System.Runtime.Serialization
+open PRo3d
+open PRo3D
 
 
 
@@ -86,18 +88,21 @@ module Shot =
         { fromCamera wp.cv with id = wp.name }
 
 [<DomainType>]
-type Model =
+type RemoteModel =
     {
         //viewPoints : plist<WayPoint>
-        shots      : plist<Shot>
+        shots         : plist<Shot>
+        Rover         : RoverModel
     }
 
 type RemoteAction = 
     | SetViewpoint of CameraView
+    
 
 type Action = 
     | MakeScreenshot of Shot
     | UpdateCamera   of Shot
     | Play
     | Load
-    | OpenFolder of string
+    | OpenFolder     of string
+    | RoverMessage   of RoverApp.Action

@@ -16,35 +16,7 @@ module SurfaceProperties =
     open Aardvark.UI.Html.SemUi
     open FShade.Intrinsics
     
-    let dropDown'' (values : alist<'a>)(selected : IMod<Option<'a>>) (change : Option<'a> -> 'msg) (f : 'a ->string)  =
-
-        let attributes (name : string) =
-            AttributeMap.ofListCond [
-                always (attribute "value" (name))
-                onlyWhen (
-                        selected 
-                            |> Mod.map (
-                                fun x -> 
-                                    match x with
-                                        | Some s -> name = f s
-                                        | None   -> name = "-None-"
-                            )) (attribute "selected" "selected")
-            ]
-
-        let ortisOnChange  = 
-            let cb (i : int) =
-                let currentState = values.Content |> Mod.force
-                change (PList.tryAt (i-1) currentState)
-                    
-            onEvent "onchange" ["event.target.selectedIndex"] (fun x -> x |> List.head |> Int32.Parse |> cb)
-
-        Incremental.select (AttributeMap.ofList [ortisOnChange; style "color:black"]) 
-            (
-                alist {
-                    yield Incremental.option (attributes "-None-") (AList.ofList [text "-None-"])
-                    yield! values |> AList.mapi(fun i x -> Incremental.option (attributes (f x)) (AList.ofList [text (f x)]))
-                }
-            )
+    
 
     type Action =
         | SetFillMode    of FillMode
@@ -98,7 +70,7 @@ module SurfaceProperties =
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
                 Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider]   model.quality  |> UI.map SetQuality ]
                 Html.row "Priority:"    [Numeric.view' [NumericInputType.InputBox] model.priority |> UI.map SetPriority ]       
-                Html.row "Scalars:"     [dropDown'' model.scalarLayers  model.selectedScalar   (fun x -> SetScalarMap x)   (fun x -> x.label)]
-                Html.row "Textures:"    [dropDown'' model.textureLayers model.selectedTexture  (fun x -> SetTexturesMap x) (fun x -> x.label)]
+                Html.row "Scalars:"     [UI.dropDown'' model.scalarLayers  model.selectedScalar   (fun x -> SetScalarMap x)   (fun x -> x.label)]
+                Html.row "Textures:"    [UI.dropDown'' model.textureLayers model.selectedTexture  (fun x -> SetTexturesMap x) (fun x -> x.label)]
             ]
         )
