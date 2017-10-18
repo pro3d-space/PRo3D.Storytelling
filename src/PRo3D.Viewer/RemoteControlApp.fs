@@ -33,7 +33,7 @@ module RemoteControlApp =
 //        sprintf "%d%d%d_%d%d%d" dt.Year dt.Month dt.Day dt.Hour dt.Minute dt.Second
         dt.ToString("yyyymmdd_hhmmss")
 
-    let takeScreenshot baseAddress shot =
+    let takeScreenshot baseAddress (shot:Shot) =
         let wc = new System.Net.WebClient()
         let path = "screenshots"
         if System.IO.Directory.Exists path |> not then
@@ -61,17 +61,22 @@ module RemoteControlApp =
         let filename = System.IO.Path.ChangeExtension (shot.id,".jpg")
         wc.DownloadFile(screenshot,Path.combine [shot.folder; filename])
 
+    let mkInstrumetnWps m = 
+        let pShots = 
+            m.shots |> PList.choose(fun x -> PlatformShot.fromRoverModel m.Rover x)
+        { m with platformShots = pShots }
+
     let loadWaypoints m = 
         match Serialization.fileExists "./waypoints.wps" with
           | Some path -> 
                 let wp = Serialization.loadAs<plist<PRo3D.Viewer.WayPoint>> path
 
                 let shots = wp |> PList.map Shot.fromWp
-                let pshots = shots |> PList.toList |> jsonSerializer.PickleToString
+                let pshots = shots |> PList.toList |> jsonSerializer.PickleToString                
 
                 System.IO.File.WriteAllText("./waypoints.json", pshots)
 
-                { m with shots = shots }
+                { m with shots = shots }  |> mkInstrumetnWps
           | None -> m
 
     let roverStuff (m : RemoteModel) =
@@ -89,36 +94,53 @@ module RemoteControlApp =
         let r = { RoverApp.initial with rovers = rovs }
 
         { m with Rover = r }
-              
+       
+    let norm (v:V3d) = 
+        v.Normalized
 
     let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
         match a with
-            | MakeScreenshot sh ->
-
-                //let platform = RemoteControlModel.InstrumentPlatform.fromRoverModel m.Rover
+            | MakeScreenshot2 psh ->
 
                 //get actual instrument params from shot
-
                 //build camera view/ frustum from shot
                 //set camera/frustum remote
                 //take screenshot (width and height)
 
+                m
+            | MakeScreenshot sh ->
                 
-
                 send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
                 
                 try takeScreenshot baseAddress sh with e -> printfn "error: %A" e
                 m
-            | UpdateCamera sh ->
-
-                let platform = RemoteControlModel.InstrumentPlatform.fromRoverModel m.Rover
-                printfn "%A" platform
-
+            | UpdateCamera sh ->                                
                 send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
                 m
+            | UpdateCamera2 sh ->
+                let platform = RemoteControlModel.PlatformShot.fromRoverModel m.Rover sh
+                match platform with 
+                   | Some p ->
+                        let psh = PlatformShot.withShot sh p
+
+                        //getviewpoint from platformshot
+                        //fov
+                        //placementtrafo
+
+                        let forward = ((psh.lookAt |> Xyz.toV3d) - (psh.pos |> Xyz.toV3d)) |> norm
+                        let up = psh.up |> Xyz.toV3d |> norm
+                        let pos = psh.pos |> Xyz.toV3d |> norm
+
+                        let placement = Trafo3d.FromBasis(forward, up.Cross forward, up, pos)
+
+                        let cv = sh |> Shot.getCamera
+
+                        send <| RemoteAction.SetViewpoint (cv)
+                        m
+                    | None -> m
             | Play ->
                 
-                for sh in m.shots do                   
+                for sh in m.shots do
                     send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                  
                     try takeScreenshot baseAddress sh with e -> printfn "error: %A" e
                 m
@@ -128,7 +150,10 @@ module RemoteControlApp =
                 Process.Start("explorer.exe", path) |> ignore
                 m
             | RoverMessage a ->
+                // react on change and update rover via dll
                 { m with Rover = RoverApp.update m.Rover a }
+            | _ -> m
+    
 
     let viewShots (m:MRemoteModel) = 
         Incremental.div 
@@ -142,6 +167,7 @@ module RemoteControlApp =
                                     text sh.id
                                     i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCamera sh)] []
                                     i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
+                                    i [clazz "ui inverted icon find"; onClick (fun _ -> UpdateCamera2 sh)] []
                                 ]
                             ]
                         ]
@@ -192,5 +218,5 @@ module RemoteControlApp =
             threads = threads
             view = view
             update = update baseAddress send
-            initial = { shots = PList.empty; Rover = RoverApp.initial } |> loadWaypoints |> roverStuff
+            initial = { shots = PList.empty; Rover = RoverApp.initial; platformShots = PList.empty } |> loadWaypoints |> roverStuff
         }

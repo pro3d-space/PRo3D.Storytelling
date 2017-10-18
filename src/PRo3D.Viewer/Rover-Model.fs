@@ -49,6 +49,18 @@ type Instrument = {
     index                   : int
 }
 
+type AxisAngleUpdate = {
+    roverId : string
+    axisId  : string
+    angle   : string
+}
+
+type InstrumentFocusUpdate = {
+    roverId       : string
+    instrumentId  : string
+    focal         : string
+}
+
 [<DomainType>]
 type Axis = {
     id           : string

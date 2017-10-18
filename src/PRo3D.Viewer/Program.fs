@@ -93,14 +93,20 @@ let main argv =
     let remoteApp = 
         App.start (PRo3D.RemoteControlApp.app "http://localhost:4321" send)
 
-    let doStuff (shot:Shot) =   
+    let takeScreenshot (shot:Shot) =   
         let act = MakeScreenshot shot |> Seq.singleton
+        remoteApp.update Guid.Empty act
+        { result = shot.folder }
+
+    let takePlatformShot (shot:PlatformShot) =   
+        let act = MakeScreenshot2 shot |> Seq.singleton
         remoteApp.update Guid.Empty act
         { result = shot.folder }
 
     WebPart.startServer 1234 [ 
         MutableApp.toWebPart runtime (remoteApp)        
-        POST >=> path "/shots" >=> mapJson doStuff
+        POST >=> path "/shots" >=> mapJson takeScreenshot
+        POST >=> path "/platformshots" >=> mapJson takePlatformShot
         Suave.Files.browseHome
     ] 
 

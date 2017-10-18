@@ -14,9 +14,11 @@ module Mutable =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.ModRef<RemoteControlModel.RemoteModel> = Aardvark.Base.Incremental.Mod.init(__initial)
         let _shots = MList.Create(__initial.shots)
+        let _platformShots = MList.Create(__initial.platformShots)
         let _Rover = PRo3d.Mutable.MRoverModel.Create(__initial.Rover)
         
         member x.shots = _shots :> alist<_>
+        member x.platformShots = _platformShots :> alist<_>
         member x.Rover = _Rover
         
         member x.Current = __current :> IMod<_>
@@ -25,6 +27,7 @@ module Mutable =
                 __current.Value <- v
                 
                 MList.Update(_shots, v.shots)
+                MList.Update(_platformShots, v.platformShots)
                 PRo3d.Mutable.MRoverModel.Update(_Rover, v.Rover)
                 
         
@@ -47,6 +50,12 @@ module Mutable =
                     override x.Get(r) = r.shots
                     override x.Set(r,v) = { r with shots = v }
                     override x.Update(r,f) = { r with shots = f r.shots }
+                }
+            let platformShots =
+                { new Lens<RemoteControlModel.RemoteModel, Aardvark.Base.plist<RemoteControlModel.PlatformShot>>() with
+                    override x.Get(r) = r.platformShots
+                    override x.Set(r,v) = { r with platformShots = v }
+                    override x.Update(r,f) = { r with platformShots = f r.platformShots }
                 }
             let Rover =
                 { new Lens<RemoteControlModel.RemoteModel, PRo3d.RoverModel>() with

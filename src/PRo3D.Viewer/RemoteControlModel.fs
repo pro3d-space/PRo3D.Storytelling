@@ -34,7 +34,7 @@ module Xyz =
         V3d(v.x, v.y, v.z)
    
 [<DataContract>]
-type InstrumentPlatform = {    
+type PlatformShot = {
     [<field: DataMember(Name = "rover")>]
     rover      : string
     [<field: DataMember(Name = "instrument")>]
@@ -45,6 +45,24 @@ type InstrumentPlatform = {
     pan        : double
     [<field: DataMember(Name = "tilt")>] //"Tilt Axis"
     tilt       : double
+    [<field: DataMember(Name = "pos")>]
+    pos     : Xyz
+    [<field: DataMember(Name = "lookAt")>]
+    lookAt  : Xyz
+    [<field: DataMember(Name = "up")>]
+    up      : Xyz
+    [<field: DataMember(Name = "col")>]    
+    col     : int
+    [<field: DataMember(Name = "row")>]
+    row     : int
+    [<field: DataMember(Name = "pph")>]
+    pph     : int
+    [<field: DataMember(Name = "ppv")>]
+    ppv     : int
+    [<field: DataMember(Name = "id")>]
+    id      : string
+    [<field: DataMember(Name = "folder")>]
+    folder  : string   
 }
 
 [<DataContract>]
@@ -66,9 +84,7 @@ type Shot = {
     [<field: DataMember(Name = "id")>]
     id      : string
     [<field: DataMember(Name = "folder")>]
-    folder  : string
-    [<field: DataMember(Name = "platform")>]
-    platform : InstrumentPlatform
+    folder  : string   
 }
 
 
@@ -86,6 +102,15 @@ module Shot =
             focal      = 0.0
             pan        = 0.0
             tilt       = 0.0
+            pos     = V3d.III |> Xyz.fromV3d
+            lookAt  = V3d.OOO |> Xyz.fromV3d
+            up      = V3d.OOI |> Xyz.fromV3d
+            col     = 1024
+            row     = 768
+            pph     = 0
+            ppv     = 0
+            id      = Guid.NewGuid().ToString()
+            folder  = "./shots" 
         }
 
     let init = 
@@ -98,8 +123,7 @@ module Shot =
             pph     = 0
             ppv     = 0
             id      = Guid.NewGuid().ToString()
-            folder  = "./shots"
-            platform = instInit
+            folder  = "./shots"           
         }
 
     let getCamera (s : Shot) : CameraView =
@@ -117,7 +141,8 @@ module Shot =
         { fromCamera wp.cv with id = wp.name }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module InstrumentPlatform =
+module PlatformShot =
+    open System
 
     let init = 
         {
@@ -126,17 +151,39 @@ module InstrumentPlatform =
             focal      = 0.0
             pan        = 0.0
             tilt       = 0.0
+            pos     = V3d.III |> Xyz.fromV3d
+            lookAt  = V3d.OOO |> Xyz.fromV3d
+            up      = V3d.OOI |> Xyz.fromV3d
+            col     = 1024
+            row     = 768
+            pph     = 0
+            ppv     = 0
+            id      = Guid.NewGuid().ToString()
+            folder  = "./shots" 
         }
 
-    let fromRoverModel (rm : RoverModel) : option<InstrumentPlatform> =
+    let withShot (sh : Shot) (psh : PlatformShot) : PlatformShot =
+        { psh with 
+            pos = sh.pos 
+            lookAt = sh.lookAt
+            up = sh.up
+            col = sh.col
+            row = sh.row
+            pph = sh.pph
+            ppv = sh.ppv
+            id = sh.id
+            folder = sh.folder
+        }
+
+    let fromRoverModel (rm : RoverModel) (sh : Shot): option<PlatformShot> =
         
-        let getRover (rover : option<Rover>) (result : InstrumentPlatform)  : option<InstrumentPlatform> =
+        let getRover (rover : option<Rover>) (result : PlatformShot)  : option<PlatformShot> =
             rover |> Option.map (fun r -> { result with rover = r.id })
 
-        let getInstrument (instrument : option<Instrument>) (result : InstrumentPlatform) : option<InstrumentPlatform> =
+        let getInstrument (instrument : option<Instrument>) (result : PlatformShot) : option<PlatformShot> =
             instrument |> Option.map (fun i -> { result with instrument = i.id; focal = i.focal.value })
 
-        let getAxes (rover : option<Rover>) (result : InstrumentPlatform) : option<InstrumentPlatform> =
+        let getAxes (rover : option<Rover>) (result : PlatformShot) : option<PlatformShot> =
             match rover with 
               | None -> None
               | Some r ->
@@ -155,6 +202,7 @@ module InstrumentPlatform =
               |> Option.bind(fun x -> getRover rm.selectedRover x)
               |> Option.bind(fun x -> getInstrument rm.selectedInstrument x)
               |> Option.bind(fun x -> getAxes rm.selectedRover x)
+              |> Option.map(fun x -> x |> withShot sh)
         
         result
 
@@ -166,8 +214,9 @@ module InstrumentPlatform =
 type RemoteModel =
     {
         //viewPoints : plist<WayPoint>
-        shots         : plist<Shot>
-        Rover         : RoverModel
+        shots           : plist<Shot>
+        platformShots   : plist<PlatformShot>
+        Rover           : RoverModel
     }
 
 type RemoteAction = 
@@ -175,8 +224,10 @@ type RemoteAction =
     
 
 type Action = 
-    | MakeScreenshot of Shot
-    | UpdateCamera   of Shot
+    | MakeScreenshot  of Shot
+    | UpdateCamera    of Shot
+    | MakeScreenshot2 of PlatformShot
+    | UpdateCamera2   of Shot
     | Play
     | Load
     | OpenFolder     of string

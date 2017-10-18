@@ -142,12 +142,31 @@ module RoverProvider =
 
         //convert initialised platform to rover and add to database
         platform |> toRover        
+
+    let updateAngles(update : AxisAngleUpdate) =
+        // save c structs counterparts of rover
+
+        // get rover by id
+
+        // get axis by id
+
+        // update Saxis
+
+        // call updatePlatform on platform
+            //var error = UpdatePlatform(ref platform);
+            //if (error != 0)
+            //    Report.Warn("Update error code {0}", error);
+
+        //push updated values into rovers database rm
+
+
+        ()
         
 
 module RoverApp = 
     open Aardvark.Base
     open Aardvark.Base.Incremental
-    open Aardvark.UI.UI            
+    open Aardvark.UI.UI                   
 
     type Action =
         | ChangeAngle      of string * Numeric.Action
