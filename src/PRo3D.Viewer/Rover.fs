@@ -9,6 +9,7 @@ open PRo3d
 
 module RoverProvider =
     open System.Runtime.InteropServices
+    open ViewPlanner
     
     
     let toInstrument i (inst : IPWrapper.SInstrument) = 
@@ -120,7 +121,7 @@ module RoverProvider =
        
         pointerArray |> Array.map(fun x -> Marshal.PtrToStringAnsi(x))
 
-    let initRover platformId : Rover =
+    let initRover platformId =
         //Get various counts to initialize respective arrays
         let numWheelPoints = uint32 6 // IPWrapper.GetNrOfPlatformPointsOnGround(platformId)
         let numInstruments = IPWrapper.GetNrOfPlatformInstruments(platformId)
@@ -141,7 +142,9 @@ module RoverProvider =
         if (errorCode <> 0) then failwith "init platform failed" else ()
 
         //convert initialised platform to rover and add to database
-        platform |> toRover        
+        let rover = platform |> toRover        
+        
+        rover, platform
 
     let updateAngles(update : AxisAngleUpdate) =
         // save c structs counterparts of rover
@@ -175,14 +178,37 @@ module RoverApp =
         | SelectInstrument of option<Instrument>
         | SelectAxis       of option<Axis>
 
+    let updatePlatform (up : AxisAngleUpdate) (m : RoverModel) = 
+
+        // use option map ?
+        let r = m.rovers |> HMap.find up.roverId    
+        let mutable p = m.platforms |> HMap.find up.roverId       
+        let a = r.axes |> HMap.find up.axisId
+        let mutable pAxes = IPWrapper.UnMarshalArray<IPWrapper.SAxis>(p.m_poPlatformAxes)
+
+        // push new angles to platform (deg to gon!!!)
+        pAxes.[a.index].m_fCurrentAngle <- up.angle.GonsFromDegrees()
+        IPWrapper.MarshalArray(pAxes, p.m_poPlatformAxes)        
+        
+        // call updatePlatform on platform
+        let error = IPWrapper.UpdatePlatform(ref p)
+        match error with
+          | 0 ->
+            m
+          | _ -> 
+            Log.error "encountered %d from update platform" error
+            m
+            
+
     let updateRovers (r : Rover) (m : RoverModel) = 
+        
         let rovers' = 
             m.rovers 
                 |> HMap.update r.id (fun x -> 
                     match x with 
                         | Some _ -> r
                         | None   -> failwith "rover not found")
-        
+                        
         { m with selectedRover = Some r; rovers = rovers' }
 
     let update (m : RoverModel) (a:Action) =
@@ -190,18 +216,20 @@ module RoverApp =
           | SelectRover r      -> { m with selectedRover = r }
           | SelectInstrument i -> { m with selectedInstrument = i }
           | SelectAxis a       -> { m with selectedAxis = a }
-          | ChangeAngle (id,a) ->            
-                match m.selectedRover with 
-                  | Some r -> 
-                     let axes' = r.axes |> HMap.update id (fun x -> 
-                        match x with
-                          | Some ax -> { ax with angle = Numeric.update ax.angle a }
-                          | None    -> failwith "axis not found"                 
-                     )                      
-
-                     m |> updateRovers { r with axes= axes' }                                         
-                     
-                  | None -> m        
+          | ChangeAngle (id,a) -> 
+            match m.selectedRover with 
+              | Some r ->                      
+                match r.axes.TryFind id with
+                  | Some ax -> 
+                    let ax' = { ax with angle = Numeric.update ax.angle a }                                                                 
+                    
+                    m 
+                      |> updateRovers   { r with axes = (r.axes |> HMap.update id (fun _ -> ax')) } 
+                      |> updatePlatform { roverId = r.id ;axisId = ax'.id ; angle = ax'.angle.value }
+                  | None -> 
+                    Log.error "axis %A not found" id
+                    m
+              | None -> m        
           | ChangeFocal (id, f) ->
              match m.selectedRover with 
                   | Some r -> 
@@ -232,6 +260,7 @@ module RoverApp =
     let initial =
         {
             rovers = hmap.Empty
+            platforms = hmap.Empty
             selectedInstrument = None
             selectedRover = None
             selectedAxis = None
@@ -262,7 +291,7 @@ module RoverApp =
                         yield div [clazz "item"] [
                             div [clazz "content"] [                                        
                                 div [clazz "header"] [
-                                    Incremental.text r.id                                    
+                                    Incremental.text r.id
                                 ]
                                 div [clazz "description"] [
                                    Incremental.text (r |> toText)

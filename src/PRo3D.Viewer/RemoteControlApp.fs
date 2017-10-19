@@ -25,7 +25,7 @@ module RemoteControlApp =
     open PRo3d
     
         
-    let jsonSerializer = FsPickler.Json.JsonSerializer(indent=false)
+    let jsonSerializer = FsPickler.Json.JsonSerializer(indent=true)
 
     
 
@@ -72,11 +72,15 @@ module RemoteControlApp =
                 let wp = Serialization.loadAs<plist<PRo3D.Viewer.WayPoint>> path
 
                 let shots = wp |> PList.map Shot.fromWp
-                let pshots = shots |> PList.toList |> jsonSerializer.PickleToString                
+                let wp_shots = shots |> PList.toList |> jsonSerializer.PickleToString                
 
-                System.IO.File.WriteAllText("./waypoints.json", pshots)
+                System.IO.File.WriteAllText("./shots.json", wp_shots)
 
-                { m with shots = shots }  |> mkInstrumetnWps
+                let m = { m with shots = shots }  |> mkInstrumetnWps
+                let plat_shots = m.platformShots |> PList.toList |> jsonSerializer.PickleToString    
+                System.IO.File.WriteAllText("./platformshots.json", plat_shots)
+
+                m
           | None -> m
 
     let roverStuff (m : RemoteModel) =
@@ -87,13 +91,17 @@ module RemoteControlApp =
         let names = RoverProvider.platformNames()    
         printfn "%A" names
 
-        let rovs =
-            names |> Array.map RoverProvider.initRover |> List.ofArray |> List.map(fun x -> x.id, x) |> HMap.ofList
+        let roverData =
+            names 
+              |> Array.map RoverProvider.initRover 
+              |> List.ofArray 
+
+        let rovs = roverData|> List.map(fun (r,_) -> r.id, r) |> HMap.ofList
+        let plats = roverData|> List.map(fun (r,p) -> r.id, p) |> HMap.ofList
+
         printfn "found rover(s): %d" (rovs |> HMap.count)
-
-        let r = { RoverApp.initial with rovers = rovs }
-
-        { m with Rover = r }
+        
+        { m with Rover = { RoverApp.initial with rovers = rovs; platforms = plats } }
        
     let norm (v:V3d) = 
         v.Normalized
@@ -151,9 +159,7 @@ module RemoteControlApp =
                 m
             | RoverMessage a ->
                 // react on change and update rover via dll
-                { m with Rover = RoverApp.update m.Rover a }
-            | _ -> m
-    
+                { m with Rover = RoverApp.update m.Rover a }                
 
     let viewShots (m:MRemoteModel) = 
         Incremental.div 

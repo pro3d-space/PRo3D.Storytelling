@@ -3,6 +3,7 @@ namespace PRo3d
 open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.UI
+open ViewPlanner
 
 type Intrinsics = {
     horizontalFieldOfView           : double
@@ -52,13 +53,13 @@ type Instrument = {
 type AxisAngleUpdate = {
     roverId : string
     axisId  : string
-    angle   : string
+    angle   : double
 }
 
 type InstrumentFocusUpdate = {
     roverId       : string
     instrumentId  : string
-    focal         : string
+    focal         : double
 }
 
 [<DomainType>]
@@ -88,6 +89,7 @@ type Rover = {
 [<DomainType>]
 type RoverModel = {
     rovers             : hmap<string, Rover>
+    platforms          : hmap<string, IPWrapper.SPlatform>
     selectedRover      : option<Rover>
     selectedInstrument : option<Instrument>
     selectedAxis       : option<Axis>
