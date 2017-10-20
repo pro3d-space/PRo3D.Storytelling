@@ -102,12 +102,16 @@ module RemoteControlApp =
         printfn "found rover(s): %d" (rovs |> HMap.count)
         
         { m with Rover = { RoverApp.initial with rovers = rovs; platforms = plats } }
-       
-    let norm (v:V3d) = 
-        v.Normalized
-
+           
     let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
         match a with
+            | SelectShot sh -> 
+                let cv = sh |> Shot.getCamera
+
+                let cv = CameraView.ofTrafo cv.ViewTrafo
+
+                send <| RemoteAction.SetViewpoint (cv)
+                { m with selectedShot = Some sh }
             | MakeScreenshot2 psh ->
 
                 //get actual instrument params from shot
@@ -135,11 +139,7 @@ module RemoteControlApp =
                         //fov
                         //placementtrafo
 
-                        let forward = ((psh.lookAt |> Xyz.toV3d) - (psh.pos |> Xyz.toV3d)) |> norm
-                        let up = psh.up |> Xyz.toV3d |> norm
-                        let pos = psh.pos |> Xyz.toV3d |> norm
-
-                        let placement = Trafo3d.FromBasis(forward, up.Cross forward, up, pos)
+                        
 
                         let cv = sh |> Shot.getCamera
 
@@ -159,15 +159,59 @@ module RemoteControlApp =
                 m
             | RoverMessage a ->
                 // react on change and update rover via dll
-                { m with Rover = RoverApp.update m.Rover a }                
+                let m = { m with Rover = RoverApp.update m.Rover a }                
+
+                let bla =
+                  match m.selectedShot,m.Rover.selectedRover, m.Rover.selectedInstrument with
+                    | Some sh, Some r, Some inst ->
+                        let cv = sh |> Shot.getCamera
+
+                        let forw = sh.lookAt |> Xyz.toV3d
+                        let pos = sh.pos |> Xyz.toV3d
+                        let up = sh.up |> Xyz.toV3d
+                        let right = up.Cross forw
+
+                        let rotTrafo =                             
+                            Trafo3d(
+                                M44d(
+                                    forw.X, right.X, up.X, 0.0,
+                                    forw.Y, right.Y, up.Y, 0.0,
+                                    forw.Z, right.Z, up.Z, 0.0,
+                                    0.0, 0.0, 0.0, 1.0
+                                ),
+                                M44d(
+                                    forw.X, forw.Y, forw.Z, 0.0,
+                                    right.X, right.Y, right.Z, 0.0,
+                                    up.X, up.Y, up.Z, 0.0,
+                                    0.0, 0.0, 0.0, 1.0
+                                )
+                            )
+
+                        let trafo = Trafo3d(rotTrafo * Trafo3d.Translation(pos))
+
+                        let r = m.Rover.rovers |> HMap.find r.id
+                        let inst = r.instruments |> HMap.find inst.id
+
+                        let trans = inst.extrinsics |> Extrinsics.transformed trafo.Forward
+                        
+                        printfn "%A %A" inst.extrinsics.position inst.extrinsics.position
+                                                                      
+                        let cv = CameraView.LookAt(trans.position, trans.position + trans.camLookAt, trans.camUp)                            
+                                                
+                        send <| RemoteAction.SetViewpoint cv
+                        m
+                    | _ -> m
+
+                m
 
     let viewShots (m:MRemoteModel) = 
         Incremental.div 
             (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
             (                
-                alist {                                                                     
+                alist {                                                          
+
                     for sh in m.shots do 
-                        yield div [clazz "item"] [
+                        yield div [clazz "item"; onClick (fun _ -> SelectShot sh)] [
                             div [clazz "content"] [                                        
                                 div [clazz "header"] [
                                     text sh.id
@@ -224,5 +268,5 @@ module RemoteControlApp =
             threads = threads
             view = view
             update = update baseAddress send
-            initial = { shots = PList.empty; Rover = RoverApp.initial; platformShots = PList.empty } |> loadWaypoints |> roverStuff
+            initial = { selectedShot = None; shots = PList.empty; Rover = RoverApp.initial; platformShots = PList.empty } |> loadWaypoints |> roverStuff
         }

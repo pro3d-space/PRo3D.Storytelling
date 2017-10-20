@@ -69,7 +69,25 @@ module RoverProvider =
 
     let toInstruments (instruments : IPWrapper.SInstrument[]) : list<Instrument> = 
         instruments |> Array.mapi toInstrument |> Array.toList
-        
+       
+    let shiftNumericInput shift (input:NumericInput)= 
+        {
+            value  = input.value
+            min    = input.min + shift
+            max    = input.max + shift
+            step   = input.step
+            format = input.format
+        }
+
+
+    let axisHack (axis:Axis) = 
+        if (axis.id = "Pan Axis") 
+        then
+            {axis with angle = axis.angle |> shiftNumericInput -180.0}
+        else 
+            axis
+
+
     let toAxes (axes : IPWrapper.SAxis[]) : list<Axis> =
         axes |> Array.mapi(fun i x->
             { 
@@ -90,7 +108,7 @@ module RoverProvider =
                             format = "{0:0.0}"
                         }
 
-            }) |> Array.toList
+            }) |> Array.map axisHack |> Array.toList
 
     let toRover (platform : IPWrapper.SPlatform) =
         let wheels = 
@@ -144,32 +162,12 @@ module RoverProvider =
         //convert initialised platform to rover and add to database
         let rover = platform |> toRover        
         
-        rover, platform
-
-    let updateAngles(update : AxisAngleUpdate) =
-        // save c structs counterparts of rover
-
-        // get rover by id
-
-        // get axis by id
-
-        // update Saxis
-
-        // call updatePlatform on platform
-            //var error = UpdatePlatform(ref platform);
-            //if (error != 0)
-            //    Report.Warn("Update error code {0}", error);
-
-        //push updated values into rovers database rm
-
-
-        ()
+        rover, platform   
         
-
 module RoverApp = 
     open Aardvark.Base
     open Aardvark.Base.Incremental
-    open Aardvark.UI.UI                   
+    open Aardvark.UI.UI                       
 
     type Action =
         | ChangeAngle      of string * Numeric.Action
@@ -187,14 +185,25 @@ module RoverApp =
         let mutable pAxes = IPWrapper.UnMarshalArray<IPWrapper.SAxis>(p.m_poPlatformAxes)
 
         // push new angles to platform (deg to gon!!!)
-        pAxes.[a.index].m_fCurrentAngle <- up.angle.GonsFromDegrees()
+       // let angle = if a.id = "Pan Axis" then up.angle + 180.0 else up.angle
+        
+        let angle = if (up.axisId = "Pan Axis"  && (up.angle < 0.0)) then (up.angle + 360.0) else up.angle
+
+        pAxes.[a.index].m_fCurrentAngle <- angle.GonsFromDegrees()
         IPWrapper.MarshalArray(pAxes, p.m_poPlatformAxes)        
         
         // call updatePlatform on platform
         let error = IPWrapper.UpdatePlatform(ref p)
         match error with
           | 0 ->
-            m
+            let r'         = p |> RoverProvider.toRover
+            //(printfn "%A" (r'.axes |> HMap.toList |> List.map(fun x -> (snd x).angle.value) |> List.head ))
+            //(printfn "%A" (r'.instruments |> HMap.toList |> List.map(fun x -> (snd x).extrinsics.camLookAt) |> List.head ))
+
+            let rovers'    = m.rovers |> HMap.alter r.id (Option.map(fun _ -> r'))
+            let platforms' = m.platforms |> HMap.alter r.id (Option.map(fun _ -> p))
+
+            { m with rovers = rovers'; platforms = platforms' }
           | _ -> 
             Log.error "encountered %d from update platform" error
             m
@@ -220,7 +229,8 @@ module RoverApp =
             match m.selectedRover with 
               | Some r ->                      
                 match r.axes.TryFind id with
-                  | Some ax -> 
+                  | Some ax ->                    
+
                     let ax' = { ax with angle = Numeric.update ax.angle a }                                                                 
                     
                     m 
@@ -323,7 +333,7 @@ module RoverApp =
         require Html.semui (
             Html.table [                
                 Html.row "Sensor (px):"  [ Incremental.text sensor ]
-                Html.row "Focal (mm):"    [ focalGui i m ]
+                Html.row "Focal (mm):"   [ focalGui i m ]                
             ]
         )
 
@@ -342,6 +352,8 @@ module RoverApp =
             for axis in (r.axes |> mapTolist) do
                 yield div[][Incremental.text axis.id; text "(deg)"]
                 yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (axis.id |> Mod.force,x))
+                yield br[]
+                yield Incremental.text (axis.startPoint |> Mod.map (sprintf "%A"))
         }
 
     let viewRoverProperties' (r : MRover) (m : MRoverModel) =

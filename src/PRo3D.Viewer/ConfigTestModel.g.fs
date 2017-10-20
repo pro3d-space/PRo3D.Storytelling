@@ -12,7 +12,7 @@ module Mutable =
     
     type MBigConfig(__initial : ConfigLensTest.BigConfig) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<ConfigLensTest.BigConfig> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<ConfigLensTest.BigConfig> = Aardvark.Base.Incremental.EqModRef<ConfigLensTest.BigConfig>(__initial) :> Aardvark.Base.Incremental.IModRef<ConfigLensTest.BigConfig>
         let _arrowSize = ResetMod.Create(__initial.arrowSize)
         
         member x.arrowSize = _arrowSize :> IMod<_>

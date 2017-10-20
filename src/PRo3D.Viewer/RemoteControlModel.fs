@@ -126,8 +126,25 @@ module Shot =
             folder  = "./shots"           
         }
 
+    let norm (v:V3d) = 
+        v.Normalized
+
     let getCamera (s : Shot) : CameraView =
-        CameraView.LookAt(s.pos |> Xyz.toV3d, s.lookAt |> Xyz.toV3d, s.up |> Xyz.toV3d)
+
+        let pos = s.pos |> Xyz.toV3d
+        let forw = s.lookAt |> Xyz.toV3d
+        let lookAt = pos + forw
+
+        CameraView.LookAt(pos, lookAt , s.up |> Xyz.toV3d)
+
+    let getCamera' (sh :Shot) : CameraView = 
+        let forward = ((sh.lookAt |> Xyz.toV3d) - (sh.pos |> Xyz.toV3d)) |> norm
+        let up = sh.up |> Xyz.toV3d |> norm
+        let pos = sh.pos |> Xyz.toV3d
+
+        let pose = Trafo3d.FromBasis(forward, up.Cross forward, up, pos)        
+
+        CameraView.ofTrafo pose
 
     
 
@@ -135,7 +152,7 @@ module Shot =
         { init with 
                 pos     = cv.Location |> Xyz.fromV3d
                 up      = cv.Up |> Xyz.fromV3d
-                lookAt  = (cv.Location + cv.Forward) |> Xyz.fromV3d  }
+                lookAt  = cv.Forward |> Xyz.fromV3d  }
 
     let fromWp (wp : WayPoint) : Shot =        
         { fromCamera wp.cv with id = wp.name }
@@ -214,9 +231,10 @@ module PlatformShot =
 type RemoteModel =
     {
         //viewPoints : plist<WayPoint>
-        shots           : plist<Shot>
-        platformShots   : plist<PlatformShot>
-        Rover           : RoverModel
+        selectedShot : Option<Shot>
+        shots            : plist<Shot>
+        platformShots    : plist<PlatformShot>
+        Rover            : RoverModel
     }
 
 type RemoteAction = 
@@ -228,6 +246,7 @@ type Action =
     | UpdateCamera    of Shot
     | MakeScreenshot2 of PlatformShot
     | UpdateCamera2   of Shot
+    | SelectShot      of Shot
     | Play
     | Load
     | OpenFolder     of string

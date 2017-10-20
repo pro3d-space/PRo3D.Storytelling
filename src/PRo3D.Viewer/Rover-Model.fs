@@ -27,6 +27,15 @@ type Extrinsics = {
     box         : Box3d
 }
 
+module Extrinsics =
+    let transformed (t:M44d) (ex:Extrinsics)=
+        {
+            position = t.TransformPos ex.position
+            camUp    = t.TransformDir ex.camUp
+            camLookAt= t.TransformDir ex.camLookAt
+            box      = ex.box.Transformed t
+        }
+
 type InstrumentType = 
     | WACL       // Left Wide Angle Camera (PanCam)        
     | WACR       // Right Wide Angle Camera (PanCam)
