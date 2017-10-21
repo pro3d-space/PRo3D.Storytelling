@@ -104,7 +104,7 @@ let main argv =
         { result = shot.folder }
 
     WebPart.startServer 1234 [ 
-        MutableApp.toWebPart runtime (remoteApp)        
+        MutableApp.toWebPart runtime (remoteApp)
         POST >=> path "/shots" >=> mapJson takeScreenshot
         POST >=> path "/platformshots" >=> mapJson takePlatformShot
         Suave.Files.browseHome

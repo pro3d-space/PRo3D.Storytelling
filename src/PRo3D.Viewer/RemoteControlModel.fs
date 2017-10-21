@@ -249,5 +249,7 @@ type Action =
     | SelectShot      of Shot
     | Play
     | Load
+    | SaveModel
+    | RemoveModel
     | OpenFolder     of string
     | RoverMessage   of RoverApp.Action

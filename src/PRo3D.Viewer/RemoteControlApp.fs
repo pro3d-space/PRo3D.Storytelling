@@ -66,24 +66,33 @@ module RemoteControlApp =
             m.shots |> PList.choose(fun x -> PlatformShot.fromRoverModel m.Rover x)
         { m with platformShots = pShots }
 
-    let loadWaypoints m = 
+    let loadData m = 
         match Serialization.fileExists "./waypoints.wps" with
           | Some path -> 
                 let wp = Serialization.loadAs<plist<PRo3D.Viewer.WayPoint>> path
 
-                let shots = wp |> PList.map Shot.fromWp
-                let wp_shots = shots |> PList.toList |> jsonSerializer.PickleToString                
-
-                System.IO.File.WriteAllText("./shots.json", wp_shots)
+                let shots = 
+                    wp 
+                      |> PList.map Shot.fromWp 
+                      |> PList.toList 
+                      |> Serialization.saveJson "./shots.json" 
+                      |> PList.ofList
 
                 let m = { m with shots = shots }  |> mkInstrumetnWps
-                let plat_shots = m.platformShots |> PList.toList |> jsonSerializer.PickleToString    
-                System.IO.File.WriteAllText("./platformshots.json", plat_shots)
+
+                m.platformShots |> PList.toList |> Serialization.saveJson "./platformshots.json" |> ignore                
 
                 m
           | None -> m
 
-    let roverStuff (m : RemoteModel) =
+    let loadLast m = 
+        match Serialization.fileExists "./remote.mdl" with
+          | Some path -> 
+            Serialization.loadAs<RemoteModel> path
+          | None ->
+            m   
+
+    let loadRoverData (m : RemoteModel) =
         let directory = @".\InstrumentStuff"
         let errorCode = IPWrapper.Init(directory, directory)
         printfn "%A" errorCode
@@ -101,7 +110,7 @@ module RemoteControlApp =
 
         printfn "found rover(s): %d" (rovs |> HMap.count)
         
-        { m with Rover = { RoverApp.initial with rovers = rovs; platforms = plats } }
+        { m with Rover = { m.Rover with rovers = rovs; platforms = plats } }
            
     let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
         match a with
@@ -153,25 +162,28 @@ module RemoteControlApp =
                     try takeScreenshot baseAddress sh with e -> printfn "error: %A" e
                 m
             | Load ->
-                loadWaypoints m
+                loadData m
+            | SaveModel -> 
+                m |> Serialization.save "./remote.mdl"
+            | RemoveModel -> 
+                System.IO.File.Delete "./remote.mdl"
+                m
             | OpenFolder path ->
                 Process.Start("explorer.exe", path) |> ignore
                 m
             | RoverMessage a ->
                 // react on change and update rover via dll
                 let m = { m with Rover = RoverApp.update m.Rover a }                
-
-                let bla =
-                  match m.selectedShot,m.Rover.selectedRover, m.Rover.selectedInstrument with
+                
+                match m.selectedShot,m.Rover.selectedRover, m.Rover.selectedInstrument with
                     | Some sh, Some r, Some inst ->
-                        let cv = sh |> Shot.getCamera
-
+                        
                         let forw = sh.lookAt |> Xyz.toV3d
                         let pos = sh.pos |> Xyz.toV3d
                         let up = sh.up |> Xyz.toV3d
-                        let right = up.Cross forw
+                        let right = forw.Cross up
 
-                        let rotTrafo =                             
+                        let rotTrafo =
                             Trafo3d(
                                 M44d(
                                     forw.X, right.X, up.X, 0.0,
@@ -198,9 +210,8 @@ module RemoteControlApp =
                                                                       
                         let cv = CameraView.LookAt(trans.position, trans.position + trans.camLookAt, trans.camUp)                            
                                                 
-                        send <| RemoteAction.SetViewpoint cv
-                        m
-                    | _ -> m
+                        send <| RemoteAction.SetViewpoint cv                        
+                    | _ -> ()
 
                 m
 
@@ -234,6 +245,19 @@ module RemoteControlApp =
 
         require Html.semui (
             div[clazz "ui two column grid"] [
+                div[clazz "ui segment"] [
+                    h1 [clazz "ui header"][text "Screenshot Service"]
+                    button [clazz "ui labeled icon button"; onClick (fun _ -> SaveModel)] [
+                        i [clazz "save icon"][]
+                        text "Save Model"
+                    ]
+                    br []
+                    button [clazz "ui labeled icon button"; onClick (fun _ -> RemoveModel)] [
+                        i [clazz "remove icon"][]
+                        text "Delete Model"
+                    ]
+
+                ]
                 div[clazz "column"] [
                     div[clazz "ui segment"] [
                         h2 [clazz "ui header"][text "Waypoints"]
@@ -268,5 +292,6 @@ module RemoteControlApp =
             threads = threads
             view = view
             update = update baseAddress send
-            initial = { selectedShot = None; shots = PList.empty; Rover = RoverApp.initial; platformShots = PList.empty } |> loadWaypoints |> roverStuff
+            initial = { selectedShot = None; shots = PList.empty; Rover = RoverApp.initial; platformShots = PList.empty } 
+              |> loadData |> loadLast |> loadRoverData
         }

@@ -5,27 +5,39 @@ open System.IO
 open System.Windows.Forms
 
 open MBrace.FsPickler
+open MBrace.FsPickler.Json
 open Aardvark.Base
 open PRo3D
 open Aardvark.Opc
 
 module Serialization =
+    open Aardvark.UI.Incremental
     
     let cache = Serialization.cache
 
     let binarySerializer = FsPickler.CreateBinarySerializer(picklerResolver = cache)
+    let jsonSerializer = FsPickler.CreateJsonSerializer(indent=true)
 
     let save path (d : 'a) =    
         let arr =  binarySerializer.Pickle d
         File.WriteAllBytes(path, arr);
         d
-
+    
     let loadAs<'a> path : 'a =
         let arr = File.ReadAllBytes(path)
         binarySerializer.UnPickle arr
 
     let writeToFile path (contents : string) =
         System.IO.File.WriteAllText(path, contents)
+
+    let saveJson path (d : 'a) =    
+        let json =  jsonSerializer.PickleToString d
+        writeToFile path json
+        d
+
+    let loadJsonAs<'a> path : 'a =
+        let json = File.readAllText path
+        jsonSerializer.UnPickleOfString json
 
     let fileExists filePath =
         match System.IO.File.Exists filePath with
