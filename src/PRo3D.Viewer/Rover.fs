@@ -176,37 +176,44 @@ module RoverApp =
         | SelectInstrument of option<Instrument>
         | SelectAxis       of option<Axis>
 
-    let updatePlatform (up : AxisAngleUpdate) (m : RoverModel) = 
+    let updateRoversAndPlatforms p m=
+        let error = IPWrapper.UpdatePlatform(ref p)
+        match error with
+          | 0 ->
+            let r'         = p |> RoverProvider.toRover
+            let rovers'    = m.rovers |> HMap.alter r'.id (Option.map(fun _ -> r'))
+            let platforms' = m.platforms |> HMap.alter r'.id (Option.map(fun _ -> p))
 
+            { m with rovers = rovers'; platforms = platforms' }
+          | _ -> 
+            Log.error "encountered %d from update platform" error
+            m
+
+    let updateFocusPlatform (up : InstrumentFocusUpdate) (m : RoverModel) = 
+        let r = m.rovers |> HMap.find up.roverId    
+        let mutable p = m.platforms |> HMap.find up.roverId       
+        let i = r.instruments|> HMap.find up.instrumentId
+        let mutable pInstruments = IPWrapper.UnMarshalArray<IPWrapper.SInstrument>(p.m_poPlatformInstruments)
+
+        pInstruments.[i.index].m_dCurrentFocalLengthInMm <- up.focal
+        IPWrapper.MarshalArray(pInstruments, p.m_poPlatformInstruments)
+
+        updateRoversAndPlatforms p m        
+
+    let updateAnglePlatform (up : AxisAngleUpdate) (m : RoverModel) = 
         // use option map ?
         let r = m.rovers |> HMap.find up.roverId    
         let mutable p = m.platforms |> HMap.find up.roverId       
         let a = r.axes |> HMap.find up.axisId
         let mutable pAxes = IPWrapper.UnMarshalArray<IPWrapper.SAxis>(p.m_poPlatformAxes)
 
-        // push new angles to platform (deg to gon!!!)
-       // let angle = if a.id = "Pan Axis" then up.angle + 180.0 else up.angle
-        
+        // push new angles to platform (deg to gon!!!)               
         let angle = if (up.axisId = "Pan Axis"  && (up.angle < 0.0)) then (up.angle + 360.0) else up.angle
 
         pAxes.[a.index].m_fCurrentAngle <- angle.GonsFromDegrees()
         IPWrapper.MarshalArray(pAxes, p.m_poPlatformAxes)        
         
-        // call updatePlatform on platform
-        let error = IPWrapper.UpdatePlatform(ref p)
-        match error with
-          | 0 ->
-            let r'         = p |> RoverProvider.toRover
-            //(printfn "%A" (r'.axes |> HMap.toList |> List.map(fun x -> (snd x).angle.value) |> List.head ))
-            //(printfn "%A" (r'.instruments |> HMap.toList |> List.map(fun x -> (snd x).extrinsics.camLookAt) |> List.head ))
-
-            let rovers'    = m.rovers |> HMap.alter r.id (Option.map(fun _ -> r'))
-            let platforms' = m.platforms |> HMap.alter r.id (Option.map(fun _ -> p))
-
-            { m with rovers = rovers'; platforms = platforms' }
-          | _ -> 
-            Log.error "encountered %d from update platform" error
-            m
+        updateRoversAndPlatforms p m
             
 
     let updateRovers (r : Rover) (m : RoverModel) = 
@@ -234,8 +241,8 @@ module RoverApp =
                     let ax' = { ax with angle = Numeric.update ax.angle a }                                                                 
                     
                     m 
-                      |> updateRovers   { r with axes = (r.axes |> HMap.update id (fun _ -> ax')) } 
-                      |> updatePlatform { roverId = r.id ;axisId = ax'.id ; angle = ax'.angle.value }
+                      |> updateRovers { r with axes = (r.axes |> HMap.update id (fun _ -> ax')) }
+                      |> updateAnglePlatform { roverId = r.id ;axisId = ax'.id ; angle = ax'.angle.value }
                   | None -> 
                     Log.error "axis %A not found" id
                     m
@@ -244,17 +251,17 @@ module RoverApp =
              match m.selectedRover with 
                   | Some r -> 
                       match m.selectedInstrument with
-                        | Some inst ->             
-                            
+                        | Some inst ->                                         
                             let inst' =  { inst with focal = Numeric.update inst.focal f }
-
                             let instruments' = 
                                 r.instruments |> HMap.update id (fun x -> 
                                     match x with
                                       | Some _ -> inst'
-                                      | None   -> failwith "axis not found")                       
+                                      | None   -> failwith "instrument not found")                       
 
-                            { m with selectedInstrument = Some inst' } |> updateRovers { r with instruments = instruments' }                            
+                            { m with selectedInstrument = Some inst' } 
+                              |> updateRovers { r with instruments = instruments' }                            
+                              |> updateFocusPlatform { roverId = r.id ; instrumentId = inst'.id ; focal = inst'.focal.value }
                         | None -> m                                        
                   | None -> m          
 

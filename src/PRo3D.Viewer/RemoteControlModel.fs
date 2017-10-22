@@ -192,6 +192,34 @@ module PlatformShot =
             folder = sh.folder
         }
 
+    let trafoFromRoverBase (forw:V3d) up pos =
+        let right = forw.Cross up
+
+        let rotTrafo =
+            Trafo3d(
+                M44d(
+                    forw.X, right.X, up.X, 0.0,
+                    forw.Y, right.Y, up.Y, 0.0,
+                    forw.Z, right.Z, up.Z, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                ),
+                M44d(
+                    forw.X, forw.Y, forw.Z, 0.0,
+                    right.X, right.Y, right.Z, 0.0,
+                    up.X, up.Y, up.Z, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                )
+            )
+
+        Trafo3d(rotTrafo * Trafo3d.Translation(pos))     
+
+    let trafoFromPlatformShot (psh : PlatformShot) = 
+        let forw = psh.lookAt |> Xyz.toV3d
+        let pos = psh.pos |> Xyz.toV3d
+        let up = psh.up |> Xyz.toV3d
+
+        trafoFromRoverBase forw up pos
+
     let fromRoverModel (rm : RoverModel) (sh : Shot): option<PlatformShot> =
         
         let getRover (rover : option<Rover>) (result : PlatformShot)  : option<PlatformShot> =
@@ -223,7 +251,19 @@ module PlatformShot =
         
         result
 
+    let getCameraAnfFov (m : RoverModel) (p : PlatformShot) =
+        let trafo = trafoFromPlatformShot p
+        let r = m.rovers |> HMap.find p.rover
+        let inst = r.instruments |> HMap.find p.instrument
 
+        let trans = inst.extrinsics |> Extrinsics.transformed trafo.Forward                                                    
+                                                                      
+        let cv = CameraView.LookAt(trans.position, trans.position + trans.camLookAt, trans.camUp)                            
+        let hfov = inst.intrinsics.horizontalFieldOfView.DegreesFromGons()
+
+        printfn "focal length: %A" inst.focal
+
+        cv, hfov
 
 
 
@@ -238,7 +278,8 @@ type RemoteModel =
     }
 
 type RemoteAction = 
-    | SetViewpoint of CameraView
+    | SetViewpoint       of CameraView
+    | SetViewpointAndFov of CameraView * double
     
 
 type Action = 

@@ -147,9 +147,7 @@ module RemoteControlApp =
                         //getviewpoint from platformshot
                         //fov
                         //placementtrafo
-
                         
-
                         let cv = sh |> Shot.getCamera
 
                         send <| RemoteAction.SetViewpoint (cv)
@@ -171,48 +169,18 @@ module RemoteControlApp =
             | OpenFolder path ->
                 Process.Start("explorer.exe", path) |> ignore
                 m
-            | RoverMessage a ->
-                // react on change and update rover via dll
-                let m = { m with Rover = RoverApp.update m.Rover a }                
-                
-                match m.selectedShot,m.Rover.selectedRover, m.Rover.selectedInstrument with
-                    | Some sh, Some r, Some inst ->
-                        
-                        let forw = sh.lookAt |> Xyz.toV3d
-                        let pos = sh.pos |> Xyz.toV3d
-                        let up = sh.up |> Xyz.toV3d
-                        let right = forw.Cross up
-
-                        let rotTrafo =
-                            Trafo3d(
-                                M44d(
-                                    forw.X, right.X, up.X, 0.0,
-                                    forw.Y, right.Y, up.Y, 0.0,
-                                    forw.Z, right.Z, up.Z, 0.0,
-                                    0.0, 0.0, 0.0, 1.0
-                                ),
-                                M44d(
-                                    forw.X, forw.Y, forw.Z, 0.0,
-                                    right.X, right.Y, right.Z, 0.0,
-                                    up.X, up.Y, up.Z, 0.0,
-                                    0.0, 0.0, 0.0, 1.0
-                                )
-                            )
-
-                        let trafo = Trafo3d(rotTrafo * Trafo3d.Translation(pos))
-
-                        let r = m.Rover.rovers |> HMap.find r.id
-                        let inst = r.instruments |> HMap.find inst.id
-
-                        let trans = inst.extrinsics |> Extrinsics.transformed trafo.Forward
-                        
-                        printfn "%A %A" inst.extrinsics.position inst.extrinsics.position
-                                                                      
-                        let cv = CameraView.LookAt(trans.position, trans.position + trans.camLookAt, trans.camUp)                            
-                                                
-                        send <| RemoteAction.SetViewpoint cv                        
+            | RoverMessage a ->                
+                let m = { m with Rover = RoverApp.update m.Rover a }                                
+                match m.selectedShot with
+                    | Some sh ->                
+                        let psh = PlatformShot.fromRoverModel m.Rover sh
+                        match psh with
+                          | Some p ->                                                                                                         
+                            PlatformShot.getCameraAnfFov m.Rover p 
+                              |> RemoteAction.SetViewpointAndFov 
+                              |> send                            
+                          | None -> ()                                                                       
                     | _ -> ()
-
                 m
 
     let viewShots (m:MRemoteModel) = 

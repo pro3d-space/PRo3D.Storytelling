@@ -16,6 +16,7 @@ open PRo3D.Surfaces
 open PRo3D.Navigation2
 open PRo3D.BookmarksX
 open PRo3D.ReferenceSystem
+open Aardvark.Base.Frustum
 
   
 [<DomainType>] 
@@ -67,6 +68,9 @@ type Model = {
     recent          : Recent
     waypoints       : plist<WayPoint>
 
+    hfov            : double
+    aspect          : double
+
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
 
@@ -102,6 +106,9 @@ module Viewer =
         interaction     = Interactions.DrawAnnotation
         picking         = false
         
+        hfov            = 60.0
+        aspect          = 1.6
+
         recent          = { recentScenes = HMap.empty }
         waypoints       = PList.empty
 

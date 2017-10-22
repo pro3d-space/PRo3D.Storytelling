@@ -89,6 +89,9 @@ let main argv =
             | RemoteAction.SetViewpoint cv -> 
                 let bla = ViewerAction.SetCamera cv |> Seq.singleton
                 mainApp.update Guid.Empty bla
+            | RemoteAction.SetViewpointAndFov (cv, fov) -> 
+                let bla = ViewerAction.SetCameraAndFrustum (cv,fov, 1.0) |> Seq.singleton
+                mainApp.update Guid.Empty bla
 
     let remoteApp = 
         App.start (PRo3D.RemoteControlApp.app "http://localhost:4321" send)
