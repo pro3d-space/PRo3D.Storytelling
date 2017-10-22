@@ -33,7 +33,7 @@ module RemoteControlApp =
 //        sprintf "%d%d%d_%d%d%d" dt.Year dt.Month dt.Day dt.Hour dt.Minute dt.Second
         dt.ToString("yyyymmdd_hhmmss")
 
-    let takeScreenshot baseAddress (shot:Shot) =
+    let takeScreenshot baseAddress (width:int) (height:int) name folder =
         let wc = new System.Net.WebClient()
         let path = "screenshots"
         if System.IO.Directory.Exists path |> not then
@@ -48,18 +48,16 @@ module RemoteControlApp =
                 | [] -> failwith "no client bla"
                 | x::[] -> x
                 | _ -> failwith "doent know"
-        let screenshot =
-            let w = shot.col
-            let h = shot.row
-            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d" baseAddress clientStatistic.name w h
+        let screenshot =            
+            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d" baseAddress clientStatistic.name width height
         Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
 
-        match System.IO.Directory.Exists shot.folder with
+        match System.IO.Directory.Exists folder with
           | true -> ()
-          | false -> System.IO.Directory.CreateDirectory shot.folder |> ignore
+          | false -> System.IO.Directory.CreateDirectory folder |> ignore
                
-        let filename = System.IO.Path.ChangeExtension (shot.id,".jpg")
-        wc.DownloadFile(screenshot,Path.combine [shot.folder; filename])
+        let filename = System.IO.Path.ChangeExtension (name,".jpg")
+        wc.DownloadFile(screenshot,Path.combine [folder; filename])
 
     let mkInstrumetnWps m = 
         let pShots = 
@@ -80,8 +78,7 @@ module RemoteControlApp =
 
                 let m = { m with shots = shots }  |> mkInstrumetnWps
 
-                m.platformShots |> PList.toList |> Serialization.saveJson "./platformshots.json" |> ignore                
-
+                m.platformShots |> PList.toList |> Serialization.saveJson "./platformshots.json" |> ignore
                 m
           | None -> m
 
@@ -122,18 +119,15 @@ module RemoteControlApp =
                 send <| RemoteAction.SetViewpoint (cv)
                 { m with selectedShot = Some sh }
             | MakeScreenshot2 psh ->
+                PlatformShot.getCameraAnfFov m.Rover psh
+                    |> RemoteAction.SetViewpointAndFov 
+                    |> send               
 
-                //get actual instrument params from shot
-                //build camera view/ frustum from shot
-                //set camera/frustum remote
-                //take screenshot (width and height)
-
-                m
-            | MakeScreenshot sh ->
-                
-                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
-                
-                try takeScreenshot baseAddress sh with e -> printfn "error: %A" e
+                try takeScreenshot baseAddress psh.col psh.row psh.id psh.folder with e -> printfn "error: %A" e
+                m                
+            | MakeScreenshot sh ->                
+                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                
+                try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
                 m
             | UpdateCamera sh ->                                
                 send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
@@ -144,20 +138,18 @@ module RemoteControlApp =
                    | Some p ->
                         let psh = PlatformShot.withShot sh p
 
-                        //getviewpoint from platformshot
-                        //fov
-                        //placementtrafo
-                        
-                        let cv = sh |> Shot.getCamera
+                        PlatformShot.getCameraAnfFov m.Rover p 
+                              |> RemoteAction.SetViewpointAndFov 
+                              |> send               
 
-                        send <| RemoteAction.SetViewpoint (cv)
+                        try takeScreenshot baseAddress psh.col psh.row psh.id psh.folder with e -> printfn "error: %A" e
                         m
                     | None -> m
             | Play ->
                 
                 for sh in m.shots do
                     send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                  
-                    try takeScreenshot baseAddress sh with e -> printfn "error: %A" e
+                    try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
                 m
             | Load ->
                 loadData m

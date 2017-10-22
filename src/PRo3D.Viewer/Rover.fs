@@ -257,7 +257,7 @@ module RoverApp =
                                 r.instruments |> HMap.update id (fun x -> 
                                     match x with
                                       | Some _ -> inst'
-                                      | None   -> failwith "instrument not found")                       
+                                      | None   -> failwith "instrument not found")
 
                             { m with selectedInstrument = Some inst' } 
                               |> updateRovers { r with instruments = instruments' }                            

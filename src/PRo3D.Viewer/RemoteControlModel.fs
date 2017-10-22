@@ -183,9 +183,7 @@ module PlatformShot =
         { psh with 
             pos = sh.pos 
             lookAt = sh.lookAt
-            up = sh.up
-            col = sh.col
-            row = sh.row
+            up = sh.up            
             pph = sh.pph
             ppv = sh.ppv
             id = sh.id
@@ -226,7 +224,13 @@ module PlatformShot =
             rover |> Option.map (fun r -> { result with rover = r.id })
 
         let getInstrument (instrument : option<Instrument>) (result : PlatformShot) : option<PlatformShot> =
-            instrument |> Option.map (fun i -> { result with instrument = i.id; focal = i.focal.value })
+            instrument |> Option.map (fun i -> 
+                { result with 
+                    instrument = i.id; 
+                    focal = i.focal.value
+                    col = int i.intrinsics.horizontalResolution
+                    row = int i.intrinsics.verticalResolution 
+                })
 
         let getAxes (rover : option<Rover>) (result : PlatformShot) : option<PlatformShot> =
             match rover with 
