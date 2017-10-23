@@ -12,7 +12,7 @@ module Mutable =
     
     type MNavigationModel(__initial : PRo3D.Navigation2.NavigationModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3D.Navigation2.NavigationModel> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Navigation2.NavigationModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Navigation2.NavigationModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Navigation2.NavigationModel>
         let _camera = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.camera)
         let _navigationMode = ResetMod.Create(__initial.navigationMode)
         let _exploreCenter = ResetMod.Create(__initial.exploreCenter)

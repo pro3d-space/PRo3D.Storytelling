@@ -9,6 +9,7 @@ open Aardvark.Base.Rendering
 open Aardvark.Opc    
 open Aardvark.SceneGraph
 open DevILSharp.ILU
+open PRo3D
 
 //[<DomainType>]
 type ScalarLayer = {

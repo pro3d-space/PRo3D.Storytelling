@@ -49,7 +49,7 @@ module ViewerApp =
     let _camera= Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera
     let _navigation= Model.Lens.scene |. Scene.Lens.navigation
 
-    let _annotations = Model.Lens.drawing |. DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.annotations
+    let _annotations = Model.Lens.drawing |. DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.childList
     let _flatAnnotations = Model.Lens.drawing |. DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.annotationsFlat
     let _groups = Model.Lens.drawing |. DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.subGroups
        
@@ -182,13 +182,14 @@ module ViewerApp =
                             let annotations' = 
                                 m.drawing.allAnnotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a') |> PList.ofList   
 
-                            let flatAnnos = 
-                                m.drawing.annotationGroups.annotationsFlat.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a') |> PList.ofList
+                            //let flatAnnos = 
+                            //    m.drawing.annotationGroups.annotationsFlat.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a') |> PList.ofList
 
-                            let func = (fun (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then AnnotationGroups.updateChild x.annotations a else x.annotations })
+                            let func = (fun (x:AnnotationGroup) -> { x with childList = if PList.count x.childList > 0 then AnnotationGroups.updateChild x.childList (Child.Annotations a) else x.childList })
                             let path = m.drawing.annotationGroups.activeChildPath
                             let root = AnnotationGroups.updateItemAt path func m.drawing.annotationGroups.rootGroup
-                            let groups = AnnotationGroups.updateGroups m.drawing.annotationGroups root flatAnnos
+                            let flats = AnnotationGroups.flattenChilds root |> PList.ofList
+                            let groups = AnnotationGroups.updateAnnotationGroups m.drawing.annotationGroups root flats
 
                             let drawing' = { m.drawing with selectedAnnotation = Some a'; allAnnotations = annotations'; annotationGroups = groups }
 
@@ -211,7 +212,8 @@ module ViewerApp =
             | ImportMeasurements,_,_ ->
                 match Dialogs.openDialog w with
                     | Some x -> 
-                        let newAnnotations = m.drawing.annotationGroups.rootGroup.annotations |> PList.append' (MeasurementsImporter.startImporter x)
+                        let annos = (MeasurementsImporter.startImporter x) |> PList.map( fun x -> Child.Annotations x) 
+                        let newAnnotations = m.drawing.annotationGroups.rootGroup.childList |> PList.append' annos
                         let m' = _annotations.Set(m, newAnnotations) 
                         m'
                     | None -> m   
@@ -220,7 +222,11 @@ module ViewerApp =
                     | Some x -> 
                         let newGroups = m.drawing.annotationGroups.rootGroup.subGroups |> PList.append' (AnnotationGroupsImporter.startImporter x)
                         let m' = _groups.Set(m, newGroups)
-                        let flatA = AnnotationGroups.flattenAnnotations m'.drawing.annotationGroups.rootGroup |> PList.ofList
+                        let flatA = AnnotationGroups.flattenChilds m'.drawing.annotationGroups.rootGroup 
+                                    |> PList.ofList
+                                    |> PList.choose (fun x -> match x with
+                                                                | Child.Annotations a -> Some a
+                                                                | _-> None)
                         let m'' = _flatAnnotations.Set(m', flatA)
                         m''
                     | None -> m   

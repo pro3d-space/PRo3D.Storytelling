@@ -12,7 +12,7 @@ module Mutable =
     
     type MUrdar(__initial : Aardvark.PRo3d.Urdar) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<Aardvark.PRo3d.Urdar> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<Aardvark.PRo3d.Urdar> = Aardvark.Base.Incremental.EqModRef<Aardvark.PRo3d.Urdar>(__initial) :> Aardvark.Base.Incremental.IModRef<Aardvark.PRo3d.Urdar>
         let _urdar = ResetMod.Create(__initial.urdar)
         
         member x.urdar = _urdar :> IMod<_>
@@ -49,7 +49,7 @@ module Mutable =
     
     type MModel(__initial : Aardvark.PRo3d.Model) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<Aardvark.PRo3d.Model> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<Aardvark.PRo3d.Model> = Aardvark.Base.Incremental.EqModRef<Aardvark.PRo3d.Model>(__initial) :> Aardvark.Base.Incremental.IModRef<Aardvark.PRo3d.Model>
         let _boxHovered = ResetMod.Create(__initial.boxHovered)
         let _dragging = ResetMod.Create(__initial.dragging)
         let _lastName = MOption.Create(__initial.lastName)
@@ -140,7 +140,7 @@ module Mutable =
     
     type MCameraControllerState(__initial : Aardvark.PRo3d.CameraControllerState) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<Aardvark.PRo3d.CameraControllerState> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<Aardvark.PRo3d.CameraControllerState> = Aardvark.Base.Incremental.EqModRef<Aardvark.PRo3d.CameraControllerState>(__initial) :> Aardvark.Base.Incremental.IModRef<Aardvark.PRo3d.CameraControllerState>
         let _view = ResetMod.Create(__initial.view)
         let _dragStart = ResetMod.Create(__initial.dragStart)
         let _look = ResetMod.Create(__initial.look)

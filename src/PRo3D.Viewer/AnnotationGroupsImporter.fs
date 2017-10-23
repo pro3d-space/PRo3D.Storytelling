@@ -17,6 +17,7 @@ module AnnotationGroupsImporter =
         let annotations = (m.Elements(xname "Measurements").Elements(xname "object")) 
                             |> Seq.map (fun x -> MeasurementsImporter.getAnnotation x)
                             |> PList.ofSeq  
+                            |> PList.map(fun x -> Child.Annotations x)
 
         let subGroups = (m.Elements(xname "SubGroups")).Elements(xname "MeasurementGroup")
                             |> Seq.map (fun x -> getGroups x)
@@ -25,7 +26,7 @@ module AnnotationGroupsImporter =
         let g = {
                 key = Guid.NewGuid()
                 name = name
-                annotations = annotations
+                childList = annotations
                 subGroups = subGroups
                 visible = visible
                 expanded = true

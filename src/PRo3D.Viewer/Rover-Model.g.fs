@@ -12,7 +12,7 @@ module Mutable =
     
     type MExtrinsics(__initial : PRo3d.Extrinsics) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3d.Extrinsics> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.Extrinsics> = Aardvark.Base.Incremental.EqModRef<PRo3d.Extrinsics>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.Extrinsics>
         let _position = ResetMod.Create(__initial.position)
         let _camUp = ResetMod.Create(__initial.camUp)
         let _camLookAt = ResetMod.Create(__initial.camLookAt)
@@ -76,7 +76,7 @@ module Mutable =
     
     type MInstrument(__initial : PRo3d.Instrument) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3d.Instrument> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.Instrument> = Aardvark.Base.Incremental.EqModRef<PRo3d.Instrument>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.Instrument>
         let _id = ResetMod.Create(__initial.id)
         let _iType = ResetMod.Create(__initial.iType)
         let _calibratedFocalLengths = ResetMod.Create(__initial.calibratedFocalLengths)
@@ -167,7 +167,7 @@ module Mutable =
     
     type MAxis(__initial : PRo3d.Axis) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3d.Axis> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.Axis> = Aardvark.Base.Incremental.EqModRef<PRo3d.Axis>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.Axis>
         let _id = ResetMod.Create(__initial.id)
         let _description = ResetMod.Create(__initial.description)
         let _startPoint = ResetMod.Create(__initial.startPoint)
@@ -249,7 +249,7 @@ module Mutable =
     
     type MRover(__initial : PRo3d.Rover) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3d.Rover> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.Rover> = Aardvark.Base.Incremental.EqModRef<PRo3d.Rover>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.Rover>
         let _id = ResetMod.Create(__initial.id)
         let _platform2Ground = ResetMod.Create(__initial.platform2Ground)
         let _wheelPositions = ResetMod.Create(__initial.wheelPositions)
@@ -331,7 +331,7 @@ module Mutable =
     
     type MRoverModel(__initial : PRo3d.RoverModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.ModRef<PRo3d.RoverModel> = Aardvark.Base.Incremental.Mod.init(__initial)
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.RoverModel> = Aardvark.Base.Incremental.EqModRef<PRo3d.RoverModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.RoverModel>
         let _rovers = MMap.Create(__initial.rovers, (fun v -> MRover.Create(v)), (fun (m,v) -> MRover.Update(m, v)), (fun v -> v))
         let _selectedRover = MOption.Create(__initial.selectedRover, (fun v -> MRover.Create(v)), (fun (m,v) -> MRover.Update(m, v)), (fun v -> v))
         let _selectedInstrument = MOption.Create(__initial.selectedInstrument, (fun v -> MInstrument.Create(v)), (fun (m,v) -> MInstrument.Update(m, v)), (fun v -> v))

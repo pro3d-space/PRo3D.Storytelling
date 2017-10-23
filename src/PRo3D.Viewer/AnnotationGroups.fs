@@ -7,6 +7,7 @@ open Aardvark.Base.Incremental
 
 open System
 
+open PRo3D.Surfaces
 open PRo3D
 
 
@@ -17,35 +18,47 @@ module AnnotationGroups =
         | ToggleExpand          of list<Index>
         | AddGroup              of list<Index>
         | RemoveGroup           of list<Index>
-        | AddChild              of list<Index>*plist<Annotation>    // TODO: change Annotation to ChildNode (|Annotation | Surface)
+        | AddChild              of list<Index>*plist<Child>    // TODO: change Annotation to ChildNode (|Annotation | Surface)
         | RemoveChild           of Guid*list<Index> // TODO: change Annotation to ChildNode (|Annotation | Surface)
         | ToggleChildVisibility of Guid*list<Index> // TODO: change Annotation to ChildNode (|Annotation | Surface)
         | ActiveChild           of Guid*list<Index>
-        | UpdateChildProperties of Annotation*list<Index>
+        | UpdateChildProperties of Child*list<Index>
         | SetGroupName          of string
         | Nop
 
     //
          
-    let updateGroups (model:AnnotationGroupsModel) (root:AnnotationGroup) (flat:plist<Annotation>) =
-        {model with rootGroup = root; annotationsFlat = flat}
+    let updateAnnotationGroups (model:AnnotationGroupsModel) (root:AnnotationGroup) (flat:plist<Child>) = //(flat:plist<Annotation>) =
+        let flatAnnotations = flat 
+                                |> PList.choose (fun x -> match x with
+                                                            | Child.Annotations a -> Some a
+                                                            | _-> None)
+        {model with rootGroup = root; annotationsFlat = flatAnnotations}
         
-    let rec flattenAnnotations (g:AnnotationGroup) =
-        match ((PList.toList g.annotations), (PList.toList g.subGroups)) with
+    let rec flattenChilds (g:AnnotationGroup) =
+        match ((PList.toList g.childList ), (PList.toList g.subGroups)) with
             | ([], []) -> []
             | (c, [] ) -> c
-            | ([], sg) -> sg |> List.collect flattenAnnotations
-            | (c, sg)  -> let sga = sg |> List.collect flattenAnnotations
+            | ([], sg) -> sg |> List.collect flattenChilds
+            | (c, sg)  -> let sga = sg |> List.collect flattenChilds
                           c@sga
 
     let loadAnnotationGroups (path:string) =
         let annotationGroups = Serialization.loadAs<PRo3D.AnnotationGroupsModel> path
-        let flatA = flattenAnnotations annotationGroups.rootGroup |> PList.ofList
+        let flatA = flattenChilds annotationGroups.rootGroup 
+                        |> Seq.ofList 
+                        |> Seq.choose (fun x -> match x with
+                                                | Child.Annotations a -> Some a
+                                                | _-> None)
+                        |> PList.ofSeq
         { annotationGroups with annotationsFlat = flatA } 
 
     let tryGetChild (ag:AnnotationGroup) key = 
-        let annos = flattenAnnotations ag 
-        annos |> Seq.tryFind(fun x -> x.key = key)
+        let childs = flattenChilds ag 
+        childs |> Seq.tryFind(fun x -> match x with 
+                                        | Child.Surfaces s -> s.guid = key
+                                        | Child.Annotations a -> a.key = key
+                                        )
 
     let updateItemAt (p : list<Index>) (f : AnnotationGroup -> AnnotationGroup) (t : AnnotationGroup) = 
         let rec go (p : list<Index>) (t : AnnotationGroup) =
@@ -68,7 +81,7 @@ module AnnotationGroups =
                                             | Some c -> let ag = {
                                                             name = t.name
                                                             key = t.key
-                                                            annotations = t.annotations
+                                                            childList = t.childList
                                                             subGroups = PList.set x (go rest c) t.subGroups
                                                             visible = t.visible
                                                             expanded = t.expanded
@@ -79,11 +92,44 @@ module AnnotationGroups =
         go (List.rev p) t 
         
     let removeGroup (ag:AnnotationGroup) (id:Guid) = ag.subGroups |> PList.filter (fun x -> x.key <> id) 
-    let removeAnnotation (ans:plist<Annotation>) (id:Guid) = ans |> PList.filter (fun x -> x.key <> id) 
+    //let removeAnnotation (ans:plist<Annotation>) (id:Guid) = ans |> PList.filter (fun x -> x.key <> id) 
+    let removeChild (childs:plist<Child>) (id:Guid) = childs |> PList.filter (fun x -> match x with
+                                                                                        | Child.Annotations a -> a.key <> id
+                                                                                        | Child.Surfaces s -> s.guid <> id) 
     let toggleAnnotation (ans:plist<Annotation>) (id:Guid) = 
         ans |> PList.map( fun x -> if x.key = id then { x with visible = not x.visible }
                                                 else x )
-    let updateChild (ans:plist<Annotation>) (a:Annotation) = ans.AsList |> List.updateIf (fun x -> x.key = a.key) (fun _ -> a) |> PList.ofList
+            |> PList.map( fun x -> Child.Annotations x)
+
+
+    let toggleSurface (surfs:plist<Surface>) (id:Guid) = 
+        surfs |> PList.map( fun x -> if x.guid = id then { x with isVisible = not x.isVisible }
+                                                else x )
+              |> PList.map( fun x -> Child.Surfaces x)
+
+    let toggleChild (childs:plist<Child>) (id:Guid) =
+        let c = childs.[0]
+        match c with
+            | Child.Annotations a -> toggleAnnotation (childs |> PList.choose( fun a -> match a with 
+                                                                                        | Child.Annotations x -> Some x  
+                                                                                        | _ -> None)) id
+            | Child.Surfaces s -> toggleSurface (childs |> PList.choose( fun s -> match s with 
+                                                                                    | Child.Surfaces x -> Some x
+                                                                                    | _-> None)) id
+
+
+    let updateAnnotation (ans:plist<Annotation>) (a:Annotation) = ans.AsList |> List.updateIf (fun x -> x.key = a.key) (fun _ -> a) |> PList.ofList
+    let updateSurface (surfs:plist<Surface>) (s:Surface) = surfs.AsList |> List.updateIf (fun x -> x.guid = s.guid) (fun _ -> s) |> PList.ofList
+    let updateChild (childs:plist<Child>) (c:Child) = 
+        match c with
+            | Child.Annotations a -> updateAnnotation (childs |> PList.choose( fun x -> match x with
+                                                                                        | Child.Annotations xa -> Some xa
+                                                                                        | _-> None )) a
+                                        |> PList.map( fun x -> Child.Annotations x)
+            | Child.Surfaces s -> updateSurface (childs |> PList.choose( fun x -> match x with
+                                                                                    | Child.Surfaces xs -> Some xs
+                                                                                    | _-> None )) s
+                                    |> PList.map( fun x -> Child.Surfaces x)
         
     let update (model : AnnotationGroupsModel) (action : Action) =
         printfn "action: %A" action
@@ -96,7 +142,7 @@ module AnnotationGroups =
             | AddGroup p -> 
                 let newGroup = {    name = "newGroup" // TODO: get group name from user
                                     key =  Guid.NewGuid()
-                                    annotations = plist.Empty
+                                    childList = plist.Empty
                                     subGroups = plist.Empty
                                     visible = true
                                     expanded = true
@@ -106,23 +152,28 @@ module AnnotationGroups =
             | RemoveGroup p -> 
                 let func = (fun (x:AnnotationGroup) (id:Guid) -> { x with subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups })
                 let newRoot = deleteItemAt p func model.rootGroup
-                let flatAnnos = flattenAnnotations newRoot |> PList.ofList
-                { model with rootGroup = newRoot; annotationsFlat = flatAnnos}
+                let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot |> PList.ofList)
+                m'
             | AddChild (p,c) -> 
-                let func = (function (x:AnnotationGroup) -> { x with annotations = c })
-                { model with rootGroup = updateItemAt p func model.rootGroup; annotationsFlat = c }
+                let func = (function (x:AnnotationGroup) -> { x with childList = c })
+                let newRoot = updateItemAt p func model.rootGroup
+                let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot |> PList.ofList)
+                m'
             | RemoveChild (k,p) -> 
-                let func = (function (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then removeAnnotation x.annotations k else x.annotations })
-                let flatAnnos = removeAnnotation model.annotationsFlat k
-                { model with rootGroup = updateItemAt p func model.rootGroup; annotationsFlat = flatAnnos }
+                let func = (function (x:AnnotationGroup) -> { x with childList = if PList.count x.childList > 0 then removeChild x.childList k else x.childList })
+                let newRoot = updateItemAt p func model.rootGroup
+                let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot |> PList.ofList)
+                m'
             | ToggleChildVisibility (c,p) -> 
-                let func = (function (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then toggleAnnotation x.annotations c else x.annotations })
-                let flatAnnos = toggleAnnotation model.annotationsFlat c
-                { model with rootGroup = updateItemAt p func model.rootGroup; annotationsFlat = flatAnnos }
+                let func = (function (x:AnnotationGroup) -> { x with childList = if PList.count x.childList > 0 then toggleChild x.childList c else x.childList })
+                let newRoot = updateItemAt p func model.rootGroup
+                let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot |> PList.ofList)
+                m'
             | UpdateChildProperties (a,p) ->
-                let func = (fun (x:AnnotationGroup) -> { x with annotations = if PList.count x.annotations > 0 then updateChild x.annotations a else x.annotations })
-                let flatA = model.annotationsFlat.AsList |> List.updateIf (fun x -> x.key = a.key) (fun _ -> a) |> PList.ofList  
-                { model with rootGroup = updateItemAt p func model.rootGroup; annotationsFlat = flatA }
+                let func = (fun (x:AnnotationGroup) -> { x with childList = if PList.count x.childList > 0 then updateChild x.childList a else x.childList })
+                let newRoot = updateItemAt p func model.rootGroup
+                let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot |> PList.ofList)
+                m'
             | SetGroupName t -> 
                 let func = (fun (x:AnnotationGroup) -> { x with name = t })
                 { model with rootGroup = updateItemAt model.activeGroupPath func model.rootGroup; activeGroupName = t }
