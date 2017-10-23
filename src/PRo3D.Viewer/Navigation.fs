@@ -70,7 +70,7 @@ module Navigation =
             adaptive {
                 let! near = near
                 let! far = far
-                return (Frustum.perspective 60.0 near far 1.0)
+                return (Frustum.perspective 90.0 near far 1.0)
                 }
 
         let renderControlAttributes (model : MNavigationModel) near far =

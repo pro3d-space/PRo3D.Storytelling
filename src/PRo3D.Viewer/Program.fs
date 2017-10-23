@@ -89,18 +89,27 @@ let main argv =
             | RemoteAction.SetViewpoint cv -> 
                 let bla = ViewerAction.SetCamera cv |> Seq.singleton
                 mainApp.update Guid.Empty bla
+            | RemoteAction.SetViewpointAndFov (cv, fov) -> 
+                let bla = ViewerAction.SetCameraAndFrustum (cv,fov, 1.0) |> Seq.singleton
+                mainApp.update Guid.Empty bla
 
     let remoteApp = 
         App.start (PRo3D.RemoteControlApp.app "http://localhost:4321" send)
 
-    let doStuff (shot:Shot) =   
+    let takeScreenshot (shot:Shot) =   
         let act = MakeScreenshot shot |> Seq.singleton
         remoteApp.update Guid.Empty act
         { result = shot.folder }
 
+    let takePlatformShot (shot:PlatformShot) =   
+        let act = MakeScreenshot2 shot |> Seq.singleton
+        remoteApp.update Guid.Empty act
+        { result = shot.folder }
+
     WebPart.startServer 1234 [ 
-        MutableApp.toWebPart runtime (remoteApp)        
-        POST >=> path "/shots" >=> mapJson doStuff
+        MutableApp.toWebPart runtime (remoteApp)
+        POST >=> path "/shots" >=> mapJson takeScreenshot
+        POST >=> path "/platformshots" >=> mapJson takePlatformShot
         Suave.Files.browseHome
     ] 
 

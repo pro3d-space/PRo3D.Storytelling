@@ -333,12 +333,14 @@ module Mutable =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.RoverModel> = Aardvark.Base.Incremental.EqModRef<PRo3d.RoverModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.RoverModel>
         let _rovers = MMap.Create(__initial.rovers, (fun v -> MRover.Create(v)), (fun (m,v) -> MRover.Update(m, v)), (fun v -> v))
+        let _platforms = MMap.Create(__initial.platforms)
         let _selectedRover = MOption.Create(__initial.selectedRover, (fun v -> MRover.Create(v)), (fun (m,v) -> MRover.Update(m, v)), (fun v -> v))
         let _selectedInstrument = MOption.Create(__initial.selectedInstrument, (fun v -> MInstrument.Create(v)), (fun (m,v) -> MInstrument.Update(m, v)), (fun v -> v))
         let _selectedAxis = MOption.Create(__initial.selectedAxis, (fun v -> MAxis.Create(v)), (fun (m,v) -> MAxis.Update(m, v)), (fun v -> v))
         let _currentAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.currentAngle)
         
         member x.rovers = _rovers :> amap<_,_>
+        member x.platforms = _platforms :> amap<_,_>
         member x.selectedRover = _selectedRover :> IMod<_>
         member x.selectedInstrument = _selectedInstrument :> IMod<_>
         member x.selectedAxis = _selectedAxis :> IMod<_>
@@ -350,6 +352,7 @@ module Mutable =
                 __current.Value <- v
                 
                 MMap.Update(_rovers, v.rovers)
+                MMap.Update(_platforms, v.platforms)
                 MOption.Update(_selectedRover, v.selectedRover)
                 MOption.Update(_selectedInstrument, v.selectedInstrument)
                 MOption.Update(_selectedAxis, v.selectedAxis)
@@ -375,6 +378,12 @@ module Mutable =
                     override x.Get(r) = r.rovers
                     override x.Set(r,v) = { r with rovers = v }
                     override x.Update(r,f) = { r with rovers = f r.rovers }
+                }
+            let platforms =
+                { new Lens<PRo3d.RoverModel, Aardvark.Base.hmap<Microsoft.FSharp.Core.string,ViewPlanner.IPWrapper.SPlatform>>() with
+                    override x.Get(r) = r.platforms
+                    override x.Set(r,v) = { r with platforms = v }
+                    override x.Update(r,f) = { r with platforms = f r.platforms }
                 }
             let selectedRover =
                 { new Lens<PRo3d.RoverModel, Microsoft.FSharp.Core.option<PRo3d.Rover>>() with

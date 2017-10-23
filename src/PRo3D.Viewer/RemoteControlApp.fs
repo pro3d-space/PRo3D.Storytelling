@@ -25,7 +25,7 @@ module RemoteControlApp =
     open PRo3d
     
         
-    let jsonSerializer = FsPickler.Json.JsonSerializer(indent=false)
+    let jsonSerializer = FsPickler.Json.JsonSerializer(indent=true)
 
     
 
@@ -33,7 +33,7 @@ module RemoteControlApp =
 //        sprintf "%d%d%d_%d%d%d" dt.Year dt.Month dt.Day dt.Hour dt.Minute dt.Second
         dt.ToString("yyyymmdd_hhmmss")
 
-    let takeScreenshot baseAddress shot =
+    let takeScreenshot baseAddress (width:int) (height:int) name folder =
         let wc = new System.Net.WebClient()
         let path = "screenshots"
         if System.IO.Directory.Exists path |> not then
@@ -48,33 +48,48 @@ module RemoteControlApp =
                 | [] -> failwith "no client bla"
                 | x::[] -> x
                 | _ -> failwith "doent know"
-        let screenshot =
-            let w = shot.col
-            let h = shot.row
-            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d" baseAddress clientStatistic.name w h
+        let screenshot =            
+            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d" baseAddress clientStatistic.name width height
         Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
 
-        match System.IO.Directory.Exists shot.folder with
+        match System.IO.Directory.Exists folder with
           | true -> ()
-          | false -> System.IO.Directory.CreateDirectory shot.folder |> ignore
+          | false -> System.IO.Directory.CreateDirectory folder |> ignore
                
-        let filename = System.IO.Path.ChangeExtension (shot.id,".jpg")
-        wc.DownloadFile(screenshot,Path.combine [shot.folder; filename])
+        let filename = System.IO.Path.ChangeExtension (name,".jpg")
+        wc.DownloadFile(screenshot,Path.combine [folder; filename])
 
-    let loadWaypoints m = 
+    let mkInstrumetnWps m = 
+        let pShots = 
+            m.shots |> PList.choose(fun x -> PlatformShot.fromRoverModel m.Rover x)
+        { m with platformShots = pShots }
+
+    let loadData m = 
         match Serialization.fileExists "./waypoints.wps" with
           | Some path -> 
                 let wp = Serialization.loadAs<plist<PRo3D.Viewer.WayPoint>> path
 
-                let shots = wp |> PList.map Shot.fromWp
-                let pshots = shots |> PList.toList |> jsonSerializer.PickleToString
+                let shots = 
+                    wp 
+                      |> PList.map Shot.fromWp 
+                      |> PList.toList 
+                      |> Serialization.saveJson "./shots.json" 
+                      |> PList.ofList
 
-                System.IO.File.WriteAllText("./waypoints.json", pshots)
+                let m = { m with shots = shots }  |> mkInstrumetnWps
 
-                { m with shots = shots }
+                m.platformShots |> PList.toList |> Serialization.saveJson "./platformshots.json" |> ignore
+                m
           | None -> m
 
-    let roverStuff (m : RemoteModel) =
+    let loadLast m = 
+        match Serialization.fileExists "./remote.mdl" with
+          | Some path -> 
+            Serialization.loadAs<RemoteModel> path
+          | None ->
+            m   
+
+    let loadRoverData (m : RemoteModel) =
         let directory = @".\InstrumentStuff"
         let errorCode = IPWrapper.Init(directory, directory)
         printfn "%A" errorCode
@@ -82,66 +97,98 @@ module RemoteControlApp =
         let names = RoverProvider.platformNames()    
         printfn "%A" names
 
-        let rovs =
-            names |> Array.map RoverProvider.initRover |> List.ofArray |> List.map(fun x -> x.id, x) |> HMap.ofList
+        let roverData =
+            names 
+              |> Array.map RoverProvider.initRover 
+              |> List.ofArray 
+
+        let rovs = roverData|> List.map(fun (r,_) -> r.id, r) |> HMap.ofList
+        let plats = roverData|> List.map(fun (r,p) -> r.id, p) |> HMap.ofList
+
         printfn "found rover(s): %d" (rovs |> HMap.count)
-
-        let r = { RoverApp.initial with rovers = rovs }
-
-        { m with Rover = r }
-              
-
+        
+        { m with Rover = { m.Rover with rovers = rovs; platforms = plats } }
+           
     let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
         match a with
-            | MakeScreenshot sh ->
+            | SelectShot sh -> 
+                let cv = sh |> Shot.getCamera
 
-                //let platform = RemoteControlModel.InstrumentPlatform.fromRoverModel m.Rover
+                let cv = CameraView.ofTrafo cv.ViewTrafo
 
-                //get actual instrument params from shot
+                send <| RemoteAction.SetViewpoint (cv)
+                { m with selectedShot = Some sh }
+            | MakeScreenshot2 psh ->
+                PlatformShot.getCameraAnfFov m.Rover psh
+                    |> RemoteAction.SetViewpointAndFov 
+                    |> send               
 
-                //build camera view/ frustum from shot
-                //set camera/frustum remote
-                //take screenshot (width and height)
-
-                
-
-                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
-                
-                try takeScreenshot baseAddress sh with e -> printfn "error: %A" e
+                try takeScreenshot baseAddress psh.col psh.row psh.id psh.folder with e -> printfn "error: %A" e
+                m                
+            | MakeScreenshot sh ->                
+                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                
+                try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
                 m
-            | UpdateCamera sh ->
-
-                let platform = RemoteControlModel.InstrumentPlatform.fromRoverModel m.Rover
-                printfn "%A" platform
-
+            | UpdateCamera sh ->                                
                 send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
                 m
+            | UpdateCamera2 sh ->
+                let platform = RemoteControlModel.PlatformShot.fromRoverModel m.Rover sh
+                match platform with 
+                   | Some p ->
+                        let psh = PlatformShot.withShot sh p
+
+                        PlatformShot.getCameraAnfFov m.Rover p 
+                              |> RemoteAction.SetViewpointAndFov 
+                              |> send               
+
+                        try takeScreenshot baseAddress psh.col psh.row psh.id psh.folder with e -> printfn "error: %A" e
+                        m
+                    | None -> m
             | Play ->
                 
-                for sh in m.shots do                   
+                for sh in m.shots do
                     send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                  
-                    try takeScreenshot baseAddress sh with e -> printfn "error: %A" e
+                    try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
                 m
             | Load ->
-                loadWaypoints m
+                loadData m
+            | SaveModel -> 
+                m |> Serialization.save "./remote.mdl"
+            | RemoveModel -> 
+                System.IO.File.Delete "./remote.mdl"
+                m
             | OpenFolder path ->
                 Process.Start("explorer.exe", path) |> ignore
                 m
-            | RoverMessage a ->
-                { m with Rover = RoverApp.update m.Rover a }
+            | RoverMessage a ->                
+                let m = { m with Rover = RoverApp.update m.Rover a }                                
+                match m.selectedShot with
+                    | Some sh ->                
+                        let psh = PlatformShot.fromRoverModel m.Rover sh
+                        match psh with
+                          | Some p ->                                                                                                         
+                            PlatformShot.getCameraAnfFov m.Rover p 
+                              |> RemoteAction.SetViewpointAndFov 
+                              |> send                            
+                          | None -> ()                                                                       
+                    | _ -> ()
+                m
 
     let viewShots (m:MRemoteModel) = 
         Incremental.div 
             (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
             (                
-                alist {                                                                     
+                alist {                                                          
+
                     for sh in m.shots do 
-                        yield div [clazz "item"] [
+                        yield div [clazz "item"; onClick (fun _ -> SelectShot sh)] [
                             div [clazz "content"] [                                        
                                 div [clazz "header"] [
                                     text sh.id
                                     i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCamera sh)] []
                                     i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
+                                    i [clazz "ui inverted icon find"; onClick (fun _ -> UpdateCamera2 sh)] []
                                 ]
                             ]
                         ]
@@ -158,6 +205,19 @@ module RemoteControlApp =
 
         require Html.semui (
             div[clazz "ui two column grid"] [
+                div[clazz "ui segment"] [
+                    h1 [clazz "ui header"][text "Screenshot Service"]
+                    button [clazz "ui labeled icon button"; onClick (fun _ -> SaveModel)] [
+                        i [clazz "save icon"][]
+                        text "Save Model"
+                    ]
+                    br []
+                    button [clazz "ui labeled icon button"; onClick (fun _ -> RemoveModel)] [
+                        i [clazz "remove icon"][]
+                        text "Delete Model"
+                    ]
+
+                ]
                 div[clazz "column"] [
                     div[clazz "ui segment"] [
                         h2 [clazz "ui header"][text "Waypoints"]
@@ -192,5 +252,6 @@ module RemoteControlApp =
             threads = threads
             view = view
             update = update baseAddress send
-            initial = { shots = PList.empty; Rover = RoverApp.initial } |> loadWaypoints |> roverStuff
+            initial = { selectedShot = None; shots = PList.empty; Rover = RoverApp.initial; platformShots = PList.empty } 
+              |> loadData |> loadLast |> loadRoverData
         }

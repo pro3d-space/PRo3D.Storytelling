@@ -37,43 +37,42 @@ module ViewerApp =
     open Surface   
     open System.Collections.Concurrent   
     open Scene   
-    
-                
+                 
+    // maybe move lenses to respective models?
+
+    // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
-    let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces
-    let _surfaces2       =  Model.Lens.scene |. Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces    
+    let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces    
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
     let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.selectedSurface
     
-    let _drawing = Model.Lens.drawing
-    let _camera= Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera
-    let _navigation= Model.Lens.scene |. Scene.Lens.navigation
+    // navigation
+    let _navigation = Model.Lens.scene |. Scene.Lens.navigation
+    let _camera     = _navigation |. NavigationModel.Lens.camera
+    let _view       = _camera |. CameraControllerState.Lens.view
 
-    let _annotations = Model.Lens.drawing |. DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.childList
-    let _flatAnnotations = Model.Lens.drawing |. DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.annotationsFlat
-    let _groups = Model.Lens.drawing |. DrawingModel.Lens.annotationGroups |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.subGroups
+    // drawing
+    let _drawing         = Model.Lens.drawing
+    let _group'          = _drawing |. DrawingModel.Lens.annotationGroups
+    let _flatAnnotations = _group' |. AnnotationGroupsModel.Lens.annotationsFlat
+    let _annotations     = _group' |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.childList
+    let _groups          = _group' |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.subGroups
        
     let lookAtData (m : Model) =         
         let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
-        let cam = 
-            let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value
-            { CameraController.initial with view = view }            
+        let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value             
 
-        { m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
+        _view.Set(m,view)        
     
     let lookAtSurface (m : Model) id =
         let surf = _sgSurfaces.Get(m) |> HMap.tryFind id
         match surf with
             | Some s ->
                 let bb = s.globalBB
-                let cam = 
-                    let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value
-                    { CameraController.initial with view = view }            
-
-                //{ m with scene = { m.scene with navigation = {m.scene.navigation with camera = cam} }}
-                (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera).Set(m, cam)
+                let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value
+                
+                _view.Set(m, view)
             | None -> m
-
     
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
@@ -87,7 +86,7 @@ module ViewerApp =
                             match v with
                                 | Some x -> { x with writeDate = s.writeDate }
                                 | None -> s
-                    ) //addToListWithoutDup s (fun x -> x.path = s.path )                
+                    )
 
         let recent = { model.recent with recentScenes = scenePaths }
 
@@ -124,14 +123,14 @@ module ViewerApp =
 
     let mdrawingConfig : DrawingApp.MSmallConfig<MViewConfigModel> =
         {            
-            getNearPlane       = fun (x:MViewConfigModel) -> x.nearPlane.value
+            getNearPlane       = fun x -> x.nearPlane.value
             getHfov            = fun (x:MViewConfigModel) -> ((Mod.init 60.0) :> IMod<float>)
             getMaxDipAngle     = fun (x:MViewConfigModel) -> x.maxDipAngle.value
             getMinDipAngle     = fun (x:MViewConfigModel) -> x.minDipAngle.value
             getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
             getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
             getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
-        }    
+        }
 
     let navConf : Navigation.smallConfig<ViewConfigModel, ReferenceSystem> =
         {
@@ -154,14 +153,11 @@ module ViewerApp =
                 let ref = m.scene.referenceSystem
 
                 { m with scene = { m.scene with navigation = Navigation.update c ref navConf m.scene.navigation msg }}
-            | SetCamera cv,_,false ->
-                let lens = (Model.Lens.scene |. Scene.Lens.navigation |. NavigationModel.Lens.camera)
-                let cam = lens.Get m
-                let c' = { cam with view = cv }
-
-                let m = lens.Set(m, c')
-
-                m
+            | SetCamera cv,_,false -> 
+                _view.Set(m, cv)
+            | SetCameraAndFrustum (cv, hfov, _),_,false ->
+                let m = _view.Set(m, cv)
+                { m with hfov = hfov }
             | AnnotationGroupsMessageViewer msg,_,_ ->
                 let ag = m.drawing.annotationGroups 
                 { m with drawing = { m.drawing with annotationGroups = AnnotationGroups.update ag msg}}
@@ -211,8 +207,8 @@ module ViewerApp =
                         Scene.import' runtime signature surfaces m  
             | ImportMeasurements,_,_ ->
                 match Dialogs.openDialog w with
-                    | Some x -> 
-                        let annos = (MeasurementsImporter.startImporter x) |> PList.map( fun x -> Child.Annotations x) 
+                    | Some importPath -> 
+                        let annos = (MeasurementsImporter.startImporter importPath) |> PList.map( fun x -> Child.Annotations x) 
                         let newAnnotations = m.drawing.annotationGroups.rootGroup.childList |> PList.append' annos
                         let m' = _annotations.Set(m, newAnnotations) 
                         m'
@@ -410,13 +406,13 @@ module ViewerApp =
                 
                 match state with
                     | NavigationMode.FreeFly -> 
-                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction (ViewerUtils.frustum m)
+                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction (ViewerUtils.frustum' m)
                     | NavigationMode.ArcBall -> 
-                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction (ViewerUtils.frustum m)
+                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction (ViewerUtils.frustum' m)
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
-        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view (ViewerUtils.frustum m)
+        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view (ViewerUtils.frustum' m)
 
         let att = 
             AttributeMap.unionMany [

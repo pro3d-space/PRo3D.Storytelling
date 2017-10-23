@@ -3,6 +3,7 @@ namespace PRo3d
 open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.UI
+open ViewPlanner
 
 type Intrinsics = {
     horizontalFieldOfView           : double
@@ -26,6 +27,15 @@ type Extrinsics = {
     box         : Box3d
 }
 
+module Extrinsics =
+    let transformed (t:M44d) (ex:Extrinsics)=
+        {
+            position = t.TransformPos ex.position
+            camUp    = t.TransformDir ex.camUp
+            camLookAt= t.TransformDir ex.camLookAt
+            box      = ex.box.Transformed t
+        }
+
 type InstrumentType = 
     | WACL       // Left Wide Angle Camera (PanCam)        
     | WACR       // Right Wide Angle Camera (PanCam)
@@ -47,6 +57,18 @@ type Instrument = {
     intrinsics              : Intrinsics
     extrinsics              : Extrinsics   
     index                   : int
+}
+
+type AxisAngleUpdate = {
+    roverId : string
+    axisId  : string
+    angle   : double
+}
+
+type InstrumentFocusUpdate = {
+    roverId       : string
+    instrumentId  : string
+    focal         : double
 }
 
 [<DomainType>]
@@ -76,6 +98,7 @@ type Rover = {
 [<DomainType>]
 type RoverModel = {
     rovers             : hmap<string, Rover>
+    platforms          : hmap<string, IPWrapper.SPlatform>
     selectedRover      : option<Rover>
     selectedInstrument : option<Instrument>
     selectedAxis       : option<Axis>

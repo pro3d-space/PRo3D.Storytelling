@@ -9,6 +9,7 @@ open PRo3d
 
 module RoverProvider =
     open System.Runtime.InteropServices
+    open ViewPlanner
     
     
     let toInstrument i (inst : IPWrapper.SInstrument) = 
@@ -68,7 +69,25 @@ module RoverProvider =
 
     let toInstruments (instruments : IPWrapper.SInstrument[]) : list<Instrument> = 
         instruments |> Array.mapi toInstrument |> Array.toList
-        
+       
+    let shiftNumericInput shift (input:NumericInput)= 
+        {
+            value  = input.value
+            min    = input.min + shift
+            max    = input.max + shift
+            step   = input.step
+            format = input.format
+        }
+
+
+    let axisHack (axis:Axis) = 
+        if (axis.id = "Pan Axis") 
+        then
+            {axis with angle = axis.angle |> shiftNumericInput -180.0}
+        else 
+            axis
+
+
     let toAxes (axes : IPWrapper.SAxis[]) : list<Axis> =
         axes |> Array.mapi(fun i x->
             { 
@@ -89,7 +108,7 @@ module RoverProvider =
                             format = "{0:0.0}"
                         }
 
-            }) |> Array.toList
+            }) |> Array.map axisHack |> Array.toList
 
     let toRover (platform : IPWrapper.SPlatform) =
         let wheels = 
@@ -120,7 +139,7 @@ module RoverProvider =
        
         pointerArray |> Array.map(fun x -> Marshal.PtrToStringAnsi(x))
 
-    let initRover platformId : Rover =
+    let initRover platformId =
         //Get various counts to initialize respective arrays
         let numWheelPoints = uint32 6 // IPWrapper.GetNrOfPlatformPointsOnGround(platformId)
         let numInstruments = IPWrapper.GetNrOfPlatformInstruments(platformId)
@@ -141,13 +160,14 @@ module RoverProvider =
         if (errorCode <> 0) then failwith "init platform failed" else ()
 
         //convert initialised platform to rover and add to database
-        platform |> toRover        
+        let rover = platform |> toRover        
         
-
+        rover, platform   
+        
 module RoverApp = 
     open Aardvark.Base
     open Aardvark.Base.Incremental
-    open Aardvark.UI.UI            
+    open Aardvark.UI.UI                       
 
     type Action =
         | ChangeAngle      of string * Numeric.Action
@@ -156,14 +176,55 @@ module RoverApp =
         | SelectInstrument of option<Instrument>
         | SelectAxis       of option<Axis>
 
+    let updateRoversAndPlatforms p m=
+        let error = IPWrapper.UpdatePlatform(ref p)
+        match error with
+          | 0 ->
+            let r'         = p |> RoverProvider.toRover
+            let rovers'    = m.rovers |> HMap.alter r'.id (Option.map(fun _ -> r'))
+            let platforms' = m.platforms |> HMap.alter r'.id (Option.map(fun _ -> p))
+
+            { m with rovers = rovers'; platforms = platforms' }
+          | _ -> 
+            Log.error "encountered %d from update platform" error
+            m
+
+    let updateFocusPlatform (up : InstrumentFocusUpdate) (m : RoverModel) = 
+        let r = m.rovers |> HMap.find up.roverId    
+        let mutable p = m.platforms |> HMap.find up.roverId       
+        let i = r.instruments|> HMap.find up.instrumentId
+        let mutable pInstruments = IPWrapper.UnMarshalArray<IPWrapper.SInstrument>(p.m_poPlatformInstruments)
+
+        pInstruments.[i.index].m_dCurrentFocalLengthInMm <- up.focal
+        IPWrapper.MarshalArray(pInstruments, p.m_poPlatformInstruments)
+
+        updateRoversAndPlatforms p m        
+
+    let updateAnglePlatform (up : AxisAngleUpdate) (m : RoverModel) = 
+        // use option map ?
+        let r = m.rovers |> HMap.find up.roverId    
+        let mutable p = m.platforms |> HMap.find up.roverId       
+        let a = r.axes |> HMap.find up.axisId
+        let mutable pAxes = IPWrapper.UnMarshalArray<IPWrapper.SAxis>(p.m_poPlatformAxes)
+
+        // push new angles to platform (deg to gon!!!)               
+        let angle = if (up.axisId = "Pan Axis"  && (up.angle < 0.0)) then (up.angle + 360.0) else up.angle
+
+        pAxes.[a.index].m_fCurrentAngle <- angle.GonsFromDegrees()
+        IPWrapper.MarshalArray(pAxes, p.m_poPlatformAxes)        
+        
+        updateRoversAndPlatforms p m
+            
+
     let updateRovers (r : Rover) (m : RoverModel) = 
+        
         let rovers' = 
             m.rovers 
                 |> HMap.update r.id (fun x -> 
                     match x with 
                         | Some _ -> r
                         | None   -> failwith "rover not found")
-        
+                        
         { m with selectedRover = Some r; rovers = rovers' }
 
     let update (m : RoverModel) (a:Action) =
@@ -171,33 +232,36 @@ module RoverApp =
           | SelectRover r      -> { m with selectedRover = r }
           | SelectInstrument i -> { m with selectedInstrument = i }
           | SelectAxis a       -> { m with selectedAxis = a }
-          | ChangeAngle (id,a) ->            
-                match m.selectedRover with 
-                  | Some r -> 
-                     let axes' = r.axes |> HMap.update id (fun x -> 
-                        match x with
-                          | Some ax -> { ax with angle = Numeric.update ax.angle a }
-                          | None    -> failwith "axis not found"                 
-                     )                      
+          | ChangeAngle (id,a) -> 
+            match m.selectedRover with 
+              | Some r ->                      
+                match r.axes.TryFind id with
+                  | Some ax ->                    
 
-                     m |> updateRovers { r with axes= axes' }                                         
-                     
-                  | None -> m        
+                    let ax' = { ax with angle = Numeric.update ax.angle a }                                                                 
+                    
+                    m 
+                      |> updateRovers { r with axes = (r.axes |> HMap.update id (fun _ -> ax')) }
+                      |> updateAnglePlatform { roverId = r.id ;axisId = ax'.id ; angle = ax'.angle.value }
+                  | None -> 
+                    Log.error "axis %A not found" id
+                    m
+              | None -> m        
           | ChangeFocal (id, f) ->
              match m.selectedRover with 
                   | Some r -> 
                       match m.selectedInstrument with
-                        | Some inst ->             
-                            
+                        | Some inst ->                                         
                             let inst' =  { inst with focal = Numeric.update inst.focal f }
-
                             let instruments' = 
                                 r.instruments |> HMap.update id (fun x -> 
                                     match x with
                                       | Some _ -> inst'
-                                      | None   -> failwith "axis not found")                       
+                                      | None   -> failwith "instrument not found")
 
-                            { m with selectedInstrument = Some inst' } |> updateRovers { r with instruments = instruments' }                            
+                            { m with selectedInstrument = Some inst' } 
+                              |> updateRovers { r with instruments = instruments' }                            
+                              |> updateFocusPlatform { roverId = r.id ; instrumentId = inst'.id ; focal = inst'.focal.value }
                         | None -> m                                        
                   | None -> m          
 
@@ -213,6 +277,7 @@ module RoverApp =
     let initial =
         {
             rovers = hmap.Empty
+            platforms = hmap.Empty
             selectedInstrument = None
             selectedRover = None
             selectedAxis = None
@@ -243,7 +308,7 @@ module RoverApp =
                         yield div [clazz "item"] [
                             div [clazz "content"] [                                        
                                 div [clazz "header"] [
-                                    Incremental.text r.id                                    
+                                    Incremental.text r.id
                                 ]
                                 div [clazz "description"] [
                                    Incremental.text (r |> toText)
@@ -275,7 +340,7 @@ module RoverApp =
         require Html.semui (
             Html.table [                
                 Html.row "Sensor (px):"  [ Incremental.text sensor ]
-                Html.row "Focal (mm):"    [ focalGui i m ]
+                Html.row "Focal (mm):"   [ focalGui i m ]                
             ]
         )
 
@@ -294,6 +359,8 @@ module RoverApp =
             for axis in (r.axes |> mapTolist) do
                 yield div[][Incremental.text axis.id; text "(deg)"]
                 yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (axis.id |> Mod.force,x))
+                yield br[]
+                yield Incremental.text (axis.startPoint |> Mod.map (sprintf "%A"))
         }
 
     let viewRoverProperties' (r : MRover) (m : MRoverModel) =

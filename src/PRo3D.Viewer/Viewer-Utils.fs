@@ -36,7 +36,8 @@ type ViewerAction =
     | ReferenceSystemMessage    of ReferenceSystemApp.Action
     | AnnotationMessage         of AnnotationProperties.Action
     | BookmarkMessage           of Bookmarks.Action
-    | SetCamera of CameraView        
+    | SetCamera                 of CameraView        
+    | SetCameraAndFrustum       of CameraView * double * double        
     | ImportSurface 
     | ImportMeasurements 
     | ImportAnnotationGroups
@@ -136,6 +137,15 @@ module ViewerUtils =
                                 true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])                        
                     ]
         sg
+
+    let frustum' (m:MModel) =
+            adaptive {
+                let! near = m.scene.config.nearPlane.value
+                let! far = m.scene.config.farPlane.value
+                let! fov = m.hfov
+                
+                return (Frustum.perspective fov near far 1.0)
+                }
 
     let frustum (m:MModel) =
         let near = m.scene.config.nearPlane.value
