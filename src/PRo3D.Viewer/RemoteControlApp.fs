@@ -111,28 +111,21 @@ module RemoteControlApp =
            
     let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
         match a with
-            | SelectShot sh -> 
-                let cv = sh |> Shot.getCamera
-
-                let cv = CameraView.ofTrafo cv.ViewTrafo
-
-                send <| RemoteAction.SetViewpoint (cv)
-                { m with selectedShot = Some sh }
-            | MakeScreenshot2 psh ->
-                PlatformShot.getCameraAnfFov m.Rover psh
-                    |> RemoteAction.SetViewpointAndFov 
-                    |> send               
-
-                try takeScreenshot baseAddress psh.col psh.row psh.id psh.folder with e -> printfn "error: %A" e
-                m                
-            | MakeScreenshot sh ->                
-                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                
+            | CaptureShot sh ->                
+                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
                 try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
                 m
-            | UpdateCamera sh ->                                
+            | CapturePlatform psh ->
+                PlatformShot.getCameraAnfFov m.Rover psh
+                    |> RemoteAction.SetViewpointAndFov 
+                    |> send                              
+
+                try takeScreenshot baseAddress 1024 1024 psh.id psh.folder with e -> printfn "error: %A" e
+                m                
+            | UpdateCameraTest sh ->                                
                 send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
                 m
-            | UpdateCamera2 sh ->
+            | UpdatePlatformTest sh ->
                 let platform = RemoteControlModel.PlatformShot.fromRoverModel m.Rover sh
                 match platform with 
                    | Some p ->
@@ -142,11 +135,15 @@ module RemoteControlApp =
                               |> RemoteAction.SetViewpointAndFov 
                               |> send               
 
-                        try takeScreenshot baseAddress psh.col psh.row psh.id psh.folder with e -> printfn "error: %A" e
+                        try takeScreenshot baseAddress 1024 1024 psh.id psh.folder with e -> printfn "error: %A" e
                         m
                     | None -> m
-            | Play ->
-                
+            | SelectShot sh -> 
+                let cv = sh |> Shot.getCamera
+                let cv = CameraView.ofTrafo cv.ViewTrafo
+                send <| RemoteAction.SetViewpoint (cv)
+                { m with selectedShot = Some sh }
+            | Play ->                
                 for sh in m.shots do
                     send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                  
                     try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
@@ -186,9 +183,9 @@ module RemoteControlApp =
                             div [clazz "content"] [                                        
                                 div [clazz "header"] [
                                     text sh.id
-                                    i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCamera sh)] []
+                                    i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCameraTest sh)] []
                                     i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
-                                    i [clazz "ui inverted icon find"; onClick (fun _ -> UpdateCamera2 sh)] []
+                                    i [clazz "ui inverted icon find"; onClick (fun _ -> UpdatePlatformTest sh)] []
                                 ]
                             ]
                         ]

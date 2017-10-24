@@ -50,15 +50,7 @@ type PlatformShot = {
     [<field: DataMember(Name = "lookAt")>]
     lookAt  : Xyz
     [<field: DataMember(Name = "up")>]
-    up      : Xyz
-    [<field: DataMember(Name = "col")>]    
-    col     : int
-    [<field: DataMember(Name = "row")>]
-    row     : int
-    [<field: DataMember(Name = "pph")>]
-    pph     : int
-    [<field: DataMember(Name = "ppv")>]
-    ppv     : int
+    up      : Xyz      
     [<field: DataMember(Name = "id")>]
     id      : string
     [<field: DataMember(Name = "folder")>]
@@ -88,6 +80,13 @@ type Shot = {
 }
 
 
+type ViewSpecification = {
+    principalPoint : V2i
+    resolution     : V2i
+    fovH           : double
+    view           : CameraView
+}
+
 
 //instrument shot 
 
@@ -104,11 +103,7 @@ module Shot =
             tilt       = 0.0
             pos     = V3d.III |> Xyz.fromV3d
             lookAt  = V3d.OOO |> Xyz.fromV3d
-            up      = V3d.OOI |> Xyz.fromV3d
-            col     = 1024
-            row     = 768
-            pph     = 0
-            ppv     = 0
+            up      = V3d.OOI |> Xyz.fromV3d            
             id      = Guid.NewGuid().ToString()
             folder  = "./shots" 
         }
@@ -170,11 +165,7 @@ module PlatformShot =
             tilt       = 0.0
             pos     = V3d.III |> Xyz.fromV3d
             lookAt  = V3d.OOO |> Xyz.fromV3d
-            up      = V3d.OOI |> Xyz.fromV3d
-            col     = 1024
-            row     = 768
-            pph     = 0
-            ppv     = 0
+            up      = V3d.OOI |> Xyz.fromV3d            
             id      = Guid.NewGuid().ToString()
             folder  = "./shots" 
         }
@@ -184,8 +175,6 @@ module PlatformShot =
             pos = sh.pos 
             lookAt = sh.lookAt
             up = sh.up            
-            pph = sh.pph
-            ppv = sh.ppv
             id = sh.id
             folder = sh.folder
         }
@@ -217,7 +206,7 @@ module PlatformShot =
         let up = psh.up |> Xyz.toV3d
 
         trafoFromRoverBase forw up pos
-
+    
     let fromRoverModel (rm : RoverModel) (sh : Shot): option<PlatformShot> =
         
         let getRover (rover : option<Rover>) (result : PlatformShot)  : option<PlatformShot> =
@@ -227,9 +216,7 @@ module PlatformShot =
             instrument |> Option.map (fun i -> 
                 { result with 
                     instrument = i.id; 
-                    focal = i.focal.value
-                    col = int i.intrinsics.horizontalResolution
-                    row = int i.intrinsics.verticalResolution 
+                    focal = i.focal.value                                    
                 })
 
         let getAxes (rover : option<Rover>) (result : PlatformShot) : option<PlatformShot> =
@@ -269,6 +256,20 @@ module PlatformShot =
 
         cv, hfov
 
+    let getViewSpec (m : RoverModel) (p : PlatformShot) =
+        let trafo = trafoFromPlatformShot p
+        let r = m.rovers |> HMap.find p.rover
+        let inst = r.instruments |> HMap.find p.instrument
+
+        let trans = inst.extrinsics |> Extrinsics.transformed trafo.Forward                                                    
+                                                                      
+        let cv = CameraView.LookAt(trans.position, trans.position + trans.camLookAt, trans.camUp)                            
+        let hfov = inst.intrinsics.horizontalFieldOfView.DegreesFromGons()
+
+        printfn "focal length: %A" inst.focal
+
+        cv, hfov
+
 
 
 [<DomainType>]
@@ -287,10 +288,10 @@ type RemoteAction =
     
 
 type Action = 
-    | MakeScreenshot  of Shot
-    | UpdateCamera    of Shot
-    | MakeScreenshot2 of PlatformShot
-    | UpdateCamera2   of Shot
+    | CaptureShot  of Shot
+    | UpdateCameraTest    of Shot
+    | CapturePlatform of PlatformShot
+    | UpdatePlatformTest   of Shot
     | SelectShot      of Shot
     | Play
     | Load

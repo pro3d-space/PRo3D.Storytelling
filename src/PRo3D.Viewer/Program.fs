@@ -97,12 +97,12 @@ let main argv =
         App.start (PRo3D.RemoteControlApp.app "http://localhost:4321" send)
 
     let takeScreenshot (shot:Shot) =   
-        let act = MakeScreenshot shot |> Seq.singleton
+        let act = CaptureShot shot |> Seq.singleton
         remoteApp.update Guid.Empty act
         { result = shot.folder }
 
     let takePlatformShot (shot:PlatformShot) =   
-        let act = MakeScreenshot2 shot |> Seq.singleton
+        let act = CapturePlatform shot |> Seq.singleton
         remoteApp.update Guid.Empty act
         { result = shot.folder }
 
