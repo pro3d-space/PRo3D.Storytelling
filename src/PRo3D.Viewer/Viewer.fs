@@ -158,6 +158,9 @@ module ViewerApp =
             | SetCameraAndFrustum (cv, hfov, _),_,false ->
                 let m = _view.Set(m, cv)
                 { m with hfov = hfov }
+
+            | SetCameraAndFrustum2 (_,_),_,false ->
+                m
             | AnnotationGroupsMessageViewer msg,_,_ ->
                 let ag = m.drawing.annotationGroups 
                 { m with drawing = { m.drawing with annotationGroups = AnnotationGroups.update ag msg}}
@@ -508,14 +511,7 @@ module ViewerApp =
                 ] 
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 
-            ]
-
-        //let annotationGroupsUI =
-        //    div [][
-        //        GuiEx.accordion "Annotations" "Write" true [
-        //            AnnotationGroups.view m.scene.groups |> UI.map AnnotationGroupsMessage
-        //        ]
-        //    ]
+            ]      
 
         let config (model:MModel) =
             adaptive {

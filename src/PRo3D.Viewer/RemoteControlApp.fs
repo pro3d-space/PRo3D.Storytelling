@@ -112,18 +112,17 @@ module RemoteControlApp =
     let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
         match a with
             | CaptureShot sh ->                
-                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
+                send <| RemoteAction.SetCameraView (sh |> Shot.getCamera)
                 try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
                 m
             | CapturePlatform psh ->
-                PlatformShot.getCameraAnfFov m.Rover psh
-                    |> RemoteAction.SetViewpointAndFov 
-                    |> send                              
+                let view = PlatformShot.getViewSpec m.Rover psh
+                view |> RemoteAction.SetView |> send
 
-                try takeScreenshot baseAddress 1024 1024 psh.id psh.folder with e -> printfn "error: %A" e
+                try takeScreenshot baseAddress view.resolution.X view.resolution.Y psh.id psh.folder with e -> printfn "error: %A" e
                 m                
             | UpdateCameraTest sh ->                                
-                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
+                send <| RemoteAction.SetCameraView (sh |> Shot.getCamera)
                 m
             | UpdatePlatformTest sh ->
                 let platform = RemoteControlModel.PlatformShot.fromRoverModel m.Rover sh
@@ -131,21 +130,20 @@ module RemoteControlApp =
                    | Some p ->
                         let psh = PlatformShot.withShot sh p
 
-                        PlatformShot.getCameraAnfFov m.Rover p 
-                              |> RemoteAction.SetViewpointAndFov 
-                              |> send               
+                        let view = PlatformShot.getViewSpec m.Rover p
+                        view |> RemoteAction.SetView |> send
 
-                        try takeScreenshot baseAddress 1024 1024 psh.id psh.folder with e -> printfn "error: %A" e
+                        try takeScreenshot baseAddress view.resolution.X view.resolution.Y psh.id psh.folder with e -> printfn "error: %A" e
                         m
                     | None -> m
             | SelectShot sh -> 
                 let cv = sh |> Shot.getCamera
                 let cv = CameraView.ofTrafo cv.ViewTrafo
-                send <| RemoteAction.SetViewpoint (cv)
+                send <| RemoteAction.SetCameraView (cv)
                 { m with selectedShot = Some sh }
             | Play ->                
                 for sh in m.shots do
-                    send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                  
+                    send <| RemoteAction.SetCameraView (sh |> Shot.getCamera)                  
                     try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
                 m
             | Load ->
@@ -165,8 +163,8 @@ module RemoteControlApp =
                         let psh = PlatformShot.fromRoverModel m.Rover sh
                         match psh with
                           | Some p ->                                                                                                         
-                            PlatformShot.getCameraAnfFov m.Rover p 
-                              |> RemoteAction.SetViewpointAndFov 
+                            PlatformShot.getViewSpec m.Rover p 
+                              |> RemoteAction.SetView 
                               |> send                            
                           | None -> ()                                                                       
                     | _ -> ()

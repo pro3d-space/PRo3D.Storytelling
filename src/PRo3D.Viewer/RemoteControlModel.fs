@@ -81,7 +81,7 @@ type Shot = {
 
 
 type ViewSpecification = {
-    principalPoint : V2i
+    principalPoint : V2d
     resolution     : V2i
     fovH           : double
     view           : CameraView
@@ -256,19 +256,24 @@ module PlatformShot =
 
         cv, hfov
 
-    let getViewSpec (m : RoverModel) (p : PlatformShot) =
+    let getViewSpec (m : RoverModel) (p : PlatformShot) : ViewSpecification =
         let trafo = trafoFromPlatformShot p
         let r = m.rovers |> HMap.find p.rover
         let inst = r.instruments |> HMap.find p.instrument
 
         let trans = inst.extrinsics |> Extrinsics.transformed trafo.Forward                                                    
                                                                       
-        let cv = CameraView.LookAt(trans.position, trans.position + trans.camLookAt, trans.camUp)                            
+        let cv = CameraView.LookAt(trans.position, trans.position + trans.camLookAt, trans.camUp)     
         let hfov = inst.intrinsics.horizontalFieldOfView.DegreesFromGons()
 
         printfn "focal length: %A" inst.focal
 
-        cv, hfov
+        {
+            view = cv
+            fovH = hfov
+            principalPoint = V2d (inst.intrinsics.horizontalPrinciplePoint, inst.intrinsics.verticalPrinciplePoint)
+            resolution = V2i (int inst.intrinsics.horizontalResolution,int inst.intrinsics.verticalResolution)
+        }
 
 
 
@@ -283,8 +288,8 @@ type RemoteModel =
     }
 
 type RemoteAction = 
-    | SetViewpoint       of CameraView
-    | SetViewpointAndFov of CameraView * double
+    | SetCameraView      of CameraView    
+    | SetView            of ViewSpecification
     
 
 type Action = 

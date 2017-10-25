@@ -38,6 +38,7 @@ type ViewerAction =
     | BookmarkMessage           of Bookmarks.Action
     | SetCamera                 of CameraView        
     | SetCameraAndFrustum       of CameraView * double * double        
+    | SetCameraAndFrustum2      of CameraView * Frustum
     | ImportSurface 
     | ImportMeasurements 
     | ImportAnnotationGroups
