@@ -68,7 +68,7 @@ type Model = {
     recent          : Recent
     waypoints       : plist<WayPoint>
 
-    hfov            : double
+    frustum         : Frustum
     aspect          : double
 
     [<TreatAsValue>]
@@ -106,7 +106,7 @@ module Viewer =
         interaction     = Interactions.DrawAnnotation
         picking         = false
         
-        hfov            = 60.0
+        frustum         = Frustum.perspective 60.0 0.1 10000.0 1.0
         aspect          = 1.6
 
         recent          = { recentScenes = HMap.empty }

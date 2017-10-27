@@ -155,12 +155,11 @@ module ViewerApp =
                 { m with scene = { m.scene with navigation = Navigation.update c ref navConf m.scene.navigation msg }}
             | SetCamera cv,_,false -> 
                 _view.Set(m, cv)
-            | SetCameraAndFrustum (cv, hfov, _),_,false ->
-                let m = _view.Set(m, cv)
-                { m with hfov = hfov }
-
-            | SetCameraAndFrustum2 (_,_),_,false ->
+            | SetCameraAndFrustum (cv, hfov, _),_,false ->                
                 m
+            | SetCameraAndFrustum2 (cv,frustum),_,false ->
+                let m = _view.Set(m, cv)
+                { m with frustum = frustum }
             | AnnotationGroupsMessageViewer msg,_,_ ->
                 let ag = m.drawing.annotationGroups 
                 { m with drawing = { m.drawing with annotationGroups = AnnotationGroups.update ag msg}}
@@ -384,7 +383,16 @@ module ViewerApp =
             | ConfigPropertiesMessage a,_,_ -> 
                 //Log.line "config message %A" a
                 let c' = ConfigProperties.update m.scene.config a
-                (Model.Lens.scene |. Scene.Lens.config).Set(m,c')
+                let m = (Model.Lens.scene |. Scene.Lens.config).Set(m,c')               
+                
+                match a with                   
+                  | ConfigProperties.Action.SetNearPlane _ | ConfigProperties.Action.SetFarPlane _ ->
+                    let fov = m.frustum |> Frustum.horizontalFieldOfViewInDegrees
+                    let asp = m.frustum |> Frustum.aspect
+                    let f' = Frustum.perspective fov c'.nearPlane.value c'.farPlane.value asp
+                    { m with frustum = f' }
+                  | _ -> m
+
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -406,13 +414,13 @@ module ViewerApp =
                 
                 match state with
                     | NavigationMode.FreeFly -> 
-                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction (ViewerUtils.frustum' m)
+                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction m.frustum
                     | NavigationMode.ArcBall -> 
-                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction (ViewerUtils.frustum' m)
+                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction m.frustum
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
-        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view (ViewerUtils.frustum' m)
+        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum
 
         let att = 
             AttributeMap.unionMany [

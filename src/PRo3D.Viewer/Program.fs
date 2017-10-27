@@ -86,10 +86,19 @@ let main argv =
 
     let send msg =
         match msg with
-            | RemoteAction.SetCameraView cv ->                 
+            | RemoteAction.SetCameraView cv ->
                 mainApp.update Guid.Empty (ViewerAction.SetCamera cv |> Seq.singleton)
-            | RemoteAction.SetView v ->                
-                mainApp.update Guid.Empty (ViewerAction.SetCameraAndFrustum (v.view,v.fovH, 1.0) |> Seq.singleton)
+            | RemoteAction.SetView v ->                                
+                Log.line "Setting View %A" v
+                let frustum = Frustum.perspective v.fovH v.near v.far (float v.resolution.X / float v.resolution.Y)
+                let frustum = { 
+                    frustum with 
+                      left   = frustum.left   - v.principalPoint.X
+                      right  = frustum.right  - v.principalPoint.X
+                      top    = frustum.top    - v.principalPoint.Y
+                      bottom = frustum.bottom - v.principalPoint.Y
+                    }
+                mainApp.update Guid.Empty (ViewerAction.SetCameraAndFrustum2 (v.view,frustum) |> Seq.singleton)
 
     let remoteApp = 
         App.start (PRo3D.RemoteControlApp.app "http://localhost:4321" send)

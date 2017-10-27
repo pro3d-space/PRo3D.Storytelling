@@ -139,14 +139,14 @@ module ViewerUtils =
                     ]
         sg
 
-    let frustum' (m:MModel) =
-            adaptive {
-                let! near = m.scene.config.nearPlane.value
-                let! far = m.scene.config.farPlane.value
-                let! fov = m.hfov
+    //let frustum' (m:MModel) =
+    //        adaptive {
+    //            let! near = m.scene.config.nearPlane.value
+    //            let! far = m.scene.config.farPlane.value
+    //            let! fov = m.hfov
                 
-                return (Frustum.perspective fov near far 1.0)
-                }
+    //            return (Frustum.perspective fov near far 1.0)
+    //            }
 
     let frustum (m:MModel) =
         let near = m.scene.config.nearPlane.value
@@ -158,7 +158,7 @@ module ViewerUtils =
             sgGrouped |> AList.map(
                 fun x -> ( x 
                     |> AMap.map(fun _ sf -> 
-                        viewSingleSurfaceSg sf (frustum m) m.scene.surfacesModel.selectedSurface sf.globalBB)
+                        viewSingleSurfaceSg sf m.frustum m.scene.surfacesModel.selectedSurface sf.globalBB)
                     |> AMap.toASet 
                     |> ASet.map snd 
                 )

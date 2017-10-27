@@ -112,7 +112,9 @@ module RemoteControlApp =
     let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
         match a with
             | CaptureShot sh ->                
-                send <| RemoteAction.SetCameraView (sh |> Shot.getCamera)
+                let view = sh |> Shot.getViewSpec
+                view |> RemoteAction.SetView |> send
+
                 try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
                 m
             | CapturePlatform psh ->
@@ -128,18 +130,17 @@ module RemoteControlApp =
                 let platform = RemoteControlModel.PlatformShot.fromRoverModel m.Rover sh
                 match platform with 
                    | Some p ->
-                        let psh = PlatformShot.withShot sh p
-
+                        
                         let view = PlatformShot.getViewSpec m.Rover p
                         view |> RemoteAction.SetView |> send
 
-                        try takeScreenshot baseAddress view.resolution.X view.resolution.Y psh.id psh.folder with e -> printfn "error: %A" e
+                        try takeScreenshot baseAddress view.resolution.X view.resolution.Y sh.id sh.folder with e -> printfn "error: %A" e
                         m
                     | None -> m
             | SelectShot sh -> 
-                let cv = sh |> Shot.getCamera
-                let cv = CameraView.ofTrafo cv.ViewTrafo
-                send <| RemoteAction.SetCameraView (cv)
+                //let cv = sh |> Shot.getCamera
+                //let cv = CameraView.ofTrafo cv.ViewTrafo
+                //send <| RemoteAction.SetCameraView (cv)
                 { m with selectedShot = Some sh }
             | Play ->                
                 for sh in m.shots do
@@ -189,15 +190,8 @@ module RemoteControlApp =
                         ]
                 }
             )
-
     
-
-    let view (m : MRemoteModel) : DomNode<RemoteControlModel.Action> =
-        
-  //      <div class="ui three column grid">
-  //<div class="column">
-  //  <div class="ui segment">
-
+    let view (m : MRemoteModel) : DomNode<RemoteControlModel.Action> =          
         require Html.semui (
             div[clazz "ui two column grid"] [
                 div[clazz "ui segment"] [
@@ -211,7 +205,6 @@ module RemoteControlApp =
                         i [clazz "remove icon"][]
                         text "Delete Model"
                     ]
-
                 ]
                 div[clazz "column"] [
                     div[clazz "ui segment"] [
@@ -231,16 +224,13 @@ module RemoteControlApp =
                         RoverApp.view m.Rover |> UI.map RoverMessage
                     ]
                 ]
-                div[clazz "column"] []
-                
+                div[clazz "column"] []                
             ]    
         )
 
     let threads (m : RemoteModel) : ThreadPool<RemoteControlModel.Action> =
         ThreadPool.empty
-
     
-
     let app baseAddress send =
         {
             unpersist = Unpersist.instance

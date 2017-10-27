@@ -51,6 +51,10 @@ type PlatformShot = {
     lookAt  : Xyz
     [<field: DataMember(Name = "up")>]
     up      : Xyz      
+    [<field: DataMember(Name = "near")>]
+    near    : float
+    [<field: DataMember(Name = "far")>]
+    far     : float
     [<field: DataMember(Name = "id")>]
     id      : string
     [<field: DataMember(Name = "folder")>]
@@ -73,22 +77,28 @@ type Shot = {
     pph     : int
     [<field: DataMember(Name = "ppv")>]
     ppv     : int
+    [<field: DataMember(Name = "hfov")>]
+    hfov     : float
+    [<field: DataMember(Name = "near")>]
+    near    : float
+    [<field: DataMember(Name = "far")>]
+    far     : float
     [<field: DataMember(Name = "id")>]
     id      : string
     [<field: DataMember(Name = "folder")>]
     folder  : string   
 }
 
-
 type ViewSpecification = {
     principalPoint : V2d
+    focal          : V2d
+    focalMm        : double
     resolution     : V2i
+    near           : double
+    far            : double
     fovH           : double
     view           : CameraView
 }
-
-
-//instrument shot 
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Shot =
@@ -104,6 +114,8 @@ module Shot =
             pos     = V3d.III |> Xyz.fromV3d
             lookAt  = V3d.OOO |> Xyz.fromV3d
             up      = V3d.OOI |> Xyz.fromV3d            
+            near    = 0.1
+            far     = 10000.0
             id      = Guid.NewGuid().ToString()
             folder  = "./shots" 
         }
@@ -117,12 +129,16 @@ module Shot =
             row     = 768
             pph     = 0
             ppv     = 0
+            hfov    = 60.0
+            near    = 0.1
+            far     = 10000.0
             id      = Guid.NewGuid().ToString()
             folder  = "./shots"           
         }
 
     let norm (v:V3d) = 
         v.Normalized
+
 
     let getCamera (s : Shot) : CameraView =
 
@@ -131,17 +147,21 @@ module Shot =
         let lookAt = pos + forw
 
         CameraView.LookAt(pos, lookAt , s.up |> Xyz.toV3d)
-
-    let getCamera' (sh :Shot) : CameraView = 
-        let forward = ((sh.lookAt |> Xyz.toV3d) - (sh.pos |> Xyz.toV3d)) |> norm
-        let up = sh.up |> Xyz.toV3d |> norm
-        let pos = sh.pos |> Xyz.toV3d
-
-        let pose = Trafo3d.FromBasis(forward, up.Cross forward, up, pos)        
-
-        CameraView.ofTrafo pose
-
     
+    let getViewSpec (s : Shot) : ViewSpecification =
+
+        let cv = s |> getCamera
+
+        {
+            view = cv
+            fovH = s.hfov
+            focalMm = 0.0
+            focal = V2d.Zero
+            principalPoint = V2d (s.pph, s.ppv)
+            resolution = V2i (s.col, s.row)
+            near = s.near
+            far = s.far
+        }        
 
     let fromCamera (cv : CameraView) : Shot =
         { init with 
@@ -166,6 +186,8 @@ module PlatformShot =
             pos     = V3d.III |> Xyz.fromV3d
             lookAt  = V3d.OOO |> Xyz.fromV3d
             up      = V3d.OOI |> Xyz.fromV3d            
+            near    = 0.1
+            far     = 10000.0
             id      = Guid.NewGuid().ToString()
             folder  = "./shots" 
         }
@@ -179,8 +201,9 @@ module PlatformShot =
             folder = sh.folder
         }
 
-    let trafoFromRoverBase (forw:V3d) up pos =
+    let trafoFromRoverBase (forw:V3d) (up:V3d) (pos:V3d) =        
         let right = forw.Cross up
+        let right = -right
 
         let rotTrafo =
             Trafo3d(
@@ -261,21 +284,25 @@ module PlatformShot =
         let r = m.rovers |> HMap.find p.rover
         let inst = r.instruments |> HMap.find p.instrument
 
-        let trans = inst.extrinsics |> Extrinsics.transformed trafo.Forward                                                    
+        let trans = inst.extrinsics |> Extrinsics.transformed trafo.Forward                         
                                                                       
         let cv = CameraView.LookAt(trans.position, trans.position + trans.camLookAt, trans.camUp)     
         let hfov = inst.intrinsics.horizontalFieldOfView.DegreesFromGons()
 
-        printfn "focal length: %A" inst.focal
+        let res = V2i (int inst.intrinsics.horizontalResolution,int inst.intrinsics.verticalResolution)
+        let pph = (inst.intrinsics.horizontalPrinciplePoint / float res.X) - 0.5
+        let ppv = (inst.intrinsics.verticalPrinciplePoint / float res.Y) - 0.5
 
         {
             view = cv
             fovH = hfov
-            principalPoint = V2d (inst.intrinsics.horizontalPrinciplePoint, inst.intrinsics.verticalPrinciplePoint)
-            resolution = V2i (int inst.intrinsics.horizontalResolution,int inst.intrinsics.verticalResolution)
+            focalMm = inst.focal.value
+            focal = V2d (inst.intrinsics.horizontalFocalLengthPerPixel, inst.intrinsics.verticalFocalLengthPerPixel)
+            principalPoint = V2d (pph, ppv)
+            resolution = res
+            near = p.near
+            far = p.far
         }
-
-
 
 [<DomainType>]
 type RemoteModel =
