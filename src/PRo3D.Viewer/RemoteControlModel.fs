@@ -10,7 +10,6 @@ open PRo3d
 open PRo3D
 
 
-
 //PTU values sequence
 //isntrument model
 //instrument pose
@@ -35,22 +34,22 @@ module Xyz =
    
 [<DataContract>]
 type PlatformShot = {
-    [<field: DataMember(Name = "rover")>]
-    rover      : string
-    [<field: DataMember(Name = "instrument")>]
-    instrument : string
-    [<field: DataMember(Name = "focal")>]
-    focal      : double
-    [<field: DataMember(Name = "pan")>] //"Pan Axis"
-    pan        : double
-    [<field: DataMember(Name = "tilt")>] //"Tilt Axis"
-    tilt       : double
     [<field: DataMember(Name = "pos")>]
     pos     : Xyz
     [<field: DataMember(Name = "lookAt")>]
     lookAt  : Xyz
     [<field: DataMember(Name = "up")>]
-    up      : Xyz      
+    up      : Xyz
+    [<field: DataMember(Name = "pan")>] //"Pan Axis"
+    pan        : double
+    [<field: DataMember(Name = "tilt")>] //"Tilt Axis"
+    tilt       : double
+    [<field: DataMember(Name = "focal")>]
+    focal      : double
+    [<field: DataMember(Name = "instrument")>]
+    instrument : string
+    [<field: DataMember(Name = "rover")>]
+    rover      : string
     [<field: DataMember(Name = "near")>]
     near    : float
     [<field: DataMember(Name = "far")>]
@@ -152,13 +151,17 @@ module Shot =
 
         let cv = s |> getCamera
 
+        let res = V2i (s.col, s.row)
+        let pph = (float s.pph /float res.X) - 0.5
+        let ppv = (float s.ppv /float res.Y) - 0.5
+
         {
             view = cv
             fovH = s.hfov
             focalMm = 0.0
             focal = V2d.Zero
-            principalPoint = V2d (s.pph, s.ppv)
-            resolution = V2i (s.col, s.row)
+            principalPoint = V2d (pph, ppv)
+            resolution = res
             near = s.near
             far = s.far
         }        
@@ -265,7 +268,7 @@ module PlatformShot =
         
         result
 
-    let getCameraAnfFov (m : RoverModel) (p : PlatformShot) =
+    let getCameraAnfFov (m : RoverModel) (p : PlatformShot)  =
         let trafo = trafoFromPlatformShot p
         let r = m.rovers |> HMap.find p.rover
         let inst = r.instruments |> HMap.find p.instrument
@@ -279,11 +282,28 @@ module PlatformShot =
 
         cv, hfov
 
+    let updateFocus (p : PlatformShot) (m : RoverModel) =
+        let r = m.rovers |> HMap.find p.rover
+        let inst = r.instruments |> HMap.find p.instrument
+       
+        if inst.calibratedFocalLengths.Length > 1 then
+            let up = {
+                roverId = p.rover
+                instrumentId = p.instrument
+                focal = p.focal
+            }
+            RoverApp.updateFocusPlatform up m
+        else
+            m
+
     let getViewSpec (m : RoverModel) (p : PlatformShot) : ViewSpecification =
+
+        let m = m |> updateFocus p
+
         let trafo = trafoFromPlatformShot p
         let r = m.rovers |> HMap.find p.rover
         let inst = r.instruments |> HMap.find p.instrument
-
+        
         let trans = inst.extrinsics |> Extrinsics.transformed trafo.Forward                         
                                                                       
         let cv = CameraView.LookAt(trans.position, trans.position + trans.camLookAt, trans.camUp)     

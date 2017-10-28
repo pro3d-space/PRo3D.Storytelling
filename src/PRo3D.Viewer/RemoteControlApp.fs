@@ -49,7 +49,7 @@ module RemoteControlApp =
                 | x::[] -> x
                 | _ -> failwith "doent know"
         let screenshot =            
-            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d" baseAddress clientStatistic.name width height
+            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=8" baseAddress clientStatistic.name width height
         Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
 
         match System.IO.Directory.Exists folder with
@@ -171,23 +171,45 @@ module RemoteControlApp =
                     | _ -> ()
                 m
 
+    let item (sh:Shot) (selected : IMod<Option<Shot>>) =
+        let attr = 
+            let background = "background-color:#636363"
+            amap {
+                let! sel = selected
+                let bla =
+                  match sel with 
+                    | Some x -> x.id = sh.id
+                    | None -> false
+
+                if bla then yield style background
+            
+                yield clazz "item"                
+                yield onClick (fun _ -> SelectShot sh)
+            } |> AttributeMap.ofAMap
+
+        Incremental.div attr 
+            (
+                alist {
+                    yield div [clazz "content"] [                                        
+                        div [clazz "header"] [
+                            text sh.id
+                            i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCameraTest sh)] [] |> UI.wrapToolTip "goto waypoint"
+                            i [clazz "ui inverted icon camera retro"; onClick (fun _ -> UpdateCameraTest sh)] [] |> UI.wrapToolTip "take screenshot"
+                            // i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
+                            i [clazz "ui inverted icon find"; onClick (fun _ -> UpdatePlatformTest sh)] [] |> UI.wrapToolTip "take platformshot"
+                        ]
+                    ]
+                }
+            )
+
+    //#bdbdbd
     let viewShots (m:MRemoteModel) = 
         Incremental.div 
-            (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
+            (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px; overflow : visible"]) 
             (                
                 alist {                                                          
-
                     for sh in m.shots do 
-                        yield div [clazz "item"; onClick (fun _ -> SelectShot sh)] [
-                            div [clazz "content"] [                                        
-                                div [clazz "header"] [
-                                    text sh.id
-                                    i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCameraTest sh)] []
-                                    i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
-                                    i [clazz "ui inverted icon find"; onClick (fun _ -> UpdatePlatformTest sh)] []
-                                ]
-                            ]
-                        ]
+                        yield item sh m.selectedShot
                 }
             )
     
