@@ -240,6 +240,8 @@ module ViewerApp =
                 Log.startTimed "kdtree intersect %s" name
                 let cameraLocation = m.scene.navigation.camera.view.Location 
 
+                let mutable cache = hmap.Empty
+
                 let hitF (p : V3d) = 
 
                     let ray =
@@ -252,13 +254,17 @@ module ViewerApp =
                                 FastRay3d(p + (up * 5000.0), -up)  
                             | _ -> Log.error "projection started without proj mode"; FastRay3d()
                     
-                    match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray with
-                        | Some (t,surf) ->                             
+                    match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray cache with
+                        | Some (t,surf), c ->                             
+                            cache <- c
                             ray.Ray.GetPointOnRay t |> Some
-                        | None -> None
+                        | None, c -> 
+                            cache <- c
+                            None
                                     
-                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray with
-                    | Some (t,surf) ->                         
+                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray cache with
+                    | Some (t,surf), c ->                         
+                        cache <- c
                         let hit = r.GetPointOnRay(t)
                         
                         match m.interaction with
@@ -283,7 +289,7 @@ module ViewerApp =
                                     Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
                                 { m with scene = {m.scene with navigation = navigation'; } }
                             | _ -> m
-                    | None -> 
+                    | None, _ -> 
                         Log.error ("no hit")
                         m
             | SaveScene, _,_ -> 

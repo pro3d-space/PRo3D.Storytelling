@@ -347,9 +347,7 @@ module Surface =
         | PickSurface               of SceneHit*string
         | OpenFolder                of Guid
 
-    type Model = SurfaceModel    
-
-    let mutable kdtreeCache : hmap<Box3d, ConcreteKdIntersectionTree> = hmap.Empty
+    type Model = SurfaceModel
 
     let triangleIsNan (t:Triangle3d) =
         t.P0.AnyNaN || t.P1.AnyNaN || t.P2.AnyNaN
@@ -377,37 +375,36 @@ module Surface =
 
         triangles
 
-    let loadObjectSet (lvl0Tree : Level0KdTree) =       
+    let loadObjectSet (cache : hmap<string, ConcreteKdIntersectionTree>) (lvl0Tree : Level0KdTree)=       
     
         match lvl0Tree with
             | InCoreKdTree kd -> 
-                kd.kdTree
+                kd.kdTree, cache
             | LazyKdTree kd -> 
             
-                let kdTree =
+                let kdTree, cache =
                     match kd.kdTree with
-                        | Some k -> k
+                        | Some k -> k, cache
                         | None -> 
-                            let tree = kdtreeCache |> HMap.tryFind kd.boundingBox
+                            let tree = cache |> HMap.tryFind (kd.boundingBox.ToString())
                             match tree with
                                 | Some t -> 
                                     //Log.line "cache hit %A" kd.boundingBox
-                                    t
+                                    t, cache
                                 | None ->                                     
-                                    Log.line "cache miss - loading kdtree"
+                                    Log.line "cache miss %A- loading kdtree" kd.boundingBox
 
                                     let mutable tree = KdTrees.loadKdtree kd.kdtreePath                                    
                                     tree.KdIntersectionTree.ObjectSet <- (kd |> loadTriangles)
 
-                                    let key = tree.KdIntersectionTree.BoundingBox3d
-                                    
-                                    kdtreeCache <- (HMap.add key tree kdtreeCache)
-                                    tree                                                          
-                kdTree  
+                                    let key = tree.KdIntersectionTree.BoundingBox3d.ToString()
+                                                                        
+                                    tree, (HMap.add key tree cache)
+                kdTree, cache
 
-    let intersectHMap (kdTreeMap: hmap<Box3d, Level0KdTree>) bb (ray : FastRay3d) surface = 
+    let intersectKdTrees (kdTreeMap: hmap<Box3d, Level0KdTree>) bb (surface : PRo3D.Surfaces.Surface) (cache : hmap<string, ConcreteKdIntersectionTree>) (ray : FastRay3d) = 
 
-        let kdtree = kdTreeMap |> HMap.find bb |> loadObjectSet        
+        let kdtree, c = kdTreeMap |> HMap.find bb |> loadObjectSet cache        
 
         let kdi = kdtree.KdIntersectionTree 
         let mutable hit = ObjectRayHit.MaxRange
@@ -416,23 +413,50 @@ module Surface =
         let hitFilter a b c d = false
         if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
             let point = ray.Ray.GetPointOnRay(hit.RayHit.T)            
-            Some (hit.RayHit.T, surface)
+            Some (hit.RayHit.T, surface),c
         else            
-            None
+            None,c
 
-    let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) = 
+    let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) cache = 
+        let mutable cache = cache
+
+        //let stuffs = 
+        //    m.sgGrouped |> PList.rev |> PList.map(fun x -> x |> HMap.map(fun _ b -> Log.warn "%A" b.surface.priority.value)) |> ignore
+
+        let kdSurfPairs =
+            m.sgSurfaces
+            |> HMap.toSeq
+            |> Seq.map (fun (_,d) -> d.kdTree, d.surface) 
+            |> Seq.sortByDescending(fun (_,s) -> s.priority)
+
+        let mutable lastPriority = Int32.MaxValue
+        let mutable hit : option<float*Surface> = None
+
+        for (kd ,surf) in kdSurfPairs do 
+            Log.error "stuff %A" surf.priority.value
+            let priorityChanged = (int surf.priority.value) = lastPriority
+
+            let h =
+                if kd.IsEmpty then 
+                    Log.error "no kdtree loaded for %s" surf.name
+                    None
+                else
+                    None
+
+            hit <- h
+            lastPriority <- (int surf.priority.value)            
+
         m.sgSurfaces
-            |> HMap.map (fun _ d -> d.kdTree, d.surface) 
-            |> HMap.map (
-                fun _ (kd ,surf) ->                     
-                    if kd.IsEmpty 
-                    then 
+            |> HMap.toSeq
+            |> Seq.map (fun (_,d) -> d.kdTree, d.surface) 
+            |> Seq.map (
+                fun (kd ,surf) ->
+                    if kd.IsEmpty then 
                         Log.error "no kdtree loaded for %s" surf.name
                         None
-                    else
-                        
+                    else                        
                         //get bbs that are hit
-                        let boundingBoxes =
+                        let hitBoxes =
                             kd  |> HMap.toSeq 
                                 |> Seq.map fst
                                 |> Seq.filter(
@@ -440,30 +464,32 @@ module Surface =
                                        let mutable t = 0.0
                                        let r' = r.Ray.Transformed(surf.trafo.Backward)
                                        x.Intersects(r', &t)
-                                )
-                        
+                                )                                                
                         //intersect corresponding kdtrees
-                        let intersection =
-                            boundingBoxes
+                        let closestHit =
+                            hitBoxes
                                 |> Seq.map(
                                     fun bb -> 
-                                        Log.line "intersection %s" surf.name
-                                        let r' = r.Ray.Transformed(surf.trafo.Backward) |> FastRay3d
-                                        intersectHMap kd bb r' surf)
+                                        Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                        
+
+                                        let hit, c = 
+                                            r.Ray.Transformed(surf.trafo.Backward)
+                                            |> FastRay3d 
+                                            |> intersectKdTrees kd bb surf cache
+
+                                        cache <- c
+                                        hit
+                                        )
                                 |> Seq.choose(fun x -> x)
                                 |> Seq.sortBy(fun (t,_)-> t)
-                                |> Seq.tryHead
-                        
-                        intersection
+                                |> Seq.tryHead                                               
+
+                        closestHit
                 )
-            //|> Seq.filter(fun (_,d) -> d.IsSome)
-            |> Seq.choose(fun (_,d) -> d)
-            //|> Seq.map(fun (_,d) -> d)
-            |> Seq.sortByDescending(fun (t,surf)-> surf.priority.value)
-            |> Seq.tryHead
-
+            |> Seq.choose(fun d -> d)
+            |> Seq.sortByDescending(fun (_,surf) -> surf.priority.value)
+            |> Seq.tryHead, cache
     
-
     let updateGrouping (model:SurfaceModel) =
         { model with sgGrouped = (Surface.groupSurfaces model.sgSurfaces) }
 

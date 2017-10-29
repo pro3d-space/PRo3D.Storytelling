@@ -41,6 +41,9 @@ module PList =
     let tryHead (a: plist<_>) =
         a |> PList.tryAt 0
 
+    let rev (a: plist<_>) =
+        a |> PList.toList |> List.rev |> PList.ofList
+
 
 type Points = list<V3d>
 

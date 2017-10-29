@@ -61,7 +61,7 @@ let main argv =
             DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
         ]
 
-    use bc = new BlockingCollection<string>()
+    use bc = new BlockingCollection<string>()    
         
     let ws (webSocket : WebSocket) (context: HttpContext) =
         socket {
