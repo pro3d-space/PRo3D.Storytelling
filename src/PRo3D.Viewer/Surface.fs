@@ -411,8 +411,8 @@ module Surface =
                 
         let objFilter a b = true
        // let hitFilter a b c d = false
-        if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
-            let point = ray.Ray.GetPointOnRay(hit.RayHit.T)            
+        if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then
+            let point = ray.Ray.GetPointOnRay(hit.RayHit.T)
             Some (hit.RayHit.T, surface),c
         else            
             None,c
