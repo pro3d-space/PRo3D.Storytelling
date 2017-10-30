@@ -256,11 +256,9 @@ module ViewerApp =
                     
                     match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray cache with
                         | Some (t,surf), c ->                             
-                            cache <- c
-                            ray.Ray.GetPointOnRay t |> Some
-                        | None, c -> 
-                            cache <- c
-                            None
+                            cache <- c; ray.Ray.GetPointOnRay t |> Some
+                        | None, c ->
+                            cache <- c; None
                                     
                 match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray cache with
                     | Some (t,surf), c ->                         
@@ -268,7 +266,8 @@ module ViewerApp =
                         let hit = r.GetPointOnRay(t)
                         
                         match m.interaction with
-                            | Interactions.DrawAnnotation ->                               
+                            | Interactions.DrawAnnotation ->               
+                                Log.error "closest intersection on %A" surf.name
                                 let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
                                 Log.stop()
                                 { m with drawing = drawing } |> stash

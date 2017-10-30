@@ -410,7 +410,7 @@ module Surface =
         let mutable hit = ObjectRayHit.MaxRange
                 
         let objFilter a b = true
-        let hitFilter a b c d = false
+       // let hitFilter a b c d = false
         if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then 
             let point = ray.Ray.GetPointOnRay(hit.RayHit.T)            
             Some (hit.RayHit.T, surface),c
@@ -420,36 +420,11 @@ module Surface =
     let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) cache = 
         let mutable cache = cache
 
-        //let stuffs = 
-        //    m.sgGrouped |> PList.rev |> PList.map(fun x -> x |> HMap.map(fun _ b -> Log.warn "%A" b.surface.priority.value)) |> ignore
-
-        let kdSurfPairs =
-            m.sgSurfaces
-            |> HMap.toSeq
-            |> Seq.map (fun (_,d) -> d.kdTree, d.surface) 
-            |> Seq.sortByDescending(fun (_,s) -> s.priority)
-
-        let mutable lastPriority = Int32.MaxValue
-        let mutable hit : option<float*Surface> = None
-
-        for (kd ,surf) in kdSurfPairs do 
-            Log.error "stuff %A" surf.priority.value
-            let priorityChanged = (int surf.priority.value) = lastPriority
-
-            let h =
-                if kd.IsEmpty then 
-                    Log.error "no kdtree loaded for %s" surf.name
-                    None
-                else
-                    None
-
-            hit <- h
-            lastPriority <- (int surf.priority.value)            
-
         m.sgSurfaces
             |> HMap.toSeq
             |> Seq.map (fun (_,d) -> d.kdTree, d.surface) 
-            |> Seq.map (
+            |> Seq.sortByDescending(fun (_,surf) -> surf.priority.value)
+            |> Seq.choose (
                 fun (kd ,surf) ->
                     if kd.IsEmpty then 
                         Log.error "no kdtree loaded for %s" surf.name
@@ -486,9 +461,7 @@ module Surface =
 
                         closestHit
                 )
-            |> Seq.choose(fun d -> d)
-            |> Seq.sortByDescending(fun (_,surf) -> surf.priority.value)
-            |> Seq.tryHead, cache
+            |> Seq.tryPick(fun d -> Some d), cache
     
     let updateGrouping (model:SurfaceModel) =
         { model with sgGrouped = (Surface.groupSurfaces model.sgSurfaces) }
