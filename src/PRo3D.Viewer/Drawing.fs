@@ -785,15 +785,33 @@ module DrawingApp =
                 |> Sg.trafo invScaleTrafo
                 |> Sg.trafo billboardTrafo                
 
-        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : bool) =
+        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
             let points = getPolyline anno
-                       
+            
+            let sgs = 
+                aset {                                        
+                    let! dots = dots
+                    if dots then 
+                        yield Sg.dots anno.points c view
+
+                    let! dns = anno.showDns
+                    if dns then
+                        yield drawDns anno view conf
+
+                    let! t = anno.text
+                    if not (t.IsEmpty()) then
+                        yield anno |> text view conf
+                }
+            
             Sg.ofList [
-                yield Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
-                if dots then yield Sg.dots anno.points c view 
-                yield drawDns anno view conf |> Sg.onOff anno.showDns                
-                yield anno |> text view conf
-            ] |> Sg.onOff anno.visible
+                Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
+                Sg.set sgs ] |> Sg.onOff anno.visible
+            //Sg.ofList [
+            //    yield Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
+            //    if dots then yield Sg.dots anno.points c view 
+            //    yield drawDns anno view conf |> Sg.onOff anno.showDns
+            //    //yield anno |> text view conf
+            //] |> Sg.onOff anno.visible
 
         let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) (cam:IMod<CameraView>) : ISg<Drawing.Action> =
             // order is irrelevant for rendering. change list to set,
@@ -815,9 +833,9 @@ module DrawingApp =
                 aset {
                     for a in annoSet do
                        let c = UI.mkColor model a
-                       let! geo = a.geometry
+                       
 
-                       let dots = match geo with | Geometry.Line | Geometry.Point -> true | _ -> false
+                       let dots = a.geometry |> Mod.map(fun geo -> match geo with | Geometry.Line | Geometry.Point -> true | _ -> false)
                        
                        yield finishedAnnotation a cam c config dots
                 } |> Sg.set
