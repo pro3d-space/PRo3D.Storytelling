@@ -10,6 +10,7 @@ open Aardvark.Opc
 open Aardvark.SceneGraph
 open DevILSharp.ILU
 open Aardvark.VRVis
+open PRo3D
 
 //[<DomainType>]
 type ScalarLayer = {
@@ -110,7 +111,7 @@ module SurfaceModel =
 module Init =
     let quality = 
             {
-                value = 0.0
+                value = 0.1
                 min =  -2.0
                 max = 5.0
                 step = 0.1

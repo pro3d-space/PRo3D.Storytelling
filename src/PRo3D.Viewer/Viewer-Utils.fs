@@ -24,6 +24,7 @@ open PRo3D.Navigation2
 open PRo3D.ReferenceSystem
 open PRo3D.Surfaces
 open PRo3D.Viewer
+open PRo3D.Groups
 
 type PropertyActions =
     | DrawingMessage    of Drawing.Action

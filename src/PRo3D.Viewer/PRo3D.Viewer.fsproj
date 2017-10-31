@@ -76,13 +76,14 @@
     <Compile Include="ReferenceSystem-Model.fs" />
     <Compile Include="ReferenceSystem.fs" />
     <Compile Include="Drawing-Properties.fs" />
+    <Compile Include="Surface-Model.fs" />
+    <Compile Include="GroupsModels.fs" />
     <Compile Include="AnnotationGroups.fs" />
     <Compile Include="Drawing-Model.fs" />
     <Compile Include="Drawing.fs" />
     <Compile Include="MeasurementsImporter.fs" />
     <Compile Include="Navigation-Model.fs" />
     <Compile Include="Navigation.fs" />
-    <Compile Include="Surface-Model.fs" />
     <Compile Include="Surface-Properties.fs" />
     <Compile Include="Surface.fs" />
     <Compile Include="Rover-Model.fs" />
@@ -117,11 +118,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CSharpUtils\CSharpUtils.csproj">
-      <Name>CSharpUtils</Name>
-      <Project>{64cde4e5-f90a-40c0-93b9-30b1ad02855c}</Project>
-      <Private>True</Private>
-    </ProjectReference>
+    <Reference Include="CSharpUtils">
+      <HintPath>..\..\bin\Debug\CSharpUtils.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />

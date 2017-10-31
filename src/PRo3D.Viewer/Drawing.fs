@@ -25,6 +25,7 @@ module DrawingApp =
     open PRo3D
     open System.Collections.Concurrent    
     open PRo3D.Drawing
+    open PRo3D.Groups
 
     open MBrace.FsPickler.Json   
     
@@ -64,19 +65,19 @@ module DrawingApp =
                  //   Log.line "sending %A" a.semantic
                     bc.Add json
 
-                    let flatAnnos = model.annotationGroups.annotationsFlat |> PList.prepend a
-
-                    let func = (fun (x : AnnotationGroup) -> {  x with annotations = x.annotations |> PList.prepend a })
+                    let func = (fun (x : AnnotationGroup) -> {  x with childList = x.childList |> PList.prepend (Child.Annotations a) })
                     AnnotationGroups.updateItemAt model.annotationGroups.activeGroupPath func model.annotationGroups.rootGroup
                 | None -> model.annotationGroups.rootGroup
 
-        let flatAnnos = 
-            match getFinishedAnnotation up north model with
-                | Some a -> 
-                    model.annotationGroups.annotationsFlat |> PList.prepend a
-                | None -> model.annotationGroups.annotationsFlat
+        //let flatAnnos = 
+        //    match getFinishedAnnotation up north model with
+        //        | Some a -> 
+        //            model.annotationGroups.annotationsFlat |> PList.prepend a
+        //        | None -> model.annotationGroups.annotationsFlat
         
-        let groups = AnnotationGroups.updateGroups model.annotationGroups rootGroup flatAnnos
+        //let groups = AnnotationGroups.updateAnnotationGroups model.annotationGroups rootGroup flatAnnos
+        let groups = AnnotationGroups.updateAnnotationGroups model.annotationGroups rootGroup (AnnotationGroups.flattenChilds rootGroup |> PList.ofList)
+
         { model with allAnnotations = anns; working = None; pendingIntersections = ThreadPool.empty; 
                     annotationGroups = groups } 
 
@@ -303,7 +304,9 @@ module DrawingApp =
                             model.allAnnotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a')     
                         let flatAnnos = 
                             model.annotationGroups.annotationsFlat.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a')  
-                        { model with selectedAnnotation = Some a'; allAnnotations = annotations' |> PList.ofList; annotationGroups = {model.annotationGroups with annotationsFlat = flatAnnos |> PList.ofList} }
+                        { model with selectedAnnotation = Some a'; 
+                                     allAnnotations = annotations' |> PList.ofList;
+                                     annotationGroups = {model.annotationGroups with annotationsFlat = flatAnnos |> PList.ofList} }
                     | None -> model
                         
             | Undo, _ -> 
@@ -451,14 +454,20 @@ module DrawingApp =
 
         
 
-        let viewAnnotationsInGroup (path:list<Index>) (model:MDrawingModel)(select : MAnnotation*list<Index> -> 'outer)(lift : AnnotationGroups.Action -> 'outer) (annotations: alist<MAnnotation>) : alist<DomNode<'outer>> =
+        let viewAnnotationsInGroup (path:list<Index>) (model:MDrawingModel)(select : MAnnotation*list<Index> -> 'outer)(lift : AnnotationGroups.Action -> 'outer) (annotations: alist<IMod<MChild>>) : alist<DomNode<'outer>> =
                         
             //Incremental.div 
             //        (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (
                             
-                        alist {                                                                     
+                        alist { 
+
+                            let annotations = annotations
+                                                |> AList.map (fun x -> Mod.force x)
+                                                |> AList.choose( fun x -> match x with
+                                                                            | MAnnotations a -> Some a
+                                                                            | _-> None )
                             for a in annotations do 
-                                                                                                        
+                                
                                 let! c = mkColor model a
 
                                 let bgc = sprintf "color: %s" (Html.ofC4b c)
@@ -517,7 +526,12 @@ module DrawingApp =
                         i [clazz "plus icon"
                            onMouseClick (fun _ -> 
                              AnnotationGroupsMessage(AnnotationGroups.AddGroup path))] [] 
-                        |> UI.wrapToolTip "Add Group"                                    
+                        |> UI.wrapToolTip "Add Group"   
+                        
+                        i [clazz "remove circle icon"
+                           onMouseClick (fun _ -> 
+                             AnnotationGroupsMessage(AnnotationGroups.ClearGroup path))] [] 
+                        |> UI.wrapToolTip "Clear Group"
                         
                         i [clazz "remove icon red"
                            onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.RemoveGroup path))] [] 
@@ -556,7 +570,7 @@ module DrawingApp =
                                 if isExpanded then yield! children
 
                                 if isExpanded then 
-                                    yield! viewAnnotationsInGroup path model select lift group.annotations
+                                    yield! viewAnnotationsInGroup path model select lift group.childList
                             }
                          )  
                                 
