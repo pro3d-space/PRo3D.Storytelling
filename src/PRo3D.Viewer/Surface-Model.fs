@@ -108,7 +108,7 @@ module SurfaceModel =
 module Init =
     let quality = 
             {
-                value = 0.0
+                value = 0.1
                 min =  -2.0
                 max = 5.0
                 step = 0.1

@@ -18,8 +18,8 @@ nuget Aardvark.Base.Incremental             ~> 3.0.40
 nuget Aardvark.Base.FSharp                  ~> 3.0.40    
 nuget Aardvark.Base.Essentials              ~> 3.0.40    
                                              
-nuget Aardvark.Compiler.DomainTypes         ~> 0.2.7
-nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 0.2.7
+nuget Aardvark.Compiler.DomainTypes         ~> 0.2.10
+nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 0.2.10
 
 nuget Aardvark.VRVis.Geometry               ~> 3.1.10
 nuget Aardvark.Fitting.Planes               ~> 3.1.10

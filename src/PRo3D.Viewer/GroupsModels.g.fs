@@ -44,7 +44,7 @@ module Mutable =
                 match __model with
                     | Annotations(value) -> 
                         __current <- __model
-                        MAnnotation.Update(_value,value)
+                        MAnnotation.Update(_value, value)
                         true
                     | _ -> false
     
@@ -65,7 +65,7 @@ module Mutable =
                 match __model with
                     | Surfaces(value) -> 
                         __current <- __model
-                        MSurface.Update(_value,value)
+                        PRo3D.Surfaces.Mutable.MSurface.Update(_value, value)
                         true
                     | _ -> false
     
