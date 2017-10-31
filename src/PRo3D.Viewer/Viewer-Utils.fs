@@ -24,6 +24,7 @@ open PRo3D.Navigation2
 open PRo3D.ReferenceSystem
 open PRo3D.Surfaces
 open PRo3D.Viewer
+open PRo3D.Groups
 
 type PropertyActions =
     | DrawingMessage    of Drawing.Action
@@ -38,6 +39,7 @@ type ViewerAction =
     | BookmarkMessage           of Bookmarks.Action
     | SetCamera                 of CameraView        
     | SetCameraAndFrustum       of CameraView * double * double        
+    | SetCameraAndFrustum2      of CameraView * Frustum
     | ImportSurface 
     | ImportMeasurements 
     | ImportAnnotationGroups
@@ -138,14 +140,14 @@ module ViewerUtils =
                     ]
         sg
 
-    let frustum' (m:MModel) =
-            adaptive {
-                let! near = m.scene.config.nearPlane.value
-                let! far = m.scene.config.farPlane.value
-                let! fov = m.hfov
+    //let frustum' (m:MModel) =
+    //        adaptive {
+    //            let! near = m.scene.config.nearPlane.value
+    //            let! far = m.scene.config.farPlane.value
+    //            let! fov = m.hfov
                 
-                return (Frustum.perspective fov near far 1.0)
-                }
+    //            return (Frustum.perspective fov near far 1.0)
+    //            }
 
     let frustum (m:MModel) =
         let near = m.scene.config.nearPlane.value
@@ -157,7 +159,7 @@ module ViewerUtils =
             sgGrouped |> AList.map(
                 fun x -> ( x 
                     |> AMap.map(fun _ sf -> 
-                        viewSingleSurfaceSg sf (frustum m) m.scene.surfacesModel.selectedSurface sf.globalBB)
+                        viewSingleSurfaceSg sf m.frustum m.scene.surfacesModel.selectedSurface sf.globalBB)
                     |> AMap.toASet 
                     |> ASet.map snd 
                 )

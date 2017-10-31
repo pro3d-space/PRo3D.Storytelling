@@ -29,6 +29,7 @@ open PRo3D.ReferenceSystem
 open PRo3D.Surfaces
 open PRo3D.Viewer
 open PRo3D.Drawing
+open PRo3D.Groups
 
 //open Viewer.Mutable.ModelModule.Lens
 //open Mutable.AnnotationGroupModule.Lens
@@ -155,9 +156,11 @@ module ViewerApp =
                 { m with scene = { m.scene with navigation = Navigation.update c ref navConf m.scene.navigation msg }}
             | SetCamera cv,_,false -> 
                 _view.Set(m, cv)
-            | SetCameraAndFrustum (cv, hfov, _),_,false ->
+            | SetCameraAndFrustum (cv, hfov, _),_,false ->                
+                m
+            | SetCameraAndFrustum2 (cv,frustum),_,false ->
                 let m = _view.Set(m, cv)
-                { m with hfov = hfov }
+                { m with frustum = frustum }
             | AnnotationGroupsMessageViewer msg,_,_ ->
                 let ag = m.drawing.annotationGroups 
                 { m with drawing = { m.drawing with annotationGroups = AnnotationGroups.update ag msg}}
@@ -241,6 +244,8 @@ module ViewerApp =
                 Log.startTimed "kdtree intersect %s" name
                 let cameraLocation = m.scene.navigation.camera.view.Location 
 
+                let mutable cache = hmap.Empty
+
                 let hitF (p : V3d) = 
 
                     let ray =
@@ -253,17 +258,20 @@ module ViewerApp =
                                 FastRay3d(p + (up * 5000.0), -up)  
                             | _ -> Log.error "projection started without proj mode"; FastRay3d()
                     
-                    match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray with
-                        | Some (t,surf) ->                             
-                            ray.Ray.GetPointOnRay t |> Some
-                        | None -> None
+                    match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray cache with
+                        | Some (t,surf), c ->                             
+                            cache <- c; ray.Ray.GetPointOnRay t |> Some
+                        | None, c ->
+                            cache <- c; None
                                     
-                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray with
-                    | Some (t,surf) ->                         
+                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray cache with
+                    | Some (t,surf), c ->                         
+                        cache <- c
                         let hit = r.GetPointOnRay(t)
                         
                         match m.interaction with
-                            | Interactions.DrawAnnotation ->                               
+                            | Interactions.DrawAnnotation ->               
+                                Log.error "closest intersection on %A" surf.name
                                 let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
                                 Log.stop()
                                 { m with drawing = drawing } |> stash
@@ -284,7 +292,7 @@ module ViewerApp =
                                     Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
                                 { m with scene = {m.scene with navigation = navigation'; } }
                             | _ -> m
-                    | None -> 
+                    | None, _ -> 
                         Log.error ("no hit")
                         m
             | SaveScene, _,_ -> 
@@ -384,7 +392,16 @@ module ViewerApp =
             | ConfigPropertiesMessage a,_,_ -> 
                 //Log.line "config message %A" a
                 let c' = ConfigProperties.update m.scene.config a
-                (Model.Lens.scene |. Scene.Lens.config).Set(m,c')
+                let m = (Model.Lens.scene |. Scene.Lens.config).Set(m,c')               
+                
+                match a with                   
+                  | ConfigProperties.Action.SetNearPlane _ | ConfigProperties.Action.SetFarPlane _ ->
+                    let fov = m.frustum |> Frustum.horizontalFieldOfViewInDegrees
+                    let asp = m.frustum |> Frustum.aspect
+                    let f' = Frustum.perspective fov c'.nearPlane.value c'.farPlane.value asp
+                    { m with frustum = f' }
+                  | _ -> m
+
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -406,13 +423,13 @@ module ViewerApp =
                 
                 match state with
                     | NavigationMode.FreeFly -> 
-                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction (ViewerUtils.frustum' m)
+                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction m.frustum
                     | NavigationMode.ArcBall -> 
-                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction (ViewerUtils.frustum' m)
+                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction m.frustum
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
-        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view (ViewerUtils.frustum' m)
+        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum
 
         let att = 
             AttributeMap.unionMany [
@@ -511,14 +528,7 @@ module ViewerApp =
                 ] 
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 
-            ]
-
-        //let annotationGroupsUI =
-        //    div [][
-        //        GuiEx.accordion "Annotations" "Write" true [
-        //            AnnotationGroups.view m.scene.groups |> UI.map AnnotationGroupsMessage
-        //        ]
-        //    ]
+            ]      
 
         let config (model:MModel) =
             adaptive {

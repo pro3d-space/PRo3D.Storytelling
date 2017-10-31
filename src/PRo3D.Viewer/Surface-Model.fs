@@ -9,6 +9,7 @@ open Aardvark.Base.Rendering
 open Aardvark.Opc    
 open Aardvark.SceneGraph
 open DevILSharp.ILU
+open Aardvark.VRVis
 open PRo3D
 
 //[<DomainType>]
@@ -77,6 +78,7 @@ type SurfaceModel = {
     selectedSurface : option<Surface>
     sgSurfaces      : hmap<Guid,SgSurface>
     sgGrouped       : plist<hmap<Guid,SgSurface>>
+    kdTreeCache     : hmap<string, ConcreteKdIntersectionTree>
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -90,6 +92,7 @@ module SurfaceModel =
             selectedSurface = b
             sgSurfaces = hmap.Empty
             sgGrouped = plist.Empty
+            kdTreeCache = hmap.Empty
         }
 
     let surfaceModelPickler : Pickler<SurfaceModel> =

@@ -61,7 +61,7 @@ let main argv =
             DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
         ]
 
-    use bc = new BlockingCollection<string>()
+    use bc = new BlockingCollection<string>()    
         
     let ws (webSocket : WebSocket) (context: HttpContext) =
         socket {
@@ -86,23 +86,30 @@ let main argv =
 
     let send msg =
         match msg with
-            | RemoteAction.SetViewpoint cv -> 
-                let bla = ViewerAction.SetCamera cv |> Seq.singleton
-                mainApp.update Guid.Empty bla
-            | RemoteAction.SetViewpointAndFov (cv, fov) -> 
-                let bla = ViewerAction.SetCameraAndFrustum (cv,fov, 1.0) |> Seq.singleton
-                mainApp.update Guid.Empty bla
+            | RemoteAction.SetCameraView cv ->
+                mainApp.update Guid.Empty (ViewerAction.SetCamera cv |> Seq.singleton)
+            | RemoteAction.SetView v ->                                
+                Log.line "Setting View %A" v
+                let frustum = Frustum.perspective v.fovH v.near v.far (float v.resolution.X / float v.resolution.Y)
+                let frustum = { 
+                    frustum with 
+                      left   = frustum.left   - v.principalPoint.X
+                      right  = frustum.right  - v.principalPoint.X
+                      top    = frustum.top    - v.principalPoint.Y
+                      bottom = frustum.bottom - v.principalPoint.Y
+                    }
+                mainApp.update Guid.Empty (ViewerAction.SetCameraAndFrustum2 (v.view,frustum) |> Seq.singleton)
 
     let remoteApp = 
         App.start (PRo3D.RemoteControlApp.app "http://localhost:4321" send)
 
     let takeScreenshot (shot:Shot) =   
-        let act = MakeScreenshot shot |> Seq.singleton
+        let act = CaptureShot shot |> Seq.singleton
         remoteApp.update Guid.Empty act
         { result = shot.folder }
 
     let takePlatformShot (shot:PlatformShot) =   
-        let act = MakeScreenshot2 shot |> Seq.singleton
+        let act = CapturePlatform shot |> Seq.singleton
         remoteApp.update Guid.Empty act
         { result = shot.folder }
 

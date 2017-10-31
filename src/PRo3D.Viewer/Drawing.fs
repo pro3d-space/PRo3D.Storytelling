@@ -25,6 +25,7 @@ module DrawingApp =
     open PRo3D
     open System.Collections.Concurrent    
     open PRo3D.Drawing
+    open PRo3D.Groups
 
     open MBrace.FsPickler.Json   
     
@@ -738,31 +739,68 @@ module DrawingApp =
             let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color.c) 
             let thickness = Mod.bindOption anno 1.0              (fun a -> a.thickness.value) 
             let key       = Mod.bindOption anno Guid.Empty       (fun a -> a.key) 
-            let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)          
+            let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)
                                    
             Sg.ofList [
                 Sg.lines polyPoints color thickness trafo key //polyline
                 Sg.dots points color view                     //support points
             ]         
 
-        let text (anno : MAnnotation) = 
-            Sg.markdown MarkdownConfig.light anno.text
-                    |> Sg.noEvents
-                    |> Sg.shader {
-                            do! Aardvark.Opc.Shader.stableTrafo
-                        }
-                   // |> Sg.transform (Trafo3d.FromOrthoNormalBasis(-V3d.IOO, V3d.OOI, V3d.OIO))
-                    |> Sg.trafo anno.modelTrafo
-                    |> Sg.translate 0.0 0.0 3.0
+        let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) = 
+            let right = forw.Cross up
 
-        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
+            let rotTrafo = 
+                new Trafo3d(
+                    new M44d(
+                        right.X, up.X, forw.X, 0.0,
+                        right.Y, up.Y, forw.Y, 0.0,
+                        right.Z, up.Z, forw.Z, 0.0,
+                        0.0,     0.0,  0.0,    1.0
+                    ),
+                    new M44d(
+                        right.X, right.Y, right.Z, 0.0,
+                        up.X,    up.Y,    up.Z,    0.0,
+                        forw.X,  forw.Y,  forw.Z,  0.0,
+                        0.0,     0.0,     0.0,     1.0
+                    )
+            )
+            
+            rotTrafo * modelt
+
+        let text (view : IMod<CameraView>) conf (anno : MAnnotation) =
+
+            let points = anno.points |> AList.toMod
+            let pos = 
+                points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
+
+            let invScaleTrafo = 
+                Sg.computeInvariantScale view conf.nearPlane pos (Mod.constant 0.1) conf.hfov |> Mod.map Trafo3d.Scale
+
+            let billboardTrafo = 
+                adaptive {
+                    let! v = view
+                    let! modelt = anno.modelTrafo
+
+                    return screenAligned v.Forward v.Up modelt
+                }
+
+            Sg.markdown MarkdownConfig.light anno.text
+                |> Sg.noEvents
+                |> Sg.shader {
+                        do! Aardvark.Opc.Shader.stableTrafo
+                    }
+                // |> Sg.transform (Trafo3d.FromOrthoNormalBasis(-V3d.IOO, V3d.OOI, V3d.OIO))
+                |> Sg.trafo invScaleTrafo
+                |> Sg.trafo billboardTrafo                
+
+        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : bool) =
             let points = getPolyline anno
                        
             Sg.ofList [
-                Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
-                Sg.dots anno.points c view |> Sg.onOff dots
-                drawDns anno view conf |> Sg.onOff anno.showDns
-                anno |> text
+                yield Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
+                if dots then yield Sg.dots anno.points c view 
+                yield drawDns anno view conf |> Sg.onOff anno.showDns                
+                yield anno |> text view conf
             ] |> Sg.onOff anno.visible
 
         let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) (cam:IMod<CameraView>) : ISg<Drawing.Action> =
@@ -785,12 +823,10 @@ module DrawingApp =
                 aset {
                     for a in annoSet do
                        let c = UI.mkColor model a
-                       let dots = 
-                         a.geometry |> Mod.map(fun g -> 
-                            match g with
-                                | Geometry.Line | Geometry.Point -> true
-                                | _ -> false
-                            )
+                       let! geo = a.geometry
+
+                       let dots = match geo with | Geometry.Line | Geometry.Point -> true | _ -> false
+                       
                        yield finishedAnnotation a cam c config dots
                 } |> Sg.set
                                 

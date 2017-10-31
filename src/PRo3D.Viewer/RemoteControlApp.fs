@@ -49,7 +49,7 @@ module RemoteControlApp =
                 | x::[] -> x
                 | _ -> failwith "doent know"
         let screenshot =            
-            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d" baseAddress clientStatistic.name width height
+            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=8" baseAddress clientStatistic.name width height
         Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
 
         match System.IO.Directory.Exists folder with
@@ -111,44 +111,40 @@ module RemoteControlApp =
            
     let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
         match a with
-            | SelectShot sh -> 
-                let cv = sh |> Shot.getCamera
+            | CaptureShot sh ->                
+                let view = sh |> Shot.getViewSpec
+                view |> RemoteAction.SetView |> send
 
-                let cv = CameraView.ofTrafo cv.ViewTrafo
-
-                send <| RemoteAction.SetViewpoint (cv)
-                { m with selectedShot = Some sh }
-            | MakeScreenshot2 psh ->
-                PlatformShot.getCameraAnfFov m.Rover psh
-                    |> RemoteAction.SetViewpointAndFov 
-                    |> send               
-
-                try takeScreenshot baseAddress psh.col psh.row psh.id psh.folder with e -> printfn "error: %A" e
-                m                
-            | MakeScreenshot sh ->                
-                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                
                 try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
                 m
-            | UpdateCamera sh ->                                
-                send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)
+            | CapturePlatform psh ->
+                let view = PlatformShot.getViewSpec m.Rover psh
+                view |> RemoteAction.SetView |> send
+
+                try takeScreenshot baseAddress view.resolution.X view.resolution.Y psh.id psh.folder with e -> printfn "error: %A" e
+                m                
+            | UpdateCameraTest sh ->                                
+                send <| RemoteAction.SetCameraView (sh |> Shot.getCamera)
                 m
-            | UpdateCamera2 sh ->
+            | UpdatePlatformTest sh ->
                 let platform = RemoteControlModel.PlatformShot.fromRoverModel m.Rover sh
                 match platform with 
                    | Some p ->
-                        let psh = PlatformShot.withShot sh p
+                        
+                        let view = PlatformShot.getViewSpec m.Rover p
+                        view |> RemoteAction.SetView |> send
 
-                        PlatformShot.getCameraAnfFov m.Rover p 
-                              |> RemoteAction.SetViewpointAndFov 
-                              |> send               
-
-                        try takeScreenshot baseAddress psh.col psh.row psh.id psh.folder with e -> printfn "error: %A" e
+                        try takeScreenshot baseAddress view.resolution.X view.resolution.Y sh.id sh.folder with e -> printfn "error: %A" e
                         m
                     | None -> m
-            | Play ->
-                
+            | SelectShot sh -> 
+                //let cv = sh |> Shot.getCamera
+                //let cv = CameraView.ofTrafo cv.ViewTrafo
+                //send <| RemoteAction.SetCameraView (cv)
+                { m with selectedShot = Some sh }
+            | Play ->                
                 for sh in m.shots do
-                    send <| RemoteAction.SetViewpoint (sh |> Shot.getCamera)                  
+                    send <| RemoteAction.SetCameraView (sh |> Shot.getCamera)                  
                     try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
                 m
             | Load ->
@@ -168,41 +164,56 @@ module RemoteControlApp =
                         let psh = PlatformShot.fromRoverModel m.Rover sh
                         match psh with
                           | Some p ->                                                                                                         
-                            PlatformShot.getCameraAnfFov m.Rover p 
-                              |> RemoteAction.SetViewpointAndFov 
+                            PlatformShot.getViewSpec m.Rover p 
+                              |> RemoteAction.SetView 
                               |> send                            
                           | None -> ()                                                                       
                     | _ -> ()
                 m
 
-    let viewShots (m:MRemoteModel) = 
-        Incremental.div 
-            (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px"]) 
-            (                
-                alist {                                                          
+    let item (sh:Shot) (selected : IMod<Option<Shot>>) =
+        let attr = 
+            let background = "background-color:#636363"
+            amap {
+                let! sel = selected
+                let bla =
+                  match sel with 
+                    | Some x -> x.id = sh.id
+                    | None -> false
 
-                    for sh in m.shots do 
-                        yield div [clazz "item"; onClick (fun _ -> SelectShot sh)] [
-                            div [clazz "content"] [                                        
-                                div [clazz "header"] [
-                                    text sh.id
-                                    i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCamera sh)] []
-                                    i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
-                                    i [clazz "ui inverted icon find"; onClick (fun _ -> UpdateCamera2 sh)] []
-                                ]
-                            ]
+                if bla then yield style background
+            
+                yield clazz "item"                
+                yield onClick (fun _ -> SelectShot sh)
+            } |> AttributeMap.ofAMap
+
+        Incremental.div attr 
+            (
+                alist {
+                    yield div [clazz "content"] [                                        
+                        div [clazz "header"] [
+                            text sh.id
+                            i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCameraTest sh)] [] |> UI.wrapToolTip "goto waypoint"
+                            i [clazz "ui inverted icon camera retro"; onClick (fun _ -> UpdateCameraTest sh)] [] |> UI.wrapToolTip "take screenshot"
+                            // i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
+                            i [clazz "ui inverted icon find"; onClick (fun _ -> UpdatePlatformTest sh)] [] |> UI.wrapToolTip "take platformshot"
                         ]
+                    ]
                 }
             )
 
+    //#bdbdbd
+    let viewShots (m:MRemoteModel) = 
+        Incremental.div 
+            (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto; width: 300px; overflow : visible"]) 
+            (                
+                alist {                                                          
+                    for sh in m.shots do 
+                        yield item sh m.selectedShot
+                }
+            )
     
-
-    let view (m : MRemoteModel) : DomNode<RemoteControlModel.Action> =
-        
-  //      <div class="ui three column grid">
-  //<div class="column">
-  //  <div class="ui segment">
-
+    let view (m : MRemoteModel) : DomNode<RemoteControlModel.Action> =          
         require Html.semui (
             div[clazz "ui two column grid"] [
                 div[clazz "ui segment"] [
@@ -216,7 +227,6 @@ module RemoteControlApp =
                         i [clazz "remove icon"][]
                         text "Delete Model"
                     ]
-
                 ]
                 div[clazz "column"] [
                     div[clazz "ui segment"] [
@@ -236,16 +246,13 @@ module RemoteControlApp =
                         RoverApp.view m.Rover |> UI.map RoverMessage
                     ]
                 ]
-                div[clazz "column"] []
-                
+                div[clazz "column"] []                
             ]    
         )
 
     let threads (m : RemoteModel) : ThreadPool<RemoteControlModel.Action> =
         ThreadPool.empty
-
     
-
     let app baseAddress send =
         {
             unpersist = Unpersist.instance

@@ -207,6 +207,8 @@ module RoverApp =
         let a = r.axes |> HMap.find up.axisId
         let mutable pAxes = IPWrapper.UnMarshalArray<IPWrapper.SAxis>(p.m_poPlatformAxes)
 
+        let up = { up with angle = -up.angle}
+
         // push new angles to platform (deg to gon!!!)               
         let angle = if (up.axisId = "Pan Axis"  && (up.angle < 0.0)) then (up.angle + 360.0) else up.angle
 

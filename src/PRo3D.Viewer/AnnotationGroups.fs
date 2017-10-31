@@ -1,4 +1,4 @@
-﻿namespace PRo3D
+﻿namespace PRo3D.Groups
 
 open Aardvark.Base
 open Aardvark.Application
@@ -44,7 +44,7 @@ module AnnotationGroups =
                           c@sga
 
     let loadAnnotationGroups (path:string) =
-        let annotationGroups = Serialization.loadAs<PRo3D.AnnotationGroupsModel> path
+        let annotationGroups = Serialization.loadAs<PRo3D.Groups.AnnotationGroupsModel> path
         let flatA = flattenChilds annotationGroups.rootGroup 
                         |> Seq.ofList 
                         |> Seq.choose (fun x -> match x with
@@ -73,22 +73,17 @@ module AnnotationGroups =
     let deleteItemAt (p : list<Index>) (f : AnnotationGroup -> Guid -> AnnotationGroup) (t : AnnotationGroup) = 
         let rec go (p : list<Index>) (t : AnnotationGroup)  =
             match p with
-                | x::rest -> match rest with
-                                | [] -> match PList.tryGet x t.subGroups with
-                                            | Some c -> f t c.key
-                                            | None -> t
-                                | _ -> match PList.tryGet x t.subGroups with
-                                            | Some c -> let ag = {
-                                                            name = t.name
-                                                            key = t.key
-                                                            childList = t.childList
-                                                            subGroups = PList.set x (go rest c) t.subGroups
-                                                            visible = t.visible
-                                                            expanded = t.expanded
-                                                            }
-                                                        ag
-                                            | None   -> t
-                |_ -> t
+              | x::rest -> 
+                match rest with
+                  | [] -> 
+                    match PList.tryGet x t.subGroups with
+                      | Some c -> f t c.key
+                      | None -> t
+                  | _ -> 
+                    match PList.tryGet x t.subGroups with
+                      | Some c -> { t with subGroups = PList.set x (go rest c) t.subGroups }                                 
+                      | None   -> t
+              |_ -> t
         go (List.rev p) t 
         
     let removeGroup (ag:AnnotationGroup) (id:Guid) = ag.subGroups |> PList.filter (fun x -> x.key <> id) 
@@ -140,17 +135,25 @@ module AnnotationGroups =
                 let func = (function (x:AnnotationGroup) -> { x with expanded = not x.expanded })
                 { model with rootGroup = updateItemAt p func model.rootGroup }
             | AddGroup p -> 
-                let newGroup = {    name = "newGroup" // TODO: get group name from user
-                                    key =  Guid.NewGuid()
-                                    childList = plist.Empty
-                                    subGroups = plist.Empty
-                                    visible = true
-                                    expanded = true
-                                    }
-                let func = (function (x:AnnotationGroup) -> { x with subGroups = PList.append newGroup x.subGroups })
+                let newGroup = 
+                    {    
+                        name = "newGroup" // TODO: get group name from user
+                        key =  Guid.NewGuid()
+                        childList = plist.Empty
+                        subGroups = plist.Empty
+                        visible = true
+                        expanded = true
+                    }
+
+                let func = 
+                    (fun (x:AnnotationGroup) -> { x with subGroups = PList.append newGroup x.subGroups })
+
                 { model with rootGroup = updateItemAt p func model.rootGroup }
             | RemoveGroup p -> 
-                let func = (fun (x:AnnotationGroup) (id:Guid) -> { x with subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups })
+                let func = 
+                    fun (x:AnnotationGroup) (id:Guid) -> 
+                        { x with subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups }
+
                 let newRoot = deleteItemAt p func model.rootGroup
                 let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot |> PList.ofList)
                 m'

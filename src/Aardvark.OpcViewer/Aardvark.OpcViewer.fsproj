@@ -87,6 +87,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="CSharpUtils">
+      <HintPath>..\..\bin\Debug\CSharpUtils.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
     <Reference Include="System.Core" />

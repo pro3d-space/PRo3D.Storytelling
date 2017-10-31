@@ -12,6 +12,7 @@ open Aardvark.SceneGraph
 open PRo3D.ReferenceSystem
 
 open PRo3D
+open PRo3D.Groups
 
 type Action =
         | SetSemantic      of Semantic

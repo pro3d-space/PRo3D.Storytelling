@@ -203,7 +203,7 @@ module Mutable =
         let _picking = ResetMod.Create(__initial.picking)
         let _recent = MRecent.Create(__initial.recent)
         let _waypoints = MList.Create(__initial.waypoints)
-        let _hfov = ResetMod.Create(__initial.hfov)
+        let _frustum = ResetMod.Create(__initial.frustum)
         let _aspect = ResetMod.Create(__initial.aspect)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
@@ -215,7 +215,7 @@ module Mutable =
         member x.picking = _picking :> IMod<_>
         member x.recent = _recent
         member x.waypoints = _waypoints :> alist<_>
-        member x.hfov = _hfov :> IMod<_>
+        member x.frustum = _frustum :> IMod<_>
         member x.aspect = _aspect :> IMod<_>
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
@@ -232,7 +232,7 @@ module Mutable =
                 ResetMod.Update(_picking,v.picking)
                 MRecent.Update(_recent, v.recent)
                 MList.Update(_waypoints, v.waypoints)
-                ResetMod.Update(_hfov,v.hfov)
+                ResetMod.Update(_frustum,v.frustum)
                 ResetMod.Update(_aspect,v.aspect)
                 _past.Update(v.past)
                 _future.Update(v.future)
@@ -294,11 +294,11 @@ module Mutable =
                     override x.Set(r,v) = { r with waypoints = v }
                     override x.Update(r,f) = { r with waypoints = f r.waypoints }
                 }
-            let hfov =
-                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.double>() with
-                    override x.Get(r) = r.hfov
-                    override x.Set(r,v) = { r with hfov = v }
-                    override x.Update(r,f) = { r with hfov = f r.hfov }
+            let frustum =
+                { new Lens<PRo3D.Viewer.Model, Aardvark.Base.Frustum>() with
+                    override x.Get(r) = r.frustum
+                    override x.Set(r,v) = { r with frustum = v }
+                    override x.Update(r,f) = { r with frustum = f r.frustum }
                 }
             let aspect =
                 { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.double>() with

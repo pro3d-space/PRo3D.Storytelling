@@ -253,11 +253,13 @@ module Mutable =
         let _selectedSurface = MOption.Create(__initial.selectedSurface, (fun v -> MSurface.Create(v)), (fun (m,v) -> MSurface.Update(m, v)), (fun v -> v))
         let _sgSurfaces = MMap.Create(__initial.sgSurfaces, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))
         let _sgGrouped = MList.Create(__initial.sgGrouped, (fun v -> MMap.Create(v, (fun v -> MSgSurface.Create(v)), (fun (m,v) -> MSgSurface.Update(m, v)), (fun v -> v))), (fun (m,v) -> MMap.Update(m, v)), (fun v -> v :> amap<_,_>))
+        let _kdTreeCache = MMap.Create(__initial.kdTreeCache)
         
         member x.surfaces = _surfaces :> alist<_>
         member x.selectedSurface = _selectedSurface :> IMod<_>
         member x.sgSurfaces = _sgSurfaces :> amap<_,_>
         member x.sgGrouped = _sgGrouped :> alist<_>
+        member x.kdTreeCache = _kdTreeCache :> amap<_,_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.SurfaceModel) =
@@ -268,6 +270,7 @@ module Mutable =
                 MOption.Update(_selectedSurface, v.selectedSurface)
                 MMap.Update(_sgSurfaces, v.sgSurfaces)
                 MList.Update(_sgGrouped, v.sgGrouped)
+                MMap.Update(_kdTreeCache, v.kdTreeCache)
                 
         
         static member Create(__initial : PRo3D.Surfaces.SurfaceModel) : MSurfaceModel = MSurfaceModel(__initial)
@@ -307,4 +310,10 @@ module Mutable =
                     override x.Get(r) = r.sgGrouped
                     override x.Set(r,v) = { r with sgGrouped = v }
                     override x.Update(r,f) = { r with sgGrouped = f r.sgGrouped }
+                }
+            let kdTreeCache =
+                { new Lens<PRo3D.Surfaces.SurfaceModel, Aardvark.Base.hmap<Microsoft.FSharp.Core.string,Aardvark.VRVis.ConcreteKdIntersectionTree>>() with
+                    override x.Get(r) = r.kdTreeCache
+                    override x.Set(r,v) = { r with kdTreeCache = v }
+                    override x.Update(r,f) = { r with kdTreeCache = f r.kdTreeCache }
                 }

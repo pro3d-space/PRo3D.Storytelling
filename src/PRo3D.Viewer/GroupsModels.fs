@@ -1,4 +1,4 @@
-﻿namespace PRo3D
+﻿namespace PRo3D.Groups
 
 open System
 open Aardvark.Base

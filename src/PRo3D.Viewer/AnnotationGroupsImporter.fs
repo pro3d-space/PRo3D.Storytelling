@@ -7,6 +7,7 @@ module AnnotationGroupsImporter =
 
     open Aardvark.Base
     open Aardvark.UI
+    open PRo3D.Groups
 
     let xname s = XName.Get(s)
 
