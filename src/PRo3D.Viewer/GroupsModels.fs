@@ -141,7 +141,7 @@ type AnnotationGroupsModel = {
     activeGroupName      : string
     activeChildKey       : Guid
     activeChildPath      : list<Index>
-    annotationsFlat      : plist<Annotation>
+    annotationsFlat      : hset<Annotation>
     lastSelectedItem     : SelectedItem
     }
 
@@ -154,7 +154,7 @@ module AnnotationGroupsModel =
         activeGroupName  = ""
         activeChildKey = Guid.Empty
         activeChildPath = list.Empty // (is path of parent group!)
-        annotationsFlat = plist.Empty
+        annotationsFlat = hset.Empty
         lastSelectedItem = SelectedItem.Annotation
         }
 

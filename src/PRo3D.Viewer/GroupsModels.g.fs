@@ -174,7 +174,7 @@ module Mutable =
         let _activeGroupName = ResetMod.Create(__initial.activeGroupName)
         let _activeChildKey = ResetMod.Create(__initial.activeChildKey)
         let _activeChildPath = ResetMod.Create(__initial.activeChildPath)
-        let _annotationsFlat = MList.Create(__initial.annotationsFlat, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
+        let _annotationsFlat = MSet.Create(unbox, __initial.annotationsFlat, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
         let _lastSelectedItem = ResetMod.Create(__initial.lastSelectedItem)
         
         member x.rootGroup = _rootGroup
@@ -183,7 +183,7 @@ module Mutable =
         member x.activeGroupName = _activeGroupName :> IMod<_>
         member x.activeChildKey = _activeChildKey :> IMod<_>
         member x.activeChildPath = _activeChildPath :> IMod<_>
-        member x.annotationsFlat = _annotationsFlat :> alist<_>
+        member x.annotationsFlat = _annotationsFlat :> aset<_>
         member x.lastSelectedItem = _lastSelectedItem :> IMod<_>
         
         member x.Current = __current :> IMod<_>
@@ -197,7 +197,7 @@ module Mutable =
                 ResetMod.Update(_activeGroupName,v.activeGroupName)
                 ResetMod.Update(_activeChildKey,v.activeChildKey)
                 ResetMod.Update(_activeChildPath,v.activeChildPath)
-                MList.Update(_annotationsFlat, v.annotationsFlat)
+                MSet.Update(_annotationsFlat, v.annotationsFlat)
                 ResetMod.Update(_lastSelectedItem,v.lastSelectedItem)
                 
         
@@ -252,7 +252,7 @@ module Mutable =
                     override x.Update(r,f) = { r with activeChildPath = f r.activeChildPath }
                 }
             let annotationsFlat =
-                { new Lens<PRo3D.Groups.AnnotationGroupsModel, Aardvark.Base.plist<PRo3D.Annotation>>() with
+                { new Lens<PRo3D.Groups.AnnotationGroupsModel, Aardvark.Base.hset<PRo3D.Annotation>>() with
                     override x.Get(r) = r.annotationsFlat
                     override x.Set(r,v) = { r with annotationsFlat = v }
                     override x.Update(r,f) = { r with annotationsFlat = f r.annotationsFlat }

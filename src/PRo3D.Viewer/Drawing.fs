@@ -48,15 +48,11 @@ module DrawingApp =
         //if there are at least 3 points do dns calculation (debug, dev). 
         //might take long for large number of points so created on demand?
 
-        let anns = 
-            match getFinishedAnnotation up north model with
-                | Some a -> 
-                 //   let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
-                 ////   Log.line "sending %A" a.semantic
-                 //   bc.Add json
-
-                    model.allAnnotations |> PList.prepend a
-                | None -> model.allAnnotations
+        //let anns = 
+        //    match getFinishedAnnotation up north model with
+        //        | Some a -> 
+        //            model.annotations.annotationsFlat |> PList.prepend a
+        //        | None -> model.annotations.annotationsFlat
 
         let rootGroup = 
             match getFinishedAnnotation up north model with
@@ -65,21 +61,15 @@ module DrawingApp =
                  //   Log.line "sending %A" a.semantic
                     bc.Add json
 
-                    let func = (fun (x : AnnotationGroup) -> {  x with childList = x.childList |> PList.prepend (Child.Annotations a) })
-                    AnnotationGroups.updateItemAt model.annotationGroups.activeGroupPath func model.annotationGroups.rootGroup
-                | None -> model.annotationGroups.rootGroup
+                    AnnotationGroups.addToActiveGroup model.annotations a
+                | None -> model.annotations.rootGroup
+       
+        let flat = (AnnotationGroups.flattenChilds rootGroup)
 
-        //let flatAnnos = 
-        //    match getFinishedAnnotation up north model with
-        //        | Some a -> 
-        //            model.annotationGroups.annotationsFlat |> PList.prepend a
-        //        | None -> model.annotationGroups.annotationsFlat
-        
-        //let groups = AnnotationGroups.updateAnnotationGroups model.annotationGroups rootGroup flatAnnos
-        let groups = AnnotationGroups.updateAnnotationGroups model.annotationGroups rootGroup (AnnotationGroups.flattenChilds rootGroup |> PList.ofList)
+        let groups = 
+            AnnotationGroups.updateAnnotationGroups model.annotations rootGroup flat
 
-        { model with allAnnotations = anns; working = None; pendingIntersections = ThreadPool.empty; 
-                    annotationGroups = groups } 
+        { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
 
     let addPoint up north samplePoint p model surfaceName bc =
         let working, newSegment = 
@@ -260,25 +250,20 @@ module DrawingApp =
                 match Dialogs.saveDialog w with
                     | None -> model
                     | Some p -> 
-                        Serialization.save "./lastMeasure" model.annotationGroups |> ignore
-                        { model with annotationGroups = Serialization.save p model.annotationGroups }
+                        Serialization.save "./lastMeasure" model.annotations |> ignore
+                        { model with annotations = Serialization.save p model.annotations }
             | Load,_ ->                
                 match Dialogs.openDialog w with
                     | None -> model
                     | Some path -> 
-                        { model with annotationGroups = AnnotationGroups.loadAnnotationGroups path }
+                        { model with annotations = AnnotationGroups.loadAnnotationGroups path }
             | QuickLoad,_ ->  
                 let groups = AnnotationGroups.loadAnnotationGroups "./lastMeasure" 
-                { model with annotationGroups = groups; allAnnotations = groups.annotationsFlat  }
-            | Send, _ ->                                        
-              // // let json = model.annotations |> PList.map JsonTypes.ofAnnotation |> pickler.PickleTyped
-                //Log.line "Sending %i annotations" (model.annotations |> PList.count)
-                //let json = model.annotations |> PList.toList |> List.map JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
-                //Log.warn "sending %A" json
-                //bc.Add json
+                { model with annotations = groups }
+            | Send, _ ->                                                      
                 model
             | Clear,_ ->
-                { model with annotationGroups = AnnotationGroupsModel.initial; allAnnotations = PList.empty }
+                { model with annotations = AnnotationGroupsModel.initial }
             | Select (p,id), false ->
                 let selected = if (not model.selected.IsEmpty) then hset.Empty else model.selected
 
@@ -288,25 +273,35 @@ module DrawingApp =
                         then 
                             HSet.remove id selected, None 
                         else 
-                            HSet.add id hset.Empty, AnnotationGroups.tryGetChild model.annotationGroups.rootGroup id //DrawingModel.tryGet model id
+                            HSet.add id hset.Empty, AnnotationGroups.tryGetChild model.annotations.rootGroup id
                     else
-                        HSet.add id selected, AnnotationGroups.tryGetChild model.annotationGroups.rootGroup id //DrawingModel.tryGet model id
-                
-                let ann = DrawingModel.tryGet model.allAnnotations id   
-                let ann1 = DrawingModel.tryGet model.annotationGroups.annotationsFlat id   
-                { model with selected = selection; selectedAnnotation = ann1; annotationGroups = {model.annotationGroups with activeChildKey = id; activeChildPath = p; lastSelectedItem = SelectedItem.Annotation} }  
+                        HSet.add id selected, AnnotationGroups.tryGetChild model.annotations.rootGroup id
+                                
+                let ann1 = DrawingModel.tryGet' model.annotations.annotationsFlat id   
+                { model with 
+                    selected = selection; 
+                    selectedAnnotation = ann1; 
+                    annotations = {
+                                    model.annotations with 
+                                        activeChildKey = id; 
+                                        activeChildPath = p; 
+                                        lastSelectedItem = SelectedItem.Annotation
+                                  } 
+                }  
             | Nop, _ -> model
             | AnnotationPropertiesMsg msg,_ ->                
                 match model.selectedAnnotation with
                     | Some a ->
-                        let a' = AnnotationProperties.update a msg
-                        let annotations' = 
-                            model.allAnnotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a')     
+                        let a' = AnnotationProperties.update a msg                        
+                        
                         let flatAnnos = 
-                            model.annotationGroups.annotationsFlat.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a')  
-                        { model with selectedAnnotation = Some a'; 
-                                     allAnnotations = annotations' |> PList.ofList;
-                                     annotationGroups = {model.annotationGroups with annotationsFlat = flatAnnos |> PList.ofList} }
+                            model.annotations.annotationsFlat |> HSet.map ( fun a -> if a.key = a'.key then a' else a ) 
+
+                        let annotations = { model.annotations with annotationsFlat = flatAnnos }
+
+                        { model with 
+                            selectedAnnotation = Some a'                                      
+                            annotations =  annotations }
                     | None -> model
                         
             | Undo, _ -> 
@@ -318,18 +313,18 @@ module DrawingApp =
                     | Some f -> f
                     | None -> model
             | RemoveAnnotation (p,id), _ ->
+                model
+            //    let toRemove = model.allAnnotations.AsList |> List.tryFindIndex (fun d -> d.key = id)
+            //    match toRemove with
+            //        | Some index ->
+            //            let as' = model.allAnnotations|> PList.removeAt index
+            //            Thread.Sleep(20)
+            //            //if removed is selected also remove selected copy
 
-                let toRemove = model.allAnnotations.AsList |> List.tryFindIndex (fun d -> d.key = id)
-                match toRemove with
-                    | Some index ->
-                        let as' = model.allAnnotations|> PList.removeAt index
-                        Thread.Sleep(20)
-                        //if removed is selected also remove selected copy
-
-                        { model with allAnnotations = as' } |> stash
-                    | None -> model             
+            //            { model with allAnnotations = as' } |> stash
+            //        | None -> model             
             | ToggleVisiblity id, _ -> model // implemented in AnnotationGroups   
-            | AnnotationGroupsMessage msg,_ -> { model with annotationGroups = AnnotationGroups.update model.annotationGroups msg}
+            | AnnotationGroupsMessage msg,_ -> { model with annotations = AnnotationGroups.update model.annotations msg}
             | _ -> model
 
     module UI =
@@ -401,58 +396,7 @@ module DrawingApp =
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "Redo"; onMouseClick (fun _ -> Redo)] [i [clazz "arrow right icon"] [] ]
                 )
-            ] 
-
-        let viewAnnotations (model:MDrawingModel) = 
-                        
-            Incremental.div 
-                    (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : visible;max-height: 30%"    ]) (                      
-                        alist {
-                            for a in model.allAnnotations do 
-                                                                        
-                                let! sem = a.semantic
-                                let! c = mkColor model a
-
-                                let bgc = sprintf "color: %s" (Html.ofC4b c)
-                                
-                                let! visible = a.visible
-                                let visibleIcon = if visible then "unhide icon" else "hide icon"
-                                let select = fun _ -> Select ([], a.key |> Mod.force)
-
-                                yield div [clazz "item"] [
-                                        i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
-                                        div [clazz "content"] [
-                                            let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
-                                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
-                                            yield Incremental.div (AttributeMap.ofList [clazz "header"]) (
-                                                alist {
-                                                    yield Incremental.text header
-                                                    yield 
-                                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                                                            i [clazz visibleIcon
-                                                               attribute "title" "Toggle"
-                                                               attribute "data-position" "left center"
-                                                               attribute "data-variation" "mini"
-                                                               onClick (fun _ -> ToggleVisiblity (a.key |> Mod.force))][] 
-                                                        )
-                                                    yield 
-                                                        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                                                            i [clazz "Remove icon"
-                                                               attribute "title" "Remove"
-                                                               attribute "data-position" "left center"
-                                                               attribute "data-variation" "mini"
-                                                            ][]
-                                                              // onClick (fun _ -> RemoveAnnotation (a.key |> Mod.force))][] 
-                                                        )
-                                                } 
-                                            ) 
-                                            yield div [clazz "description"] [Incremental.text desc]      
-                                        ]
-                                    ]
-                        }     
-                ) 
-
-        
+            ]         
 
         let viewAnnotationsInGroup (path:list<Index>) (model:MDrawingModel)(select : MAnnotation*list<Index> -> 'outer)(lift : AnnotationGroups.Action -> 'outer) (annotations: alist<IMod<MChild>>) : alist<DomNode<'outer>> =
                         
@@ -499,13 +443,13 @@ module DrawingApp =
 
             alist {
 
-                let! c = AnnotationGroups.mkColor model.annotationGroups.activeGroupKey group.key
+                let! c = AnnotationGroups.mkColor model.annotations.activeGroupKey group.key
                 let color = sprintf "color: %s" (Html.ofC4b c)                
                 let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
 
                 let icon =
                     adaptive {
-                        let! active = model.annotationGroups.activeGroupKey
+                        let! active = model.annotations.activeGroupKey
                         let! group  =  group.key
 
                         return if (active = group) then "circle icon" else "circle thin icon"
@@ -582,7 +526,7 @@ module DrawingApp =
 
         let viewAnnotationGroups (model:MDrawingModel) = 
              require Html.semui (
-                TreeView.view [] (viewTree [] model.annotationGroups.rootGroup model)
+                TreeView.view [] (viewTree [] model.annotations.rootGroup model)
             )                                    
  
     let threads (m : DrawingModel) = m.pendingIntersections
@@ -801,36 +745,29 @@ module DrawingApp =
 
         let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
             let points = getPolyline anno
-            
-            let sgs = 
-                aset {                                        
-                    let! dots = dots
-                    if dots then 
-                        yield Sg.dots anno.points c view
 
-                    let! dns = anno.showDns
-                    if dns then
-                        yield drawDns anno view conf
+            let optional (sg : ISg<_>) (m : IMod<bool>) : aset<ISg<_>> =
+                adaptive {
+                    let! m = m 
+                    if m then return sg
+                    else return Sg.ofSeq []
+                } |> ASet.ofModSingle
 
-                    let! t = anno.text
-                    if not (t.IsEmpty()) then
-                        yield anno |> text view conf
-                }
-            
+            let dots  = dots |> optional (Sg.dots anno.points c view)
+            let dns   = anno.showDns  |> optional (drawDns anno view conf)
+            let texts = anno.text |> Mod.map (String.isEmpty >> not) |> optional (text view conf anno)
+            let sgs = ASet.unionMany' [dots; dns; texts]
+
             Sg.ofList [
                 Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
-                Sg.set sgs ] |> Sg.onOff anno.visible
-            //Sg.ofList [
-            //    yield Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
-            //    if dots then yield Sg.dots anno.points c view 
-            //    yield drawDns anno view conf |> Sg.onOff anno.showDns
-            //    //yield anno |> text view conf
-            //] |> Sg.onOff anno.visible
+                Sg.set sgs 
+            ] |> Sg.onOff anno.visible
 
         let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) (cam:IMod<CameraView>) : ISg<Drawing.Action> =
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler           
-            let annoSet = ASet.ofAList model.annotationGroups.annotationsFlat //model.allAnnotations
+            let annoSet = 
+                model.annotations.annotationsFlat //model.allAnnotations
 
             let config = 
                 {

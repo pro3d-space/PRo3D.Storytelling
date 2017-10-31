@@ -54,7 +54,7 @@ module ViewerApp =
 
     // drawing
     let _drawing         = Model.Lens.drawing
-    let _group'          = _drawing |. DrawingModel.Lens.annotationGroups
+    let _group'          = _drawing |. DrawingModel.Lens.annotations
     let _flatAnnotations = _group' |. AnnotationGroupsModel.Lens.annotationsFlat
     let _annotations     = _group' |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.childList
     let _groups          = _group' |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.subGroups
@@ -144,6 +144,8 @@ module ViewerApp =
         let view' = CameraView.lookAt cam.view.Location (cam.view.Location + cam.view.Forward) m.scene.referenceSystem.up.value
         let cam' = { cam with view = view' }
         _camera.Set(m,cam')    
+    
+    let mutable cache = hmap.Empty
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =
         
@@ -162,8 +164,8 @@ module ViewerApp =
                 let m = _view.Set(m, cv)
                 { m with frustum = frustum }
             | AnnotationGroupsMessageViewer msg,_,_ ->
-                let ag = m.drawing.annotationGroups 
-                { m with drawing = { m.drawing with annotationGroups = AnnotationGroups.update ag msg}}
+                let ag = m.drawing.annotations 
+                { m with drawing = { m.drawing with annotations = AnnotationGroups.update ag msg}}
             | DrawingMessage msg, Interactions.DrawAnnotation,_->
                 { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg } |> stash
             | SurfaceActions msg,_,_ ->
@@ -177,20 +179,18 @@ module ViewerApp =
             | AnnotationMessage msg,_,_ ->                
                     match m.drawing.selectedAnnotation with
                         | Some a -> 
-                            let a' = AnnotationProperties.update a msg
-                            let annotations' = 
-                                m.drawing.allAnnotations.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a') |> PList.ofList   
+                            let a' = AnnotationProperties.update a msg                                                       
 
-                            //let flatAnnos = 
-                            //    m.drawing.annotationGroups.annotationsFlat.AsList |> List.updateIf (fun x -> x.key = a'.key) (fun _ -> a') |> PList.ofList
+                            let func = 
+                                (fun (x:AnnotationGroup) -> 
+                                    { x with childList = if PList.count x.childList > 0 then AnnotationGroups.updateChild x.childList (Child.Annotations a) else x.childList })
 
-                            let func = (fun (x:AnnotationGroup) -> { x with childList = if PList.count x.childList > 0 then AnnotationGroups.updateChild x.childList (Child.Annotations a) else x.childList })
-                            let path = m.drawing.annotationGroups.activeChildPath
-                            let root = AnnotationGroups.updateItemAt path func m.drawing.annotationGroups.rootGroup
-                            let flats = AnnotationGroups.flattenChilds root |> PList.ofList
-                            let groups = AnnotationGroups.updateAnnotationGroups m.drawing.annotationGroups root flats
+                            let path = m.drawing.annotations.activeChildPath
+                            let root = AnnotationGroups.updateItemAt path func m.drawing.annotations.rootGroup
+                            let flats = AnnotationGroups.flattenChilds root
+                            let groups = AnnotationGroups.updateAnnotationGroups m.drawing.annotations root flats
 
-                            let drawing' = { m.drawing with selectedAnnotation = Some a'; allAnnotations = annotations'; annotationGroups = groups }
+                            let drawing' = { m.drawing with selectedAnnotation = Some a'; annotations = groups }
 
                             { m with drawing = drawing' }
                         | None -> m       
@@ -212,20 +212,20 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | Some importPath -> 
                         let annos = (MeasurementsImporter.startImporter importPath) |> PList.map( fun x -> Child.Annotations x) 
-                        let newAnnotations = m.drawing.annotationGroups.rootGroup.childList |> PList.append' annos
+                        let newAnnotations = m.drawing.annotations.rootGroup.childList |> PList.append' annos
                         let m' = _annotations.Set(m, newAnnotations) 
                         m'
                     | None -> m   
             | ImportAnnotationGroups,_,_ ->
                 match Dialogs.openDialog w with
                     | Some x -> 
-                        let newGroups = m.drawing.annotationGroups.rootGroup.subGroups |> PList.append' (AnnotationGroupsImporter.startImporter x)
+                        let newGroups = m.drawing.annotations.rootGroup.subGroups |> PList.append' (AnnotationGroupsImporter.startImporter x)
                         let m' = _groups.Set(m, newGroups)
-                        let flatA = AnnotationGroups.flattenChilds m'.drawing.annotationGroups.rootGroup 
-                                    |> PList.ofList
-                                    |> PList.choose (fun x -> match x with
-                                                                | Child.Annotations a -> Some a
-                                                                | _-> None)
+                        let flatA = AnnotationGroups.flattenChilds m'.drawing.annotations.rootGroup                                     
+                                    |> HSet.choose (fun x -> 
+                                         match x with
+                                           | Child.Annotations a -> Some a
+                                           | _-> None)
                         let m'' = _flatAnnotations.Set(m', flatA)
                         m''
                     | None -> m   
@@ -244,7 +244,7 @@ module ViewerApp =
                 Log.startTimed "kdtree intersect %s" name
                 let cameraLocation = m.scene.navigation.camera.view.Location 
 
-                let mutable cache = hmap.Empty
+                
 
                 let hitF (p : V3d) = 
 
@@ -466,7 +466,7 @@ module ViewerApp =
 
         let annotationGroupProperties (model:MModel) =
             adaptive {
-                let bla = Some model.drawing.annotationGroups
+                let bla = Some model.drawing.annotations
                 let opt = 
                     match bla with
                         | Some a -> AnnotationGroups.viewUI a
@@ -509,11 +509,13 @@ module ViewerApp =
             } 
 
         let annotationUI = 
-            let item2 = m.drawing.annotationGroups.lastSelectedItem 
-                            |> Mod.map( fun x -> match x with 
-                                                    | SelectedItem.AnnotationGroup -> annotationGroupProperties m
-                                                    | _ -> annotationProperties m //SelectedItem.Annotation
-                                                    )
+            let item2 = 
+                m.drawing.annotations.lastSelectedItem 
+                    |> Mod.map (fun x -> 
+                        match x with 
+                          | SelectedItem.AnnotationGroup -> annotationGroupProperties m
+                          | _ -> annotationProperties m //SelectedItem.Annotation
+                    )
             
             div [][
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage

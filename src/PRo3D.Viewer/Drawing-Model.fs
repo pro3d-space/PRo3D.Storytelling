@@ -54,8 +54,7 @@ type DrawingModel = {
     geometry : Geometry
     semantic : Semantic
 
-    annotationGroups: AnnotationGroupsModel
-    allAnnotations : plist<Annotation>
+    annotations: AnnotationGroupsModel    
     exportPath : string
 
     selected : hset<Guid>
@@ -85,6 +84,9 @@ module DrawingModel =
     let tryGet (ans:plist<Annotation>) key = 
             ans |> Seq.tryFind(fun x -> x.key = key)
 
+    let tryGet' (ans:hset<Annotation>) key = 
+            ans |> Seq.tryFind(fun x -> x.key = key)
+
     let update (ans:plist<Annotation>) (ann : Annotation) = 
         ans.AsList 
             |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
@@ -99,8 +101,7 @@ module DrawingModel =
         geometry    = Geometry.Polyline
         semantic    = Semantic.Horizon3
 
-        annotationGroups = AnnotationGroupsModel.initial
-        allAnnotations = PList.empty
+        annotations = AnnotationGroupsModel.initial
 
         exportPath  = @"."
 
