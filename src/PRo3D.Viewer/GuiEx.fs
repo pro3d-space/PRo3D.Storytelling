@@ -104,7 +104,7 @@ module GuiEx =
                                 //    text text'
                                 //]
                         ]
-                        div [clazz content] content'
+                        div [clazz content;  style "overflow-y : auto; max-height: 30%"] content'
                     ]
                 ]
             )

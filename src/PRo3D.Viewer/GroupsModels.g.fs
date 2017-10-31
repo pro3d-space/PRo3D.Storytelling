@@ -174,7 +174,7 @@ module Mutable =
         let _activeGroupName = ResetMod.Create(__initial.activeGroupName)
         let _activeChildKey = ResetMod.Create(__initial.activeChildKey)
         let _activeChildPath = ResetMod.Create(__initial.activeChildPath)
-        let _annotationsFlat = MSet.Create(unbox, __initial.annotationsFlat, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
+        let _annotationsFlat = MSet.Create((fun (v : PRo3D.Annotation) -> v.key :> obj), __initial.annotationsFlat, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
         let _lastSelectedItem = ResetMod.Create(__initial.lastSelectedItem)
         
         member x.rootGroup = _rootGroup

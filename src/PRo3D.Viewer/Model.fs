@@ -83,6 +83,7 @@ type Segment = {
 
 [<DomainType>]
 type Annotation = {
+    [<PrimaryKey>]
     key         : Guid
 
     modelTrafo  : Trafo3d
