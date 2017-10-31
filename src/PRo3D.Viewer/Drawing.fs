@@ -526,7 +526,12 @@ module DrawingApp =
                         i [clazz "plus icon"
                            onMouseClick (fun _ -> 
                              AnnotationGroupsMessage(AnnotationGroups.AddGroup path))] [] 
-                        |> UI.wrapToolTip "Add Group"                                    
+                        |> UI.wrapToolTip "Add Group"   
+                        
+                        i [clazz "remove circle icon"
+                           onMouseClick (fun _ -> 
+                             AnnotationGroupsMessage(AnnotationGroups.ClearGroup path))] [] 
+                        |> UI.wrapToolTip "Clear Group"
                         
                         i [clazz "remove icon red"
                            onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.RemoveGroup path))] [] 

@@ -24,6 +24,7 @@ module AnnotationGroups =
         | ActiveChild           of Guid*list<Index>
         | UpdateChildProperties of Child*list<Index>
         | SetGroupName          of string
+        | ClearGroup            of list<Index>
         | Nop
 
     //
@@ -180,6 +181,11 @@ module AnnotationGroups =
             | SetGroupName t -> 
                 let func = (fun (x:AnnotationGroup) -> { x with name = t })
                 { model with rootGroup = updateItemAt model.activeGroupPath func model.rootGroup; activeGroupName = t }
+            | ClearGroup p -> 
+                let func = (function (x:AnnotationGroup) -> { x with childList = plist.Empty })
+                let newRoot = updateItemAt p func model.rootGroup
+                let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot |> PList.ofList)
+                m'
             | _ -> model
     
 
