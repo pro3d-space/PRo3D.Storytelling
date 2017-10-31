@@ -774,8 +774,9 @@ module DrawingApp =
 
                     return screenAligned v.Forward v.Up modelt
                 }
+            let bounds : Border2d = { left = 0.1; right = 0.1; top = 0.1; bottom = 0.1 }
 
-            Sg.markdown MarkdownConfig.light anno.text
+            Sg.textWithBackground (Font.create "Consolas" FontStyle.Regular) C4b.White C4b.Black bounds anno.text
                 |> Sg.noEvents
                 |> Sg.shader {
                         do! Aardvark.Opc.Shader.stableTrafo
