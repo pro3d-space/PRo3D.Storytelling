@@ -56,8 +56,8 @@ module ViewerApp =
     let _drawing         = Model.Lens.drawing
     let _group'          = _drawing |. DrawingModel.Lens.annotations
     let _flatAnnotations = _group' |. AnnotationGroupsModel.Lens.annotationsFlat
-    let _annotations     = _group' |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.childList
-    let _groups          = _group' |. AnnotationGroupsModel.Lens.rootGroup |. AnnotationGroup.Lens.subGroups
+    let _annotations     = _group' |. AnnotationGroupsModel.Lens.rootGroup |. Group.Lens.childList
+    let _groups          = _group' |. AnnotationGroupsModel.Lens.rootGroup |. Group.Lens.subGroups
        
     let lookAtData (m : Model) =         
         let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -182,7 +182,7 @@ module ViewerApp =
                             let a' = AnnotationProperties.update a msg                                                       
 
                             let func = 
-                                (fun (x:AnnotationGroup) -> 
+                                (fun (x:Group) -> 
                                     { x with childList = if PList.count x.childList > 0 then AnnotationGroups.updateChild x.childList (Child.Annotations a) else x.childList })
 
                             let path = m.drawing.annotations.activeChildPath

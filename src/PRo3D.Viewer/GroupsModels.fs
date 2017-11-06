@@ -27,17 +27,17 @@ type Child =
 //    }
    
 [<DomainType>]
-type AnnotationGroup = {
+type Group = {
     key         : Guid
     name        : string
     childList   : plist<Child> //plist<Annotation> 
-    subGroups   : plist<AnnotationGroup>
+    subGroups   : plist<Group>
     visible     : bool
     expanded    : bool
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module AnnotationGroup =
+module Group =
 
     let Linear = {
         name = "Linear"
@@ -135,7 +135,7 @@ type SelectedItem = Annotation = 0 | Surface = 1 | AnnotationGroup = 2
 
 [<DomainType>]
 type AnnotationGroupsModel = {
-    rootGroup       : AnnotationGroup
+    rootGroup            : Group
     activeGroupKey       : Guid
     activeGroupPath      : list<Index>
     activeGroupName      : string
@@ -148,7 +148,7 @@ type AnnotationGroupsModel = {
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AnnotationGroupsModel =
     let initial = {
-        rootGroup = AnnotationGroup.initRoot2
+        rootGroup = Group.initRoot2
         activeGroupKey =  Guid.Empty
         activeGroupPath = list.Empty
         activeGroupName  = ""
@@ -161,7 +161,7 @@ module AnnotationGroupsModel =
         
 [<DomainType>]
 type AnnotationGroupsImporterModel = {
-    rootGroupI       : plist<AnnotationGroup>
+    rootGroupI       : plist<Group>
 }
 
 //[<DomainType>]

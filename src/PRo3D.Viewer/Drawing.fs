@@ -265,7 +265,7 @@ module DrawingApp =
             | Clear,_ ->
                 { model with annotations = AnnotationGroupsModel.initial }
             | Select (p,id), false ->
-                let selected = if (not model.selected.IsEmpty) then hset.Empty else model.selected
+                let selected = model.selected
 
                 let selection, ann =         
                     if (not model.selected.IsEmpty) then
@@ -273,14 +273,14 @@ module DrawingApp =
                         then 
                             HSet.remove id selected, None 
                         else 
-                            HSet.add id hset.Empty, AnnotationGroups.tryGetChild model.annotations.rootGroup id
+                            HSet.add id selected, DrawingModel.tryGet' model.annotations.annotationsFlat id   
                     else
-                        HSet.add id selected, AnnotationGroups.tryGetChild model.annotations.rootGroup id
+                        HSet.add id hset.Empty, DrawingModel.tryGet' model.annotations.annotationsFlat id   
                                 
-                let ann1 = DrawingModel.tryGet' model.annotations.annotationsFlat id   
+                //let ann1 = DrawingModel.tryGet' model.annotations.annotationsFlat id   
                 { model with 
                     selected = selection; 
-                    selectedAnnotation = ann1; 
+                    selectedAnnotation = ann; 
                     annotations = {
                                     model.annotations with 
                                         activeChildKey = id; 
@@ -374,6 +374,8 @@ module DrawingApp =
                     button [clazz "ui icon button"; attribute "data-content" "Save Annotations"; onMouseClick (fun _ -> Save)] [
                             i [clazz "save icon"] [] ] 
                 )
+                //i [clazz "save icon"; onMouseClick (fun _ -> Save)] [] |> UI.wrapToolTip "Save Annotations" 
+                
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "Load Annotations"; onMouseClick (fun _ -> Load)] [
                             i [clazz "folder outline icon"] [] ]
@@ -439,7 +441,7 @@ module DrawingApp =
                         }     
                 //) 
 
-        let rec viewTree path (group : MAnnotationGroup) (model : MDrawingModel) : alist<DomNode<Action>> =
+        let rec viewTree path (group : MGroup) (model : MDrawingModel) : alist<DomNode<Action>> =
 
             alist {
 

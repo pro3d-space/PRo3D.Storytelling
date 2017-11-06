@@ -57,7 +57,7 @@ type DrawingModel = {
     annotations: AnnotationGroupsModel    
     exportPath : string
 
-    selected : hset<Guid>
+    selected : hset<Guid> //*list<Index> 
     selectedAnnotation : option<Annotation>
 
     pendingIntersections : ThreadPool<Action>

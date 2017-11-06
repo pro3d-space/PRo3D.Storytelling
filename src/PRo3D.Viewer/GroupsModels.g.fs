@@ -83,13 +83,13 @@ module Mutable =
     
     
     
-    type MAnnotationGroup(__initial : PRo3D.Groups.AnnotationGroup) =
+    type MGroup(__initial : PRo3D.Groups.Group) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroup> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.AnnotationGroup>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroup>
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.Group> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.Group>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.Group>
         let _key = ResetMod.Create(__initial.key)
         let _name = ResetMod.Create(__initial.name)
         let _childList = MList.Create(__initial.childList, (fun v -> MChild.Create(v)), (fun (m,v) -> MChild.Update(m, v)), (fun v -> v))
-        let _subGroups = MList.Create(__initial.subGroups, (fun v -> MAnnotationGroup.Create(v)), (fun (m,v) -> MAnnotationGroup.Update(m, v)), (fun v -> v))
+        let _subGroups = MList.Create(__initial.subGroups, (fun v -> MGroup.Create(v)), (fun (m,v) -> MGroup.Update(m, v)), (fun v -> v))
         let _visible = ResetMod.Create(__initial.visible)
         let _expanded = ResetMod.Create(__initial.expanded)
         
@@ -101,7 +101,7 @@ module Mutable =
         member x.expanded = _expanded :> IMod<_>
         
         member x.Current = __current :> IMod<_>
-        member x.Update(v : PRo3D.Groups.AnnotationGroup) =
+        member x.Update(v : PRo3D.Groups.Group) =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
@@ -113,52 +113,52 @@ module Mutable =
                 ResetMod.Update(_expanded,v.expanded)
                 
         
-        static member Create(__initial : PRo3D.Groups.AnnotationGroup) : MAnnotationGroup = MAnnotationGroup(__initial)
-        static member Update(m : MAnnotationGroup, v : PRo3D.Groups.AnnotationGroup) = m.Update(v)
+        static member Create(__initial : PRo3D.Groups.Group) : MGroup = MGroup(__initial)
+        static member Update(m : MGroup, v : PRo3D.Groups.Group) = m.Update(v)
         
         override x.ToString() = __current.Value.ToString()
         member x.AsString = sprintf "%A" __current.Value
-        interface IUpdatable<PRo3D.Groups.AnnotationGroup> with
+        interface IUpdatable<PRo3D.Groups.Group> with
             member x.Update v = x.Update v
     
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module AnnotationGroup =
+    module Group =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let key =
-                { new Lens<PRo3D.Groups.AnnotationGroup, System.Guid>() with
+                { new Lens<PRo3D.Groups.Group, System.Guid>() with
                     override x.Get(r) = r.key
                     override x.Set(r,v) = { r with key = v }
                     override x.Update(r,f) = { r with key = f r.key }
                 }
             let name =
-                { new Lens<PRo3D.Groups.AnnotationGroup, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.Groups.Group, Microsoft.FSharp.Core.string>() with
                     override x.Get(r) = r.name
                     override x.Set(r,v) = { r with name = v }
                     override x.Update(r,f) = { r with name = f r.name }
                 }
             let childList =
-                { new Lens<PRo3D.Groups.AnnotationGroup, Aardvark.Base.plist<PRo3D.Groups.Child>>() with
+                { new Lens<PRo3D.Groups.Group, Aardvark.Base.plist<PRo3D.Groups.Child>>() with
                     override x.Get(r) = r.childList
                     override x.Set(r,v) = { r with childList = v }
                     override x.Update(r,f) = { r with childList = f r.childList }
                 }
             let subGroups =
-                { new Lens<PRo3D.Groups.AnnotationGroup, Aardvark.Base.plist<PRo3D.Groups.AnnotationGroup>>() with
+                { new Lens<PRo3D.Groups.Group, Aardvark.Base.plist<PRo3D.Groups.Group>>() with
                     override x.Get(r) = r.subGroups
                     override x.Set(r,v) = { r with subGroups = v }
                     override x.Update(r,f) = { r with subGroups = f r.subGroups }
                 }
             let visible =
-                { new Lens<PRo3D.Groups.AnnotationGroup, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Groups.Group, Microsoft.FSharp.Core.bool>() with
                     override x.Get(r) = r.visible
                     override x.Set(r,v) = { r with visible = v }
                     override x.Update(r,f) = { r with visible = f r.visible }
                 }
             let expanded =
-                { new Lens<PRo3D.Groups.AnnotationGroup, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Groups.Group, Microsoft.FSharp.Core.bool>() with
                     override x.Get(r) = r.expanded
                     override x.Set(r,v) = { r with expanded = v }
                     override x.Update(r,f) = { r with expanded = f r.expanded }
@@ -168,7 +168,7 @@ module Mutable =
     type MAnnotationGroupsModel(__initial : PRo3D.Groups.AnnotationGroupsModel) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.AnnotationGroupsModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsModel>
-        let _rootGroup = MAnnotationGroup.Create(__initial.rootGroup)
+        let _rootGroup = MGroup.Create(__initial.rootGroup)
         let _activeGroupKey = ResetMod.Create(__initial.activeGroupKey)
         let _activeGroupPath = ResetMod.Create(__initial.activeGroupPath)
         let _activeGroupName = ResetMod.Create(__initial.activeGroupName)
@@ -191,7 +191,7 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
-                MAnnotationGroup.Update(_rootGroup, v.rootGroup)
+                MGroup.Update(_rootGroup, v.rootGroup)
                 ResetMod.Update(_activeGroupKey,v.activeGroupKey)
                 ResetMod.Update(_activeGroupPath,v.activeGroupPath)
                 ResetMod.Update(_activeGroupName,v.activeGroupName)
@@ -216,7 +216,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let rootGroup =
-                { new Lens<PRo3D.Groups.AnnotationGroupsModel, PRo3D.Groups.AnnotationGroup>() with
+                { new Lens<PRo3D.Groups.AnnotationGroupsModel, PRo3D.Groups.Group>() with
                     override x.Get(r) = r.rootGroup
                     override x.Set(r,v) = { r with rootGroup = v }
                     override x.Update(r,f) = { r with rootGroup = f r.rootGroup }
@@ -268,7 +268,7 @@ module Mutable =
     type MAnnotationGroupsImporterModel(__initial : PRo3D.Groups.AnnotationGroupsImporterModel) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsImporterModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.AnnotationGroupsImporterModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsImporterModel>
-        let _rootGroupI = MList.Create(__initial.rootGroupI, (fun v -> MAnnotationGroup.Create(v)), (fun (m,v) -> MAnnotationGroup.Update(m, v)), (fun v -> v))
+        let _rootGroupI = MList.Create(__initial.rootGroupI, (fun v -> MGroup.Create(v)), (fun (m,v) -> MGroup.Update(m, v)), (fun v -> v))
         
         member x.rootGroupI = _rootGroupI :> alist<_>
         
@@ -295,7 +295,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let rootGroupI =
-                { new Lens<PRo3D.Groups.AnnotationGroupsImporterModel, Aardvark.Base.plist<PRo3D.Groups.AnnotationGroup>>() with
+                { new Lens<PRo3D.Groups.AnnotationGroupsImporterModel, Aardvark.Base.plist<PRo3D.Groups.Group>>() with
                     override x.Get(r) = r.rootGroupI
                     override x.Set(r,v) = { r with rootGroupI = v }
                     override x.Update(r,f) = { r with rootGroupI = f r.rootGroupI }
