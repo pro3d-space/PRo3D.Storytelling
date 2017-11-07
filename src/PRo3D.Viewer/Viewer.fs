@@ -177,7 +177,7 @@ module ViewerApp =
                         let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
                         { m with scene = { m.scene with surfacesModel = s}}
             | AnnotationMessage msg,_,_ ->                
-                    match m.drawing.selectedAnnotation with
+                    match m.drawing.annotations.lastSelectedChild with
                         | Some a -> 
                             let a' = AnnotationProperties.update a msg                                                       
 
@@ -185,12 +185,13 @@ module ViewerApp =
                                 (fun (x:Group) -> 
                                     { x with childList = if PList.count x.childList > 0 then AnnotationGroups.updateChild x.childList (Child.Annotations a) else x.childList })
 
-                            let path = m.drawing.annotations.activeChildPath
+                            let path = m.drawing.annotations.activeChild.path
                             let root = AnnotationGroups.updateItemAt path func m.drawing.annotations.rootGroup
                             let flats = AnnotationGroups.flattenChilds root
                             let groups = AnnotationGroups.updateAnnotationGroups m.drawing.annotations root flats
+                            let annotations = { groups with lastSelectedChild = Some a' }
 
-                            let drawing' = { m.drawing with selectedAnnotation = Some a'; annotations = groups }
+                            let drawing' = { m.drawing with annotations = annotations }
 
                             { m with drawing = drawing' }
                         | None -> m       
@@ -477,7 +478,7 @@ module ViewerApp =
         
         let annotationProperties (model:MModel) =
             adaptive {
-                let! bla = model.drawing.selectedAnnotation
+                let! bla = model.drawing.annotations.lastSelectedChild
                 let opt = 
                     match bla with
                         | Some a -> AnnotationProperties.view a
@@ -488,7 +489,7 @@ module ViewerApp =
 
         let dns (model:MModel) =
             adaptive {
-                let! bla = model.drawing.selectedAnnotation
+                let! bla = model.drawing.annotations.lastSelectedChild
                 let opt = 
                     match bla with
                         | Some a -> DipAndStrike.viewUI a

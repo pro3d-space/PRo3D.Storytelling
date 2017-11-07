@@ -28,7 +28,7 @@ type Action =
         | Finish                
         | Undo
         | Redo
-        | Select                  of list<Index>*Guid      
+        //| Select                  of list<Index>*Guid      
         | ToggleVisiblity         of Guid
         | RemoveAnnotation        of list<Index>*Guid       
         | Send
@@ -57,8 +57,8 @@ type DrawingModel = {
     annotations: AnnotationGroupsModel    
     exportPath : string
 
-    selected : hset<Guid> //*list<Index> 
-    selectedAnnotation : option<Annotation>
+    //selected : hset<Guid> //*list<Index> 
+    //selectedAnnotation : option<Annotation>
 
     pendingIntersections : ThreadPool<Action>
     //config : ViewConfigModel
@@ -105,8 +105,8 @@ module DrawingModel =
 
         exportPath  = @"."
 
-        selected                = HSet.empty
-        selectedAnnotation      = None
+        //selected                = HSet.empty
+        //selectedAnnotation      = None
         pendingIntersections    = ThreadPool.empty            
 
         past    = None

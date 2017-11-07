@@ -12,6 +12,7 @@ open PRo3D
 
 
 module AnnotationGroups =
+    open DomainModel
    
     type Action =
         | ActiveGroup           of Guid*list<Index>*string
@@ -25,7 +26,8 @@ module AnnotationGroups =
         | UpdateChildProperties of Child*list<Index>
         | SetGroupName          of string
         | ClearGroup            of list<Index>
-        | MoveChilds            of list<Index>*hset<Guid> //selectedGroupPath*selectedAnnotationList
+        | SelectChilds          of list<Index>*Guid      
+        | MoveChilds            of hset<list<Index>>*hset<Guid> //selectedGroupPathList*selectedAnnotationList
         | Nop
        
     let updateAnnotationGroups (model:AnnotationGroupsModel) (root:Group) (flat:hset<Child>) = //(flat:plist<Annotation>) =
@@ -103,7 +105,7 @@ module AnnotationGroups =
         ans |> PList.map( fun x -> if x.key = id then { x with visible = not x.visible } else x )
             |> PList.map( fun x -> Child.Annotations x)
 
-    let toggleSurface (surfs:plist<Surface>) (id:Guid) = 
+    let toggleSurface (surfs:plist<PRo3D.Surfaces.Surface>) (id:Guid) = 
         surfs |> PList.map( fun x -> if x.guid = id then { x with isVisible = not x.isVisible } else x )
               |> PList.map( fun x -> Child.Surfaces x)
 
@@ -124,7 +126,7 @@ module AnnotationGroups =
     let updateAnnotation (ans:plist<Annotation>) (a:Annotation) = 
         ans.AsList |> List.updateIf (fun x -> x.key = a.key) (fun _ -> a) |> PList.ofList
 
-    let updateSurface (surfs:plist<Surface>) (s:Surface) = 
+    let updateSurface (surfs:plist<PRo3D.Surfaces.Surface>) (s:PRo3D.Surfaces.Surface) = 
         surfs.AsList |> List.updateIf (fun x -> x.guid = s.guid) (fun _ -> s) |> PList.ofList
 
     let updateChild (childs:plist<Child>) (c:Child) = 
@@ -146,23 +148,30 @@ module AnnotationGroups =
                             | _-> None )) s 
                 |> PList.map( fun x -> Child.Surfaces x)
 
+    //let removeChild (model:AnnotationGroupsModel)(childId:Guid) (path:list<Index>) =
+    //    let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then removeChild x.childList childId else x.childList })
+    //    let newRoot = updateItemAt path func model.rootGroup
+    //    let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot)
+    //    m'
+
     let addToActiveGroup model a = 
         let func = (fun (x : Group) -> { x with childList = x.childList |> PList.prepend (Child.Annotations a) })
-        updateItemAt model.activeGroupPath func model.rootGroup
+        updateItemAt model.activeGroup.path func model.rootGroup
         
     let update (model : AnnotationGroupsModel) (action : Action) =
         printfn "action: %A" action
         match action with
             | ActiveGroup (g, p, s) -> 
+                let selection = {
+                    id = g
+                    path = p
+                    name = s}
                 { model with 
-                    activeGroupKey   = g 
-                    activeGroupPath  = p 
-                    activeGroupName  = s
+                    activeGroup   = selection
                     lastSelectedItem = SelectedItem.AnnotationGroup } 
             | ActiveChild (g, p) -> 
                 { model with
-                    activeChildKey   = g
-                    activeChildPath  = p 
+                    activeChild = { id = g; path = p; name = "" }
                     lastSelectedItem = SelectedItem.Annotation} 
             | ToggleExpand p -> 
                 let func = (fun (x:Group) -> { x with expanded = not x.expanded })
@@ -212,28 +221,66 @@ module AnnotationGroups =
                 m'
             | SetGroupName t -> 
                 let func = (fun (x:Group) -> { x with name = t })
-                { model with rootGroup = updateItemAt model.activeGroupPath func model.rootGroup; activeGroupName = t }
+              
+                { model with rootGroup = updateItemAt model.activeGroup.path func model.rootGroup; activeGroup = {model.activeGroup with name = t} }
             | ClearGroup p -> 
                 let func = (function (x:Group) -> { x with childList = plist.Empty })
                 let newRoot = updateItemAt p func model.rootGroup
                 let fl = flattenChilds newRoot
                 let m' = updateAnnotationGroups model newRoot (fl)
                 m'
-            //| MoveChilds (p,select) ->
-            //    // find annotations in tree, store and delete from group
+            | SelectChilds (p,id) ->
+                let selected = model.selectedChilds
+                let tSelection = {
+                    id = id
+                    path = p
+                    name = ""
+                    }
+               
+                let selection, child =         
+                    if (not model.selectedChilds.IsEmpty) then
+                        if HSet.contains tSelection selected
+                        then 
+                            HSet.remove tSelection selected, None
+                        else 
+                            HSet.add tSelection selected, Group.tryGet' model.annotationsFlat id  
+                    else
+                        HSet.add tSelection hset.Empty, Group.tryGet' model.annotationsFlat id   
 
-            //    // add annotation to active group
+                { model with selectedChilds = selection; 
+                             activeChild = tSelection; 
+                             lastSelectedItem = SelectedItem.Annotation;
+                             lastSelectedChild = child }  
+            | MoveChilds (path,select) -> model
+                // get annotations in tree
+                //let toMove = select
+                //                |> HSet.choose ( fun x -> (tryGetChild model.rootGroup x))
+                               
+                //// delete from groups
+                //let mutable count = 0
+                //for p in path do  
+                //    let m = removeChild model select.Iter(count) p
+                //    //{model with rootGroup = m}
+                //    count <- count + 1
+                
+                
+                //// add annotation to active group
+                //let func1 = (fun (x:Group) -> { x with childList = toMove })
+                //let newRoot1 = updateItemAt model.activeChildPath func1 model.rootGroup
+                //let m' = updateAnnotationGroups model newRoot1 (flattenChilds newRoot1)
+
+               // m'
             | _ -> model
     
 
-    let mkColor (activeId : IMod<Guid>) (groupId : IMod<Guid>) = 
+    let mkColor (activeId : Guid) (groupId : Guid) = 
         if activeId = groupId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
              
     let rec viewTree path (group : MGroup) (model : MAnnotationGroupsModel) =
 
         alist {
-
-            let! c = mkColor model.activeGroupKey group.key
+            let! s = model.activeGroup
+            let! c = mkColor s.id (group.key |> Mod.force)
             let color = sprintf "color: %s" (Html.ofC4b c)
             let c = sprintf "color: %s" (Html.ofC4b C4b.White)
             let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups
@@ -254,13 +301,6 @@ module AnnotationGroups =
                                 attribute "data-variation" "mini"
                                 onMouseClick (fun _ -> AddGroup path)] [] 
                             )
-                        //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
-                        //    i [ clazz "remove icon" 
-                        //        attribute "title" "Remove Group"
-                        //        attribute "data-position" "left center"
-                        //        attribute "data-variation" "mini" 
-                        //        onMouseClick (fun _ -> RemoveGroup path)] [] 
-                        //    )
 
                         i [ clazz "remove icon"; onMouseClick (fun _ -> RemoveGroup path)] [] |> UI.wrapToolTip "Remove Group"
                 ]
@@ -301,9 +341,10 @@ module AnnotationGroups =
         }
 
     let viewUI (model : MAnnotationGroupsModel) =   
+        let ts = model.activeGroup
         require Html.semui (
             Html.table [                            
-                Html.row "Change Groupname:"[Html.SemUi.textBox model.activeGroupName SetGroupName ]
+                Html.row "Change Groupname:"[Html.SemUi.textBox (ts |> Mod.map (fun x -> x.name)) SetGroupName ]
             ]
         )
 

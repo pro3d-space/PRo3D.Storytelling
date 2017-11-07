@@ -21,8 +21,6 @@ module Mutable =
         let _semantic = ResetMod.Create(__initial.semantic)
         let _annotations = PRo3D.Groups.Mutable.MAnnotationGroupsModel.Create(__initial.annotations)
         let _exportPath = ResetMod.Create(__initial.exportPath)
-        let _selected = MSet.Create(__initial.selected)
-        let _selectedAnnotation = MOption.Create(__initial.selectedAnnotation, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
         let _pendingIntersections = ResetMod.Create(__initial.pendingIntersections)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
@@ -35,8 +33,6 @@ module Mutable =
         member x.semantic = _semantic :> IMod<_>
         member x.annotations = _annotations
         member x.exportPath = _exportPath :> IMod<_>
-        member x.selected = _selected :> aset<_>
-        member x.selectedAnnotation = _selectedAnnotation :> IMod<_>
         member x.pendingIntersections = _pendingIntersections :> IMod<_>
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
@@ -54,8 +50,6 @@ module Mutable =
                 ResetMod.Update(_semantic,v.semantic)
                 PRo3D.Groups.Mutable.MAnnotationGroupsModel.Update(_annotations, v.annotations)
                 ResetMod.Update(_exportPath,v.exportPath)
-                MSet.Update(_selected, v.selected)
-                MOption.Update(_selectedAnnotation, v.selectedAnnotation)
                 ResetMod.Update(_pendingIntersections,v.pendingIntersections)
                 _past.Update(v.past)
                 _future.Update(v.future)
@@ -122,18 +116,6 @@ module Mutable =
                     override x.Get(r) = r.exportPath
                     override x.Set(r,v) = { r with exportPath = v }
                     override x.Update(r,f) = { r with exportPath = f r.exportPath }
-                }
-            let selected =
-                { new Lens<PRo3D.Drawing.DrawingModel, Aardvark.Base.hset<System.Guid>>() with
-                    override x.Get(r) = r.selected
-                    override x.Set(r,v) = { r with selected = v }
-                    override x.Update(r,f) = { r with selected = f r.selected }
-                }
-            let selectedAnnotation =
-                { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.option<PRo3D.Annotation>>() with
-                    override x.Get(r) = r.selectedAnnotation
-                    override x.Set(r,v) = { r with selectedAnnotation = v }
-                    override x.Update(r,f) = { r with selectedAnnotation = f r.selectedAnnotation }
                 }
             let pendingIntersections =
                 { new Lens<PRo3D.Drawing.DrawingModel, Aardvark.Base.ThreadPool<PRo3D.Drawing.Action>>() with

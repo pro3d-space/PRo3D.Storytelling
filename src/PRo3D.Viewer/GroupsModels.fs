@@ -36,92 +36,15 @@ type Group = {
     expanded    : bool
     }
 
+type TreeSelection = {
+    [<PrimaryKey>]
+    id : Guid
+    path : list<Index>
+    name : string
+}
+
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Group =
-
-    let Linear = {
-        name = "Linear"
-        key =  Guid.NewGuid()
-        childList = plist.Empty
-        subGroups = plist.Empty
-        visible = true
-        expanded = true
-        }
-    let ViewPoint = {
-        name = "ViewPoint"
-        key =  Guid.NewGuid()
-        childList = plist.Empty
-        subGroups = plist.Empty
-        visible = true
-        expanded = true
-        }
-    let Sky = {
-        name = "Sky"
-        key =  Guid.NewGuid()
-        childList = plist.Empty
-        subGroups = plist.Empty
-        visible = true
-        expanded = true
-        }
-    let Point = {
-        name = "Point"
-        key =  Guid.NewGuid()
-        childList = plist.Empty
-        subGroups = plist.Empty
-        visible = true
-        expanded = true
-        }
-    let Line = {
-        name = "Line"
-        key =  Guid.NewGuid()
-        childList = plist.Empty
-        //subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
-        subGroups = PList.empty
-        visible = true
-        expanded = true
-        }
-    let Polyline = {
-        name = "Polyline"
-        key =  Guid.NewGuid()
-        childList = plist.Empty
-       // subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
-        subGroups = PList.empty
-        visible = true
-        expanded = true
-        }
-    let Polygon = {
-        name = "Polygon"
-        key =  Guid.NewGuid()
-        childList = plist.Empty
-        //subGroups = [ Linear; ViewPoint; Sky ] |> PList.ofList
-        subGroups = PList.empty
-        visible = true
-        expanded = true
-        }
-    let surface1Group = {
-        name = "surface1"
-        key =  Guid.NewGuid()
-        childList = plist.Empty
-        subGroups = [Point; Line; Polyline; Polygon] |> PList.ofList
-        visible = true
-        expanded = true
-        }
-    let surface2Group = {
-        name = "surface2"
-        key =  Guid.NewGuid()
-        childList = plist.Empty
-        subGroups = [Point; Polyline] |> PList.ofList
-        visible = true
-        expanded = true
-        }
-    let initRoot = {
-        name = "Annotations"
-        key =  Guid.NewGuid()
-        childList = plist.Empty
-        subGroups = [surface1Group; ] |> PList.ofList //surface2Group
-        visible = true
-        expanded = true
-        }
     let initRoot2 = {
         name = "Annotations"
         key =  Guid.NewGuid()
@@ -130,32 +53,39 @@ module Group =
         visible = true
         expanded = true
         }
+    let initTreeSelection =  { 
+        id = Guid.Empty
+        path = list.Empty
+        name = "" 
+        }
+
+    let tryGet' (ans:hset<Annotation>) key = 
+            ans |> Seq.tryFind(fun x -> x.key = key)
 
 type SelectedItem = Annotation = 0 | Surface = 1 | AnnotationGroup = 2
+
 
 [<DomainType>]
 type AnnotationGroupsModel = {
     rootGroup            : Group
-    activeGroupKey       : Guid
-    activeGroupPath      : list<Index>
-    activeGroupName      : string
-    activeChildKey       : Guid
-    activeChildPath      : list<Index>
+    activeGroup          : TreeSelection
+    activeChild          : TreeSelection
     annotationsFlat      : hset<Annotation>
     lastSelectedItem     : SelectedItem
+    selectedChilds       : hset<TreeSelection> 
+    lastSelectedChild    : option<Annotation>
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module AnnotationGroupsModel =
     let initial = {
         rootGroup = Group.initRoot2
-        activeGroupKey =  Guid.Empty
-        activeGroupPath = list.Empty
-        activeGroupName  = ""
-        activeChildKey = Guid.Empty
-        activeChildPath = list.Empty // (is path of parent group!)
+        activeGroup = Group.initTreeSelection
+        activeChild = Group.initTreeSelection
         annotationsFlat = hset.Empty
         lastSelectedItem = SelectedItem.Annotation
+        selectedChilds = hset.Empty
+        lastSelectedChild = None
         }
 
         

@@ -264,44 +264,18 @@ module DrawingApp =
                 model
             | Clear,_ ->
                 { model with annotations = AnnotationGroupsModel.initial }
-            | Select (p,id), false ->
-                let selected = model.selected
-
-                let selection, ann =         
-                    if (not model.selected.IsEmpty) then
-                        if HSet.contains id selected 
-                        then 
-                            HSet.remove id selected, None 
-                        else 
-                            HSet.add id selected, DrawingModel.tryGet' model.annotations.annotationsFlat id   
-                    else
-                        HSet.add id hset.Empty, DrawingModel.tryGet' model.annotations.annotationsFlat id   
-                                
-                //let ann1 = DrawingModel.tryGet' model.annotations.annotationsFlat id   
-                { model with 
-                    selected = selection; 
-                    selectedAnnotation = ann; 
-                    annotations = {
-                                    model.annotations with 
-                                        activeChildKey = id; 
-                                        activeChildPath = p; 
-                                        lastSelectedItem = SelectedItem.Annotation
-                                  } 
-                }  
             | Nop, _ -> model
             | AnnotationPropertiesMsg msg,_ ->                
-                match model.selectedAnnotation with
+                match model.annotations.lastSelectedChild with
                     | Some a ->
                         let a' = AnnotationProperties.update a msg                        
                         
                         let flatAnnos = 
                             model.annotations.annotationsFlat |> HSet.map ( fun a -> if a.key = a'.key then a' else a ) 
 
-                        let annotations = { model.annotations with annotationsFlat = flatAnnos }
+                        let annotations = { model.annotations with annotationsFlat = flatAnnos; lastSelectedChild = Some a' }
 
-                        { model with 
-                            selectedAnnotation = Some a'                                      
-                            annotations =  annotations }
+                        { model with annotations =  annotations }
                     | None -> model
                         
             | Undo, _ -> 
@@ -360,12 +334,18 @@ module DrawingApp =
         
         let mkColor (model : MDrawingModel) (a : MAnnotation) =
             let id = a.key |> Mod.force
+            
+            //let color =  
+            //    model.annotations.selectedChilds
+            //        |> ASet.contains id 
+            //        |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
 
             let color =  
-                model.selected 
-                    |> ASet.contains id 
+                model.annotations.selectedChilds
+                    |> ASet.map(fun x -> x.id = id)
+                    |> ASet.contains true
                     |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
-
+            
             color
 
         let viewAnnotationImportExport =
@@ -445,13 +425,14 @@ module DrawingApp =
 
             alist {
 
-                let! c = AnnotationGroups.mkColor model.annotations.activeGroupKey group.key
+                let! s = model.annotations.activeGroup
+                let! c = AnnotationGroups.mkColor s.id (group.key |> Mod.force)
                 let color = sprintf "color: %s" (Html.ofC4b c)                
                 let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
 
                 let icon =
                     adaptive {
-                        let! active = model.annotations.activeGroupKey
+                        let active = s.id
                         let! group  =  group.key
 
                         return if (active = group) then "circle icon" else "circle thin icon"
@@ -503,7 +484,7 @@ module DrawingApp =
                     }         
 
 
-                let select = fun (a:MAnnotation,path:list<Index>) -> Select (path, a.key |> Mod.force)
+                let select = fun (a:MAnnotation,path:list<Index>) -> Action.AnnotationGroupsMessage(AnnotationGroups.SelectChilds (path, a.key |> Mod.force))  // Select (path, a.key |> Mod.force)
                 let lift   = fun (a:AnnotationGroups.Action) -> (AnnotationGroupsMessage a)
 
                 yield div [ clazz "item"] [
