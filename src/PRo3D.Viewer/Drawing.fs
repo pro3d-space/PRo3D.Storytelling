@@ -64,7 +64,7 @@ module DrawingApp =
                     Groups.addToActiveGroup model.annotations (Child.Annotations a)
                 | None -> model.annotations.rootGroup
        
-        let flat = (Groups.flattenChilds rootGroup)
+        let flat = (Groups.flatten rootGroup)
 
         let groups = 
             Groups.updateAnnotationGroups model.annotations rootGroup flat
@@ -272,8 +272,8 @@ module DrawingApp =
                         | Child.Annotations ann -> 
                             let a' = AnnotationProperties.update ann msg |> Child.Annotations                        
                             let flatAnnos = 
-                                model.annotations.annotationsFlat |> HSet.map ( fun a -> if a.id = a'.id then a' else a ) 
-                            let annotations = { model.annotations with annotationsFlat = flatAnnos; lastSelectedChild = Some a' }
+                                model.annotations.flat |> HSet.map ( fun a -> if a.id = a'.id then a' else a ) 
+                            let annotations = { model.annotations with flat = flatAnnos; lastSelectedChild = Some a' }
                             { model with annotations =  annotations }
                         | _ -> model
                   | None -> model                        
@@ -755,7 +755,7 @@ module DrawingApp =
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler           
             let annoSet = 
-                model.annotations.annotationsFlat 
+                model.annotations.flat 
                     |> ASet.chooseM(fun x -> x |> Mod.map toAnnotationOpt)
 
             let config = 

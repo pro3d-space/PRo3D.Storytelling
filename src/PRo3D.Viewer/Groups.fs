@@ -29,26 +29,43 @@ module Groups =
         | SelectChilds          of list<Index>*Guid      
         | MoveChilds            of hset<list<Index>>*hset<Guid> //selectedGroupPathList*selectedAnnotationList
         | Nop
-       
+      
+    let initRoot2 = {
+        name = "Annotations"
+        key =  Guid.NewGuid()
+        childList = plist.Empty
+        subGroups = plist.Empty 
+        visible = true
+        expanded = true
+        }
+    let initTreeSelection =  { 
+        id = Guid.Empty
+        path = list.Empty
+        name = "" 
+        }
+
+    let tryGet' (ans:hset<Child>) id = 
+            ans |> Seq.tryFind(fun x -> x.id = id)
+
     let updateAnnotationGroups (model:GroupsModel) (root:Group) (flat:hset<Child>) =        
-        { model with rootGroup = root; annotationsFlat = flat }      
+        { model with rootGroup = root; flat = flat }      
         
-    let rec flattenChilds (g:Group) : hset<Child> =
+    let rec flatten (g:Group) : hset<Child> =
         match ((PList.toList g.childList ), (PList.toList g.subGroups)) with
             | ([], []) -> HSet.empty
             | (c, [] ) -> c |> HSet.ofList
-            | ([], sg) -> sg |> HSet.ofList |> HSet.collect flattenChilds 
+            | ([], sg) -> sg |> HSet.ofList |> HSet.collect flatten 
             | (c, sg)  -> 
                 let sga = 
-                    sg |> HSet.ofList |> HSet.collect flattenChilds                    
+                    sg |> HSet.ofList |> HSet.collect flatten                    
                 HSet.union (c |> HSet.ofList) sga
 
     let loadAnnotationGroups (path:string) =
-        let annotationGroups = Serialization.loadAs<PRo3D.Groups.GroupsModel> path          
-        { annotationGroups with annotationsFlat = (flattenChilds annotationGroups.rootGroup) } 
+        let groups = Serialization.loadAs<PRo3D.Groups.GroupsModel> path          
+        { groups with flat = (flatten groups.rootGroup) } 
 
     let tryGetChild (ag:Group) id = 
-        flattenChilds ag |> Seq.tryFind(fun x -> x.id = id)
+        flatten ag |> Seq.tryFind(fun x -> x.id = id)
 
     let updateItemAt (p : list<Index>) (f : Group -> Group) (t : Group) = 
         let rec go (p : list<Index>) (t : Group) =
@@ -131,28 +148,28 @@ module Groups =
                         { x with subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups }
 
                 let newRoot = deleteItemAt p func model.rootGroup
-                let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot)
+                let m' = updateAnnotationGroups model newRoot (flatten newRoot)
                 m'
             | AddChild (p,c) -> 
                 let func = (fun (x:Group) -> { x with childList = c })
                 let newRoot = updateItemAt p func model.rootGroup
-                let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot)
+                let m' = updateAnnotationGroups model newRoot (flatten newRoot)
                 m'
             | RemoveChild (k,p) -> 
                 let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then removeChild x.childList k else x.childList })
                 let newRoot = updateItemAt p func model.rootGroup                
 
-                updateAnnotationGroups model newRoot (flattenChilds newRoot)
+                updateAnnotationGroups model newRoot (flatten newRoot)
                 
             | ToggleChildVisibility (c,p) -> 
                 let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then toggleChild x.childList c else x.childList })
                 let newRoot = updateItemAt p func model.rootGroup
-                let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot)
+                let m' = updateAnnotationGroups model newRoot (flatten newRoot)
                 m'
             | UpdateChildProperties (a,p) ->
                 let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then updateChild x.childList a else x.childList })
                 let newRoot = updateItemAt p func model.rootGroup
-                let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot)
+                let m' = updateAnnotationGroups model newRoot (flatten newRoot)
                 m'
             | SetGroupName t -> 
                 let func = (fun (x:Group) -> { x with name = t })
@@ -161,7 +178,7 @@ module Groups =
             | ClearGroup p -> 
                 let func = (function (x:Group) -> { x with childList = plist.Empty })
                 let newRoot = updateItemAt p func model.rootGroup
-                let fl = flattenChilds newRoot
+                let fl = flatten newRoot
                 let m' = updateAnnotationGroups model newRoot (fl)
                 m'
             | SelectChilds (p,id) ->
@@ -178,9 +195,9 @@ module Groups =
                         then 
                             HSet.remove tSelection selected, None
                         else 
-                            HSet.add tSelection selected, Group.tryGet' model.annotationsFlat id  
+                            HSet.add tSelection selected, Group.tryGet' model.flat id  
                     else
-                        HSet.add tSelection hset.Empty, Group.tryGet' model.annotationsFlat id   
+                        HSet.add tSelection hset.Empty, Group.tryGet' model.flat id   
 
                 { model with 
                     selectedChilds    = selection; 

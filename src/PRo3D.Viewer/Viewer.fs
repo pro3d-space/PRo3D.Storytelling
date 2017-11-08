@@ -55,7 +55,7 @@ module ViewerApp =
     // drawing
     let _drawing         = Model.Lens.drawing
     let _group'          = _drawing |. DrawingModel.Lens.annotations
-    let _flatAnnotations = _group'  |. GroupsModel.Lens.annotationsFlat
+    let _flatAnnotations = _group'  |. GroupsModel.Lens.flat
     let _annotations     = _group'  |. GroupsModel.Lens.rootGroup |. Group.Lens.childList
     let _groups          = _group'  |. GroupsModel.Lens.rootGroup |. Group.Lens.subGroups
        
@@ -189,7 +189,7 @@ module ViewerApp =
                                   
                                   let path = m.drawing.annotations.activeChild.path
                                   let root = Groups.updateItemAt path func m.drawing.annotations.rootGroup
-                                  let flats = Groups.flattenChilds root
+                                  let flats = Groups.flatten root
                                   let groups = Groups.updateAnnotationGroups m.drawing.annotations root flats
                                   let annotations = { groups with lastSelectedChild = Some a' }                                  
                                   
@@ -225,7 +225,7 @@ module ViewerApp =
                     | Some x -> 
                         let newGroups = m.drawing.annotations.rootGroup.subGroups |> PList.append' (AnnotationGroupsImporter.startImporter x)
                         let m' = _groups.Set(m, newGroups)
-                        let flatA = Groups.flattenChilds m'.drawing.annotations.rootGroup                                    
+                        let flatA = Groups.flatten m'.drawing.annotations.rootGroup                                    
                         let m'' = _flatAnnotations.Set(m', flatA)
                         m''
                     | None -> m   

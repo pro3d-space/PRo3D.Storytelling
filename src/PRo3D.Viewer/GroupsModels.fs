@@ -89,7 +89,7 @@ type GroupsModel = {
     rootGroup            : Group
     activeGroup          : TreeSelection
     activeChild          : TreeSelection
-    annotationsFlat      : hset<Child>
+    flat                 : hset<Child>
     lastSelectedItem     : SelectedItem
     selectedChilds       : hset<TreeSelection> 
     lastSelectedChild    : option<Child>
@@ -101,7 +101,7 @@ module GroupsModel =
         rootGroup = Group.initRoot2
         activeGroup = Group.initTreeSelection
         activeChild = Group.initTreeSelection
-        annotationsFlat = hset.Empty
+        flat = hset.Empty
         lastSelectedItem = SelectedItem.Child
         selectedChilds = hset.Empty
         lastSelectedChild = None
@@ -112,32 +112,3 @@ module GroupsModel =
 type AnnotationGroupsImporterModel = {
     rootGroupI       : plist<Group>
 }
-
-//[<DomainType>]
-//type SurfaceGroupsModel = {
-//    rootGroup            : AnnotationGroup
-//    activeGroup          : option<AnnotationGroup>
-//    activeGroupKey       : Guid
-//    activeGroupPath      : list<Index>
-//    activeGroupName      : string
-//    activeChild          : option<Surface>
-//    activeChildKey       : Guid
-//    activeChildPath      : list<Index>
-//    surfacesFlat         : plist<Surface>
-//    lastSelectedItem     : SelectedItem
-//    }
-
-//[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-//module SurfaceGroupsModel =
-    //let initial = {
-    //    rootGroup = AnnotationGroup.initRoot2
-    //    activeGroup = None
-    //    activeGroupKey =  Guid.Empty
-    //    activeGroupPath = list.Empty
-    //    activeGroupName  = ""
-    //    activeChild = None
-    //    activeChildKey = Guid.Empty
-    //    activeChildPath = list.Empty // (is path of parent group!)
-    //    annotationsFlat = plist.Empty
-    //    //lastSelectedItem = SelectedItem.Annotation
-    //    }

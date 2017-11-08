@@ -72,8 +72,8 @@
     <Compile Include="Model.fs" />
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
-    <Compile Include="DipAndStrike.fs" />
     <Compile Include="ReferenceSystem-Model.fs" />
+    <Compile Include="DipAndStrike.fs" />
     <Compile Include="ReferenceSystem.fs" />
     <Compile Include="Drawing-Properties.fs" />
     <Compile Include="Surface-Model.fs" />
