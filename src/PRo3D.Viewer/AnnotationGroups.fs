@@ -30,13 +30,14 @@ module AnnotationGroups =
         | MoveChilds            of hset<list<Index>>*hset<Guid> //selectedGroupPathList*selectedAnnotationList
         | Nop
        
-    let updateAnnotationGroups (model:AnnotationGroupsModel) (root:Group) (flat:hset<Child>) = //(flat:plist<Annotation>) =
-        let flatAnnotations = 
-            flat |> HSet.choose (fun x -> 
-                match x with
-                  | Child.Annotations a -> Some a
-                  | _-> None)
-        {model with rootGroup = root; annotationsFlat = flatAnnotations}
+    let toAnnotation (c:Child) : option<Annotation> =
+        match c with
+            | Child.Annotations a -> Some a
+            | _-> None
+
+
+    let updateAnnotationGroups (model:AnnotationGroupsModel) (root:Group) (flat:hset<Child>) =        
+        { model with rootGroup = root; annotationsFlat = flat |> HSet.choose toAnnotation }        
         
     let rec flattenChilds (g:Group) : hset<Child> =
         match ((PList.toList g.childList ), (PList.toList g.subGroups)) with
@@ -206,9 +207,10 @@ module AnnotationGroups =
                 m'
             | RemoveChild (k,p) -> 
                 let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then removeChild x.childList k else x.childList })
-                let newRoot = updateItemAt p func model.rootGroup
-                let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot)
-                m'
+                let newRoot = updateItemAt p func model.rootGroup                
+
+                updateAnnotationGroups model newRoot (flattenChilds newRoot)
+                
             | ToggleChildVisibility (c,p) -> 
                 let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then toggleChild x.childList c else x.childList })
                 let newRoot = updateItemAt p func model.rootGroup

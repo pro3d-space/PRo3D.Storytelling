@@ -7,10 +7,6 @@ open Aardvark.Base.Incremental
 open PRo3D
 open PRo3D.Surfaces
 
-[<DomainType>]
-type Child = 
-    | Annotations of value : Annotation
-    | Surfaces of value : Surface //PRo3D.Surfaces.
 
 //type Groupable =
 //    | Annotations of plist<Annotation>
@@ -25,6 +21,26 @@ type Child =
 //    visible     : bool
 //    expanded    : bool
 //    }
+[<DomainType>]
+type Child = 
+    | Annotations of value : Annotation
+    | Surfaces    of value : Surface
+    with member x.id =
+            match x with
+              | Annotations a -> a.key
+              | Surfaces    s -> s.guid
+            
+module Child =
+    let toggleVisibility (c : Child) =
+        match c with
+          | Annotations a -> Annotations { a with visible   = not a.visible }
+          | Surfaces    s -> Surfaces    { s with isVisible = not s.isVisible }
+
+type Content = {
+    id      : Guid
+    visible : bool
+    child   : Child
+}
    
 [<DomainType>]
 type Group = {
@@ -34,7 +50,7 @@ type Group = {
     subGroups   : plist<Group>
     visible     : bool
     expanded    : bool
-    }
+}
 
 type TreeSelection = {
     [<PrimaryKey>]
