@@ -11,7 +11,7 @@ open PRo3D.Surfaces
 open PRo3D
 
 
-module AnnotationGroups =
+module Groups =
     open DomainModel
    
     type Action =
@@ -36,7 +36,7 @@ module AnnotationGroups =
             | _-> None
 
 
-    let updateAnnotationGroups (model:AnnotationGroupsModel) (root:Group) (flat:hset<Child>) =        
+    let updateAnnotationGroups (model:GroupsModel) (root:Group) (flat:hset<Child>) =        
         { model with rootGroup = root; annotationsFlat = flat |> HSet.choose toAnnotation }        
         
     let rec flattenChilds (g:Group) : hset<Child> =
@@ -50,7 +50,7 @@ module AnnotationGroups =
                 HSet.union (c |> HSet.ofList) sga
 
     let loadAnnotationGroups (path:string) =
-        let annotationGroups = Serialization.loadAs<PRo3D.Groups.AnnotationGroupsModel> path
+        let annotationGroups = Serialization.loadAs<PRo3D.Groups.GroupsModel> path
         let flatA = 
             flattenChilds annotationGroups.rootGroup
                 |> HSet.choose (fun x -> 
@@ -159,7 +159,7 @@ module AnnotationGroups =
         let func = (fun (x : Group) -> { x with childList = x.childList |> PList.prepend (Child.Annotations a) })
         updateItemAt model.activeGroup.path func model.rootGroup
         
-    let update (model : AnnotationGroupsModel) (action : Action) =
+    let update (model : GroupsModel) (action : Action) =
         printfn "action: %A" action
         match action with
             | ActiveGroup (g, p, s) -> 
@@ -278,7 +278,7 @@ module AnnotationGroups =
     let mkColor (activeId : Guid) (groupId : Guid) = 
         if activeId = groupId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
              
-    let rec viewTree path (group : MGroup) (model : MAnnotationGroupsModel) =
+    let rec viewTree path (group : MGroup) (model : MGroupsModel) =
 
         alist {
             let! s = model.activeGroup
@@ -342,7 +342,7 @@ module AnnotationGroups =
                 
         }
 
-    let viewUI (model : MAnnotationGroupsModel) =   
+    let viewUI (model : MGroupsModel) =   
         let ts = model.activeGroup
         require Html.semui (
             Html.table [                            
@@ -350,7 +350,7 @@ module AnnotationGroups =
             ]
         )
 
-    let view (model : MAnnotationGroupsModel) =
+    let view (model : MGroupsModel) =
         require Html.semui (
             TreeView.view [] (viewTree [] model.rootGroup model)
         )

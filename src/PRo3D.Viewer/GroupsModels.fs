@@ -36,11 +36,11 @@ module Child =
           | Annotations a -> Annotations { a with visible   = not a.visible }
           | Surfaces    s -> Surfaces    { s with isVisible = not s.isVisible }
 
-type Content = {
-    id      : Guid
-    visible : bool
-    child   : Child
-}
+//type Content = {
+//    id      : Guid
+//    visible : bool
+//    child   : Child
+//}
    
 [<DomainType>]
 type Group = {
@@ -82,7 +82,7 @@ type SelectedItem = Annotation = 0 | Surface = 1 | AnnotationGroup = 2
 
 
 [<DomainType>]
-type AnnotationGroupsModel = {
+type GroupsModel = {
     rootGroup            : Group
     activeGroup          : TreeSelection
     activeChild          : TreeSelection
@@ -93,7 +93,7 @@ type AnnotationGroupsModel = {
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module AnnotationGroupsModel =
+module GroupsModel =
     let initial = {
         rootGroup = Group.initRoot2
         activeGroup = Group.initTreeSelection

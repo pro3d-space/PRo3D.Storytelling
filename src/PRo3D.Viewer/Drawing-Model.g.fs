@@ -19,7 +19,7 @@ module Mutable =
         let _projection = ResetMod.Create(__initial.projection)
         let _geometry = ResetMod.Create(__initial.geometry)
         let _semantic = ResetMod.Create(__initial.semantic)
-        let _annotations = PRo3D.Groups.Mutable.MAnnotationGroupsModel.Create(__initial.annotations)
+        let _annotations = PRo3D.Groups.Mutable.MGroupsModel.Create(__initial.annotations)
         let _exportPath = ResetMod.Create(__initial.exportPath)
         let _pendingIntersections = ResetMod.Create(__initial.pendingIntersections)
         let _past = ResetMod.Create(__initial.past)
@@ -48,7 +48,7 @@ module Mutable =
                 ResetMod.Update(_projection,v.projection)
                 ResetMod.Update(_geometry,v.geometry)
                 ResetMod.Update(_semantic,v.semantic)
-                PRo3D.Groups.Mutable.MAnnotationGroupsModel.Update(_annotations, v.annotations)
+                PRo3D.Groups.Mutable.MGroupsModel.Update(_annotations, v.annotations)
                 ResetMod.Update(_exportPath,v.exportPath)
                 ResetMod.Update(_pendingIntersections,v.pendingIntersections)
                 _past.Update(v.past)
@@ -106,7 +106,7 @@ module Mutable =
                     override x.Update(r,f) = { r with semantic = f r.semantic }
                 }
             let annotations =
-                { new Lens<PRo3D.Drawing.DrawingModel, PRo3D.Groups.AnnotationGroupsModel>() with
+                { new Lens<PRo3D.Drawing.DrawingModel, PRo3D.Groups.GroupsModel>() with
                     override x.Get(r) = r.annotations
                     override x.Set(r,v) = { r with annotations = v }
                     override x.Update(r,f) = { r with annotations = f r.annotations }

@@ -55,9 +55,9 @@ module ViewerApp =
     // drawing
     let _drawing         = Model.Lens.drawing
     let _group'          = _drawing |. DrawingModel.Lens.annotations
-    let _flatAnnotations = _group' |. AnnotationGroupsModel.Lens.annotationsFlat
-    let _annotations     = _group' |. AnnotationGroupsModel.Lens.rootGroup |. Group.Lens.childList
-    let _groups          = _group' |. AnnotationGroupsModel.Lens.rootGroup |. Group.Lens.subGroups
+    let _flatAnnotations = _group'  |. GroupsModel.Lens.annotationsFlat
+    let _annotations     = _group'  |. GroupsModel.Lens.rootGroup |. Group.Lens.childList
+    let _groups          = _group'  |. GroupsModel.Lens.rootGroup |. Group.Lens.subGroups
        
     let lookAtData (m : Model) =         
         let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -165,7 +165,7 @@ module ViewerApp =
                 { m with frustum = frustum }
             | AnnotationGroupsMessageViewer msg,_,_ ->
                 let ag = m.drawing.annotations 
-                { m with drawing = { m.drawing with annotations = AnnotationGroups.update ag msg}}
+                { m with drawing = { m.drawing with annotations = Groups.update ag msg}}
             | DrawingMessage msg, Interactions.DrawAnnotation,_->
                 { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg } |> stash
             | SurfaceActions msg,_,_ ->
@@ -183,12 +183,12 @@ module ViewerApp =
 
                             let func = 
                                 (fun (x:Group) -> 
-                                    { x with childList = if PList.count x.childList > 0 then AnnotationGroups.updateChild x.childList (Child.Annotations a) else x.childList })
+                                    { x with childList = if PList.count x.childList > 0 then Groups.updateChild x.childList (Child.Annotations a) else x.childList })
 
                             let path = m.drawing.annotations.activeChild.path
-                            let root = AnnotationGroups.updateItemAt path func m.drawing.annotations.rootGroup
-                            let flats = AnnotationGroups.flattenChilds root
-                            let groups = AnnotationGroups.updateAnnotationGroups m.drawing.annotations root flats
+                            let root = Groups.updateItemAt path func m.drawing.annotations.rootGroup
+                            let flats = Groups.flattenChilds root
+                            let groups = Groups.updateAnnotationGroups m.drawing.annotations root flats
                             let annotations = { groups with lastSelectedChild = Some a' }
 
                             let drawing' = { m.drawing with annotations = annotations }
@@ -222,7 +222,7 @@ module ViewerApp =
                     | Some x -> 
                         let newGroups = m.drawing.annotations.rootGroup.subGroups |> PList.append' (AnnotationGroupsImporter.startImporter x)
                         let m' = _groups.Set(m, newGroups)
-                        let flatA = AnnotationGroups.flattenChilds m'.drawing.annotations.rootGroup                                     
+                        let flatA = Groups.flattenChilds m'.drawing.annotations.rootGroup                                     
                                     |> HSet.choose (fun x -> 
                                          match x with
                                            | Child.Annotations a -> Some a
@@ -470,7 +470,7 @@ module ViewerApp =
                 let bla = Some model.drawing.annotations
                 let opt = 
                     match bla with
-                        | Some a -> AnnotationGroups.viewUI a
+                        | Some a -> Groups.viewUI a
                         | None   -> div[][]
 
                 return (opt |> UI.map AnnotationGroupsMessageViewer)

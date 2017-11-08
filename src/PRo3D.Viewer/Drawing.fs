@@ -61,13 +61,13 @@ module DrawingApp =
                  //   Log.line "sending %A" a.semantic
                     bc.Add json
 
-                    AnnotationGroups.addToActiveGroup model.annotations a
+                    Groups.addToActiveGroup model.annotations a
                 | None -> model.annotations.rootGroup
        
-        let flat = (AnnotationGroups.flattenChilds rootGroup)
+        let flat = (Groups.flattenChilds rootGroup)
 
         let groups = 
-            AnnotationGroups.updateAnnotationGroups model.annotations rootGroup flat
+            Groups.updateAnnotationGroups model.annotations rootGroup flat
 
         { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
 
@@ -256,14 +256,14 @@ module DrawingApp =
                 match Dialogs.openDialog w with
                     | None -> model
                     | Some path -> 
-                        { model with annotations = AnnotationGroups.loadAnnotationGroups path }
+                        { model with annotations = Groups.loadAnnotationGroups path }
             | QuickLoad,_ ->  
-                let groups = AnnotationGroups.loadAnnotationGroups "./lastMeasure" 
+                let groups = Groups.loadAnnotationGroups "./lastMeasure" 
                 { model with annotations = groups }
             | Send, _ ->                                                      
                 model
             | Clear,_ ->
-                { model with annotations = AnnotationGroupsModel.initial }
+                { model with annotations = GroupsModel.initial }
             | Nop, _ -> model
             | AnnotationPropertiesMsg msg,_ ->                
                 match model.annotations.lastSelectedChild with
@@ -298,7 +298,7 @@ module DrawingApp =
             //            { model with allAnnotations = as' } |> stash
             //        | None -> model             
             | ToggleVisiblity id, _ -> model // implemented in AnnotationGroups   
-            | AnnotationGroupsMessage msg,_ -> { model with annotations = AnnotationGroups.update model.annotations msg}
+            | AnnotationGroupsMessage msg,_ -> { model with annotations = Groups.update model.annotations msg}
             | _ -> model
 
     module UI =
@@ -380,7 +380,7 @@ module DrawingApp =
                 )
             ]         
 
-        let viewAnnotationsInGroup (path:list<Index>) (model:MDrawingModel)(select : MAnnotation*list<Index> -> 'outer)(lift : AnnotationGroups.Action -> 'outer) (annotations: alist<IMod<MChild>>) : alist<DomNode<'outer>> =
+        let viewAnnotationsInGroup (path:list<Index>) (model:MDrawingModel)(select : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<IMod<MChild>>) : alist<DomNode<'outer>> =
                         
             //Incremental.div 
             //        (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (
@@ -411,8 +411,8 @@ module DrawingApp =
                                         yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
                                             alist {
                                                 yield Incremental.text header
-                                                yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| AnnotationGroups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"                                                                                                                
-                                                yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| AnnotationGroups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
+                                                yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"                                                                                                                
+                                                yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
                                             } 
                                         ) 
                                         yield div [clazz "description";style ac ] [Incremental.text desc]      
@@ -426,7 +426,7 @@ module DrawingApp =
             alist {
 
                 let! s = model.annotations.activeGroup
-                let! c = AnnotationGroups.mkColor s.id (group.key |> Mod.force)
+                let! c = Groups.mkColor s.id (group.key |> Mod.force)
                 let color = sprintf "color: %s" (Html.ofC4b c)                
                 let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
 
@@ -442,7 +442,7 @@ module DrawingApp =
                     amap {
                         let! icon = icon
                         yield clazz icon
-                        yield onClick (fun _ -> AnnotationGroupsMessage(AnnotationGroups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+                        yield onClick (fun _ -> AnnotationGroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                     } |> AttributeMap.ofAMap
                
                 let desc =
@@ -452,22 +452,22 @@ module DrawingApp =
                         
                         i [clazz "plus icon"
                            onMouseClick (fun _ -> 
-                             AnnotationGroupsMessage(AnnotationGroups.AddGroup path))] [] 
+                             AnnotationGroupsMessage(Groups.AddGroup path))] [] 
                         |> UI.wrapToolTip "Add Group"   
                         
                         i [clazz "remove circle icon"
                            onMouseClick (fun _ -> 
-                             AnnotationGroupsMessage(AnnotationGroups.ClearGroup path))] [] 
+                             AnnotationGroupsMessage(Groups.ClearGroup path))] [] 
                         |> UI.wrapToolTip "Clear Group"
                         
                         i [clazz "remove icon red"
-                           onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.RemoveGroup path))] [] 
+                           onMouseClick (fun _ -> Action.AnnotationGroupsMessage(Groups.RemoveGroup path))] [] 
                         |> UI.wrapToolTip "Remove Group"
                     ]
                  
                 let itemAttributes =
                     amap {
-                        yield onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.ToggleExpand path))
+                        yield onMouseClick (fun _ -> Action.AnnotationGroupsMessage(Groups.ToggleExpand path))
                         let! selected = group.expanded
                         if selected 
                         then yield clazz "icon large outline open folder"
@@ -484,8 +484,8 @@ module DrawingApp =
                     }         
 
 
-                let select = fun (a:MAnnotation,path:list<Index>) -> Action.AnnotationGroupsMessage(AnnotationGroups.SelectChilds (path, a.key |> Mod.force))  // Select (path, a.key |> Mod.force)
-                let lift   = fun (a:AnnotationGroups.Action) -> (AnnotationGroupsMessage a)
+                let select = fun (a:MAnnotation,path:list<Index>) -> Action.AnnotationGroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force))  // Select (path, a.key |> Mod.force)
+                let lift   = fun (a:Groups.Action) -> (AnnotationGroupsMessage a)
 
                 yield div [ clazz "item"] [
                      Incremental.i itemAttributes AList.empty

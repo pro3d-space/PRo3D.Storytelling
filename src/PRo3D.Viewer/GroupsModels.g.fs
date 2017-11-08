@@ -165,9 +165,9 @@ module Mutable =
                 }
     
     
-    type MAnnotationGroupsModel(__initial : PRo3D.Groups.AnnotationGroupsModel) =
+    type MGroupsModel(__initial : PRo3D.Groups.GroupsModel) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.AnnotationGroupsModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsModel>
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.GroupsModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.GroupsModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.GroupsModel>
         let _rootGroup = MGroup.Create(__initial.rootGroup)
         let _activeGroup = ResetMod.Create(__initial.activeGroup)
         let _activeChild = ResetMod.Create(__initial.activeChild)
@@ -185,7 +185,7 @@ module Mutable =
         member x.lastSelectedChild = _lastSelectedChild :> IMod<_>
         
         member x.Current = __current :> IMod<_>
-        member x.Update(v : PRo3D.Groups.AnnotationGroupsModel) =
+        member x.Update(v : PRo3D.Groups.GroupsModel) =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
@@ -198,58 +198,58 @@ module Mutable =
                 MOption.Update(_lastSelectedChild, v.lastSelectedChild)
                 
         
-        static member Create(__initial : PRo3D.Groups.AnnotationGroupsModel) : MAnnotationGroupsModel = MAnnotationGroupsModel(__initial)
-        static member Update(m : MAnnotationGroupsModel, v : PRo3D.Groups.AnnotationGroupsModel) = m.Update(v)
+        static member Create(__initial : PRo3D.Groups.GroupsModel) : MGroupsModel = MGroupsModel(__initial)
+        static member Update(m : MGroupsModel, v : PRo3D.Groups.GroupsModel) = m.Update(v)
         
         override x.ToString() = __current.Value.ToString()
         member x.AsString = sprintf "%A" __current.Value
-        interface IUpdatable<PRo3D.Groups.AnnotationGroupsModel> with
+        interface IUpdatable<PRo3D.Groups.GroupsModel> with
             member x.Update v = x.Update v
     
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module AnnotationGroupsModel =
+    module GroupsModel =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let rootGroup =
-                { new Lens<PRo3D.Groups.AnnotationGroupsModel, PRo3D.Groups.Group>() with
+                { new Lens<PRo3D.Groups.GroupsModel, PRo3D.Groups.Group>() with
                     override x.Get(r) = r.rootGroup
                     override x.Set(r,v) = { r with rootGroup = v }
                     override x.Update(r,f) = { r with rootGroup = f r.rootGroup }
                 }
             let activeGroup =
-                { new Lens<PRo3D.Groups.AnnotationGroupsModel, PRo3D.Groups.TreeSelection>() with
+                { new Lens<PRo3D.Groups.GroupsModel, PRo3D.Groups.TreeSelection>() with
                     override x.Get(r) = r.activeGroup
                     override x.Set(r,v) = { r with activeGroup = v }
                     override x.Update(r,f) = { r with activeGroup = f r.activeGroup }
                 }
             let activeChild =
-                { new Lens<PRo3D.Groups.AnnotationGroupsModel, PRo3D.Groups.TreeSelection>() with
+                { new Lens<PRo3D.Groups.GroupsModel, PRo3D.Groups.TreeSelection>() with
                     override x.Get(r) = r.activeChild
                     override x.Set(r,v) = { r with activeChild = v }
                     override x.Update(r,f) = { r with activeChild = f r.activeChild }
                 }
             let annotationsFlat =
-                { new Lens<PRo3D.Groups.AnnotationGroupsModel, Aardvark.Base.hset<PRo3D.Annotation>>() with
+                { new Lens<PRo3D.Groups.GroupsModel, Aardvark.Base.hset<PRo3D.Annotation>>() with
                     override x.Get(r) = r.annotationsFlat
                     override x.Set(r,v) = { r with annotationsFlat = v }
                     override x.Update(r,f) = { r with annotationsFlat = f r.annotationsFlat }
                 }
             let lastSelectedItem =
-                { new Lens<PRo3D.Groups.AnnotationGroupsModel, PRo3D.Groups.SelectedItem>() with
+                { new Lens<PRo3D.Groups.GroupsModel, PRo3D.Groups.SelectedItem>() with
                     override x.Get(r) = r.lastSelectedItem
                     override x.Set(r,v) = { r with lastSelectedItem = v }
                     override x.Update(r,f) = { r with lastSelectedItem = f r.lastSelectedItem }
                 }
             let selectedChilds =
-                { new Lens<PRo3D.Groups.AnnotationGroupsModel, Aardvark.Base.hset<PRo3D.Groups.TreeSelection>>() with
+                { new Lens<PRo3D.Groups.GroupsModel, Aardvark.Base.hset<PRo3D.Groups.TreeSelection>>() with
                     override x.Get(r) = r.selectedChilds
                     override x.Set(r,v) = { r with selectedChilds = v }
                     override x.Update(r,f) = { r with selectedChilds = f r.selectedChilds }
                 }
             let lastSelectedChild =
-                { new Lens<PRo3D.Groups.AnnotationGroupsModel, Microsoft.FSharp.Core.option<PRo3D.Annotation>>() with
+                { new Lens<PRo3D.Groups.GroupsModel, Microsoft.FSharp.Core.option<PRo3D.Annotation>>() with
                     override x.Get(r) = r.lastSelectedChild
                     override x.Set(r,v) = { r with lastSelectedChild = v }
                     override x.Update(r,f) = { r with lastSelectedChild = f r.lastSelectedChild }

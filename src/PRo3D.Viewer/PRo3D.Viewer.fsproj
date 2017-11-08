@@ -78,7 +78,7 @@
     <Compile Include="Drawing-Properties.fs" />
     <Compile Include="Surface-Model.fs" />
     <Compile Include="GroupsModels.fs" />
-    <Compile Include="AnnotationGroups.fs" />
+    <Compile Include="Groups.fs" />
     <Compile Include="Drawing-Model.fs" />
     <Compile Include="Drawing.fs" />
     <Compile Include="MeasurementsImporter.fs" />

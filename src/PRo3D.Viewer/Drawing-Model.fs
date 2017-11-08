@@ -41,7 +41,7 @@ type Action =
         | AnnotationPropertiesMsg of AnnotationProperties.Action
         | UpVectorChanged         of V3d
         | NorthVectorChanged      of V3d
-        | AnnotationGroupsMessage   of AnnotationGroups.Action
+        | AnnotationGroupsMessage   of Groups.Action
 
 [<DomainType>]
 type DrawingModel = {
@@ -54,7 +54,7 @@ type DrawingModel = {
     geometry : Geometry
     semantic : Semantic
 
-    annotations: AnnotationGroupsModel    
+    annotations: GroupsModel    
     exportPath : string
 
     //selected : hset<Guid> //*list<Index> 
@@ -101,7 +101,7 @@ module DrawingModel =
         geometry    = Geometry.Polyline
         semantic    = Semantic.Horizon3
 
-        annotations = AnnotationGroupsModel.initial
+        annotations = GroupsModel.initial
 
         exportPath  = @"."
 
