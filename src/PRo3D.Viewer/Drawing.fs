@@ -61,7 +61,7 @@ module DrawingApp =
                  //   Log.line "sending %A" a.semantic
                     bc.Add json
 
-                    Groups.addToActiveGroup model.annotations a
+                    Groups.addToActiveGroup model.annotations (Child.Annotations a)
                 | None -> model.annotations.rootGroup
        
         let flat = (Groups.flattenChilds rootGroup)
@@ -267,17 +267,16 @@ module DrawingApp =
             | Nop, _ -> model
             | AnnotationPropertiesMsg msg,_ ->                
                 match model.annotations.lastSelectedChild with
-                    | Some a ->
-                        let a' = AnnotationProperties.update a msg                        
-                        
-                        let flatAnnos = 
-                            model.annotations.annotationsFlat |> HSet.map ( fun a -> if a.key = a'.key then a' else a ) 
-
-                        let annotations = { model.annotations with annotationsFlat = flatAnnos; lastSelectedChild = Some a' }
-
-                        { model with annotations =  annotations }
-                    | None -> model
-                        
+                  | Some a ->                        
+                      match a with
+                        | Child.Annotations ann -> 
+                            let a' = AnnotationProperties.update ann msg |> Child.Annotations                        
+                            let flatAnnos = 
+                                model.annotations.annotationsFlat |> HSet.map ( fun a -> if a.id = a'.id then a' else a ) 
+                            let annotations = { model.annotations with annotationsFlat = flatAnnos; lastSelectedChild = Some a' }
+                            { model with annotations =  annotations }
+                        | _ -> model
+                  | None -> model                        
             | Undo, _ -> 
                 match model.past with
                     | Some p -> { p with future = Some model }
@@ -745,12 +744,19 @@ module DrawingApp =
                 Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
                 Sg.set sgs 
             ] |> Sg.onOff anno.visible
+        
+        let toAnnotationOpt = 
+            fun y -> 
+                match y with
+                    | MAnnotations ann -> Some ann
+                    | _ -> None
 
         let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) (cam:IMod<CameraView>) : ISg<Drawing.Action> =
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler           
             let annoSet = 
-                model.annotations.annotationsFlat //model.allAnnotations
+                model.annotations.annotationsFlat 
+                    |> ASet.chooseM(fun x -> x |> Mod.map toAnnotationOpt)
 
             let config = 
                 {
@@ -767,10 +773,7 @@ module DrawingApp =
                 aset {
                     for a in annoSet do
                        let c = UI.mkColor model a
-                       
-
-                       let dots = a.geometry |> Mod.map(fun geo -> match geo with | Geometry.Line | Geometry.Point -> true | _ -> false)
-                       
+                       let dots = a.geometry |> Mod.map(fun geo -> match geo with | Geometry.Line | Geometry.Point -> true | _ -> false)                       
                        yield finishedAnnotation a cam c config dots
                 } |> Sg.set
                                 

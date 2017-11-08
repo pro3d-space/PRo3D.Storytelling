@@ -25,10 +25,13 @@ open PRo3D.Surfaces
 type Child = 
     | Annotations of value : Annotation
     | Surfaces    of value : Surface
-    with member x.id =
+    //[<PrimaryKey>] //???
+    with 
+    [<PrimaryKey>] 
+        member x.id =
             match x with
-              | Annotations a -> a.key
-              | Surfaces    s -> s.guid
+                | Annotations a -> a.key
+                | Surfaces    s -> s.guid
             
 module Child =
     let toggleVisibility (c : Child) =
@@ -75,10 +78,10 @@ module Group =
         name = "" 
         }
 
-    let tryGet' (ans:hset<Annotation>) key = 
-            ans |> Seq.tryFind(fun x -> x.key = key)
+    let tryGet' (ans:hset<Child>) id = 
+            ans |> Seq.tryFind(fun x -> x.id = id)
 
-type SelectedItem = Annotation = 0 | Surface = 1 | AnnotationGroup = 2
+type SelectedItem = Child = 0 | Group = 1
 
 
 [<DomainType>]
@@ -86,10 +89,10 @@ type GroupsModel = {
     rootGroup            : Group
     activeGroup          : TreeSelection
     activeChild          : TreeSelection
-    annotationsFlat      : hset<Annotation>
+    annotationsFlat      : hset<Child>
     lastSelectedItem     : SelectedItem
     selectedChilds       : hset<TreeSelection> 
-    lastSelectedChild    : option<Annotation>
+    lastSelectedChild    : option<Child>
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -99,7 +102,7 @@ module GroupsModel =
         activeGroup = Group.initTreeSelection
         activeChild = Group.initTreeSelection
         annotationsFlat = hset.Empty
-        lastSelectedItem = SelectedItem.Annotation
+        lastSelectedItem = SelectedItem.Child
         selectedChilds = hset.Empty
         lastSelectedChild = None
         }

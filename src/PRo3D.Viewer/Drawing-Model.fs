@@ -54,7 +54,7 @@ type DrawingModel = {
     geometry : Geometry
     semantic : Semantic
 
-    annotations: GroupsModel    
+    annotations: GroupsModel 
     exportPath : string
 
     //selected : hset<Guid> //*list<Index> 
