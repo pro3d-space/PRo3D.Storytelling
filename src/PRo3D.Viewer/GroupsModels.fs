@@ -7,10 +7,6 @@ open Aardvark.Base.Incremental
 open PRo3D
 open PRo3D.Surfaces
 
-[<DomainType>]
-type Child = 
-    | Annotations of value : Annotation
-    | Surfaces of value : Surface //PRo3D.Surfaces.
 
 //type Groupable =
 //    | Annotations of plist<Annotation>
@@ -25,6 +21,28 @@ type Child =
 //    visible     : bool
 //    expanded    : bool
 //    }
+[<DomainType>]
+type Child = 
+    | Annotations of value : Annotation
+    | Surfaces    of value : Surface
+    with 
+    [<PrimaryKey>] 
+        member x.id =
+            match x with
+                | Annotations a -> a.key
+                | Surfaces    s -> s.guid
+            
+module Child =
+    let toggleVisibility (c : Child) =
+        match c with
+          | Annotations a -> Annotations { a with visible   = not a.visible }
+          | Surfaces    s -> Surfaces    { s with isVisible = not s.isVisible }
+
+//type Content = {
+//    id      : Guid
+//    visible : bool
+//    child   : Child
+//}
    
 [<DomainType>]
 type Group = {
@@ -34,7 +52,7 @@ type Group = {
     subGroups   : plist<Group>
     visible     : bool
     expanded    : bool
-    }
+}
 
 type TreeSelection = {
     [<PrimaryKey>]
@@ -59,31 +77,31 @@ module Group =
         name = "" 
         }
 
-    let tryGet' (ans:hset<Annotation>) key = 
-            ans |> Seq.tryFind(fun x -> x.key = key)
+    let tryGet' (ans:hset<Child>) id = 
+            ans |> Seq.tryFind(fun x -> x.id = id)
 
-type SelectedItem = Annotation = 0 | Surface = 1 | AnnotationGroup = 2
+type SelectedItem = Child = 0 | Group = 1
 
 
 [<DomainType>]
-type AnnotationGroupsModel = {
+type GroupsModel = {
     rootGroup            : Group
     activeGroup          : TreeSelection
     activeChild          : TreeSelection
-    annotationsFlat      : hset<Annotation>
+    flat                 : hset<Child>
     lastSelectedItem     : SelectedItem
     selectedChilds       : hset<TreeSelection> 
-    lastSelectedChild    : option<Annotation>
+    lastSelectedChild    : option<Child>
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module AnnotationGroupsModel =
+module GroupsModel =
     let initial = {
         rootGroup = Group.initRoot2
         activeGroup = Group.initTreeSelection
         activeChild = Group.initTreeSelection
-        annotationsFlat = hset.Empty
-        lastSelectedItem = SelectedItem.Annotation
+        flat = hset.Empty
+        lastSelectedItem = SelectedItem.Child
         selectedChilds = hset.Empty
         lastSelectedChild = None
         }
@@ -93,32 +111,3 @@ module AnnotationGroupsModel =
 type AnnotationGroupsImporterModel = {
     rootGroupI       : plist<Group>
 }
-
-//[<DomainType>]
-//type SurfaceGroupsModel = {
-//    rootGroup            : AnnotationGroup
-//    activeGroup          : option<AnnotationGroup>
-//    activeGroupKey       : Guid
-//    activeGroupPath      : list<Index>
-//    activeGroupName      : string
-//    activeChild          : option<Surface>
-//    activeChildKey       : Guid
-//    activeChildPath      : list<Index>
-//    surfacesFlat         : plist<Surface>
-//    lastSelectedItem     : SelectedItem
-//    }
-
-//[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-//module SurfaceGroupsModel =
-    //let initial = {
-    //    rootGroup = AnnotationGroup.initRoot2
-    //    activeGroup = None
-    //    activeGroupKey =  Guid.Empty
-    //    activeGroupPath = list.Empty
-    //    activeGroupName  = ""
-    //    activeChild = None
-    //    activeChildKey = Guid.Empty
-    //    activeChildPath = list.Empty // (is path of parent group!)
-    //    annotationsFlat = plist.Empty
-    //    //lastSelectedItem = SelectedItem.Annotation
-    //    }

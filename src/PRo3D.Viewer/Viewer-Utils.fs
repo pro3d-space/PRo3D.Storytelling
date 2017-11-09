@@ -32,7 +32,7 @@ type PropertyActions =
 
 type ViewerAction =                
     | DrawingMessage            of Drawing.Action
-    | AnnotationGroupsMessageViewer   of AnnotationGroups.Action
+    | AnnotationGroupsMessageViewer   of Groups.Action
     | NavigationMessage         of Navigation.Action
     | ReferenceSystemMessage    of ReferenceSystemApp.Action
     | AnnotationMessage         of AnnotationProperties.Action

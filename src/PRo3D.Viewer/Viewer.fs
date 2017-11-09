@@ -55,9 +55,9 @@ module ViewerApp =
     // drawing
     let _drawing         = Model.Lens.drawing
     let _group'          = _drawing |. DrawingModel.Lens.annotations
-    let _flatAnnotations = _group' |. AnnotationGroupsModel.Lens.annotationsFlat
-    let _annotations     = _group' |. AnnotationGroupsModel.Lens.rootGroup |. Group.Lens.childList
-    let _groups          = _group' |. AnnotationGroupsModel.Lens.rootGroup |. Group.Lens.subGroups
+    let _flatAnnotations = _group'  |. GroupsModel.Lens.flat
+    let _annotations     = _group'  |. GroupsModel.Lens.rootGroup |. Group.Lens.childList
+    let _groups          = _group'  |. GroupsModel.Lens.rootGroup |. Group.Lens.subGroups
        
     let lookAtData (m : Model) =         
         let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -165,7 +165,7 @@ module ViewerApp =
                 { m with frustum = frustum }
             | AnnotationGroupsMessageViewer msg,_,_ ->
                 let ag = m.drawing.annotations 
-                { m with drawing = { m.drawing with annotations = AnnotationGroups.update ag msg}}
+                { m with drawing = { m.drawing with annotations = Groups.update ag msg}}
             | DrawingMessage msg, Interactions.DrawAnnotation,_->
                 { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg } |> stash
             | SurfaceActions msg,_,_ ->
@@ -179,21 +179,24 @@ module ViewerApp =
             | AnnotationMessage msg,_,_ ->                
                     match m.drawing.annotations.lastSelectedChild with
                         | Some a -> 
-                            let a' = AnnotationProperties.update a msg                                                       
-
-                            let func = 
-                                (fun (x:Group) -> 
-                                    { x with childList = if PList.count x.childList > 0 then AnnotationGroups.updateChild x.childList (Child.Annotations a) else x.childList })
-
-                            let path = m.drawing.annotations.activeChild.path
-                            let root = AnnotationGroups.updateItemAt path func m.drawing.annotations.rootGroup
-                            let flats = AnnotationGroups.flattenChilds root
-                            let groups = AnnotationGroups.updateAnnotationGroups m.drawing.annotations root flats
-                            let annotations = { groups with lastSelectedChild = Some a' }
-
-                            let drawing' = { m.drawing with annotations = annotations }
-
-                            { m with drawing = drawing' }
+                            match a with 
+                              | Child.Annotations ann ->
+                                  let a' = AnnotationProperties.update ann msg |> Child.Annotations
+                                  
+                                  let func = 
+                                      (fun (x:Group) -> 
+                                          { x with childList = if PList.count x.childList > 0 then Groups.updateChild x.childList a else x.childList })
+                                  
+                                  let path = m.drawing.annotations.activeChild.path
+                                  let root = Groups.updateItemAt path func m.drawing.annotations.rootGroup
+                                  let flats = Groups.flatten root
+                                  let groups = Groups.updateAnnotationGroups m.drawing.annotations root flats
+                                  let annotations = { groups with lastSelectedChild = Some a' }                                  
+                                  
+                                  let drawing' = { m.drawing with annotations = annotations }
+                                  
+                                  { m with drawing = drawing' }
+                              | _ -> m
                         | None -> m       
             | BookmarkMessage msg,_,_ ->    
                 let model, bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
@@ -222,11 +225,7 @@ module ViewerApp =
                     | Some x -> 
                         let newGroups = m.drawing.annotations.rootGroup.subGroups |> PList.append' (AnnotationGroupsImporter.startImporter x)
                         let m' = _groups.Set(m, newGroups)
-                        let flatA = AnnotationGroups.flattenChilds m'.drawing.annotations.rootGroup                                     
-                                    |> HSet.choose (fun x -> 
-                                         match x with
-                                           | Child.Annotations a -> Some a
-                                           | _-> None)
+                        let flatA = Groups.flatten m'.drawing.annotations.rootGroup                                    
                         let m'' = _flatAnnotations.Set(m', flatA)
                         m''
                     | None -> m   
@@ -466,35 +465,35 @@ module ViewerApp =
         let control = DomNode.RenderControl(att, cam, cmds, None)
 
         let annotationGroupProperties (model:MModel) =
-            adaptive {
-                let bla = Some model.drawing.annotations
-                let opt = 
-                    match bla with
-                        | Some a -> AnnotationGroups.viewUI a
-                        | None   -> div[][]
-
-                return (opt |> UI.map AnnotationGroupsMessageViewer)
+            adaptive {                                
+                return (Groups.viewUI model.drawing.annotations |> UI.map AnnotationGroupsMessageViewer)
             } 
         
+        let lscToDom lsc isSome = 
+            adaptive {
+                match lsc with
+                    | Some a ->   
+                        let! a' = a
+                        match a' with 
+                            | MAnnotations ann -> return isSome ann
+                            | _ -> return div[][]                                                             
+                    | None   -> return div[][] 
+            }
+
         let annotationProperties (model:MModel) =
             adaptive {
-                let! bla = model.drawing.annotations.lastSelectedChild
-                let opt = 
-                    match bla with
-                        | Some a -> AnnotationProperties.view a
-                        | None   -> div[][]
+                let! child = model.drawing.annotations.lastSelectedChild
+                let! opt = lscToDom child (fun x -> AnnotationProperties.view x)                
 
                 return (opt |> UI.map AnnotationMessage)
             } 
 
+
         let dns (model:MModel) =
             adaptive {
-                let! bla = model.drawing.annotations.lastSelectedChild
-                let opt = 
-                    match bla with
-                        | Some a -> DipAndStrike.viewUI a
-                        | None   -> div[][]
-
+                let! child = model.drawing.annotations.lastSelectedChild                
+                let! opt = lscToDom child (fun x -> DipAndStrike.viewUI x)
+                                
                 return (opt |> UI.map DnSProperties)
             } 
 
@@ -514,8 +513,8 @@ module ViewerApp =
                 m.drawing.annotations.lastSelectedItem 
                     |> Mod.map (fun x -> 
                         match x with 
-                          | SelectedItem.AnnotationGroup -> annotationGroupProperties m
-                          | _ -> annotationProperties m //SelectedItem.Annotation
+                          | SelectedItem.Group -> annotationGroupProperties m
+                          | _ -> annotationProperties m 
                     )
             
             div [][
@@ -523,6 +522,7 @@ module ViewerApp =
 
                
                 GuiEx.accordion "Annotations" "Write" true [
+                    DrawingApp.UI.viewGroupButtons |> UI.map DrawingMessage
                     DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
                 GuiEx.accordion "Properties" "Content" true [
