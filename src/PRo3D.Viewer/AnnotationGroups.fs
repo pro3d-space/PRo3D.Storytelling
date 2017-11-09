@@ -13,6 +13,7 @@ open PRo3D
 
 module AnnotationGroups =
     open DomainModel
+    open Aardvark.Base.MultimethodTest
    
     type Action =
         | ActiveGroup           of Guid*list<Index>*string
@@ -27,7 +28,7 @@ module AnnotationGroups =
         | SetGroupName          of string
         | ClearGroup            of list<Index>
         | SelectChilds          of list<Index>*Guid      
-        | MoveChilds            of hset<list<Index>>*hset<Guid> //selectedGroupPathList*selectedAnnotationList
+        | MoveChilds            //of hset<list<Index>>*hset<Guid> //selectedGroupPathList*selectedAnnotationList
         | Nop
        
     let updateAnnotationGroups (model:AnnotationGroupsModel) (root:Group) (flat:hset<Child>) = //(flat:plist<Annotation>) =
@@ -148,11 +149,16 @@ module AnnotationGroups =
                             | _-> None )) s 
                 |> PList.map( fun x -> Child.Surfaces x)
 
-    //let removeChild (model:AnnotationGroupsModel)(childId:Guid) (path:list<Index>) =
-    //    let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then removeChild x.childList childId else x.childList })
-    //    let newRoot = updateItemAt path func model.rootGroup
-    //    let m' = updateAnnotationGroups model newRoot (flattenChilds newRoot)
-    //    m'
+    let removeSelectedChilds (selected:hset<TreeSelection>) (model : AnnotationGroupsModel) =
+        selected
+            |> HSet.map ( fun s ->
+                let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then removeChild x.childList s.id else x.childList })
+                let root = updateItemAt s.path func model.rootGroup
+                {model with rootGroup = root} ) |> ignore
+           
+        updateAnnotationGroups model model.rootGroup (flattenChilds model.rootGroup)
+            
+            
 
     let addToActiveGroup model a = 
         let func = (fun (x : Group) -> { x with childList = x.childList |> PList.prepend (Child.Annotations a) })
@@ -251,25 +257,21 @@ module AnnotationGroups =
                              activeChild = tSelection; 
                              lastSelectedItem = SelectedItem.Annotation;
                              lastSelectedChild = child }  
-            | MoveChilds (path,select) -> model
+            | MoveChilds  -> 
                 // get annotations in tree
-                //let toMove = select
-                //                |> HSet.choose ( fun x -> (tryGetChild model.rootGroup x))
+                let toMove = model.selectedChilds
+                                |> HSet.choose ( fun x -> (tryGetChild model.rootGroup x.id))
+                                |> HSet.toSeq
+                                |> PList.ofSeq
                                
-                //// delete from groups
-                //let mutable count = 0
-                //for p in path do  
-                //    let m = removeChild model select.Iter(count) p
-                //    //{model with rootGroup = m}
-                //    count <- count + 1
+                // delete from groups
+                let m = removeSelectedChilds model.selectedChilds model
                 
-                
-                //// add annotation to active group
-                //let func1 = (fun (x:Group) -> { x with childList = toMove })
-                //let newRoot1 = updateItemAt model.activeChildPath func1 model.rootGroup
-                //let m' = updateAnnotationGroups model newRoot1 (flattenChilds newRoot1)
-
-               // m'
+                // add annotation to active group
+                let func1 = (fun (x:Group) -> { x with childList = x.childList |> PList.append' toMove })
+                let newRoot1 = updateItemAt m.activeGroup.path func1 m.rootGroup
+                let m' = updateAnnotationGroups m newRoot1 (flattenChilds newRoot1)
+                m'
             | _ -> model
     
 

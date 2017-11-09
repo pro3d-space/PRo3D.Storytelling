@@ -378,7 +378,8 @@ module DrawingApp =
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "Redo"; onMouseClick (fun _ -> Redo)] [i [clazz "arrow right icon"] [] ]
                 )
-            ]         
+            ] 
+            
 
         let viewAnnotationsInGroup (path:list<Index>) (model:MDrawingModel)(select : MAnnotation*list<Index> -> 'outer)(lift : AnnotationGroups.Action -> 'outer) (annotations: alist<IMod<MChild>>) : alist<DomNode<'outer>> =
                         
@@ -463,6 +464,11 @@ module DrawingApp =
                         i [clazz "remove icon red"
                            onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.RemoveGroup path))] [] 
                         |> UI.wrapToolTip "Remove Group"
+
+                        i [clazz "send icon"
+                           onMouseClick (fun _ -> Action.AnnotationGroupsMessage(AnnotationGroups.MoveChilds))] [] 
+                        |> UI.wrapToolTip "Move Selection"
+
                     ]
                  
                 let itemAttributes =

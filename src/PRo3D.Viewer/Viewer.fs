@@ -520,7 +520,8 @@ module ViewerApp =
             
             div [][
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
-                    
+
+               
                 GuiEx.accordion "Annotations" "Write" true [
                     DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
