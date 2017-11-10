@@ -265,18 +265,18 @@ module DrawingApp =
             | Clear,_ ->
                 { model with annotations = GroupsModel.initial }
             | Nop, _ -> model
-            | AnnotationPropertiesMsg msg,_ ->                
-                match model.annotations.lastSelectedChild with
-                  | Some a ->                        
-                      match a with
-                        | Child.Annotations ann -> 
-                            let a' = AnnotationProperties.update ann msg |> Child.Annotations                        
-                            let flatAnnos = 
-                                model.annotations.flat |> HSet.map ( fun a -> if a.id = a'.id then a' else a ) 
-                            let annotations = { model.annotations with flat = flatAnnos; lastSelectedChild = Some a' }
-                            { model with annotations =  annotations }
-                        | _ -> model
-                  | None -> model                        
+            //| AnnotationPropertiesMsg msg,_ ->                
+            //    match model.annotations.lastSelectedChild with
+            //      | Some a ->                        
+            //          match a with
+            //            | Child.Annotations ann -> 
+            //                let a' = AnnotationProperties.update ann msg |> Child.Annotations                        
+            //                let flatAnnos = 
+            //                    model.annotations.flat |> HSet.map ( fun a -> if a.id = a'.id then a' else a ) 
+            //                let annotations = { model.annotations with flat = flatAnnos; lastSelectedChild = Some a' }
+            //                { model with annotations =  annotations }
+            //            | _ -> model
+            //      | None -> model                        
             | Undo, _ -> 
                 match model.past with
                     | Some p -> { p with future = Some model }
@@ -302,6 +302,7 @@ module DrawingApp =
 
     module UI =
         open Aardvark.Base.Incremental
+        //open Aardvark.UI.TreeViewApp
 
         let viewAnnotationToolsHorizontal (model:MDrawingModel) =
             Html.Layout.horizontal [
@@ -333,11 +334,6 @@ module DrawingApp =
         
         let mkColor (model : MDrawingModel) (a : MAnnotation) =
             let id = a.key |> Mod.force
-            
-            //let color =  
-            //    model.annotations.selectedChilds
-            //        |> ASet.contains id 
-            //        |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
 
             let color =  
                 model.annotations.selectedChilds
@@ -433,6 +429,13 @@ module DrawingApp =
                                 ]
                         }     
                 //) 
+        
+        let getAmap icon action =
+             amap {
+                    let! icon = icon
+                    yield clazz icon
+                    yield onClick (fun _ -> action)
+                } |> AttributeMap.ofAMap
 
         let rec viewTree path (group : MGroup) (model : MDrawingModel) : alist<DomNode<Action>> =
 
@@ -451,13 +454,28 @@ module DrawingApp =
                         return if (active = group) then "circle icon" else "circle thin icon"
                     }
                       
-                let map = 
-                    amap {
-                        let! icon = icon
-                        yield clazz icon
-                        yield onClick (fun _ -> GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
-                    } |> AttributeMap.ofAMap
-               
+                let map = getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+                    //amap {
+                    //    let! icon = icon
+                    //    yield clazz icon
+                    //    yield onClick (fun _ -> GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+                    //} |> AttributeMap.ofAMap
+                
+                let toggleIcon =
+                    adaptive {
+                        let! toggle = group.visible
+                        return if toggle then "unhide icon" else "hide icon"
+                    }
+
+                let toggleMap = getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+                //    amap {
+                //        let! toggleIcon = toggleIcon
+                //        yield clazz toggleIcon
+                //        yield onClick (fun _ -> GroupsMessage(Groups.ToggleGroup path))
+                //    } |> AttributeMap.ofAMap 
+                //let! visible = group.visible
+                //let visibleIcon = if visible then "unhide icon" else "hide icon"
+
                 let desc =
                     div [style color] [       
                         Incremental.text group.name
@@ -477,6 +495,10 @@ module DrawingApp =
                            onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
                         |> UI.wrapToolTip "Remove Group"
 
+                        Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
+                        //i [clazz visibleIcon
+                        //   onMouseClick (fun _ -> Action.GroupsMessage(Groups.ToggleGroup path))] [] 
+                        //|> UI.wrapToolTip "Toggle Group"
                     ]
                  
                 let itemAttributes =

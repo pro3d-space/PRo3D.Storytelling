@@ -28,7 +28,8 @@ module Groups =
         | UpdateChildProperties of Child*list<Index>
         | SetGroupName          of string
         | ClearGroup            of list<Index>
-        | SelectChilds          of list<Index>*Guid      
+        | SelectChilds          of list<Index>*Guid  
+        | ToggleGroup           of list<Index>
         | MoveChilds      
         | ClearSelection
         | Nop
@@ -104,7 +105,10 @@ module Groups =
         childs |> PList.filter (fun x -> x.id <> id)    
 
     let toggleChild (childs:plist<Child>) (id:Guid) =        
-        childs |> PList.map(fun x -> if x.id = id then Child.toggleVisibility x else x)        
+        childs |> PList.map(fun x -> if x.id = id then Child.toggleVisibility x else x) 
+        
+    let toggleChildList (childs:plist<Child>) =        
+        childs |> PList.map(fun x -> Child.toggleVisibility x)
     
     let updateChild (childs:plist<Child>) (c:Child) = 
         childs |> PList.map(fun x -> if x.id = c.id then c else x)
@@ -243,6 +247,13 @@ module Groups =
                     activeChild       = tSelection; 
                     lastSelectedItem  = SelectedItem.Child;
                     lastSelectedChild = child }
+            | ToggleGroup p ->
+                let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then toggleChildList x.childList else x.childList })
+                let newRoot = updateItemAt p func model.rootGroup
+                let func1 = (fun (x:Group) -> { x with visible = not x.visible })
+                let newRoot1 = updateItemAt p func1 newRoot
+                let m' = updateAnnotationGroups model newRoot1 (flatten newRoot1)
+                m'
             | MoveChilds  -> 
                 let m = moveChildren model
                 m
