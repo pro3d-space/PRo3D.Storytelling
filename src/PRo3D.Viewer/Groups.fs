@@ -25,34 +25,21 @@ module Groups =
         | RemoveChild           of Guid*list<Index> 
         | ToggleChildVisibility of Guid*list<Index> 
         | ActiveChild           of Guid*list<Index>
-        | UpdateChildProperties of Child*list<Index>
+        | UpdateChildProperties of Child
         | SetGroupName          of string
+        | SetChildName          of string
         | ClearGroup            of list<Index>
         | SelectChilds          of list<Index>*Guid  
         | ToggleGroup           of list<Index>
         | MoveChilds      
         | ClearSelection
+        | UpdateCam             of Guid
         | Nop
-      
-    //let initRoot2 = {
-    //    name = "Annotations"
-    //    key =  Guid.NewGuid()
-    //    childList = plist.Empty
-    //    subGroups = plist.Empty 
-    //    visible = true
-    //    expanded = true
-    //    }
-
-    //let initTreeSelection =  { 
-    //    id = Guid.Empty
-    //    path = list.Empty
-    //    name = "" 
-    //    }
 
     let tryGet' (ans:hset<Child>) id = 
             ans |> Seq.tryFind(fun x -> x.id = id)
 
-    let updateAnnotationGroups (model:GroupsModel) (root:Group) (flat:hset<Child>) =        
+    let updateGroups (model:GroupsModel) (root:Group) (flat:hset<Child>) =        
         { model with rootGroup = root; flat = flat }      
         
     let rec flatten (g:Group) : hset<Child> =
@@ -116,13 +103,19 @@ module Groups =
     let addToActiveGroup model (a:Child) = 
         let func = (fun (x : Group) -> { x with childList = x.childList |> PList.prepend a })
         updateItemAt model.activeGroup.path func model.rootGroup
+    
+    let updateChildProperties (model:GroupsModel) (c:Child) =
+        let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then updateChild x.childList c else x.childList })
+        let newRoot = updateItemAt model.activeChild.path func model.rootGroup
+        let m' = updateGroups model newRoot (flatten newRoot)
+        { m' with lastSelectedChild = Some c }
 
     let rec removeSelectionfromTree (selection:list<TreeSelection> ) (model:GroupsModel) =
         match selection with
           | x::rest ->
                 let func = (fun (y:Group) -> { y with childList = if PList.count y.childList > 0 then removeChild y.childList x.id else y.childList })
                 let newRoot = updateItemAt x.path func model.rootGroup 
-                let m' = updateAnnotationGroups model newRoot (flatten newRoot)
+                let m' = updateGroups model newRoot (flatten newRoot)
                 removeSelectionfromTree rest m'
           |_ -> model
 
@@ -142,7 +135,7 @@ module Groups =
         // add annotations to active group
         let func1 = (fun (x:Group) -> { x with childList = x.childList |> PList.append' toMove })
         let newRoot1 = updateItemAt m.activeGroup.path func1 m.rootGroup
-        let m' = updateAnnotationGroups m newRoot1 (flatten newRoot1)
+        let m' = updateGroups m newRoot1 (flatten newRoot1)
 
         // update selection paths
         let sel = (model.selectedChilds |> HSet.map( fun x -> {x with path = m.activeGroup.path }))
@@ -187,34 +180,36 @@ module Groups =
                         { x with subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups }
 
                 let newRoot = deleteItemAt p func model.rootGroup
-                let m' = updateAnnotationGroups model newRoot (flatten newRoot)
+                let m' = updateGroups model newRoot (flatten newRoot)
                 m'
             | AddChild (p,c) -> 
                 let func = (fun (x:Group) -> { x with childList = c })
                 let newRoot = updateItemAt p func model.rootGroup
-                let m' = updateAnnotationGroups model newRoot (flatten newRoot)
+                let m' = updateGroups model newRoot (flatten newRoot)
                 m'
             | RemoveChild (k,p) -> 
                 let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then removeChild x.childList k else x.childList })
                 let newRoot = updateItemAt p func model.rootGroup                
                 let m = removeFromSelection model k p
                 
-                updateAnnotationGroups m newRoot (flatten newRoot)
+                updateGroups m newRoot (flatten newRoot)
                 
             | ToggleChildVisibility (c,p) -> 
                 let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then toggleChild x.childList c else x.childList })
                 let newRoot = updateItemAt p func model.rootGroup
-                let m' = updateAnnotationGroups model newRoot (flatten newRoot)
+                let m' = updateGroups model newRoot (flatten newRoot)
                 m'
-            | UpdateChildProperties (a,p) ->
-                let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then updateChild x.childList a else x.childList })
-                let newRoot = updateItemAt p func model.rootGroup
-                let m' = updateAnnotationGroups model newRoot (flatten newRoot)
-                m'
+            | UpdateChildProperties a ->
+                updateChildProperties model a
             | SetGroupName t -> 
                 let func = (fun (x:Group) -> { x with name = t })
               
                 { model with rootGroup = updateItemAt model.activeGroup.path func model.rootGroup; activeGroup = {model.activeGroup with name = t} }
+            | SetChildName t -> 
+                match model.lastSelectedChild with
+                    | Some c -> let child = Child.setName c t
+                                updateChildProperties model child
+                    | None -> model
             | ClearGroup p -> 
                 let func = (function (x:Group) -> { x with childList = plist.Empty })
                 let newRoot = updateItemAt p func model.rootGroup
@@ -222,7 +217,7 @@ module Groups =
                                                                                 | true -> Some x
                                                                                 | _ -> None )
                 let m = { model with selectedChilds = selection }
-                let m' = updateAnnotationGroups m newRoot (flatten newRoot)
+                let m' = updateGroups m newRoot (flatten newRoot)
                 m'
             | SelectChilds (p,id) ->
                 let selected = model.selectedChilds
@@ -252,84 +247,27 @@ module Groups =
                 let newRoot = updateItemAt p func model.rootGroup
                 let func1 = (fun (x:Group) -> { x with visible = not x.visible })
                 let newRoot1 = updateItemAt p func1 newRoot
-                let m' = updateAnnotationGroups model newRoot1 (flatten newRoot1)
+                let m' = updateGroups model newRoot1 (flatten newRoot1)
                 m'
             | MoveChilds  -> 
                 let m = moveChildren model
                 m
             | ClearSelection ->
                 { model with selectedChilds = hset.Empty }
+            | UpdateCam id -> model
             | _ -> model
     
 
     let mkColor (activeId : Guid) (groupId : Guid) = 
         if activeId = groupId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
-             
-    //let rec viewTree path (group : MGroup) (model : MGroupsModel) =
+    
+    let getAmap icon action =
+        amap {
+            let! icon = icon
+            yield clazz icon
+            yield onClick (fun _ -> action)
+        } |> AttributeMap.ofAMap
 
-    //    alist {
-    //        let! s = model.activeGroup
-    //        let! c = mkColor s.id (group.key |> Mod.force)
-    //        let color = sprintf "color: %s" (Html.ofC4b c)
-    //        let c = sprintf "color: %s" (Html.ofC4b C4b.White)
-    //        let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups
-    //        let desc =
-    //            div [style color] [
-    //                    Incremental.text group.name
-    //                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
-    //                        i [ clazz "circle thin icon" 
-    //                            attribute "title" "Set active"
-    //                            attribute "data-position" "left center"
-    //                            attribute "data-variation" "mini"
-    //                            onClick (fun _ -> ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force))] [] 
-    //                        )
-    //                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (            
-    //                        i [ clazz "plus icon" 
-    //                            attribute "title" "Add Group"
-    //                            attribute "data-position" "left center"
-    //                            attribute "data-variation" "mini"
-    //                            onMouseClick (fun _ -> AddGroup path)] [] 
-    //                        )
-
-    //                    i [ clazz "remove icon"; onMouseClick (fun _ -> RemoveGroup path)] [] |> UI.wrapToolTip "Remove Group"
-    //            ]
-                        
-     
-    //        let itemAttributes =
-    //            amap {
-    //                yield onMouseClick (fun _ -> ToggleExpand path)
-    //                let! selected = group.expanded
-    //                if selected then 
-    //                    yield clazz "icon large outline open folder"
-    //                else
-    //                    yield clazz "icon large outline folder"                    
-    //            } |> AttributeMap.ofAMap
-
-            
-    //        let childrenAttribs =
-    //            amap {
-    //                yield clazz "list"
-    //                let! isExpanded = group.expanded
-    //                if isExpanded then yield style "visible"
-    //                else yield style "hidden"
-    //            }
-
-    //        yield div [ clazz "item" ] [
-    //             Incremental.i itemAttributes AList.empty
-    //             div [ clazz "content" ] [
-    //                 //div [ clazz "header"] [desc]
-    //                 div [ clazz "description noselect"] [desc]
-    //                 Incremental.div (AttributeMap.ofAMap childrenAttribs) 
-    //                    <| alist { 
-    //                        let! isExpanded = group.expanded
-    //                        if isExpanded then yield! children
-    //                    }
-    //             ]
-    //        ]
-                
-    //    }
-
-            
 
     let viewUI (model : MGroupsModel) =   
         let ts = model.activeGroup

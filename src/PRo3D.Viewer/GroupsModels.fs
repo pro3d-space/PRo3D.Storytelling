@@ -6,6 +6,8 @@ open Aardvark.Base.Incremental
 
 open PRo3D
 open PRo3D.Surfaces
+open PRo3D.BookmarksX
+open PRo3D.Navigation2
 
 
 //type Groupable =
@@ -25,18 +27,29 @@ open PRo3D.Surfaces
 type Child = 
     | Annotations of value : Annotation
     | Surfaces    of value : Surface
+    | Bookmarks   of value : Bookmark
     with 
     [<PrimaryKey>] 
         member x.id =
             match x with
                 | Annotations a -> a.key
                 | Surfaces    s -> s.guid
+                | Bookmarks   b -> b.key
             
 module Child =
+    open Aardvark.UI.Incremental
+
     let toggleVisibility (c : Child) =
         match c with
           | Annotations a -> Annotations { a with visible   = not a.visible }
           | Surfaces    s -> Surfaces    { s with isVisible = not s.isVisible }
+          | _ -> c
+
+    let setName (c: Child) (name: string) =
+        match c with
+          | Surfaces s  -> Surfaces    { s with name = name }
+          | Bookmarks b -> Bookmarks   { b with name = name }
+          | _ -> c
 
 //type Content = {
 //    id      : Guid
@@ -63,8 +76,8 @@ type TreeSelection = {
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Group =
-    let initRoot2 = {
-        name = "Annotations"
+    let initRoot = {
+        name = "root"
         key =  Guid.NewGuid()
         childList = plist.Empty
         subGroups = plist.Empty 
@@ -97,7 +110,7 @@ type GroupsModel = {
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module GroupsModel =
     let initial = {
-        rootGroup = Group.initRoot2
+        rootGroup = Group.initRoot
         activeGroup = Group.initTreeSelection
         activeChild = Group.initTreeSelection
         flat = hset.Empty
@@ -111,3 +124,14 @@ module GroupsModel =
 type AnnotationGroupsImporterModel = {
     rootGroupI       : plist<Group>
 }
+
+[<DomainType>]
+type BookmarksModel = {
+    bookmarks   : GroupsModel 
+}
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module BookmarksModel =
+    let initial = {
+        bookmarks        = GroupsModel.initial
+        }

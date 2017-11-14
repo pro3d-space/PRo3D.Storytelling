@@ -185,12 +185,12 @@ module ViewerApp =
                                   
                                   let func = 
                                       (fun (x:Group) -> 
-                                          { x with childList = if PList.count x.childList > 0 then Groups.updateChild x.childList a else x.childList })
+                                          { x with childList = if PList.count x.childList > 0 then Groups.updateChild x.childList a' else x.childList })
                                   
                                   let path = m.drawing.annotations.activeChild.path
                                   let root = Groups.updateItemAt path func m.drawing.annotations.rootGroup
                                   let flats = Groups.flatten root
-                                  let groups = Groups.updateAnnotationGroups m.drawing.annotations root flats
+                                  let groups = Groups.updateGroups m.drawing.annotations root flats
                                   let annotations = { groups with lastSelectedChild = Some a' }                                  
                                   
                                   let drawing' = { m.drawing with annotations = annotations }
@@ -199,8 +199,13 @@ module ViewerApp =
                               | _ -> m
                         | None -> m       
             | BookmarkMessage msg,_,_ ->    
+                    
                 let model, bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
                 { m with scene = { m.scene with bookmarksModel = bm; navigation = model.scene.navigation }} 
+            | BookmarkUIMessage msg,_,_ ->    
+                    
+                let bm = Groups.update m.scene.bookmarksModel.bookmarks msg
+                { m with scene = { m.scene with bookmarksModel = {m.scene.bookmarksModel with bookmarks = bm }}} 
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolders w with
                     | [] -> m
@@ -479,6 +484,22 @@ module ViewerApp =
                             | _ -> return div[][]                                                             
                     | None   -> return div[][] 
             }
+        
+        let bookmarkGroupProperties (model:MModel) =
+            adaptive {                                
+                return (Groups.viewUI model.scene.bookmarksModel.bookmarks |> UI.map BookmarkUIMessage)
+            } 
+
+        let lscToDom2 lsc isSome = 
+            adaptive {
+                match lsc with
+                    | Some b ->   
+                        let! b' = b
+                        match b' with 
+                            | MBookmarks bm -> return isSome bm
+                            | _ -> return div[][]                                                             
+                    | None   -> return div[][] 
+            }
 
         let annotationProperties (model:MModel) =
             adaptive {
@@ -499,13 +520,10 @@ module ViewerApp =
 
         let bookmarkProperties (model:MModel) =
             adaptive {
-                let! sbm = model.scene.bookmarksModel.selectedBookmark
-                let opt = 
-                    match sbm with
-                        | Some a -> Bookmarks.UI.view a
-                        | None   -> div[][]
-
-                return (opt |> UI.map BookmarkMessage)
+                let! sbm = model.scene.bookmarksModel.bookmarks.lastSelectedChild 
+                let! opt =  lscToDom2 sbm (fun x -> Bookmarks.UI.view x)
+                            
+                return (opt |> UI.map BookmarkUIMessage)
             } 
 
         let annotationUI = 
@@ -556,15 +574,27 @@ module ViewerApp =
             ]          
             
         let bookmarkUI = 
+            let item2 = 
+                m.scene.bookmarksModel.bookmarks.lastSelectedItem 
+                    |> Mod.map (fun x -> 
+                        match x with 
+                          | SelectedItem.Group -> bookmarkGroupProperties m
+                          | _ -> bookmarkProperties m 
+                    )
             div [][
                 Bookmarks.viewGUI |> UI.map BookmarkMessage
 
                 GuiEx.accordion "Bookmarks" "Write" true [
-                    Bookmarks.view m.scene.bookmarksModel |> UI.map BookmarkMessage 
+                    Bookmarks.viewBookmarksGroups m.scene.bookmarksModel |> UI.map BookmarkMessage 
                 ]
+                //GuiEx.accordion "Properties" "Content" true [
+                //    Incremental.div AttributeMap.empty (AList.ofModSingle(bookmarkProperties m))
+                //]
                 GuiEx.accordion "Properties" "Content" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle(bookmarkProperties m))
-                ]
+                    Incremental.div AttributeMap.empty (alist{ let! item = item2
+                                                               let! i = item
+                                                               yield i})
+                ] 
             ]
           
         let tabs = 

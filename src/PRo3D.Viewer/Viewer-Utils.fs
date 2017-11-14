@@ -37,6 +37,7 @@ type ViewerAction =
     | ReferenceSystemMessage    of ReferenceSystemApp.Action
     | AnnotationMessage         of AnnotationProperties.Action
     | BookmarkMessage           of Bookmarks.Action
+    | BookmarkUIMessage         of Groups.Action
     | SetCamera                 of CameraView        
     | SetCameraAndFrustum       of CameraView * double * double        
     | SetCameraAndFrustum2      of CameraView * Frustum

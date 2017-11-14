@@ -15,15 +15,4 @@ type Bookmark = {
     navigationState : NavigationModel
 }
 
-[<DomainType>]
-type BookmarksModel = {
-    bookmarks        : plist<Bookmark>
-    selectedBookmark : option<Bookmark>
-}
 
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module BookmarksModel =
-    let initial = {
-        bookmarks        = plist.Empty
-        selectedBookmark = None
-        }

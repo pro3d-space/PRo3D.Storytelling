@@ -17,6 +17,7 @@ module Mutable =
             match __model with
                 | Annotations(value) -> MAnnotations(__model, value) :> MChild
                 | Surfaces(value) -> MSurfaces(__model, value) :> MChild
+                | Bookmarks(value) -> MBookmarks(__model, value) :> MChild
         
         static member Create(v : PRo3D.Groups.Child) =
             ResetMod.Create(MChild.CreateValue v) :> IMod<_>
@@ -69,13 +70,35 @@ module Mutable =
                         true
                     | _ -> false
     
+    and private MBookmarks(__initial : PRo3D.Groups.Child, value : PRo3D.BookmarksX.Bookmark) =
+        inherit MChild()
+        
+        let mutable __current = __initial
+        let _value = PRo3D.BookmarksX.Mutable.MBookmark.Create(value)
+        member x.value = _value
+        
+        override x.ToString() = __current.ToString()
+        override x.AsString = sprintf "%A" __current
+        
+        override x.TryUpdate(__model : PRo3D.Groups.Child) = 
+            if System.Object.ReferenceEquals(__current, __model) then
+                true
+            else
+                match __model with
+                    | Bookmarks(value) -> 
+                        __current <- __model
+                        PRo3D.BookmarksX.Mutable.MBookmark.Update(_value, value)
+                        true
+                    | _ -> false
+    
     
     [<AutoOpen>]
     module MChildPatterns =
-        let (|MAnnotations|MSurfaces|) (m : MChild) =
+        let (|MAnnotations|MSurfaces|MBookmarks|) (m : MChild) =
             match m with
             | :? MAnnotations as v -> MAnnotations(v.value)
             | :? MSurfaces as v -> MSurfaces(v.value)
+            | :? MBookmarks as v -> MBookmarks(v.value)
             | _ -> failwith "impossible"
     
     
@@ -290,4 +313,41 @@ module Mutable =
                     override x.Get(r) = r.rootGroupI
                     override x.Set(r,v) = { r with rootGroupI = v }
                     override x.Update(r,f) = { r with rootGroupI = f r.rootGroupI }
+                }
+    
+    
+    type MBookmarksModel(__initial : PRo3D.Groups.BookmarksModel) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.BookmarksModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.BookmarksModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.BookmarksModel>
+        let _bookmarks = MGroupsModel.Create(__initial.bookmarks)
+        
+        member x.bookmarks = _bookmarks
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3D.Groups.BookmarksModel) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                MGroupsModel.Update(_bookmarks, v.bookmarks)
+                
+        
+        static member Create(__initial : PRo3D.Groups.BookmarksModel) : MBookmarksModel = MBookmarksModel(__initial)
+        static member Update(m : MBookmarksModel, v : PRo3D.Groups.BookmarksModel) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3D.Groups.BookmarksModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module BookmarksModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let bookmarks =
+                { new Lens<PRo3D.Groups.BookmarksModel, PRo3D.Groups.GroupsModel>() with
+                    override x.Get(r) = r.bookmarks
+                    override x.Set(r,v) = { r with bookmarks = v }
+                    override x.Update(r,f) = { r with bookmarks = f r.bookmarks }
                 }
