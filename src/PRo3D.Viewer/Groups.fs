@@ -269,6 +269,18 @@ module Groups =
         } |> AttributeMap.ofAMap
 
 
+    let viewGroupButtons =
+        div [clazz "ui buttons inverted"] [
+            onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                button [clazz "ui icon button"; attribute "data-content" "Move Selection"; onMouseClick (fun _ -> MoveChilds)] [
+                        i [clazz "Move icon"] [] ] 
+            )
+            onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                button [clazz "ui icon button"; attribute "data-content" "Clear Selection"; onMouseClick (fun _ -> ClearSelection)] [
+                        i [clazz "Remove icon"] [] ]
+            )
+        ] 
+
     let viewUI (model : MGroupsModel) =   
         let ts = model.activeGroup
         require Html.semui (

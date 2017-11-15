@@ -540,7 +540,7 @@ module ViewerApp =
 
                
                 GuiEx.accordion "Annotations" "Write" true [
-                    DrawingApp.UI.viewGroupButtons |> UI.map DrawingMessage
+                    Groups.viewGroupButtons |> UI.map AnnotationGroupsMessageViewer
                     DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
                 GuiEx.accordion "Properties" "Content" true [
@@ -585,11 +585,9 @@ module ViewerApp =
                 Bookmarks.viewGUI |> UI.map BookmarkMessage
 
                 GuiEx.accordion "Bookmarks" "Write" true [
+                    Groups.viewGroupButtons |> UI.map BookmarkUIMessage
                     Bookmarks.viewBookmarksGroups m.scene.bookmarksModel |> UI.map BookmarkMessage 
                 ]
-                //GuiEx.accordion "Properties" "Content" true [
-                //    Incremental.div AttributeMap.empty (AList.ofModSingle(bookmarkProperties m))
-                //]
                 GuiEx.accordion "Properties" "Content" true [
                     Incremental.div AttributeMap.empty (alist{ let! item = item2
                                                                let! i = item

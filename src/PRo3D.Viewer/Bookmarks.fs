@@ -88,8 +88,16 @@ module Bookmarks =
                 
 
 
-    let mkColor (activeId : IMod<Guid>) (bmId : IMod<Guid>) = 
-        if activeId = bmId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
+    let mkColor (model : MGroupsModel) (b : MBookmark) =
+            let id = b.key |> Mod.force
+
+            let color =  
+                model.selectedChilds
+                    |> ASet.map(fun x -> x.id = id)
+                    |> ASet.contains true
+                    |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)
+            
+            color
 
 
     let viewGUI = 
@@ -100,35 +108,6 @@ module Bookmarks =
                                 i [clazz "plus icon"] [] ] 
                     )
                 ] 
-
-    //let view (model : MBookmarksModel) =
-    
-    //  Incremental.div 
-    //                (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : visible;max-height: 30%" ]) (                      
-    //                    alist {
-    //                        for b in model.bookmarks do
-                                
-    //                            yield div [clazz "item"; onClick (fun _ -> Select (b.key |> Mod.force))] [
-    //                                    div [clazz "content"] [
-    //                                        let desc = b.name
-    //                                        yield Incremental.div (AttributeMap.ofList [clazz "header"])(
-    //                                            alist {
-    //                                                //yield Incremental.i map AList.empty |> UI.wrapToolTipRight "Set active"
-    //                                                yield i [clazz "home icon"                                                
-    //                                                         onClick (fun _ -> UpdateCam (b.key |> Mod.force))
-    //                                                         ][] |> UI.wrapToolTipRight "FlyTo"               
-    //                                                yield i [clazz "Remove icon"
-    //                                                         onClick (fun _ -> Remove (b.key |> Mod.force))
-    //                                                         ][]  |> UI.wrapToolTipRight "Remove"          
-                                                              
-    //                                                } 
-    //                                        ) 
-    //                                        yield div [clazz "description"] [Incremental.text desc]      
-    //                                    ]
-    //                                ]
-                               
-    //                    }     
-    //            ) 
 
     let viewBookmarks (path:list<Index>) (model:MGroupsModel)(select : MBookmark*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (bookmarks: alist<IMod<MChild>>) : alist<DomNode<'outer>> = 
                      
@@ -142,22 +121,27 @@ module Bookmarks =
                                                                             | _-> None )
                             for b in bookmarks do
                                 
+                                let! c = mkColor model b
+                                let bgc = sprintf "color: %s" (Html.ofC4b c)
+
                                 let select = fun _ -> select (b,path)
                                 let! key = b.key
 
-                                yield div [clazz "item"; onClick select; style color] [
-                                        div [clazz "content"; style color] [
+
+                                yield div [clazz "item"; onClick select; style bgc] [
+                                        i [clazz "large Sticky Note middle aligned icon";style bgc][] //i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                                        div [clazz "content"; style bgc] [
                                             let desc = b.name
                                             yield Incremental.div (AttributeMap.ofList [clazz "header"])(
                                                 alist {
                                                     yield i [clazz "home icon"                                                
                                                              onClick (fun _ -> lift <| Groups.UpdateCam key)
-                                                             style color][] |> UI.wrapToolTipRight "FlyTo"               
+                                                             style bgc][] |> UI.wrapToolTipRight "FlyTo"               
                                                     yield i [clazz "Remove icon"
                                                              onClick (fun _ -> lift <| Groups.RemoveChild (key,path)); style color] [] |> UI.wrapToolTip "Remove"      
                                                     } 
                                             ) 
-                                            yield div [clazz "description"; style color] [Incremental.text desc]      
+                                            yield div [clazz "description"; style bgc] [Incremental.text desc]      
                                         ]
                                     ]
                                
@@ -190,13 +174,13 @@ module Bookmarks =
             let map = getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                    
                 
-            let toggleIcon =
-                adaptive {
-                    let! toggle = group.visible
-                    return if toggle then "unhide icon" else "hide icon"
-                }
+            //let toggleIcon =
+            //    adaptive {
+            //        let! toggle = group.visible
+            //        return if toggle then "unhide icon" else "hide icon"
+            //    }
 
-            let toggleMap = getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+            //let toggleMap = getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
                
             let desc =
                 div [style color] [       
@@ -217,7 +201,7 @@ module Bookmarks =
                        onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
                     |> UI.wrapToolTip "Remove Group"
 
-                    Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
+                    //Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
                 ]
                  
             let itemAttributes =

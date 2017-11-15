@@ -363,17 +363,7 @@ module DrawingApp =
                 )
             ] 
          
-        let viewGroupButtons =
-            div [clazz "ui buttons inverted"] [
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Move Selection"; onMouseClick (fun _ -> GroupsMessage(Groups.MoveChilds))] [
-                            i [clazz "Move icon"] [] ] 
-                )
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Clear Selection"; onMouseClick (fun _ -> GroupsMessage(Groups.ClearSelection))] [
-                            i [clazz "Remove icon"] [] ]
-                )
-            ] 
+      
 
         let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(select : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<IMod<MChild>>) : alist<DomNode<'outer>> =
                            
