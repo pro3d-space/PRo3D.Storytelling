@@ -25,6 +25,7 @@ open PRo3D.ReferenceSystem
 open PRo3D.Surfaces
 open PRo3D.Viewer
 open PRo3D.Groups
+open Aardvark.UI.Trafos
 
 type PropertyActions =
     | DrawingMessage    of Drawing.Action
@@ -57,8 +58,10 @@ type ViewerAction =
     | NewScene
     | KeyDown                   of key : Aardvark.Application.Keys
     | KeyUp                     of key : Aardvark.Application.Keys      
+    | SetKind                   of TrafoKind
     | SetInteraction            of Interactions        
-        
+    | SetMode                   of TrafoMode
+    | Translate                 of string * TrafoController.Action
     | SurfaceActions            of SurfaceApp.Action
 
 
@@ -93,7 +96,7 @@ module ViewerUtils =
 
         let rangeToMinMax (s:MSgSurface) =
             adaptive {
-                let! scalar = surface.surface.selectedScalar
+                let! scalar = s.surface.selectedScalar
                 return match scalar with 
                           | Some s -> V2d(s.definedRange.Min, s.definedRange.Max)
                           | None   -> V2d(0.0,1.0)
@@ -114,7 +117,7 @@ module ViewerUtils =
                         let! frustum = frustum 
                         let sizes = V2i(1024,768)
                         let! quality = surface.surface.quality.value
-                        let! trafo = surface.surface.trafo
+                        let! trafo = surface.surface.preTransform //combine pre and current transform
 
                         return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality); trafo = trafo }
                     })   
@@ -138,16 +141,8 @@ module ViewerUtils =
                             fun sceneHit -> 
                                 true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])                        
                     ]
+                |> Sg.trafo surface.surface.trafo.previewTrafo
         sg
-
-    //let frustum' (m:MModel) =
-    //        adaptive {
-    //            let! near = m.scene.config.nearPlane.value
-    //            let! far = m.scene.config.farPlane.value
-    //            let! fov = m.hfov
-                
-    //            return (Frustum.perspective fov near far 1.0)
-    //            }
 
     let frustum (m:MModel) =
         let near = m.scene.config.nearPlane.value
@@ -159,7 +154,8 @@ module ViewerUtils =
             sgGrouped |> AList.map(
                 fun x -> ( x 
                     |> AMap.map(fun _ sf -> 
-                        viewSingleSurfaceSg sf m.frustum m.scene.surfacesModel.selectedSurface sf.globalBB)
+                        viewSingleSurfaceSg sf m.frustum m.scene.surfacesModel.selectedSurface sf.globalBB                        
+                        )
                     |> AMap.toASet 
                     |> ASet.map snd 
                 )

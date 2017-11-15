@@ -17,6 +17,7 @@ open PRo3D.Navigation2
 open PRo3D.BookmarksX
 open PRo3D.ReferenceSystem
 open Aardvark.Base.Frustum
+open Aardvark.UI.Trafos
 
   
 [<DomainType>] 
@@ -51,6 +52,7 @@ type Interactions =
     | PickExploreCenter     = 0
     | PlaceCoordinateSystem = 1  // compute up north vector at that point
     | DrawAnnotation        = 2
+    | TrafoControls         = 3
 
 type WayPoint = {
     name : string
@@ -70,6 +72,9 @@ type Model = {
 
     frustum         : Frustum
     aspect          : double
+
+    trafoKind       : TrafoKind
+    trafoMode       : TrafoMode
 
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
@@ -111,6 +116,9 @@ module Viewer =
 
         recent          = { recentScenes = HMap.empty }
         waypoints       = PList.empty
+
+        trafoKind       = TrafoKind.Translate
+        trafoMode       = TrafoMode.Local
 
         past            = None
         future          = None

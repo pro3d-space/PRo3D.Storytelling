@@ -42,11 +42,11 @@ module Scene =
     let addLegacyTrafos surfaces = 
         surfaces 
             |> PList.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))
-            |> PList.map(fun(s,p) -> 
+            |> PList.map(fun(s,p) ->                     
                     match (Serialization.fileExists p) with
                         | Some path->
                             let t = readLine path
-                            { s with trafo = Trafo3d.Parse(t) }
+                            { s with preTransform = Trafo3d.Parse(t) }
                         | None ->
                             s
                         )

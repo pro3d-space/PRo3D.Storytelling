@@ -205,6 +205,8 @@ module Mutable =
         let _waypoints = MList.Create(__initial.waypoints)
         let _frustum = ResetMod.Create(__initial.frustum)
         let _aspect = ResetMod.Create(__initial.aspect)
+        let _trafoKind = ResetMod.Create(__initial.trafoKind)
+        let _trafoMode = ResetMod.Create(__initial.trafoMode)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
         
@@ -217,6 +219,8 @@ module Mutable =
         member x.waypoints = _waypoints :> alist<_>
         member x.frustum = _frustum :> IMod<_>
         member x.aspect = _aspect :> IMod<_>
+        member x.trafoKind = _trafoKind :> IMod<_>
+        member x.trafoMode = _trafoMode :> IMod<_>
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         
@@ -234,6 +238,8 @@ module Mutable =
                 MList.Update(_waypoints, v.waypoints)
                 ResetMod.Update(_frustum,v.frustum)
                 ResetMod.Update(_aspect,v.aspect)
+                ResetMod.Update(_trafoKind,v.trafoKind)
+                ResetMod.Update(_trafoMode,v.trafoMode)
                 _past.Update(v.past)
                 _future.Update(v.future)
                 
@@ -305,6 +311,18 @@ module Mutable =
                     override x.Get(r) = r.aspect
                     override x.Set(r,v) = { r with aspect = v }
                     override x.Update(r,f) = { r with aspect = f r.aspect }
+                }
+            let trafoKind =
+                { new Lens<PRo3D.Viewer.Model, Aardvark.UI.Trafos.TrafoKind>() with
+                    override x.Get(r) = r.trafoKind
+                    override x.Set(r,v) = { r with trafoKind = v }
+                    override x.Update(r,f) = { r with trafoKind = f r.trafoKind }
+                }
+            let trafoMode =
+                { new Lens<PRo3D.Viewer.Model, Aardvark.UI.Trafos.TrafoMode>() with
+                    override x.Get(r) = r.trafoMode
+                    override x.Set(r,v) = { r with trafoMode = v }
+                    override x.Update(r,f) = { r with trafoMode = f r.trafoMode }
                 }
             let past =
                 { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with

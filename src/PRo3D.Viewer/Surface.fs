@@ -15,28 +15,12 @@ open PRo3D
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg
+    open Aardvark.UI.Trafos
 
     let getSurface model guid =
-        model.surfaces |> PList.toList |> List.tryFind (fun a -> a.guid = guid)
+        model.surfaces |> PList.toList |> List.tryFind (fun a -> a.guid = guid)    
 
-    let updateSingleSurface model (s': PRo3D.Surfaces.Surface)  =
-        let surfaces' = 
-            model.surfaces 
-                |> PList.toList 
-                |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s') 
-                |> PList.ofList
-
-        // update sgsurfaces as well !!!
-        let sgSurfaces' = 
-            model.sgSurfaces 
-                |> HMap.alter s'.guid 
-                        (fun x -> match x with 
-                                    | Some k -> Some { k with surface = s' }
-                                    | None -> None)   
-
-        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
-
-    let updateSingleSurface' model (s':PRo3D.Surfaces.Surface)  =
+    let updateSingleSurface model (s':PRo3D.Surfaces.Surface)  =
         let surfaces' = 
             model.surfaces 
                 |> PList.toList 
@@ -286,7 +270,8 @@ module Surface =
             relativePaths   = false
             quality         = Init.quality
             priority        = Init.priority
-            trafo           = Trafo3d.Identity
+            preTransform    = Trafo3d.Identity
+            trafo           = { TrafoController.initial with mode = TrafoMode.Local }
 
             scalarLayers    = PList.empty
             selectedScalar  = None
@@ -297,7 +282,7 @@ module Surface =
     
     let combineLeafBBs (hierarchies : list<PatchHierarchy>) =
          hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getLeaves)                  
+            |> List.map(fun d -> d.tree |> QTree.getLeaves)
             |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
             |> Seq.concat
             |> Box3d.ofSeq
@@ -309,10 +294,11 @@ module Surface =
             |> Box3d.ofSeq
 
     let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = {
-        surface = s       
+        surface    = s       
         sceneGraph = sg
-        globalBB = bb
-        kdTree = kd
+        globalBB   = bb
+        kdTree     = kd
+        //trafo      = { TrafoController.initial with mode = TrafoMode.Local }
     }
 
     let transformBox (trafo:Trafo3d) (bb:Box3d) =
@@ -321,12 +307,12 @@ module Surface =
     let createSgSurfaces runtime signature surfaces =
         surfaces          
             |> PList.toList
-            |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.trafo })
+            |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.preTransform })
             |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
             |> List.zip (surfaces |> PList.toList)
             |> List.map (
                 fun (surf, (sg, hierarchies, kdtree)) -> 
-                    let bb = hierarchies |> combineLeafBBs |> transformBox surf.trafo
+                    let bb = hierarchies |> combineLeafBBs |> transformBox surf.preTransform
                     sgOfSurface surf sg bb kdtree)
             |> List.map (fun d -> (d.surface.guid, d))
             |> HMap.ofList
@@ -437,7 +423,7 @@ module Surface =
                                 |> Seq.filter(
                                     fun x -> 
                                        let mutable t = 0.0
-                                       let r' = r.Ray.Transformed(surf.trafo.Backward)
+                                       let r' = r.Ray.Transformed(surf.preTransform.Backward) //combine pre and current transform
                                        x.Intersects(r', &t)
                                 )                                                
                         //intersect corresponding kdtrees
@@ -448,7 +434,7 @@ module Surface =
                                         Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                        
 
                                         let hit, c = 
-                                            r.Ray.Transformed(surf.trafo.Backward)
+                                            r.Ray.Transformed(surf.preTransform.Backward) //combine pre and current transform
                                             |> FastRay3d 
                                             |> intersectKdTrees kd bb surf cache
 
@@ -465,6 +451,11 @@ module Surface =
     
     let updateGrouping (model:SurfaceModel) =
         { model with sgGrouped = (Surface.groupSurfaces model.sgSurfaces) }
+    
+    let reflectSelectedUpdate (model:SurfaceModel) =
+        match model.selectedSurface with 
+            | Some s -> Surface.updateSingleSurface model s
+            | None -> model
 
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
         match action with
@@ -473,7 +464,7 @@ module Surface =
                     match model.selectedSurface with 
                         | Some s -> 
                             let s' = SurfaceProperties.update s msg 
-                            let model = Surface.updateSingleSurface' model s'
+                            let model = Surface.updateSingleSurface model s'
                             { model with selectedSurface = Some s' }
                         | None -> model
 

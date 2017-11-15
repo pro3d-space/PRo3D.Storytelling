@@ -244,8 +244,7 @@ module Viewer =
             |> List.map (fun h ->                     
                     let sg = Sg.patchLod signature runner h.baseDir 
                                     scene.lodDecider scene.useCompressedTextures                                 
-                                    (PatchLod.toRoseTree h.tree)
-                                    
+                                    (PatchLod.toRoseTree h.tree)                                    
                     sg
                ) 
             |> Sg.ofList

@@ -38,6 +38,7 @@ module ViewerApp =
     open Surface   
     open System.Collections.Concurrent   
     open Scene   
+    open Aardvark.UI.Trafos
                  
     // maybe move lenses to respective models?
 
@@ -45,7 +46,7 @@ module ViewerApp =
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces    
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
-    let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.selectedSurface
+    let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.selectedSurface |? Unchecked.defaultof<_>
     
     // navigation
     let _navigation = Model.Lens.scene |. Scene.Lens.navigation
@@ -401,7 +402,15 @@ module ViewerApp =
                     let f' = Frustum.perspective fov c'.nearPlane.value c'.farPlane.value asp
                     { m with frustum = f' }
                   | _ -> m
+            | SetMode d,_,_ -> 
+                { m with trafoMode = d }
+            | SetKind d,_,_ -> 
+                { m with trafoKind = d }
+            | Translate (_,b),_,_ -> 
+                let m = _selectedSurface.Update(m, fun s -> { s with trafo = TranslateController.updateController s.trafo b })
 
+                _surfacesModel.Set(m, SurfaceApp.reflectSelectedUpdate m.scene.surfacesModel)
+                
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -459,7 +468,25 @@ module ViewerApp =
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation
 
-            [ annotations; refSystem; exploreCenter] |> Sg.ofList
+            let scaling pos = 
+                Sg.computeInvariantScale m.scene.navigation.camera.view (Mod.constant 0.1) pos (Mod.constant 0.3) (Mod.constant 60.0)
+
+            let controller = 
+                adaptive {
+                    let! selected = m.scene.surfacesModel.selectedSurface
+                    let! kind = m.trafoKind
+                    match selected with
+                      | Some s -> 
+                          match kind with
+                            | TrafoKind.Translate -> 
+                                return TranslateController.viewController (fun t -> Translate("", t)) scaling s.trafo  // move controller to right pos in space                              
+                            | _ -> return Sg.empty
+                      | None -> return Sg.empty
+                    
+
+                } |> Sg.dynamic
+
+            [ controller; annotations; refSystem; exploreCenter] |> Sg.ofList
                                             
         let cmds = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let control = DomNode.RenderControl(att, cam, cmds, None)

@@ -11,6 +11,8 @@ open Aardvark.SceneGraph
 open DevILSharp.ILU
 open Aardvark.VRVis
 open PRo3D
+open Aardvark.UI.Trafos
+
 
 //[<DomainType>]
 type ScalarLayer = {
@@ -54,7 +56,8 @@ type Surface = {
     quality       : NumericInput
     priority      : NumericInput
 
-    trafo         : Trafo3d
+    preTransform  : Trafo3d        
+    trafo       : Transformation
 
     scalarLayers   : plist<ScalarLayer>
     selectedScalar : option<ScalarLayer>
@@ -66,6 +69,7 @@ type Surface = {
 [<DomainType>]
 type SgSurface = {    
     surface : Surface    
+
 
     globalBB    : Box3d
     sceneGraph  : ISg
