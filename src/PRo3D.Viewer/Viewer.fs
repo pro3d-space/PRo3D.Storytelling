@@ -46,6 +46,7 @@ module ViewerApp =
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces    
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
+    let _selectedSurface' = _surfacesModel   |. SurfaceModel.Lens.selectedSurface
     let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.selectedSurface |? Unchecked.defaultof<_>
     
     // navigation
@@ -148,15 +149,26 @@ module ViewerApp =
     
     let mutable cache = hmap.Empty
 
+    let isGrabbed (model : Model) =
+        let sel = _selectedSurface'.Get(model)
+        match sel with
+          | Some s -> s.trafo.grabbed.IsSome
+          | None -> false
+        //model.s.selectedObjects |> HSet.exists (fun name -> 
+        //    match HMap.tryFind name world.objects with
+        //        | Some o -> o.transformation.grabbed.IsSome
+        //        | None -> false
+        //)        
+
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =
         
         match msg, m.interaction, m.picking with
-            | NavigationMessage  msg,_,false -> 
+            | NavigationMessage  msg,_,false when (isGrabbed m |> not) ->
                
-                let c   = m.scene.config
-                let ref = m.scene.referenceSystem
+               let c   = m.scene.config
+               let ref = m.scene.referenceSystem
 
-                { m with scene = { m.scene with navigation = Navigation.update c ref navConf m.scene.navigation msg }}
+               { m with scene = { m.scene with navigation = Navigation.update c ref navConf m.scene.navigation msg }}
             | SetCamera cv,_,false -> 
                 _view.Set(m, cv)
             | SetCameraAndFrustum (cv, hfov, _),_,false ->                
@@ -407,6 +419,9 @@ module ViewerApp =
             | SetKind d,_,_ -> 
                 { m with trafoKind = d }
             | Translate (_,b),_,_ -> 
+
+                //let trafo = 
+
                 let m = _selectedSurface.Update(m, fun s -> { s with trafo = TranslateController.updateController s.trafo b })
 
                 _surfacesModel.Set(m, SurfaceApp.reflectSelectedUpdate m.scene.surfacesModel)
@@ -471,15 +486,24 @@ module ViewerApp =
             let scaling pos = 
                 Sg.computeInvariantScale m.scene.navigation.camera.view (Mod.constant 0.1) pos (Mod.constant 0.3) (Mod.constant 60.0)
 
+            let scaling' pos =
+                Mod.constant 8.0
+
             let controller = 
                 adaptive {
                     let! selected = m.scene.surfacesModel.selectedSurface
                     let! kind = m.trafoKind
                     match selected with
                       | Some s -> 
+                          let pos =
+                             m.scene.surfacesModel.sgSurfaces 
+                               |> AMap.find (s.guid |> Mod.force) 
+                               |> Mod.bind (fun d -> d.globalBB |> Mod.map(fun x -> x.Center))
+                               |> Mod.map Trafo3d.Translation
+
                           match kind with
-                            | TrafoKind.Translate -> 
-                                return TranslateController.viewController (fun t -> Translate("", t)) scaling s.trafo  // move controller to right pos in space                              
+                            | TrafoKind.Translate ->                                               
+                                return TranslateController.viewController (fun t -> Translate("", t)) scaling' s.trafo |> Sg.trafo pos    // move controller to right pos in space                              
                             | _ -> return Sg.empty
                       | None -> return Sg.empty
                     
