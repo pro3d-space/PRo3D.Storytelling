@@ -117,7 +117,7 @@ module Viewer =
         recent          = { recentScenes = HMap.empty }
         waypoints       = PList.empty
 
-        trafoKind       = TrafoKind.Translate
+        trafoKind       = TrafoKind.Rotate
         trafoMode       = TrafoMode.Local
 
         past            = None

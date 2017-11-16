@@ -62,6 +62,7 @@ type ViewerAction =
     | SetInteraction            of Interactions        
     | SetMode                   of TrafoMode
     | Translate                 of string * TrafoController.Action
+    | Rotate                    of string * TrafoController.Action
     | SurfaceActions            of SurfaceApp.Action
 
 

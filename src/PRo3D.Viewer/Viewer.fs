@@ -39,6 +39,7 @@ module ViewerApp =
     open System.Collections.Concurrent   
     open Scene   
     open Aardvark.UI.Trafos
+    open Aardvark.SceneGraph.SgFSharp.Sg
                  
     // maybe move lenses to respective models?
 
@@ -367,6 +368,14 @@ module ViewerApp =
 
                     let c' = ConfigProperties.update m.scene.config configAction
 
+                    let kind = 
+                        match k with
+                          | Aardvark.Application.Keys.F1 -> TrafoKind.Translate
+                          | Aardvark.Application.Keys.F2 -> TrafoKind.Rotate
+                          | _ -> m.trafoKind
+
+                    let m = { m with trafoKind = kind }
+
                     let m = 
                         match k with 
                           | Aardvark.Application.Keys.Space -> 
@@ -418,14 +427,12 @@ module ViewerApp =
                 { m with trafoMode = d }
             | SetKind d,_,_ -> 
                 { m with trafoKind = d }
-            | Translate (_,b),_,_ -> 
-
-                //let trafo = 
-
+            | Translate (_,b),_,_ ->
                 let m = _selectedSurface.Update(m, fun s -> { s with trafo = TranslateController.updateController s.trafo b })
-
                 _surfacesModel.Set(m, SurfaceApp.reflectSelectedUpdate m.scene.surfacesModel)
-                
+            | Rotate (_,b),_,_ ->
+                let m = _selectedSurface.Update(m, fun s -> { s with trafo = RotationController.updateController s.trafo b })
+                _surfacesModel.Set(m, SurfaceApp.reflectSelectedUpdate m.scene.surfacesModel)
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -481,13 +488,10 @@ module ViewerApp =
                 |> Sg.map ReferenceSystemMessage
 
             let exploreCenter =
-                Navigation.Sg.view m.scene.navigation
+                Navigation.Sg.view m.scene.navigation           
 
-            let scaling pos = 
-                Sg.computeInvariantScale m.scene.navigation.camera.view (Mod.constant 0.1) pos (Mod.constant 0.3) (Mod.constant 60.0)
-
-            let scaling' pos =
-                Mod.constant 8.0
+            //let scaling' pos =
+            //    Mod.constant 8.0
 
             let controller = 
                 adaptive {
@@ -499,11 +503,19 @@ module ViewerApp =
                              m.scene.surfacesModel.sgSurfaces 
                                |> AMap.find (s.guid |> Mod.force) 
                                |> Mod.bind (fun d -> d.globalBB |> Mod.map(fun x -> x.Center))
-                               |> Mod.map Trafo3d.Translation
+                               
+
+                          let scaling inPos = 
+                            let position = Mod.map2(fun a b -> a) inPos pos
+                            Sg.computeInvariantScale m.scene.navigation.camera.view (Mod.constant 0.1) position (Mod.constant 0.5) (Mod.constant 60.0)
 
                           match kind with
                             | TrafoKind.Translate ->                                               
-                                return TranslateController.viewController (fun t -> Translate("", t)) scaling' s.trafo |> Sg.trafo pos    // move controller to right pos in space                              
+                                return TranslateController.viewController (fun t -> Translate("", t)) scaling s.trafo 
+                                  |> Sg.trafo (pos |> Mod.map Trafo3d.Translation)
+                            | TrafoKind.Rotate ->
+                                return RotationController.viewController (fun t -> Rotate("", t)) (scaling) s.trafo
+                                  |> Sg.trafo (pos |> Mod.map (fun x -> Trafo3d.Translation -x))
                             | _ -> return Sg.empty
                       | None -> return Sg.empty
                     
