@@ -15,7 +15,7 @@ module Mutable =
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Scene> = Aardvark.Base.Incremental.EqModRef<PRo3D.Viewer.Scene>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Scene>
         let _navigation = PRo3D.Navigation2.Mutable.MNavigationModel.Create(__initial.navigation)
         let _interaction = ResetMod.Create(__initial.interaction)
-        let _surfacesModel = PRo3D.Surfaces.Mutable.MSurfaceModel.Create(__initial.surfacesModel)
+        let _surfacesModel = PRo3D.Groups.Mutable.MSurfaceModel.Create(__initial.surfacesModel)
         let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
         let _scenePath = MOption.Create(__initial.scenePath)
         let _referenceSystem = PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Create(__initial.referenceSystem)
@@ -36,7 +36,7 @@ module Mutable =
                 
                 PRo3D.Navigation2.Mutable.MNavigationModel.Update(_navigation, v.navigation)
                 ResetMod.Update(_interaction,v.interaction)
-                PRo3D.Surfaces.Mutable.MSurfaceModel.Update(_surfacesModel, v.surfacesModel)
+                PRo3D.Groups.Mutable.MSurfaceModel.Update(_surfacesModel, v.surfacesModel)
                 PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
                 MOption.Update(_scenePath, v.scenePath)
                 PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Update(_referenceSystem, v.referenceSystem)
@@ -70,7 +70,7 @@ module Mutable =
                     override x.Update(r,f) = { r with interaction = f r.interaction }
                 }
             let surfacesModel =
-                { new Lens<PRo3D.Viewer.Scene, PRo3D.Surfaces.SurfaceModel>() with
+                { new Lens<PRo3D.Viewer.Scene, PRo3D.Groups.SurfaceModel>() with
                     override x.Get(r) = r.surfacesModel
                     override x.Set(r,v) = { r with surfacesModel = v }
                     override x.Update(r,f) = { r with surfacesModel = f r.surfacesModel }

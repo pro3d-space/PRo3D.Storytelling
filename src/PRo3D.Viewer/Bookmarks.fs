@@ -18,10 +18,6 @@ module Bookmarks =
 
     type Action =
         | AddBookmark 
-        //| UpdateCam of Guid  
-        //| Select of Guid
-        //| Remove of Guid
-        //| SetBookmarkName          of string
         | GroupsMessage   of Groups.Action
     
     let tryGet (ans:plist<Bookmark>) key = 
@@ -39,38 +35,11 @@ module Bookmarks =
     let update (model : BookmarksModel) (act : Action) (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*BookmarksModel) = 
         match act with
             | AddBookmark -> 
-                //(outerModel,model) // in Groups
                 let newBm = getNewBookmark (navigation.Get outerModel) model.bookmarks.flat.Count
-                let root = Groups.addToActiveGroup model.bookmarks (Child.Bookmarks newBm)
-                let groups = 
-                    Groups.updateGroups model.bookmarks root (Groups.flatten root)
+                let groups = Groups.addToActiveGroup model.bookmarks (Child.Bookmarks newBm)
+                //let groups = 
+                //    Groups.updateGroups model.bookmarks root (Groups.flatten root)
                 (outerModel,{ model with bookmarks = groups})
-                
-            //| UpdateCam id -> 
-            //    let bm = tryGet model.bookmarks id
-            //    match bm with
-            //        | Some b ->
-            //            let navigation' = b.navigationState 
-            //            let newOuterModel = navigation.Set(outerModel,navigation')
-            //            (newOuterModel,model)                      
-            //        | None -> (outerModel,model)
-            //| Select id ->
-            //    let sb = tryGet model.bookmarks id   
-            //    (outerModel,{ model with selectedBookmark = sb })
-            //| Remove id -> (outerModel,model) // in Groups
-                //let toRemove = model.bookmarks |> PList.toList |> List.tryFindIndex (fun d -> d.key = id)
-                //match toRemove with
-                //    | Some index ->
-                //        let b' = model.bookmarks |> PList.removeAt index
-                //        (outerModel, { model with bookmarks = b'})
-                //    | None -> (outerModel, model) 
-            //| SetBookmarkName n -> 
-            //    match model.bookmarks.activeChild with //selectedBookmark with
-            //            | Some x -> let b' = { x with name = n }
-            //                        let bookmarks' = 
-            //                            model.bookmarks.AsList |> List.updateIf (fun x -> x.key = b'.key) (fun _ -> b')   
-            //                        (outerModel, {model with bookmarks = bookmarks' |> PList.ofList })
-            //            | None -> (outerModel,model)
             | GroupsMessage msg -> 
                 match msg with
                     | Groups.Action.UpdateCam id -> 
@@ -99,21 +68,11 @@ module Bookmarks =
             
             color
 
-
-    let viewGUI = 
-        
-         div [clazz "ui buttons inverted"] [
-                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                        button [clazz "ui icon button"; attribute "data-content" "Add Bookmark"; onMouseClick (fun _ -> AddBookmark )] [ //
-                                i [clazz "plus icon"] [] ] 
-                    )
-                ] 
-
     let viewBookmarks (path:list<Index>) (model:MGroupsModel)(select : MBookmark*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (bookmarks: alist<IMod<MChild>>) : alist<DomNode<'outer>> = 
                      
                         alist {
 
-                            let color = sprintf "color: %s" (Html.ofC4b C4b.White)      
+                            //let color = sprintf "color: %s" (Html.ofC4b C4b.White)      
                             let bookmarks = bookmarks
                                                 |> AList.map (fun x -> Mod.force x)
                                                 |> AList.choose( fun x -> match x with
@@ -128,8 +87,8 @@ module Bookmarks =
                                 let! key = b.key
 
 
-                                yield div [clazz "item"; onClick select; style bgc] [
-                                        i [clazz "large Sticky Note middle aligned icon";style bgc][] //i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                                yield div [clazz "item"; style bgc] [
+                                        i [clazz "large Sticky Note middle aligned icon"; onClick select;style bgc][] //i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
                                         div [clazz "content"; style bgc] [
                                             let desc = b.name
                                             yield Incremental.div (AttributeMap.ofList [clazz "header"])(
@@ -138,7 +97,7 @@ module Bookmarks =
                                                              onClick (fun _ -> lift <| Groups.UpdateCam key)
                                                              style bgc][] |> UI.wrapToolTipRight "FlyTo"               
                                                     yield i [clazz "Remove icon"
-                                                             onClick (fun _ -> lift <| Groups.RemoveChild (key,path)); style color] [] |> UI.wrapToolTip "Remove"      
+                                                             onClick (fun _ -> lift <| Groups.RemoveChild (key,path)); style bgc] [] |> UI.wrapToolTip "Remove"      
                                                     } 
                                             ) 
                                             yield div [clazz "description"; style bgc] [Incremental.text desc]      
@@ -147,13 +106,6 @@ module Bookmarks =
                                
                         }     
                
-
-    let getAmap icon action =
-             amap {
-                    let! icon = icon
-                    yield clazz icon
-                    yield onClick (fun _ -> action)
-                } |> AttributeMap.ofAMap
 
     let rec viewTree path (group : MGroup) (model : MGroupsModel) : alist<DomNode<Action>> =
 
@@ -171,7 +123,7 @@ module Bookmarks =
                     return if (active = group) then "circle icon" else "circle thin icon"
                 }
                       
-            let map = getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+            let map = Groups.getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                    
                 
             //let toggleIcon =
@@ -223,7 +175,7 @@ module Bookmarks =
                 }         
 
 
-            let select = fun (a:MBookmark,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force))  // Select (path, a.key |> Mod.force)
+            let select = fun (a:MBookmark,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force, a.name |> Mod.force))  // Select (path, a.key |> Mod.force)
             let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
             yield div [ clazz "item"] [
@@ -263,5 +215,13 @@ module Bookmarks =
                     Html.row "Sky:"     [Incremental.text (view |> Mod.map (fun x -> x.Sky.ToString("0.00")))]
                 ]
             )
+
+        let viewGUI = 
+         div [clazz "ui buttons inverted"] [
+                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                        button [clazz "ui icon button"; attribute "data-content" "Add Bookmark"; onMouseClick (fun _ -> AddBookmark )] [ //
+                                i [clazz "plus icon"] [] ] 
+                    )
+                ] 
 
        

@@ -54,7 +54,7 @@ module DrawingApp =
         //            model.annotations.annotationsFlat |> PList.prepend a
         //        | None -> model.annotations.annotationsFlat
 
-        let rootGroup = 
+        let groups = 
             match getFinishedAnnotation up north model with
                 | Some a -> 
                     let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
@@ -62,12 +62,12 @@ module DrawingApp =
                     bc.Add json
 
                     Groups.addToActiveGroup model.annotations (Child.Annotations a)
-                | None -> model.annotations.rootGroup
+                | None -> model.annotations
        
-        let flat = (Groups.flatten rootGroup)
+       // let flat = (Groups.flatten rootGroup)
 
-        let groups = 
-            Groups.updateGroups model.annotations rootGroup flat
+        //let groups = 
+        //    Groups.updateGroups model.annotations rootGroup flat
 
         { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
 
@@ -402,12 +402,12 @@ module DrawingApp =
                         ]
                 }     
         
-        let getAmap icon action =
-             amap {
-                    let! icon = icon
-                    yield clazz icon
-                    yield onClick (fun _ -> action)
-                } |> AttributeMap.ofAMap
+        //let getAmap icon action =
+        //     amap {
+        //            let! icon = icon
+        //            yield clazz icon
+        //            yield onClick (fun _ -> action)
+        //        } |> AttributeMap.ofAMap
 
         let rec viewTree path (group : MGroup) (model : MGroupsModel) : alist<DomNode<Action>> =
 
@@ -426,7 +426,7 @@ module DrawingApp =
                         return if (active = group) then "circle icon" else "circle thin icon"
                     }
                       
-                let map = getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+                let map = Groups.getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                    
                 
                 let toggleIcon =
@@ -435,7 +435,7 @@ module DrawingApp =
                         return if toggle then "unhide icon" else "hide icon"
                     }
 
-                let toggleMap = getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+                let toggleMap = Groups.getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
                
                 let desc =
                     div [style color] [       
@@ -478,7 +478,7 @@ module DrawingApp =
                     }         
 
 
-                let select = fun (a:MAnnotation,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force))  // Select (path, a.key |> Mod.force)
+                let select = fun (a:MAnnotation,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force, ""))  // Select (path, a.key |> Mod.force)
                 let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
                 yield div [ clazz "item"] [

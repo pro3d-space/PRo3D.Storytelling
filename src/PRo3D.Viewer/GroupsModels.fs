@@ -8,6 +8,10 @@ open PRo3D
 open PRo3D.Surfaces
 open PRo3D.BookmarksX
 open PRo3D.Navigation2
+//open PRo3D.Groups
+
+open Aardvark.VRVis
+open Aardvark.Opc 
 
 
 //type Groupable =
@@ -51,12 +55,24 @@ module Child =
           | Bookmarks b -> Bookmarks   { b with name = name }
           | _ -> c
 
-//type Content = {
-//    id      : Guid
-//    visible : bool
-//    child   : Child
-//}
-   
+    let childrenToSurfaces surfaces =
+        surfaces
+            |> HSet.choose(fun x -> match x with
+                                        | Child.Surfaces s -> Some s
+                                        | _ -> None )
+    let childrenToAnnotations annos =
+        annos
+            |> HSet.choose(fun x -> match x with
+                                        | Child.Annotations a -> Some a
+                                        | _ -> None )
+    let childrenToBookmarks bms =
+        bms
+            |> HSet.choose(fun x -> match x with
+                                        | Child.Bookmarks b -> Some b
+                                        | _ -> None )
+
+    
+
 [<DomainType>]
 type Group = {
     key         : Guid
@@ -135,3 +151,43 @@ module BookmarksModel =
     let initial = {
         bookmarks        = GroupsModel.initial
         }
+
+[<DomainType>]
+type SurfaceModel = {
+    surfaces        : GroupsModel //plist<Surface>
+    //selectedSurface : option<Surface> // = lastSelectedChild
+    sgSurfaces      : hmap<Guid,SgSurface>
+    sgGrouped       : plist<hmap<Guid,SgSurface>>
+    kdTreeCache     : hmap<string, ConcreteKdIntersectionTree>
+}
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module SurfaceModel =
+    open MBrace.FsPickler
+    open MBrace.FsPickler.Combinators    
+
+    let fillSurfaceGroup a b = 
+        let surfaces = GroupsModel.initial
+        { surfaces with rootGroup = { surfaces.rootGroup with childList = a}; lastSelectedChild = b }
+
+    let makeSurfaceModel a b =
+        let surfaces = fillSurfaceGroup a b
+        {
+            surfaces = surfaces
+            //selectedSurface = b
+            sgSurfaces = hmap.Empty
+            sgGrouped = plist.Empty
+            kdTreeCache = hmap.Empty
+        }
+
+    let surfaceModelPickler : Pickler<SurfaceModel> =
+        Pickler.product makeSurfaceModel
+        ^+ Pickler.field (fun s -> s.surfaces.rootGroup.childList)   Pickler.auto<plist<Child>> //Surface
+        ^. Pickler.field (fun s -> s.surfaces.lastSelectedChild)     Pickler.auto<option<Child>> //Pickler.auto<option<Surface>>
+
+    let initial = makeSurfaceModel PList.empty None   
+
+    
+    registry.RegisterFactory (fun _ -> surfaceModelPickler)
+
+    //FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)

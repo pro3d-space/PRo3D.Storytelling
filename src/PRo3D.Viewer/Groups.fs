@@ -21,15 +21,15 @@ module Groups =
         | ToggleExpand          of list<Index>
         | AddGroup              of list<Index>
         | RemoveGroup           of list<Index>
-        | AddChild              of list<Index>*plist<Child>    
+        | AddChildren           of list<Index>*plist<Child>    
         | RemoveChild           of Guid*list<Index> 
         | ToggleChildVisibility of Guid*list<Index> 
-        | ActiveChild           of Guid*list<Index>
+        | ActiveChild           of Guid*list<Index>*string
         | UpdateChildProperties of Child
         | SetGroupName          of string
         | SetChildName          of string
         | ClearGroup            of list<Index>
-        | SelectChilds          of list<Index>*Guid  
+        | SelectChilds          of list<Index>*Guid*string 
         | ToggleGroup           of list<Index>
         | MoveChilds      
         | ClearSelection
@@ -89,7 +89,7 @@ module Groups =
         ag.subGroups |> PList.filter (fun x -> x.key <> id) 
     
     let removeChild (childs:plist<Child>) (id:Guid) = 
-        childs |> PList.filter (fun x -> x.id <> id)    
+        childs |> PList.filter (fun x -> x.id <> id)   
 
     let toggleChild (childs:plist<Child>) (id:Guid) =        
         childs |> PList.map(fun x -> if x.id = id then Child.toggleVisibility x else x) 
@@ -100,28 +100,51 @@ module Groups =
     let updateChild (childs:plist<Child>) (c:Child) = 
         childs |> PList.map(fun x -> if x.id = c.id then c else x)
 
+    // add one child to children of active group
     let addToActiveGroup model (a:Child) = 
         let func = (fun (x : Group) -> { x with childList = x.childList |> PList.prepend a })
-        updateItemAt model.activeGroup.path func model.rootGroup
+        let newRoot = updateItemAt model.activeGroup.path func model.rootGroup
+        updateGroups model newRoot (flatten newRoot)
+
+    // add a list of children to children of active group
+    let AddChildren path cs model = 
+        let func = (fun (x:Group) -> { x with childList = x.childList |> PList.append' cs })
+        let newRoot = updateItemAt path func model.rootGroup
+        updateGroups model newRoot (flatten newRoot)
     
     let updateChildProperties (model:GroupsModel) (c:Child) =
         let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then updateChild x.childList c else x.childList })
         let newRoot = updateItemAt model.activeChild.path func model.rootGroup
         let m' = updateGroups model newRoot (flatten newRoot)
         { m' with lastSelectedChild = Some c }
+    
+    let rec updateChildList (children:list<Child> ) (model:GroupsModel) =
+        match children with
+          | x::rest ->
+                let m' = updateChildProperties model x
+                updateChildList rest m'
+          |_ -> model
+    
+    let removeFromSelection model id path =
+        { model with selectedChilds = model.selectedChilds |> HSet.remove( { id = id; path = path; name = "" } ) }
+    
+    let removeChild2 model id path =
+        let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then removeChild x.childList id else x.childList })
+        let newRoot = updateItemAt path func model.rootGroup                
+        let m = removeFromSelection model id path
+        updateGroups m newRoot (flatten newRoot)
 
     let rec removeSelectionfromTree (selection:list<TreeSelection> ) (model:GroupsModel) =
         match selection with
           | x::rest ->
-                let func = (fun (y:Group) -> { y with childList = if PList.count y.childList > 0 then removeChild y.childList x.id else y.childList })
-                let newRoot = updateItemAt x.path func model.rootGroup 
-                let m' = updateGroups model newRoot (flatten newRoot)
+                //let func = (fun (y:Group) -> { y with childList = if PList.count y.childList > 0 then removeChild y.childList x.id else y.childList })
+                //let newRoot = updateItemAt x.path func model.rootGroup 
+                //let m' = updateGroups model newRoot (flatten newRoot)
+                let m' = removeChild2 model x.id x.path
                 removeSelectionfromTree rest m'
           |_ -> model
 
-    let removeFromSelection model id path =
-        { model with selectedChilds = model.selectedChilds |> HSet.remove( { id = id; path = path; name = "" } ) }
-
+    
     let moveChildren model =
         // get annotations
         let toMove = model.selectedChilds
@@ -140,7 +163,8 @@ module Groups =
         // update selection paths
         let sel = (model.selectedChilds |> HSet.map( fun x -> {x with path = m.activeGroup.path }))
         { m' with selectedChilds = sel}
-        
+
+    
     let update (model : GroupsModel) (action : Action) =
         printfn "action: %A" action
         match action with
@@ -152,9 +176,9 @@ module Groups =
                 { model with 
                     activeGroup   = selection
                     lastSelectedItem = SelectedItem.Group } 
-            | ActiveChild (g, p) -> 
+            | ActiveChild (g, p, s) -> 
                 { model with
-                    activeChild = { id = g; path = p; name = "" }
+                    activeChild = { id = g; path = p; name = s }
                     lastSelectedItem = SelectedItem.Child } 
             | ToggleExpand p -> 
                 let func = (fun (x:Group) -> { x with expanded = not x.expanded })
@@ -182,17 +206,13 @@ module Groups =
                 let newRoot = deleteItemAt p func model.rootGroup
                 let m' = updateGroups model newRoot (flatten newRoot)
                 m'
-            | AddChild (p,c) -> 
-                let func = (fun (x:Group) -> { x with childList = c })
-                let newRoot = updateItemAt p func model.rootGroup
-                let m' = updateGroups model newRoot (flatten newRoot)
-                m'
-            | RemoveChild (k,p) -> 
-                let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then removeChild x.childList k else x.childList })
-                let newRoot = updateItemAt p func model.rootGroup                
-                let m = removeFromSelection model k p
+            | AddChildren (p,cs) -> AddChildren p cs model               
+            | RemoveChild (k,p) -> removeChild2 model k p
+                //let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then removeChild x.childList k else x.childList })
+                //let newRoot = updateItemAt p func model.rootGroup                
+                //let m = removeFromSelection model k p
                 
-                updateGroups m newRoot (flatten newRoot)
+                //updateGroups m newRoot (flatten newRoot)
                 
             | ToggleChildVisibility (c,p) -> 
                 let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then toggleChild x.childList c else x.childList })
@@ -219,12 +239,12 @@ module Groups =
                 let m = { model with selectedChilds = selection }
                 let m' = updateGroups m newRoot (flatten newRoot)
                 m'
-            | SelectChilds (p,id) ->
+            | SelectChilds (p,id,s) ->
                 let selected = model.selectedChilds
                 let tSelection = {
                     id = id
                     path = p
-                    name = ""
+                    name = s
                     }
                
                 let selection, child =         

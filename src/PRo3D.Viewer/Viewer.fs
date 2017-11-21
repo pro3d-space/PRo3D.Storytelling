@@ -38,6 +38,7 @@ module ViewerApp =
     open Surface   
     open System.Collections.Concurrent   
     open Scene   
+    open DomainModel.Surfaces
                  
     // maybe move lenses to respective models?
 
@@ -45,7 +46,8 @@ module ViewerApp =
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces    
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
-    let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.selectedSurface
+    let _surfaceGroup    = _surfacesModel   |. SurfaceModel.Lens.surfaces
+    let _selectedSurface = _surfaceGroup    |. GroupsModel.Lens.lastSelectedChild
     
     // navigation
     let _navigation = Model.Lens.scene |. Scene.Lens.navigation
@@ -582,7 +584,7 @@ module ViewerApp =
                           | _ -> bookmarkProperties m 
                     )
             div [][
-                Bookmarks.viewGUI |> UI.map BookmarkMessage
+                Bookmarks.UI.viewGUI |> UI.map BookmarkMessage
 
                 GuiEx.accordion "Bookmarks" "Write" true [
                     Groups.viewGroupButtons |> UI.map BookmarkUIMessage

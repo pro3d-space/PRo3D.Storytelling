@@ -8,6 +8,7 @@ open Aardvark.Opc
 open PRo3D.Surfaces
 open PRo3D.Viewer
 open PRo3D.Surfaces.Surface
+open PRo3D.Groups
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Scene =
@@ -18,19 +19,38 @@ module Scene =
     let expandRelativePaths (m:Scene) =
         // Surfaces        
         
+        //match m.scenePath with
+        //    | Some p ->         
+        //        let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
+        //        let surfaces = 
+        //            m.surfacesModel.surfaces                           
+        //            |> PList.map(
+        //                fun x -> 
+        //                    if x.relativePaths then
+        //                        //let p'' = Path.Combine(p', x.name)
+        //                        { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
+        //                    else x
+        //                )
+        //        { m with surfacesModel = Surface.updateSurfaces m.surfacesModel surfaces}
+        //    | None -> m     
+        
         match m.scenePath with
             | Some p ->         
                 let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
-                let surfaces = 
-                    m.surfacesModel.surfaces                            
-                    |> PList.map(
-                        fun x -> 
-                            if x.relativePaths then
-                                let p'' = Path.Combine(p', x.name)
-                                { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
-                            else x
-                        )
-                { m with surfacesModel = Surface.updateSurfaces m.surfacesModel surfaces}
+                let newFlats = 
+                    (Child.childrenToSurfaces m.surfacesModel.surfaces.flat)   
+                        |> HSet.map(
+                            fun x -> 
+                                if x.relativePaths then
+                                    let p'' = Path.Combine(p', x.name)
+                                    { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
+                                else x
+                            )
+                let flatList = newFlats|> HSet.toList
+                let childList = flatList |> List.map(fun x -> Child.Surfaces x )
+                let newGroupsModel = Groups.updateChildList childList m.surfacesModel.surfaces
+                let m' = { m with surfacesModel = { m.surfacesModel with surfaces = newGroupsModel }}      
+                { m' with surfacesModel = Surface.updateSurfaces m'.surfacesModel (flatList |> PList.ofList)}
             | None -> m        
 
     let readLine (filePath:string) =
@@ -82,13 +102,16 @@ module Scene =
                 |> addLegacyTrafos
                 |> addSurfaceAttributes                
 
-        let surfaces = surfaces |> PList.append' m.scene.surfacesModel.surfaces
-        let m = 
-            (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, surfaces)
+        let existingSurfaces = Child.childrenToSurfaces m.scene.surfacesModel.surfaces.flat |> HSet.toList |> PList.ofList         
+        let allSurfaces = surfaces |> PList.append' existingSurfaces
+        let sChildren = surfaces |> PList.map (fun x -> Child.Surfaces x) 
+        let newGroupsModel = Groups.AddChildren m.scene.surfacesModel.surfaces.activeGroup.path sChildren m.scene.surfacesModel.surfaces
+        let m = //{ m with scene = { m.scene with surfacesModel = { m.scene.surfacesModel with surfaces = newGroupsModel }}}
+            (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, newGroupsModel)
         
         //handle sg surfaces
         let sgSurfaces = 
-            surfaces
+            allSurfaces
                 |> Surface.createSgSurfaces runtime signature
                 |> HMap.union m.scene.surfacesModel.sgSurfaces
                 |> Files.expandLazyKdTreePaths m.scene.scenePath
@@ -103,7 +126,8 @@ module Scene =
         
         let s = s |> expandRelativePaths
 
-        let sgSurfaces = Surface.createSgSurfaces runtime signature s.surfacesModel.surfaces |> Files.expandLazyKdTreePaths m.scene.scenePath
+        let surfs = (Child.childrenToSurfaces s.surfacesModel.surfaces.flat) |> HSet.toList |> PList.ofList    
+        let sgSurfaces = Surface.createSgSurfaces runtime signature surfs |> Files.expandLazyKdTreePaths m.scene.scenePath
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
         let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
