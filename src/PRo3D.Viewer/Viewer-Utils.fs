@@ -130,7 +130,7 @@ module ViewerUtils =
                         let attr : Aardvark.Opc.AttributeParameters = 
                             {
                                 selectedTexture = texture |> Option.map(fun x -> x.index)
-                                selectedScalar  = scalar  |> Option.map(fun x -> x.index)                           
+                                selectedScalar  = scalar  |> Option.map(fun x -> x.index)
                             }
 
                         return attr
@@ -142,7 +142,8 @@ module ViewerUtils =
                             fun sceneHit -> 
                                 true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])                        
                     ]
-                |> Sg.trafo surface.surface.trafo.previewTrafo
+                |> Sg.trafo surface.trafo.previewTrafo
+                |> Sg.trafo (surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation(-x.Center)))
         sg
 
     let frustum (m:MModel) =

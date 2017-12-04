@@ -270,12 +270,9 @@ module Surface =
             relativePaths   = false
             quality         = Init.quality
             priority        = Init.priority
-            preTransform    = Trafo3d.Identity
-            trafo           = { TrafoController.initial with mode = TrafoMode.Local }
-
+            preTransform    = Trafo3d.Identity            
             scalarLayers    = PList.empty
             selectedScalar  = None
-
             textureLayers   = PList.empty
             selectedTexture = None            
         }
@@ -293,13 +290,18 @@ module Surface =
             |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
             |> Box3d.ofSeq
 
-    let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = {
-        surface    = s       
-        sceneGraph = sg
-        globalBB   = bb
-        kdTree     = kd
-        //trafo      = { TrafoController.initial with mode = TrafoMode.Local }
-    }
+    let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = 
+    
+        let pose = Pose.translate bb.Center
+        let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
+
+        {
+            surface    = s       
+            sceneGraph = sg
+            globalBB   = bb
+            kdTree     = kd
+            trafo      = trafo
+        }
 
     let transformBox (trafo:Trafo3d) (bb:Box3d) =
         bb.Transformed(trafo)

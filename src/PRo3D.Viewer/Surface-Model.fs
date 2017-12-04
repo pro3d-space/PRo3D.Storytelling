@@ -56,8 +56,8 @@ type Surface = {
     quality       : NumericInput
     priority      : NumericInput
 
-    preTransform  : Trafo3d        
-    trafo       : Transformation
+    preTransform  : Trafo3d
+    
 
     scalarLayers   : plist<ScalarLayer>
     selectedScalar : option<ScalarLayer>
@@ -68,9 +68,8 @@ type Surface = {
 
 [<DomainType>]
 type SgSurface = {    
-    surface : Surface    
-
-
+    surface     : Surface    
+    trafo       : Transformation
     globalBB    : Box3d
     sceneGraph  : ISg
     kdTree      : hmap<Box3d,Level0KdTree>

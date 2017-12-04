@@ -151,7 +151,7 @@ module ViewerApp =
     let mutable cache = hmap.Empty
 
     let isGrabbed (model : Model) =
-        let sel = _selectedSurface'.Get(model)
+        let sel = _selectedSurface'.Get(model) |> Option.bind(fun x -> _sgSurfaces.Get(model).TryFind x.guid)
         match sel with
           | Some s -> s.trafo.grabbed.IsSome
           | None -> false
@@ -428,11 +428,31 @@ module ViewerApp =
             | SetKind d,_,_ -> 
                 { m with trafoKind = d }
             | Translate (_,b),_,_ ->
-                let m = _selectedSurface.Update(m, fun s -> { s with trafo = TranslateController.updateController s.trafo b })
-                _surfacesModel.Set(m, SurfaceApp.reflectSelectedUpdate m.scene.surfacesModel)
+                //let m = _selectedSurface.Update(m, fun s -> { s with trafo = TranslateController.updateController s.trafo b })
+                //_surfacesModel.Set(m, SurfaceApp.reflectSelectedUpdate m.scene.surfacesModel)
+
+                let selected = _selectedSurface.Get(m).guid
+                let sgSurf = _sgSurfaces.Get(m) |> HMap.find selected
+                let s' = { sgSurf with trafo = TranslateController.updateController sgSurf.trafo b }
+                let bla = 
+                  _sgSurfaces.Get(m) 
+                    |> HMap.update selected  (fun x -> 
+                      match x with 
+                        | Some _ -> printfn "%A" s'.trafo.previewTrafo.Forward.C3.XYZ; s'
+                        | None   -> failwith "surface not found")
+                _sgSurfaces.Set(m, bla)
+                
             | Rotate (_,b),_,_ ->
-                let m = _selectedSurface.Update(m, fun s -> { s with trafo = RotationController.updateController s.trafo b })
-                _surfacesModel.Set(m, SurfaceApp.reflectSelectedUpdate m.scene.surfacesModel)
+                let selected = _selectedSurface.Get(m).guid
+                let sgSurf = _sgSurfaces.Get(m) |> HMap.find selected
+                let s' = { sgSurf with trafo = RotationController.updateController sgSurf.trafo b }
+                let bla = 
+                  _sgSurfaces.Get(m) 
+                    |> HMap.update selected  (fun x -> 
+                      match x with 
+                        | Some _ -> s'
+                        | None   -> failwith "surface not found")
+                _sgSurfaces.Set(m, bla)
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -488,10 +508,7 @@ module ViewerApp =
                 |> Sg.map ReferenceSystemMessage
 
             let exploreCenter =
-                Navigation.Sg.view m.scene.navigation           
-
-            //let scaling' pos =
-            //    Mod.constant 8.0
+                Navigation.Sg.view m.scene.navigation
 
             let controller = 
                 adaptive {
@@ -499,30 +516,27 @@ module ViewerApp =
                     let! kind = m.trafoKind
                     match selected with
                       | Some s -> 
-                          let pos =
-                             m.scene.surfacesModel.sgSurfaces 
-                               |> AMap.find (s.guid |> Mod.force) 
-                               |> Mod.bind (fun d -> d.globalBB |> Mod.map(fun x -> x.Center))
-                               
-
-                          let scaling inPos = 
-                            let position = Mod.map2(fun a b -> a) inPos pos
-                            Sg.computeInvariantScale m.scene.navigation.camera.view (Mod.constant 0.1) position (Mod.constant 0.5) (Mod.constant 60.0)
+                          let! sg = m.scene.surfacesModel.sgSurfaces |> AMap.find (s.guid |> Mod.force)
+                          
+                          let scaling pos =                            
+                            Sg.computeInvariantScale 
+                                m.scene.navigation.camera.view 
+                                (Mod.constant 0.1)
+                                pos 
+                                (Mod.constant 0.5)
+                                (Mod.constant 60.0)
 
                           match kind with
                             | TrafoKind.Translate ->                                               
-                                return TranslateController.viewController (fun t -> Translate("", t)) scaling s.trafo 
-                                  |> Sg.trafo (pos |> Mod.map Trafo3d.Translation)
+                                return TranslateController.viewController (fun t -> Translate("", t)) scaling sg.trafo
                             | TrafoKind.Rotate ->
-                                return RotationController.viewController (fun t -> Rotate("", t)) (scaling) s.trafo
-                                  |> Sg.trafo (pos |> Mod.map (fun x -> Trafo3d.Translation -x))
+                                return RotationController.viewController (fun t -> Rotate("", t)) scaling sg.trafo
                             | _ -> return Sg.empty
                       | None -> return Sg.empty
                     
-
                 } |> Sg.dynamic
 
-            [ controller; annotations; refSystem; exploreCenter] |> Sg.ofList
+            [controller; annotations; refSystem; exploreCenter] |> Sg.ofList
                                             
         let cmds = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let control = DomNode.RenderControl(att, cam, cmds, None)
@@ -539,14 +553,14 @@ module ViewerApp =
                         let! a' = a
                         match a' with 
                             | MAnnotations ann -> return isSome ann
-                            | _ -> return div[][]                                                             
-                    | None   -> return div[][] 
+                            | _ -> return div[][]
+                    | None   -> return div[][]
             }
 
         let annotationProperties (model:MModel) =
             adaptive {
                 let! child = model.drawing.annotations.lastSelectedChild
-                let! opt = lscToDom child (fun x -> AnnotationProperties.view x)                
+                let! opt = lscToDom child (fun x -> AnnotationProperties.view x)
 
                 return (opt |> UI.map AnnotationMessage)
             } 
