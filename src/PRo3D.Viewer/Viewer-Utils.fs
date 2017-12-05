@@ -102,6 +102,9 @@ module ViewerUtils =
                           | Some s -> V2d(s.definedRange.Min, s.definedRange.Max)
                           | None   -> V2d(0.0,1.0)
             }
+
+        let globalToLocal = 
+            surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation -x.Center)
                 
         let sg = 
             surface.sceneGraph 
@@ -142,8 +145,12 @@ module ViewerUtils =
                             fun sceneHit -> 
                                 true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])                        
                     ]
-                |> Sg.trafo surface.trafo.previewTrafo
-                |> Sg.trafo (surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation(-x.Center)))
+                //|> Sg.trafo (surface.globalBB 
+                //                |> Mod.map(fun x -> 
+                //                    let t = Trafo3d.Translation(-x.Center)
+                //                    printfn "%A" t.Forward.C3.XYZ
+                //                    t))
+                |> Sg.trafo (surface.trafo.previewTrafo |> Mod.map(fun x -> printfn "%A" x.Forward.C3.XYZ; x))
         sg
 
     let frustum (m:MModel) =

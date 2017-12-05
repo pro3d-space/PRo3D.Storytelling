@@ -74,6 +74,7 @@ module ViewerApp =
             | Some s ->
                 let bb = s.globalBB
                 let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value
+                let view = CameraView.lookAt V3d.One V3d.Zero m.scene.referenceSystem.up.value
                 
                 _view.Set(m, view)
             | None -> m

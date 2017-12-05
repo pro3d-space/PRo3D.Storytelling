@@ -254,9 +254,22 @@ module Surface =
             failwith (sprintf "invalid bounding box %s" (bb.ToString()))
         else bb
    
+    let combineLeafBBs (hierarchies : list<PatchHierarchy>) =
+         hierarchies
+            |> List.map(fun d -> d.tree |> QTree.getLeaves)
+            |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
+            |> Seq.concat
+            |> Box3d.ofSeq
+
+    let combineRootBBs (hierarchies : list<PatchHierarchy>) =
+         hierarchies
+            |> List.map(fun d -> d.tree |> QTree.getRoot)                  
+            |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
+            |> Box3d.ofSeq
+
     /// creates a surface from opc folder path
-    let mk path = 
-        
+    let mk path =                 
+
         let names = Files.getOPCNames path                
         {
             guid            = Guid.NewGuid()
@@ -275,24 +288,11 @@ module Surface =
             selectedScalar  = None
             textureLayers   = PList.empty
             selectedTexture = None            
-        }
-    
-    let combineLeafBBs (hierarchies : list<PatchHierarchy>) =
-         hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getLeaves)
-            |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
-            |> Seq.concat
-            |> Box3d.ofSeq
-
-    let combineRootBBs (hierarchies : list<PatchHierarchy>) =
-         hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getRoot)                  
-            |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
-            |> Box3d.ofSeq
+        }       
 
     let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = 
     
-        let pose = Pose.translate bb.Center
+        let pose = Pose.translate V3d.Zero // bb.Center
         let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
 
         {
@@ -306,18 +306,31 @@ module Surface =
     let transformBox (trafo:Trafo3d) (bb:Box3d) =
         bb.Transformed(trafo)
       
-    let createSgSurfaces runtime signature surfaces =
-        surfaces          
-            |> PList.toList
-            |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.preTransform })
-            |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
-            |> List.zip (surfaces |> PList.toList)
-            |> List.map (
-                fun (surf, (sg, hierarchies, kdtree)) -> 
+    type SgHelper = {
+        surf        : PRo3D.Surfaces.Surface
+        bb          : Box3d
+        sg          : ISg        
+        kdtree      : hmap<Box3d,Level0KdTree>
+    }
+    
+    let createSgSurfaces runtime signature surfaces =        
+        let sghs =
+            surfaces
+                |> PList.toList
+                |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.preTransform })
+                |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
+                |> List.zip (surfaces |> PList.toList)
+                |> List.map(fun (surf, (sg, hierarchies, kdtree)) -> 
                     let bb = hierarchies |> combineLeafBBs |> transformBox surf.preTransform
-                    sgOfSurface surf sg bb kdtree)
-            |> List.map (fun d -> (d.surface.guid, d))
-            |> HMap.ofList
+                    { surf = surf; bb = bb; sg = sg; kdtree = kdtree })
+
+        let sgSurfaces =
+            sghs 
+              |> List.map (fun d -> sgOfSurface d.surf d.sg d.bb d.kdtree)
+              |> List.map (fun d -> (d.surface.guid, d))
+              |> HMap.ofList       
+
+        sgSurfaces
                   
  module SurfaceApp =
     open System.Diagnostics
