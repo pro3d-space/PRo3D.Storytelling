@@ -15,6 +15,7 @@ module Scene =
     
     
     let surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
+    let _flatSurfaces = Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.flat
 
     let expandRelativePaths (m:Scene) =
         // Surfaces        
@@ -125,6 +126,9 @@ module Scene =
     let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
         
         let s = s |> expandRelativePaths
+
+        let flat = Groups.flatten s.surfacesModel.surfaces.rootGroup
+        let s = _flatSurfaces.Set(s, flat)
 
         let surfs = (Child.childrenToSurfaces s.surfacesModel.surfaces.flat) |> HSet.toList |> PList.ofList    
         let sgSurfaces = Surface.createSgSurfaces runtime signature surfs |> Files.expandLazyKdTreePaths m.scene.scenePath
