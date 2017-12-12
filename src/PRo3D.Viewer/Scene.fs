@@ -129,12 +129,16 @@ module Scene =
 
         let flat = Groups.flatten s.surfacesModel.surfaces.rootGroup
         let s = _flatSurfaces.Set(s, flat)
+        let m = { m with scene = s }
 
-        let surfs = (Child.childrenToSurfaces s.surfacesModel.surfaces.flat) |> HSet.toList |> PList.ofList    
+        let surfs = s.surfacesModel.surfaces.flat |> Child.childrenToSurfaces |> HSet.toList |> PList.ofList
+
         let sgSurfaces = Surface.createSgSurfaces runtime signature surfs |> Files.expandLazyKdTreePaths m.scene.scenePath
+
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
         let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
+        
         surfaceModelLens.Set(m, grouped)
 
     let loadScene path m runtime signature =
