@@ -187,7 +187,7 @@ module ViewerApp =
                                   
                                   let func = 
                                       (fun (x:Group) -> 
-                                          { x with childList = if PList.count x.childList > 0 then Groups.updateChild x.childList a' else x.childList })
+                                          { x with childList = if PList.count x.childList > 0 then Groups.updateChild a' x.childList else x.childList })
                                   
                                   let path = m.drawing.annotations.activeChild.path
                                   let root = Groups.updateItemAt path func m.drawing.annotations.rootGroup
