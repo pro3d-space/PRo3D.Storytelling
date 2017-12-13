@@ -48,7 +48,7 @@ module ViewerApp =
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces    
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
-    let _selectedSurface' = _surfacesModel   |. SurfaceModel.Lens.selectedSurface
+    //let _selectedSurface' = _surfacesModel   |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.lastSelectedChild
     let _surfaceGroup    = _surfacesModel   |. SurfaceModel.Lens.surfaces
     let _selectedSurface = _surfaceGroup    |. GroupsModel.Lens.lastSelectedChild
     
@@ -154,18 +154,12 @@ module ViewerApp =
     let mutable cache = hmap.Empty
 
     let isGrabbed (model : Model) =
-        let sel = _selectedSurface'.Get(model) |> Option.bind(fun x -> _sgSurfaces.Get(model).TryFind x.guid)
+        let sel = _selectedSurface.Get(model) |> Option.bind(fun x -> _sgSurfaces.Get(model).TryFind x.id)
         match sel with
           | Some s -> s.trafo.grabbed.IsSome
-          | None -> false
-        //model.s.selectedObjects |> HSet.exists (fun name -> 
-        //    match HMap.tryFind name world.objects with
-        //        | Some o -> o.transformation.grabbed.IsSome
-        //        | None -> false
-        //)        
+          | None -> false       
 
-    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =
-        
+    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) ->
                
@@ -439,28 +433,33 @@ module ViewerApp =
                 //let m = _selectedSurface.Update(m, fun s -> { s with trafo = TranslateController.updateController s.trafo b })
                 //_surfacesModel.Set(m, SurfaceApp.reflectSelectedUpdate m.scene.surfacesModel)
 
-                let selected = _selectedSurface.Get(m).guid
-                let sgSurf = _sgSurfaces.Get(m) |> HMap.find selected
-                let s' = { sgSurf with trafo = TranslateController.updateController sgSurf.trafo b }
-                let bla = 
-                  _sgSurfaces.Get(m) 
-                    |> HMap.update selected  (fun x -> 
-                      match x with 
-                        | Some _ -> printfn "%A" s'.trafo.previewTrafo.Forward.C3.XYZ; s'
-                        | None   -> failwith "surface not found")
-                _sgSurfaces.Set(m, bla)
+                match _selectedSurface.Get(m) with
+                  | Some selected ->
+                    let sgSurf = _sgSurfaces.Get(m) |> HMap.find selected.id
+                    let s' = { sgSurf with trafo = TranslateController.updateController sgSurf.trafo b }
+                    let bla = 
+                      _sgSurfaces.Get(m) 
+                        |> HMap.update selected.id (fun x -> 
+                            match x with 
+                              | Some _ -> printfn "%A" s'.trafo.previewTrafo.Forward.C3.XYZ; s'
+                              | None   -> failwith "surface not found")
+                    _sgSurfaces.Set(m, bla)
+                  | None -> m
                 
             | Rotate (_,b),_,_ ->
-                let selected = _selectedSurface.Get(m).guid
-                let sgSurf = _sgSurfaces.Get(m) |> HMap.find selected
-                let s' = { sgSurf with trafo = RotationController.updateController sgSurf.trafo b }
-                let bla = 
-                  _sgSurfaces.Get(m) 
-                    |> HMap.update selected  (fun x -> 
-                      match x with 
-                        | Some _ -> s'
-                        | None   -> failwith "surface not found")
-                _sgSurfaces.Set(m, bla)
+                 match _selectedSurface.Get(m) with
+                   | Some selected ->
+                     let sgSurf = _sgSurfaces.Get(m) |> HMap.find selected.id
+                     let s' = { sgSurf with trafo = RotationController.updateController sgSurf.trafo b }
+                     let bla = 
+                       _sgSurfaces.Get(m) 
+                        |> HMap.update selected.id (fun x -> 
+                          match x with 
+                            | Some _ -> s'
+                            | None   -> failwith "surface not found")
+                     _sgSurfaces.Set(m, bla)
+                   | None -> m
+                  
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -518,13 +517,24 @@ module ViewerApp =
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation
 
+            let getSurface (c:IMod<MChild>) =
+                adaptive {
+                    let! child = c                     
+                    match child with 
+                      | MSurfaces x -> return x
+                      | _ -> return failwith ""
+                }
+
             let controller = 
                 adaptive {
-                    let! selected = m.scene.surfacesModel.selectedSurface
+                    let! selected = m.scene.surfacesModel.surfaces.lastSelectedChild
                     let! kind = m.trafoKind
                     match selected with
-                      | Some s -> 
-                          let! sg = m.scene.surfacesModel.sgSurfaces |> AMap.find (s.guid |> Mod.force)
+                      | Some c -> 
+                          let id = c |> getSurface |> Mod.bind(fun x -> x.guid)
+
+
+                          let! sg = m.scene.surfacesModel.sgSurfaces |> AMap.find (id |> Mod.force)
                           
                           let scaling pos =                            
                             Sg.computeInvariantScale 

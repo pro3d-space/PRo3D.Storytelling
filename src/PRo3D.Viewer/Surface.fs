@@ -259,9 +259,9 @@ module Surface =
                                     let targetDir = Path.Combine(targetSurfaceDir, sf.name)
                                     Copy.copyAll sf.importPath targetDir true
 
-                            // update opc paths and scene
+                                    // update opc paths and scene
                                     let s' = { sf with opcPaths = expandNamesToPaths targetDir sf.opcNames; relativePaths = true }
-                            updateSingleSurface surfaceModel s'
+                                    updateSingleSurface surfaceModel s'
                                 | _ ->
                                     Log.error "surface %s not found" (guid.ToString())
                                     surfaceModel
@@ -491,10 +491,10 @@ module Surface =
     let updateGrouping (model:SurfaceModel) =
         { model with sgGrouped = (Surface.groupSurfaces model.sgSurfaces) }
     
-    let reflectSelectedUpdate (model:SurfaceModel) =
-        match model.selectedSurface with 
-            | Some s -> Surface.updateSingleSurface model s
-            | None -> model
+    //let reflectSelectedUpdate (model:SurfaceModel) =
+    //    match model.selectedSurface with 
+    //        | Some s -> Surface.updateSingleSurface model s
+    //        | None -> model
 
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
         match action with
@@ -512,7 +512,7 @@ module Surface =
                                 match s with 
                                   | Child.Surfaces sf ->
                                         let s' = SurfaceProperties.update sf msg 
-                            let model = Surface.updateSingleSurface model s'
+                                        let model = Surface.updateSingleSurface model s'
                                         { model with surfaces = { model.surfaces with lastSelectedChild = Some (Child.Surfaces s') }}
                                   | _ -> model
                         | None -> model
@@ -554,12 +554,12 @@ module Surface =
                         match s with 
                             | Child.Surfaces sf ->
                                 let path = Surface.Files.getSurfaceFolder sf scenePath
-                        match path with
-                            | Some p -> 
-                                Process.Start("explorer.exe", p) |> ignore
-                                model
-                            | None -> model
-                            | _ -> model     
+                                match path with
+                                    | Some p -> 
+                                        Process.Start("explorer.exe", p) |> ignore
+                                        model
+                                    | None -> model
+                                    | _ -> model     
                     | None -> model
             | GroupsMessage msg -> { model with surfaces = Groups.update model.surfaces msg}
             | _ -> model
