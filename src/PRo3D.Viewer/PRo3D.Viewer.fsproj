@@ -42,7 +42,8 @@
     <DocumentationFile>
     </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
-    <StartArguments>-sync</StartArguments>
+    <StartArguments>
+    </StartArguments>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
@@ -77,12 +78,13 @@
     <Compile Include="ReferenceSystem.fs" />
     <Compile Include="Drawing-Properties.fs" />
     <Compile Include="Surface-Model.fs" />
+    <Compile Include="Navigation-Model.fs" />
+    <Compile Include="Bookmark-Model.fs" />
     <Compile Include="GroupsModels.fs" />
     <Compile Include="Groups.fs" />
     <Compile Include="Drawing\Drawing-Model.fs" />
     <Compile Include="Drawing\Drawing.fs" />
     <Compile Include="MeasurementsImporter.fs" />
-    <Compile Include="Navigation-Model.fs" />
     <Compile Include="Navigation.fs" />
     <Compile Include="Surface-Properties.fs" />
     <Compile Include="Surface.fs" />
@@ -91,7 +93,6 @@
     <Compile Include="Properties.fs" />
     <Compile Include="ConfigTestModel.fs" />
     <Compile Include="ConfigTest.fs" />
-    <Compile Include="Bookmark-Model.fs" />
     <Compile Include="Viewer-Model.fs" />
     <Compile Include="Bookmarks.fs" />
     <Compile Include="Scene.fs" />

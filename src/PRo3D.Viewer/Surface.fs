@@ -11,6 +11,7 @@ open Aardvark.Opc
 open Aardvark.SceneGraph
 
 open PRo3D
+open PRo3D.Groups
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
@@ -18,14 +19,32 @@ module Surface =
     open Aardvark.UI.Trafos
 
     let getSurface model guid =
-        model.surfaces |> PList.toList |> List.tryFind (fun a -> a.guid = guid)    
+        //model.surfaces |> PList.toList |> List.tryFind (fun a -> a.guid = guid)
+        Groups.tryGetChild model.surfaces.rootGroup guid
 
     let updateSingleSurface model (s':PRo3D.Surfaces.Surface)  =
-        let surfaces' = 
-            model.surfaces 
-                |> PList.toList 
-                |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s') 
-                |> PList.ofList
+        let surfaces' = Groups.updateChildProperties model.surfaces (Child.Surfaces s')
+            //model.surfaces 
+            //    |> PList.toList 
+            //    |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s') 
+            //    |> PList.ofList
+
+        // update sgsurfaces as well !!!
+        let sgSurfaces' = 
+            model.sgSurfaces 
+                |> HMap.alter s'.guid 
+                        (fun x -> match x with 
+                                    | Some k -> Some { k with surface = s' }
+                                    | None -> None)   
+
+        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
+
+    let updateSingleSurface' model (s':PRo3D.Surfaces.Surface)  =
+        let surfaces' = Groups.updateChildProperties model.surfaces (Child.Surfaces s')
+            //model.surfaces 
+            //    |> PList.toList 
+            //    |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s') 
+            //    |> PList.ofList
 
         // update sgsurfaces as well !!!
         let sgSurfaces' = 
@@ -63,7 +82,7 @@ module Surface =
                         HMap.alter x.guid update model.sgSurfaces ) 
                 |> List.fold (fun a b -> HMap.union a b) HMap.empty
 
-        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
+        { model with sgSurfaces = sgSurfaces' } //
 
     let groupSurfaces (sgSurfaces : hmap<Guid, SgSurface>) =
         sgSurfaces
@@ -235,13 +254,17 @@ module Surface =
                                 Directory.CreateDirectory(targetSurfaceDir) |> ignore
 
                             // copy data
-                            let targetDir = Path.Combine(targetSurfaceDir, s.name)
-                            Copy.copyAll s.importPath targetDir true
+                            match s with
+                                |Child.Surfaces sf -> 
+                                    let targetDir = Path.Combine(targetSurfaceDir, sf.name)
+                                    Copy.copyAll sf.importPath targetDir true
 
                             // update opc paths and scene
-                            let s' = { s with opcPaths = expandNamesToPaths targetDir s.opcNames; relativePaths = true }
+                                    let s' = { sf with opcPaths = expandNamesToPaths targetDir sf.opcNames; relativePaths = true }
                             updateSingleSurface surfaceModel s'
-                    
+                                | _ ->
+                                    Log.error "surface %s not found" (guid.ToString())
+                                    surfaceModel
                         | None ->
                             Log.error "surface %s not found" (guid.ToString())
                             surfaceModel
@@ -344,9 +367,10 @@ module Surface =
         | SelectSurface             of Guid
         | FlyToSurface              of Guid
         | MakeRelative              of Guid
-        | RemoveSurface             of Guid
+        | RemoveSurface             of Guid*list<Index>
         | PickSurface               of SceneHit*string
         | OpenFolder                of Guid
+        | GroupsMessage             of Groups.Action
 
     type Model = SurfaceModel
 
@@ -475,53 +499,69 @@ module Surface =
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
         match action with
             | SurfacePropertiesMessage msg ->
-                let m =
-                    match model.selectedSurface with 
-                        | Some s -> 
-                            let s' = SurfaceProperties.update s msg 
-                            let model = Surface.updateSingleSurface model s'
-                            { model with selectedSurface = Some s' }
-                        | None -> model
+                //let m =
+                //    match model.selectedSurface with 
+                //        | Some s -> 
+                //            let s' = SurfaceProperties.update s msg 
+                //            let model = Surface.updateSingleSurface' model s'
+                //            { model with selectedSurface = Some s' }
+                //        | None -> model
 
+                let m = match model.surfaces.lastSelectedChild with
+                        | Some s -> 
+                                match s with 
+                                  | Child.Surfaces sf ->
+                                        let s' = SurfaceProperties.update sf msg 
+                            let model = Surface.updateSingleSurface model s'
+                                        { model with surfaces = { model.surfaces with lastSelectedChild = Some (Child.Surfaces s') }}
+                                  | _ -> model
+                        | None -> model
                 match msg with
                   | SurfaceProperties.SetPriority _ -> m |> updateGrouping 
                   | _ -> m
                 
-            | SelectSurface id -> 
-                let surf = model.surfaces |> Seq.tryFind(fun x -> x.guid = id)
-                let surf =
-                    match surf, model.selectedSurface with
-                        | Some a, Some b -> if a.guid = b.guid then None else Some a
-                        | Some a, None   -> Some a
-                        | None, _        -> None
+            | SelectSurface id -> model
+                //let surf = model.surfaces |> Seq.tryFind(fun x -> x.guid = id)
+                //let surf =
+                //    match surf, model.selectedSurface with
+                //        | Some a, Some b -> if a.guid = b.guid then None else Some a
+                //        | Some a, None   -> Some a
+                //        | None, _        -> None
 
-                { model with selectedSurface = surf }
+                //{ model with selectedSurface = surf }
             | FlyToSurface id -> model
             | MakeRelative id ->                
                 let model = Surface.Files.makeSurfaceRelative id model scenePath
                 let sgSurfaces = model.sgSurfaces |> Surface.Files.expandLazyKdTreePaths scenePath
                 { model with sgSurfaces = sgSurfaces}
-            | RemoveSurface id ->                
-                let toRemove = model.surfaces |> PList.toList |> List.tryFindIndex (fun d -> d.guid = id)
-                match toRemove with
-                    | Some index ->
-                        let s' = model.surfaces |> PList.removeAt index
+            | RemoveSurface (id,path) -> //model
+                let groups = Groups.removeChild2 model.surfaces id path
+                let sg' = model.sgSurfaces |> HMap.remove id
+                { model with surfaces = groups; sgSurfaces = sg'}
+                //let toRemove = model.surfaces |> PList.toList |> List.tryFindIndex (fun d -> d.guid = id)
+                //match toRemove with
+                //    | Some index ->
+                //        let s' = model.surfaces |> PList.removeAt index
 
-                        let sg' = model.sgSurfaces |> HMap.remove id
+                //        let sg' = model.sgSurfaces |> HMap.remove id
                         
-                        { model with surfaces = s'; sgSurfaces = sg' }
-                    | None -> model             
+                //        { model with surfaces = s'; sgSurfaces = sg' }
+                //    | None -> model             
             | OpenFolder id ->
                 let surf = id |> Surface.getSurface model
                 match surf with
                     | Some s -> 
-                        let path = Surface.Files.getSurfaceFolder s scenePath
+                        match s with 
+                            | Child.Surfaces sf ->
+                                let path = Surface.Files.getSurfaceFolder sf scenePath
                         match path with
                             | Some p -> 
                                 Process.Start("explorer.exe", p) |> ignore
                                 model
                             | None -> model
+                            | _ -> model     
                     | None -> model
+            | GroupsMessage msg -> { model with surfaces = Groups.update model.surfaces msg}
             | _ -> model
 
     let absRelIcons (m : MSurface)=
@@ -538,83 +578,277 @@ module Surface =
             return absRelIcons
         }
 
-    let viewSurfaceHeader (m:MSurface) absRelIcons =         
-        [
-            Incremental.text m.name; text " "
+    //let viewSurfaceHeader (m:MSurface) absRelIcons =         
+    //    [
+    //        Incremental.text m.name; text " "
 
-            i [clazz "home icon"                                                
-               onClick (fun _ -> FlyToSurface (m.guid |> Mod.force))
-            ][] |> UI.wrapToolTip "FlyTo"                                                                                
+    //        i [clazz "home icon"                                                
+    //           onClick (fun _ -> FlyToSurface (m.guid |> Mod.force))
+    //        ][] |> UI.wrapToolTip "FlyTo"                                                                                
 
-            Incremental.i (absRelIcons)(AList.empty) |> UI.wrapToolTip "portable"                                        
+    //        Incremental.i (absRelIcons)(AList.empty) |> UI.wrapToolTip "portable"                                        
 
-            i [clazz "folder icon"                                                
-               onClick (fun _ -> OpenFolder (m.guid |> Mod.force))
-            ][] |> UI.wrapToolTip "open folder"                                                                                
+    //        i [clazz "folder icon"                                                
+    //           onClick (fun _ -> OpenFolder (m.guid |> Mod.force))
+    //        ][] |> UI.wrapToolTip "open folder"                                                                                
 
-            i [clazz "Remove icon red";                                             
-                onClick (fun _ -> RemoveSurface (m.guid |> Mod.force))
-            ][] |> UI.wrapToolTip "Remove"                                         
-        ]    
+    //        i [clazz "Remove icon red";                                             
+    //            onClick (fun _ -> RemoveSurface (m.guid |> Mod.force))
+    //        ][] |> UI.wrapToolTip "Remove"                                         
+    //    ]    
 
-    let viewSurfaceList (m:MSurfaceModel) = 
-        let listAttr = AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : visible;max-height: 30%"]
-        Incremental.div listAttr (
-            alist {                        
-                for (_,s) in m.sgSurfaces |> AMap.toASet |> AList.ofASet do
+    //let viewSurfaceList (m:) = 
+    //    let listAttr = AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : visible;max-height: 30%"]
+    //    Incremental.div listAttr (
+    //        alist {                        
+    //            for (_,s) in m.sgSurfaces |> AMap.toASet |> AList.ofASet do
 
-                    let! selected = m.selectedSurface
-                    let! color =
-                        match selected with
-                          | Some sel -> 
-                            sel.guid |> Mod.map (fun g -> if g = (s.surface.guid |> Mod.force) then C4b.Blue else C4b.White)
-                          | None -> Mod.constant C4b.White
+    //                let! selected = m.selectedSurface
+    //                let! color =
+    //                    match selected with
+    //                      | Some sel -> 
+    //                        sel.guid |> Mod.map (fun g -> if g = (s.surface.guid |> Mod.force) then C4b.Blue else C4b.White)
+    //                      | None -> Mod.constant C4b.White
                                                                                     
-                    let! absRelIcons = absRelIcons s.surface
+    //                let! absRelIcons = absRelIcons s.surface
                     
-                    let bgc = color |> Html.ofC4b |> sprintf "color: %s"
+    //                let bgc = color |> Html.ofC4b |> sprintf "color: %s"
 
-                    yield div [clazz "item"] [
-                        i [
-                            clazz "large cube middle aligned icon"; 
-                            style bgc
-                            onClick (fun _ -> SelectSurface (s.surface.guid |> Mod.force))
-                        ][]
-                        div [clazz "content"] [
-                            div [clazz "header"] (
-                                viewSurfaceHeader s.surface absRelIcons
-                            )
-                            div [clazz "description"] [
-                                Incremental.text (
-                                    s.globalBB 
-                                        |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
+    //                yield div [clazz "item"] [
+    //                    i [
+    //                        clazz "large cube middle aligned icon"; 
+    //                        style bgc
+    //                        onClick (fun _ -> SelectSurface (s.surface.guid |> Mod.force))
+    //                    ][]
+    //                    div [clazz "content"] [
+    //                        div [clazz "header"] (
+    //                            viewSurfaceHeader s.surface absRelIcons
+    //                        )
+    //                        div [clazz "description"] [
+    //                            Incremental.text (
+    //                                s.globalBB 
+    //                                    |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
+
+    //                            Incremental.text (
+    //                                s.surface.relativePaths
+    //                                    |> Mod.map (fun d -> sprintf " | local: %A" (d)))
+    //                        ]                                    
+    //                    ]
+    //                ]
+    //        }
+    //    )
+    
+    let mkColor (model : MGroupsModel) (s : MSurface) =
+            let id = s.guid |> Mod.force
+
+            let color =  
+                model.selectedChilds
+                    |> ASet.map(fun x -> x.id = id)
+                    |> ASet.contains true
+                    |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)
+            
+            color
+
+    let viewSurfacesInGroups (path:list<Index>) (model:MGroupsModel)(select : MSurface*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (surfaces: alist<IMod<MChild>>) : alist<DomNode<'outer>> = 
+            alist {
+                let surfaces = surfaces
+                                |> AList.map (fun x -> Mod.force x)
+                                |> AList.choose( fun x -> match x with
+                                                            | MSurfaces s -> Some s
+                                                            | _-> None )
+                for s in surfaces do
+
+                    let select = fun _ -> select (s,path)
+                    let! c = mkColor model s
+                    let bgc = sprintf "color: %s" (Html.ofC4b c)
+                    let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
+                    let! key = s.guid
+                                                                                    
+                    let! absRelIcons = absRelIcons s
+
+                    yield div [clazz "item"; style bgc] [
+                        i [clazz "large cube middle aligned icon"; onClick select;style bgc][] 
+                        div [clazz "content"; style bgc] [
+                            let desc = s.name
+                            yield Incremental.div (AttributeMap.ofList [clazz "header"; style infoc])(
+                                alist {
+                                    yield Incremental.text desc
+
+                                    yield i [clazz "home icon"                                                
+                                             onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                                                
+
+                                    yield Incremental.i (absRelIcons)(AList.empty) |> UI.wrapToolTip "portable"                                        
+
+                                    yield i [clazz "folder icon"                                                
+                                             onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"                                                                                
+
+                                    yield i [clazz "Remove icon red"
+                                             //onClick (fun _ -> lift <| RemoveSurface (key,path))] [] |> UI.wrapToolTip "Remove" 
+                                             onClick (fun _ -> RemoveSurface (key,path)) ][] |> UI.wrapToolTip "Remove"        
+                                    } 
+                            ) 
+                            yield div [clazz "description"; style infoc] [
+                                //Incremental.text (
+                                //    s.globalBB 
+                                //        |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
 
                                 Incremental.text (
-                                    s.surface.relativePaths
+                                    s.relativePaths
                                         |> Mod.map (fun d -> sprintf " | local: %A" (d)))
                             ]                                    
                         ]
                     ]
             }
-        )
+       
+
+    let rec viewTree path (group : MGroup) (model : MGroupsModel) : alist<DomNode<Action>> =
+
+        alist {
+
+            let! s = model.activeGroup
+            let color = sprintf "color: %s" (Html.ofC4b C4b.White)                
+            let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
+
+            let icon =
+                adaptive {
+                    let active = s.id
+                    let! group  =  group.key
+
+                    return if (active = group) then "circle icon" else "circle thin icon"
+                }
+                      
+            let map = Groups.getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+                   
+                
+            let toggleIcon =
+                adaptive {
+                    let! toggle = group.visible
+                    return if toggle then "unhide icon" else "hide icon"
+                }
+
+            let toggleMap = Groups.getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+               
+            let desc =
+                div [style color] [       
+                    Incremental.text group.name
+                    Incremental.i map AList.empty |> UI.wrapToolTip "Set active"
+                        
+                    i [clazz "plus icon"
+                       onMouseClick (fun _ -> 
+                         GroupsMessage(Groups.AddGroup path))] [] 
+                    |> UI.wrapToolTip "Add Group"   
+                        
+                    i [clazz "remove circle icon"
+                       onMouseClick (fun _ -> 
+                         GroupsMessage(Groups.ClearGroup path))] [] 
+                    |> UI.wrapToolTip "Clear Group"
+                        
+                    i [clazz "remove icon red"
+                       onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
+                    |> UI.wrapToolTip "Remove Group"
+
+                    Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
+                ]
+                 
+            let itemAttributes =
+                amap {
+                    yield onMouseClick (fun _ -> Action.GroupsMessage(Groups.ToggleExpand path))
+                    let! selected = group.expanded
+                    if selected 
+                    then yield clazz "icon large outline open folder"
+                    else yield clazz "icon large outline folder"
+                    yield style "overflow-y : visible"
+                } |> AttributeMap.ofAMap
+            
+            let childrenAttribs =
+                amap {
+                    yield clazz "list"
+                    let! isExpanded = group.expanded
+                    if isExpanded then yield style "visible"
+                    else yield style "hidden"
+                }         
+
+
+            let select = fun (a:MSurface,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.guid |> Mod.force, a.name |> Mod.force))  // Select (path, a.key |> Mod.force)
+            let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
+
+            yield div [ clazz "item"] [
+                    Incremental.i itemAttributes AList.empty
+                    div [ clazz "content" ] [                         
+                        div [ clazz "description noselect"] [desc]
+                        Incremental.div (AttributeMap.ofAMap childrenAttribs) (                          
+                            alist { 
+                                let! isExpanded = group.expanded
+                                if isExpanded then yield! children
+
+                                if isExpanded then 
+                                    yield! viewSurfacesInGroups path model select lift group.childList
+                            }
+                        )  
+                                
+                    ]
+            ]
+                
+        }
+
+
+    let viewSurfacesGroups (model:MSurfaceModel) = 
+        require Html.semui (
+            TreeView.view [] (viewTree [] model.surfaces.rootGroup model.surfaces)
+        )    
+        
+
+    //let viewSurfaceProperties (model:MSurfaceModel) =
+    //    adaptive {
+    //        let! bla = model.surfaces.lastSelectedChild
+    //        let opt = 
+    //            match bla with
+    //                | Some s -> SurfaceProperties.view s
+    //                | None   -> div[][]
+
+    //        return (opt |> UI.map SurfacePropertiesMessage)
+    //    }    
+
+    let lscToDom lsc isSome = 
+        adaptive {
+            match lsc with
+                | Some b ->   
+                    let! b' = b
+                    match b' with 
+                        | MSurfaces bm -> return isSome bm
+                        | _ -> return div[][]                                                             
+                | None   -> return div[][] 
+        }
 
     let viewSurfaceProperties (model:MSurfaceModel) =
         adaptive {
-            let! bla = model.selectedSurface
-            let opt = 
-                match bla with
-                    | Some s -> SurfaceProperties.view s
-                    | None   -> div[][]
+            let! bla = model.surfaces.lastSelectedChild
+            let! opt = lscToDom bla (fun x -> SurfaceProperties.view x)
 
             return (opt |> UI.map SurfacePropertiesMessage)
         }                          
-
+        
+    let surfaceGroupProperties (model:MSurfaceModel) =
+        adaptive {                                
+            return (Groups.viewUI model.surfaces|> UI.map GroupsMessage)
+        } 
+    
+    
     let surfaceUI (model:MSurfaceModel) =
+        let item2 = 
+            model.surfaces.lastSelectedItem 
+                |> Mod.map (fun x -> 
+                    match x with 
+                        | SelectedItem.Group -> surfaceGroupProperties model
+                        | _ -> viewSurfaceProperties model 
+                )
         div[][                            
-            yield GuiEx.accordion "Surfaces" "Cubes" true [ viewSurfaceList model ]
+            yield GuiEx.accordion "Surfaces" "Cubes" true [ viewSurfacesGroups model ]
             yield GuiEx.accordion "Properties" "Content" true [
-                        Incremental.div AttributeMap.empty (AList.ofModSingle (viewSurfaceProperties model))
+                        Incremental.div AttributeMap.empty (alist{ let! item = item2
+                                                                   let! i = item
+                                                                   yield i})
             ]
         ]
-
-
+    
+    

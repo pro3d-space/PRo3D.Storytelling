@@ -163,7 +163,12 @@ module Viewer =
 
             if System.IO.File.Exists(cacheFile) then
                 Log.line "Found lazy kdtree cache"
-                (Serialization.loadAs<array<Box3d*Level0KdTree>> cacheFile) |> HMap.ofArray
+                try
+                    (Serialization.loadAs<array<Box3d*Level0KdTree>> cacheFile) |> HMap.ofArray
+                with
+                  | _ -> 
+                    Log.error "could not load kdtree cache file. please delete %A" cacheFile
+                    HMap.empty
             else
                 
                 Log.line "did not find lazy kdtree cache"

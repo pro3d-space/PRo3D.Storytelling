@@ -54,7 +54,7 @@ module DrawingApp =
         //            model.annotations.annotationsFlat |> PList.prepend a
         //        | None -> model.annotations.annotationsFlat
 
-        let rootGroup = 
+        let groups = 
             match getFinishedAnnotation up north model with
                 | Some a -> 
                     let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
@@ -62,12 +62,12 @@ module DrawingApp =
                     bc.Add json
 
                     Groups.addToActiveGroup model.annotations (Child.Annotations a)
-                | None -> model.annotations.rootGroup
+                | None -> model.annotations
        
-        let flat = (Groups.flatten rootGroup)
+       // let flat = (Groups.flatten rootGroup)
 
-        let groups = 
-            Groups.updateAnnotationGroups model.annotations rootGroup flat
+        //let groups = 
+        //    Groups.updateGroups model.annotations rootGroup flat
 
         { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
 
@@ -264,19 +264,7 @@ module DrawingApp =
                 model
             | Clear,_ ->
                 { model with annotations = GroupsModel.initial }
-            | Nop, _ -> model
-            //| AnnotationPropertiesMsg msg,_ ->                
-            //    match model.annotations.lastSelectedChild with
-            //      | Some a ->                        
-            //          match a with
-            //            | Child.Annotations ann -> 
-            //                let a' = AnnotationProperties.update ann msg |> Child.Annotations                        
-            //                let flatAnnos = 
-            //                    model.annotations.flat |> HSet.map ( fun a -> if a.id = a'.id then a' else a ) 
-            //                let annotations = { model.annotations with flat = flatAnnos; lastSelectedChild = Some a' }
-            //                { model with annotations =  annotations }
-            //            | _ -> model
-            //      | None -> model                        
+            | Nop, _ -> model                   
             | Undo, _ -> 
                 match model.past with
                     | Some p -> { p with future = Some model }
@@ -285,8 +273,8 @@ module DrawingApp =
                 match model.future with
                     | Some f -> f
                     | None -> model
-            | RemoveAnnotation (p,id), _ ->
-                model
+            //| RemoveAnnotation (p,id), _ ->
+            //    model
             //    let toRemove = model.allAnnotations.AsList |> List.tryFindIndex (fun d -> d.key = id)
             //    match toRemove with
             //        | Some index ->
@@ -296,7 +284,7 @@ module DrawingApp =
 
             //            { model with allAnnotations = as' } |> stash
             //        | None -> model             
-            | ToggleVisiblity id, _ -> model // implemented in AnnotationGroups   
+            //| ToggleVisiblity id, _ -> model // implemented in Groups   
             | GroupsMessage msg,_ -> { model with annotations = Groups.update model.annotations msg}
             | _ -> model
 
@@ -332,11 +320,11 @@ module DrawingApp =
                 viewAnnotationTools model            
             ]
         
-        let mkColor (model : MDrawingModel) (a : MAnnotation) =
+        let mkColor (model : MGroupsModel) (a : MAnnotation) =
             let id = a.key |> Mod.force
 
             let color =  
-                model.annotations.selectedChilds
+                model.selectedChilds
                     |> ASet.map(fun x -> x.id = id)
                     |> ASet.contains true
                     |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
@@ -375,73 +363,57 @@ module DrawingApp =
                 )
             ] 
          
-        let viewGroupButtons =
-            div [clazz "ui buttons inverted"] [
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Move Selection"; onMouseClick (fun _ -> GroupsMessage(Groups.MoveChilds))] [
-                            i [clazz "Move icon"] [] ] 
-                )
-                //i [clazz "save icon"; onMouseClick (fun _ -> Save)] [] |> UI.wrapToolTip "Save Annotations" 
-                
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Clear Selection"; onMouseClick (fun _ -> GroupsMessage(Groups.ClearSelection))] [
-                            i [clazz "Remove icon"] [] ]
-                )
-            ] 
+      
 
-        let viewAnnotationsInGroup (path:list<Index>) (model:MDrawingModel)(select : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<IMod<MChild>>) : alist<DomNode<'outer>> =
-                        
-            //Incremental.div 
-            //        (AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : auto;max-height: 30%"    ]) (
-                            
-                        alist { 
+        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(select : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<IMod<MChild>>) : alist<DomNode<'outer>> =
+                           
+                alist { 
 
-                            let annotations = annotations
-                                                |> AList.map (fun x -> Mod.force x)
-                                                |> AList.choose( fun x -> match x with
-                                                                            | MAnnotations a -> Some a
-                                                                            | _-> None )
-                            for a in annotations do 
+                    let annotations = annotations
+                                        |> AList.map (fun x -> Mod.force x)
+                                        |> AList.choose( fun x -> match x with
+                                                                    | MAnnotations a -> Some a
+                                                                    | _-> None )
+                    for a in annotations do 
                                 
-                                let! c = mkColor model a
+                        let! c = mkColor model a
 
-                                let bgc = sprintf "color: %s" (Html.ofC4b c)
-                                let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
-                                let! visible = a.visible
-                                let visibleIcon = if visible then "unhide icon" else "hide icon"
-                                let select = fun _ -> select (a,path)
-                                let! key = a.key
+                        let bgc = sprintf "color: %s" (Html.ofC4b c)
+                        let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
+                        let! visible = a.visible
+                        let visibleIcon = if visible then "unhide icon" else "hide icon"
+                        let select = fun _ -> select (a,path)
+                        let! key = a.key
 
-                                yield div [clazz "item"] [
-                                    i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
-                                    div [clazz "content"] [
-                                        let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
-                                        let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
-                                        yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
-                                            alist {
-                                                yield Incremental.text header
-                                                yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"                                                                                                                
-                                                yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
-                                            } 
-                                        ) 
-                                        yield div [clazz "description";style ac ] [Incremental.text desc]      
-                                    ]
-                                ]
-                        }     
-                //) 
+                        yield div [clazz "item"] [
+                            i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                            div [clazz "content"] [
+                                let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
+                                let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
+                                yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
+                                    alist {
+                                        yield Incremental.text header
+                                        yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"                                                                                                                
+                                        yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
+                                    } 
+                                ) 
+                                yield div [clazz "description";style ac ] [Incremental.text desc]      
+                            ]
+                        ]
+                }     
         
-        let getAmap icon action =
-             amap {
-                    let! icon = icon
-                    yield clazz icon
-                    yield onClick (fun _ -> action)
-                } |> AttributeMap.ofAMap
+        //let getAmap icon action =
+        //     amap {
+        //            let! icon = icon
+        //            yield clazz icon
+        //            yield onClick (fun _ -> action)
+        //        } |> AttributeMap.ofAMap
 
-        let rec viewTree path (group : MGroup) (model : MDrawingModel) : alist<DomNode<Action>> =
+        let rec viewTree path (group : MGroup) (model : MGroupsModel) : alist<DomNode<Action>> =
 
             alist {
 
-                let! s = model.annotations.activeGroup
+                let! s = model.activeGroup
                 //let! c = Groups.mkColor s.id (group.key |> Mod.force)
                 let color = sprintf "color: %s" (Html.ofC4b C4b.White)                
                 let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
@@ -454,12 +426,8 @@ module DrawingApp =
                         return if (active = group) then "circle icon" else "circle thin icon"
                     }
                       
-                let map = getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
-                    //amap {
-                    //    let! icon = icon
-                    //    yield clazz icon
-                    //    yield onClick (fun _ -> GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
-                    //} |> AttributeMap.ofAMap
+                let map = Groups.getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+                   
                 
                 let toggleIcon =
                     adaptive {
@@ -467,15 +435,8 @@ module DrawingApp =
                         return if toggle then "unhide icon" else "hide icon"
                     }
 
-                let toggleMap = getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
-                //    amap {
-                //        let! toggleIcon = toggleIcon
-                //        yield clazz toggleIcon
-                //        yield onClick (fun _ -> GroupsMessage(Groups.ToggleGroup path))
-                //    } |> AttributeMap.ofAMap 
-                //let! visible = group.visible
-                //let visibleIcon = if visible then "unhide icon" else "hide icon"
-
+                let toggleMap = Groups.getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+               
                 let desc =
                     div [style color] [       
                         Incremental.text group.name
@@ -496,9 +457,6 @@ module DrawingApp =
                         |> UI.wrapToolTip "Remove Group"
 
                         Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
-                        //i [clazz visibleIcon
-                        //   onMouseClick (fun _ -> Action.GroupsMessage(Groups.ToggleGroup path))] [] 
-                        //|> UI.wrapToolTip "Toggle Group"
                     ]
                  
                 let itemAttributes =
@@ -520,7 +478,7 @@ module DrawingApp =
                     }         
 
 
-                let select = fun (a:MAnnotation,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force))  // Select (path, a.key |> Mod.force)
+                let select = fun (a:MAnnotation,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force, ""))  // Select (path, a.key |> Mod.force)
                 let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
                 yield div [ clazz "item"] [
@@ -543,10 +501,12 @@ module DrawingApp =
             }
 
 
+
         let viewAnnotationGroups (model:MDrawingModel) = 
              require Html.semui (
-                TreeView.view [] (viewTree [] model.annotations.rootGroup model)
-            )                                    
+                TreeView.view [] (viewTree [] model.annotations.rootGroup model.annotations)
+            )  
+                               
  
     let threads (m : DrawingModel) = m.pendingIntersections
 
@@ -809,7 +769,7 @@ module DrawingApp =
             let annotations =
                 aset {
                     for a in annoSet do
-                       let c = UI.mkColor model a
+                       let c = UI.mkColor model.annotations a
                        let dots = a.geometry |> Mod.map(fun geo -> match geo with | Geometry.Line | Geometry.Point -> true | _ -> false)                       
                        yield finishedAnnotation a cam c config dots
                 } |> Sg.set

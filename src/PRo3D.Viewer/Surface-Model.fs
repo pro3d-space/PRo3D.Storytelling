@@ -75,40 +75,40 @@ type SgSurface = {
     kdTree      : hmap<Box3d,Level0KdTree>
 }
 
-[<DomainType>]
-type SurfaceModel = {
-    surfaces        : plist<Surface>
-    selectedSurface : option<Surface>
-    sgSurfaces      : hmap<Guid,SgSurface>
-    sgGrouped       : plist<hmap<Guid,SgSurface>>
-    kdTreeCache     : hmap<string, ConcreteKdIntersectionTree>
-}
+//[<DomainType>]
+//type SurfaceModel = {
+//    surfaces        : plist<Surface>
+//    selectedSurface : option<Surface>
+//    sgSurfaces      : hmap<Guid,SgSurface>
+//    sgGrouped       : plist<hmap<Guid,SgSurface>>
+//    kdTreeCache     : hmap<string, ConcreteKdIntersectionTree>
+//}
 
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module SurfaceModel =
-    open MBrace.FsPickler
-    open MBrace.FsPickler.Combinators    
+//[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+//module SurfaceModel =
+//    open MBrace.FsPickler
+//    open MBrace.FsPickler.Combinators    
 
-    let makeSurfaceModel a b =
-        {
-            surfaces = a
-            selectedSurface = b
-            sgSurfaces = hmap.Empty
-            sgGrouped = plist.Empty
-            kdTreeCache = hmap.Empty
-        }
+//    let makeSurfaceModel a b =
+//        {
+//            surfaces = a
+//            selectedSurface = b
+//            sgSurfaces = hmap.Empty
+//            sgGrouped = plist.Empty
+//            kdTreeCache = hmap.Empty
+//        }
 
-    let surfaceModelPickler : Pickler<SurfaceModel> =
-        Pickler.product makeSurfaceModel
-        ^+ Pickler.field (fun s -> s.surfaces)          Pickler.auto<plist<Surface>>
-        ^. Pickler.field (fun s -> s.selectedSurface)   Pickler.auto<option<Surface>>
+//    let surfaceModelPickler : Pickler<SurfaceModel> =
+//        Pickler.product makeSurfaceModel
+//        ^+ Pickler.field (fun s -> s.surfaces)          Pickler.auto<plist<Surface>>
+//        ^. Pickler.field (fun s -> s.selectedSurface)   Pickler.auto<option<Surface>>
 
-    let initial = makeSurfaceModel PList.empty None    
+//    let initial = makeSurfaceModel PList.empty None    
 
     
-    registry.RegisterFactory (fun _ -> surfaceModelPickler)
+//    registry.RegisterFactory (fun _ -> surfaceModelPickler)
 
-    //FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)
+////    //FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)
 
 
 module Init =

@@ -28,9 +28,8 @@ type Action =
         | Finish                
         | Undo
         | Redo
-        //| Select                  of list<Index>*Guid      
-        | ToggleVisiblity         of Guid
-        | RemoveAnnotation        of list<Index>*Guid       
+        //| ToggleVisiblity         of Guid
+        //| RemoveAnnotation        of list<Index>*Guid       
         | Send
         | Export
         | Save              
@@ -38,7 +37,6 @@ type Action =
         | QuickLoad
         | Clear
         | Nop
-        //| AnnotationPropertiesMsg of AnnotationProperties.Action
         | UpVectorChanged         of V3d
         | NorthVectorChanged      of V3d
         | GroupsMessage   of Groups.Action

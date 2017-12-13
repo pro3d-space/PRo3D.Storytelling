@@ -38,6 +38,7 @@ type ViewerAction =
     | ReferenceSystemMessage    of ReferenceSystemApp.Action
     | AnnotationMessage         of AnnotationProperties.Action
     | BookmarkMessage           of Bookmarks.Action
+    | BookmarkUIMessage         of Groups.Action
     | SetCamera                 of CameraView        
     | SetCameraAndFrustum       of CameraView * double * double        
     | SetCameraAndFrustum2      of CameraView * Frustum
@@ -67,6 +68,7 @@ type ViewerAction =
 
 
 module ViewerUtils =
+    open OpenCvSharp.XFeatures2D
     
     let colormap = 
         let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
@@ -75,13 +77,26 @@ module ViewerUtils =
     let pickable' (pick :IMod<Pickable>) (sg: ISg) =
         Sg.PickableApplicator (pick, Mod.constant sg)
 
-    let viewSingleSurfaceSg (surface : MSgSurface) (frustum : IMod<Frustum>) (selectedSurf : IMod<Option<MSurface>>) (globalBB : IMod<Box3d>) =
+    let getSurface (child:IMod<Option<IMod<MChild>>>) =
+        adaptive {
+            let! c = child
+            match c with 
+                | Some s -> 
+                    let! s' = s 
+                    match s' with
+                        | MSurfaces y -> return Some y
+                        | _-> return None 
+                |_ -> return None
+            }
+
+    let viewSingleSurfaceSg (surface : MSgSurface) (frustum : IMod<Frustum>) (selectedSurf : IMod<Option<IMod<MChild>>>) (globalBB : IMod<Box3d>) = //(selectedSurf : IMod<Option<MSurface>>)
+        let sf = getSurface selectedSurf
         let isSelected = 
-            Mod.bind2 (fun guid (selected: Option<MSurface>) ->
+            Mod.bind2 (fun guid (selected: Option<MSurface>) ->   //(selected: Option<MSurface>)
                 match selected with
                     | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
                     | None -> Mod.constant false
-            ) surface.surface.guid selectedSurf
+            ) surface.surface.guid sf
 
         let createSg (sg : ISg) =
             sg 
@@ -157,14 +172,27 @@ module ViewerUtils =
         let near = m.scene.config.nearPlane.value
         let far = m.scene.config.farPlane.value
         (Navigation.UI.frustum near far)
+    
+    //let getSelectedSurface (surface: IMod<Option<IMod<MChild>>>) = 
+    //    adaptive {
+    //        let! surf = surface
+    //        match surf with
+    //            | Some s ->
+    //                let! s' = s
+    //                match s' with
+    //                    | MSurfaces sf -> return sf
+    //                    |_ -> return None)
+
+    //            }
 
     let renderCommands sgGrouped overlayed (m:MModel) =
+        let selected = m.scene.surfacesModel.surfaces.lastSelectedChild
+
         let grouped = 
             sgGrouped |> AList.map(
                 fun x -> ( x 
                     |> AMap.map(fun _ sf -> 
-                        viewSingleSurfaceSg sf m.frustum m.scene.surfacesModel.selectedSurface sf.globalBB                        
-                        )
+                        viewSingleSurfaceSg sf m.frustum selected sf.globalBB)
                     |> AMap.toASet 
                     |> ASet.map snd 
                 )
