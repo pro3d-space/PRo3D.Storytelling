@@ -51,7 +51,7 @@ module Scene =
                 let childList = flatList |> List.map(fun x -> Child.Surfaces x )
                 let newGroupsModel = Groups.updateChildList childList m.surfacesModel.surfaces
                 let m' = { m with surfacesModel = { m.surfacesModel with surfaces = newGroupsModel }}      
-                { m' with surfacesModel = Surface.updateSurfaces m'.surfacesModel (flatList |> PList.ofList)}
+                { m' with surfacesModel = SurfaceModel.updateSurfaces m'.surfacesModel (flatList |> PList.ofList)}
             | None -> m        
 
     let readLine (filePath:string) =
@@ -119,7 +119,7 @@ module Scene =
                                        
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
-        let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
+        let grouped = m.scene.surfacesModel |> SurfaceModel.updateGrouping
         surfaceModelLens.Set(m, grouped)        
 
     /// loads surfaces given in scene - creates their sg pendants
@@ -137,7 +137,7 @@ module Scene =
 
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
-        let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
+        let grouped = m.scene.surfacesModel |> SurfaceModel.updateGrouping
         
         surfaceModelLens.Set(m, grouped)
 

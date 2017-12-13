@@ -148,7 +148,7 @@ let main argv =
 
     //printfn "%A" errorCode
 
-    //ctrl.ShowDevTools()
+    ctrl.ShowDevTools()
     Application.Run form
 
     //let p = Process.Start("chrome.exe", "--app=http://localhost:4321/")

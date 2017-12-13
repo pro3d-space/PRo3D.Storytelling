@@ -305,9 +305,104 @@ module Groups =
             ]
         )
 
-    //let view (model : MGroupsModel) =
-    //    require Html.semui (
-    //        TreeView.view [] (viewTree [] model.rootGroup model)
-    //    )
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module SurfaceModel =
+    open PRo3D.Groups
+    open MBrace.FsPickler
+    open MBrace.FsPickler.Combinators    
+    open Aardvark.Opc
+    open PRo3D.Surfaces
+
+    let fillSurfaceGroup a b = 
+        let surfaces = GroupsModel.initial
+        { surfaces with rootGroup = { surfaces.rootGroup with childList = a}; lastSelectedChild = b }
+
+    let makeSurfaceModel a b =
+        let surfaces = fillSurfaceGroup a b
+        {
+            surfaces = surfaces
+            //selectedSurface = b
+            sgSurfaces = hmap.Empty
+            sgGrouped = plist.Empty
+            kdTreeCache = hmap.Empty
+        }
+
+    let surfaceModelPickler : Pickler<SurfaceModel> =
+        Pickler.product makeSurfaceModel
+        ^+ Pickler.field (fun s -> s.surfaces.rootGroup.childList)   Pickler.auto<plist<Child>> //Surface
+        ^. Pickler.field (fun s -> s.surfaces.lastSelectedChild)     Pickler.auto<option<Child>> //Pickler.auto<option<Surface>>
+
+    let initial = makeSurfaceModel PList.empty None   
+    
+    registry.RegisterFactory (fun _ -> surfaceModelPickler)
+
+    let getSurface model guid =        
+        Groups.tryGetChild model.surfaces.rootGroup guid
+
+    let groupSurfaces (sgSurfaces : hmap<Guid, SgSurface>) =
+        sgSurfaces
+            |> HMap.toList
+            |> List.groupBy(fun (g,x) -> x.surface.priority.value)
+            |> List.map( fun (p,k) -> (p, k |> HMap.ofList))
+            |> List.sortBy fst
+            |> List.map snd
+            |> PList.ofList
+    
+    let updateGrouping (model:SurfaceModel) =
+        { model with sgGrouped = (groupSurfaces model.sgSurfaces) }        
+
+    let updateGrouping' (model:SurfaceModel) (s':PRo3D.Surfaces.Surface) =
+        let group' = 
+            model.sgGrouped
+              |> PList.map(fun surfs ->
+                surfs
+                |> HMap.alter s'.guid 
+                        (fun x -> match x with 
+                                    | Some k -> Some { k with surface = s' }
+                                    | None -> None)
+                )
+        { model with sgGrouped = group' }
+   
+    let updateSingleSurface' model (s':PRo3D.Surfaces.Surface)  =
+        let surfaces' = 
+            Groups.updateChildProperties model.surfaces (Child.Surfaces s')
+
+        // update sgsurfaces as well !!!
+        let sgSurfaces' = 
+            model.sgSurfaces 
+                |> HMap.alter s'.guid 
+                        (fun x -> match x with 
+                                    | Some k -> Some { k with surface = s' }
+                                    | None -> None)   
+
+        // update sggroup as well !!!
+        let group' = 
+            model.sgGrouped
+              |> PList.map(fun surfs ->
+                surfs
+                |> HMap.alter s'.guid 
+                        (fun x -> match x with 
+                                    | Some k -> Some { k with surface = s' }
+                                    | None -> None)
+                )
+
+        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces'; sgGrouped = group' }
+
+    let updateSurfaces model (surfaces' : plist<PRo3D.Surfaces.Surface>) =
+        let sgSurfaces' =
+            surfaces' 
+                |> PList.toList
+                |> List.map (
+                    fun x -> 
+                        let update = 
+                            (fun (d : Option<SgSurface>) ->
+                                match d with 
+                                    | Some k -> Some { k with surface = x }
+                                    | None -> None)
+
+                        HMap.alter x.guid update model.sgSurfaces ) 
+                |> List.fold (fun a b -> HMap.union a b) HMap.empty
+
+        { model with sgSurfaces = sgSurfaces' }
 
 

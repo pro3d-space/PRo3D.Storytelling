@@ -160,33 +160,4 @@ type SurfaceModel = {
     kdTreeCache     : hmap<string, ConcreteKdIntersectionTree>
 }
 
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module SurfaceModel =
-    open MBrace.FsPickler
-    open MBrace.FsPickler.Combinators    
-
-    let fillSurfaceGroup a b = 
-        let surfaces = GroupsModel.initial
-        { surfaces with rootGroup = { surfaces.rootGroup with childList = a}; lastSelectedChild = b }
-
-    let makeSurfaceModel a b =
-        let surfaces = fillSurfaceGroup a b
-        {
-            surfaces = surfaces
-            //selectedSurface = b
-            sgSurfaces = hmap.Empty
-            sgGrouped = plist.Empty
-            kdTreeCache = hmap.Empty
-        }
-
-    let surfaceModelPickler : Pickler<SurfaceModel> =
-        Pickler.product makeSurfaceModel
-        ^+ Pickler.field (fun s -> s.surfaces.rootGroup.childList)   Pickler.auto<plist<Child>> //Surface
-        ^. Pickler.field (fun s -> s.surfaces.lastSelectedChild)     Pickler.auto<option<Child>> //Pickler.auto<option<Surface>>
-
-    let initial = makeSurfaceModel PList.empty None   
-
-    
-    registry.RegisterFactory (fun _ -> surfaceModelPickler)
-
     //FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)
