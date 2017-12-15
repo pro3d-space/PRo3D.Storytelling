@@ -185,6 +185,13 @@ module Surface =
                     Log.error "can't make surface relative. not valid scene path has not been saved yet."
                     surfaceModel
 
+    type SgHelper = {
+        surf        : PRo3D.Surfaces.Surface
+        bb          : Box3d
+        sg          : ISg        
+        kdtree      : hmap<Box3d,Level0KdTree>
+    }
+
     let assertInvalidBB (bb:Box3d) = 
         if(bb.IsInvalid) then 
             failwith (sprintf "invalid bounding box %s" (bb.ToString()))
@@ -241,14 +248,7 @@ module Surface =
 
     let transformBox (trafo:Trafo3d) (bb:Box3d) =
         bb.Transformed(trafo)
-      
-    type SgHelper = {
-        surf        : PRo3D.Surfaces.Surface
-        bb          : Box3d
-        sg          : ISg        
-        kdtree      : hmap<Box3d,Level0KdTree>
-    }
-    
+              
     let createSgSurfaces runtime signature surfaces =        
         let sghs =
             surfaces
@@ -282,9 +282,7 @@ module Surface =
         | RemoveSurface             of Guid*list<Index>
         | PickSurface               of SceneHit*string
         | OpenFolder                of Guid
-        | GroupsMessage             of Groups.Action
-
-    type Model = SurfaceModel
+        | GroupsMessage             of Groups.Action    
 
     let triangleIsNan (t:Triangle3d) =
         t.P0.AnyNaN || t.P1.AnyNaN || t.P2.AnyNaN
@@ -354,7 +352,7 @@ module Surface =
         else            
             None,c
 
-    let doKdTreeIntersection (m : Model) (t : Trafo3d) (r : FastRay3d) cache = 
+    let doKdTreeIntersection (m : SurfaceModel) (t : Trafo3d) (r : FastRay3d) cache = 
         let mutable cache = cache
 
         m.sgSurfaces
