@@ -283,13 +283,12 @@ module Groups =
     let mkColor (activeId : Guid) (groupId : Guid) = 
         if activeId = groupId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
     
-    let getAmap icon action =
+    let mkGroupAttributeMap icon action =
         amap {
             let! icon = icon
             yield clazz icon
             yield onClick (fun _ -> action)
         } |> AttributeMap.ofAMap
-
 
     let viewGroupButtons =
         div [clazz "ui buttons inverted"] [
@@ -313,32 +312,32 @@ module Groups =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module SurfaceModel =
-    open PRo3D.Groups
     open MBrace.FsPickler
     open MBrace.FsPickler.Combinators    
+
     open Aardvark.Opc
+    open PRo3D.Groups
     open PRo3D.Surfaces
 
-    let fillSurfaceGroup a b = 
+    let initSurfaceGroups children selected = 
         let surfaces = GroupsModel.initial
-        { surfaces with rootGroup = { surfaces.rootGroup with childList = a}; lastSelectedChild = b }
+        { surfaces with rootGroup = { surfaces.rootGroup with childList = children}; lastSelectedChild = selected }
 
-    let makeSurfaceModel a b =
-        let surfaces = fillSurfaceGroup a b
+    let initSurfaceModel children selected =
+        let surfaces = initSurfaceGroups children selected
         {
-            surfaces = surfaces
-            //selectedSurface = b
-            sgSurfaces = hmap.Empty
-            sgGrouped = plist.Empty
+            surfaces    = surfaces
+            sgSurfaces  = hmap.Empty
+            sgGrouped   = plist.Empty
             kdTreeCache = hmap.Empty
         }
 
     let surfaceModelPickler : Pickler<SurfaceModel> =
-        Pickler.product makeSurfaceModel
+        Pickler.product initSurfaceModel
         ^+ Pickler.field (fun s -> s.surfaces.rootGroup.childList)   Pickler.auto<plist<Child>> //Surface
         ^. Pickler.field (fun s -> s.surfaces.lastSelectedChild)     Pickler.auto<option<Child>> //Pickler.auto<option<Surface>>
 
-    let initial = makeSurfaceModel PList.empty None   
+    let initial = initSurfaceModel PList.empty None   
     
     registry.RegisterFactory (fun _ -> surfaceModelPickler)
 
@@ -354,22 +353,10 @@ module SurfaceModel =
             |> List.map snd
             |> PList.ofList
     
-    let updateGrouping (model:SurfaceModel) =
-        { model with sgGrouped = (groupSurfaces model.sgSurfaces) }        
-
-    let updateGrouping' (model:SurfaceModel) (s':PRo3D.Surfaces.Surface) =
-        let group' = 
-            model.sgGrouped
-              |> PList.map(fun surfs ->
-                surfs
-                |> HMap.alter s'.guid 
-                        (fun x -> match x with 
-                                    | Some k -> Some { k with surface = s' }
-                                    | None -> None)
-                )
-        { model with sgGrouped = group' }
+    let triggerSgGrouping (model:SurfaceModel) =
+        { model with sgGrouped = (groupSurfaces model.sgSurfaces) }           
    
-    let updateSingleSurface' model (s':PRo3D.Surfaces.Surface)  =
+    let updateSingleSurface (s':PRo3D.Surfaces.Surface) (model:SurfaceModel) =
         let surfaces' = 
             Groups.updateChildProperties model.surfaces (Child.Surfaces s')
 

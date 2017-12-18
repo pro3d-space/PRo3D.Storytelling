@@ -174,7 +174,7 @@ module Surface =
 
                                     // update opc paths and scene
                                     let s' = { sf with opcPaths = expandNamesToPaths targetDir sf.opcNames; relativePaths = true }
-                                    SurfaceModel.updateSingleSurface' surfaceModel s'
+                                    surfaceModel |> SurfaceModel.updateSingleSurface s'
                                 | _ ->
                                     Log.error "surface %s not found" (guid.ToString())
                                     surfaceModel
@@ -276,7 +276,7 @@ module Surface =
     open Aardvark.VRVis
     
     type Action =
-        | SurfacePropertiesMessage  of SurfaceProperties.Action        
+        | SurfacePropertiesMessage  of SurfaceProperties.Action
         | FlyToSurface              of Guid
         | MakeRelative              of Guid
         | RemoveSurface             of Guid*list<Index>
@@ -347,7 +347,7 @@ module Surface =
         let objFilter a b = true
        // let hitFilter a b c d = false
         if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then
-            let point = ray.Ray.GetPointOnRay(hit.RayHit.T)
+            //let point = ray.Ray.GetPointOnRay(hit.RayHit.T)
             Some (hit.RayHit.T, surface),c
         else            
             None,c
@@ -401,19 +401,19 @@ module Surface =
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
         match action with
             | SurfacePropertiesMessage msg ->                
-                let m = match model.surfaces.lastSelectedChild with
-                        | Some s -> 
-                                match s with 
-                                  | Child.Surfaces sf ->
-                                        let s' = SurfaceProperties.update sf msg 
-                                        let model = SurfaceModel.updateSingleSurface' model s'
-                                        { model with surfaces = { model.surfaces with lastSelectedChild = Some (Child.Surfaces s') }}
-                                  | _ -> model
-                        | None -> model
+                let m = 
+                  match model.surfaces.lastSelectedChild with
+                    | Some s -> 
+                      match s with 
+                        | Child.Surfaces sf ->
+                            let s' = SurfaceProperties.update sf msg 
+                            let model = model |> SurfaceModel.updateSingleSurface s'
+                            { model with surfaces = { model.surfaces with lastSelectedChild = Some (Child.Surfaces s') }}
+                        | _ -> model
+                    | None -> model
                 match msg with
-                  | SurfaceProperties.SetPriority _ -> m |> SurfaceModel.updateGrouping 
-                  | _ -> m                              
-            | FlyToSurface id -> model
+                  | SurfaceProperties.SetPriority _ -> m |> SurfaceModel.triggerSgGrouping 
+                  | _ -> m            
             | MakeRelative id ->                
                 let model = Surface.Files.makeSurfaceRelative id model scenePath
                 let sgSurfaces = model.sgSurfaces |> Surface.Files.expandLazyKdTreePaths scenePath
@@ -509,8 +509,7 @@ module Surface =
                         ]
                     ]
             }
-       
-
+           
     let rec viewTree path (group : MGroup) (model : MGroupsModel) : alist<DomNode<Action>> =
 
         alist {
@@ -519,29 +518,30 @@ module Surface =
             let color = sprintf "color: %s" (Html.ofC4b C4b.White)                
             let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
 
-            let icon =
+            let activeIcon =
                 adaptive {
                     let active = s.id
                     let! group  =  group.key
 
                     return if (active = group) then "circle icon" else "circle thin icon"
                 }
-                      
-            let map = Groups.getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
-                   
-                
+
+            let setActive = Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)
+            let activeAttributes = 
+                Groups.mkGroupAttributeMap activeIcon (GroupsMessage setActive)
+                                   
             let toggleIcon =
                 adaptive {
                     let! toggle = group.visible
                     return if toggle then "unhide icon" else "hide icon"
                 }
 
-            let toggleMap = Groups.getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+            let toggleAttributes = Groups.mkGroupAttributeMap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
                
             let desc =
                 div [style color] [       
                     Incremental.text group.name
-                    Incremental.i map AList.empty |> UI.wrapToolTip "Set active"
+                    Incremental.i activeAttributes AList.empty |> UI.wrapToolTip "Set active"
                         
                     i [clazz "plus icon"
                        onMouseClick (fun _ -> 
@@ -557,7 +557,7 @@ module Surface =
                        onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
                     |> UI.wrapToolTip "Remove Group"
 
-                    Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
+                    Incremental.i toggleAttributes AList.empty |> UI.wrapToolTip "Toggle Group"
                 ]
                  
             let itemAttributes =
