@@ -52,9 +52,13 @@ module Groups =
                     sg |> HSet.ofList |> HSet.collect flatten                    
                 HSet.union (c |> HSet.ofList) sga
     
-    let loadAnnotationGroups (path:string) =
+    let loadGroups (path:string) =
         let groups = Serialization.loadAs<PRo3D.Groups.GroupsModel> path          
         { groups with flat = (flatten groups.rootGroup) } 
+
+    //let loadSurfaceGroups (path:string) =
+    //    let groups = Serialization.loadAs<PRo3D.Groups.GroupsModel> path          
+    //    { groups with flat = (flatten groups.rootGroup) } 
 
     let tryGetChild (ag:Group) id = 
         flatten ag |> Seq.tryFind(fun x -> x.id = id)

@@ -256,9 +256,9 @@ module DrawingApp =
                 match Dialogs.openDialog w with
                     | None -> model
                     | Some path -> 
-                        { model with annotations = Groups.loadAnnotationGroups path }
+                        { model with annotations = Groups.loadGroups path }
             | QuickLoad,_ ->  
-                let groups = Groups.loadAnnotationGroups "./lastMeasure" 
+                let groups = Groups.loadGroups "./lastMeasure" 
                 { model with annotations = groups }
             | Send, _ ->                                                      
                 model

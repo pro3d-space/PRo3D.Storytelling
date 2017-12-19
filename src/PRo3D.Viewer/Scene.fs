@@ -140,9 +140,7 @@ module Scene =
 
         let grouped = m.scene.surfacesModel |> SurfaceModel.updateGrouping
         
-        let flat = Groups.flatten m.scene.surfacesModel.surfaces.rootGroup
-        let g1 = { grouped with surfaces = { grouped.surfaces with flat = flat } }
-        surfaceModelLens.Set(m, g1)
+        surfaceModelLens.Set(m, grouped)
 
     let loadScene path m runtime signature =
         let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
