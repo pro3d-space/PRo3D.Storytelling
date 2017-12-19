@@ -71,7 +71,7 @@ module ReferenceSystemApp =
                     |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
                         do! Aardvark.Opc.Shader.stableTrafo
                         do! DefaultSurfaces.vertexColor
-                        do! DefaultSurfaces.simpleLighting
+                       // do! DefaultSurfaces.simpleLighting
                     }
                     |> Sg.trafo(trafo)
 

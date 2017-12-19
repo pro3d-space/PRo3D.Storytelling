@@ -44,6 +44,9 @@ module PList =
     let rev (a: plist<_>) =
         a |> PList.toList |> List.rev |> PList.ofList
 
+    let applyNonEmpty (func : plist<_> -> plist<_>) (a : plist<_>) =
+        if PList.count a > 0 then (a |> func) else a
+
 
 type Points = list<V3d>
 

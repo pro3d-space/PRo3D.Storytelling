@@ -11,6 +11,8 @@ open Aardvark.SceneGraph
 open DevILSharp.ILU
 open Aardvark.VRVis
 open PRo3D
+open Aardvark.UI.Trafos
+
 
 //[<DomainType>]
 type ScalarLayer = {
@@ -54,7 +56,8 @@ type Surface = {
     quality       : NumericInput
     priority      : NumericInput
 
-    trafo         : Trafo3d
+    preTransform  : Trafo3d
+    
 
     scalarLayers   : plist<ScalarLayer>
     selectedScalar : option<ScalarLayer>
@@ -65,48 +68,12 @@ type Surface = {
 
 [<DomainType>]
 type SgSurface = {    
-    surface : Surface    
-
+    surface     : Surface    
+    trafo       : Transformation
     globalBB    : Box3d
     sceneGraph  : ISg
     kdTree      : hmap<Box3d,Level0KdTree>
 }
-
-//[<DomainType>]
-//type SurfaceModel = {
-//    surfaces        : plist<Surface>
-//    selectedSurface : option<Surface>
-//    sgSurfaces      : hmap<Guid,SgSurface>
-//    sgGrouped       : plist<hmap<Guid,SgSurface>>
-//    kdTreeCache     : hmap<string, ConcreteKdIntersectionTree>
-//}
-
-//[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-//module SurfaceModel =
-//    open MBrace.FsPickler
-//    open MBrace.FsPickler.Combinators    
-
-//    let makeSurfaceModel a b =
-//        {
-//            surfaces = a
-//            selectedSurface = b
-//            sgSurfaces = hmap.Empty
-//            sgGrouped = plist.Empty
-//            kdTreeCache = hmap.Empty
-//        }
-
-//    let surfaceModelPickler : Pickler<SurfaceModel> =
-//        Pickler.product makeSurfaceModel
-//        ^+ Pickler.field (fun s -> s.surfaces)          Pickler.auto<plist<Surface>>
-//        ^. Pickler.field (fun s -> s.selectedSurface)   Pickler.auto<option<Surface>>
-
-//    let initial = makeSurfaceModel PList.empty None    
-
-    
-//    registry.RegisterFactory (fun _ -> surfaceModelPickler)
-
-////    //FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)
-
 
 module Init =
     let quality = 

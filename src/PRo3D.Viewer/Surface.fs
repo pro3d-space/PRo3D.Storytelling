@@ -16,94 +16,8 @@ open PRo3D.Groups
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg
-
-    let getSurface model guid =
-        //model.surfaces |> PList.toList |> List.tryFind (fun a -> a.guid = guid)
-        Groups.tryGetChild model.surfaces.rootGroup guid
-
-    let updateSingleSurface model (s': PRo3D.Surfaces.Surface)  =
-        let surfaces' = Groups.updateChildProperties model.surfaces (Child.Surfaces s')
-            //model.surfaces 
-            //    |> PList.toList 
-            //    |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s') 
-            //    |> PList.ofList
-
-        // update sgsurfaces as well !!!
-        let sgSurfaces' = 
-            model.sgSurfaces 
-                |> HMap.alter s'.guid 
-                        (fun x -> match x with 
-                                    | Some k -> Some { k with surface = s' }
-                                    | None -> None)   
-
-        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces' }
-
-    let updateSingleSurface' model (s':PRo3D.Surfaces.Surface)  =
-        let surfaces' = Groups.updateChildProperties model.surfaces (Child.Surfaces s')
-            //model.surfaces 
-            //    |> PList.toList 
-            //    |> List.updateIf (fun x -> x.guid = s'.guid) (fun x -> s') 
-            //    |> PList.ofList
-
-        // update sgsurfaces as well !!!
-        let sgSurfaces' = 
-            model.sgSurfaces 
-                |> HMap.alter s'.guid 
-                        (fun x -> match x with 
-                                    | Some k -> Some { k with surface = s' }
-                                    | None -> None)   
-
-        // update sggroup as well !!!
-        let group' = 
-            model.sgGrouped
-              |> PList.map(fun surfs ->
-                surfs
-                |> HMap.alter s'.guid 
-                        (fun x -> match x with 
-                                    | Some k -> Some { k with surface = s' }
-                                    | None -> None)
-                )
-
-        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces'; sgGrouped = group' }
-
-    let updateSurfaces model (surfaces' : plist<PRo3D.Surfaces.Surface>) =
-        let sgSurfaces' =
-            surfaces' 
-                |> PList.toList
-                |> List.map (
-                    fun x -> 
-                        let update = 
-                            (fun (d : Option<SgSurface>) ->
-                                match d with 
-                                    | Some k -> Some { k with surface = x }
-                                    | None -> None)
-
-                        HMap.alter x.guid update model.sgSurfaces ) 
-                |> List.fold (fun a b -> HMap.union a b) HMap.empty
-
-        { model with sgSurfaces = sgSurfaces' } //
-
-    let groupSurfaces (sgSurfaces : hmap<Guid, SgSurface>) =
-        sgSurfaces
-            |> HMap.toList
-            |> List.groupBy(fun (g,x) -> x.surface.priority.value)
-            |> List.map( fun (p,k) -> (p, k |> HMap.ofList))
-            |> List.sortBy fst
-            |> List.map snd
-            |> PList.ofList
-
-    let updateGrouping' (model:SurfaceModel) (s':PRo3D.Surfaces.Surface) =
-        let group' = 
-            model.sgGrouped
-              |> PList.map(fun surfs ->
-                surfs
-                |> HMap.alter s'.guid 
-                        (fun x -> match x with 
-                                    | Some k -> Some { k with surface = s' }
-                                    | None -> None)
-                )
-        { model with sgGrouped = group' }
-
+    open Aardvark.UI.Trafos    
+    
     module SurfaceAttributes = 
         open System.Xml
             
@@ -244,7 +158,7 @@ module Surface =
         let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
             match scenePath with
                 | Some sp ->
-                    let surf = getSurface surfaceModel guid
+                    let surf = SurfaceModel.getSurface surfaceModel guid
                     match surf with
                         | Some s ->
                             // create target dir
@@ -260,7 +174,7 @@ module Surface =
 
                                     // update opc paths and scene
                                     let s' = { sf with opcPaths = expandNamesToPaths targetDir sf.opcNames; relativePaths = true }
-                                    updateSingleSurface surfaceModel s'
+                                    SurfaceModel.updateSingleSurface' surfaceModel s'
                                 | _ ->
                                     Log.error "surface %s not found" (guid.ToString())
                                     surfaceModel
@@ -276,9 +190,22 @@ module Surface =
             failwith (sprintf "invalid bounding box %s" (bb.ToString()))
         else bb
    
+    let combineLeafBBs (hierarchies : list<PatchHierarchy>) =
+         hierarchies
+            |> List.map(fun d -> d.tree |> QTree.getLeaves)
+            |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
+            |> Seq.concat
+            |> Box3d.ofSeq
+
+    let combineRootBBs (hierarchies : list<PatchHierarchy>) =
+         hierarchies
+            |> List.map(fun d -> d.tree |> QTree.getRoot)                  
+            |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
+            |> Box3d.ofSeq
+
     /// creates a surface from opc folder path
-    let mk path = 
-        
+    let mk path =                 
+
         let names = Files.getOPCNames path                
         {
             guid            = Guid.NewGuid()
@@ -292,50 +219,54 @@ module Surface =
             relativePaths   = false
             quality         = Init.quality
             priority        = Init.priority
-            trafo           = Trafo3d.Identity
-
+            preTransform    = Trafo3d.Identity            
             scalarLayers    = PList.empty
             selectedScalar  = None
-
             textureLayers   = PList.empty
             selectedTexture = None            
-        }
+        }       
+
+    let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = 
     
-    let combineLeafBBs (hierarchies : list<PatchHierarchy>) =
-         hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getLeaves)                  
-            |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
-            |> Seq.concat
-            |> Box3d.ofSeq
+        let pose = Pose.translate V3d.Zero // bb.Center
+        let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
 
-    let combineRootBBs (hierarchies : list<PatchHierarchy>) =
-         hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getRoot)                  
-            |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
-            |> Box3d.ofSeq
-
-    let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = {
-        surface = s       
-        sceneGraph = sg
-        globalBB = bb
-        kdTree = kd
-    }
+        {
+            surface    = s       
+            sceneGraph = sg
+            globalBB   = bb
+            kdTree     = kd
+            trafo      = trafo
+        }
 
     let transformBox (trafo:Trafo3d) (bb:Box3d) =
         bb.Transformed(trafo)
       
-    let createSgSurfaces runtime signature surfaces =
-        surfaces          
-            |> PList.toList
-            |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.trafo })
-            |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
-            |> List.zip (surfaces |> PList.toList)
-            |> List.map (
-                fun (surf, (sg, hierarchies, kdtree)) -> 
-                    let bb = hierarchies |> combineLeafBBs |> transformBox surf.trafo
-                    sgOfSurface surf sg bb kdtree)
-            |> List.map (fun d -> (d.surface.guid, d))
-            |> HMap.ofList
+    type SgHelper = {
+        surf        : PRo3D.Surfaces.Surface
+        bb          : Box3d
+        sg          : ISg        
+        kdtree      : hmap<Box3d,Level0KdTree>
+    }
+    
+    let createSgSurfaces runtime signature surfaces =        
+        let sghs =
+            surfaces
+                |> PList.toList
+                |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.preTransform })
+                |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
+                |> List.zip (surfaces |> PList.toList)
+                |> List.map(fun (surf, (sg, hierarchies, kdtree)) -> 
+                    let bb = hierarchies |> combineLeafBBs |> transformBox surf.preTransform
+                    { surf = surf; bb = bb; sg = sg; kdtree = kdtree })
+
+        let sgSurfaces =
+            sghs 
+              |> List.map (fun d -> sgOfSurface d.surf d.sg d.bb d.kdtree)
+              |> List.map (fun d -> (d.surface.guid, d))
+              |> HMap.ofList       
+
+        sgSurfaces
                   
  module SurfaceApp =
     open System.Diagnostics
@@ -345,8 +276,7 @@ module Surface =
     open Aardvark.VRVis
     
     type Action =
-        | SurfacePropertiesMessage  of SurfaceProperties.Action
-        | SelectSurface             of Guid
+        | SurfacePropertiesMessage  of SurfaceProperties.Action        
         | FlyToSurface              of Guid
         | MakeRelative              of Guid
         | RemoveSurface             of Guid*list<Index>
@@ -444,7 +374,7 @@ module Surface =
                                 |> Seq.filter(
                                     fun x -> 
                                        let mutable t = 0.0
-                                       let r' = r.Ray.Transformed(surf.trafo.Backward)
+                                       let r' = r.Ray.Transformed(surf.preTransform.Backward) //combine pre and current transform
                                        x.Intersects(r', &t)
                                 )                                                
                         //intersect corresponding kdtrees
@@ -455,7 +385,7 @@ module Surface =
                                         Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                        
 
                                         let hit, c = 
-                                            r.Ray.Transformed(surf.trafo.Backward)
+                                            r.Ray.Transformed(surf.preTransform.Backward) //combine pre and current transform
                                             |> FastRay3d 
                                             |> intersectKdTrees kd bb surf cache
 
@@ -469,43 +399,22 @@ module Surface =
                         closestHit
                 )
             |> Seq.tryPick(fun d -> Some d), cache
-    
-    let updateGrouping (model:SurfaceModel) =
-        { model with sgGrouped = (Surface.groupSurfaces model.sgSurfaces) }
-
+        
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
         match action with
-            | SurfacePropertiesMessage msg ->
-                //let m =
-                //    match model.selectedSurface with 
-                //        | Some s -> 
-                //            let s' = SurfaceProperties.update s msg 
-                //            let model = Surface.updateSingleSurface' model s'
-                //            { model with selectedSurface = Some s' }
-                //        | None -> model
-
+            | SurfacePropertiesMessage msg ->                
                 let m = match model.surfaces.lastSelectedChild with
-                            | Some s -> 
+                        | Some s -> 
                                 match s with 
                                   | Child.Surfaces sf ->
                                         let s' = SurfaceProperties.update sf msg 
-                                        let model = Surface.updateSingleSurface' model s'
+                                        let model = SurfaceModel.updateSingleSurface' model s'
                                         { model with surfaces = { model.surfaces with lastSelectedChild = Some (Child.Surfaces s') }}
                                   | _ -> model
-                            | None -> model
+                        | None -> model
                 match msg with
-                  | SurfaceProperties.SetPriority _ -> m |> updateGrouping 
-                  | _ -> m
-                
-            | SelectSurface id -> model
-                //let surf = model.surfaces |> Seq.tryFind(fun x -> x.guid = id)
-                //let surf =
-                //    match surf, model.selectedSurface with
-                //        | Some a, Some b -> if a.guid = b.guid then None else Some a
-                //        | Some a, None   -> Some a
-                //        | None, _        -> None
-
-                //{ model with selectedSurface = surf }
+                  | SurfaceProperties.SetPriority _ -> m |> SurfaceModel.updateGrouping 
+                  | _ -> m                              
             | FlyToSurface id -> model
             | MakeRelative id ->                
                 let model = Surface.Files.makeSurfaceRelative id model scenePath
@@ -514,18 +423,9 @@ module Surface =
             | RemoveSurface (id,path) -> //model
                 let groups = Groups.removeChild2 model.surfaces id path
                 let sg' = model.sgSurfaces |> HMap.remove id
-                { model with surfaces = groups; sgSurfaces = sg'}
-                //let toRemove = model.surfaces |> PList.toList |> List.tryFindIndex (fun d -> d.guid = id)
-                //match toRemove with
-                //    | Some index ->
-                //        let s' = model.surfaces |> PList.removeAt index
-
-                //        let sg' = model.sgSurfaces |> HMap.remove id
-                        
-                //        { model with surfaces = s'; sgSurfaces = sg' }
-                //    | None -> model             
+                { model with surfaces = groups; sgSurfaces = sg'}                    
             | OpenFolder id ->
-                let surf = id |> Surface.getSurface model
+                let surf = id |> SurfaceModel.getSurface model
                 match surf with
                     | Some s -> 
                         match s with 
@@ -535,8 +435,8 @@ module Surface =
                                     | Some p -> 
                                         Process.Start("explorer.exe", p) |> ignore
                                         model
-                                    | None -> model
-                            | _ -> model     
+                                    | None -> model      
+                            | _ -> failwith "can only contain surfaces"
                     | None -> model
             | GroupsMessage msg -> { model with surfaces = Groups.update model.surfaces msg}
             | _ -> model
@@ -553,67 +453,7 @@ module Surface =
                         ]         
                     )
             return absRelIcons
-        }
-
-    //let viewSurfaceHeader (m:MSurface) absRelIcons =         
-    //    [
-    //        Incremental.text m.name; text " "
-
-    //        i [clazz "home icon"                                                
-    //           onClick (fun _ -> FlyToSurface (m.guid |> Mod.force))
-    //        ][] |> UI.wrapToolTip "FlyTo"                                                                                
-
-    //        Incremental.i (absRelIcons)(AList.empty) |> UI.wrapToolTip "portable"                                        
-
-    //        i [clazz "folder icon"                                                
-    //           onClick (fun _ -> OpenFolder (m.guid |> Mod.force))
-    //        ][] |> UI.wrapToolTip "open folder"                                                                                
-
-    //        i [clazz "Remove icon red";                                             
-    //            onClick (fun _ -> RemoveSurface (m.guid |> Mod.force))
-    //        ][] |> UI.wrapToolTip "Remove"                                         
-    //    ]    
-
-    //let viewSurfaceList (m:) = 
-    //    let listAttr = AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : visible;max-height: 30%"]
-    //    Incremental.div listAttr (
-    //        alist {                        
-    //            for (_,s) in m.sgSurfaces |> AMap.toASet |> AList.ofASet do
-
-    //                let! selected = m.selectedSurface
-    //                let! color =
-    //                    match selected with
-    //                      | Some sel -> 
-    //                        sel.guid |> Mod.map (fun g -> if g = (s.surface.guid |> Mod.force) then C4b.Blue else C4b.White)
-    //                      | None -> Mod.constant C4b.White
-                                                                                    
-    //                let! absRelIcons = absRelIcons s.surface
-                    
-    //                let bgc = color |> Html.ofC4b |> sprintf "color: %s"
-
-    //                yield div [clazz "item"] [
-    //                    i [
-    //                        clazz "large cube middle aligned icon"; 
-    //                        style bgc
-    //                        onClick (fun _ -> SelectSurface (s.surface.guid |> Mod.force))
-    //                    ][]
-    //                    div [clazz "content"] [
-    //                        div [clazz "header"] (
-    //                            viewSurfaceHeader s.surface absRelIcons
-    //                        )
-    //                        div [clazz "description"] [
-    //                            Incremental.text (
-    //                                s.globalBB 
-    //                                    |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
-
-    //                            Incremental.text (
-    //                                s.surface.relativePaths
-    //                                    |> Mod.map (fun d -> sprintf " | local: %A" (d)))
-    //                        ]                                    
-    //                    ]
-    //                ]
-    //        }
-    //    )
+        }    
     
     let mkColor (model : MGroupsModel) (s : MSurface) =
             let id = s.guid |> Mod.force
@@ -622,8 +462,7 @@ module Surface =
                 model.selectedChilds
                     |> ASet.map(fun x -> x.id = id)
                     |> ASet.contains true
-                    |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)
-            
+                    |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)            
             color
 
     let viewSurfacesInGroups (path:list<Index>) (model:MGroupsModel)(select : MSurface*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (surfaces: alist<IMod<MChild>>) : alist<DomNode<'outer>> = 
@@ -665,14 +504,10 @@ module Surface =
                                     } 
                             ) 
                             yield div [clazz "description"; style infoc] [
-                                //Incremental.text (
-                                //    s.globalBB 
-                                //        |> Mod.map (fun d -> sprintf "Size: %.3f m" (d.Size.Length)))
-
                                 Incremental.text (
                                     s.relativePaths
                                         |> Mod.map (fun d -> sprintf " | local: %A" (d)))
-                                        ]      
+                            ]                                    
                         ]
                     ]
             }
@@ -803,7 +638,7 @@ module Surface =
             let! opt = lscToDom bla (fun x -> SurfaceProperties.view x)
 
             return (opt |> UI.map SurfacePropertiesMessage)
-        } 
+        }                          
         
     let surfaceGroupProperties (model:MSurfaceModel) =
         adaptive {                                

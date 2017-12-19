@@ -16,6 +16,7 @@ module Scene =
     
     
     let surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
+    let _flatSurfaces = Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.flat
 
     let expandRelativePaths (m:Scene) =
         // Surfaces        
@@ -51,7 +52,7 @@ module Scene =
                 let childList = flatList |> List.map(fun x -> Child.Surfaces x )
                 let newGroupsModel = Groups.updateChildList childList m.surfacesModel.surfaces
                 let m' = { m with surfacesModel = { m.surfacesModel with surfaces = newGroupsModel }}      
-                { m' with surfacesModel = Surface.updateSurfaces m'.surfacesModel (flatList |> PList.ofList)}
+                { m' with surfacesModel = SurfaceModel.updateSurfaces m'.surfacesModel (flatList |> PList.ofList)}
             | None -> m        
 
     let readLine (filePath:string) =
@@ -63,11 +64,11 @@ module Scene =
     let addLegacyTrafos surfaces = 
         surfaces 
             |> PList.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))
-            |> PList.map(fun(s,p) -> 
+            |> PList.map(fun(s,p) ->                     
                     match (Serialization.fileExists p) with
                         | Some path->
                             let t = readLine path
-                            { s with trafo = Trafo3d.Parse(t) }
+                            { s with preTransform = Trafo3d.Parse(t) }
                         | None ->
                             s
                         )
@@ -119,7 +120,7 @@ module Scene =
                                        
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
-        let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
+        let grouped = m.scene.surfacesModel |> SurfaceModel.updateGrouping
         surfaceModelLens.Set(m, grouped)        
 
     /// loads surfaces given in scene - creates their sg pendants
@@ -127,11 +128,18 @@ module Scene =
         
         let s = s |> expandRelativePaths
 
-        let surfs = (Child.childrenToSurfaces s.surfacesModel.surfaces.flat) |> HSet.toList |> PList.ofList    
+        let flat = Groups.flatten s.surfacesModel.surfaces.rootGroup
+        let s = _flatSurfaces.Set(s, flat)
+        let m = { m with scene = s }
+
+        let surfs = s.surfacesModel.surfaces.flat |> Child.childrenToSurfaces |> HSet.toList |> PList.ofList
+
         let sgSurfaces = Surface.createSgSurfaces runtime signature surfs |> Files.expandLazyKdTreePaths m.scene.scenePath
+
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
-        let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
+        let grouped = m.scene.surfacesModel |> SurfaceModel.updateGrouping
+        
         let flat = Groups.flatten m.scene.surfacesModel.surfaces.rootGroup
         let g1 = { grouped with surfaces = { grouped.surfaces with flat = flat } }
         surfaceModelLens.Set(m, g1)

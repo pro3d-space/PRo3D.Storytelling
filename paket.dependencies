@@ -32,11 +32,11 @@ nuget FParsec                               ~> 1.0.2
 nuget FsPickler                             ~> 4.0.0
 nuget FsPickler.Json                        ~> 4.0.0
 
-nuget Aardvark.UI                           ~> 3.3.44
-nuget Aardvark.UI.Primitives                ~> 3.3.44
-nuget Aardvark.Service                      ~> 3.3.44
-nuget Aardvark.Cef.WinForms                 ~> 3.3.44
-nuget Aardvark.Cef                          ~> 3.3.44
+nuget Aardvark.UI                           ~> 3.3.46
+nuget Aardvark.UI.Primitives                ~> 3.3.46
+nuget Aardvark.Service                      ~> 3.3.46
+nuget Aardvark.Cef.WinForms                 ~> 3.3.46
+nuget Aardvark.Cef                          ~> 3.3.46
 
 nuget WindowsAPICodePack-Core
 nuget WindowsAPICodePack-ShellExtensions

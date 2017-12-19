@@ -39,6 +39,8 @@ module ViewerApp =
     open System.Collections.Concurrent   
     open Scene   
     open DomainModel.Surfaces
+    open Aardvark.UI.Trafos
+    open Aardvark.SceneGraph.SgFSharp.Sg
                  
     // maybe move lenses to respective models?
 
@@ -46,6 +48,7 @@ module ViewerApp =
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces    
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
+    //let _selectedSurface' = _surfacesModel   |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.lastSelectedChild
     let _surfaceGroup    = _surfacesModel   |. SurfaceModel.Lens.surfaces
     let _selectedSurface = _surfaceGroup    |. GroupsModel.Lens.lastSelectedChild
     
@@ -73,6 +76,7 @@ module ViewerApp =
             | Some s ->
                 let bb = s.globalBB
                 let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value
+                let view = CameraView.lookAt V3d.One V3d.Zero m.scene.referenceSystem.up.value
                 
                 _view.Set(m, view)
             | None -> m
@@ -150,15 +154,20 @@ module ViewerApp =
     
     let mutable cache = hmap.Empty
 
-    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =
-        
-        match msg, m.interaction, m.picking with
-            | NavigationMessage  msg,_,false -> 
-               
-                let c   = m.scene.config
-                let ref = m.scene.referenceSystem
+    let isGrabbed (model : Model) =
+        let sel = _selectedSurface.Get(model) |> Option.bind(fun x -> _sgSurfaces.Get(model).TryFind x.id)
+        match sel with
+          | Some s -> s.trafo.grabbed.IsSome
+          | None -> false       
 
-                { m with scene = { m.scene with navigation = Navigation.update c ref navConf m.scene.navigation msg }}
+    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
+        match msg, m.interaction, m.picking with
+            | NavigationMessage  msg,_,false when (isGrabbed m |> not) ->
+               
+               let c   = m.scene.config
+               let ref = m.scene.referenceSystem
+
+               { m with scene = { m.scene with navigation = Navigation.update c ref navConf m.scene.navigation msg }}
             | SetCamera cv,_,false -> 
                 _view.Set(m, cv)
             | SetCameraAndFrustum (cv, hfov, _),_,false ->                
@@ -188,7 +197,7 @@ module ViewerApp =
                                   
                                   let func = 
                                       (fun (x:Group) -> 
-                                          { x with childList = if PList.count x.childList > 0 then Groups.updateChild x.childList a' else x.childList })
+                                          { x with childList = if PList.count x.childList > 0 then Groups.updateChild a' x.childList else x.childList })
                                   
                                   let path = m.drawing.annotations.activeChild.path
                                   let root = Groups.updateItemAt path func m.drawing.annotations.rootGroup
@@ -371,6 +380,14 @@ module ViewerApp =
 
                     let c' = ConfigProperties.update m.scene.config configAction
 
+                    let kind = 
+                        match k with
+                          | Aardvark.Application.Keys.F1 -> TrafoKind.Translate
+                          | Aardvark.Application.Keys.F2 -> TrafoKind.Rotate
+                          | _ -> m.trafoKind
+
+                    let m = { m with trafoKind = kind }
+
                     let m = 
                         match k with 
                           | Aardvark.Application.Keys.Space -> 
@@ -418,7 +435,41 @@ module ViewerApp =
                     let f' = Frustum.perspective fov c'.nearPlane.value c'.farPlane.value asp
                     { m with frustum = f' }
                   | _ -> m
+            | SetMode d,_,_ -> 
+                { m with trafoMode = d }
+            | SetKind d,_,_ -> 
+                { m with trafoKind = d }
+            | Translate (_,b),_,_ ->
+                //let m = _selectedSurface.Update(m, fun s -> { s with trafo = TranslateController.updateController s.trafo b })
+                //_surfacesModel.Set(m, SurfaceApp.reflectSelectedUpdate m.scene.surfacesModel)
 
+                match _selectedSurface.Get(m) with
+                  | Some selected ->
+                    let sgSurf = _sgSurfaces.Get(m) |> HMap.find selected.id
+                    let s' = { sgSurf with trafo = TranslateController.updateController sgSurf.trafo b }
+                    let bla = 
+                      _sgSurfaces.Get(m) 
+                        |> HMap.update selected.id (fun x -> 
+                            match x with 
+                              | Some _ -> printfn "%A" s'.trafo.previewTrafo.Forward.C3.XYZ; s'
+                              | None   -> failwith "surface not found")
+                    _sgSurfaces.Set(m, bla)
+                  | None -> m
+                
+            | Rotate (_,b),_,_ ->
+                 match _selectedSurface.Get(m) with
+                   | Some selected ->
+                     let sgSurf = _sgSurfaces.Get(m) |> HMap.find selected.id
+                     let s' = { sgSurf with trafo = RotationController.updateController sgSurf.trafo b }
+                     let bla = 
+                       _sgSurfaces.Get(m) 
+                        |> HMap.update selected.id (fun x -> 
+                          match x with 
+                            | Some _ -> s'
+                            | None   -> failwith "surface not found")
+                     _sgSurfaces.Set(m, bla)
+                   | None -> m
+                  
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -476,6 +527,44 @@ module ViewerApp =
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation
 
+            let getSurface (c:IMod<MChild>) =
+                adaptive {
+                    let! child = c                     
+                    match child with 
+                      | MSurfaces x -> return x
+                      | _ -> return failwith ""
+                }
+
+            let controller = 
+                adaptive {
+                    let! selected = m.scene.surfacesModel.surfaces.lastSelectedChild
+                    let! kind = m.trafoKind
+                    match selected with
+                      | Some c -> 
+                          let id = c |> getSurface |> Mod.bind(fun x -> x.guid)
+
+
+                          let! sg = m.scene.surfacesModel.sgSurfaces |> AMap.find (id |> Mod.force)
+                          
+                          let scaling pos =                            
+                            Sg.computeInvariantScale 
+                                m.scene.navigation.camera.view 
+                                (Mod.constant 0.1)
+                                pos 
+                                (Mod.constant 0.5)
+                                (Mod.constant 60.0)
+
+                          match kind with
+                            | TrafoKind.Translate ->                                               
+                                return TranslateController.viewController (fun t -> Translate("", t)) scaling sg.trafo
+                            | TrafoKind.Rotate ->
+                                return RotationController.viewController (fun t -> Rotate("", t)) scaling sg.trafo
+                            | _ -> return Sg.empty
+                      | None -> return Sg.empty
+                    
+                } |> Sg.dynamic
+
+            [controller; annotations; refSystem; exploreCenter] |> Sg.ofList
             let viewPlans =
                 ViewPlan.Sg.view 
                     m.scene.config 
@@ -501,8 +590,8 @@ module ViewerApp =
                         let! a' = a
                         match a' with 
                             | MAnnotations ann -> return isSome ann
-                            | _ -> return div[][]                                                             
-                    | None   -> return div[][] 
+                            | _ -> return div[][]
+                    | None   -> return div[][]
             }
         
         let bookmarkGroupProperties (model:MModel) =
@@ -524,7 +613,7 @@ module ViewerApp =
         let annotationProperties (model:MModel) =
             adaptive {
                 let! child = model.drawing.annotations.lastSelectedChild
-                let! opt = lscToDom child (fun x -> AnnotationProperties.view x)                
+                let! opt = lscToDom child (fun x -> AnnotationProperties.view x)
 
                 return (opt |> UI.map AnnotationMessage)
             } 
@@ -619,7 +708,7 @@ module ViewerApp =
                                                                let! i = item
                                                                yield i})
                 ] 
-            ]
+                ]
 
         let viewPlannerUI = 
             
