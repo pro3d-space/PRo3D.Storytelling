@@ -67,6 +67,7 @@ type ViewerAction =
     | Translate                 of string * TrafoController.Action
     | Rotate                    of string * TrafoController.Action
     | SurfaceActions            of SurfaceApp.Action
+    | AlignmentActions          of PRo3d.Align.AlignmentActions
 
 
 module ViewerUtils =
@@ -167,7 +168,8 @@ module ViewerUtils =
                 //                    let t = Trafo3d.Translation(-x.Center)
                 //                    printfn "%A" t.Forward.C3.XYZ
                 //                    t))
-                |> Sg.trafo (surface.trafo.previewTrafo |> Mod.map(fun x -> printfn "%A" x.Forward.C3.XYZ; x))
+                |> Sg.trafo (surface.surface.preTransform)
+                //|> Sg.trafo (surface.trafo.previewTrafo |> Mod.map(fun x -> printfn "%A" x.Forward.C3.XYZ; x))
         sg
 
     let frustum (m:MModel) =

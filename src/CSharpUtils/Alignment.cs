@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Aardvark.Base;
 
-namespace Aardvark.VRVis
+namespace Aardvark.VRVis.Approx
 {
 
     public class Approx<T>

@@ -50,7 +50,7 @@ module Groups =
             | (c, sg)  -> 
                 let sga = 
                     sg |> HSet.ofList |> HSet.collect flatten                    
-                HSet.union (c |> HSet.ofList) sga
+                HSet.union (c |> HSet.ofList) sga    
     
     let loadAnnotationGroups (path:string) =
         let groups = Serialization.loadAs<PRo3D.Groups.GroupsModel> path          

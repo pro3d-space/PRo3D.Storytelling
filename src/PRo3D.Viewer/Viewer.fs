@@ -41,6 +41,7 @@ module ViewerApp =
     open DomainModel.Surfaces
     open Aardvark.UI.Trafos
     open Aardvark.SceneGraph.SgFSharp.Sg
+    open PRo3d.Align
                  
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
@@ -281,6 +282,8 @@ module ViewerApp =
                                 let ref = m.scene.referenceSystem 
                                 let viewPlans' = ViewPlan.update (m.scene.viewPlans) camState (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m))))
                                 { m with scene = {m.scene with viewPlans = viewPlans' } }
+                            | Interactions.AlignPick -> 
+                                { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = hit; surfaceName = surf.guid}))}
                             | _ -> m
                     | None, _ -> 
                         Log.error ("no hit")
@@ -313,7 +316,7 @@ module ViewerApp =
             | KeyDown k, _, _ ->
                     let drawingAction =
                         match k with
-                            | Aardvark.Application.Keys.Enter       -> Drawing.Action.Finish
+                            | Aardvark.Application.Keys.Enter       -> Drawing.Action.Finish                                                               
                             | Aardvark.Application.Keys.LeftCtrl    -> Drawing.Action.StartDrawing
                             | Aardvark.Application.Keys.D0          -> Drawing.Action.SetSemantic Semantic.Horizon0
                             | Aardvark.Application.Keys.D1          -> Drawing.Action.SetSemantic Semantic.Horizon1
@@ -330,6 +333,26 @@ module ViewerApp =
                         match m.interaction with
                             | Interactions.DrawAnnotation -> 
                                 { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing drawingAction; } |> stash
+                            | Interactions.AlignPick -> 
+                                match k with
+                                 | Aardvark.Application.Keys.Enter -> 
+                                    let m = { m with alignment = AlignmentApp.update m.alignment PRo3d.Align.AlignmentActions.Finish }
+
+                                    match (m.alignment.resultTrafo, m.alignment.alignment)with
+                                      | Some t, Some al -> 
+                                        
+                                        let shmap = m.scene.surfacesModel.sgSurfaces |> HMap.update al.blue (fun x ->                                            
+                                            match x with 
+                                            | Some s -> { s with surface = { s.surface with preTransform = t }}
+                                            | None -> failwith "surface must exist")
+
+                                        let m = _sgSurfaces.Set(m, shmap) 
+                                        let ss = m.scene.surfacesModel|> SurfaceModel.triggerSgGrouping
+
+                                        _surfacesModel.Set(m, ss)
+                                      | _ -> m
+
+                                 | _ -> m
                             | _ -> m
                                                         
 
@@ -478,6 +501,12 @@ module ViewerApp =
                     |> Sg.map DrawingMessage
                     |> Sg.fillMode (Mod.constant FillMode.Fill)
                     |> Sg.cullMode (Mod.constant CullMode.None)
+            
+            let alignment = 
+                AlignmentApp.view m.alignment m.scene.navigation.camera.view
+                    |> Sg.map AlignmentActions
+                    |> Sg.fillMode (Mod.constant FillMode.Fill)
+                    |> Sg.cullMode (Mod.constant CullMode.None)
 
             let refSystem =
                 ReferenceSystemApp.Sg.view
@@ -536,7 +565,7 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
-            [controller; annotations; refSystem; exploreCenter; viewPlans] |> Sg.ofList
+            [controller; annotations; refSystem; alignment; exploreCenter; viewPlans] |> Sg.ofList
                                             
         let cmds = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let control = DomNode.RenderControl(att, cam, cmds, None)

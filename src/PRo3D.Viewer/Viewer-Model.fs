@@ -20,6 +20,7 @@ open PRo3D.Groups
 open PRo3D.ReferenceSystem
 open Aardvark.Base.Frustum
 open Aardvark.UI.Trafos
+open PRo3d.Align
 
   
 [<DomainType>] 
@@ -57,6 +58,7 @@ type Interactions =
     | DrawAnnotation        = 2
     | PlaceRover            = 3
     | TrafoControls         = 4
+    | AlignPick             = 5
 
 type WayPoint = {
     name : string
@@ -78,6 +80,8 @@ type Model = {
 
     trafoKind       : TrafoKind
     trafoMode       : TrafoMode
+
+    alignment       : AlignmentModel
 
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
@@ -107,6 +111,7 @@ module Viewer =
                 referenceSystem = ReferenceSystem.initial
                 bookmarksModel  = BookmarksModel.initial
                 viewPlans       = ViewPlanModel.initial
+                
                 //groups          = AnnotationGroupsModel.initial
         }
 
@@ -123,6 +128,8 @@ module Viewer =
 
         trafoKind       = TrafoKind.Rotate
         trafoMode       = TrafoMode.Local
+
+        alignment       = Alignment.initModel
 
         past            = None
         future          = None
