@@ -134,7 +134,9 @@ module Groups =
         let func = (fun (x:Group) -> { x with childList = x.childList |> PList.applyNonEmpty (removeChild id) })
         let newRoot = updateItemAt path func model.rootGroup                
         let m = removeFromSelection model id path
-        updateGroups m newRoot (flatten newRoot)
+        let flat = flatten newRoot
+        Log.error "annotations number: %d" flat.Count
+        updateGroups m newRoot flat
 
     let rec removeSelectionfromTree (selection:list<TreeSelection> ) (m:GroupsModel) =
         match selection with
@@ -319,12 +321,12 @@ module SurfaceModel =
     open PRo3D.Groups
     open PRo3D.Surfaces
 
-    let initSurfaceGroups children selected = 
+    let initSurfaceGroups group selected = 
         let surfaces = GroupsModel.initial
-        { surfaces with rootGroup = { surfaces.rootGroup with childList = children}; lastSelectedChild = selected }
+        { surfaces with rootGroup = group; lastSelectedChild = selected }
 
-    let initSurfaceModel children selected =
-        let surfaces = initSurfaceGroups children selected
+    let initSurfaceModel group selected =
+        let surfaces = initSurfaceGroups group selected
         {
             surfaces    = surfaces
             sgSurfaces  = hmap.Empty
@@ -334,10 +336,10 @@ module SurfaceModel =
 
     let surfaceModelPickler : Pickler<SurfaceModel> =
         Pickler.product initSurfaceModel
-        ^+ Pickler.field (fun s -> s.surfaces.rootGroup.childList)   Pickler.auto<plist<Child>> //Surface
+        ^+ Pickler.field (fun s -> s.surfaces.rootGroup)             Pickler.auto<Group> //Surface
         ^. Pickler.field (fun s -> s.surfaces.lastSelectedChild)     Pickler.auto<option<Child>> //Pickler.auto<option<Surface>>
 
-    let initial = initSurfaceModel PList.empty None   
+    let initial = initSurfaceModel Group.initRoot None   
     
     registry.RegisterFactory (fun _ -> surfaceModelPickler)
 

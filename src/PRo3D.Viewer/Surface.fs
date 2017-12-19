@@ -421,7 +421,7 @@ module Surface =
             | RemoveSurface (id,path) -> //model
                 let groups = Groups.removeChild2 model.surfaces id path
                 let sg' = model.sgSurfaces |> HMap.remove id
-                { model with surfaces = groups; sgSurfaces = sg'}                    
+                { model with surfaces = groups; sgSurfaces = sg'} |> SurfaceModel.triggerSgGrouping              
             | OpenFolder id ->
                 let surf = id |> SurfaceModel.getSurface model
                 match surf with

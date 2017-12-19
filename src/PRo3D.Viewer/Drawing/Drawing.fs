@@ -272,20 +272,10 @@ module DrawingApp =
             | Redo, _ ->
                 match model.future with
                     | Some f -> f
-                    | None -> model
-            //| RemoveAnnotation (p,id), _ ->
-            //    model
-            //    let toRemove = model.allAnnotations.AsList |> List.tryFindIndex (fun d -> d.key = id)
-            //    match toRemove with
-            //        | Some index ->
-            //            let as' = model.allAnnotations|> PList.removeAt index
-            //            Thread.Sleep(20)
-            //            //if removed is selected also remove selected copy
-
-            //            { model with allAnnotations = as' } |> stash
-            //        | None -> model             
-            //| ToggleVisiblity id, _ -> model // implemented in Groups   
-            | GroupsMessage msg,_ -> { model with annotations = Groups.update model.annotations msg}
+                    | None -> model           
+            | GroupsMessage msg,_ ->
+                let m = { model with annotations = Groups.update model.annotations msg}
+                m
             | _ -> model
 
     module UI =
