@@ -33,7 +33,7 @@ type Child =
     | Surfaces    of value : Surface
     | Bookmarks   of value : Bookmark
     with 
-    [<PrimaryKey>] 
+    //[<PrimaryKey>] 
         member x.id =
             match x with
                 | Annotations a -> a.key

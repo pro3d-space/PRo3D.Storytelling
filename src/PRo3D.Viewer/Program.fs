@@ -26,6 +26,7 @@ open ViewPlanner
 
 open Suave.Json
 open System.Runtime.Serialization
+open Aardvark.VRVis
 
 [<DataContract>]
 type Calc =
@@ -133,6 +134,10 @@ let main argv =
     //form.WindowState <- FormWindowState.Minimized
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"
+
+    
+
+    //PoseTrafoEstimation.SimilarityTrafo([|V3d.Zero|],[|V3d.One|],
 
     //let directory = @".\InstrumentStuff"
     //let errorCode = IPWrapper.Init(directory, directory)

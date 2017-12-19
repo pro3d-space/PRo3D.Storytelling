@@ -10,6 +10,7 @@ open System
 
 [<DomainType>]
 type Bookmark = {
+    [<PrimaryKey>] 
     key             : Guid
     name            : string
     navigationState : NavigationModel

@@ -41,6 +41,22 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Aardvark.Base\lib\net45\Aardvark.Base.dll</HintPath>
     </Reference>
+    <Reference Include="Aardvark.Base.FSharp, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Aardvark.Base.FSharp\lib\net45\Aardvark.Base.FSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Aardvark.Base.Incremental, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Aardvark.Base.Incremental\lib\net45\Aardvark.Base.Incremental.dll</HintPath>
+    </Reference>
+    <Reference Include="Aardvark.Base.TypeProviders, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Aardvark.Base.FSharp\lib\net45\Aardvark.Base.TypeProviders.dll</HintPath>
+    </Reference>
+    <Reference Include="Aardvark.VRVis.Base, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Aardvark.VRVis.Base\lib\net45\Aardvark.VRVis.Base.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -51,6 +67,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Alignment.cs" />
     <Compile Include="FastDoubleParse.cs" />
     <Compile Include="InstrumentDll\IPWrapper.Conversions.cs" />
     <Compile Include="InstrumentDll\IPWrapper.cs" />

@@ -42,16 +42,11 @@ module ViewerApp =
     open Aardvark.UI.Trafos
     open Aardvark.SceneGraph.SgFSharp.Sg
                  
-    // maybe move lenses to respective models?
-
     // surfaces
-    let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel
-    let _surfaces        = _surfacesModel   |. SurfaceModel.Lens.surfaces    
+    let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
-    //let _selectedSurface' = _surfacesModel   |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.lastSelectedChild
-    let _surfaceGroup    = _surfacesModel   |. SurfaceModel.Lens.surfaces
-    let _selectedSurface = _surfaceGroup    |. GroupsModel.Lens.lastSelectedChild
-    
+    let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.surfaces  |. GroupsModel.Lens.lastSelectedChild
+       
     // navigation
     let _navigation = Model.Lens.scene |. Scene.Lens.navigation
     let _camera     = _navigation |. NavigationModel.Lens.camera
@@ -59,56 +54,29 @@ module ViewerApp =
 
     // drawing
     let _drawing         = Model.Lens.drawing
-    let _group'          = _drawing |. DrawingModel.Lens.annotations
-    let _flatAnnotations = _group'  |. GroupsModel.Lens.flat
-    let _annotations     = _group'  |. GroupsModel.Lens.rootGroup |. Group.Lens.childList
-    let _groups          = _group'  |. GroupsModel.Lens.rootGroup |. Group.Lens.subGroups
+    let _annoGroup       = _drawing |. DrawingModel.Lens.annotations
+    let _flat            = _annoGroup  |. GroupsModel.Lens.flat    
+    let _groups          = _annoGroup  |. GroupsModel.Lens.rootGroup |. Group.Lens.subGroups
        
     let lookAtData (m : Model) =         
-        let bb = _sgSurfaces.Get(m) |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
+        let bb = m |> Lenses.get _sgSurfaces |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
         let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value             
 
-        _view.Set(m,view)        
+        _view.Set(m,view)
     
     let lookAtSurface (m : Model) id =
-        let surf = _sgSurfaces.Get(m) |> HMap.tryFind id
+        let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
         match surf with
             | Some s ->
                 let bb = s.globalBB
                 let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value
-                let view = CameraView.lookAt V3d.One V3d.Zero m.scene.referenceSystem.up.value
                 
-                _view.Set(m, view)
+                m |> Lenses.set _view view
             | None -> m
     
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
        
-    let stashAndSaveRecent (s : SceneHandle) (model : Model) =
-        let scenePaths = 
-            model.recent.recentScenes                 
-                |> HMap.update s.path 
-                    (
-                        fun v -> 
-                            match v with
-                                | Some x -> { x with writeDate = s.writeDate }
-                                | None -> s
-                    )
-
-        let recent = { model.recent with recentScenes = scenePaths }
-
-        Serialization.save "./recent" recent |> ignore
-
-        { model with recent = recent }
-
-    let stashAndSaveRecent' (path : string) (model : Model) =
-        let handle = {
-            name = Path.GetFileName(path)
-            path = path
-            writeDate = DateTime.Now
-        }
-        stashAndSaveRecent handle model
-
     let refConfig : ReferenceSystemConfig<ViewConfigModel> =
         { 
             arrowLength = ViewConfigModel.Lens.arrowLength |. NumericInput.Lens.value 
@@ -232,23 +200,21 @@ module ViewerApp =
                                 |> List.map Surface.mk
                                 |> PList.ofList
 
-                        Scene.import' runtime signature surfaces m  
-            | ImportMeasurements,_,_ ->
-                match Dialogs.openDialog w with
-                    | Some importPath -> 
-                        let annos = (MeasurementsImporter.startImporter importPath) |> PList.map( fun x -> Child.Annotations x) 
-                        let newAnnotations = m.drawing.annotations.rootGroup.childList |> PList.append' annos
-                        let m' = _annotations.Set(m, newAnnotations) 
-                        m'
-                    | None -> m   
+                        Scene.import' runtime signature surfaces m
             | ImportAnnotationGroups,_,_ ->
                 match Dialogs.openDialog w with
                     | Some x -> 
-                        let newGroups = m.drawing.annotations.rootGroup.subGroups |> PList.append' (AnnotationGroupsImporter.startImporter x)
-                        let m' = _groups.Set(m, newGroups)
-                        let flatA = Groups.flatten m'.drawing.annotations.rootGroup                                    
-                        let m'' = _flatAnnotations.Set(m', flatA)
-                        m''
+                        //update groups
+                        let newGroups = 
+                            m.drawing.annotations.rootGroup.subGroups 
+                              |> PList.append' (AnnotationGroupsImporter.startImporter x)
+
+                        let m' = m |> Lenses.set _groups newGroups
+
+                        //updat flat layout
+                        let flatAnnotations = m'.drawing.annotations.rootGroup |> Groups.flatten
+
+                        m' |> Lenses.set _flat flatAnnotations                       
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
@@ -264,9 +230,7 @@ module ViewerApp =
                 let r = fray.Ray
                 Log.startTimed "kdtree intersect %s" name
                 let cameraLocation = m.scene.navigation.camera.view.Location 
-
                 
-
                 let hitF (p : V3d) = 
 
                     let ray =
@@ -328,22 +292,22 @@ module ViewerApp =
                             | None -> m
                             | Some p -> 
                                 let s' = { m.scene with scenePath = Some p}
-                                { m with scene = Serialization.save p s'; } |> stashAndSaveRecent' p
+                                { m with scene = Serialization.save p s'; } |> Model.stashAndSaveRecent p
                     | Some path ->                        
-                        { m with scene = Serialization.save path m.scene } |> stashAndSaveRecent' path
+                        { m with scene = Serialization.save path m.scene } |> Model.stashAndSaveRecent path
             | SaveAs,_,_ ->
                 match Dialogs.saveDialog w with
                     | None -> m
                     | Some p -> 
                         let s' = { m.scene with scenePath = Some p}                                
-                        { m with scene = Serialization.save p s' } |> stashAndSaveRecent' p
+                        { m with scene = Serialization.save p s' } |> Model.stashAndSaveRecent p
             | OpenScene,_,_ ->
                 match Dialogs.openDialog w with
                     | None -> m
                     | Some path -> 
-                        Scene.loadScene path m runtime signature |> stashAndSaveRecent' path
+                        Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
             | LoadScene path,_,_ ->
-                Scene.loadScene path m runtime signature |> stashAndSaveRecent' path
+                Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
             | NewScene,_,_ ->
                 { PRo3D.Viewer.Viewer.initial with recent = m.recent }
             | KeyDown k, _, _ ->
@@ -440,36 +404,35 @@ module ViewerApp =
             | SetKind d,_,_ -> 
                 { m with trafoKind = d }
             | Translate (_,b),_,_ ->
-                //let m = _selectedSurface.Update(m, fun s -> { s with trafo = TranslateController.updateController s.trafo b })
-                //_surfacesModel.Set(m, SurfaceApp.reflectSelectedUpdate m.scene.surfacesModel)
-
+                
                 match _selectedSurface.Get(m) with
                   | Some selected ->
-                    let sgSurf = _sgSurfaces.Get(m) |> HMap.find selected.id
+                    let sgSurf = m |> Lenses.get _sgSurfaces |> HMap.find selected.id
                     let s' = { sgSurf with trafo = TranslateController.updateController sgSurf.trafo b }
-                    let bla = 
-                      _sgSurfaces.Get(m) 
-                        |> HMap.update selected.id (fun x -> 
-                            match x with 
-                              | Some _ -> printfn "%A" s'.trafo.previewTrafo.Forward.C3.XYZ; s'
-                              | None   -> failwith "surface not found")
-                    _sgSurfaces.Set(m, bla)
-                  | None -> m
-                
+                                        
+                    m 
+                    |> Lenses.get _sgSurfaces
+                    |> HMap.update selected.id (fun x -> 
+                        match x with 
+                            | Some _ -> printfn "%A" s'.trafo.previewTrafo.Forward.C3.XYZ; s'
+                            | None   -> failwith "surface not found")
+                    |> Lenses.set' _sgSurfaces m
+                    
+                  | None -> m                               
             | Rotate (_,b),_,_ ->
                  match _selectedSurface.Get(m) with
                    | Some selected ->
-                     let sgSurf = _sgSurfaces.Get(m) |> HMap.find selected.id
+                     let sgSurf = m |> Lenses.get _sgSurfaces |> HMap.find selected.id
                      let s' = { sgSurf with trafo = RotationController.updateController sgSurf.trafo b }
-                     let bla = 
-                       _sgSurfaces.Get(m) 
-                        |> HMap.update selected.id (fun x -> 
+
+                     m 
+                     |> Lenses.get _sgSurfaces
+                     |> HMap.update selected.id (fun x -> 
                           match x with 
                             | Some _ -> s'
                             | None   -> failwith "surface not found")
-                     _sgSurfaces.Set(m, bla)
+                     |> Lenses.set' _sgSurfaces m
                    | None -> m
-                  
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -564,7 +527,7 @@ module ViewerApp =
                     
                 } |> Sg.dynamic
 
-            [controller; annotations; refSystem; exploreCenter] |> Sg.ofList
+            //[controller; annotations; refSystem; exploreCenter] |> Sg.ofList
             let viewPlans =
                 ViewPlan.Sg.view 
                     m.scene.config 
@@ -573,7 +536,7 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
-            [ annotations; refSystem; exploreCenter; viewPlans] |> Sg.ofList
+            [controller; annotations; refSystem; exploreCenter; viewPlans] |> Sg.ofList
                                             
         let cmds = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let control = DomNode.RenderControl(att, cam, cmds, None)
@@ -789,13 +752,7 @@ module ViewerApp =
                 clazz "ui button"
                 attribute "data-content" "text text text"
                 onClick (fun _ -> ImportSurface)
-            ] 
-
-        let importMeasurements =
-            [ text "browse"] |> button [ 
-                clazz "ui button"
-                onClick (fun _ -> ImportMeasurements)
-            ] 
+            ]         
 
         let importAnnotationGroups =
             [ text "browse"] |> button [ 
@@ -840,8 +797,7 @@ module ViewerApp =
                 "blank", [div[style "height:15px"][]]                
                 "Scene", [sceneTools]
                 "Recent", [recentScenes]
-                "Add Surface", [openSurface]
-                "Import Annotations", [importMeasurements]
+                "Add Surface", [openSurface]                
                 "Import AnnotationGroups", [importAnnotationGroups]]                              
             onBoot usingContext (                            
                 body [clazz "context example"] (GuiEx.adornerMenu sections topMenu (rest m))                                  

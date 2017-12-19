@@ -138,7 +138,9 @@ module Groups =
         let func = (fun (x:Group) -> { x with childList = x.childList |> PList.applyNonEmpty (removeChild id) })
         let newRoot = updateItemAt path func model.rootGroup                
         let m = removeFromSelection model id path
-        updateGroups m newRoot (flatten newRoot)
+        let flat = flatten newRoot
+        Log.error "annotations number: %d" flat.Count
+        updateGroups m newRoot flat
 
     let rec removeSelectionfromTree (selection:list<TreeSelection> ) (m:GroupsModel) =
         match selection with
@@ -173,11 +175,11 @@ module Groups =
         match action with
             | ActiveGroup (g, p, s) -> 
                 let selection = {
-                    id = g
+                    id   = g
                     path = p
                     name = s}
                 { model with 
-                    activeGroup   = selection
+                    activeGroup      = selection
                     lastSelectedItem = SelectedItem.Group } 
             | ActiveChild (g, p, s) -> 
                 { model with
@@ -189,12 +191,12 @@ module Groups =
             | AddGroup p -> 
                 let newGroup = 
                     {    
-                        name = "newGroup" 
-                        key =  Guid.NewGuid()
+                        name      = "newGroup" 
+                        key       = Guid.NewGuid()
                         childList = plist.Empty
                         subGroups = plist.Empty
-                        visible = true
-                        expanded = true
+                        visible   = true
+                        expanded  = true
                     }
 
                 let func = 
@@ -221,44 +223,50 @@ module Groups =
             | UpdateChildProperties a ->
                 updateChildProperties model a
             | SetGroupName t -> 
-                let func = (fun (x:Group) -> { x with name = t })
+                let func = 
+                    fun (x:Group) -> { x with name = t }
               
-                { model with rootGroup = updateItemAt model.activeGroup.path func model.rootGroup; activeGroup = {model.activeGroup with name = t} }
+                { model with 
+                    rootGroup   = updateItemAt model.activeGroup.path func model.rootGroup
+                    activeGroup = { model.activeGroup with name = t }
+                }
             | SetChildName t -> 
                 match model.lastSelectedChild with
                     | Some c -> let child = Child.setName c t
                                 updateChildProperties model child
                     | None -> model
             | ClearGroup p -> 
+                let selection = 
+                  model.selectedChilds 
+                    |> HSet.choose (fun x -> 
+                        match x.path = p with
+                          | true -> Some x
+                          | _    -> None )
+
                 let func = (function (x:Group) -> { x with childList = plist.Empty })
                 let newRoot = updateItemAt p func model.rootGroup
-                let selection = model.selectedChilds |> HSet.choose (fun x -> match x.path = p with
-                                                                                | true -> Some x
-                                                                                | _ -> None )
                 let m = { model with selectedChilds = selection }
                 let m' = updateGroups m newRoot (flatten newRoot)
                 m'
             | SelectChilds (p,id,s) ->
                 let selected = model.selectedChilds
-                let tSelection = {
+                let treeSelection = {
                     id = id
                     path = p
                     name = s
                     }
-               
-                let selection, child =         
-                    if (not model.selectedChilds.IsEmpty) then
-                        if HSet.contains tSelection selected
-                        then 
-                            HSet.remove tSelection selected, None
-                        else 
-                            HSet.add tSelection selected, Group.tryGet' model.flat id  
+
+                //multiselect selected, singleselece hset.empty
+                let selection, child =
+                    if HSet.contains treeSelection selected
+                    then 
+                        HSet.remove treeSelection selected, None
                     else
-                        HSet.add tSelection hset.Empty, Group.tryGet' model.flat id   
+                        HSet.add treeSelection HSet.empty, Group.tryGet' model.flat id
 
                 { model with 
                     selectedChilds    = selection; 
-                    activeChild       = tSelection; 
+                    activeChild       = treeSelection; 
                     lastSelectedItem  = SelectedItem.Child;
                     lastSelectedChild = child }
             | ToggleGroup p ->
@@ -281,13 +289,12 @@ module Groups =
     let mkColor (activeId : Guid) (groupId : Guid) = 
         if activeId = groupId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
     
-    let getAmap icon action =
+    let mkGroupAttributeMap icon action =
         amap {
             let! icon = icon
             yield clazz icon
             yield onClick (fun _ -> action)
         } |> AttributeMap.ofAMap
-
 
     let viewGroupButtons =
         div [clazz "ui buttons inverted"] [
@@ -311,32 +318,32 @@ module Groups =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module SurfaceModel =
-    open PRo3D.Groups
     open MBrace.FsPickler
     open MBrace.FsPickler.Combinators    
+
     open Aardvark.Opc
+    open PRo3D.Groups
     open PRo3D.Surfaces
 
-    let fillSurfaceGroup a b = 
+    let initSurfaceGroups group selected = 
         let surfaces = GroupsModel.initial
-        { surfaces with rootGroup = { surfaces.rootGroup with childList = a}; lastSelectedChild = b }
+        { surfaces with rootGroup = group; lastSelectedChild = selected }
 
-    let makeSurfaceModel a b =
-        let surfaces = fillSurfaceGroup a b
+    let initSurfaceModel group selected =
+        let surfaces = initSurfaceGroups group selected
         {
-            surfaces = surfaces
-            //selectedSurface = b
-            sgSurfaces = hmap.Empty
-            sgGrouped = plist.Empty
+            surfaces    = surfaces
+            sgSurfaces  = hmap.Empty
+            sgGrouped   = plist.Empty
             kdTreeCache = hmap.Empty
         }
 
     let surfaceModelPickler : Pickler<SurfaceModel> =
-        Pickler.product makeSurfaceModel
-        ^+ Pickler.field (fun s -> s.surfaces.rootGroup.childList)   Pickler.auto<plist<Child>> //Surface
+        Pickler.product initSurfaceModel
+        ^+ Pickler.field (fun s -> s.surfaces.rootGroup)             Pickler.auto<Group> //Surface
         ^. Pickler.field (fun s -> s.surfaces.lastSelectedChild)     Pickler.auto<option<Child>> //Pickler.auto<option<Surface>>
 
-    let initial = makeSurfaceModel PList.empty None   
+    let initial = initSurfaceModel Group.initRoot None   
     
     registry.RegisterFactory (fun _ -> surfaceModelPickler)
 
@@ -352,22 +359,10 @@ module SurfaceModel =
             |> List.map snd
             |> PList.ofList
     
-    let updateGrouping (model:SurfaceModel) =
-        { model with sgGrouped = (groupSurfaces model.sgSurfaces) }        
-
-    let updateGrouping' (model:SurfaceModel) (s':PRo3D.Surfaces.Surface) =
-        let group' = 
-            model.sgGrouped
-              |> PList.map(fun surfs ->
-                surfs
-                |> HMap.alter s'.guid 
-                        (fun x -> match x with 
-                                    | Some k -> Some { k with surface = s' }
-                                    | None -> None)
-                )
-        { model with sgGrouped = group' }
+    let triggerSgGrouping (model:SurfaceModel) =
+        { model with sgGrouped = (groupSurfaces model.sgSurfaces) }           
    
-    let updateSingleSurface' model (s':PRo3D.Surfaces.Surface)  =
+    let updateSingleSurface (s':PRo3D.Surfaces.Surface) (model:SurfaceModel) =
         let surfaces' = 
             Groups.updateChildProperties model.surfaces (Child.Surfaces s')
 

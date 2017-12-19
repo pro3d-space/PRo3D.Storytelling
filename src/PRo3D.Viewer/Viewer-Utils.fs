@@ -45,7 +45,7 @@ type ViewerAction =
     | SetCameraAndFrustum       of CameraView * double * double        
     | SetCameraAndFrustum2      of CameraView * Frustum
     | ImportSurface 
-    | ImportMeasurements 
+    //| ImportMeasurements 
     | ImportAnnotationGroups
     | DnSProperties             of PropertyActions
     | ConfigPropertiesMessage   of ConfigProperties.Action
@@ -174,18 +174,6 @@ module ViewerUtils =
         let near = m.scene.config.nearPlane.value
         let far = m.scene.config.farPlane.value
         (Navigation.UI.frustum near far)
-    
-    //let getSelectedSurface (surface: IMod<Option<IMod<MChild>>>) = 
-    //    adaptive {
-    //        let! surf = surface
-    //        match surf with
-    //            | Some s ->
-    //                let! s' = s
-    //                match s' with
-    //                    | MSurfaces sf -> return sf
-    //                    |_ -> return None)
-
-    //            }
 
     let renderCommands sgGrouped overlayed (m:MModel) =
         let selected = m.scene.surfacesModel.surfaces.lastSelectedChild
@@ -220,3 +208,30 @@ module ViewerUtils =
 
             yield RenderCommand.SceneGraph overlayed
         }  
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Model =
+    let private stashAndSaveRecent' (s : SceneHandle) (model : Model) =
+        let scenePaths = 
+            model.recent.recentScenes                 
+                |> HMap.update s.path 
+                    (
+                        fun v -> 
+                            match v with
+                                | Some x -> { x with writeDate = s.writeDate }
+                                | None -> s
+                    )
+
+        let recent = { model.recent with recentScenes = scenePaths }
+
+        Serialization.save "./recent" recent |> ignore
+
+        { model with recent = recent }
+
+    let stashAndSaveRecent (path : string) (model : Model) =
+        let handle = {
+            name = Path.GetFileName(path)
+            path = path
+            writeDate = DateTime.Now
+        }
+        stashAndSaveRecent' handle model
