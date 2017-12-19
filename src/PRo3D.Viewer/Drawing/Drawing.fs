@@ -375,21 +375,23 @@ module DrawingApp =
                                                                     | MAnnotations a -> Some a
                                                                     | _-> None )
                     for a in annotations do 
+                        let select = fun _ -> select (a,path)
                                 
                         let! c = mkColor model a
-
                         let bgc = sprintf "color: %s" (Html.ofC4b c)
                         let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
+
                         let! visible = a.visible
                         let visibleIcon = if visible then "unhide icon" else "hide icon"
-                        let select = fun _ -> select (a,path)
-                        let! key = a.key
+                        let key = a.key |> Mod.force
 
                         yield div [clazz "item"] [
                             i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
                             div [clazz "content"] [
                                 let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
                                 let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
+
+                                //header
                                 yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
                                     alist {
                                         yield Incremental.text header
@@ -397,25 +399,20 @@ module DrawingApp =
                                         yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
                                     } 
                                 ) 
+
+                                //description
                                 yield div [clazz "description";style ac ] [Incremental.text desc]      
                             ]
                         ]
                 }     
-        
-        //let getAmap icon action =
-        //     amap {
-        //            let! icon = icon
-        //            yield clazz icon
-        //            yield onClick (fun _ -> action)
-        //        } |> AttributeMap.ofAMap
-
+              
         let rec viewTree path (group : MGroup) (model : MGroupsModel) : alist<DomNode<Action>> =
 
             alist {
 
                 let! s = model.activeGroup
-                //let! c = Groups.mkColor s.id (group.key |> Mod.force)
-                let color = sprintf "color: %s" (Html.ofC4b C4b.White)                
+                
+                
                 let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
 
                 let icon =
@@ -426,7 +423,7 @@ module DrawingApp =
                         return if (active = group) then "circle icon" else "circle thin icon"
                     }
                       
-                let map = Groups.getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+                let map = Groups.mkGroupAttributeMap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                    
                 let toggleIcon =
                     adaptive {
@@ -434,8 +431,9 @@ module DrawingApp =
                         return if toggle then "unhide icon" else "hide icon"
                     }
 
-                let toggleMap = Groups.getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+                let toggleMap = Groups.mkGroupAttributeMap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
                
+                let color = sprintf "color: %s" (Html.ofC4b C4b.White)
                 let desc =
                     div [style color] [       
                         Incremental.text group.name

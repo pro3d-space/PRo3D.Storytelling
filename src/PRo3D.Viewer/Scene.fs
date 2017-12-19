@@ -120,7 +120,7 @@ module Scene =
                                        
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
-        let grouped = m.scene.surfacesModel |> SurfaceModel.updateGrouping
+        let grouped = m.scene.surfacesModel |> SurfaceModel.triggerSgGrouping
         surfaceModelLens.Set(m, grouped)        
 
     /// loads surfaces given in scene - creates their sg pendants
@@ -138,7 +138,7 @@ module Scene =
 
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
-        let grouped = m.scene.surfacesModel |> SurfaceModel.updateGrouping
+        let grouped = m.scene.surfacesModel |> SurfaceModel.triggerSgGrouping
         
         let flat = Groups.flatten m.scene.surfacesModel.surfaces.rootGroup
         let g1 = { grouped with surfaces = { grouped.surfaces with flat = flat } }
