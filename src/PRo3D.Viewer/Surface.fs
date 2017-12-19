@@ -697,13 +697,13 @@ module Surface =
             let map = Groups.getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                    
                 
-            let toggleIcon =
-                adaptive {
-                    let! toggle = group.visible
-                    return if toggle then "unhide icon" else "hide icon"
-                }
+            //let toggleIcon =
+            //    adaptive {
+            //        let! toggle = group.visible
+            //        return if toggle then "unhide icon" else "hide icon"
+            //    }
 
-            let toggleMap = Groups.getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+            //let toggleMap = Groups.getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
                
             let desc =
                 div [style color] [       
@@ -724,7 +724,7 @@ module Surface =
                        onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
                     |> UI.wrapToolTip "Remove Group"
 
-                    Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
+                    //Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
                 ]
                  
             let itemAttributes =
@@ -820,7 +820,9 @@ module Surface =
                         | _ -> viewSurfaceProperties model 
                 )
         div[][                            
-            yield GuiEx.accordion "Surfaces" "Cubes" true [ viewSurfacesGroups model ]
+            yield GuiEx.accordion "Surfaces" "Cubes" true [ 
+                Groups.viewGroupButtons |> UI.map GroupsMessage
+                viewSurfacesGroups model ]
             yield GuiEx.accordion "Properties" "Content" true [
                         Incremental.div AttributeMap.empty (alist{ let! item = item2
                                                                    let! i = item

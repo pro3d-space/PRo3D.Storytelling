@@ -428,7 +428,6 @@ module DrawingApp =
                       
                 let map = Groups.getAmap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                    
-                
                 let toggleIcon =
                     adaptive {
                         let! toggle = group.visible

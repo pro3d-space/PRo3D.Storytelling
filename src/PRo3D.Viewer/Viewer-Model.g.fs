@@ -20,6 +20,7 @@ module Mutable =
         let _scenePath = MOption.Create(__initial.scenePath)
         let _referenceSystem = PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Create(__initial.referenceSystem)
         let _bookmarksModel = PRo3D.Groups.Mutable.MBookmarksModel.Create(__initial.bookmarksModel)
+        let _viewPlans = PRo3d.Mutable.MViewPlanModel.Create(__initial.viewPlans)
         
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
@@ -28,6 +29,7 @@ module Mutable =
         member x.scenePath = _scenePath :> IMod<_>
         member x.referenceSystem = _referenceSystem
         member x.bookmarksModel = _bookmarksModel
+        member x.viewPlans = _viewPlans
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.Scene) =
@@ -41,6 +43,7 @@ module Mutable =
                 MOption.Update(_scenePath, v.scenePath)
                 PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Update(_referenceSystem, v.referenceSystem)
                 PRo3D.Groups.Mutable.MBookmarksModel.Update(_bookmarksModel, v.bookmarksModel)
+                PRo3d.Mutable.MViewPlanModel.Update(_viewPlans, v.viewPlans)
                 
         
         static member Create(__initial : PRo3D.Viewer.Scene) : MScene = MScene(__initial)
@@ -98,6 +101,12 @@ module Mutable =
                     override x.Get(r) = r.bookmarksModel
                     override x.Set(r,v) = { r with bookmarksModel = v }
                     override x.Update(r,f) = { r with bookmarksModel = f r.bookmarksModel }
+                }
+            let viewPlans =
+                { new Lens<PRo3D.Viewer.Scene, PRo3d.ViewPlanModel>() with
+                    override x.Get(r) = r.viewPlans
+                    override x.Set(r,v) = { r with viewPlans = v }
+                    override x.Update(r,f) = { r with viewPlans = f r.viewPlans }
                 }
     
     

@@ -16,6 +16,7 @@ type ReferenceSystem = {
 type ReferenceSystemConfig<'a> = {
     arrowLength    : Lens<'a,double>
     arrowThickness : Lens<'a,double>
+    nearPlane      : Lens<'a,double>
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -55,4 +56,5 @@ module ReferenceSystem =
     let initialConfig : ReferenceSystemConfig<ViewConfigModel> = {
         arrowLength =    ViewConfigModel.Lens.arrowLength    |. NumericInput.Lens.value
         arrowThickness = ViewConfigModel.Lens.arrowThickness |. NumericInput.Lens.value
+        nearPlane = ViewConfigModel.Lens.nearPlane |. NumericInput.Lens.value
     }

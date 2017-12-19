@@ -12,6 +12,7 @@ open Aardvark.SceneGraph
 open Aardvark.VRVis
 
 open PRo3D
+open PRo3d
 open PRo3D.Surfaces
 open PRo3D.Navigation2
 //open PRo3D.BookmarksX
@@ -29,6 +30,7 @@ type Scene = {
     scenePath       : option<string>
     referenceSystem : ReferenceSystem
     bookmarksModel  : BookmarksModel
+    viewPlans       : ViewPlanModel
     //groups          : AnnotationGroupsModel
 }
 
@@ -52,6 +54,7 @@ type Interactions =
     | PickExploreCenter     = 0
     | PlaceCoordinateSystem = 1  // compute up north vector at that point
     | DrawAnnotation        = 2
+    | PlaceRover            = 3
 
 type WayPoint = {
     name : string
@@ -68,7 +71,6 @@ type Model = {
     picking         : bool
     recent          : Recent
     waypoints       : plist<WayPoint>
-
     frustum         : Frustum
     aspect          : double
 
@@ -99,6 +101,7 @@ module Viewer =
                 scenePath       = None
                 referenceSystem = ReferenceSystem.initial
                 bookmarksModel  = BookmarksModel.initial
+                viewPlans       = ViewPlanModel.initial
                 //groups          = AnnotationGroupsModel.initial
         }
 

@@ -12,6 +12,7 @@ open PRo3D.Groups
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Scene =
+    open Aardvark.Base.MultimethodTest
     
     
     let surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
@@ -131,7 +132,9 @@ module Scene =
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
 
         let grouped = m.scene.surfacesModel |> SurfaceApp.updateGrouping
-        surfaceModelLens.Set(m, grouped)
+        let flat = Groups.flatten m.scene.surfacesModel.surfaces.rootGroup
+        let g1 = { grouped with surfaces = { grouped.surfaces with flat = flat } }
+        surfaceModelLens.Set(m, g1)
 
     let loadScene path m runtime signature =
         let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }

@@ -388,6 +388,7 @@ module RoverApp =
                 match x with 
                   | Some r -> viewRoverProperties' r m
                   | None ->   div[][])
+
                      
     let view (m : MRoverModel) : DomNode<Action> =
         Static.div[][

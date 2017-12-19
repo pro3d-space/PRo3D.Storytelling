@@ -109,6 +109,7 @@ module ViewerApp =
         { 
             arrowLength = ViewConfigModel.Lens.arrowLength |. NumericInput.Lens.value 
             arrowThickness = ViewConfigModel.Lens.arrowThickness |. NumericInput.Lens.value 
+            nearPlane = ViewConfigModel.Lens.nearPlane |. NumericInput.Lens.value 
         }
 
     let mrefConfig : ReferenceSystemApp.MInnerConfig<MViewConfigModel> =
@@ -200,14 +201,18 @@ module ViewerApp =
                                   { m with drawing = drawing' }
                               | _ -> m
                         | None -> m       
-            | BookmarkMessage msg,_,_ ->    
-                    
+            | BookmarkMessage msg,_,_ ->  
                 let model, bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
                 { m with scene = { m.scene with bookmarksModel = bm; navigation = model.scene.navigation }} 
             | BookmarkUIMessage msg,_,_ ->    
-                    
                 let bm = Groups.update m.scene.bookmarksModel.bookmarks msg
                 { m with scene = { m.scene with bookmarksModel = {m.scene.bookmarksModel with bookmarks = bm }}} 
+            | RoverMessage msg,_,_ ->
+                let roverModel = RoverApp.update m.scene.viewPlans.roverModel msg
+                { m with scene = { m.scene with viewPlans = { m.scene.viewPlans with roverModel = roverModel }}}  
+            | ViewPlanMessage msg,_,_ ->
+                let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
+                { m with scene = { m.scene with viewPlans = viewPlanModel}}  
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolders w with
                     | [] -> m
@@ -298,6 +303,11 @@ module ViewerApp =
                                 let navigation' = 
                                     Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
                                 { m with scene = {m.scene with navigation = navigation'; } }
+                            | Interactions.PlaceRover ->
+                                let camState = m.scene.navigation.camera
+                                let ref = m.scene.referenceSystem 
+                                let viewPlans' = ViewPlan.update (m.scene.viewPlans) camState (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m))))
+                                { m with scene = {m.scene with viewPlans = viewPlans' } }
                             | _ -> m
                     | None, _ -> 
                         Log.error ("no hit")
@@ -466,7 +476,15 @@ module ViewerApp =
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation
 
-            [ annotations; refSystem; exploreCenter] |> Sg.ofList
+            let viewPlans =
+                ViewPlan.Sg.view 
+                    m.scene.config 
+                    mrefConfig 
+                    m.scene.viewPlans 
+                    m.scene.navigation.camera.view
+                |> Sg.map ViewPlanMessage
+
+            [ annotations; refSystem; exploreCenter; viewPlans] |> Sg.ofList
                                             
         let cmds = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let control = DomNode.RenderControl(att, cam, cmds, None)
@@ -526,6 +544,12 @@ module ViewerApp =
                 let! opt =  lscToDom2 sbm (fun x -> Bookmarks.UI.view x)
                             
                 return (opt |> UI.map BookmarkUIMessage)
+            } 
+
+        let viewPlanProperties (model:MModel) =
+            adaptive {
+                let! opt = ViewPlan.UI.viewRoverProperties model.scene.viewPlans
+                return (opt |> UI.map RoverMessage)
             } 
 
         let annotationUI = 
@@ -596,13 +620,25 @@ module ViewerApp =
                                                                yield i})
                 ] 
             ]
+
+        let viewPlannerUI = 
+            
+            div [][
+                GuiEx.accordion "ViewPlans" "Write" true [
+                    ViewPlan.UI.viewViewPlans m.scene.viewPlans |> UI.map ViewPlanMessage
+                ]
+                GuiEx.accordion "Properties" "Content" true [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle (viewPlanProperties m))
+                ] 
+            ]
           
         let tabs = 
             GuiEx.tabbed [clazz "ui inverted segment"] [
                 ("Data", SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions) 
                 ("Annotations", annotationUI) 
                 ("Config", configUI)            
-                ("Bookmarks", bookmarkUI)      
+                ("Bookmarks", bookmarkUI) 
+                //("ViewPlanner", viewPlannerUI)
             ] "Data" 
       
         let topMenu = [
@@ -613,6 +649,7 @@ module ViewerApp =
 
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
              DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
+             ViewPlan.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
 
              //button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
              //button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
@@ -754,10 +791,14 @@ module ViewerApp =
                 { m with waypoints = wp }
           | None -> m
 
+    let loadRoverData (m:Model) =
+        let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
+        { m with scene = { m.scene with viewPlans = vps } }
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        
-        let m = Scene.loadLastScene runtime signature m       
+        let m = Scene.loadLastScene runtime signature m   
+        let m = loadRoverData m
         
         App.start {
             unpersist = Unpersist.instance

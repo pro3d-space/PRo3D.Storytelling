@@ -1,9 +1,15 @@
 namespace PRo3d
 
+open System
+
 open Aardvark.Base
 open Aardvark.Base.Incremental
+open Aardvark.UI.Primitives
 open Aardvark.UI
 open ViewPlanner
+open FShade.Intrinsics
+open Aardvark.Base.CameraView
+
 
 type Intrinsics = {
     horizontalFieldOfView           : double
@@ -104,3 +110,55 @@ type RoverModel = {
     selectedAxis       : option<Axis>
     currentAngle       : NumericInput
 }
+
+[<DomainType>]
+type ViewPlan = {
+    [<PrimaryKey>]
+    id                  : Guid
+    position            : V3d
+    lookAt              : V3d
+    viewerState         : CameraControllerState
+    vectorsVisible      : bool
+    rover               : Rover
+    roverTrafo          : Trafo3d
+    isVisible           : bool
+    //selectedInstrument  : option<Instrument>
+    //currentPanAngle     : NumericInput
+    //currentTiltAngle    : NumericInput
+}
+
+[<DomainType>]
+type ViewPlanModel = {
+    viewPlans           : hset<ViewPlan>
+    selectedViewPlan    : option<ViewPlan>
+    working             : list<V3d> // pos + lookAt
+    roverModel          : RoverModel
+    }
+
+module ViewPlanModel =
+    let currentAngle = 
+        {
+            value = 0.0
+            min =  0.0
+            max = 90.0
+            step = 0.1
+            format = "{0:0.0}"
+        }
+
+    let initRoverModel = {
+        rovers = hmap.Empty
+        platforms = hmap.Empty
+        selectedRover = None
+        selectedInstrument = None
+        selectedAxis = None
+        currentAngle = currentAngle
+        }
+
+    let initial = {
+        viewPlans = hset.Empty
+        selectedViewPlan = None
+        working = list.Empty
+        roverModel = initRoverModel
+        }
+
+  
