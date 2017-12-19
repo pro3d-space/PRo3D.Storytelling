@@ -39,6 +39,8 @@ type ViewerAction =
     | AnnotationMessage         of AnnotationProperties.Action
     | BookmarkMessage           of Bookmarks.Action
     | BookmarkUIMessage         of Groups.Action
+    | RoverMessage              of RoverApp.Action
+    | ViewPlanMessage           of ViewPlan.Action
     | SetCamera                 of CameraView        
     | SetCameraAndFrustum       of CameraView * double * double        
     | SetCameraAndFrustum2      of CameraView * Frustum

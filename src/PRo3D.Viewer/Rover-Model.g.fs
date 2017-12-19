@@ -409,3 +409,167 @@ module Mutable =
                     override x.Set(r,v) = { r with currentAngle = v }
                     override x.Update(r,f) = { r with currentAngle = f r.currentAngle }
                 }
+    
+    
+    type MViewPlan(__initial : PRo3d.ViewPlan) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.ViewPlan> = Aardvark.Base.Incremental.EqModRef<PRo3d.ViewPlan>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.ViewPlan>
+        let _id = ResetMod.Create(__initial.id)
+        let _position = ResetMod.Create(__initial.position)
+        let _lookAt = ResetMod.Create(__initial.lookAt)
+        let _viewerState = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.viewerState)
+        let _vectorsVisible = ResetMod.Create(__initial.vectorsVisible)
+        let _rover = MRover.Create(__initial.rover)
+        let _roverTrafo = ResetMod.Create(__initial.roverTrafo)
+        let _isVisible = ResetMod.Create(__initial.isVisible)
+        
+        member x.id = _id :> IMod<_>
+        member x.position = _position :> IMod<_>
+        member x.lookAt = _lookAt :> IMod<_>
+        member x.viewerState = _viewerState
+        member x.vectorsVisible = _vectorsVisible :> IMod<_>
+        member x.rover = _rover
+        member x.roverTrafo = _roverTrafo :> IMod<_>
+        member x.isVisible = _isVisible :> IMod<_>
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3d.ViewPlan) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                ResetMod.Update(_id,v.id)
+                ResetMod.Update(_position,v.position)
+                ResetMod.Update(_lookAt,v.lookAt)
+                Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_viewerState, v.viewerState)
+                ResetMod.Update(_vectorsVisible,v.vectorsVisible)
+                MRover.Update(_rover, v.rover)
+                ResetMod.Update(_roverTrafo,v.roverTrafo)
+                ResetMod.Update(_isVisible,v.isVisible)
+                
+        
+        static member Create(__initial : PRo3d.ViewPlan) : MViewPlan = MViewPlan(__initial)
+        static member Update(m : MViewPlan, v : PRo3d.ViewPlan) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3d.ViewPlan> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module ViewPlan =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let id =
+                { new Lens<PRo3d.ViewPlan, System.Guid>() with
+                    override x.Get(r) = r.id
+                    override x.Set(r,v) = { r with id = v }
+                    override x.Update(r,f) = { r with id = f r.id }
+                }
+            let position =
+                { new Lens<PRo3d.ViewPlan, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.position
+                    override x.Set(r,v) = { r with position = v }
+                    override x.Update(r,f) = { r with position = f r.position }
+                }
+            let lookAt =
+                { new Lens<PRo3d.ViewPlan, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.lookAt
+                    override x.Set(r,v) = { r with lookAt = v }
+                    override x.Update(r,f) = { r with lookAt = f r.lookAt }
+                }
+            let viewerState =
+                { new Lens<PRo3d.ViewPlan, Aardvark.UI.Primitives.CameraControllerState>() with
+                    override x.Get(r) = r.viewerState
+                    override x.Set(r,v) = { r with viewerState = v }
+                    override x.Update(r,f) = { r with viewerState = f r.viewerState }
+                }
+            let vectorsVisible =
+                { new Lens<PRo3d.ViewPlan, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.vectorsVisible
+                    override x.Set(r,v) = { r with vectorsVisible = v }
+                    override x.Update(r,f) = { r with vectorsVisible = f r.vectorsVisible }
+                }
+            let rover =
+                { new Lens<PRo3d.ViewPlan, PRo3d.Rover>() with
+                    override x.Get(r) = r.rover
+                    override x.Set(r,v) = { r with rover = v }
+                    override x.Update(r,f) = { r with rover = f r.rover }
+                }
+            let roverTrafo =
+                { new Lens<PRo3d.ViewPlan, Aardvark.Base.Trafo3d>() with
+                    override x.Get(r) = r.roverTrafo
+                    override x.Set(r,v) = { r with roverTrafo = v }
+                    override x.Update(r,f) = { r with roverTrafo = f r.roverTrafo }
+                }
+            let isVisible =
+                { new Lens<PRo3d.ViewPlan, Microsoft.FSharp.Core.bool>() with
+                    override x.Get(r) = r.isVisible
+                    override x.Set(r,v) = { r with isVisible = v }
+                    override x.Update(r,f) = { r with isVisible = f r.isVisible }
+                }
+    
+    
+    type MViewPlanModel(__initial : PRo3d.ViewPlanModel) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.ViewPlanModel> = Aardvark.Base.Incremental.EqModRef<PRo3d.ViewPlanModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.ViewPlanModel>
+        let _viewPlans = MSet.Create((fun (v : PRo3d.ViewPlan) -> v.id :> obj), __initial.viewPlans, (fun v -> MViewPlan.Create(v)), (fun (m,v) -> MViewPlan.Update(m, v)), (fun v -> v))
+        let _selectedViewPlan = MOption.Create(__initial.selectedViewPlan, (fun v -> MViewPlan.Create(v)), (fun (m,v) -> MViewPlan.Update(m, v)), (fun v -> v))
+        let _working = ResetMod.Create(__initial.working)
+        let _roverModel = MRoverModel.Create(__initial.roverModel)
+        
+        member x.viewPlans = _viewPlans :> aset<_>
+        member x.selectedViewPlan = _selectedViewPlan :> IMod<_>
+        member x.working = _working :> IMod<_>
+        member x.roverModel = _roverModel
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3d.ViewPlanModel) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                MSet.Update(_viewPlans, v.viewPlans)
+                MOption.Update(_selectedViewPlan, v.selectedViewPlan)
+                ResetMod.Update(_working,v.working)
+                MRoverModel.Update(_roverModel, v.roverModel)
+                
+        
+        static member Create(__initial : PRo3d.ViewPlanModel) : MViewPlanModel = MViewPlanModel(__initial)
+        static member Update(m : MViewPlanModel, v : PRo3d.ViewPlanModel) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3d.ViewPlanModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module ViewPlanModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let viewPlans =
+                { new Lens<PRo3d.ViewPlanModel, Aardvark.Base.hset<PRo3d.ViewPlan>>() with
+                    override x.Get(r) = r.viewPlans
+                    override x.Set(r,v) = { r with viewPlans = v }
+                    override x.Update(r,f) = { r with viewPlans = f r.viewPlans }
+                }
+            let selectedViewPlan =
+                { new Lens<PRo3d.ViewPlanModel, Microsoft.FSharp.Core.option<PRo3d.ViewPlan>>() with
+                    override x.Get(r) = r.selectedViewPlan
+                    override x.Set(r,v) = { r with selectedViewPlan = v }
+                    override x.Update(r,f) = { r with selectedViewPlan = f r.selectedViewPlan }
+                }
+            let working =
+                { new Lens<PRo3d.ViewPlanModel, Microsoft.FSharp.Collections.list<Aardvark.Base.V3d>>() with
+                    override x.Get(r) = r.working
+                    override x.Set(r,v) = { r with working = v }
+                    override x.Update(r,f) = { r with working = f r.working }
+                }
+            let roverModel =
+                { new Lens<PRo3d.ViewPlanModel, PRo3d.RoverModel>() with
+                    override x.Get(r) = r.roverModel
+                    override x.Set(r,v) = { r with roverModel = v }
+                    override x.Update(r,f) = { r with roverModel = f r.roverModel }
+                }

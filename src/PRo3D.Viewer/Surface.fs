@@ -530,11 +530,11 @@ module Surface =
             let activeAttributes = 
                 Groups.mkGroupAttributeMap activeIcon (GroupsMessage setActive)
                                    
-            let toggleIcon =
-                adaptive {
-                    let! toggle = group.visible
-                    return if toggle then "unhide icon" else "hide icon"
-                }
+            //let toggleIcon =
+            //    adaptive {
+            //        let! toggle = group.visible
+            //        return if toggle then "unhide icon" else "hide icon"
+            //    }
 
             let toggleAttributes = Groups.mkGroupAttributeMap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
                
@@ -653,7 +653,9 @@ module Surface =
                         | _ -> viewSurfaceProperties model 
                 )
         div[][                            
-            yield GuiEx.accordion "Surfaces" "Cubes" true [ viewSurfacesGroups model ]
+            yield GuiEx.accordion "Surfaces" "Cubes" true [ 
+                Groups.viewGroupButtons |> UI.map GroupsMessage
+                viewSurfacesGroups model ]
             yield GuiEx.accordion "Properties" "Content" true [
                         Incremental.div AttributeMap.empty (alist{ let! item = item2
                                                                    let! i = item
