@@ -530,11 +530,11 @@ module Surface =
             let activeAttributes = 
                 Groups.mkGroupAttributeMap activeIcon (GroupsMessage setActive)
                                    
-            //let toggleIcon =
-            //    adaptive {
-            //        let! toggle = group.visible
-            //        return if toggle then "unhide icon" else "hide icon"
-            //    }
+            let toggleIcon =
+                adaptive {
+                    let! toggle = group.visible
+                    return if toggle then "unhide icon" else "hide icon"
+                }
 
             let toggleAttributes = Groups.mkGroupAttributeMap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
                
