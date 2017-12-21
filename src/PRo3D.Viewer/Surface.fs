@@ -345,11 +345,16 @@ module Surface =
         let mutable hit = ObjectRayHit.MaxRange
                 
         let objFilter a b = true
-       // let hitFilter a b c d = false
-        if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then
-            //let point = ray.Ray.GetPointOnRay(hit.RayHit.T)
-            Some (hit.RayHit.T, surface),c
-        else            
+        try
+           // let hitFilter a b c d = false
+            if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then
+                //let point = ray.Ray.GetPointOnRay(hit.RayHit.T)
+                Some (hit.RayHit.T, surface),c
+            else            
+                None,c
+        with 
+          | _ -> 
+            Report.Error "null ref exception in kdtree intersection" 
             None,c
 
     let doKdTreeIntersection (m : SurfaceModel) (t : Trafo3d) (r : FastRay3d) cache = 
