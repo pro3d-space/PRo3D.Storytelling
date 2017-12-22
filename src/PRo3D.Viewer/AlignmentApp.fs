@@ -26,10 +26,8 @@ module Alignment =
         Trafo3d.Identity
 
 module AlignmentApp =
-    open PRo3D
-    open Tao.OpenAl
+    open PRo3D 
     
-
     let update (m : AlignmentModel) (a : AlignmentActions) : AlignmentModel =
         match a with
           | AddPoint k ->

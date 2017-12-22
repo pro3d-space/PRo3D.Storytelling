@@ -35,8 +35,12 @@ module Bookmarks =
     let update (model : BookmarksModel) (act : Action) (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*BookmarksModel) = 
         match act with
             | AddBookmark -> 
-                let newBm = getNewBookmark (navigation.Get outerModel) model.bookmarks.flat.Count
-                let groups = Groups.addToActiveGroup model.bookmarks (Child.Bookmarks newBm)
+                let newBm = getNewBookmark (navigation.Get outerModel) model.bookmarks.flat.Count |> Child.Bookmarks
+
+                let groups = 
+                    { model.bookmarks with flat = (model.bookmarks.flat.Add(newBm.id,newBm)) }
+
+                let groups = Groups.addToActiveGroup groups newBm.id
                 //let groups = 
                 //    Groups.updateGroups model.bookmarks root (Groups.flatten root)
                 (outerModel,{ model with bookmarks = groups})
@@ -68,13 +72,14 @@ module Bookmarks =
             
             color
 
-    let viewBookmarks (path:list<Index>) (model:MGroupsModel)(select : MBookmark*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (bookmarks: alist<IMod<MChild>>) : alist<DomNode<'outer>> = 
+    let viewBookmarks (path:list<Index>) (model:MGroupsModel)(select : MBookmark*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (bookmarks: alist<Guid>) : alist<DomNode<'outer>> = 
                      
                         alist {
 
+                            
                             //let color = sprintf "color: %s" (Html.ofC4b C4b.White)      
                             let bookmarks = bookmarks
-                                                |> AList.map (fun x -> Mod.force x)
+                                                |> AList.map (fun x -> failwith "x")
                                                 |> AList.choose( fun x -> match x with
                                                                             | MBookmarks a -> Some a
                                                                             | _-> None )

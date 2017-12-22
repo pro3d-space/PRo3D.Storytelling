@@ -35,24 +35,24 @@ module Scene =
         //                )
         //        { m with surfacesModel = Surface.updateSurfaces m.surfacesModel surfaces}
         //    | None -> m     
-        
+                
+
         match m.scenePath with
             | Some p ->         
                 let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
                 let newFlats = 
                     (Child.childrenToSurfaces m.surfacesModel.surfaces.flat)   
-                        |> HSet.map(
-                            fun x -> 
+                        |> HMap.map(fun _ x ->                            
                                 if x.relativePaths then
                                     let p'' = Path.Combine(p', x.name)
                                     { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
                                 else x
                             )
-                let flatList = newFlats|> HSet.toList
-                let childList = flatList |> List.map(fun x -> Child.Surfaces x )
+                let flatList = newFlats|> HMap.toList
+                let childList = flatList |> List.map(fun (_,x) -> Child.Surfaces x )
                 let newGroupsModel = Groups.updateChildList childList m.surfacesModel.surfaces
                 let m' = { m with surfacesModel = { m.surfacesModel with surfaces = newGroupsModel }}      
-                { m' with surfacesModel = SurfaceModel.updateSurfaces m'.surfacesModel (flatList |> PList.ofList)}
+                { m' with surfacesModel = SurfaceModel.updateSurfaces m'.surfacesModel (flatList |> List.map snd |> PList.ofList)}
             | None -> m        
 
     let readLine (filePath:string) =
@@ -104,9 +104,14 @@ module Scene =
                 |> addLegacyTrafos
                 |> addSurfaceAttributes                
 
-        let existingSurfaces = Child.childrenToSurfaces m.scene.surfacesModel.surfaces.flat |> HSet.toList |> PList.ofList         
+        let existingSurfaces = 
+            Child.childrenToSurfaces m.scene.surfacesModel.surfaces.flat 
+              |> HMap.toList 
+              |> List.map snd 
+              |> PList.ofList         
+
         let allSurfaces = surfaces |> PList.append' existingSurfaces
-        let sChildren = surfaces |> PList.map (fun x -> Child.Surfaces x) 
+        let sChildren = surfaces |> PList.map (fun x -> (Child.Surfaces x).id) 
         let newGroupsModel = Groups.AddChildren m.scene.surfacesModel.surfaces.activeGroup.path sChildren m.scene.surfacesModel.surfaces
         let m = //{ m with scene = { m.scene with surfacesModel = { m.scene.surfacesModel with surfaces = newGroupsModel }}}
             (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, newGroupsModel)
@@ -128,11 +133,18 @@ module Scene =
         
         let s = s |> expandRelativePaths
 
-        let flat = Groups.flatten s.surfacesModel.surfaces.rootGroup
+        failwith "load"
+
+        let flat = hmap.Empty//Groups.flatten s.surfacesModel.surfaces.rootGroup
         let s = _flatSurfaces.Set(s, flat)
         let m = { m with scene = s }
 
-        let surfs = s.surfacesModel.surfaces.flat |> Child.childrenToSurfaces |> HSet.toList |> PList.ofList
+        let surfs = 
+            s.surfacesModel.surfaces.flat 
+              |> Child.childrenToSurfaces 
+              |> HMap.toList 
+              |> List.map snd 
+              |> PList.ofList
 
         let sgSurfaces = Surface.createSgSurfaces runtime signature surfs |> Files.expandLazyKdTreePaths m.scene.scenePath
 
@@ -140,7 +152,7 @@ module Scene =
 
         let grouped = m.scene.surfacesModel |> SurfaceModel.triggerSgGrouping
         
-        let flat = Groups.flatten m.scene.surfacesModel.surfaces.rootGroup
+        let flat = failwith "load" // Groups.flatten m.scene.surfacesModel.surfaces.rootGroup
         let g1 = { grouped with surfaces = { grouped.surfaces with flat = flat } }
         surfaceModelLens.Set(m, g1)
 

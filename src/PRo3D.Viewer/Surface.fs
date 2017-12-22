@@ -468,8 +468,13 @@ module Surface =
                     |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)            
             color
 
-    let viewSurfacesInGroups (path:list<Index>) (model:MGroupsModel)(select : MSurface*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (surfaces: alist<IMod<MChild>>) : alist<DomNode<'outer>> = 
+    let viewSurfacesInGroups (path:list<Index>) (model:MGroupsModel)(select : MSurface*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (surfaceIds: alist<Guid>) : alist<DomNode<'outer>> = 
             alist {
+
+                let surfaces = 
+                   surfaceIds 
+                      |> AList.chooseM (fun x -> model.flat |> AMap.tryFind x)
+
                 let surfaces = surfaces
                                 |> AList.map (fun x -> Mod.force x)
                                 |> AList.choose( fun x -> match x with
@@ -595,7 +600,7 @@ module Surface =
                             alist { 
                                 let! isExpanded = group.expanded
                                 if isExpanded then yield! children
-
+                                
                                 if isExpanded then 
                                     yield! viewSurfacesInGroups path model select lift group.childList
                             }

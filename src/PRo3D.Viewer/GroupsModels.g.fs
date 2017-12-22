@@ -111,7 +111,7 @@ module Mutable =
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.Group> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.Group>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.Group>
         let _key = ResetMod.Create(__initial.key)
         let _name = ResetMod.Create(__initial.name)
-        let _childList = MList.Create(__initial.childList, (fun v -> MChild.Create(v)), (fun (m,v) -> MChild.Update(m, v)), (fun v -> v))
+        let _childList = MList.Create(__initial.childList)
         let _subGroups = MList.Create(__initial.subGroups, (fun v -> MGroup.Create(v)), (fun (m,v) -> MGroup.Update(m, v)), (fun v -> v))
         let _visible = ResetMod.Create(__initial.visible)
         let _expanded = ResetMod.Create(__initial.expanded)
@@ -163,7 +163,7 @@ module Mutable =
                     override x.Update(r,f) = { r with name = f r.name }
                 }
             let childList =
-                { new Lens<PRo3D.Groups.Group, Aardvark.Base.plist<PRo3D.Groups.Child>>() with
+                { new Lens<PRo3D.Groups.Group, Aardvark.Base.plist<System.Guid>>() with
                     override x.Get(r) = r.childList
                     override x.Set(r,v) = { r with childList = v }
                     override x.Update(r,f) = { r with childList = f r.childList }
@@ -194,7 +194,7 @@ module Mutable =
         let _rootGroup = MGroup.Create(__initial.rootGroup)
         let _activeGroup = ResetMod.Create(__initial.activeGroup)
         let _activeChild = ResetMod.Create(__initial.activeChild)
-        let _flat = MSet.Create(unbox, __initial.flat, (fun v -> MChild.Create(v)), (fun (m,v) -> MChild.Update(m, v)), (fun v -> v))
+        let _flat = MMap.Create(__initial.flat, (fun v -> MChild.Create(v)), (fun (m,v) -> MChild.Update(m, v)), (fun v -> v))
         let _lastSelectedItem = ResetMod.Create(__initial.lastSelectedItem)
         let _selectedChilds = MSet.Create(__initial.selectedChilds)
         let _lastSelectedChild = MOption.Create(__initial.lastSelectedChild, (fun v -> MChild.Create(v)), (fun (m,v) -> MChild.Update(m, v)), (fun v -> v))
@@ -202,7 +202,7 @@ module Mutable =
         member x.rootGroup = _rootGroup
         member x.activeGroup = _activeGroup :> IMod<_>
         member x.activeChild = _activeChild :> IMod<_>
-        member x.flat = _flat :> aset<_>
+        member x.flat = _flat :> amap<_,_>
         member x.lastSelectedItem = _lastSelectedItem :> IMod<_>
         member x.selectedChilds = _selectedChilds :> aset<_>
         member x.lastSelectedChild = _lastSelectedChild :> IMod<_>
@@ -215,7 +215,7 @@ module Mutable =
                 MGroup.Update(_rootGroup, v.rootGroup)
                 ResetMod.Update(_activeGroup,v.activeGroup)
                 ResetMod.Update(_activeChild,v.activeChild)
-                MSet.Update(_flat, v.flat)
+                MMap.Update(_flat, v.flat)
                 ResetMod.Update(_lastSelectedItem,v.lastSelectedItem)
                 MSet.Update(_selectedChilds, v.selectedChilds)
                 MOption.Update(_lastSelectedChild, v.lastSelectedChild)
@@ -254,7 +254,7 @@ module Mutable =
                     override x.Update(r,f) = { r with activeChild = f r.activeChild }
                 }
             let flat =
-                { new Lens<PRo3D.Groups.GroupsModel, Aardvark.Base.hset<PRo3D.Groups.Child>>() with
+                { new Lens<PRo3D.Groups.GroupsModel, Aardvark.Base.hmap<System.Guid,PRo3D.Groups.Child>>() with
                     override x.Get(r) = r.flat
                     override x.Set(r,v) = { r with flat = v }
                     override x.Update(r,f) = { r with flat = f r.flat }

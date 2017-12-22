@@ -164,14 +164,16 @@ module ViewerApp =
                               | Child.Annotations ann ->
                                   let a' = AnnotationProperties.update ann msg |> Child.Annotations
                                   
+                                  // update properties of selected annotation
+
                                   let func = 
-                                      (fun (x:Group) -> 
-                                          { x with childList = if PList.count x.childList > 0 then Groups.updateChild a' x.childList else x.childList })
+                                      (fun (x:Group) -> x)
+                                          //{ x with childList = if PList.count x.childList > 0 then //Groups.updateChild a' x.childList else x.childList })
                                   
                                   let path = m.drawing.annotations.activeChild.path
                                   let root = Groups.updateItemAt path func m.drawing.annotations.rootGroup
-                                  let flats = Groups.flatten root
-                                  let groups = Groups.updateGroups m.drawing.annotations root flats
+                                  //let flats = Groups.flatten root
+                                  let groups = Groups.updateGroups m.drawing.annotations root HMap.empty
                                   let annotations = { groups with lastSelectedChild = Some a' }                                  
                                   
                                   let drawing' = { m.drawing with annotations = annotations }
@@ -213,9 +215,9 @@ module ViewerApp =
                         let m' = m |> Lenses.set _groups newGroups
 
                         //updat flat layout
-                        let flatAnnotations = m'.drawing.annotations.rootGroup |> Groups.flatten
+                        let flatAnnotations = failwith "import" // m'.drawing.annotations.rootGroup |> Groups.flatten
 
-                        m' |> Lenses.set _flat flatAnnotations                       
+                        m' |> Lenses.set _flat flatAnnotations
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     

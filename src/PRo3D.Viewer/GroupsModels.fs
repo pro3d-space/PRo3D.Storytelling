@@ -40,36 +40,7 @@ type Child =
                 | Surfaces    s -> s.guid
                 | Bookmarks   b -> b.key
             
-module Child =
-    open Aardvark.UI.Incremental
 
-    let toggleVisibility (c : Child) =
-        match c with
-          | Annotations a -> Annotations { a with visible   = not a.visible }
-          | Surfaces    s -> Surfaces    { s with isVisible = not s.isVisible }
-          | _ -> c
-
-    let setName (c: Child) (name: string) =
-        match c with
-          | Surfaces s  -> Surfaces    { s with name = name }
-          | Bookmarks b -> Bookmarks   { b with name = name }
-          | _ -> c
-
-    let childrenToSurfaces surfaces =
-        surfaces
-            |> HSet.choose(fun x -> match x with
-                                        | Child.Surfaces s -> Some s
-                                        | _ -> None )
-    let childrenToAnnotations annos =
-        annos
-            |> HSet.choose(fun x -> match x with
-                                        | Child.Annotations a -> Some a
-                                        | _ -> None )
-    let childrenToBookmarks bms =
-        bms
-            |> HSet.choose(fun x -> match x with
-                                        | Child.Bookmarks b -> Some b
-                                        | _ -> None )
 
     
 
@@ -77,7 +48,7 @@ module Child =
 type Group = {
     key         : Guid
     name        : string
-    childList   : plist<Child> //plist<Annotation> 
+    childList   : plist<Guid>
     subGroups   : plist<Group>
     visible     : bool
     expanded    : bool
@@ -117,11 +88,42 @@ type GroupsModel = {
     rootGroup            : Group
     activeGroup          : TreeSelection
     activeChild          : TreeSelection
-    flat                 : hset<Child>
+    flat                 : hmap<Guid,Child>
     lastSelectedItem     : SelectedItem
     selectedChilds       : hset<TreeSelection> 
     lastSelectedChild    : option<Child>
     }
+
+module Child =
+    open Aardvark.UI.Incremental
+
+    let toggleVisibility (c : Child) =
+        match c with
+          | Annotations a -> Annotations { a with visible   = not a.visible }
+          | Surfaces    s -> Surfaces    { s with isVisible = not s.isVisible }
+          | _ -> c
+
+    let setName (c: Child) (name: string) =
+        match c with
+          | Surfaces s  -> Surfaces    { s with name = name }
+          | Bookmarks b -> Bookmarks   { b with name = name }
+          | _ -> c
+
+    let childrenToSurfaces surfaces =
+        surfaces
+            |> HMap.choose(fun _ x -> match x with
+                                        | Child.Surfaces s -> Some s
+                                        | _ -> None )
+    let childrenToAnnotations annos =
+        annos
+            |> HSet.choose(fun x -> match x with
+                                        | Child.Annotations a -> Some a
+                                        | _ -> None )
+    let childrenToBookmarks bms =
+        bms
+            |> HSet.choose(fun x -> match x with
+                                        | Child.Bookmarks b -> Some b
+                                        | _ -> None )
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module GroupsModel =
@@ -129,7 +131,7 @@ module GroupsModel =
         rootGroup = Group.initRoot
         activeGroup = Group.initTreeSelection
         activeChild = Group.initTreeSelection
-        flat = hset.Empty
+        flat = hmap.Empty
         lastSelectedItem = SelectedItem.Child
         selectedChilds = hset.Empty
         lastSelectedChild = None

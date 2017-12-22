@@ -61,7 +61,9 @@ module DrawingApp =
                  //   Log.line "sending %A" a.semantic
                     bc.Add json
 
-                    Groups.addToActiveGroup model.annotations (Child.Annotations a)
+                    failwith "add to flat"
+
+                    Groups.addToActiveGroup model.annotations a.key
                 | None -> model.annotations
        
        // let flat = (Groups.flatten rootGroup)
@@ -355,12 +357,12 @@ module DrawingApp =
          
       
 
-        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(select : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<IMod<MChild>>) : alist<DomNode<'outer>> =
+        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(select : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<Guid>) : alist<DomNode<'outer>> =
                            
                 alist { 
 
                     let annotations = annotations
-                                        |> AList.map (fun x -> Mod.force x)
+                                        |> AList.map (fun x -> failwith "x")
                                         |> AList.choose( fun x -> match x with
                                                                     | MAnnotations a -> Some a
                                                                     | _-> None )
@@ -740,7 +742,8 @@ module DrawingApp =
             // since set provides more degrees of freedom for the compiler           
             let annoSet = 
                 model.annotations.flat 
-                    |> ASet.chooseM(fun x -> x |> Mod.map toAnnotationOpt)
+                    |> AMap.chooseM(fun x y -> y |> Mod.map toAnnotationOpt) 
+                    |> AMap.toASet
 
             let config = 
                 {
@@ -755,7 +758,7 @@ module DrawingApp =
 
             let annotations =
                 aset {
-                    for a in annoSet do
+                    for (_,a) in annoSet do
                        let c = UI.mkColor model.annotations a
                        let dots = a.geometry |> Mod.map(fun geo -> match geo with | Geometry.Line | Geometry.Point -> true | _ -> false)                       
                        yield finishedAnnotation a cam c config dots
