@@ -168,7 +168,7 @@ module Surface =
 
                             // copy data
                             match s with
-                                |Child.Surfaces sf -> 
+                                |Leaf.Surfaces sf -> 
                                     let targetDir = Path.Combine(targetSurfaceDir, sf.name)
                                     Copy.copyAll sf.importPath targetDir true
 
@@ -410,10 +410,10 @@ module Surface =
                   match model.surfaces.lastSelectedChild with
                     | Some s -> 
                       match s with 
-                        | Child.Surfaces sf ->
+                        | Leaf.Surfaces sf ->
                             let s' = SurfaceProperties.update sf msg 
                             let model = model |> SurfaceModel.updateSingleSurface s'
-                            { model with surfaces = { model.surfaces with lastSelectedChild = Some (Child.Surfaces s') }}
+                            { model with surfaces = { model.surfaces with lastSelectedChild = Some (Leaf.Surfaces s') }}
                         | _ -> model
                     | None -> model
                 match msg with
@@ -424,7 +424,7 @@ module Surface =
                 let sgSurfaces = model.sgSurfaces |> Surface.Files.expandLazyKdTreePaths scenePath
                 { model with sgSurfaces = sgSurfaces}
             | RemoveSurface (id,path) -> //model
-                let groups = Groups.removeChild2 model.surfaces id path
+                let groups = Groups.removeLeaf model.surfaces id path false
                 let sg' = model.sgSurfaces |> HMap.remove id
                 { model with surfaces = groups; sgSurfaces = sg'} |> SurfaceModel.triggerSgGrouping              
             | OpenFolder id ->
@@ -432,7 +432,7 @@ module Surface =
                 match surf with
                     | Some s -> 
                         match s with 
-                            | Child.Surfaces sf ->
+                            | Leaf.Surfaces sf ->
                                 let path = Surface.Files.getSurfaceFolder sf scenePath
                                 match path with
                                     | Some p -> 
@@ -520,13 +520,13 @@ module Surface =
                     ]
             }
            
-    let rec viewTree path (group : MGroup) (model : MGroupsModel) : alist<DomNode<Action>> =
+    let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<Action>> =
 
         alist {
 
             let! s = model.activeGroup
             let color = sprintf "color: %s" (Html.ofC4b C4b.White)                
-            let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
+            let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
             let activeIcon =
                 adaptive {
@@ -602,7 +602,7 @@ module Surface =
                                 if isExpanded then yield! children
                                 
                                 if isExpanded then 
-                                    yield! viewSurfacesInGroups path model select lift group.childList
+                                    yield! viewSurfacesInGroups path model select lift group.leaves
                             }
                         )  
                                 

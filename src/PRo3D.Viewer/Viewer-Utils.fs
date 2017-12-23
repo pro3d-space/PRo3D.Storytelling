@@ -80,7 +80,7 @@ module ViewerUtils =
     let pickable' (pick :IMod<Pickable>) (sg: ISg) =
         Sg.PickableApplicator (pick, Mod.constant sg)
 
-    let getSurface (child:IMod<Option<IMod<MChild>>>) =
+    let getSurface (child:IMod<Option<IMod<MLeaf>>>) =
         adaptive {
             let! c = child
             match c with 
@@ -92,7 +92,7 @@ module ViewerUtils =
                 |_ -> return None
             }
 
-    let viewSingleSurfaceSg (surface : MSgSurface) (frustum : IMod<Frustum>) (selectedSurf : IMod<Option<IMod<MChild>>>) (globalBB : IMod<Box3d>) = //(selectedSurf : IMod<Option<MSurface>>)
+    let viewSingleSurfaceSg (surface : MSgSurface) (frustum : IMod<Frustum>) (selectedSurf : IMod<Option<IMod<MLeaf>>>) (globalBB : IMod<Box3d>) = //(selectedSurf : IMod<Option<MSurface>>)
         let sf = getSurface selectedSurf
         let isSelected = 
             Mod.bind2 (fun guid (selected: Option<MSurface>) ->   //(selected: Option<MSurface>)
@@ -210,30 +210,3 @@ module ViewerUtils =
 
             yield RenderCommand.SceneGraph overlayed
         }  
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module Model =
-    let private stashAndSaveRecent' (s : SceneHandle) (model : Model) =
-        let scenePaths = 
-            model.recent.recentScenes                 
-                |> HMap.update s.path 
-                    (
-                        fun v -> 
-                            match v with
-                                | Some x -> { x with writeDate = s.writeDate }
-                                | None -> s
-                    )
-
-        let recent = { model.recent with recentScenes = scenePaths }
-
-        Serialization.save "./recent" recent |> ignore
-
-        { model with recent = recent }
-
-    let stashAndSaveRecent (path : string) (model : Model) =
-        let handle = {
-            name = Path.GetFileName(path)
-            path = path
-            writeDate = DateTime.Now
-        }
-        stashAndSaveRecent' handle model

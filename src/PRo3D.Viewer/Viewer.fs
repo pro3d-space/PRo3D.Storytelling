@@ -57,7 +57,7 @@ module ViewerApp =
     let _drawing         = Model.Lens.drawing
     let _annoGroup       = _drawing |. DrawingModel.Lens.annotations
     let _flat            = _annoGroup  |. GroupsModel.Lens.flat    
-    let _groups          = _annoGroup  |. GroupsModel.Lens.rootGroup |. Group.Lens.subGroups
+    let _groups          = _annoGroup  |. GroupsModel.Lens.rootGroup |. Node.Lens.subNodes
        
     let lookAtData (m : Model) =         
         let bb = m |> Lenses.get _sgSurfaces |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -161,24 +161,29 @@ module ViewerApp =
                     match m.drawing.annotations.lastSelectedChild with
                         | Some a -> 
                             match a with 
-                              | Child.Annotations ann ->
-                                  let a' = AnnotationProperties.update ann msg |> Child.Annotations
+                              | Leaf.Annotations ann ->
+                                  let a' = AnnotationProperties.update ann msg |> Leaf.Annotations
                                   
                                   // update properties of selected annotation
 
+                                  failwith "annotations properties"
+
                                   let func = 
-                                      (fun (x:Group) -> x)
+                                      (fun (x:Node) -> x)
                                           //{ x with childList = if PList.count x.childList > 0 then //Groups.updateChild a' x.childList else x.childList })
                                   
                                   let path = m.drawing.annotations.activeChild.path
-                                  let root = Groups.updateItemAt path func m.drawing.annotations.rootGroup
+                                  let root = Groups.updateNodeAt path func m.drawing.annotations.rootGroup
                                   //let flats = Groups.flatten root
-                                  let groups = Groups.updateGroups m.drawing.annotations root HMap.empty
-                                  let annotations = { groups with lastSelectedChild = Some a' }                                  
+
+                                  m
+
+                                  //let groups = Groups.updateGroups m.drawing.annotations root HMap.empty
+                                  //let annotations = { groups with lastSelectedChild = Some a' }                                  
                                   
-                                  let drawing' = { m.drawing with annotations = annotations }
+                                  //let drawing' = { m.drawing with annotations = annotations }
                                   
-                                  { m with drawing = drawing' }
+                                  //{ m with drawing = drawing' }
                               | _ -> m
                         | None -> m       
             | BookmarkMessage msg,_,_ ->  
@@ -209,7 +214,7 @@ module ViewerApp =
                     | Some x -> 
                         //update groups
                         let newGroups = 
-                            m.drawing.annotations.rootGroup.subGroups 
+                            m.drawing.annotations.rootGroup.subNodes
                               |> PList.append' (AnnotationGroupsImporter.startImporter x)
 
                         let m' = m |> Lenses.set _groups newGroups
@@ -429,35 +434,36 @@ module ViewerApp =
             | SetKind d,_,_ -> 
                 { m with trafoKind = d }
             | Translate (_,b),_,_ ->
-                
-                match _selectedSurface.Get(m) with
-                  | Some selected ->
-                    let sgSurf = m |> Lenses.get _sgSurfaces |> HMap.find selected.id
-                    let s' = { sgSurf with trafo = TranslateController.updateController sgSurf.trafo b }
+                m
+                //match _selectedSurface.Get(m) with
+                //  | Some selected ->
+                //    let sgSurf = m |> Lenses.get _sgSurfaces |> HMap.find selected.id
+                //    let s' = { sgSurf with trafo = TranslateController.updateController sgSurf.trafo b }
                                         
-                    m 
-                    |> Lenses.get _sgSurfaces
-                    |> HMap.update selected.id (fun x -> 
-                        match x with 
-                            | Some _ -> printfn "%A" s'.trafo.previewTrafo.Forward.C3.XYZ; s'
-                            | None   -> failwith "surface not found")
-                    |> Lenses.set' _sgSurfaces m
+                //    m 
+                //    |> Lenses.get _sgSurfaces
+                //    |> HMap.update selected.id (fun x -> 
+                //        match x with 
+                //            | Some _ -> printfn "%A" s'.trafo.previewTrafo.Forward.C3.XYZ; s'
+                //            | None   -> failwith "surface not found")
+                //    |> Lenses.set' _sgSurfaces m
                     
-                  | None -> m                               
+                //  | None -> m                               
             | Rotate (_,b),_,_ ->
-                 match _selectedSurface.Get(m) with
-                   | Some selected ->
-                     let sgSurf = m |> Lenses.get _sgSurfaces |> HMap.find selected.id
-                     let s' = { sgSurf with trafo = RotationController.updateController sgSurf.trafo b }
+                m
+                 //match _selectedSurface.Get(m) with
+                 //  | Some selected ->
+                 //    let sgSurf = m |> Lenses.get _sgSurfaces |> HMap.find selected.id
+                 //    let s' = { sgSurf with trafo = RotationController.updateController sgSurf.trafo b }
 
-                     m 
-                     |> Lenses.get _sgSurfaces
-                     |> HMap.update selected.id (fun x -> 
-                          match x with 
-                            | Some _ -> s'
-                            | None   -> failwith "surface not found")
-                     |> Lenses.set' _sgSurfaces m
-                   | None -> m
+                 //    m 
+                 //    |> Lenses.get _sgSurfaces
+                 //    |> HMap.update selected.id (fun x -> 
+                 //         match x with 
+                 //           | Some _ -> s'
+                 //           | None   -> failwith "surface not found")
+                 //    |> Lenses.set' _sgSurfaces m
+                 //  | None -> m
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -521,7 +527,7 @@ module ViewerApp =
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation
 
-            let getSurface (c:IMod<MChild>) =
+            let getSurface (c:IMod<MLeaf>) =
                 adaptive {
                     let! child = c                     
                     match child with 

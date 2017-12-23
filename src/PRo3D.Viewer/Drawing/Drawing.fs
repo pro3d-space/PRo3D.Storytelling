@@ -398,14 +398,14 @@ module DrawingApp =
                         ]
                 }     
               
-        let rec viewTree path (group : MGroup) (model : MGroupsModel) : alist<DomNode<Action>> =
+        let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<Action>> =
 
             alist {
 
                 let! s = model.activeGroup
                 
                 
-                let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
+                let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
                 let icon =
                     adaptive {
@@ -480,7 +480,7 @@ module DrawingApp =
                                 if isExpanded then yield! children
 
                                 if isExpanded then 
-                                    yield! viewAnnotationsInGroup path model select lift group.childList
+                                    yield! viewAnnotationsInGroup path model select lift group.leaves
                             }
                          )  
                                 

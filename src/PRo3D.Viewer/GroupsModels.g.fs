@@ -9,27 +9,27 @@ open PRo3D.Groups
 module Mutable =
 
     [<AbstractClass; System.Runtime.CompilerServices.Extension; StructuredFormatDisplay("{AsString}")>]
-    type MChild() =
-        abstract member TryUpdate : PRo3D.Groups.Child -> bool
+    type MLeaf() =
+        abstract member TryUpdate : PRo3D.Groups.Leaf -> bool
         abstract member AsString : string
         
-        static member private CreateValue(__model : PRo3D.Groups.Child) = 
+        static member private CreateValue(__model : PRo3D.Groups.Leaf) = 
             match __model with
-                | Annotations(value) -> MAnnotations(__model, value) :> MChild
-                | Surfaces(value) -> MSurfaces(__model, value) :> MChild
-                | Bookmarks(value) -> MBookmarks(__model, value) :> MChild
+                | Annotations(value) -> MAnnotations(__model, value) :> MLeaf
+                | Surfaces(value) -> MSurfaces(__model, value) :> MLeaf
+                | Bookmarks(value) -> MBookmarks(__model, value) :> MLeaf
         
-        static member Create(v : PRo3D.Groups.Child) =
-            ResetMod.Create(MChild.CreateValue v) :> IMod<_>
+        static member Create(v : PRo3D.Groups.Leaf) =
+            ResetMod.Create(MLeaf.CreateValue v) :> IMod<_>
         
         [<System.Runtime.CompilerServices.Extension>]
-        static member Update(m : IMod<MChild>, v : PRo3D.Groups.Child) =
-            let m = unbox<ResetMod<MChild>> m
+        static member Update(m : IMod<MLeaf>, v : PRo3D.Groups.Leaf) =
+            let m = unbox<ResetMod<MLeaf>> m
             if not (m.GetValue().TryUpdate v) then
-                m.Update(MChild.CreateValue v)
+                m.Update(MLeaf.CreateValue v)
     
-    and private MAnnotations(__initial : PRo3D.Groups.Child, value : PRo3D.Annotation) =
-        inherit MChild()
+    and private MAnnotations(__initial : PRo3D.Groups.Leaf, value : PRo3D.Annotation) =
+        inherit MLeaf()
         
         let mutable __current = __initial
         let _value = PRo3D.Mutable.MAnnotation.Create(value)
@@ -38,7 +38,7 @@ module Mutable =
         override x.ToString() = __current.ToString()
         override x.AsString = sprintf "%A" __current
         
-        override x.TryUpdate(__model : PRo3D.Groups.Child) = 
+        override x.TryUpdate(__model : PRo3D.Groups.Leaf) = 
             if System.Object.ReferenceEquals(__current, __model) then
                 true
             else
@@ -49,8 +49,8 @@ module Mutable =
                         true
                     | _ -> false
     
-    and private MSurfaces(__initial : PRo3D.Groups.Child, value : PRo3D.Surfaces.Surface) =
-        inherit MChild()
+    and private MSurfaces(__initial : PRo3D.Groups.Leaf, value : PRo3D.Surfaces.Surface) =
+        inherit MLeaf()
         
         let mutable __current = __initial
         let _value = PRo3D.Surfaces.Mutable.MSurface.Create(value)
@@ -59,7 +59,7 @@ module Mutable =
         override x.ToString() = __current.ToString()
         override x.AsString = sprintf "%A" __current
         
-        override x.TryUpdate(__model : PRo3D.Groups.Child) = 
+        override x.TryUpdate(__model : PRo3D.Groups.Leaf) = 
             if System.Object.ReferenceEquals(__current, __model) then
                 true
             else
@@ -70,8 +70,8 @@ module Mutable =
                         true
                     | _ -> false
     
-    and private MBookmarks(__initial : PRo3D.Groups.Child, value : PRo3D.BookmarksX.Bookmark) =
-        inherit MChild()
+    and private MBookmarks(__initial : PRo3D.Groups.Leaf, value : PRo3D.BookmarksX.Bookmark) =
+        inherit MLeaf()
         
         let mutable __current = __initial
         let _value = PRo3D.BookmarksX.Mutable.MBookmark.Create(value)
@@ -80,7 +80,7 @@ module Mutable =
         override x.ToString() = __current.ToString()
         override x.AsString = sprintf "%A" __current
         
-        override x.TryUpdate(__model : PRo3D.Groups.Child) = 
+        override x.TryUpdate(__model : PRo3D.Groups.Leaf) = 
             if System.Object.ReferenceEquals(__current, __model) then
                 true
             else
@@ -93,8 +93,8 @@ module Mutable =
     
     
     [<AutoOpen>]
-    module MChildPatterns =
-        let (|MAnnotations|MSurfaces|MBookmarks|) (m : MChild) =
+    module MLeafPatterns =
+        let (|MAnnotations|MSurfaces|MBookmarks|) (m : MLeaf) =
             match m with
             | :? MAnnotations as v -> MAnnotations(v.value)
             | :? MSurfaces as v -> MSurfaces(v.value)
@@ -106,82 +106,82 @@ module Mutable =
     
     
     
-    type MGroup(__initial : PRo3D.Groups.Group) =
+    type MNode(__initial : PRo3D.Groups.Node) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.Group> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.Group>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.Group>
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.Node> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.Node>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.Node>
         let _key = ResetMod.Create(__initial.key)
         let _name = ResetMod.Create(__initial.name)
-        let _childList = MList.Create(__initial.childList)
-        let _subGroups = MList.Create(__initial.subGroups, (fun v -> MGroup.Create(v)), (fun (m,v) -> MGroup.Update(m, v)), (fun v -> v))
+        let _leaves = MList.Create(__initial.leaves)
+        let _subNodes = MList.Create(__initial.subNodes, (fun v -> MNode.Create(v)), (fun (m,v) -> MNode.Update(m, v)), (fun v -> v))
         let _visible = ResetMod.Create(__initial.visible)
         let _expanded = ResetMod.Create(__initial.expanded)
         
         member x.key = _key :> IMod<_>
         member x.name = _name :> IMod<_>
-        member x.childList = _childList :> alist<_>
-        member x.subGroups = _subGroups :> alist<_>
+        member x.leaves = _leaves :> alist<_>
+        member x.subNodes = _subNodes :> alist<_>
         member x.visible = _visible :> IMod<_>
         member x.expanded = _expanded :> IMod<_>
         
         member x.Current = __current :> IMod<_>
-        member x.Update(v : PRo3D.Groups.Group) =
+        member x.Update(v : PRo3D.Groups.Node) =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
                 ResetMod.Update(_key,v.key)
                 ResetMod.Update(_name,v.name)
-                MList.Update(_childList, v.childList)
-                MList.Update(_subGroups, v.subGroups)
+                MList.Update(_leaves, v.leaves)
+                MList.Update(_subNodes, v.subNodes)
                 ResetMod.Update(_visible,v.visible)
                 ResetMod.Update(_expanded,v.expanded)
                 
         
-        static member Create(__initial : PRo3D.Groups.Group) : MGroup = MGroup(__initial)
-        static member Update(m : MGroup, v : PRo3D.Groups.Group) = m.Update(v)
+        static member Create(__initial : PRo3D.Groups.Node) : MNode = MNode(__initial)
+        static member Update(m : MNode, v : PRo3D.Groups.Node) = m.Update(v)
         
         override x.ToString() = __current.Value.ToString()
         member x.AsString = sprintf "%A" __current.Value
-        interface IUpdatable<PRo3D.Groups.Group> with
+        interface IUpdatable<PRo3D.Groups.Node> with
             member x.Update v = x.Update v
     
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module Group =
+    module Node =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let key =
-                { new Lens<PRo3D.Groups.Group, System.Guid>() with
+                { new Lens<PRo3D.Groups.Node, System.Guid>() with
                     override x.Get(r) = r.key
                     override x.Set(r,v) = { r with key = v }
                     override x.Update(r,f) = { r with key = f r.key }
                 }
             let name =
-                { new Lens<PRo3D.Groups.Group, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.Groups.Node, Microsoft.FSharp.Core.string>() with
                     override x.Get(r) = r.name
                     override x.Set(r,v) = { r with name = v }
                     override x.Update(r,f) = { r with name = f r.name }
                 }
-            let childList =
-                { new Lens<PRo3D.Groups.Group, Aardvark.Base.plist<System.Guid>>() with
-                    override x.Get(r) = r.childList
-                    override x.Set(r,v) = { r with childList = v }
-                    override x.Update(r,f) = { r with childList = f r.childList }
+            let leaves =
+                { new Lens<PRo3D.Groups.Node, Aardvark.Base.plist<System.Guid>>() with
+                    override x.Get(r) = r.leaves
+                    override x.Set(r,v) = { r with leaves = v }
+                    override x.Update(r,f) = { r with leaves = f r.leaves }
                 }
-            let subGroups =
-                { new Lens<PRo3D.Groups.Group, Aardvark.Base.plist<PRo3D.Groups.Group>>() with
-                    override x.Get(r) = r.subGroups
-                    override x.Set(r,v) = { r with subGroups = v }
-                    override x.Update(r,f) = { r with subGroups = f r.subGroups }
+            let subNodes =
+                { new Lens<PRo3D.Groups.Node, Aardvark.Base.plist<PRo3D.Groups.Node>>() with
+                    override x.Get(r) = r.subNodes
+                    override x.Set(r,v) = { r with subNodes = v }
+                    override x.Update(r,f) = { r with subNodes = f r.subNodes }
                 }
             let visible =
-                { new Lens<PRo3D.Groups.Group, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Groups.Node, Microsoft.FSharp.Core.bool>() with
                     override x.Get(r) = r.visible
                     override x.Set(r,v) = { r with visible = v }
                     override x.Update(r,f) = { r with visible = f r.visible }
                 }
             let expanded =
-                { new Lens<PRo3D.Groups.Group, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Groups.Node, Microsoft.FSharp.Core.bool>() with
                     override x.Get(r) = r.expanded
                     override x.Set(r,v) = { r with expanded = v }
                     override x.Update(r,f) = { r with expanded = f r.expanded }
@@ -191,13 +191,13 @@ module Mutable =
     type MGroupsModel(__initial : PRo3D.Groups.GroupsModel) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.GroupsModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.GroupsModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.GroupsModel>
-        let _rootGroup = MGroup.Create(__initial.rootGroup)
+        let _rootGroup = MNode.Create(__initial.rootGroup)
         let _activeGroup = ResetMod.Create(__initial.activeGroup)
         let _activeChild = ResetMod.Create(__initial.activeChild)
-        let _flat = MMap.Create(__initial.flat, (fun v -> MChild.Create(v)), (fun (m,v) -> MChild.Update(m, v)), (fun v -> v))
+        let _flat = MMap.Create(__initial.flat, (fun v -> MLeaf.Create(v)), (fun (m,v) -> MLeaf.Update(m, v)), (fun v -> v))
         let _lastSelectedItem = ResetMod.Create(__initial.lastSelectedItem)
         let _selectedChilds = MSet.Create(__initial.selectedChilds)
-        let _lastSelectedChild = MOption.Create(__initial.lastSelectedChild, (fun v -> MChild.Create(v)), (fun (m,v) -> MChild.Update(m, v)), (fun v -> v))
+        let _lastSelectedChild = MOption.Create(__initial.lastSelectedChild, (fun v -> MLeaf.Create(v)), (fun (m,v) -> MLeaf.Update(m, v)), (fun v -> v))
         
         member x.rootGroup = _rootGroup
         member x.activeGroup = _activeGroup :> IMod<_>
@@ -212,7 +212,7 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
-                MGroup.Update(_rootGroup, v.rootGroup)
+                MNode.Update(_rootGroup, v.rootGroup)
                 ResetMod.Update(_activeGroup,v.activeGroup)
                 ResetMod.Update(_activeChild,v.activeChild)
                 MMap.Update(_flat, v.flat)
@@ -236,7 +236,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let rootGroup =
-                { new Lens<PRo3D.Groups.GroupsModel, PRo3D.Groups.Group>() with
+                { new Lens<PRo3D.Groups.GroupsModel, PRo3D.Groups.Node>() with
                     override x.Get(r) = r.rootGroup
                     override x.Set(r,v) = { r with rootGroup = v }
                     override x.Update(r,f) = { r with rootGroup = f r.rootGroup }
@@ -254,7 +254,7 @@ module Mutable =
                     override x.Update(r,f) = { r with activeChild = f r.activeChild }
                 }
             let flat =
-                { new Lens<PRo3D.Groups.GroupsModel, Aardvark.Base.hmap<System.Guid,PRo3D.Groups.Child>>() with
+                { new Lens<PRo3D.Groups.GroupsModel, Aardvark.Base.hmap<System.Guid,PRo3D.Groups.Leaf>>() with
                     override x.Get(r) = r.flat
                     override x.Set(r,v) = { r with flat = v }
                     override x.Update(r,f) = { r with flat = f r.flat }
@@ -272,7 +272,7 @@ module Mutable =
                     override x.Update(r,f) = { r with selectedChilds = f r.selectedChilds }
                 }
             let lastSelectedChild =
-                { new Lens<PRo3D.Groups.GroupsModel, Microsoft.FSharp.Core.option<PRo3D.Groups.Child>>() with
+                { new Lens<PRo3D.Groups.GroupsModel, Microsoft.FSharp.Core.option<PRo3D.Groups.Leaf>>() with
                     override x.Get(r) = r.lastSelectedChild
                     override x.Set(r,v) = { r with lastSelectedChild = v }
                     override x.Update(r,f) = { r with lastSelectedChild = f r.lastSelectedChild }
@@ -282,7 +282,7 @@ module Mutable =
     type MAnnotationGroupsImporterModel(__initial : PRo3D.Groups.AnnotationGroupsImporterModel) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsImporterModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.AnnotationGroupsImporterModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsImporterModel>
-        let _rootGroupI = MList.Create(__initial.rootGroupI, (fun v -> MGroup.Create(v)), (fun (m,v) -> MGroup.Update(m, v)), (fun v -> v))
+        let _rootGroupI = MList.Create(__initial.rootGroupI, (fun v -> MNode.Create(v)), (fun (m,v) -> MNode.Update(m, v)), (fun v -> v))
         
         member x.rootGroupI = _rootGroupI :> alist<_>
         
@@ -309,7 +309,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let rootGroupI =
-                { new Lens<PRo3D.Groups.AnnotationGroupsImporterModel, Aardvark.Base.plist<PRo3D.Groups.Group>>() with
+                { new Lens<PRo3D.Groups.AnnotationGroupsImporterModel, Aardvark.Base.plist<PRo3D.Groups.Node>>() with
                     override x.Get(r) = r.rootGroupI
                     override x.Set(r,v) = { r with rootGroupI = v }
                     override x.Update(r,f) = { r with rootGroupI = f r.rootGroupI }

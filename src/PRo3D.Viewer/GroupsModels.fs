@@ -28,7 +28,7 @@ open Aardvark.Opc
 //    expanded    : bool
 //    }
 [<DomainType>]
-type Child = 
+type Leaf = 
     | Annotations of value : Annotation
     | Surfaces    of value : Surface
     | Bookmarks   of value : Bookmark
@@ -45,11 +45,11 @@ type Child =
     
 
 [<DomainType>]
-type Group = {
+type Node = {
     key         : Guid
     name        : string
-    childList   : plist<Guid>
-    subGroups   : plist<Group>
+    leaves      : plist<Guid>
+    subNodes   : plist<Node>
     visible     : bool
     expanded    : bool
 }
@@ -66,8 +66,8 @@ module Group =
     let initRoot = {
         name = "root"
         key =  Guid.NewGuid()
-        childList = plist.Empty
-        subGroups = plist.Empty 
+        leaves = plist.Empty
+        subNodes = plist.Empty 
         visible = true
         expanded = true
         }
@@ -77,7 +77,7 @@ module Group =
         name = "" 
         }
 
-    let tryGet' (ans:hset<Child>) id = 
+    let tryGet' (ans:hset<Leaf>) id = 
             ans |> Seq.tryFind(fun x -> x.id = id)
 
 type SelectedItem = Child = 0 | Group = 1
@@ -85,44 +85,48 @@ type SelectedItem = Child = 0 | Group = 1
 
 [<DomainType>]
 type GroupsModel = {
-    rootGroup            : Group
+    rootGroup            : Node
     activeGroup          : TreeSelection
     activeChild          : TreeSelection
-    flat                 : hmap<Guid,Child>
+    flat                 : hmap<Guid,Leaf>
     lastSelectedItem     : SelectedItem
     selectedChilds       : hset<TreeSelection> 
-    lastSelectedChild    : option<Child>
+    lastSelectedChild    : option<Leaf>
     }
 
-module Child =
+module Leaf =
     open Aardvark.UI.Incremental
 
-    let toggleVisibility (c : Child) =
+    let toggleVisibility (c : Leaf) =
         match c with
           | Annotations a -> Annotations { a with visible   = not a.visible }
           | Surfaces    s -> Surfaces    { s with isVisible = not s.isVisible }
           | _ -> c
 
-    let setName (c: Child) (name: string) =
+    let setName (c: Leaf) (name: string) =
         match c with
           | Surfaces s  -> Surfaces    { s with name = name }
           | Bookmarks b -> Bookmarks   { b with name = name }
           | _ -> c
 
-    let childrenToSurfaces surfaces =
+    let toSurfaces surfaces =
         surfaces
-            |> HMap.choose(fun _ x -> match x with
-                                        | Child.Surfaces s -> Some s
-                                        | _ -> None )
+            |> HMap.choose(fun _ x -> 
+                match x with
+                | Leaf.Surfaces s -> Some s
+                | _ -> None )
+
     let childrenToAnnotations annos =
         annos
-            |> HSet.choose(fun x -> match x with
-                                        | Child.Annotations a -> Some a
-                                        | _ -> None )
+            |> HSet.choose(fun x -> 
+                match x with
+                    | Leaf.Annotations a -> Some a
+                    | _ -> None )
+
     let childrenToBookmarks bms =
         bms
             |> HSet.choose(fun x -> match x with
-                                        | Child.Bookmarks b -> Some b
+                                        | Leaf.Bookmarks b -> Some b
                                         | _ -> None )
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -140,7 +144,7 @@ module GroupsModel =
         
 [<DomainType>]
 type AnnotationGroupsImporterModel = {
-    rootGroupI       : plist<Group>
+    rootGroupI       : plist<Node>
 }
 
 [<DomainType>]

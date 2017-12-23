@@ -35,7 +35,7 @@ module Bookmarks =
     let update (model : BookmarksModel) (act : Action) (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*BookmarksModel) = 
         match act with
             | AddBookmark -> 
-                let newBm = getNewBookmark (navigation.Get outerModel) model.bookmarks.flat.Count |> Child.Bookmarks
+                let newBm = getNewBookmark (navigation.Get outerModel) model.bookmarks.flat.Count |> Leaf.Bookmarks
 
                 let groups = 
                     { model.bookmarks with flat = (model.bookmarks.flat.Add(newBm.id,newBm)) }
@@ -47,11 +47,12 @@ module Bookmarks =
             | GroupsMessage msg -> 
                 match msg with
                     | Groups.Action.UpdateCam id -> 
-                        let bm = Groups.tryGetChild model.bookmarks.rootGroup id
+                        let bm = model.bookmarks.flat |> HMap.tryFind id
                         match bm with
                             | Some b ->
                                 match b with
-                                    | Child.Bookmarks bkm ->
+                                    | Leaf.Bookmarks bkm ->
+
                                         let navigation' = bkm.navigationState 
                                         let newOuterModel = navigation.Set(outerModel,navigation')
                                         (newOuterModel,model)
@@ -112,13 +113,13 @@ module Bookmarks =
                         }     
                
 
-    let rec viewTree path (group : MGroup) (model : MGroupsModel) : alist<DomNode<Action>> =
+    let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<Action>> =
 
         alist {
 
             let! s = model.activeGroup
             let color = sprintf "color: %s" (Html.ofC4b C4b.White)                
-            let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
+            let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
             let icon =
                 adaptive {
@@ -193,7 +194,7 @@ module Bookmarks =
                                 if isExpanded then yield! children
 
                                 if isExpanded then 
-                                    yield! viewBookmarks path model select lift group.childList
+                                    yield! viewBookmarks path model select lift group.leaves
                             }
                         )  
                                 
