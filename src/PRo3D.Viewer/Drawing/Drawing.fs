@@ -57,13 +57,15 @@ module DrawingApp =
         let groups = 
             match getFinishedAnnotation up north model with
                 | Some a -> 
-                    let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
-                 //   Log.line "sending %A" a.semantic
-                    bc.Add json
+                    let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
+                    bc.Add json                    
 
-                    failwith "add to flat"
+                    let leaf = Leaf.Annotations a
+                    let m = Groups.addToActiveGroup leaf.id leaf model.annotations
+                    let flat' = m.flat |> HMap.add leaf.id leaf
 
-                    Groups.addToActiveGroup model.annotations a.key
+                    { m with flat = flat' }
+
                 | None -> model.annotations
        
        // let flat = (Groups.flatten rootGroup)
@@ -361,11 +363,18 @@ module DrawingApp =
                            
                 alist { 
 
-                    let annotations = annotations
-                                        |> AList.map (fun x -> failwith "x")
-                                        |> AList.choose( fun x -> match x with
-                                                                    | MAnnotations a -> Some a
-                                                                    | _-> None )
+                    let annotations = 
+                        annotations
+                          |> AList.map (
+                            fun x -> 
+                            let a = model.flat |> AMap.find x |> Mod.bind(id)
+                            a
+                            )
+                          |> AList.choose( fun x -> 
+                            match (x |> Mod.force) with
+                                | MAnnotations a -> Some a
+                                | _-> None )
+
                     for a in annotations do 
                         let select = fun _ -> select (a,path)
                                 

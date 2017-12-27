@@ -35,15 +35,12 @@ module Bookmarks =
     let update (model : BookmarksModel) (act : Action) (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*BookmarksModel) = 
         match act with
             | AddBookmark -> 
-                let newBm = getNewBookmark (navigation.Get outerModel) model.bookmarks.flat.Count |> Leaf.Bookmarks
-
-                let groups = 
-                    { model.bookmarks with flat = (model.bookmarks.flat.Add(newBm.id,newBm)) }
-
-                let groups = Groups.addToActiveGroup groups newBm.id
-                //let groups = 
-                //    Groups.updateGroups model.bookmarks root (Groups.flatten root)
-                (outerModel,{ model with bookmarks = groups})
+                let newBm = 
+                    getNewBookmark (navigation.Get outerModel) model.bookmarks.flat.Count
+                
+                let groups = Groups.addToActiveGroup newBm.key (Leaf.Bookmarks newBm) model.bookmarks
+                
+                outerModel, { model with bookmarks = groups}
             | GroupsMessage msg -> 
                 match msg with
                     | Groups.Action.UpdateCam id -> 

@@ -197,7 +197,7 @@ module Mutable =
         let _flat = MMap.Create(__initial.flat, (fun v -> MLeaf.Create(v)), (fun (m,v) -> MLeaf.Update(m, v)), (fun v -> v))
         let _lastSelectedItem = ResetMod.Create(__initial.lastSelectedItem)
         let _selectedChilds = MSet.Create(__initial.selectedChilds)
-        let _lastSelectedChild = MOption.Create(__initial.lastSelectedChild, (fun v -> MLeaf.Create(v)), (fun (m,v) -> MLeaf.Update(m, v)), (fun v -> v))
+        let _lastSelectedChild = MOption.Create(__initial.lastSelectedChild)
         
         member x.rootGroup = _rootGroup
         member x.activeGroup = _activeGroup :> IMod<_>
@@ -272,7 +272,7 @@ module Mutable =
                     override x.Update(r,f) = { r with selectedChilds = f r.selectedChilds }
                 }
             let lastSelectedChild =
-                { new Lens<PRo3D.Groups.GroupsModel, Microsoft.FSharp.Core.option<PRo3D.Groups.Leaf>>() with
+                { new Lens<PRo3D.Groups.GroupsModel, Microsoft.FSharp.Core.option<System.Guid>>() with
                     override x.Get(r) = r.lastSelectedChild
                     override x.Set(r,v) = { r with lastSelectedChild = v }
                     override x.Update(r,f) = { r with lastSelectedChild = f r.lastSelectedChild }

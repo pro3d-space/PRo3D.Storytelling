@@ -130,15 +130,16 @@ module Surface =
                 let p = surface.importPath
                 if Directory.Exists p then Some p else None
 
-        let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, SgSurface>)=
+        let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, PRo3D.Surfaces.Surface>) (sgSurfaces : hmap<Guid, SgSurface>) =
             match scenePath with
                 | Some sp -> 
-                    surfaces |> HMap.map (fun _ s -> 
+                    sgSurfaces |> HMap.map (fun _ s -> 
                         let path = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
+                        let surf = surfaces |> HMap.find s.surface
                         let kd =
                             s.kdTree |> HMap.map (fun _ k -> 
                                 match k with 
-                                    | Level0KdTree.LazyKdTree lk when s.surface.relativePaths -> 
+                                    | Level0KdTree.LazyKdTree lk when surf.relativePaths -> 
                                         let kdTreeSub =
                                             lk.kdtreePath.Split(Path.DirectorySeparatorChar) 
                                                 |> List.ofArray |> List.rev |> List.take 5 |> List.rev |> Path.combine  
@@ -153,7 +154,7 @@ module Surface =
                             )
                         { s with kdTree = kd }
                     )
-                | None -> surfaces
+                | None -> sgSurfaces
 
         let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
             match scenePath with
@@ -239,7 +240,7 @@ module Surface =
         let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
 
         {
-            surface    = s       
+            surface    = s.guid
             sceneGraph = sg
             globalBB   = bb
             kdTree     = kd
@@ -263,7 +264,7 @@ module Surface =
         let sgSurfaces =
             sghs 
               |> List.map (fun d -> sgOfSurface d.surf d.sg d.bb d.kdtree)
-              |> List.map (fun d -> (d.surface.guid, d))
+              |> List.map (fun d -> (d.surface, d))
               |> HMap.ofList       
 
         sgSurfaces
@@ -362,7 +363,7 @@ module Surface =
 
         m.sgSurfaces
             |> HMap.toSeq
-            |> Seq.map (fun (_,d) -> d.kdTree, d.surface) 
+            |> Seq.map (fun (_,d) -> d.kdTree, (m.surfaces.flat |> HMap.find d.surface) |> Leaf.toSurface)            
             |> Seq.sortByDescending(fun (_,surf) -> surf.priority.value)
             |> Seq.choose (
                 fun (kd ,surf) ->
@@ -409,19 +410,16 @@ module Surface =
                 let m = 
                   match model.surfaces.lastSelectedChild with
                     | Some s -> 
-                      match s with 
-                        | Leaf.Surfaces sf ->
-                            let s' = SurfaceProperties.update sf msg 
-                            let model = model |> SurfaceModel.updateSingleSurface s'
-                            { model with surfaces = { model.surfaces with lastSelectedChild = Some (Leaf.Surfaces s') }}
-                        | _ -> model
+                      let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface                        
+                      let s' = SurfaceProperties.update surface msg
+                      model |> SurfaceModel.updateSingleSurface s'                        
                     | None -> model
                 match msg with
                   | SurfaceProperties.SetPriority _ -> m |> SurfaceModel.triggerSgGrouping 
                   | _ -> m            
             | MakeRelative id ->                
                 let model = Surface.Files.makeSurfaceRelative id model scenePath
-                let sgSurfaces = model.sgSurfaces |> Surface.Files.expandLazyKdTreePaths scenePath
+                let sgSurfaces = model.sgSurfaces |> Surface.Files.expandLazyKdTreePaths scenePath (model.surfaces.flat |> Leaf.toSurfaces)
                 { model with sgSurfaces = sgSurfaces}
             | RemoveSurface (id,path) -> //model
                 let groups = Groups.removeLeaf model.surfaces id path false
@@ -642,10 +640,17 @@ module Surface =
 
     let viewSurfaceProperties (model:MSurfaceModel) =
         adaptive {
-            let! bla = model.surfaces.lastSelectedChild
-            let! opt = lscToDom bla (fun x -> SurfaceProperties.view x)
+            let! guid = model.surfaces.lastSelectedChild
+            
+            match guid with
+                | Some i -> 
 
-            return (opt |> UI.map SurfacePropertiesMessage)
+                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                    let! surf = leaf 
+                    let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
+                   
+                    return SurfaceProperties.view x |> UI.map SurfacePropertiesMessage
+                | None -> return div[][] |> UI.map SurfacePropertiesMessage 
         }                          
         
     let surfaceGroupProperties (model:MSurfaceModel) =

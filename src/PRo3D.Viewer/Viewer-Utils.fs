@@ -80,32 +80,45 @@ module ViewerUtils =
     let pickable' (pick :IMod<Pickable>) (sg: ISg) =
         Sg.PickableApplicator (pick, Mod.constant sg)
 
-    let getSurface (child:IMod<Option<IMod<MLeaf>>>) =
-        adaptive {
-            let! c = child
+    //let getSurface (child:IMod<Option<IMod<MLeaf>>>) =
+    //    adaptive {
+    //        let! c = child
+    //        match c with 
+    //            | Some s -> 
+    //                let! s' = s 
+    //                match s' with
+    //                    | MSurfaces y -> return Some y
+    //                    | _-> return None 
+    //            |_ -> return None
+    //        }
+
+    let toModSurface (leaf : IMod<MLeaf>) = 
+         adaptive {
+            let! c = leaf
             match c with 
-                | Some s -> 
-                    let! s' = s 
-                    match s' with
-                        | MSurfaces y -> return Some y
-                        | _-> return None 
-                |_ -> return None
+                | MSurfaces s -> return s
+                |_ -> return failwith "wrong type"
             }
 
-    let viewSingleSurfaceSg (surface : MSgSurface) (frustum : IMod<Frustum>) (selectedSurf : IMod<Option<IMod<MLeaf>>>) (globalBB : IMod<Box3d>) = //(selectedSurf : IMod<Option<MSurface>>)
-        let sf = getSurface selectedSurf
-        let isSelected = 
-            Mod.bind2 (fun guid (selected: Option<MSurface>) ->   //(selected: Option<MSurface>)
-                match selected with
-                    | Some s -> Mod.map (fun selectedGuid -> selectedGuid = guid) s.guid
-                    | None -> Mod.constant false
-            ) surface.surface.guid sf
+    let lookUp guid (table:amap<Guid, IMod<MLeaf>>) =
+        let entry = table |> AMap.find guid
+
+        entry |> Mod.bind(fun x -> x |> toModSurface)
+
+    let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (globalBB : IMod<Box3d>) =
+        
+        let surf = lookUp (surface.surface |> Mod.force) blarg
+
+        let isSelected = Mod.map2(fun x y->
+          match x with
+            | Some id -> id = y
+            | None -> false) selectedId surface.surface
 
         let createSg (sg : ISg) =
             sg 
             |> Sg.noEvents 
-            |> Sg.cullMode(surface.surface.cullMode) 
-            |> Sg.fillMode(surface.surface.fillMode)         
+            |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
+            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))         
                 
         let pickable = 
             adaptive {
@@ -115,7 +128,8 @@ module ViewerUtils =
 
         let rangeToMinMax (s:MSgSurface) =
             adaptive {
-                let! scalar = s.surface.selectedScalar
+                let! s = surf
+                let! scalar = s.selectedScalar
                 return match scalar with 
                           | Some s -> V2d(s.definedRange.Min, s.definedRange.Max)
                           | None   -> V2d(0.0,1.0)
@@ -123,30 +137,39 @@ module ViewerUtils =
 
         let globalToLocal = 
             surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation -x.Center)
-                
+            
+        let selectedScalar =
+            adaptive {
+                let! s = surf
+                let! scalar = s.selectedScalar
+                return scalar.IsSome
+            }
+
         let sg = 
             surface.sceneGraph 
                 |> Mod.map createSg
                 |> Sg.dynamic
                 |> Sg.uniform "selected"       isSelected
                 |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
-                |> Sg.uniform "falseColors"    (surface.surface.selectedScalar |> Mod.map Option.isSome)
-                |> Sg.uniform "MinMax"         (surface |> rangeToMinMax)             
+                |> Sg.uniform "falseColors"    selectedScalar
+                |> Sg.uniform "MinMax"         (surface |> rangeToMinMax)
                 |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
-                |> Sg.onOff(surface.surface.isVisible)                             
+                |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
                 |> Sg.LodParameters( 
                     adaptive {
+                        let! s = surf
                         let! frustum = frustum 
                         let sizes = V2i(1024,768)
-                        let! quality = surface.surface.quality.value
-                        let! trafo = surface.surface.preTransform //combine pre and current transform
+                        let! quality = s.quality.value
+                        let! trafo = s.preTransform //combine pre and current transform
 
                         return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality); trafo = trafo }
                     })   
                 |> Sg.AttributeParameters(
                     adaptive {
-                        let! texture = surface.surface.selectedTexture 
-                        let! scalar = surface.surface.selectedScalar
+                        let! s = surf
+                        let! texture = s.selectedTexture 
+                        let! scalar = s.selectedScalar
 
                         let attr : Aardvark.Opc.AttributeParameters = 
                             {
@@ -161,14 +184,16 @@ module ViewerUtils =
                 |> Sg.withEvents [
                         SceneEventKind.Down, (
                             fun sceneHit -> 
-                                true, Seq.ofList [PickSurface (sceneHit,(surface.surface.name |> Mod.force))])                        
+                                let bla = surf |> Mod.force
+                                let bla = bla.name |> Mod.force
+                                true, Seq.ofList [PickSurface (sceneHit,bla)])
                     ]
                 //|> Sg.trafo (surface.globalBB 
                 //                |> Mod.map(fun x -> 
                 //                    let t = Trafo3d.Translation(-x.Center)
                 //                    printfn "%A" t.Forward.C3.XYZ
                 //                    t))
-                |> Sg.trafo (surface.surface.preTransform)
+                |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))
                 //|> Sg.trafo (surface.trafo.previewTrafo |> Mod.map(fun x -> printfn "%A" x.Forward.C3.XYZ; x))
         sg
 
@@ -184,7 +209,8 @@ module ViewerUtils =
             sgGrouped |> AList.map(
                 fun x -> ( x 
                     |> AMap.map(fun _ sf -> 
-                        viewSingleSurfaceSg sf m.frustum selected sf.globalBB)
+                        let bla = m.scene.surfacesModel.surfaces.flat
+                        viewSingleSurfaceSg sf bla m.frustum selected sf.globalBB)
                     |> AMap.toASet 
                     |> ASet.map snd 
                 )

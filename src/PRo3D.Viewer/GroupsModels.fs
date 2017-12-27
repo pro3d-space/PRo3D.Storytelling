@@ -32,13 +32,25 @@ type Leaf =
     | Annotations of value : Annotation
     | Surfaces    of value : Surface
     | Bookmarks   of value : Bookmark
-    with 
-    //[<PrimaryKey>] 
-        member x.id =
-            match x with
-                | Annotations a -> a.key
-                | Surfaces    s -> s.guid
-                | Bookmarks   b -> b.key
+    with     
+      member x.id =
+        match x with
+          | Annotations a -> a.key
+          | Surfaces    s -> s.guid
+          | Bookmarks   b -> b.key
+
+      member x.visible =
+        match x with
+          | Annotations a -> a.visible
+          | Surfaces    s -> s.isVisible
+          | Bookmarks   b -> true
+
+      member x.setVisible (v:bool) =
+        match x with
+          | Annotations a -> Leaf.Annotations { a with visible = v }
+          | Surfaces    s -> Leaf.Surfaces    { s with isVisible = v }
+          | Bookmarks   _ -> x
+
             
 
 
@@ -91,7 +103,7 @@ type GroupsModel = {
     flat                 : hmap<Guid,Leaf>
     lastSelectedItem     : SelectedItem
     selectedChilds       : hset<TreeSelection> 
-    lastSelectedChild    : option<Leaf>
+    lastSelectedChild    : option<Guid>
     }
 
 module Leaf =
@@ -115,6 +127,19 @@ module Leaf =
                 match x with
                 | Leaf.Surfaces s -> Some s
                 | _ -> None )
+
+    let toSurface leaf =
+        match leaf with 
+          | Leaf.Surfaces s -> s
+          | _ -> failwith "wrong type"
+
+    let toSurfaces' surfaces =
+        surfaces |> PList.choose(fun x -> match x with | Leaf.Surfaces s -> Some s| _-> None)
+
+    let toAnnotation leaf =
+        match leaf with 
+          | Leaf.Annotations a -> a
+          | _ -> failwith "wrong type"
 
     let childrenToAnnotations annos =
         annos

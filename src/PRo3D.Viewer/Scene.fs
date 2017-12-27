@@ -46,8 +46,7 @@ module Model =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Scene =
-    open Aardvark.Base.MultimethodTest
-    
+    open Aardvark.Base.MultimethodTest       
     
     let surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _flatSurfaces = Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.flat
@@ -74,19 +73,19 @@ module Scene =
         match m.scenePath with
             | Some p ->         
                 let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
-                let newFlats = 
-                    (Leaf.toSurfaces m.surfacesModel.surfaces.flat)   
+                let flat' = 
+                    (m.surfacesModel.surfaces.flat |> Leaf.toSurfaces)
                         |> HMap.map(fun _ x ->                            
                                 if x.relativePaths then
                                     let p'' = Path.Combine(p', x.name)
                                     { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
                                 else x
                             )
-                let flatList = newFlats|> HMap.toList
-                let childList = flatList |> List.map(fun (_,x) -> Leaf.Surfaces x )
-                let newGroupsModel = Groups.updateChildList childList m.surfacesModel.surfaces
-                let m' = { m with surfacesModel = { m.surfacesModel with surfaces = newGroupsModel }}      
-                { m' with surfacesModel = SurfaceModel.updateSurfaces m'.surfacesModel (flatList |> List.map snd |> PList.ofList)}
+                        |> HMap.map(fun _ x -> Leaf.Surfaces x)
+
+                let sm = { m.surfacesModel.surfaces with flat = flat' }                
+                
+                { m with surfacesModel = { m.surfacesModel with surfaces = sm }}      
             | None -> m        
 
     let readLine (filePath:string) =
@@ -150,18 +149,19 @@ module Scene =
 
         let newGroupsModel = 
             m.scene.surfacesModel.surfaces |> 
-              Groups.AddChildren m.scene.surfacesModel.surfaces.activeGroup.path sChildren 
+              Groups.addChildren m.scene.surfacesModel.surfaces.activeGroup.path sChildren 
                 
 
-        let m = //{ m with scene = { m.scene with surfacesModel = { m.scene.surfacesModel with surfaces = newGroupsModel }}}
-            (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, newGroupsModel)
+        let m = (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, newGroupsModel)
         
+        let kk = (m.scene.surfacesModel.surfaces.flat |> Leaf.toSurfaces)
+
         //handle sg surfaces
         let sgSurfaces = 
             allSurfaces
                 |> Surface.createSgSurfaces runtime signature
                 |> HMap.union m.scene.surfacesModel.sgSurfaces
-                |> Files.expandLazyKdTreePaths m.scene.scenePath
+                |> Files.expandLazyKdTreePaths m.scene.scenePath kk
                                        
         let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
                     
@@ -170,15 +170,16 @@ module Scene =
           |> Lenses.set' surfaceModelLens m
              
     let prepareSurfaceModel (runtime : IRuntime) (signature: IFramebufferSignature) (scenePath : option<string>) (model : SurfaceModel) : SurfaceModel =
-        let surfaces = 
-            model.surfaces.flat 
-              |> Leaf.toSurfaces 
+        let surfaces = model.surfaces.flat |> Leaf.toSurfaces 
+
+        let surfacesList =
+            surfaces
               |> HMap.toList 
               |> List.map snd 
               |> PList.ofList
 
         let sgSurfaces = 
-            Surface.createSgSurfaces runtime signature surfaces |> Files.expandLazyKdTreePaths scenePath        
+            Surface.createSgSurfaces runtime signature surfacesList |> Files.expandLazyKdTreePaths scenePath surfaces        
 
         model 
           |> SurfaceModel.withSgSurfaces sgSurfaces 

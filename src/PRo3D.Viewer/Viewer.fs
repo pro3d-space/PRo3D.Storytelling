@@ -55,9 +55,9 @@ module ViewerApp =
 
     // drawing
     let _drawing         = Model.Lens.drawing
-    let _annoGroup       = _drawing |. DrawingModel.Lens.annotations
-    let _flat            = _annoGroup  |. GroupsModel.Lens.flat    
-    let _groups          = _annoGroup  |. GroupsModel.Lens.rootGroup |. Node.Lens.subNodes
+    let _annotations     = _drawing |. DrawingModel.Lens.annotations
+    let _flat            = _annotations  |. GroupsModel.Lens.flat    
+    let _groups          = _annotations  |. GroupsModel.Lens.rootGroup |. Node.Lens.subNodes
        
     let lookAtData (m : Model) =         
         let bb = m |> Lenses.get _sgSurfaces |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -124,7 +124,7 @@ module ViewerApp =
     let mutable cache = hmap.Empty
 
     let isGrabbed (model : Model) =
-        let sel = _selectedSurface.Get(model) |> Option.bind(fun x -> _sgSurfaces.Get(model).TryFind x.id)
+        let sel = _selectedSurface.Get(model) |> Option.bind(fun x -> _sgSurfaces.Get(model).TryFind x)
         match sel with
           | Some s -> s.trafo.grabbed.IsSome
           | None -> false       
@@ -158,34 +158,16 @@ module ViewerApp =
                         let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
                         { m with scene = { m.scene with surfacesModel = s}}
             | AnnotationMessage msg,_,_ ->                
-                    match m.drawing.annotations.lastSelectedChild with
-                        | Some a -> 
-                            match a with 
-                              | Leaf.Annotations ann ->
-                                  let a' = AnnotationProperties.update ann msg |> Leaf.Annotations
-                                  
-                                  // update properties of selected annotation
-
-                                  failwith "annotations properties"
-
-                                  let func = 
-                                      (fun (x:Node) -> x)
-                                          //{ x with childList = if PList.count x.childList > 0 then //Groups.updateChild a' x.childList else x.childList })
-                                  
-                                  let path = m.drawing.annotations.activeChild.path
-                                  let root = Groups.updateNodeAt path func m.drawing.annotations.rootGroup
-                                  //let flats = Groups.flatten root
-
-                                  m
-
-                                  //let groups = Groups.updateGroups m.drawing.annotations root HMap.empty
-                                  //let annotations = { groups with lastSelectedChild = Some a' }                                  
-                                  
-                                  //let drawing' = { m.drawing with annotations = annotations }
-                                  
-                                  //{ m with drawing = drawing' }
-                              | _ -> m
-                        | None -> m       
+                match m.drawing.annotations.lastSelectedChild with
+                  | Some selected ->                             
+                      let f = (fun x ->
+                          let a = x |> Leaf.toAnnotation
+                          AnnotationProperties.update a msg |> Leaf.Annotations)
+                            
+                      m.drawing.annotations
+                        |> Groups.updateLeaf' selected f
+                        |> Lenses.set' _annotations m
+                  | None -> m       
             | BookmarkMessage msg,_,_ ->  
                 let model, bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
                 { m with scene = { m.scene with bookmarksModel = bm; navigation = model.scene.navigation }} 
@@ -348,14 +330,14 @@ module ViewerApp =
                                     match (m.alignment.resultTrafo, m.alignment.alignment)with
                                       | Some t, Some al -> 
                                         
-                                        let shmap = m.scene.surfacesModel.sgSurfaces |> HMap.update al.blue (fun x ->                                            
-                                            match x with 
-                                            | Some s -> { s with surface = { s.surface with preTransform = t }}
-                                            | None -> failwith "surface must exist")
+                                        let f = (fun x -> 
+                                            match x with
+                                              | Leaf.Surfaces s -> { s with preTransform = t} |> Leaf.Surfaces
+                                              |_ -> failwith "wrong type")
 
-                                        let m = _sgSurfaces.Set(m, shmap) 
-                                        let ss = m.scene.surfacesModel|> SurfaceModel.triggerSgGrouping
-
+                                        let g = Groups.updateLeaf' al.blue f m.scene.surfacesModel.surfaces
+                                        let ss = { m.scene.surfacesModel with surfaces = g } |> SurfaceModel.triggerSgGrouping
+                                        
                                         _surfacesModel.Set(m, ss)
                                       | _ -> m
 
@@ -540,26 +522,29 @@ module ViewerApp =
                     let! selected = m.scene.surfacesModel.surfaces.lastSelectedChild
                     let! kind = m.trafoKind
                     match selected with
-                      | Some c -> 
-                          let id = c |> getSurface |> Mod.bind(fun x -> x.guid)
+                      | Some c ->                           
 
-
-                          let! sg = m.scene.surfacesModel.sgSurfaces |> AMap.find (id |> Mod.force)
+                          let! sgo = m.scene.surfacesModel.sgSurfaces |> AMap.tryFind c
                           
-                          let scaling pos =                            
-                            Sg.computeInvariantScale 
-                                m.scene.navigation.camera.view 
-                                (Mod.constant 0.1)
-                                pos 
-                                (Mod.constant 0.5)
-                                (Mod.constant 60.0)
+                          match sgo with 
+                              | Some sg ->
+                                    let scaling pos =                            
+                                        Sg.computeInvariantScale 
+                                            m.scene.navigation.camera.view 
+                                            (Mod.constant 0.1)
+                                            pos 
+                                            (Mod.constant 0.5)
+                                            (Mod.constant 60.0)
 
-                          match kind with
-                            | TrafoKind.Translate ->                                               
-                                return TranslateController.viewController (fun t -> Translate("", t)) scaling sg.trafo
-                            | TrafoKind.Rotate ->
-                                return RotationController.viewController (fun t -> Rotate("", t)) scaling sg.trafo
-                            | _ -> return Sg.empty
+                                    match kind with
+                                    | TrafoKind.Translate ->                                               
+                                        return TranslateController.viewController (fun t -> Translate("", t)) scaling sg.trafo
+                                    | TrafoKind.Rotate ->
+                                        return RotationController.viewController (fun t -> Rotate("", t)) scaling sg.trafo
+                                    | _ -> return Sg.empty
+                              | None -> 
+                                Log.warn "selected surface does not exist"
+                                return Sg.empty                                 
                       | None -> return Sg.empty
                     
                 } |> Sg.dynamic
@@ -582,58 +567,53 @@ module ViewerApp =
             adaptive {                                
                 return (Groups.viewUI model.drawing.annotations |> UI.map AnnotationGroupsMessageViewer)
             } 
-        
-        let lscToDom lsc isSome = 
-            adaptive {
-                match lsc with
-                    | Some a ->   
-                        let! a' = a
-                        match a' with 
-                            | MAnnotations ann -> return isSome ann
-                            | _ -> return div[][]
-                    | None   -> return div[][]
-            }
-        
+                        
         let bookmarkGroupProperties (model:MModel) =
             adaptive {                                
                 return (Groups.viewUI model.scene.bookmarksModel.bookmarks |> UI.map BookmarkUIMessage)
             } 
-
-        let lscToDom2 lsc isSome = 
-            adaptive {
-                match lsc with
-                    | Some b ->   
-                        let! b' = b
-                        match b' with 
-                            | MBookmarks bm -> return isSome bm
-                            | _ -> return div[][]                                                             
-                    | None   -> return div[][] 
-            }
-
+       
         let annotationProperties (model:MModel) =
             adaptive {
-                let! child = model.drawing.annotations.lastSelectedChild
-                let! opt = lscToDom child (fun x -> AnnotationProperties.view x)
+                let! selected = model.drawing.annotations.lastSelectedChild
+                let flat = model.drawing.annotations.flat
 
-                return (opt |> UI.map AnnotationMessage)
+                match selected with
+                  | Some guid -> 
+                      let item = flat |> AMap.find guid |> Mod.bind(id)
+                      let! leaf = item
+                      match leaf with
+                        | MAnnotations ann -> return AnnotationProperties.view ann |> UI.map AnnotationMessage
+                        | _ -> return div[][] |> UI.map AnnotationMessage
+
+                  | None -> 
+                      return div[][] |> UI.map AnnotationMessage              
             } 
 
 
-        let dns (model:MModel) =
+        let dipAndStrike (model:MModel) = 
             adaptive {
-                let! child = model.drawing.annotations.lastSelectedChild                
-                let! opt = lscToDom child (fun x -> DipAndStrike.viewUI x)
+              return div[][] |> UI.map DnSProperties
+            }
+            //failwith "dipandstrick"
+            //adaptive {
+            //    let! child = model.drawing.annotations.lastSelectedChild                
+            //    let! opt = lscToDom child (fun x -> DipAndStrike.viewUI x)
                                 
-                return (opt |> UI.map DnSProperties)
-            } 
+            //    return (opt |> UI.map DnSProperties)
+            //} 
 
-        let bookmarkProperties (model:MModel) =
+        let bookmarkProperties (model:MModel) = 
             adaptive {
-                let! sbm = model.scene.bookmarksModel.bookmarks.lastSelectedChild 
-                let! opt =  lscToDom2 sbm (fun x -> Bookmarks.UI.view x)
+                return div[][] |> UI.map BookmarkUIMessage
+            }
+            //failwith "bookmarkpropsopif"
+            //adaptive {
+            //    let! sbm = model.scene.bookmarksModel.bookmarks.lastSelectedChild 
+            //    let! opt =  lscToDom2 sbm (fun x -> Bookmarks.UI.view x)
                             
-                return (opt |> UI.map BookmarkUIMessage)
-            } 
+            //    return (opt |> UI.map BookmarkUIMessage)
+            //} 
 
         let viewPlanProperties (model:MModel) =
             adaptive {
@@ -664,7 +644,7 @@ module ViewerApp =
                                                                yield i})
                 ] 
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle(dns m))] 
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(dipAndStrike m))] 
             ]      
 
         let config (model:MModel) =
