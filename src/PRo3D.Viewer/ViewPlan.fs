@@ -406,12 +406,12 @@ module ViewPlan =
             //    UI.dropDown'' (RoverApp.roversList m)  m.selectedRover (fun x -> RoverApp.Action.SelectRover (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )
             ]
 
-        let viewRoverProperties (model : MViewPlanModel) = 
+        let viewRoverProperties lifter (model : MViewPlanModel) = 
             model.selectedViewPlan 
                 |> Mod.map(fun x ->
                     match x with 
-                      | Some x -> RoverApp.viewRoverProperties' x.rover model.roverModel
-                      | None ->   div[][])
+                      | Some x -> RoverApp.viewRoverProperties' x.rover model.roverModel |> UI.map lifter
+                      | None ->   div[][] |> UI.map lifter)
 
         let viewViewPlansUI (model:MViewPlanModel) = 
              //let listAttr = AttributeMap.ofList [style "overflow-y : visible"]

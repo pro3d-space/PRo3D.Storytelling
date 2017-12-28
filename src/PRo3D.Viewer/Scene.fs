@@ -48,28 +48,11 @@ module Model =
 module Scene =
     open Aardvark.Base.MultimethodTest       
     
-    let surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
+    let _surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _flatSurfaces = Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.flat
 
     let expandRelativePaths (m:Scene) =
-        // Surfaces        
-        
-        //match m.scenePath with
-        //    | Some p ->         
-        //        let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
-        //        let surfaces = 
-        //            m.surfacesModel.surfaces                           
-        //            |> PList.map(
-        //                fun x -> 
-        //                    if x.relativePaths then
-        //                        //let p'' = Path.Combine(p', x.name)
-        //                        { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
-        //                    else x
-        //                )
-        //        { m with surfacesModel = Surface.updateSurfaces m.surfacesModel surfaces}
-        //    | None -> m     
-                
-
+                        
         match m.scenePath with
             | Some p ->         
                 let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
@@ -88,12 +71,10 @@ module Scene =
                 { m with surfacesModel = { m.surfacesModel with surfaces = sm }}      
             | None -> m        
 
-    let readLine (filePath:string) =
+    let private readLine (filePath:string) =
             use sr = new System.IO.StreamReader (filePath)
             sr.ReadLine ()       
 
-    
-    
     let addLegacyTrafos surfaces = 
         surfaces 
             |> PList.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))
@@ -147,27 +128,25 @@ module Scene =
         let allSurfaces = existingSurfaces |> PList.append' surfaces //????
         let sChildren = surfaces |> PList.map Leaf.Surfaces
 
-        let newGroupsModel = 
-            m.scene.surfacesModel.surfaces |> 
-              Groups.addChildren m.scene.surfacesModel.surfaces.activeGroup.path sChildren 
-                
-
-        let m = (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, newGroupsModel)
+        let m = 
+            m.scene.surfacesModel.surfaces 
+              |> Groups.addLeaves m.scene.surfacesModel.surfaces.activeGroup.path sChildren 
+              |> Lenses.set' (_surfaceModelLens |. SurfaceModel.Lens.surfaces) m                        
         
-        let kk = (m.scene.surfacesModel.surfaces.flat |> Leaf.toSurfaces)
+        let surfaceMap = 
+            (m.scene.surfacesModel.surfaces.flat |> Leaf.toSurfaces)
 
         //handle sg surfaces
-        let sgSurfaces = 
+        let m = 
             allSurfaces
                 |> Surface.createSgSurfaces runtime signature
                 |> HMap.union m.scene.surfacesModel.sgSurfaces
-                |> Files.expandLazyKdTreePaths m.scene.scenePath kk
-                                       
-        let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
+                |> Files.expandLazyKdTreePaths m.scene.scenePath surfaceMap
+                |> Lenses.set' (_surfaceModelLens |. SurfaceModel.Lens.sgSurfaces) m                                               
                     
         m.scene.surfacesModel 
           |> SurfaceModel.triggerSgGrouping 
-          |> Lenses.set' surfaceModelLens m
+          |> Lenses.set' _surfaceModelLens m
              
     let prepareSurfaceModel (runtime : IRuntime) (signature: IFramebufferSignature) (scenePath : option<string>) (model : SurfaceModel) : SurfaceModel =
         let surfaces = model.surfaces.flat |> Leaf.toSurfaces 
@@ -195,7 +174,7 @@ module Scene =
             m.scene.surfacesModel 
               |> prepareSurfaceModel runtime signature s.scenePath
 
-        surfaceModelLens.Set(m, sModel)        
+        _surfaceModelLens.Set(m, sModel)        
                     
     let loadLastScene runtime signature m =
         match Serialization.fileExists "./recent" with

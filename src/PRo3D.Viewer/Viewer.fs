@@ -165,7 +165,7 @@ module ViewerApp =
                           AnnotationProperties.update a msg |> Leaf.Annotations)
                             
                       m.drawing.annotations
-                        |> Groups.updateLeaf' selected f
+                        |> Groups.updateLeaf selected f
                         |> Lenses.set' _annotations m
                   | None -> m       
             | BookmarkMessage msg,_,_ ->  
@@ -331,16 +331,15 @@ module ViewerApp =
                                       | Some t, Some al -> 
                                         
                                         let f = (fun x -> 
-                                            match x with
-                                              | Leaf.Surfaces s -> { s with preTransform = t} |> Leaf.Surfaces
-                                              |_ -> failwith "wrong type")
+                                            let s = x |> Leaf.toSurface
+                                            { s with preTransform = t} |> Leaf.Surfaces)
 
-                                        let g = Groups.updateLeaf' al.blue f m.scene.surfacesModel.surfaces
-                                        let ss = { m.scene.surfacesModel with surfaces = g } |> SurfaceModel.triggerSgGrouping
+                                        let g = Groups.updateLeaf al.blue f m.scene.surfacesModel.surfaces                                          
                                         
-                                        _surfacesModel.Set(m, ss)
+                                        { m.scene.surfacesModel with surfaces = g }
+                                          |> SurfaceModel.triggerSgGrouping
+                                          |> Lenses.set' _surfacesModel m                                                                                
                                       | _ -> m
-
                                  | _ -> m
                             | _ -> m
                                                         
@@ -571,68 +570,46 @@ module ViewerApp =
         let bookmarkGroupProperties (model:MModel) =
             adaptive {                                
                 return (Groups.viewUI model.scene.bookmarksModel.bookmarks |> UI.map BookmarkUIMessage)
-            } 
-       
-        let annotationProperties (model:MModel) =
-            adaptive {
-                let! selected = model.drawing.annotations.lastSelectedChild
-                let flat = model.drawing.annotations.flat
+            }                              
 
-                match selected with
-                  | Some guid -> 
-                      let item = flat |> AMap.find guid |> Mod.bind(id)
-                      let! leaf = item
-                      match leaf with
-                        | MAnnotations ann -> return AnnotationProperties.view ann |> UI.map AnnotationMessage
-                        | _ -> return div[][] |> UI.map AnnotationMessage
+        let viewAnnotationProperties (model :MModel) =
+            let view = (fun leaf ->
+                match leaf with
+                  | MAnnotations ann -> AnnotationProperties.view ann
+                  | _ -> div[][])
+            
+            model.drawing.annotations |> Groups.viewSelected view AnnotationMessage                   
 
-                  | None -> 
-                      return div[][] |> UI.map AnnotationMessage              
-            } 
+        let viewDipAndStrike (model:MModel) = 
+            let view = (fun leaf ->
+                match leaf with
+                  | MAnnotations ann -> DipAndStrike.viewUI ann
+                  | _ -> div[][])
 
+            model.drawing.annotations |> Groups.viewSelected view DnSProperties             
 
-        let dipAndStrike (model:MModel) = 
-            adaptive {
-              return div[][] |> UI.map DnSProperties
-            }
-            //failwith "dipandstrick"
-            //adaptive {
-            //    let! child = model.drawing.annotations.lastSelectedChild                
-            //    let! opt = lscToDom child (fun x -> DipAndStrike.viewUI x)
-                                
-            //    return (opt |> UI.map DnSProperties)
-            //} 
+        let viewBookmarkProperties (model:MModel) = 
+            let view = (fun leaf ->
+                match leaf with
+                  | MBookmarks bm -> Bookmarks.UI.view bm
+                  | _ -> div[][])
 
-        let bookmarkProperties (model:MModel) = 
-            adaptive {
-                return div[][] |> UI.map BookmarkUIMessage
-            }
-            //failwith "bookmarkpropsopif"
-            //adaptive {
-            //    let! sbm = model.scene.bookmarksModel.bookmarks.lastSelectedChild 
-            //    let! opt =  lscToDom2 sbm (fun x -> Bookmarks.UI.view x)
-                            
-            //    return (opt |> UI.map BookmarkUIMessage)
-            //} 
-
+            model.scene.bookmarksModel.bookmarks |> Groups.viewSelected view BookmarkUIMessage
+            
         let viewPlanProperties (model:MModel) =
-            adaptive {
-                let! opt = ViewPlan.UI.viewRoverProperties model.scene.viewPlans
-                return (opt |> UI.map RoverMessage)
-            } 
-
+            model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties  RoverMessage
+            
         let annotationUI = 
             let item2 = 
-                m.drawing.annotations.lastSelectedItem 
+                m.drawing.annotations.lastSelectedItem
                     |> Mod.map (fun x -> 
                         match x with 
                           | SelectedItem.Group -> annotationGroupProperties m
-                          | _ -> annotationProperties m 
+                          | _ -> viewAnnotationProperties m 
                     )
             
             div [][
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
-
                
                 GuiEx.accordion "Annotations" "Write" true [
                     Groups.viewGroupButtons |> UI.map AnnotationGroupsMessageViewer
@@ -644,7 +621,7 @@ module ViewerApp =
                                                                yield i})
                 ] 
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle(dipAndStrike m))] 
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))] 
             ]      
 
         let config (model:MModel) =
@@ -674,7 +651,7 @@ module ViewerApp =
                     |> Mod.map (fun x -> 
                         match x with 
                           | SelectedItem.Group -> bookmarkGroupProperties m
-                          | _ -> bookmarkProperties m 
+                          | _ -> viewBookmarkProperties m 
                     )
             div [][
                 Bookmarks.UI.viewGUI |> UI.map BookmarkMessage

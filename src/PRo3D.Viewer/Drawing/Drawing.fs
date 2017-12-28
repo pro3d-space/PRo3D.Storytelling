@@ -56,22 +56,13 @@ module DrawingApp =
 
         let groups = 
             match getFinishedAnnotation up north model with
-                | Some a -> 
-                    let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
-                    bc.Add json                    
-
-                    let leaf = Leaf.Annotations a
-                    let m = Groups.addToActiveGroup leaf.id leaf model.annotations
-                    let flat' = m.flat |> HMap.add leaf.id leaf
-
-                    { m with flat = flat' }
-
-                | None -> model.annotations
-       
-       // let flat = (Groups.flatten rootGroup)
-
-        //let groups = 
-        //    Groups.updateGroups model.annotations rootGroup flat
+              | Some a -> 
+                let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
+                bc.Add json                    
+                    
+                model.annotations 
+                  |> Groups.addLeafToActiveGroup (Leaf.Annotations a)
+              | None -> model.annotations             
 
         { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
 
@@ -111,8 +102,6 @@ module DrawingApp =
                             | _ -> failwith "case does not exist"
                     
                     result
-                    
-                        
                 | None ->  //no working state, start new working annotation
                     { 
                         //annotation states should be immutable after creation

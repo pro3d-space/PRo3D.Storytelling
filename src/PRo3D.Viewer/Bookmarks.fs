@@ -38,7 +38,8 @@ module Bookmarks =
                 let newBm = 
                     getNewBookmark (navigation.Get outerModel) model.bookmarks.flat.Count
                 
-                let groups = Groups.addToActiveGroup newBm.key (Leaf.Bookmarks newBm) model.bookmarks
+                let groups = 
+                    Groups.addLeafToActiveGroup (Leaf.Bookmarks newBm) model.bookmarks
                 
                 outerModel, { model with bookmarks = groups}
             | GroupsMessage msg -> 
@@ -72,70 +73,61 @@ module Bookmarks =
 
     let viewBookmarks (path:list<Index>) (model:MGroupsModel)(select : MBookmark*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (bookmarks: alist<Guid>) : alist<DomNode<'outer>> = 
                      
-                        alist {
+        alist {
 
-                            
-                            //let color = sprintf "color: %s" (Html.ofC4b C4b.White)      
-                            let bookmarks = bookmarks
-                                                |> AList.map (fun x -> failwith "x")
-                                                |> AList.choose( fun x -> match x with
-                                                                            | MBookmarks a -> Some a
-                                                                            | _-> None )
-                            for b in bookmarks do
+            let bookmarks = 
+                bookmarks
+                  |> AList.map (fun x -> model.flat |> AMap.find x |> Mod.bind(id) |> Mod.force)
+                  |> AList.choose( fun x -> 
+                     match x with
+                       | MBookmarks a -> Some a
+                       | _-> None )
+
+            for b in bookmarks do
                                 
-                                let! c = mkColor model b
-                                let bgc = sprintf "color: %s" (Html.ofC4b c)
+                let! c = mkColor model b
+                let bgc = sprintf "color: %s" (Html.ofC4b c)
 
-                                let select = fun _ -> select (b,path)
-                                let! key = b.key
+                let select = fun _ -> select (b,path)
+                let! key = b.key
 
-
-                                yield div [clazz "item"; style bgc] [
-                                        i [clazz "large Sticky Note middle aligned icon"; onClick select;style bgc][] //i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
-                                        div [clazz "content"; style bgc] [
-                                            let desc = b.name
-                                            yield Incremental.div (AttributeMap.ofList [clazz "header"])(
-                                                alist {
-                                                    yield i [clazz "home icon"                                                
-                                                             onClick (fun _ -> lift <| Groups.UpdateCam key)
-                                                             style bgc][] |> UI.wrapToolTipRight "FlyTo"               
-                                                    yield i [clazz "Remove icon"
-                                                             onClick (fun _ -> lift <| Groups.RemoveChild (key,path)); style bgc] [] |> UI.wrapToolTip "Remove"      
-                                                    } 
-                                            ) 
-                                            yield div [clazz "description"; style bgc] [Incremental.text desc]      
-                                        ]
-                                    ]
-                               
-                        }     
+                yield div [clazz "item"; style bgc] [
+                    i [clazz "large Sticky Note middle aligned icon"; onClick select;style bgc][] //i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                    div [clazz "content"; style bgc] [
+                        let desc = b.name
+                        yield Incremental.div (AttributeMap.ofList [clazz "header"])(
+                            alist {
+                                    yield i [clazz "home icon"; 
+                                             onClick (fun _ -> lift <| Groups.UpdateCam key); 
+                                             style bgc][] |> UI.wrapToolTipRight "FlyTo"
+                    
+                                    yield i [clazz "Remove icon"; 
+                                             onClick (fun _ -> lift <| Groups.RemoveChild (key,path)); 
+                                             style bgc] [] |> UI.wrapToolTip "Remove"
+                                } 
+                        ) 
+                        yield div [clazz "description"; style bgc] [Incremental.text desc]      
+                    ]
+                ]
+        }     
                
 
     let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<Action>> =
 
         alist {
 
-            let! s = model.activeGroup
+            let! active = model.activeGroup
             let color = sprintf "color: %s" (Html.ofC4b C4b.White)                
-            let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
+            
 
             let icon =
-                adaptive {
-                    let active = s.id
+                adaptive {                    
                     let! group  =  group.key
-
-                    return if (active = group) then "circle icon" else "circle thin icon"
+                    return if (active.id = group) then "circle icon" else "circle thin icon"
                 }
                       
-            let map = Groups.mkGroupAttributeMap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
-                   
-                
-            //let toggleIcon =
-            //    adaptive {
-            //        let! toggle = group.visible
-            //        return if toggle then "unhide icon" else "hide icon"
-            //    }
-
-            //let toggleMap = getAmap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+            let map = 
+                Groups.mkGroupAttributeMap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                
             let desc =
                 div [style color] [       
@@ -154,9 +146,7 @@ module Bookmarks =
                         
                     i [clazz "remove icon red"
                        onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
-                    |> UI.wrapToolTip "Remove Group"
-
-                    //Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
+                    |> UI.wrapToolTip "Remove Group"                    
                 ]
                  
             let itemAttributes =
@@ -177,25 +167,27 @@ module Bookmarks =
                     else yield style "hidden"
                 }         
 
+            let leafDomNodes = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
-            let select = fun (a:MBookmark,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force, a.name |> Mod.force))  // Select (path, a.key |> Mod.force)
+            let select = fun (a:MBookmark,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force, a.name |> Mod.force))
             let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
             yield div [ clazz "item"] [
-                    Incremental.i itemAttributes AList.empty
-                    div [ clazz "content" ] [                         
-                        div [ clazz "description noselect"] [desc]
-                        Incremental.div (AttributeMap.ofAMap childrenAttribs) (                          
-                            alist { 
-                                let! isExpanded = group.expanded
-                                if isExpanded then yield! children
+                Incremental.i itemAttributes AList.empty
+                div [ clazz "content" ] [                         
+                    div [ clazz "description noselect"] [desc]
+                    Incremental.div (AttributeMap.ofAMap childrenAttribs) (                          
+                        alist { 
+                            let! isExpanded = group.expanded
+                            if isExpanded then 
+                                yield! leafDomNodes
 
-                                if isExpanded then 
-                                    yield! viewBookmarks path model select lift group.leaves
-                            }
-                        )  
-                                
-                    ]
+                            if isExpanded then 
+                                yield! viewBookmarks path model select lift group.leaves
+                        }
+                    )  
+                            
+                ]
             ]
                 
         }
