@@ -60,6 +60,13 @@ type Interactions =
     | TrafoControls         = 4
     | AlignPick             = 5
 
+type TabMenu = 
+    | Data        = 0
+    | Annotations = 1
+    | Bookmarks   = 2
+    | Config      = 3
+
+
 type WayPoint = {
     name : string
     cv   : CameraView
@@ -82,6 +89,7 @@ type Model = {
     trafoMode       : TrafoMode
 
     alignment       : AlignmentModel
+    tabMenu         : TabMenu
 
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
@@ -133,4 +141,6 @@ module Viewer =
 
         past            = None
         future          = None
+
+        tabMenu = TabMenu.Data
     }

@@ -68,6 +68,7 @@ type ViewerAction =
     | Rotate                    of string * TrafoController.Action
     | SurfaceActions            of SurfaceApp.Action
     | AlignmentActions          of PRo3d.Align.AlignmentActions
+    | SetTabMenu                of TabMenu
 
 
 module ViewerUtils =
