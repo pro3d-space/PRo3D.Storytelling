@@ -186,7 +186,9 @@ module ViewerApp =
                 { m with scene = { m.scene with bookmarksModel = {m.scene.bookmarksModel with bookmarks = bm }}} 
             | RoverMessage msg,_,_ ->
                 let roverModel = RoverApp.update m.scene.viewPlans.roverModel msg
-                { m with scene = { m.scene with viewPlans = { m.scene.viewPlans with roverModel = roverModel }}}  
+                // TODO!!! update rover in viewPlans (also selected) write updateViewPlanRover function in ViewPlan
+                let viewPlanModel = ViewPlan.updateViewPlanFromRover roverModel m.scene.viewPlans
+                { m with scene = { m.scene with viewPlans = viewPlanModel}}  
             | ViewPlanMessage msg,_,_ ->
                 let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
                 { m with scene = { m.scene with viewPlans = viewPlanModel}}  
@@ -690,7 +692,7 @@ module ViewerApp =
                 ("Annotations", annotationUI) 
                 ("Config", configUI)            
                 ("Bookmarks", bookmarkUI) 
-                //("ViewPlanner", viewPlannerUI)
+                ("ViewPlanner", viewPlannerUI)
             ] "Data" 
       
         let topMenu = [

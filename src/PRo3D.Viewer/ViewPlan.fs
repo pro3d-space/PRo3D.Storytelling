@@ -21,6 +21,7 @@ open Aardvark.UI.Primitives
 
 module ViewPlan = 
     open ViewPlanner
+    open Aardvark.Base.MultimethodTest
 
     type Action =
         | AddPoint  of V3d*ReferenceSystem*hmap<string, ConcreteKdIntersectionTree>*SurfaceModel 
@@ -51,6 +52,24 @@ module ViewPlan =
         
                 { model with roverModel = { model.roverModel with rovers = rovs; platforms = plats } }
             | _ -> model
+
+    let updateViewPlans (vp:ViewPlan) (vps:hset<ViewPlan>) =
+        vps
+        |> HSet.map (fun x -> if x.id = vp.id then vp else x)
+    
+    let updateViewPlanFromRover (rover:RoverModel) (vp:ViewPlanModel) =
+        // update rover model
+        let m = {vp with roverModel = rover}
+        // update selected view plan and viewplans
+        let test = match vp.selectedViewPlan with
+                    | Some v -> match rover.selectedRover with
+                                    | Some r -> { v with rover = r }
+                                    | None -> v
+                    | None -> (failwith "no viewplan found")
+        { m with viewPlans = updateViewPlans test vp.viewPlans; selectedViewPlan = Some test}
+        
+       
+
 
     let trafoFromTranslatedBase (position:V3d) (tilt:V3d) (forward:V3d) (right:V3d) : Trafo3d =  
         let rotTrafo =
@@ -206,16 +225,6 @@ module ViewPlan =
             //| _ -> model
 
     module Sg =
-
-        //let coneISg color radius size trafo =  
-        //    Sg.cone 30 color radius size
-        //            |> Sg.noEvents
-        //            |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
-        //                do! Aardvark.Opc.Shader.stableTrafo
-        //                do! DefaultSurfaces.vertexColor
-        //                do! DefaultSurfaces.simpleLighting
-        //            }
-        //            |> Sg.trafo(trafo)
                         
         let drawWorking (model:MViewPlanModel) (cam:IMod<CameraView>) =
            
@@ -283,8 +292,9 @@ module ViewPlan =
                 alist {
                     let! s = axis.startPoint
                     let! e = axis.endPoint
-                    yield e
-                    yield s
+                    let! trafo = trafo
+                    yield trafo.Forward.TransformPos e
+                    yield trafo.Forward.TransformPos s
                 } 
             let color = Mod.constant C4b.Red
             Sg.ofList [
@@ -292,8 +302,49 @@ module ViewPlan =
                     Sg.dots endp color cam 
                     PRo3D.Sg.lines axisLine color thickness trafo (Mod.constant Guid.Empty)
                 ] 
+        
+        let drawInstruments (instruments:alist<MInstrument>) (roverM:MRoverModel) (trafo:IMod<Trafo3d>) (near:IMod<float>) (length:IMod<float>) (thickness:IMod<float>) (cam:IMod<CameraView>) =
+            alist {
+                for i in instruments do
+                    let camPosTrans = 
+                        adaptive{
+                            let! p = i.extrinsics.position
+                            let! trafo = trafo
+                            return trafo.Forward.TransformPos p
+                            }
+                    let camLookAtTrans = 
+                        adaptive{
+                            let! p = i.extrinsics.camLookAt
+                            let! trafo = trafo
+                            return trafo.Forward.TransformDir p
+                            }
+                    let camUpTrans = 
+                        adaptive{
+                            let! p = i.extrinsics.camUp
+                            let! trafo = trafo
+                            return trafo.Forward.TransformDir p
+                            }
+                    let selected = roverM.selectedInstrument
+                    match (selected |> Mod.force) with
+                        | Some s -> match (s.id |> Mod.force) = (i.id |> Mod.force) with
+                                        | true ->
+                                            yield Sg.ofList [
+                                                    ReferenceSystemApp.Sg.point camPosTrans (Mod.constant C4b.Cyan) cam // position
+                                                    ReferenceSystemApp.Sg.directionMarker camPosTrans camLookAtTrans (Mod.constant C4b.Cyan) near length thickness cam // lookAt vec
+                                                    ReferenceSystemApp.Sg.directionMarker camPosTrans camUpTrans (Mod.constant C4b.Red) near length thickness cam // up vec
+                                                ] 
+                                        | false -> 
+                                            yield Sg.ofList [
+                                                    ReferenceSystemApp.Sg.directionMarker camPosTrans camLookAtTrans (Mod.constant C4b.Blue) near length thickness cam // lookAt vec
+                                                    ReferenceSystemApp.Sg.directionMarker camPosTrans camUpTrans (Mod.constant C4b.Red) near length thickness cam // up vec
+                                                ] 
+                        | None -> yield Sg.ofList []
+            }
+                
+           
 
-        let drawSelectionGeometry (vp:MViewPlan) (thickness:IMod<float>) (cam:IMod<CameraView>) = 
+            
+        let drawSelectionGeometry (vp:MViewPlan) (near:IMod<float>) (length:IMod<float>) (thickness:IMod<float>) (cam:IMod<CameraView>) (roverM:MRoverModel)= 
             let wheels = vp.rover.wheelPositions
                             |> Mod.force
                             |> AList.ofList
@@ -303,9 +354,19 @@ module ViewPlan =
                     for a in axes do
                         yield drawAxis a cam thickness vp.roverTrafo
                     } |> ASet.ofAList |> Sg.set
+            let instruments = vp.rover.instruments |> RoverApp.mapTolist
+            let sgInstruments = 
+                 drawInstruments instruments roverM vp.roverTrafo near length thickness cam
+                 |> ASet.ofAList 
+                 |> Sg.set
+                //alist {
+                //    for i in instruments do
+                //        yield drawInstruments i roverM vp.roverTrafo near length thickness cam
+                //    } |> ASet.ofAList |> Sg.set
             Sg.ofList [
                 Sg.dots wheels (Mod.constant C4b.White) cam
                 sgAxes
+                sgInstruments
             ]         
 
         let view<'ma> (mbigConfig : 'ma) (minnerConfig : ReferenceSystemApp.MInnerConfig<'ma>) (model:MViewPlanModel) (cam:IMod<CameraView>) : ISg<Action> =
@@ -322,7 +383,7 @@ module ViewPlan =
                        let id = vp.id
                        yield match (selected |> Mod.force) with
                                     | Some s -> if ((s.id |> Mod.force) = (id |> Mod.force)) then 
-                                                    drawSelectionGeometry s thickness cam
+                                                    drawSelectionGeometry s near length thickness cam model.roverModel
                                                 else Sg.ofList []
                                     | None -> Sg.ofList []
                 } |> Sg.set
