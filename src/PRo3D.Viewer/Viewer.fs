@@ -724,6 +724,7 @@ module ViewerApp =
                 control
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden"] [
                     div[style "height:41px"][text "spacer"]
+                    div [clazz "ui black horizontal label"][text "Show Tab:"]
                     Html.SemUi.dropDown model.tabMenu SetTabMenu
                     viewTabs model.tabMenu                    
                 ]            

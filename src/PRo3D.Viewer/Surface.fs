@@ -455,16 +455,17 @@ module Surface =
                     )
             return absRelIcons
         }    
+
+    let isSelected (model : MGroupsModel) (s : MSurface) =
+        let id = s.guid |> Mod.force
+            
+        model.selectedChilds
+          |> ASet.map(fun x -> x.id = id)
+          |> ASet.contains true
     
     let mkColor (model : MGroupsModel) (s : MSurface) =
-            let id = s.guid |> Mod.force
-
-            let color =  
-                model.selectedChilds
-                    |> ASet.map(fun x -> x.id = id)
-                    |> ASet.contains true
-                    |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)            
-            color
+        isSelected model s 
+          |> Mod.bind (fun x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)
 
     let viewSurfacesInGroups (path:list<Index>) (model:MGroupsModel)(select : MSurface*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (surfaceIds: alist<Guid>) : alist<DomNode<'outer>> = 
             alist {
@@ -473,28 +474,34 @@ module Surface =
                    surfaceIds 
                       |> AList.chooseM (fun x -> model.flat |> AMap.tryFind x)
 
-                let surfaces = surfaces
-                                |> AList.map (fun x -> Mod.force x)
-                                |> AList.choose( fun x -> match x with
-                                                            | MSurfaces s -> Some s
-                                                            | _-> None )
+                let surfaces = 
+                   surfaces
+                      |> AList.map (fun x -> Mod.force x)
+                      |> AList.choose( fun x -> match x with
+                                                  | MSurfaces s -> Some s
+                                                  | _-> None )
                 for s in surfaces do
 
                     let select = fun _ -> select (s,path)
-                    let! c = mkColor model s
-                    let bgc = sprintf "color: %s" (Html.ofC4b c)
+                    let! isSelected = isSelected model s
+                 //   let! c = mkColor model s
+                 //   let bgc = sprintf "color: %s" (Html.ofC4b c)
                     let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
                     let! key = s.guid
                                                                                     
                     let! absRelIcons = absRelIcons s
 
-                    yield div [clazz "item"; style bgc] [
-                        i [clazz "large cube middle aligned icon"; onClick select;style bgc][] 
-                        div [clazz "content"; style bgc] [
+                    yield div [clazz "item"; style infoc] [
+                        i [clazz "large cube middle aligned icon"; onClick select;style infoc][] 
+                       // i [clazz "ui circular label"][Incremental.text (s.priority.value |> Mod.map(sprintf "%.0f"))]
+                        div [clazz "content"; style infoc] [
                             let desc = s.name
                             yield Incremental.div (AttributeMap.ofList [clazz "header"; style infoc])(
                                 alist {
-                                    yield Incremental.text desc
+                                    if isSelected then
+                                        yield div[onClick select][ u[][Incremental.text desc]]
+                                    else
+                                        yield div[onClick select][Incremental.text desc]
 
                                     yield i [clazz "home icon"                                                
                                              onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                                                
@@ -509,11 +516,11 @@ module Surface =
                                              onClick (fun _ -> RemoveSurface (key,path)) ][] |> UI.wrapToolTip "Remove"        
                                     } 
                             ) 
-                            yield div [clazz "description"; style infoc] [
-                                Incremental.text (
-                                    s.relativePaths
-                                        |> Mod.map (fun d -> sprintf " | local: %A" (d)))
-                            ]                                    
+                            //yield div [clazz "description"; style infoc] [
+                            //    Incremental.text (
+                            //        s.relativePaths
+                            //            |> Mod.map (fun d -> sprintf " | local: %A" (d)))
+                            //]                                    
                         ]
                     ]
             }
@@ -527,11 +534,9 @@ module Surface =
             let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
             let activeIcon =
-                adaptive {
-                    let active = s.id
+                adaptive {                    
                     let! group  =  group.key
-
-                    return if (active = group) then "circle icon" else "circle thin icon"
+                    return if (s.id = group) then "circle icon" else "circle thin icon"
                 }
 
             let setActive = Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)
@@ -587,8 +592,10 @@ module Surface =
                 }         
 
 
-            let select = fun (a:MSurface,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.guid |> Mod.force, a.name |> Mod.force))  // Select (path, a.key |> Mod.force)
-            let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
+            let select = fun (a:MSurface,path:list<Index>) -> 
+                Action.GroupsMessage(Groups.SelectChilds (path, a.guid |> Mod.force, a.name |> Mod.force))
+
+            let lift = fun (a:Groups.Action) -> (GroupsMessage a)
 
             yield div [ clazz "item"] [
                     Incremental.i itemAttributes AList.empty

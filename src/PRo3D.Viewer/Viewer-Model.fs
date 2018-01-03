@@ -61,7 +61,7 @@ type Interactions =
     | AlignPick             = 5
 
 type TabMenu = 
-    | Data        = 0
+    | Surfaces    = 0
     | Annotations = 1
     | Bookmarks   = 2
     | Config      = 3
