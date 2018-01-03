@@ -142,5 +142,5 @@ module Viewer =
         past            = None
         future          = None
 
-        tabMenu = TabMenu.Data
+        tabMenu = TabMenu.Surfaces
     }

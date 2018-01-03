@@ -706,7 +706,7 @@ module ViewerApp =
                 alist {
                     let! t = tab
                     match t with
-                      | TabMenu.Data -> 
+                      | TabMenu.Surfaces -> 
                             yield SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions
                       | TabMenu.Annotations -> 
                             yield annotationUI
