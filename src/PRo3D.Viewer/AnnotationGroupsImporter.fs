@@ -11,28 +11,44 @@ module AnnotationGroupsImporter =
 
     let xname s = XName.Get(s)
 
-    let rec getGroups (m:XElement) = 
+    let rec flatten (g:Node) : hset<Guid> =
+        match ((PList.toList g.leaves ), (PList.toList g.subNodes)) with
+            | ([], []) -> HSet.empty
+            | (c, [] ) -> c |> HSet.ofList
+            | ([], sg) -> sg |> HSet.ofList |> HSet.collect flatten
+            | (c, sg)  -> 
+                let sga = 
+                    sg |> HSet.ofList |> HSet.collect flatten
+                HSet.union (c |> HSet.ofList) sga
+
+    let rec getGroups (m:XElement) : (Node * hmap<Guid,Leaf>) = 
         let name = (m.Element(xname "Name")).Value.ToString()
         let visible = (m.Element(xname "IsVisible")).Value.ToBool()
                            
         let annotations = (m.Elements(xname "Measurements").Elements(xname "object")) 
-                            |> Seq.map (fun x -> MeasurementsImporter.getAnnotation x)
-                            |> PList.ofSeq  
-                            |> PList.map(fun x -> Leaf.Annotations x)
+                            |> Seq.map (fun x -> MeasurementsImporter.getAnnotation x)                           
+                            |> Seq.map(fun x -> Leaf.Annotations x)
 
-        let subGroups = (m.Elements(xname "SubGroups")).Elements(xname "MeasurementGroup")
-                            |> Seq.map (fun x -> getGroups x)
-                            |> PList.ofSeq
+        let flat' = annotations |> Seq.map(fun x -> x.id, x) |> HMap.ofSeq
+
+        let subGroupsNFlat = (m.Elements(xname "SubGroups")).Elements(xname "MeasurementGroup")
+                            |> Seq.map (fun x -> getGroups x)             
         
+        let flat' = 
+            subGroupsNFlat 
+              |> Seq.map (fun (_,x) -> x) 
+              |> Seq.toList 
+              |> List.fold (fun acc x -> HMap.union acc x) flat'
+
         let g = {
                 key = Guid.NewGuid()
                 name = name
-                leaves = failwith "annotations"
-                subNodes = subGroups
+                leaves = annotations |> Seq.map(fun x -> x.id) |> PList.ofSeq
+                subNodes = subGroupsNFlat |> Seq.map(fun (x,_) -> x) |> PList.ofSeq
                 visible = visible
                 expanded = true
                 }
-        g
+        (g, flat')
 
     type XmlReader with
     /// Returns a lazy sequence of XElements matching a given name.
@@ -51,10 +67,19 @@ module AnnotationGroupsImporter =
     let startImporter (path:string) =
         let reader = XmlReader.Create path
         let root = reader.StreamElements("MeasurementGroups") 
-        let groups = (root.Elements(xname "MeasurementGroup")) 
+        let groupsNFlat = (root.Elements(xname "MeasurementGroup")) 
                         |> Seq.map (fun x -> getGroups x)
-                        |> PList.ofSeq  
-        groups
+
+        let flat = 
+            groupsNFlat 
+              |> Seq.map (fun (_,x) -> x) 
+              |> Seq.toList 
+              |> List.fold (fun acc x -> HMap.union acc x) HMap.empty
+
+        let groups = 
+            groupsNFlat |> Seq.map (fun (x,_) -> x) |> PList.ofSeq  
+
+        groups, flat
 
 
     type Action =
@@ -62,4 +87,6 @@ module AnnotationGroupsImporter =
         
     let update (model : AnnotationGroupsImporterModel) (act : Action) =
         match act with
-            | ImportGroups s         -> { model with rootGroupI = startImporter s }
+            | ImportGroups s         -> 
+                let groups, flat = startImporter s
+                { model with rootGroupI = groups ; flatI = flat  }

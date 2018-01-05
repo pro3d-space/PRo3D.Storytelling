@@ -195,16 +195,15 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | Some x -> 
                         //update groups
+                        let imported, flat = AnnotationGroupsImporter.startImporter x
+
                         let newGroups = 
                             m.drawing.annotations.rootGroup.subNodes
-                              |> PList.append' (AnnotationGroupsImporter.startImporter x)
+                              |> PList.append' imported
 
-                        let m' = m |> Lenses.set _groups newGroups
+                        let m' = m |> Lenses.set _groups newGroups                        
 
-                        //updat flat layout
-                        let flatAnnotations = failwith "import" // m'.drawing.annotations.rootGroup |> Groups.flatten
-
-                        m' |> Lenses.set _flat flatAnnotations
+                        m' |> Lenses.set _flat flat
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     

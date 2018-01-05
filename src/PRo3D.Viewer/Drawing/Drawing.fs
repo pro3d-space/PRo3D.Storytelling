@@ -689,7 +689,7 @@ module DrawingApp =
                 points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
 
             let invScaleTrafo = 
-                Sg.computeInvariantScale view conf.nearPlane pos (Mod.constant 0.1) conf.hfov |> Mod.map Trafo3d.Scale
+                Sg.computeInvariantScale view conf.nearPlane pos (Mod.constant 0.07) conf.hfov |> Mod.map Trafo3d.Scale
 
             let billboardTrafo = 
                 adaptive {
