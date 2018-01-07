@@ -354,15 +354,24 @@ module DrawingApp =
 
                     let annotations = 
                         annotations
-                          |> AList.map (
+                          |> AList.choose (
                             fun x -> 
-                            let a = model.flat |> AMap.find x |> Mod.bind(id)
-                            a
-                            )
-                          |> AList.choose( fun x -> 
-                            match (x |> Mod.force) with
-                                | MAnnotations a -> Some a
-                                | _-> None )
+                                let anno = 
+                                  model.flat 
+                                    |> AMap.tryFind x 
+                                    |> Mod.map(fun y -> 
+                                       match y with 
+                                         | Some k -> Some (k |> Mod.force)
+                                         | None -> 
+                                            Log.error "annoation with guid %A does not exist" x
+                                            None)                                
+                                match anno |> Mod.force with
+                                  | Some a -> 
+                                    match a with
+                                      | MAnnotations manno -> Some manno
+                                      | _ -> None
+                                  | None -> None
+                            )                          
 
                     for a in annotations do 
                         let select = fun _ -> select (a,path)
