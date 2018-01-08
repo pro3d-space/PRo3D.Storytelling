@@ -8,7 +8,7 @@ open Aardvark.Base.Incremental
 module AnnotationProperties = 
             
     type Action = 
-        | SetGeometry     of Geometry
+        | SetGeometry     of PRo3D.Geometry
         | SetProjection   of Projection
         | SetSemantic     of Semantic
         | ChangeThickness of Numeric.Action
@@ -44,9 +44,7 @@ module AnnotationProperties =
         let wLength  = Mod.bindOption model.results Double.NaN (fun a -> a.wayLength)
 
         require Html.semui (
-            Html.table [                            
-                //Html.row "Geometry:"    [Html.SemUi.dropDown model.geometry SetGeometry]
-                //Html.row "Projection:"  [Html.SemUi.dropDown model.projection SetProjection]      
+            Html.table [                                            
                 Html.row "Geometry:"    [Incremental.text (model.geometry |> Mod.map (fun x -> sprintf "%A" x ))]
                 Html.row "Projection:"  [Incremental.text (model.projection |> Mod.map (fun x -> sprintf "%A" x ))]
                 Html.row "Semantic:"    [Html.SemUi.dropDown model.semantic SetSemantic]      

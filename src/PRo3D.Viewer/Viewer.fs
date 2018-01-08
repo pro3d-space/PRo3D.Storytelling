@@ -196,16 +196,15 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | Some x -> 
                         //update groups
+                        let imported, flat = AnnotationGroupsImporter.startImporter x
+
                         let newGroups = 
                             m.drawing.annotations.rootGroup.subNodes
-                              |> PList.append' (AnnotationGroupsImporter.startImporter x)
+                              |> PList.append' imported
 
-                        let m' = m |> Lenses.set _groups newGroups
+                        let m' = m |> Lenses.set _groups newGroups                        
 
-                        //updat flat layout
-                        let flatAnnotations = failwith "import" // m'.drawing.annotations.rootGroup |> Groups.flatten
-
-                        m' |> Lenses.set _flat flatAnnotations
+                        m' |> Lenses.set _flat flat
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
@@ -446,6 +445,8 @@ module ViewerApp =
                  //           | None   -> failwith "surface not found")
                  //    |> Lenses.set' _sgSurfaces m
                  //  | None -> m
+            | SetTabMenu tab,_,_ ->
+                { m with tabMenu = tab }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -601,9 +602,9 @@ module ViewerApp =
             model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage //RoverMessage
             
         let annotationUI = 
-            let item2 = 
+            let prop = 
                 m.drawing.annotations.lastSelectedItem
-                    |> Mod.map (fun x -> 
+                    |> Mod.bind (fun x -> 
                         match x with 
                           | SelectedItem.Group -> annotationGroupProperties m
                           | _ -> viewAnnotationProperties m 
@@ -617,9 +618,7 @@ module ViewerApp =
                     DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
                 GuiEx.accordion "Properties" "Content" true [
-                    Incremental.div AttributeMap.empty (alist{ let! item = item2
-                                                               let! i = item
-                                                               yield i})
+                    Incremental.div AttributeMap.empty (AList.ofModSingle prop)
                 ] 
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))] 
@@ -701,13 +700,33 @@ module ViewerApp =
              //button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
              //button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
         ] 
+
+        let viewTabs (tab:IMod<TabMenu>) = 
+            let nodes =
+                alist {
+                    let! t = tab
+                    match t with
+                      | TabMenu.Surfaces -> 
+                            yield SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions
+                      | TabMenu.Annotations -> 
+                            yield annotationUI
+                      | TabMenu.Bookmarks -> 
+                            yield bookmarkUI
+                      | TabMenu.Config -> 
+                            yield configUI
+                      | _-> failwith "tab not supported"
+                    
+                }
+            Incremental.div AttributeMap.empty nodes                        
                      
         let rest (model : MModel) = 
             [             
                 control
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden"] [
                     div[style "height:41px"][text "spacer"]
-                    tabs                    
+                    div [clazz "ui black horizontal label"][text "Show Tab:"]
+                    Html.SemUi.dropDown model.tabMenu SetTabMenu
+                    viewTabs model.tabMenu                    
                 ]            
             ]
         
@@ -795,7 +814,7 @@ module ViewerApp =
                 "Add Surface", [openSurface]                
                 "Import AnnotationGroups", [importAnnotationGroups]]                              
             onBoot usingContext (                            
-                body [clazz "context example"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
+                body [clazz "context example"; style "overflow-y:hidden"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
         ))
                
     /// Thread Pool stuff

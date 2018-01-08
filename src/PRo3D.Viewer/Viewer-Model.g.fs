@@ -217,6 +217,7 @@ module Mutable =
         let _trafoKind = ResetMod.Create(__initial.trafoKind)
         let _trafoMode = ResetMod.Create(__initial.trafoMode)
         let _alignment = PRo3d.Align.Mutable.MAlignmentModel.Create(__initial.alignment)
+        let _tabMenu = ResetMod.Create(__initial.tabMenu)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
         
@@ -232,6 +233,7 @@ module Mutable =
         member x.trafoKind = _trafoKind :> IMod<_>
         member x.trafoMode = _trafoMode :> IMod<_>
         member x.alignment = _alignment
+        member x.tabMenu = _tabMenu :> IMod<_>
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         
@@ -252,6 +254,7 @@ module Mutable =
                 ResetMod.Update(_trafoKind,v.trafoKind)
                 ResetMod.Update(_trafoMode,v.trafoMode)
                 PRo3d.Align.Mutable.MAlignmentModel.Update(_alignment, v.alignment)
+                ResetMod.Update(_tabMenu,v.tabMenu)
                 _past.Update(v.past)
                 _future.Update(v.future)
                 
@@ -341,6 +344,12 @@ module Mutable =
                     override x.Get(r) = r.alignment
                     override x.Set(r,v) = { r with alignment = v }
                     override x.Update(r,f) = { r with alignment = f r.alignment }
+                }
+            let tabMenu =
+                { new Lens<PRo3D.Viewer.Model, PRo3D.Viewer.TabMenu>() with
+                    override x.Get(r) = r.tabMenu
+                    override x.Set(r,v) = { r with tabMenu = v }
+                    override x.Update(r,f) = { r with tabMenu = f r.tabMenu }
                 }
             let past =
                 { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with

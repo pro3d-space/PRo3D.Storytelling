@@ -170,6 +170,7 @@ module GroupsModel =
 [<DomainType>]
 type AnnotationGroupsImporterModel = {
     rootGroupI       : plist<Node>
+    flatI             : hmap<Guid,Leaf>
 }
 
 [<DomainType>]

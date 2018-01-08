@@ -283,8 +283,10 @@ module Mutable =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsImporterModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.AnnotationGroupsImporterModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsImporterModel>
         let _rootGroupI = MList.Create(__initial.rootGroupI, (fun v -> MNode.Create(v)), (fun (m,v) -> MNode.Update(m, v)), (fun v -> v))
+        let _flatI = MMap.Create(__initial.flatI, (fun v -> MLeaf.Create(v)), (fun (m,v) -> MLeaf.Update(m, v)), (fun v -> v))
         
         member x.rootGroupI = _rootGroupI :> alist<_>
+        member x.flatI = _flatI :> amap<_,_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Groups.AnnotationGroupsImporterModel) =
@@ -292,6 +294,7 @@ module Mutable =
                 __current.Value <- v
                 
                 MList.Update(_rootGroupI, v.rootGroupI)
+                MMap.Update(_flatI, v.flatI)
                 
         
         static member Create(__initial : PRo3D.Groups.AnnotationGroupsImporterModel) : MAnnotationGroupsImporterModel = MAnnotationGroupsImporterModel(__initial)
@@ -313,6 +316,12 @@ module Mutable =
                     override x.Get(r) = r.rootGroupI
                     override x.Set(r,v) = { r with rootGroupI = v }
                     override x.Update(r,f) = { r with rootGroupI = f r.rootGroupI }
+                }
+            let flatI =
+                { new Lens<PRo3D.Groups.AnnotationGroupsImporterModel, Aardvark.Base.hmap<System.Guid,PRo3D.Groups.Leaf>>() with
+                    override x.Get(r) = r.flatI
+                    override x.Set(r,v) = { r with flatI = v }
+                    override x.Update(r,f) = { r with flatI = f r.flatI }
                 }
     
     
