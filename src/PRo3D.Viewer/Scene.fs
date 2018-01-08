@@ -11,56 +11,70 @@ open PRo3D.Surfaces.Surface
 open PRo3D.Groups
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Model =
+
+    let withScene (s:Scene) (m:Model) =
+        { m with scene = s}
+
+    let withScene' (m:Model) (s:Scene) =
+        { m with scene = s}
+
+    let private stashAndSaveRecent' (s : SceneHandle) (model : Model) =
+        let scenePaths = 
+            model.recent.recentScenes                 
+                |> HMap.update s.path 
+                    (
+                        fun v -> 
+                            match v with
+                                | Some x -> { x with writeDate = s.writeDate }
+                                | None -> s
+                    )
+
+        let recent = { model.recent with recentScenes = scenePaths }
+
+        Serialization.save "./recent" recent |> ignore
+
+        { model with recent = recent }
+
+    let stashAndSaveRecent (path : string) (model : Model) =
+        let handle = {
+            name = Path.GetFileName(path)
+            path = path
+            writeDate = DateTime.Now
+        }
+        stashAndSaveRecent' handle model
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Scene =
-    open Aardvark.Base.MultimethodTest
+    open Aardvark.Base.MultimethodTest       
     
-    
-    let surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
+    let _surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _flatSurfaces = Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.flat
 
     let expandRelativePaths (m:Scene) =
-        // Surfaces        
-        
-        //match m.scenePath with
-        //    | Some p ->         
-        //        let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
-        //        let surfaces = 
-        //            m.surfacesModel.surfaces                           
-        //            |> PList.map(
-        //                fun x -> 
-        //                    if x.relativePaths then
-        //                        //let p'' = Path.Combine(p', x.name)
-        //                        { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
-        //                    else x
-        //                )
-        //        { m with surfacesModel = Surface.updateSurfaces m.surfacesModel surfaces}
-        //    | None -> m     
-        
+                        
         match m.scenePath with
             | Some p ->         
                 let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
-                let newFlats = 
-                    (Child.childrenToSurfaces m.surfacesModel.surfaces.flat)   
-                        |> HSet.map(
-                            fun x -> 
+                let flat' = 
+                    (m.surfacesModel.surfaces.flat |> Leaf.toSurfaces)
+                        |> HMap.map(fun _ x ->                            
                                 if x.relativePaths then
                                     let p'' = Path.Combine(p', x.name)
                                     { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
                                 else x
                             )
-                let flatList = newFlats|> HSet.toList
-                let childList = flatList |> List.map(fun x -> Child.Surfaces x )
-                let newGroupsModel = Groups.updateChildList childList m.surfacesModel.surfaces
-                let m' = { m with surfacesModel = { m.surfacesModel with surfaces = newGroupsModel }}      
-                { m' with surfacesModel = SurfaceModel.updateSurfaces m'.surfacesModel (flatList |> PList.ofList)}
+                        |> HMap.map(fun _ x -> Leaf.Surfaces x)
+
+                let sm = { m.surfacesModel.surfaces with flat = flat' }                
+                
+                { m with surfacesModel = { m.surfacesModel with surfaces = sm }}      
             | None -> m        
 
-    let readLine (filePath:string) =
+    let private readLine (filePath:string) =
             use sr = new System.IO.StreamReader (filePath)
             sr.ReadLine ()       
 
-    
-    
     let addLegacyTrafos surfaces = 
         surfaces 
             |> PList.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))
@@ -102,52 +116,66 @@ module Scene =
         let surfaces = 
             surfaces 
                 |> addLegacyTrafos
-                |> addSurfaceAttributes                
+                |> addSurfaceAttributes
 
-        let existingSurfaces = Child.childrenToSurfaces m.scene.surfacesModel.surfaces.flat |> HSet.toList |> PList.ofList         
-        let allSurfaces = surfaces |> PList.append' existingSurfaces
-        let sChildren = surfaces |> PList.map (fun x -> Child.Surfaces x) 
-        let newGroupsModel = Groups.AddChildren m.scene.surfacesModel.surfaces.activeGroup.path sChildren m.scene.surfacesModel.surfaces
-        let m = //{ m with scene = { m.scene with surfacesModel = { m.scene.surfacesModel with surfaces = newGroupsModel }}}
-            (surfaceModelLens |. SurfaceModel.Lens.surfaces).Set(m, newGroupsModel)
+        let existingSurfaces = 
+            m.scene.surfacesModel.surfaces.flat
+              |> Leaf.toSurfaces
+              |> HMap.toList 
+              |> List.map snd 
+              |> PList.ofList         
+
+        let allSurfaces = existingSurfaces |> PList.append' surfaces //????
+        let sChildren = surfaces |> PList.map Leaf.Surfaces
+
+        let m = 
+            m.scene.surfacesModel.surfaces 
+              |> Groups.addLeaves m.scene.surfacesModel.surfaces.activeGroup.path sChildren 
+              |> Lenses.set' (_surfaceModelLens |. SurfaceModel.Lens.surfaces) m                        
         
+        let surfaceMap = 
+            (m.scene.surfacesModel.surfaces.flat |> Leaf.toSurfaces)
+
         //handle sg surfaces
-        let sgSurfaces = 
+        let m = 
             allSurfaces
                 |> Surface.createSgSurfaces runtime signature
                 |> HMap.union m.scene.surfacesModel.sgSurfaces
-                |> Files.expandLazyKdTreePaths m.scene.scenePath
-                                       
-        let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
+                |> Files.expandLazyKdTreePaths m.scene.scenePath surfaceMap
+                |> Lenses.set' (_surfaceModelLens |. SurfaceModel.Lens.sgSurfaces) m                                               
+                    
+        m.scene.surfacesModel 
+          |> SurfaceModel.triggerSgGrouping 
+          |> Lenses.set' _surfaceModelLens m
+             
+    let prepareSurfaceModel (runtime : IRuntime) (signature: IFramebufferSignature) (scenePath : option<string>) (model : SurfaceModel) : SurfaceModel =
+        let surfaces = model.surfaces.flat |> Leaf.toSurfaces 
 
-        let grouped = m.scene.surfacesModel |> SurfaceModel.triggerSgGrouping
-        surfaceModelLens.Set(m, grouped)        
+        let surfacesList =
+            surfaces
+              |> HMap.toList 
+              |> List.map snd 
+              |> PList.ofList
 
-    /// loads surfaces given in scene - creates their sg pendants
-    let load (runtime : IRuntime) (signature: IFramebufferSignature)(s : Scene) (m : Model) =
-        
-        let s = s |> expandRelativePaths
+        let sgSurfaces = 
+            Surface.createSgSurfaces runtime signature surfacesList |> Files.expandLazyKdTreePaths scenePath surfaces        
 
-        let flat = Groups.flatten s.surfacesModel.surfaces.rootGroup
-        let s = _flatSurfaces.Set(s, flat)
-        let m = { m with scene = s }
-
-        let surfs = s.surfacesModel.surfaces.flat |> Child.childrenToSurfaces |> HSet.toList |> PList.ofList
-
-        let sgSurfaces = Surface.createSgSurfaces runtime signature surfs |> Files.expandLazyKdTreePaths m.scene.scenePath
-
-        let m = (surfaceModelLens |. SurfaceModel.Lens.sgSurfaces).Set(m, sgSurfaces)
-
-        let grouped = m.scene.surfacesModel |> SurfaceModel.triggerSgGrouping
-        
-        surfaceModelLens.Set(m, grouped)
+        model 
+          |> SurfaceModel.withSgSurfaces sgSurfaces 
+          |> SurfaceModel.triggerSgGrouping       
 
     let loadScene path m runtime signature =
         let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
-        let m = { m with scene = s }
+        
+        let m = 
+            m |> Model.withScene (expandRelativePaths <| s)
 
-        load runtime signature s m
-            
+        let sModel = 
+            m.scene.surfacesModel 
+              |> prepareSurfaceModel runtime signature s.scenePath
+
+        _surfaceModelLens.Set(m, sModel)        
+                    
     let loadLastScene runtime signature m =
         match Serialization.fileExists "./recent" with
             | Some path  ->

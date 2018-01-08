@@ -47,6 +47,15 @@ module PList =
     let applyNonEmpty (func : plist<_> -> plist<_>) (a : plist<_>) =
         if PList.count a > 0 then (a |> func) else a
 
+    let remove' (v : 'a) (list: plist<'a>) : plist<'a> =
+        list |> PList.filter(fun x -> x <> v)
+
+module Option = 
+    let fromBool v b =
+        match b with 
+          | true  -> Some v
+          | false -> None
+
 
 type Points = list<V3d>
 

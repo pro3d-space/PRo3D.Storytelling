@@ -262,7 +262,7 @@ module PlatformShot =
         let result = 
             Some init 
               |> Option.bind(fun x -> getRover rm.selectedRover x)
-              |> Option.bind(fun x -> getInstrument rm.selectedInstrument x)
+              //|> Option.bind(fun x -> getInstrument rm.selectedInstrument x)
               |> Option.bind(fun x -> getAxes rm.selectedRover x)
               |> Option.map(fun x -> x |> withShot sh)
         

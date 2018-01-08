@@ -64,13 +64,13 @@ module SurfaceProperties =
         require Html.semui (
             Html.table [                                            
                // Html.row "Path:"        [Incremental.text (model.importPath |> Mod.map (fun x -> sprintf "%A" x ))]                
-                Html.row "Fillmode:"    [Html.SemUi.dropDown model.fillMode SetFillMode]
-                Html.row "Cullmode:"    [Html.SemUi.dropDown model.cullMode SetCullMode]
                 Html.row "Name:"        [Html.SemUi.textBox model.name SetName ]
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
-                Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider]   model.quality  |> UI.map SetQuality ]
                 Html.row "Priority:"    [Numeric.view' [NumericInputType.InputBox] model.priority |> UI.map SetPriority ]       
+                Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider]   model.quality  |> UI.map SetQuality ]
+                Html.row "Fillmode:"    [Html.SemUi.dropDown model.fillMode SetFillMode]
                 Html.row "Scalars:"     [UI.dropDown'' model.scalarLayers  model.selectedScalar   (fun x -> SetScalarMap x)   (fun x -> x.label)]
                 Html.row "Textures:"    [UI.dropDown'' model.textureLayers model.selectedTexture  (fun x -> SetTexturesMap x) (fun x -> x.label)]
+                Html.row "Cull Faces:"  [Html.SemUi.dropDown model.cullMode SetCullMode]
             ]
         )

@@ -185,13 +185,13 @@ module Mutable =
     type MSgSurface(__initial : PRo3D.Surfaces.SgSurface) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurface> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.SgSurface>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurface>
-        let _surface = MSurface.Create(__initial.surface)
+        let _surface = ResetMod.Create(__initial.surface)
         let _trafo = Aardvark.UI.Trafos.Mutable.MTransformation.Create(__initial.trafo)
         let _globalBB = ResetMod.Create(__initial.globalBB)
         let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
         let _kdTree = MMap.Create(__initial.kdTree)
         
-        member x.surface = _surface
+        member x.surface = _surface :> IMod<_>
         member x.trafo = _trafo
         member x.globalBB = _globalBB :> IMod<_>
         member x.sceneGraph = _sceneGraph :> IMod<_>
@@ -202,7 +202,7 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
-                MSurface.Update(_surface, v.surface)
+                ResetMod.Update(_surface,v.surface)
                 Aardvark.UI.Trafos.Mutable.MTransformation.Update(_trafo, v.trafo)
                 ResetMod.Update(_globalBB,v.globalBB)
                 ResetMod.Update(_sceneGraph,v.sceneGraph)
@@ -224,7 +224,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let surface =
-                { new Lens<PRo3D.Surfaces.SgSurface, PRo3D.Surfaces.Surface>() with
+                { new Lens<PRo3D.Surfaces.SgSurface, System.Guid>() with
                     override x.Get(r) = r.surface
                     override x.Set(r,v) = { r with surface = v }
                     override x.Update(r,f) = { r with surface = f r.surface }

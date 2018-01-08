@@ -241,10 +241,10 @@ module RemoteControlApp =
                         ]
                         viewShots m
                     ]
-                    div[clazz "ui segment"] [
-                        h2 [clazz "ui header"][text "Rovers"]
-                        RoverApp.view m.Rover |> UI.map RoverMessage
-                    ]
+                    //div[clazz "ui segment"] [
+                    //    h2 [clazz "ui header"][text "Rovers"]
+                    //    RoverApp.view m.Rover |> UI.map RoverMessage
+                    //]
                 ]
                 div[clazz "column"] []                
             ]    

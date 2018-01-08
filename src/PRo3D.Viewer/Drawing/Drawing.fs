@@ -56,18 +56,13 @@ module DrawingApp =
 
         let groups = 
             match getFinishedAnnotation up north model with
-                | Some a -> 
-                    let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString
-                 //   Log.line "sending %A" a.semantic
-                    bc.Add json
-
-                    Groups.addToActiveGroup model.annotations (Child.Annotations a)
-                | None -> model.annotations
-       
-       // let flat = (Groups.flatten rootGroup)
-
-        //let groups = 
-        //    Groups.updateGroups model.annotations rootGroup flat
+              | Some a -> 
+                let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
+                bc.Add json                    
+                    
+                model.annotations 
+                  |> Groups.addLeafToActiveGroup (Leaf.Annotations a)
+              | None -> model.annotations             
 
         { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
 
@@ -107,8 +102,6 @@ module DrawingApp =
                             | _ -> failwith "case does not exist"
                     
                     result
-                    
-                        
                 | None ->  //no working state, start new working annotation
                     { 
                         //annotation states should be immutable after creation
@@ -355,15 +348,22 @@ module DrawingApp =
          
       
 
-        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(select : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<IMod<MChild>>) : alist<DomNode<'outer>> =
+        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(select : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<Guid>) : alist<DomNode<'outer>> =
                            
                 alist { 
 
-                    let annotations = annotations
-                                        |> AList.map (fun x -> Mod.force x)
-                                        |> AList.choose( fun x -> match x with
-                                                                    | MAnnotations a -> Some a
-                                                                    | _-> None )
+                    let annotations = 
+                        annotations
+                          |> AList.map (
+                            fun x -> 
+                            let a = model.flat |> AMap.find x |> Mod.bind(id)
+                            a
+                            )
+                          |> AList.choose( fun x -> 
+                            match (x |> Mod.force) with
+                                | MAnnotations a -> Some a
+                                | _-> None )
+
                     for a in annotations do 
                         let select = fun _ -> select (a,path)
                                 
@@ -396,14 +396,14 @@ module DrawingApp =
                         ]
                 }     
               
-        let rec viewTree path (group : MGroup) (model : MGroupsModel) : alist<DomNode<Action>> =
+        let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<Action>> =
 
             alist {
 
                 let! s = model.activeGroup
                 
                 
-                let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subGroups    
+                let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
                 let icon =
                     adaptive {
@@ -478,7 +478,7 @@ module DrawingApp =
                                 if isExpanded then yield! children
 
                                 if isExpanded then 
-                                    yield! viewAnnotationsInGroup path model select lift group.childList
+                                    yield! viewAnnotationsInGroup path model select lift group.leaves
                             }
                          )  
                                 
@@ -663,7 +663,6 @@ module DrawingApp =
 
         let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) = 
             let right = forw.Cross up
-
             let rotTrafo = 
                 new Trafo3d(
                     new M44d(
@@ -679,11 +678,9 @@ module DrawingApp =
                         0.0,     0.0,     0.0,     1.0
                     )
             )
-            
             rotTrafo * modelt
 
         let text (view : IMod<CameraView>) conf (anno : MAnnotation) =
-
             let points = anno.points |> AList.toMod
             let pos = 
                 points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
@@ -740,7 +737,8 @@ module DrawingApp =
             // since set provides more degrees of freedom for the compiler           
             let annoSet = 
                 model.annotations.flat 
-                    |> ASet.chooseM(fun x -> x |> Mod.map toAnnotationOpt)
+                    |> AMap.chooseM(fun x y -> y |> Mod.map toAnnotationOpt) 
+                    |> AMap.toASet
 
             let config = 
                 {
@@ -755,7 +753,7 @@ module DrawingApp =
 
             let annotations =
                 aset {
-                    for a in annoSet do
+                    for (_,a) in annoSet do
                        let c = UI.mkColor model.annotations a
                        let dots = a.geometry |> Mod.map(fun geo -> match geo with | Geometry.Line | Geometry.Point -> true | _ -> false)                       
                        yield finishedAnnotation a cam c config dots

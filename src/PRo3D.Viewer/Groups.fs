@@ -12,8 +12,9 @@ open PRo3D
 
 
 module Groups =
-    open DomainModel
-    open Aardvark.Base.MultimethodTest
+    open DomainModel        
+    open Aardvark.Base.Geometry.BvhTree
+
     //open Aardvark.UI.Static.Svg
    
     type Action =
@@ -21,11 +22,11 @@ module Groups =
         | ToggleExpand          of list<Index>
         | AddGroup              of list<Index>
         | RemoveGroup           of list<Index>
-        | AddChildren           of list<Index>*plist<Child>    
+        | AddChildren           of list<Index>*plist<Leaf>    
         | RemoveChild           of Guid*list<Index> 
         | ToggleChildVisibility of Guid*list<Index> 
         | ActiveChild           of Guid*list<Index>*string
-        | UpdateChildProperties of Child
+        | UpdateChildProperties of Leaf
         | SetGroupName          of string
         | SetChildName          of string
         | ClearGroup            of list<Index>
@@ -35,139 +36,165 @@ module Groups =
         | ClearSelection
         | UpdateCam             of Guid
         | Nop
-
-    let tryGet' (ans:hset<Child>) id = 
-            ans |> Seq.tryFind(fun x -> x.id = id)
-
-    let updateGroups (model:GroupsModel) (root:Group) (flat:hset<Child>) =        
-        { model with rootGroup = root; flat = flat }      
         
-    let rec flatten (g:Group) : hset<Child> =
-        match ((PList.toList g.childList ), (PList.toList g.subGroups)) with
-            | ([], []) -> HSet.empty
-            | (c, [] ) -> c |> HSet.ofList
-            | ([], sg) -> sg |> HSet.ofList |> HSet.collect flatten 
-            | (c, sg)  -> 
-                let sga = 
-                    sg |> HSet.ofList |> HSet.collect flatten                    
-                HSet.union (c |> HSet.ofList) sga
+    let loadAnnotationGroups (path:string) =
+        Serialization.loadAs<PRo3D.Groups.GroupsModel> path               
+        
+    let getNode (path : list<Index>) (root : Node) : Node =
+        let rec goDeeper (p : list<Index>) (node : Node) =
+          match p with 
+            | [] -> 
+                Log.warn "found %A" node.name
+                node
+            | x :: rest ->
+                Log.warn "visiting %A" x
+                match PList.tryGet x node.subNodes with
+                  | Some n -> goDeeper rest n
+                  | None   -> Log.error "Index list does not match tree"; node
+
+        goDeeper (List.rev path) root
+
+    let collectLeaves (target : Node) =
+        let rec loop (target : Node) =
+            let leafIds = target.leaves |> PList.toList
+            
+            let subs = 
+                target.subNodes |> PList.toList |> List.collect(fun x -> loop x)
+
+            List.concat [leafIds; subs]
+
+        loop target |> PList.ofList
+
+    let updateLeaf' id f model =
+        let update = 
+            (fun (d:option<Leaf>) ->
+                match d with 
+                  | Some k -> Some (f k)
+                  | None   -> None )
+          
+        HMap.alter id update model.flat
+
+    let updateLeaf id f model =
+        let flat' = updateLeaf' id f model
+        { model with flat = flat' }
+
+    let updateLeaf'' (l:Leaf) (m:GroupsModel) : GroupsModel =
+        let f = (fun _ -> l)
+        updateLeaf l.id f m        
+
+    let updateLeaves leaves f model =
+        let flat' =
+          leaves
+          |> PList.toList
+          |> List.map  (fun x -> updateLeaf' x f model)
+          |> List.fold (fun a b -> HMap.union a b) HMap.empty
+
+        { model with flat = flat' }
+
     
     let loadGroups (path:string) =
-        let groups = Serialization.loadAs<PRo3D.Groups.GroupsModel> path          
-        { groups with flat = (flatten groups.rootGroup) } 
+        Serialization.loadAs<PRo3D.Groups.GroupsModel> path       //let groups =    
+        //{ groups with flat = (flatten groups.rootGroup) } 
 
-    //let loadSurfaceGroups (path:string) =
-    //    let groups = Serialization.loadAs<PRo3D.Groups.GroupsModel> path          
-    //    { groups with flat = (flatten groups.rootGroup) } 
-
-    let tryGetChild (ag:Group) id = 
-        flatten ag |> Seq.tryFind(fun x -> x.id = id)
-
-    let updateItemAt (p : list<Index>) (f : Group -> Group) (t : Group) = 
-        let rec go (p : list<Index>) (t : Group) =
+    let updateNodeAt (p : list<Index>) (f : Node -> Node) (t : Node) = 
+        let rec go (p : list<Index>) (t : Node) =
             match p with
               | [] -> f t
               | x::rest ->
-                    match PList.tryGet x t.subGroups with
-                      | Some c -> { t with subGroups = PList.set x (go rest c) t.subGroups }                                                  
+                    match PList.tryGet x t.subNodes with
+                      | Some c -> { t with subNodes = PList.set x (go rest c) t.subNodes }                                                  
                       | None   -> t
         go (List.rev p) t 
-
-    let deleteItemAt (p : list<Index>) (f : Group -> Guid -> Group) (t : Group) = 
-        let rec go (p : list<Index>) (t : Group)  =
+    
+    let updateActiveGroup (f : Node -> Node) (m : GroupsModel) =
+        let root = updateNodeAt m.activeGroup.path f m.rootGroup
+        { m with rootGroup = root }
+    
+    let deleteItemAt (p : list<Index>) (f : Node -> Guid -> Node) (t : Node) = 
+        let rec go (p : list<Index>) (t : Node)  =
             match p with
               | x::rest -> 
                 match rest with
                   | [] -> 
-                    match PList.tryGet x t.subGroups with
+                    match PList.tryGet x t.subNodes with
                       | Some c -> f t c.key
                       | None -> t
                   | _ -> 
-                    match PList.tryGet x t.subGroups with
-                      | Some c -> { t with subGroups = PList.set x (go rest c) t.subGroups }                                 
+                    match PList.tryGet x t.subNodes with
+                      | Some c -> { t with subNodes = PList.set x (go rest c) t.subNodes }                                 
                       | None   -> t
               | _ -> t
         go (List.rev p) t 
         
-    let removeGroup (ag:Group) (id:Guid) = 
-        ag.subGroups |> PList.filter (fun x -> x.key <> id) 
-    
-    let removeChild (id:Guid) (childs:plist<Child>) = 
-        childs |> PList.filter (fun x -> x.id <> id)   
+    let removeGroup (ag:Node) (id:Guid) = 
+        ag.subNodes |> PList.filter (fun x -> x.key <> id)           
 
-    let toggleChild (id:Guid) (childs:plist<Child>) =
-        childs |> PList.map(fun x -> if x.id = id then Child.toggleVisibility x else x) 
-        
-    let toggleChildList (childs:plist<Child>) =        
-        childs |> PList.map(fun x -> Child.toggleVisibility x)
-    
-    let updateChild (c:Child) (childs:plist<Child>) = 
-        childs |> PList.map(fun x -> if x.id = c.id then c else x)
+    // add one child to children of active group ... maybe move to active group
+    let addLeafToActiveGroup (leaf:Leaf) model=
 
-    // add one child to children of active group
-    let addToActiveGroup model (a:Child) = 
-        let func = (fun (x : Group) -> { x with childList = x.childList |> PList.prepend a })
-        let newRoot = updateItemAt model.activeGroup.path func model.rootGroup
-        updateGroups model newRoot (flatten newRoot)
+        let model = { model with flat = model.flat |> HMap.add leaf.id leaf }
+
+        let func = (fun (x : Node) -> { x with leaves = x.leaves |> PList.prepend leaf.id })
+        model |> updateActiveGroup func
 
     // add a list of children to children of active group
-    let AddChildren path cs model = 
-        let func = (fun (x:Group) -> { x with childList = x.childList |> PList.append' cs })
-        let newRoot = updateItemAt path func model.rootGroup
-        updateGroups model newRoot (flatten newRoot)
-    
-    let bla = updateChild
+    let addLeaves path (cs : plist<Leaf>) model = 
+        let f = (fun (x:Node) -> 
+            { x with leaves = x.leaves |> PList.append' (cs |> PList.map (fun x -> x.id)) })
 
-    let updateChildProperties (model:GroupsModel) (c:Child) =
-        let func = (fun (x:Group) -> { x with childList = x.childList |> PList.applyNonEmpty (updateChild c)})
-        let newRoot = updateItemAt model.activeChild.path func model.rootGroup
-        let m' = updateGroups model newRoot (flatten newRoot)
-        { m' with lastSelectedChild = Some c }
-    
-    let rec updateChildList (children:list<Child> ) (model:GroupsModel) =
-        match children with
-          | x::rest ->
-                let m' = updateChildProperties model x
-                updateChildList rest m'
-          |_ -> model
-    
-    let removeFromSelection model id path =
+        //add ids to group
+        let root' = updateNodeAt path f model.rootGroup
+
+        //add child nodes to flat
+        let cs = 
+            cs |> PList.toList |> List.map(fun x -> (x.id,x))|> HMap.ofList
+        
+        { model with rootGroup = root'; flat = model.flat |> HMap.union cs }            
+
+               
+    let removeFromSelection id path model =
         { model with selectedChilds = model.selectedChilds |> HSet.remove( { id = id; path = path; name = "" } ) }
     
-    let removeChild2 model id path =        
-        let func = (fun (x:Group) -> { x with childList = x.childList |> PList.applyNonEmpty (removeChild id) })
-        let newRoot = updateItemAt path func model.rootGroup                
-        let m = removeFromSelection model id path
-        let flat = flatten newRoot
-        Log.error "annotations number: %d" flat.Count
-        updateGroups m newRoot flat
+    let removeLeaf model (id:Guid) path removeFromFlat =
+        let func = (fun (x:Node) -> { x with leaves = x.leaves |> PList.remove' id })
+        let root' = updateNodeAt path func model.rootGroup
 
-    let rec removeSelectionfromTree (selection:list<TreeSelection> ) (m:GroupsModel) =
+        let m = model |> removeFromSelection id path
+
+        if removeFromFlat then
+            let flat' = m.flat |> HMap.remove id
+            { m with rootGroup = root'; flat = flat' }
+        else
+            { m with rootGroup = root' } 
+
+    let rec removeSelected (selection:list<TreeSelection>) (removeFromFlat:bool) (m:GroupsModel)  =
         match selection with
           | x::rest ->                
-                let m' = removeChild2 m x.id x.path
-                removeSelectionfromTree rest m'
+                let m' = removeLeaf m x.id x.path removeFromFlat
+                removeSelected rest removeFromFlat m'
           |_ -> m
 
     
-    let moveChildren model =
-        // get annotations
-        let toMove = model.selectedChilds
-                        |> HSet.choose ( fun x -> (tryGetChild model.rootGroup x.id))
-                        |> HSet.toSeq
-                        |> PList.ofSeq
-                               
-        // delete from groups
-        let m = removeSelectionfromTree (model.selectedChilds |> HSet.toList) model
+    let moveChildren m =
+       
+        let toMove = 
+            m.selectedChilds
+              |> HSet.choose (fun x -> m.flat |> HMap.tryFind x.id)
+              |> HSet.toSeq
+              |> PList.ofSeq
                 
-        // add annotations to active group
-        let func1 = (fun (x:Group) -> { x with childList = x.childList |> PList.append' toMove })
-        let newRoot1 = updateItemAt m.activeGroup.path func1 m.rootGroup
-        let m' = updateGroups m newRoot1 (flatten newRoot1)
-
+        // * delete leaves in source group
+        // * add leaves to destination group
+        let m = 
+          m
+            |> removeSelected    (m.selectedChilds |> HSet.toList) false
+            |> updateActiveGroup (fun (x:Node) -> 
+                let ids = (toMove |> PList.map(fun x -> x.id))
+                { x with leaves = x.leaves |> PList.append' ids })
+         
         // update selection paths
-        let sel = (model.selectedChilds |> HSet.map( fun x -> {x with path = m.activeGroup.path }))
-        { m' with selectedChilds = sel}
+        let sel = (m.selectedChilds |> HSet.map( fun x -> {x with path = m.activeGroup.path }))
+        { m with selectedChilds = sel}        
 
     
     let update (model : GroupsModel) (action : Action) =
@@ -186,68 +213,76 @@ module Groups =
                     activeChild = { id = g; path = p; name = s }
                     lastSelectedItem = SelectedItem.Child } 
             | ToggleExpand p -> 
-                let func = (fun (x:Group) -> { x with expanded = not x.expanded })
-                { model with rootGroup = updateItemAt p func model.rootGroup }
+                let func = (fun (x:Node) -> { x with expanded = not x.expanded })
+                { model with rootGroup = updateNodeAt p func model.rootGroup }
             | AddGroup p -> 
                 let newGroup = 
                     {    
                         name      = "newGroup" 
                         key       = Guid.NewGuid()
-                        childList = plist.Empty
-                        subGroups = plist.Empty
+                        leaves = plist.Empty
+                        subNodes = plist.Empty
                         visible   = true
                         expanded  = true
                     }
 
                 let func = 
-                    (fun (x:Group) -> { x with subGroups = PList.append newGroup x.subGroups })
+                    (fun (x:Node) -> { x with subNodes = PList.append newGroup x.subNodes })
 
-                { model with rootGroup = updateItemAt p func model.rootGroup }
+                { model with rootGroup = updateNodeAt p func model.rootGroup }
             | RemoveGroup p -> 
-                let func = 
-                    fun (x:Group) (id:Guid) -> 
-                        { x with subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups }
+                failwith "remove group"
+                //let func = 
+                //    fun (x:Group) (id:Guid) -> 
+                //        { x with subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups }
 
-                let newRoot = deleteItemAt p func model.rootGroup
-                let m' = updateGroups model newRoot (flatten newRoot)
-                m'
+                //let newRoot = deleteItemAt p func model.rootGroup
+                //let m' = updateGroups model newRoot (flatten newRoot)
+                //m'
+                model
             | AddChildren (p,cs) ->
-                AddChildren p cs model
+                failwith "addchildren"
+                //AddChildren p cs model
+                model
             | RemoveChild (k,p) ->
-                removeChild2 model k p
+                removeLeaf model k p true
             | ToggleChildVisibility (c,p) -> 
-                let func = (fun (x:Group) -> { x with childList = x.childList |> PList.applyNonEmpty (toggleChild c)})
-                let newRoot = updateItemAt p func model.rootGroup
-                let m' = updateGroups model newRoot (flatten newRoot)
-                m'
+                failwith "togglechild visible"
+                //let func = (fun (x:Group) -> { x with childList = x.childList |> PList.applyNonEmpty (toggleChild c)})
+                //let newRoot = updateItemAt p func model.rootGroup
+                //let m' = updateGroups model newRoot (flatten newRoot)
+                //m'
+                model
             | UpdateChildProperties a ->
-                updateChildProperties model a
+                updateLeaf'' a model
             | SetGroupName t -> 
                 let func = 
-                    fun (x:Group) -> { x with name = t }
+                    fun (x:Node) -> { x with name = t }
               
                 { model with 
-                    rootGroup   = updateItemAt model.activeGroup.path func model.rootGroup
+                    rootGroup   = updateNodeAt model.activeGroup.path func model.rootGroup
                     activeGroup = { model.activeGroup with name = t }
                 }
             | SetChildName t -> 
                 match model.lastSelectedChild with
-                    | Some c -> let child = Child.setName c t
-                                updateChildProperties model child
+                    | Some id -> model |> updateLeaf id (fun x -> Leaf.setName x t)
                     | None -> model
             | ClearGroup p -> 
-                let selection = 
-                  model.selectedChilds 
-                    |> HSet.choose (fun x -> 
-                        match x.path = p with
-                          | true -> Some x
-                          | _    -> None )
+                failwith "clear group"
 
-                let func = (function (x:Group) -> { x with childList = plist.Empty })
-                let newRoot = updateItemAt p func model.rootGroup
-                let m = { model with selectedChilds = selection }
-                let m' = updateGroups m newRoot (flatten newRoot)
-                m'
+                //let selection = 
+                //  model.selectedChilds 
+                //    |> HSet.choose (fun x -> 
+                //        match x.path = p with
+                //          | true -> Some x
+                //          | _    -> None )
+
+                //let func = (function (x:Group) -> { x with childList = plist.Empty })
+                //let newRoot = updateItemAt p func model.rootGroup
+                //let m = { model with selectedChilds = selection }
+                //let m' = updateGroups m newRoot (flatten newRoot)
+                //m'
+                model
             | SelectChilds (p,id,s) ->
                 let selected = model.selectedChilds
                 let treeSelection = {
@@ -262,21 +297,22 @@ module Groups =
                     then 
                         HSet.remove treeSelection selected, None
                     else
-                        HSet.add treeSelection HSet.empty, Group.tryGet' model.flat id
+                        HSet.add treeSelection HSet.empty, (model.flat |> HMap.tryFind id)
 
                 { model with 
                     selectedChilds    = selection; 
                     activeChild       = treeSelection; 
                     lastSelectedItem  = SelectedItem.Child;
-                    lastSelectedChild = child }
+                    lastSelectedChild = Some id }
             | ToggleGroup p ->
-                let func = (fun (x:Group) -> { x with childList = if PList.count x.childList > 0 then toggleChildList x.childList else x.childList })
-                let func1 = (fun (x:Group) -> { x with visible = not x.visible })
+                
+                let leaves = 
+                    getNode p model.rootGroup |> collectLeaves
 
-                let newRoot = updateItemAt p func model.rootGroup
-                let newRoot1 = updateItemAt p func1 newRoot
-                let m' = updateGroups model newRoot1 (flatten newRoot1)
-                m'
+                let f = (fun (k:Leaf) -> (k.setVisible (not k.visible)))
+
+                updateLeaves leaves f model
+               
             | MoveChilds  -> 
                 let m = moveChildren model
                 m
@@ -316,6 +352,18 @@ module Groups =
             ]
         )
 
+    let viewSelected (view : MLeaf -> DomNode<'a>) (lifter : 'a -> 'b) (model : MGroupsModel) : IMod<DomNode<'b>> = 
+        adaptive {
+            let! selected = model.lastSelectedChild
+            match selected with
+                | Some guid -> 
+                    let item = 
+                        model.flat |> AMap.find guid |> Mod.bind(id) |> Mod.force
+                    return view item |> UI.map lifter
+                | None ->
+                    return div[][] |> UI.map lifter
+        }
+
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module SurfaceModel =
     open MBrace.FsPickler
@@ -325,12 +373,15 @@ module SurfaceModel =
     open PRo3D.Groups
     open PRo3D.Surfaces
 
-    let initSurfaceGroups group selected = 
-        let surfaces = GroupsModel.initial
-        { surfaces with rootGroup = group; lastSelectedChild = selected }
+    let withSgSurfaces sgSurfaces m =
+        { m with sgSurfaces = sgSurfaces }
 
-    let initSurfaceModel group selected =
-        let surfaces = initSurfaceGroups group selected
+    let initSurfaceGroups group flat selected = 
+        let surfaces = GroupsModel.initial
+        { surfaces with rootGroup = group; lastSelectedChild = selected; flat = flat }
+
+    let initSurfaceModel group flat selected =
+        let surfaces = initSurfaceGroups group flat selected
         {
             surfaces    = surfaces
             sgSurfaces  = hmap.Empty
@@ -340,68 +391,52 @@ module SurfaceModel =
 
     let surfaceModelPickler : Pickler<SurfaceModel> =
         Pickler.product initSurfaceModel
-        ^+ Pickler.field (fun s -> s.surfaces.rootGroup)             Pickler.auto<Group> //Surface
-        ^. Pickler.field (fun s -> s.surfaces.lastSelectedChild)     Pickler.auto<option<Child>> //Pickler.auto<option<Surface>>
+        ^+ Pickler.field (fun s -> s.surfaces.rootGroup)             Pickler.auto<Node> //Surface
+        ^+ Pickler.field (fun s -> s.surfaces.flat)                  Pickler.auto<hmap<Guid,Leaf>> //Surface
+        ^. Pickler.field (fun s -> s.surfaces.lastSelectedChild)     Pickler.auto<option<Guid>> //Pickler.auto<option<Surface>>
 
-    let initial = initSurfaceModel Group.initRoot None   
+    let initial = initSurfaceModel Group.initRoot hmap.Empty None   
     
     registry.RegisterFactory (fun _ -> surfaceModelPickler)
 
-    let getSurface model guid =        
-        Groups.tryGetChild model.surfaces.rootGroup guid
+    let getSurface model guid =
+        model.surfaces.flat |> HMap.tryFind guid        
 
-    let groupSurfaces (sgSurfaces : hmap<Guid, SgSurface>) =
+    let groupSurfaces (sgSurfaces : hmap<Guid, SgSurface>) (surfaces : hmap<Guid, Surface>) =
         sgSurfaces
             |> HMap.toList
-            |> List.groupBy(fun (g,x) -> x.surface.priority.value)
+            |> List.groupBy(fun (_,x) -> 
+                let surf = HMap.find x.surface surfaces 
+                surf.priority.value)
             |> List.map( fun (p,k) -> (p, k |> HMap.ofList))
             |> List.sortBy fst
             |> List.map snd
             |> PList.ofList
     
     let triggerSgGrouping (model:SurfaceModel) =
-        { model with sgGrouped = (groupSurfaces model.sgSurfaces) }           
+        { model with sgGrouped = (groupSurfaces model.sgSurfaces (model.surfaces.flat |> Leaf.toSurfaces)) }
    
     let updateSingleSurface (s':PRo3D.Surfaces.Surface) (model:SurfaceModel) =
         let surfaces' = 
-            Groups.updateChildProperties model.surfaces (Child.Surfaces s')
+            Groups.updateLeaf'' (Leaf.Surfaces s') model.surfaces      
 
-        // update sgsurfaces as well !!!
-        let sgSurfaces' = 
-            model.sgSurfaces 
-                |> HMap.alter s'.guid 
-                        (fun x -> match x with 
-                                    | Some k -> Some { k with surface = s' }
-                                    | None -> None)   
+        { model with surfaces = surfaces' } // sgSurfaces = sgSurfaces'; sgGrouped = group' }
 
-        // update sggroup as well !!!
-        let group' = 
-            model.sgGrouped
-              |> PList.map(fun surfs ->
-                surfs
-                |> HMap.alter s'.guid 
-                        (fun x -> match x with 
-                                    | Some k -> Some { k with surface = s' }
-                                    | None -> None)
-                )
+    //let updateSurfaces model (surfaces' : plist<PRo3D.Surfaces.Surface>) =
+    //    let sgSurfaces' =
+    //        surfaces' 
+    //            |> PList.toList
+    //            |> List.map (
+    //                fun x -> 
+    //                    let update = 
+    //                        (fun (d : Option<SgSurface>) ->
+    //                            match d with 
+    //                                | Some k -> Some { k with surface = x }
+    //                                | None -> None)
 
-        { model with surfaces = surfaces'; sgSurfaces = sgSurfaces'; sgGrouped = group' }
+    //                    HMap.alter x.guid update model.sgSurfaces ) 
+    //            |> List.fold (fun a b -> HMap.union a b) HMap.empty
 
-    let updateSurfaces model (surfaces' : plist<PRo3D.Surfaces.Surface>) =
-        let sgSurfaces' =
-            surfaces' 
-                |> PList.toList
-                |> List.map (
-                    fun x -> 
-                        let update = 
-                            (fun (d : Option<SgSurface>) ->
-                                match d with 
-                                    | Some k -> Some { k with surface = x }
-                                    | None -> None)
-
-                        HMap.alter x.guid update model.sgSurfaces ) 
-                |> List.fold (fun a b -> HMap.union a b) HMap.empty
-
-        { model with sgSurfaces = sgSurfaces' }
+    //    { model with sgSurfaces = sgSurfaces' }
 
 

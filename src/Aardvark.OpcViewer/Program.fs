@@ -93,8 +93,6 @@ module KdTrees =
         ^+ Pickler.case InCoreKdTree incorePickler
         ^. Pickler.case LazyKdTree lazyPickler
     
-    
-
     //FsPickler.RegisterPicklerFactory (fun _ -> level0KdTreePickler )
     registry.RegisterFactory (fun _ -> level0KdTreePickler)
 

@@ -86,6 +86,8 @@
     <Compile Include="Drawing\Drawing.fs" />
     <Compile Include="MeasurementsImporter.fs" />
     <Compile Include="Navigation.fs" />
+    <Compile Include="AlignmentModel.fs" />
+    <Compile Include="AlignmentApp.fs" />
     <Compile Include="Surface-Properties.fs" />
     <Compile Include="Surface.fs" />
     <Compile Include="Rover-Model.fs" />

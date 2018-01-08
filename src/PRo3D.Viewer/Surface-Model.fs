@@ -68,7 +68,7 @@ type Surface = {
 
 [<DomainType>]
 type SgSurface = {    
-    surface     : Surface    
+    surface     : Guid    
     trafo       : Transformation
     globalBB    : Box3d
     sceneGraph  : ISg
