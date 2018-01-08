@@ -714,6 +714,8 @@ module ViewerApp =
                             yield bookmarkUI
                       | TabMenu.Config -> 
                             yield configUI
+                      | TabMenu.Viewplanner -> 
+                            yield viewPlannerUI
                       | _-> failwith "tab not supported"
                     
                 }

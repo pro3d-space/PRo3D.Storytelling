@@ -61,7 +61,7 @@ type Node = {
     key         : Guid
     name        : string
     leaves      : plist<Guid>
-    subNodes   : plist<Node>
+    subNodes    : plist<Node>
     visible     : bool
     expanded    : bool
 }

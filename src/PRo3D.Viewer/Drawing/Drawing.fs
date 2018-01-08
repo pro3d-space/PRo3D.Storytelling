@@ -412,7 +412,7 @@ module DrawingApp =
                 let! s = model.activeGroup
                 
                 
-                let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
+                let subNodes = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
                 let icon =
                     adaptive {
@@ -458,8 +458,8 @@ module DrawingApp =
                 let itemAttributes =
                     amap {
                         yield onMouseClick (fun _ -> Action.GroupsMessage(Groups.ToggleExpand path))
-                        let! selected = group.expanded
-                        if selected 
+                        let! expanded = group.expanded
+                        if expanded 
                         then yield clazz "icon large outline open folder"
                         else yield clazz "icon large outline folder"
                         yield style "overflow-y : visible"
@@ -484,7 +484,7 @@ module DrawingApp =
                          Incremental.div (AttributeMap.ofAMap childrenAttribs) (                          
                             alist { 
                                 let! isExpanded = group.expanded
-                                if isExpanded then yield! children
+                                if isExpanded then yield! subNodes
 
                                 if isExpanded then 
                                     yield! viewAnnotationsInGroup path model select lift group.leaves

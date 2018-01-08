@@ -54,7 +54,7 @@ module AnnotationGroupsImporter =
         (g, flat')
 
     type XmlReader with
-    /// Returns a lazy sequence of XElements matching a given name.
+    /// Returns a lazy sequence of XElements matching a given name to start from
         member reader.StreamElements(name, ?namespaceURI) =
             let readOp =
                 match namespaceURI with

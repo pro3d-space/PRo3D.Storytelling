@@ -63,8 +63,9 @@ type Interactions =
 type TabMenu = 
     | Surfaces    = 0
     | Annotations = 1
-    | Bookmarks   = 2
-    | Config      = 3
+    | Viewplanner = 2
+    | Bookmarks   = 3
+    | Config      = 4
 
 
 type WayPoint = {
