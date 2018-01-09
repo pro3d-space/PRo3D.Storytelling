@@ -440,8 +440,12 @@ module Surface =
                             | _ -> failwith "can only contain surfaces"
                     | None -> model
             | GroupsMessage msg -> 
-                failwith "also delete sgs when hmap has changed !!!"
-                { model with surfaces = Groups.update model.surfaces msg}
+                let groups = Groups.update model.surfaces msg
+                let sgs = 
+                    model.sgSurfaces 
+                      |> HMap.filter(fun k _ -> groups.flat |> HMap.containsKey k)
+
+                { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping
             | _ -> model
 
     let absRelIcons (m : MSurface)=
