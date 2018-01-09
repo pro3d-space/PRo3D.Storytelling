@@ -13,7 +13,7 @@ open PRo3D
 
 module Groups =
     open DomainModel        
-    open Aardvark.Base.Geometry.BvhTree
+    open Aardvark.Base.Geometry.BvhTree        
 
     //open Aardvark.UI.Static.Svg
    
@@ -110,7 +110,7 @@ module Groups =
         let root = updateNodeAt m.activeGroup.path f m.rootGroup
         { m with rootGroup = root }
     
-    let deleteItemAt (p : list<Index>) (f : Node -> Guid -> Node) (t : Node) = 
+    let updateStructureAt (p : list<Index>) (f : Node -> Guid -> Node) (t : Node) = 
         let rec go (p : list<Index>) (t : Node)  =
             match p with
               | x::rest -> 
@@ -121,12 +121,12 @@ module Groups =
                       | None -> t
                   | _ -> 
                     match PList.tryGet x t.subNodes with
-                      | Some c -> { t with subNodes = PList.set x (go rest c) t.subNodes }                                 
+                      | Some c -> { t with subNodes = PList.set x (go rest c) t.subNodes }
                       | None   -> t
               | _ -> t
         go (List.rev p) t 
         
-    let removeGroup (ag:Node) (id:Guid) = 
+    let removeGroup (ag:Node) (id:Guid) =         
         ag.subNodes |> PList.filter (fun x -> x.key <> id)           
 
     // add one child to children of active group ... maybe move to active group
@@ -231,15 +231,27 @@ module Groups =
 
                 { model with rootGroup = updateNodeAt p func model.rootGroup }
             | RemoveGroup p -> 
-                failwith "remove group"
-                //let func = 
-                //    fun (x:Group) (id:Guid) -> 
-                //        { x with subGroups = if PList.count x.subGroups > 0 then removeGroup x id else x.subGroups }
 
-                //let newRoot = deleteItemAt p func model.rootGroup
-                //let m' = updateGroups model newRoot (flatten newRoot)
-                //m'
-                model
+                //delete from flat
+                let flat' = 
+                    model.rootGroup 
+                      |> getNode p
+                      |> collectLeaves                
+                      |> PList.toList 
+                      |> List.fold (fun rest k -> HMap.remove k rest) model.flat
+
+                //delet from hierarchy                                
+                let func = 
+                    fun (x:Node) (id:Guid) -> { x with subNodes = removeGroup x id }
+
+                let root' = updateStructureAt p func model.rootGroup
+                
+                { model with
+                    rootGroup = root'
+                    flat = flat' 
+                    lastSelectedChild = None
+                    selectedChilds = HSet.empty }
+                
             | AddChildren (p,cs) ->
                 failwith "addchildren"
                 //AddChildren p cs model
