@@ -81,7 +81,7 @@ let main argv =
 
     Aardvark.Opc.PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
 
-    use form = new Form(Width = 1280, Height = 768)
+    use form = new Form(Width = 1280, Height = 800)
 
     let mainApp = PRo3D.ViewerApp.start form runtime signature bc   
 

@@ -107,7 +107,8 @@ module Groups =
         go (List.rev p) t 
     
     let updateActiveGroup (f : Node -> Node) (m : GroupsModel) =
-        let root = updateNodeAt m.activeGroup.path f m.rootGroup
+        let root = updateNodeAt m.activeGroup.path f m.rootGroup        
+
         { m with rootGroup = root }
     
     let updateStructureAt (p : list<Index>) (f : Node -> Guid -> Node) (t : Node) = 
@@ -130,9 +131,20 @@ module Groups =
         ag.subNodes |> PList.filter (fun x -> x.key <> id)           
 
     // add one child to children of active group ... maybe move to active group
-    let addLeafToActiveGroup (leaf:Leaf) model=
+    let addLeafToActiveGroup (leaf:Leaf) (select:bool) model=
 
-        let model = { model with flat = model.flat |> HMap.add leaf.id leaf }
+        let treeSelection =  {
+                id = leaf.id
+                path = model.activeGroup.path
+                name = ""
+            }
+
+        let model = 
+            { model with 
+                flat = model.flat |> HMap.add leaf.id leaf; 
+                lastSelectedChild = Some leaf.id; 
+                selectedChilds = HSet.empty |> HSet.add treeSelection
+            }
 
         let func = (fun (x : Node) -> { x with leaves = x.leaves |> PList.prepend leaf.id })
         model |> updateActiveGroup func
@@ -304,12 +316,12 @@ module Groups =
                     }
 
                 //multiselect selected, singleselece hset.empty
-                let selection, child =
+                let selection =
                     if HSet.contains treeSelection selected
                     then 
-                        HSet.remove treeSelection selected, None
+                        HSet.remove treeSelection selected
                     else
-                        HSet.add treeSelection HSet.empty, (model.flat |> HMap.tryFind id)
+                        HSet.add treeSelection HSet.empty
 
                 { model with 
                     selectedChilds    = selection; 

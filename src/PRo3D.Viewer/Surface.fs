@@ -441,11 +441,16 @@ module Surface =
                     | None -> model
             | GroupsMessage msg -> 
                 let groups = Groups.update model.surfaces msg
-                let sgs = 
-                    model.sgSurfaces 
-                      |> HMap.filter(fun k _ -> groups.flat |> HMap.containsKey k)
 
-                { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping
+                match msg with
+                  | Groups.Action.RemoveGroup _ ->
+                    let sgs = 
+                        model.sgSurfaces 
+                            |> HMap.filter(fun k _ -> groups.flat |> HMap.containsKey k)
+
+                    { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping
+                  | _ -> { model with surfaces = groups }
+                
             | _ -> model
 
     let absRelIcons (m : MSurface)=
@@ -502,7 +507,7 @@ module Surface =
                        // i [clazz "ui circular label"][Incremental.text (s.priority.value |> Mod.map(sprintf "%.0f"))]
                         div [clazz "content"; style infoc] [
                             let desc = s.name
-                            yield Incremental.div (AttributeMap.ofList [clazz "header"; style infoc])(
+                            yield Incremental.div (AttributeMap.ofList [style infoc])(
                                 alist {
                                     if isSelected then
                                         yield div[onClick select][ u[][Incremental.text desc]]

@@ -59,9 +59,11 @@ module DrawingApp =
               | Some a -> 
                 let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
                 bc.Add json                    
-                    
-                model.annotations 
-                  |> Groups.addLeafToActiveGroup (Leaf.Annotations a)
+                                  
+                
+                model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true
+                
+                
               | None -> model.annotations             
 
         { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 

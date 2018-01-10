@@ -39,7 +39,7 @@ module Bookmarks =
                     getNewBookmark (navigation.Get outerModel) model.bookmarks.flat.Count
                 
                 let groups = 
-                    Groups.addLeafToActiveGroup (Leaf.Bookmarks newBm) model.bookmarks
+                    Groups.addLeafToActiveGroup (Leaf.Bookmarks newBm) true model.bookmarks
                 
                 outerModel, { model with bookmarks = groups}
             | GroupsMessage msg -> 
