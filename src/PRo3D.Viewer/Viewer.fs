@@ -554,8 +554,7 @@ module ViewerApp =
                       | None -> return Sg.empty
                     
                 } |> Sg.dynamic
-
-            //[controller; annotations; refSystem; exploreCenter] |> Sg.ofList
+            
             let viewPlans =
                 ViewPlan.Sg.view 
                     m.scene.config 
@@ -564,7 +563,8 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
-            [controller; annotations; refSystem; alignment; exploreCenter; viewPlans] |> Sg.ofList
+            //, exploreCenter
+            [controller; annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList
                                             
         let cmds = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let control = DomNode.RenderControl(att, cam, cmds, None)

@@ -16,6 +16,8 @@ open PRo3D.Groups
 
 type Action =
         | SetSemantic      of Semantic
+        | ChangeColor      of ColorPicker.Action
+        | ChangeThickness  of Numeric.Action
         | SetGeometry      of Geometry
         | SetProjection    of Projection
         | SetExportPath    of string
@@ -51,6 +53,8 @@ type DrawingModel = {
     projection : Projection
     geometry : Geometry
     semantic : Semantic
+    color    : ColorInput
+    thickness : NumericInput
 
     annotations: GroupsModel 
     exportPath : string
@@ -87,9 +91,11 @@ module DrawingModel =
             |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
             |> PList.ofList
 
-    let initialdrawing = {
+    let initialdrawing : DrawingModel = {
         hoverPosition = None
         draw          = false                    
+        color         = { c = C4b.Blue } 
+        thickness     = Annotation.thickn
 
         working     = None
         projection  = Projection.Viewpoint

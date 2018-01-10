@@ -340,12 +340,14 @@ module ViewPlan =
                     return (trafo.Forward.UpperLeftM33().C2)
                 }
 
+            let size = Sg.computeInvariantScale cam near viewPlan.position length (Mod.constant 60.0)
+
             Sg.ofList [
                     ReferenceSystemApp.Sg.point viewPlan.position (Mod.constant C4b.Green) cam // position
                     ReferenceSystemApp.Sg.point viewPlan.lookAt (Mod.constant C4b.Yellow) cam // lookAt pos
-                    ReferenceSystemApp.Sg.directionMarker viewPlan.position lookAtVec (Mod.constant C4b.Yellow) near length thickness cam // lookAt vec
-                    ReferenceSystemApp.Sg.directionMarker viewPlan.position rightVec (Mod.constant C4b.Blue) near length thickness cam // right vec
-                    ReferenceSystemApp.Sg.directionMarker viewPlan.position tiltVec (Mod.constant C4b.Red) near length thickness cam // tilt vec
+                    ReferenceSystemApp.Sg.directionMarker viewPlan.position lookAtVec (Mod.constant C4b.Yellow) near size length thickness cam // lookAt vec
+                    ReferenceSystemApp.Sg.directionMarker viewPlan.position rightVec  (Mod.constant C4b.Blue)   near size length thickness cam // right vec
+                    ReferenceSystemApp.Sg.directionMarker viewPlan.position tiltVec   (Mod.constant C4b.Red)    near size length thickness cam // tilt vec
                 ] |> Sg.onOff viewPlan.isVisible
         
         let drawAxis (axis:MAxis) (cam:IMod<CameraView>) (thickness:IMod<float>) (trafo:IMod<Trafo3d>) =
@@ -402,18 +404,19 @@ module ViewPlan =
                         | Some s -> 
                             let! sid = s.id
                             let! id = i.id
+                            let size = Sg.computeInvariantScale cam near viewPlan.position length (Mod.constant 60.0)
                             match sid = id with
-                                        | true ->
-                                            yield Sg.ofList [
-                                                    ReferenceSystemApp.Sg.point camPosTrans (Mod.constant C4b.Cyan) cam // position
-                                                    ReferenceSystemApp.Sg.directionMarker camPosTrans camLookAtTrans (Mod.constant C4b.Cyan) near length thickness cam // lookAt vec
-                                                    ReferenceSystemApp.Sg.directionMarker camPosTrans camUpTrans (Mod.constant C4b.Red) near length thickness cam // up vec
-                                                ] 
-                                        | false -> 
-                                            yield Sg.ofList [
-                                                    ReferenceSystemApp.Sg.directionMarker camPosTrans camLookAtTrans (Mod.constant C4b.Blue) near length thickness cam // lookAt vec
-                                                    ReferenceSystemApp.Sg.directionMarker camPosTrans camUpTrans (Mod.constant C4b.Red) near length thickness cam // up vec
-                                                ] 
+                            | true ->
+                              yield Sg.ofList [
+                                        ReferenceSystemApp.Sg.point camPosTrans (Mod.constant C4b.Cyan) cam // position
+                                        ReferenceSystemApp.Sg.directionMarker camPosTrans camLookAtTrans (Mod.constant C4b.Cyan) near size length thickness cam // lookAt vec
+                                        ReferenceSystemApp.Sg.directionMarker camPosTrans camUpTrans (Mod.constant C4b.Red) near size length thickness cam // up vec
+                                    ] 
+                            | false -> 
+                              yield Sg.ofList [
+                                        ReferenceSystemApp.Sg.directionMarker camPosTrans camLookAtTrans (Mod.constant C4b.Blue) near size length thickness cam // lookAt vec
+                                        ReferenceSystemApp.Sg.directionMarker camPosTrans camUpTrans (Mod.constant C4b.Red) near size length thickness cam // up vec
+                                    ] 
                         | None -> yield Sg.ofList []
                 }
                 

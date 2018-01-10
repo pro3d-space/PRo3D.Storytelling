@@ -75,13 +75,13 @@ module ReferenceSystemApp =
                     }
                     |> Sg.trafo(trafo)
 
-        let directionMarker (pos:IMod<V3d>) (dir:IMod<V3d>) (color:IMod<C4b>) (near:IMod<float>) (arrowLength:IMod<float>) (arrowThickness:IMod<float>) (cam:IMod<CameraView>) =
+        let directionMarker (pos:IMod<V3d>) (dir:IMod<V3d>) (color:IMod<C4b>) (near:IMod<float>) (size:IMod<float>) (arrowLength:IMod<float>) (arrowThickness:IMod<float>) (cam:IMod<CameraView>) =
             aset{
                
                 let! dirs = dir
                 
-                let lineLengthScale = 
-                    Sg.computeInvariantScale cam near pos arrowLength (Mod.constant 60.0)
+                let lineLengthScale = size
+                    //Sg.computeInvariantScale cam near pos arrowLength (Mod.constant 60.0)
                 let scaledLength = 
                     Mod.map2(fun (str:V3d) s -> str.Normalized * s) dir lineLengthScale
 
@@ -95,18 +95,30 @@ module ReferenceSystemApp =
                     }
 
                 let posTrafo =
-                            pos |> Mod.map(fun d -> Trafo3d.Translation(d))
+                    pos |> Mod.map(fun d -> Trafo3d.Translation(d))
+                
+                let sizeText = 
+                    size 
+                      |> Mod.map(fun x -> sprintf "%Am" x) 
+                      |> Sg.text cam near (Mod.constant 60.0) pos posTrafo
 
                 let coneTrafo = 
-                            Mod.map2(fun p s -> Trafo3d.RotateInto(V3d.ZAxis, dirs.Normalized) * Trafo3d.Translation(p + s)) pos scaledLength
+                    Mod.map2(fun p s -> Trafo3d.RotateInto(V3d.ZAxis, dirs.Normalized) * Trafo3d.Translation(p + s)) pos scaledLength
 
                 //let radius = length * 0.1
                 //let scale =  DrawingApp.Sg.computeInvariantScale cam p 5.0
-                let radius = lineLengthScale |> Mod.map(fun d -> d * 0.05)
+                let radius = lineLengthScale |> Mod.map(fun d -> d * 0.04)
                 let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
 
-                yield PRo3D.Sg.lines al color arrowThickness posTrafo (Mod.constant Guid.Empty)
-                yield coneISg color radius coneSize coneTrafo //(Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + scaledLength))) // 
+                let nLabelPos = Mod.map2(fun l r -> l + r) pos scaledLength
+                let nPosTrafo =
+                    nLabelPos |> Mod.map(fun d -> Trafo3d.Translation(d))
+                let nLabel = Sg.text cam near (Mod.constant 60.0) nLabelPos nPosTrafo (Mod.constant "N")
+
+                yield PRo3D.Sg.lines al color (arrowThickness |> Mod.map(fun x -> x*2.0)) posTrafo (Mod.constant Guid.Empty)
+               // yield coneISg color radius coneSize coneTrafo //(Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + scaledLength))) // 
+                yield sizeText
+                yield nLabel
             } |> Sg.set 
                         
         let point (pos:IMod<V3d>) (color:IMod<C4b>) (cam:IMod<CameraView>) =
@@ -121,10 +133,15 @@ module ReferenceSystemApp =
             let thickness = minnerConfig.getArrowThickness mbigConfig
             let near      = minnerConfig.getNearDistance   mbigConfig
 
+            let east = Mod.map2(fun (l:V3d) (r:V3d) -> r.Cross(l) ) model.up.value model.north
+
+            let size = Mod.constant 100.0
+
             Sg.ofList [
                 point model.origin (Mod.constant C4b.Red) cam
-                directionMarker model.origin model.up.value (Mod.constant C4b.Blue) near length thickness cam
-                directionMarker model.origin model.north    (Mod.constant C4b.Red)  near length thickness cam
+                directionMarker model.origin model.up.value (Mod.constant C4b.Blue)  near size length thickness cam
+                directionMarker model.origin model.north    (Mod.constant C4b.Red)   near size length thickness cam
+                directionMarker model.origin east           (Mod.constant C4b.Green) near size length thickness cam                
             ] |> Sg.onOff(model.isVisible)
 
     module UI =
