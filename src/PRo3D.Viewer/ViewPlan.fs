@@ -342,12 +342,26 @@ module ViewPlan =
 
             let size = Sg.computeInvariantScale cam near viewPlan.position length (Mod.constant 60.0)
 
+            let marker : ReferenceSystemApp.Sg.MarkerStyle = {
+                position  = viewPlan.position
+                direction = Mod.constant V3d.NaN
+                color     = Mod.constant C4b.Black
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant true
+                text      = Mod.constant None
+            }
+
+            let lookAt = { marker with direction = lookAtVec; color = (Mod.constant C4b.Yellow)}
+            let right  = { marker with direction = rightVec;  color = (Mod.constant C4b.Red)}
+            let tilt   = { marker with direction = tiltVec;   color = (Mod.constant C4b.Red)}
+
             Sg.ofList [
                     ReferenceSystemApp.Sg.point viewPlan.position (Mod.constant C4b.Green) cam // position
                     ReferenceSystemApp.Sg.point viewPlan.lookAt (Mod.constant C4b.Yellow) cam // lookAt pos
-                    ReferenceSystemApp.Sg.directionMarker viewPlan.position lookAtVec (Mod.constant C4b.Yellow) near size length thickness cam // lookAt vec
-                    ReferenceSystemApp.Sg.directionMarker viewPlan.position rightVec  (Mod.constant C4b.Blue)   near size length thickness cam // right vec
-                    ReferenceSystemApp.Sg.directionMarker viewPlan.position tiltVec   (Mod.constant C4b.Red)    near size length thickness cam // tilt vec
+                    lookAt |> ReferenceSystemApp.Sg.directionMarker near cam
+                    right  |> ReferenceSystemApp.Sg.directionMarker near cam
+                    tilt   |> ReferenceSystemApp.Sg.directionMarker near cam                    
                 ] |> Sg.onOff viewPlan.isVisible
         
         let drawAxis (axis:MAxis) (cam:IMod<CameraView>) (thickness:IMod<float>) (trafo:IMod<Trafo3d>) =
@@ -405,17 +419,32 @@ module ViewPlan =
                             let! sid = s.id
                             let! id = i.id
                             let size = Sg.computeInvariantScale cam near viewPlan.position length (Mod.constant 60.0)
+
+                            let marker : ReferenceSystemApp.Sg.MarkerStyle = {
+                                position  = camPosTrans
+                                direction = Mod.constant V3d.NaN
+                                color     = Mod.constant C4b.Black
+                                size      = size
+                                thickness = thickness
+                                hasArrow  = Mod.constant true
+                                text      = Mod.constant None
+                            }
+
+                            let up = { marker with direction = camUpTrans; color = (Mod.constant C4b.Red)}
+
                             match sid = id with
                             | true ->
+                              let lookAt = { marker with direction = camLookAtTrans; color = (Mod.constant C4b.Cyan)}
                               yield Sg.ofList [
                                         ReferenceSystemApp.Sg.point camPosTrans (Mod.constant C4b.Cyan) cam // position
-                                        ReferenceSystemApp.Sg.directionMarker camPosTrans camLookAtTrans (Mod.constant C4b.Cyan) near size length thickness cam // lookAt vec
-                                        ReferenceSystemApp.Sg.directionMarker camPosTrans camUpTrans (Mod.constant C4b.Red) near size length thickness cam // up vec
+                                        lookAt |> ReferenceSystemApp.Sg.directionMarker near cam 
+                                        up     |> ReferenceSystemApp.Sg.directionMarker near cam
                                     ] 
                             | false -> 
+                              let lookAt = { marker with direction = camLookAtTrans; color = (Mod.constant C4b.Blue)}                              
                               yield Sg.ofList [
-                                        ReferenceSystemApp.Sg.directionMarker camPosTrans camLookAtTrans (Mod.constant C4b.Blue) near size length thickness cam // lookAt vec
-                                        ReferenceSystemApp.Sg.directionMarker camPosTrans camUpTrans (Mod.constant C4b.Red) near size length thickness cam // up vec
+                                        lookAt |> ReferenceSystemApp.Sg.directionMarker near cam 
+                                        up     |> ReferenceSystemApp.Sg.directionMarker near cam
                                     ] 
                         | None -> yield Sg.ofList []
                 }

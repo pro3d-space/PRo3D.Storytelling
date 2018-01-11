@@ -273,7 +273,7 @@ module Sg =
             }
         let bounds : Border2d = { left = 0.1; right = 0.1; top = 0.1; bottom = 0.1 }
 
-        Sg.textWithBackground (Font.create "Consolas" FontStyle.Regular) C4b.White C4b.Black bounds text
+        Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
             |> Sg.noEvents
             |> Sg.shader {
                     do! Aardvark.Opc.Shader.stableTrafo

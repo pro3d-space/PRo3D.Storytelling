@@ -193,7 +193,25 @@ module ViewerApp =
                                 |> List.map Surface.mk
                                 |> PList.ofList
 
-                        Scene.import' runtime signature surfaces m
+                        let m = Scene.import' runtime signature surfaces m
+
+                        let surfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
+                        let head = surfaces |> List.tryHead
+                        match head with
+                          | Some v ->
+
+                            let fullBb = 
+                                surfaces 
+                                  |> List.map(fun x -> x.globalBB) 
+                                  |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
+
+                            let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
+                            let (refSystem',_)= 
+                                ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
+                                                                
+                            { m with scene = { m.scene with referenceSystem = refSystem' }} |> updateCameraUp
+                          | None -> m
+                                                                       
             | ImportAnnotationGroups,_,_ ->
                 match Dialogs.openDialog w with
                     | Some x -> 
@@ -253,7 +271,7 @@ module ViewerApp =
                                 Log.stop()
                                 { m with drawing = drawing } |> stash
                             | Interactions.PlaceCoordinateSystem -> 
-                                //let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
+                                
                                 let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
                                 let (refSystem',_)= 
                                     ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
@@ -700,6 +718,13 @@ module ViewerApp =
                     return DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
                   | Interactions.PlaceRover ->
                     return ViewPlan.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
+                  | Interactions.PlaceCoordinateSystem -> 
+                    return Html.Layout.horizontal [
+                        Html.Layout.boxH [ Html.SemUi.dropDown' m.scene.referenceSystem.scaleChart m.scene.referenceSystem.selectedScale ReferenceSystemApp.Action.SetScale id ]
+                        Html.Layout.boxH [ i [clazz "large Unhide icon"][] ]
+                        Html.Layout.boxH [ Html.SemUi.toggleBox m.scene.referenceSystem.isVisible ReferenceSystemApp.Action.ToggleVisible  ]
+                        
+                        ] |> UI.map ReferenceSystemMessage
                   | _ -> 
                     return div[][]
             }
