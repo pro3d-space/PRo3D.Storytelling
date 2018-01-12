@@ -72,7 +72,7 @@ type ViewerAction =
 
 
 module ViewerUtils =
-    open OpenCvSharp.XFeatures2D
+    //open OpenCvSharp.XFeatures2D
     
     let colormap = 
         let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }

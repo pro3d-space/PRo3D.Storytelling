@@ -179,8 +179,10 @@ module ViewerApp =
                 let viewPlanModel = ViewPlan.updateViewPlanFromRover roverModel m.scene.viewPlans
                 { m with scene = { m.scene with viewPlans = viewPlanModel}}  
             | ViewPlanMessage msg,_,_ ->
-                let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
-                { m with scene = { m.scene with viewPlans = viewPlanModel}}  
+                //let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
+                //{ m with scene = { m.scene with viewPlans = viewPlanModel}}  
+                let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation m
+                { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }}  
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolders w with
                     | [] -> m
@@ -269,7 +271,7 @@ module ViewerApp =
                             | Interactions.PlaceRover ->
                                 let camState = m.scene.navigation.camera
                                 let ref = m.scene.referenceSystem 
-                                let viewPlans' = ViewPlan.update (m.scene.viewPlans) camState (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m))))
+                                let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
                                 { m with scene = {m.scene with viewPlans = viewPlans' } }
                             | Interactions.AlignPick -> 
                                 { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = hit; surfaceName = surf.guid}))}
@@ -724,7 +726,7 @@ module ViewerApp =
         let rest (model : MModel) = 
             [             
                 control
-                div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden"] [
+                div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
                     div[style "height:41px"][text "spacer"]
                     div [clazz "ui black horizontal label"][text "Show Tab:"]
                     Html.SemUi.dropDown model.tabMenu SetTabMenu
