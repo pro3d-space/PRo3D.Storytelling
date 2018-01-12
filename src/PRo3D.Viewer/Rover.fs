@@ -111,9 +111,12 @@ module RoverProvider =
             }) |> Array.map axisHack |> Array.toList
 
     let toRover (platform : IPWrapper.SPlatform) =
-        let wheels = 
-            IPWrapper.UnMarshalArray<IPWrapper.SPoint3D>(
-                    platform.m_poPointsOnGround, (int)platform.m_nNrOfPlatformPointsOnGround).ToV3ds();
+        let wheels = IPWrapper.UnMarshalArray<IPWrapper.SPoint3D>(
+                        platform.m_poPointsOnGround, (int)platform.m_nNrOfPlatformPointsOnGround).ToV3ds(); 
+            //[new V3d(0.556, 0.78, -0.312); new V3d(0.045, 0.78, -0.312);
+            //          new V3d(-0.588, 0.78, -0.312); new V3d(0.556, -0.78, -0.312);
+            //          new V3d(0.045, -0.78, -0.312); new V3d(-0.588, -0.78, -0.312)]
+            
 
         let axes = 
             IPWrapper.UnMarshalArray<IPWrapper.SAxis>(platform.m_poPlatformAxes, (int)platform.m_nNrOfPlatformAxes) |> toAxes

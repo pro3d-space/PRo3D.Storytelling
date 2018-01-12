@@ -513,7 +513,7 @@ module Surface =
                                         yield div[onClick select][ u[][Incremental.text desc]]
                                     else
                                         yield div[onClick select][Incremental.text desc]
-
+ 
                                     yield i [clazz "home icon"                                                
                                              onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                                                
 
