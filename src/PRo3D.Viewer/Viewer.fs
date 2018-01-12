@@ -148,7 +148,9 @@ module ViewerApp =
                 let ag = m.drawing.annotations 
                 { m with drawing = { m.drawing with annotations = Groups.update ag msg}}
             | DrawingMessage msg, Interactions.DrawAnnotation,_->
-                { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg } |> stash
+                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
+
+                { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
                 match msg with
                     | SurfaceApp.Action.FlyToSurface id -> 
@@ -193,7 +195,25 @@ module ViewerApp =
                                 |> List.map Surface.mk
                                 |> PList.ofList
 
-                        Scene.import' runtime signature surfaces m
+                        let m = Scene.import' runtime signature surfaces m
+
+                        let surfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
+                        let head = surfaces |> List.tryHead
+                        match head with
+                          | Some v ->
+
+                            let fullBb = 
+                                surfaces 
+                                  |> List.map(fun x -> x.globalBB) 
+                                  |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
+
+                            let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
+                            let (refSystem',_)= 
+                                ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
+                                                                
+                            { m with scene = { m.scene with referenceSystem = refSystem' }} |> updateCameraUp
+                          | None -> m
+                                                                       
             | ImportAnnotationGroups,_,_ ->
                 match Dialogs.openDialog w with
                     | Some x -> 
@@ -253,7 +273,7 @@ module ViewerApp =
                                 Log.stop()
                                 { m with drawing = drawing } |> stash
                             | Interactions.PlaceCoordinateSystem -> 
-                                //let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
+                                
                                 let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
                                 let (refSystem',_)= 
                                     ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
@@ -323,7 +343,10 @@ module ViewerApp =
                     let m =
                         match m.interaction with
                             | Interactions.DrawAnnotation -> 
-                                { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing drawingAction; } |> stash
+                                let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing drawingAction } |> stash
+                                match drawingAction with
+                                  | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
+                                  | _ -> m                                
                             | Interactions.AlignPick -> 
                                 match k with
                                  | Aardvark.Application.Keys.Enter -> 
@@ -551,8 +574,7 @@ module ViewerApp =
                       | None -> return Sg.empty
                     
                 } |> Sg.dynamic
-
-            //[controller; annotations; refSystem; exploreCenter] |> Sg.ofList
+            
             let viewPlans =
                 ViewPlan.Sg.view 
                     m.scene.config 
@@ -561,7 +583,8 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
-            [controller; annotations; refSystem; alignment; exploreCenter; viewPlans] |> Sg.ofList
+            //, exploreCenter
+            [controller; annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList
                                             
         let cmds = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let control = DomNode.RenderControl(att, cam, cmds, None)
@@ -689,15 +712,35 @@ module ViewerApp =
                 ("ViewPlanner", viewPlannerUI)
             ] "Data" 
       
+        let dynamicTop =
+            adaptive {
+                let! interaction = m.interaction
+                match interaction with
+                  | Interactions.DrawAnnotation -> 
+                    return DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
+                  | Interactions.PlaceRover ->
+                    return ViewPlan.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
+                  | Interactions.PlaceCoordinateSystem -> 
+                    return Html.Layout.horizontal [
+                        Html.Layout.boxH [ Html.SemUi.dropDown' m.scene.referenceSystem.scaleChart m.scene.referenceSystem.selectedScale ReferenceSystemApp.Action.SetScale id ]
+                        Html.Layout.boxH [ i [clazz "large Unhide icon"][] ]
+                        Html.Layout.boxH [ Html.SemUi.toggleBox m.scene.referenceSystem.isVisible ReferenceSystemApp.Action.ToggleVisible  ]
+                        
+                        ] |> UI.map ReferenceSystemMessage
+                  | _ -> 
+                    return div[][]
+            }
+
         let topMenu = [
+             Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
+
              Html.Layout.horizontal [
                 Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
                 Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
-             ]
-
-             Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
-             DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
-             ViewPlan.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
+             ]             
+                         
+             Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
+             
 
              //button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
              //button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
@@ -728,7 +771,7 @@ module ViewerApp =
                 control
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
                     div[style "height:41px"][text "spacer"]
-                    div [clazz "ui black horizontal label"][text "Show Tab:"]
+                    div [clazz "ui large black horizontal label"][text "Show Tab:"]
                     Html.SemUi.dropDown model.tabMenu SetTabMenu
                     viewTabs model.tabMenu                    
                 ]            

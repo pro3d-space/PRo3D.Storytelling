@@ -21,6 +21,7 @@ module ReferenceSystemApp =
         | SetUp            of Vector3d.Action       
         | SetNorth         of V3d
         | ToggleVisible
+        | SetScale         of string
         | SetArrowSize     of double
     //    | SetViewConfig    of ViewConfigModel
 
@@ -61,9 +62,21 @@ module ReferenceSystemApp =
                 { model with isVisible = not model.isVisible}, bigConfig
             | SetArrowSize d  ->
                 let big' = config.arrowLength.Set(bigConfig, d) 
-                model, big'           
+                model, big'          
+            | SetScale s ->
+                { model with selectedScale = s }, bigConfig
 
     module Sg =
+
+        type MarkerStyle = {
+                position  : IMod<V3d>
+                direction : IMod<V3d>
+                color     : IMod<C4b>
+                size      : IMod<float>
+                thickness : IMod<float>
+                hasArrow  : IMod<bool>
+                text      : IMod<option<string>>
+            }
 
         let coneISg color radius size trafo =  
             Sg.cone 30 color radius size
@@ -75,38 +88,55 @@ module ReferenceSystemApp =
                     }
                     |> Sg.trafo(trafo)
 
-        let directionMarker (pos:IMod<V3d>) (dir:IMod<V3d>) (color:IMod<C4b>) (near:IMod<float>) (arrowLength:IMod<float>) (arrowThickness:IMod<float>) (cam:IMod<CameraView>) =
+        let directionMarker (near:IMod<float>) (cam:IMod<CameraView>) (style : MarkerStyle) =
             aset{
                
-                let! dirs = dir
+                let! dirs = style.direction
                 
-                let lineLengthScale = 
-                    Sg.computeInvariantScale cam near pos arrowLength (Mod.constant 60.0)
+                let lineLengthScale = style.size                    
                 let scaledLength = 
-                    Mod.map2(fun (str:V3d) s -> str.Normalized * s) dir lineLengthScale
+                    Mod.map2(fun (str:V3d) s -> str.Normalized * s) style.direction lineLengthScale
 
                 //let scaledLength = dir * length
                 let al = 
                     alist {
-                        let! p = pos
+                        let! p = style.position
                         let! length = scaledLength
                         yield p
                         yield p + length
                     }
 
                 let posTrafo =
-                            pos |> Mod.map(fun d -> Trafo3d.Translation(d))
+                    style.position |> Mod.map(fun d -> Trafo3d.Translation(d))
+                
+                
 
                 let coneTrafo = 
-                            Mod.map2(fun p s -> Trafo3d.RotateInto(V3d.ZAxis, dirs.Normalized) * Trafo3d.Translation(p + s)) pos scaledLength
+                    Mod.map2(fun p s -> Trafo3d.RotateInto(V3d.ZAxis, dirs.Normalized) * Trafo3d.Translation(p + s)) style.position scaledLength
 
                 //let radius = length * 0.1
                 //let scale =  DrawingApp.Sg.computeInvariantScale cam p 5.0
-                let radius = lineLengthScale |> Mod.map(fun d -> d * 0.05)
+                let radius = lineLengthScale |> Mod.map(fun d -> d * 0.04)
                 let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
 
-                yield PRo3D.Sg.lines al color arrowThickness posTrafo (Mod.constant Guid.Empty)
-                yield coneISg color radius coneSize coneTrafo //(Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + scaledLength))) // 
+                let nLabelPos = Mod.map2(fun l r -> l + r) style.position scaledLength
+                let nPosTrafo =
+                    nLabelPos |> Mod.map(fun d -> Trafo3d.Translation(d))
+
+                
+                let label = 
+                    style.text 
+                      |> Mod.map(fun x ->
+                        match x with 
+                          | Some text -> Sg.text cam near (Mod.constant 60.0) nLabelPos nPosTrafo (Mod.constant text)
+                          | None -> Sg.empty)
+
+
+                
+
+                yield PRo3D.Sg.lines al style.color (style.thickness |> Mod.map(fun x -> x*2.0)) posTrafo (Mod.constant Guid.Empty)
+                //yield coneISg style.color radius coneSize coneTrafo //(Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + scaledLength))) //                 
+                yield label |> Sg.dynamic
             } |> Sg.set 
                         
         let point (pos:IMod<V3d>) (color:IMod<C4b>) (cam:IMod<CameraView>) =
@@ -115,16 +145,69 @@ module ReferenceSystemApp =
                 yield Sg.dots (AList.single pos) color cam //there is also a method for drawing a single dot.
             } |> Sg.set
 
+//["1km";"100m";"10m";"1m";"10cm";"1cm";"1mm";"0.1mm"] 
+        let scaleToSize (a:string) =
+            match a with
+              | "1km" -> 1000.0
+              | "100m"-> 100.0
+              | "10m" -> 10.0
+              | "1m"  -> 1.0
+              | "10cm"-> 0.1
+              | "1cm" -> 0.01
+              | "1mm" -> 0.001
+              | "0.1mm" -> 0.0001
+              | _     -> 1.0
+
         let view<'ma> (mbigConfig : 'ma) (minnerConfig : MInnerConfig<'ma>) (model:MReferenceSystem) (cam:IMod<CameraView>) : ISg<Action> =
                        
             let length    = minnerConfig.getArrowLength    mbigConfig
             let thickness = minnerConfig.getArrowThickness mbigConfig
             let near      = minnerConfig.getNearDistance   mbigConfig
 
+            let east = Mod.map2(fun (l:V3d) (r:V3d) -> r.Cross(l) ) model.up.value model.north
+
+            let size = model.selectedScale |> Mod.map scaleToSize
+
+            let styleUp : MarkerStyle = {
+                position  = model.origin
+                direction = model.up.value
+                color     = Mod.constant C4b.Blue
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant None
+            }
+
+            let styleNorth : MarkerStyle = {
+                position  = model.origin
+                direction = model.north
+                color     = Mod.constant C4b.Red
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant true
+                text      = Mod.constant (Some "N")
+            }
+
+            let styleEast : MarkerStyle = {
+                position  = model.origin
+                direction = east
+                color     = Mod.constant C4b.Green
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant None
+            }
+
+            let sizeText = 
+                model.selectedScale      
+                   |> Sg.text cam near (Mod.constant 60.0) model.origin (model.origin |> Mod.map Trafo3d.Translation)
+
             Sg.ofList [
                 point model.origin (Mod.constant C4b.Red) cam
-                directionMarker model.origin model.up.value (Mod.constant C4b.Blue) near length thickness cam
-                directionMarker model.origin model.north    (Mod.constant C4b.Red)  near length thickness cam
+                sizeText
+                styleUp    |> directionMarker near cam
+                styleNorth |> directionMarker near cam
+                styleEast  |> directionMarker near cam                     
             ] |> Sg.onOff(model.isVisible)
 
     module UI =

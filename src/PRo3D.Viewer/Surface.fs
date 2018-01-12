@@ -32,7 +32,7 @@ module Surface =
                 index        = index
             }
 
-        let parseTexture (index : int)(node : XmlNode) : TextureLayer =        
+        let parseTexture (index : int)(node : XmlNode) : TextureLayer =
             { 
                 label = node |> get "Label" 
                 index = index
@@ -422,7 +422,7 @@ module Surface =
                 let sgSurfaces = model.sgSurfaces |> Surface.Files.expandLazyKdTreePaths scenePath (model.surfaces.flat |> Leaf.toSurfaces)
                 { model with sgSurfaces = sgSurfaces}
             | RemoveSurface (id,path) -> //model
-                let groups = Groups.removeLeaf model.surfaces id path false
+                let groups = Groups.removeLeaf model.surfaces id path true
                 let sg' = model.sgSurfaces |> HMap.remove id
                 { model with surfaces = groups; sgSurfaces = sg'} |> SurfaceModel.triggerSgGrouping              
             | OpenFolder id ->
@@ -439,7 +439,18 @@ module Surface =
                                     | None -> model      
                             | _ -> failwith "can only contain surfaces"
                     | None -> model
-            | GroupsMessage msg -> { model with surfaces = Groups.update model.surfaces msg}
+            | GroupsMessage msg -> 
+                let groups = Groups.update model.surfaces msg
+
+                match msg with
+                  | Groups.Action.RemoveGroup _ ->
+                    let sgs = 
+                        model.sgSurfaces 
+                            |> HMap.filter(fun k _ -> groups.flat |> HMap.containsKey k)
+
+                    { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping
+                  | _ -> { model with surfaces = groups }
+                
             | _ -> model
 
     let absRelIcons (m : MSurface)=
@@ -496,7 +507,7 @@ module Surface =
                        // i [clazz "ui circular label"][Incremental.text (s.priority.value |> Mod.map(sprintf "%.0f"))]
                         div [clazz "content"; style infoc] [
                             let desc = s.name
-                            yield Incremental.div (AttributeMap.ofList [clazz "header"; style infoc])(
+                            yield Incremental.div (AttributeMap.ofList [style infoc])(
                                 alist {
                                     if isSelected then
                                         yield div[onClick select][ u[][Incremental.text desc]]
@@ -655,7 +666,7 @@ module Surface =
                     let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
                     let! surf = leaf 
                     let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
-                   
+                                       
                     return SurfaceProperties.view x |> UI.map SurfacePropertiesMessage
                 | None -> return div[][] |> UI.map SurfacePropertiesMessage 
         }                          
@@ -672,7 +683,7 @@ module Surface =
                 |> Mod.map (fun x -> 
                     match x with 
                         | SelectedItem.Group -> surfaceGroupProperties model
-                        | _ -> viewSurfaceProperties model 
+                        | _ -> viewSurfaceProperties model
                 )
         div[][                            
             yield GuiEx.accordion "Surfaces" "Cubes" true [ 

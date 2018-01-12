@@ -19,6 +19,8 @@ module Mutable =
         let _projection = ResetMod.Create(__initial.projection)
         let _geometry = ResetMod.Create(__initial.geometry)
         let _semantic = ResetMod.Create(__initial.semantic)
+        let _color = Aardvark.UI.Mutable.MColorInput.Create(__initial.color)
+        let _thickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.thickness)
         let _annotations = PRo3D.Groups.Mutable.MGroupsModel.Create(__initial.annotations)
         let _exportPath = ResetMod.Create(__initial.exportPath)
         let _pendingIntersections = ResetMod.Create(__initial.pendingIntersections)
@@ -31,6 +33,8 @@ module Mutable =
         member x.projection = _projection :> IMod<_>
         member x.geometry = _geometry :> IMod<_>
         member x.semantic = _semantic :> IMod<_>
+        member x.color = _color
+        member x.thickness = _thickness
         member x.annotations = _annotations
         member x.exportPath = _exportPath :> IMod<_>
         member x.pendingIntersections = _pendingIntersections :> IMod<_>
@@ -48,6 +52,8 @@ module Mutable =
                 ResetMod.Update(_projection,v.projection)
                 ResetMod.Update(_geometry,v.geometry)
                 ResetMod.Update(_semantic,v.semantic)
+                Aardvark.UI.Mutable.MColorInput.Update(_color, v.color)
+                Aardvark.UI.Mutable.MNumericInput.Update(_thickness, v.thickness)
                 PRo3D.Groups.Mutable.MGroupsModel.Update(_annotations, v.annotations)
                 ResetMod.Update(_exportPath,v.exportPath)
                 ResetMod.Update(_pendingIntersections,v.pendingIntersections)
@@ -104,6 +110,18 @@ module Mutable =
                     override x.Get(r) = r.semantic
                     override x.Set(r,v) = { r with semantic = v }
                     override x.Update(r,f) = { r with semantic = f r.semantic }
+                }
+            let color =
+                { new Lens<PRo3D.Drawing.DrawingModel, Aardvark.UI.ColorInput>() with
+                    override x.Get(r) = r.color
+                    override x.Set(r,v) = { r with color = v }
+                    override x.Update(r,f) = { r with color = f r.color }
+                }
+            let thickness =
+                { new Lens<PRo3D.Drawing.DrawingModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.thickness
+                    override x.Set(r,v) = { r with thickness = v }
+                    override x.Update(r,f) = { r with thickness = f r.thickness }
                 }
             let annotations =
                 { new Lens<PRo3D.Drawing.DrawingModel, PRo3D.Groups.GroupsModel>() with

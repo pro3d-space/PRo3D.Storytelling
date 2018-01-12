@@ -59,9 +59,11 @@ module DrawingApp =
               | Some a -> 
                 let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
                 bc.Add json                    
-                    
-                model.annotations 
-                  |> Groups.addLeafToActiveGroup (Leaf.Annotations a)
+                                  
+                
+                model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true
+                
+                
               | None -> model.annotations             
 
         { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
@@ -105,7 +107,9 @@ module DrawingApp =
                 | None ->  //no working state, start new working annotation
                     { 
                         //annotation states should be immutable after creation
-                        (Annotation.make model.projection model.geometry model.semantic surfaceName)  
+                        //(Annotation.make model.projection model.geometry model.semantic surfaceName)  
+                        //    with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
+                        (Annotation.make2 model.projection model.geometry model.color model.thickness surfaceName)
                             with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
                     }, None
 
@@ -230,6 +234,10 @@ module DrawingApp =
                     { model with geometry = mode }
             | SetProjection mode, _ ->
                     { model with projection = mode }                  
+            | ChangeColor c, _ -> 
+                { model with color = ColorPicker.update model.color c }
+            | ChangeThickness th, _ ->
+                { model with thickness = Numeric.update model.thickness th }
             | SetExportPath s, _ ->
                     { model with exportPath = s }
             | Export, _ ->
@@ -280,29 +288,11 @@ module DrawingApp =
                 Html.Layout.boxH [ i [clazz "large Write icon"][] ]
                 Html.Layout.boxH [ Html.SemUi.dropDown model.geometry SetGeometry ]
                 Html.Layout.boxH [ Html.SemUi.dropDown model.projection SetProjection ]
-                Html.Layout.boxH [ Html.SemUi.dropDown model.semantic SetSemantic ]                
+                Html.Layout.boxH [ ColorPicker.view model.color |> UI.map ChangeColor; div[][] ]
+                Html.Layout.boxH [ Numeric.view' [InputBox] model.thickness |> UI.map ChangeThickness ]
+              //  Html.Layout.boxH [ Html.SemUi.dropDown model.semantic SetSemantic ]                
             ]
-
-        let viewAnnotationToolsSlim (model:MDrawingModel) =
-            Html.SemUi.stuffStack[                                            
-                Html.SemUi.dropDown model.geometry SetGeometry
-                Html.SemUi.dropDown model.projection SetProjection
-                Html.SemUi.dropDown model.semantic SetSemantic
-            ]  
-
-        let viewAnnotationTools (model:MDrawingModel)=  
-            Html.table [                            
-             //   Html.row "Text:" [Html.SemUi.textBox model.exportPath SetExportPath ]
-                Html.row "Geometry:" [Html.SemUi.dropDown model.geometry SetGeometry]
-                Html.row "Projections:" [Html.SemUi.dropDown model.projection SetProjection]
-                Html.row "Semantic:" [Html.SemUi.dropDown model.semantic SetSemantic]
-            ]    
-
-        let viewAnnotationToolsAcc (model:MDrawingModel)=  
-            Html.SemUi.accordion "Annotation Tools" "Write" true [
-                viewAnnotationTools model            
-            ]
-        
+                      
         let mkColor (model : MGroupsModel) (a : MAnnotation) =
             let id = a.key |> Mod.force
 
@@ -669,51 +659,13 @@ module DrawingApp =
                 Sg.lines polyPoints color thickness trafo key //polyline
                 Sg.dots points color view                     //support points
             ]         
-
-        let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) = 
-            let right = forw.Cross up
-            let rotTrafo = 
-                new Trafo3d(
-                    new M44d(
-                        right.X, up.X, forw.X, 0.0,
-                        right.Y, up.Y, forw.Y, 0.0,
-                        right.Z, up.Z, forw.Z, 0.0,
-                        0.0,     0.0,  0.0,    1.0
-                    ),
-                    new M44d(
-                        right.X, right.Y, right.Z, 0.0,
-                        up.X,    up.Y,    up.Z,    0.0,
-                        forw.X,  forw.Y,  forw.Z,  0.0,
-                        0.0,     0.0,     0.0,     1.0
-                    )
-            )
-            rotTrafo * modelt
-
-        let text (view : IMod<CameraView>) conf (anno : MAnnotation) =
+        
+        let textFromAnno (view : IMod<CameraView>) conf (anno : MAnnotation) = 
             let points = anno.points |> AList.toMod
             let pos = 
                 points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
 
-            let invScaleTrafo = 
-                Sg.computeInvariantScale view conf.nearPlane pos (Mod.constant 0.07) conf.hfov |> Mod.map Trafo3d.Scale
-
-            let billboardTrafo = 
-                adaptive {
-                    let! v = view
-                    let! modelt = anno.modelTrafo
-
-                    return screenAligned v.Forward v.Up modelt
-                }
-            let bounds : Border2d = { left = 0.1; right = 0.1; top = 0.1; bottom = 0.1 }
-
-            Sg.textWithBackground (Font.create "Consolas" FontStyle.Regular) C4b.White C4b.Black bounds anno.text
-                |> Sg.noEvents
-                |> Sg.shader {
-                        do! Aardvark.Opc.Shader.stableTrafo
-                    }
-                // |> Sg.transform (Trafo3d.FromOrthoNormalBasis(-V3d.IOO, V3d.OOI, V3d.OIO))
-                |> Sg.trafo invScaleTrafo
-                |> Sg.trafo billboardTrafo                
+            Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo anno.text
 
         let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
             let points = getPolyline anno
@@ -727,7 +679,7 @@ module DrawingApp =
 
             let dots  = dots |> optional (Sg.dots anno.points c view)
             let dns   = anno.showDns  |> optional (drawDns anno view conf)
-            let texts = anno.text |> Mod.map (String.isEmpty >> not) |> optional (text view conf anno)
+            let texts = anno.text |> Mod.map (String.isEmpty >> not) |> optional (textFromAnno view conf anno)
             let sgs = ASet.unionMany' [dots; dns; texts]
 
             Sg.ofList [
