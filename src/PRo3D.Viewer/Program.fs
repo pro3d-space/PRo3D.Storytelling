@@ -130,7 +130,7 @@ let main argv =
     use ctrl = new AardvarkCefBrowser()
     ctrl.Dock <- DockStyle.Fill
     form.Controls.Add ctrl    
-    form.Text <- "PRo3D Viewer - 2.5.0 - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH"
+    form.Text <- "PRo3D Viewer - 2.5.0* - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH"
     //form.WindowState <- FormWindowState.Minimized
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"
