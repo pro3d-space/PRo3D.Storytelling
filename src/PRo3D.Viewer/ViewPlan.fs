@@ -27,15 +27,16 @@ module ViewPlan =
     
 
     type Action =
-        | AddPoint  of V3d*ReferenceSystem*hmap<string, ConcreteKdIntersectionTree>*SurfaceModel 
-        | SelectViewPlan of Guid
-        | FlyToViewPlan of Guid
-        | IsVisible of Guid
-        | RemoveViewPlan of Guid
+        | AddPoint         of V3d*ReferenceSystem*hmap<string, ConcreteKdIntersectionTree>*SurfaceModel 
+        | SelectViewPlan   of Guid
+        | FlyToViewPlan    of Guid
+        | IsVisible        of Guid
+        | RemoveViewPlan   of Guid
         | SelectInstrument of option<Instrument>
         | SelectAxis       of option<Axis>
         | ChangeAngle      of string * Numeric.Action
         | ChangeFocal      of string * Numeric.Action
+        | SetVPName        of string
     
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =
         match path with
@@ -214,6 +215,7 @@ module ViewPlan =
 
         let newViewPlan = {
             id = Guid.NewGuid()
+            name = rover.id
             position = working.[0]
             lookAt = working.[1]
             viewerState = camState
@@ -306,8 +308,12 @@ module ViewPlan =
                             let roverModel' = RoverApp.updateFocusPlatform { roverId = vp.rover.id ; instrumentId = inst'.id ; focal = inst'.focal.value } model.roverModel
                             outerModel, updateRovers model roverModel' vp'
                         | None -> outerModel, model                                       
-                    | None -> outerModel, model          
-
+                    | None -> outerModel, model 
+            | SetVPName t -> match model.selectedViewPlan with
+                                | Some vp -> let vp' = {vp with name = t}
+                                             outerModel, {model with selectedViewPlan = Some vp'; viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then vp' else x) }              
+                                | _ -> outerModel, model
+                
             //| _ -> model
 
     module Sg =
@@ -532,7 +538,7 @@ module ViewPlan =
 
         let viewHeader (m:MViewPlan) toggleMap =     
                 [
-                    Incremental.text m.rover.id; text " "
+                    Incremental.text m.name; text " "
 
                     i [clazz "home icon";                                                
                         onClick (fun _ -> FlyToViewPlan (m.id |> Mod.force))
@@ -552,11 +558,11 @@ module ViewPlan =
                     let! selected = m.selectedViewPlan
                     let viewPlans = m.viewPlans |> ASet.toAList
                     for vp in viewPlans do
-
+                        let! vpid = vp.id
                         let! color =
                             match selected with
                               | Some sel -> 
-                                sel.id |> Mod.map (fun g -> if g = (vp.id |> Mod.force) then C4b.VRVisGreen else C4b.White)
+                                sel.id |> Mod.map (fun g -> if g = vpid then C4b.VRVisGreen else C4b.White)
                               | None -> Mod.constant C4b.White
                                                                  
                         let bgc = color |> Html.ofC4b |> sprintf "color: %s"
@@ -571,7 +577,7 @@ module ViewPlan =
                             amap {
                                 let! toggleIcon = toggleIcon
                                 yield clazz toggleIcon
-                                yield onClick (fun _ -> IsVisible (vp.id |> Mod.force))
+                                yield onClick (fun _ -> IsVisible vpid)
                             } |> AttributeMap.ofAMap  
 
 
@@ -579,7 +585,7 @@ module ViewPlan =
                             i [
                                 clazz "large cube middle aligned icon"; 
                                 style bgc
-                                onClick (fun _ -> SelectViewPlan (vp.id |> Mod.force))
+                                onClick (fun _ -> SelectViewPlan vpid)
                             ][]
                             div [clazz "content"] [
                                 div [clazz "header"] (
@@ -634,6 +640,7 @@ module ViewPlan =
         let viewRoverProperties' (r : MRover) (m : MViewPlan) =
             require Html.semui (
                 Html.table [
+                     Html.row "Change VPName:"[ Html.SemUi.textBox m.name SetVPName ]
                      Html.row "Name:"       [ Incremental.text r.id ]
                      Html.row "Instrument:" [ 
                         instrumentsDd r m 
@@ -669,14 +676,4 @@ module ViewPlan =
                 viewViewPlans model
             ) 
 
-        //let viewPlanUI (model:MViewPlanModel) =
-        //    div[][                            
-        //        yield GuiEx.accordion "ViewPlans" "Cubes" true [ 
-        //            viewViewPlans |> UI.map GroupsMessage
-        //            viewSurfacesGroups model ]
-        //        yield GuiEx.accordion "Properties" "Content" true [
-        //                    Incremental.div AttributeMap.empty (alist{ let! item = item2
-        //                                                               let! i = item
-        //                                                               yield i})
-        //        ]
-        //    ]
+       

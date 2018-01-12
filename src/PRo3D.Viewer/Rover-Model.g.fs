@@ -388,6 +388,7 @@ module Mutable =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.ViewPlan> = Aardvark.Base.Incremental.EqModRef<PRo3d.ViewPlan>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.ViewPlan>
         let _id = ResetMod.Create(__initial.id)
+        let _name = ResetMod.Create(__initial.name)
         let _position = ResetMod.Create(__initial.position)
         let _lookAt = ResetMod.Create(__initial.lookAt)
         let _viewerState = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.viewerState)
@@ -400,6 +401,7 @@ module Mutable =
         let _currentAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.currentAngle)
         
         member x.id = _id :> IMod<_>
+        member x.name = _name :> IMod<_>
         member x.position = _position :> IMod<_>
         member x.lookAt = _lookAt :> IMod<_>
         member x.viewerState = _viewerState
@@ -417,6 +419,7 @@ module Mutable =
                 __current.Value <- v
                 
                 ResetMod.Update(_id,v.id)
+                ResetMod.Update(_name,v.name)
                 ResetMod.Update(_position,v.position)
                 ResetMod.Update(_lookAt,v.lookAt)
                 Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_viewerState, v.viewerState)
@@ -448,6 +451,12 @@ module Mutable =
                     override x.Get(r) = r.id
                     override x.Set(r,v) = { r with id = v }
                     override x.Update(r,f) = { r with id = f r.id }
+                }
+            let name =
+                { new Lens<PRo3d.ViewPlan, Microsoft.FSharp.Core.string>() with
+                    override x.Get(r) = r.name
+                    override x.Set(r,v) = { r with name = v }
+                    override x.Update(r,f) = { r with name = f r.name }
                 }
             let position =
                 { new Lens<PRo3d.ViewPlan, Aardvark.Base.V3d>() with

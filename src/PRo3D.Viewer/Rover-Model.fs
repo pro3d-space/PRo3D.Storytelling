@@ -115,6 +115,7 @@ type RoverModel = {
 type ViewPlan = {
     [<PrimaryKey>]
     id                  : Guid
+    name                : string
     position            : V3d
     lookAt              : V3d
     viewerState         : CameraControllerState
