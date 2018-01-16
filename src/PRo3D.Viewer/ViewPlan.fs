@@ -65,10 +65,7 @@ module ViewPlan =
         vps
         |> HSet.map (fun x -> if x.id = vp.id then vp else x)
     
-    //let updateAxis (vp:ViewPlan) (a:Axis) = 
-    //    vp.rover.axes
-    //        |> HMap.map( fun x -> if x.id = a.id then a else x )
-
+  
     let updateViewPlanFromRover (roverModel:RoverModel) (vp:ViewPlanModel) =
         // update rover model
         let m = {vp with roverModel = roverModel}
@@ -536,18 +533,18 @@ module ViewPlan =
 
     module UI =
 
-        let viewHeader (m:MViewPlan) toggleMap =     
+        let viewHeader (m:MViewPlan) (id:Guid) toggleMap =     
                 [
                     Incremental.text m.name; text " "
 
                     i [clazz "home icon";                                                
-                        onClick (fun _ -> FlyToViewPlan (m.id |> Mod.force))
+                        onClick (fun _ -> FlyToViewPlan id)
                     ][] |> UI.wrapToolTip "FlyTo"                                                                                
 
                     Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Arrows"                                                                     
 
                     i [clazz "Remove icon red";                                             
-                        onClick (fun _ -> RemoveViewPlan (m.id |> Mod.force))
+                        onClick (fun _ -> RemoveViewPlan id)
                     ][] |> UI.wrapToolTip "Remove"                                         
                 ]    
 
@@ -589,7 +586,7 @@ module ViewPlan =
                             ][]
                             div [clazz "content"] [
                                 div [clazz "header"] (
-                                    viewHeader vp toggleMap
+                                    viewHeader vp vpid toggleMap
                                 )      
                             ]
                         ]
@@ -599,10 +596,10 @@ module ViewPlan =
         let focalGui (i : MInstrument) =
             let nodes =
                 alist {
-                
+                    let! id = i.id
                     let! focals = i.calibratedFocalLengths
                     if focals.Length > 1 then                    
-                        yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] i.focal |> UI.map (fun x -> ChangeFocal (i.id |> Mod.force,x))
+                        yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] i.focal |> UI.map (fun x -> ChangeFocal (id,x))
                     else
                         yield Incremental.text (i.focal.value |> Mod.map string)
                 }

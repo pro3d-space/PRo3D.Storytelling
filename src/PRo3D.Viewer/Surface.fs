@@ -569,7 +569,7 @@ module Surface =
                         
                     i [clazz "plus icon"
                        onMouseClick (fun _ -> 
-                         GroupsMessage(Groups.AddGroup path))] [] 
+                         GroupsMessage(Groups.AddGroup path))] []
                     |> UI.wrapToolTip "Add Group"   
                         
                     i [clazz "remove circle icon"
