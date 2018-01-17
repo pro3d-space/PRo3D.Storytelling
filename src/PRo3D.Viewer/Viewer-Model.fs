@@ -73,6 +73,10 @@ type WayPoint = {
     cv   : CameraView
 }
 
+type ViewerMode =
+    | Standard
+    | Instrument
+
 [<DomainType>]
 type Model = { 
    
@@ -91,6 +95,9 @@ type Model = {
 
     alignment       : AlignmentModel
     tabMenu         : TabMenu
+    
+    instrumentCamera : CameraControllerState    
+    instrumentFrustum : Frustum
 
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
@@ -144,4 +151,7 @@ module Viewer =
         future          = None
 
         tabMenu = TabMenu.Surfaces
+        
+        instrumentCamera = { CameraController.initial with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }        
+        instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
     }

@@ -34,7 +34,8 @@ open PRo3D.Groups
 //open Viewer.Mutable.ModelModule.Lens
 //open Mutable.AnnotationGroupModule.Lens
  
-module ViewerApp =
+module ViewerApp =    
+            
     open Surface   
     open System.Collections.Concurrent   
     open Scene   
@@ -42,6 +43,7 @@ module ViewerApp =
     open Aardvark.UI.Trafos
     open Aardvark.SceneGraph.SgFSharp.Sg
     open PRo3d.Align
+    open Aardvark.Rendering.GL.OpenGl.Pointers
                  
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
@@ -484,9 +486,9 @@ module ViewerApp =
                 |> Sg.noEvents
                 |> Sg.trafo(trafo)
    
-    let view (m : MModel) =        
+    let view (mode : ViewerMode) (m : MModel) =        
 
-        let renderControlAttributes (model : MNavigationModel) =            
+        let renderControlAttributes (model : MNavigationModel)  =            
 
             amap {
                 let! state = model.navigationMode
@@ -499,7 +501,6 @@ module ViewerApp =
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
-        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum
 
         let att = 
             AttributeMap.unionMany [
@@ -510,6 +511,15 @@ module ViewerApp =
                     onKeyUp (KeyUp)
                     attribute "style" "width:70%; height: 100%; float:left"; ] 
             ]
+
+        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum
+
+        let instrumentAtt =            
+                (CameraController.extractAttributes m.instrumentCamera Navigation.Action.FreeFlyAction m.instrumentFrustum)                
+                |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)
+            
+                        
+        let instrumentCam = Mod.map2 Camera.create m.instrumentCamera.view m.instrumentFrustum
 
         let overlayed =
             let annotations =
@@ -587,7 +597,9 @@ module ViewerApp =
             [controller; annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList
                                             
         let cmds = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
+
         let control = DomNode.RenderControl(att, cam, cmds, None)
+        let instrumentControl = DomNode.RenderControl(instrumentAtt, instrumentCam, cmds, None)
 
         let annotationGroupProperties (model:MModel) =
             adaptive {                                
@@ -666,15 +678,18 @@ module ViewerApp =
                     DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
                 GuiEx.accordion "Properties" "Content" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle prop)
-                    Incremental.div AttributeMap.empty (AList.ofModSingle (delete))
-                    Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))
+                    Incremental.div AttributeMap.empty (AList.ofModSingle prop)                                        
                 ]
                
+                GuiEx.accordion "Actions" "Asterisk" true [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle (delete))
+                ]     
                 
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))] 
                 ]      
+
+
 
         let config (model:MModel) =
             adaptive {
@@ -880,16 +895,33 @@ module ViewerApp =
                     ]
                 ]
 
-        require (Html.semui @ [myCss]) (
-            let sections = [
-                "blank", [div[style "height:15px"][]]                
-                "Scene", [sceneTools]
-                "Recent", [recentScenes]
-                "Add Surface", [openSurface]                
-                "Import AnnotationGroups", [importAnnotationGroups]]                              
+        let chooseView (mode : ViewerMode) =
+
+            let stuff = 
+                alist {                                     
+                    match mode with
+                    | ViewerMode.Standard -> 
+                        let sections = [
+                            "blank", [div[style "height:15px"][]]
+                            "Scene", [sceneTools]
+                            "Recent", [recentScenes]
+                            "Add Surface", [openSurface]                
+                            "Import AnnotationGroups", [importAnnotationGroups]]   
+
+
+                        yield div[](GuiEx.adornerMenu sections topMenu (rest m))
+                    | ViewerMode.Instrument -> 
+                        yield instrumentControl
+                }
+                  
+
+            Incremental.div AttributeMap.empty stuff
+            
+        require (Html.semui @ [myCss]) (                             
             onBoot usingContext (                            
-                body [clazz "context example"; style "overflow-y:hidden"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
-        ))
+                body [clazz "context example"; style "overflow-y:hidden"] [chooseView mode]
+            )
+        )
                
     /// Thread Pool stuff
     let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =         
@@ -928,7 +960,7 @@ module ViewerApp =
         let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
         { m with scene = { m.scene with viewPlans = vps } }
 
-    let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
+    let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) (mode : ViewerMode) bc =
         let m = PRo3D.Viewer.Viewer.initial        
         let m = Scene.loadLastScene runtime signature m   
         let m = loadRoverData m
@@ -936,7 +968,7 @@ module ViewerApp =
         App.start {
             unpersist = Unpersist.instance
             threads = pool runtime signature
-            view = view
+            view = view mode
             update = update w runtime signature bc
             initial = m
         }

@@ -27,6 +27,7 @@ open ViewPlanner
 open Suave.Json
 open System.Runtime.Serialization
 open Aardvark.VRVis
+open PRo3D.Viewer
 
 [<DataContract>]
 type Calc =
@@ -81,25 +82,45 @@ let main argv =
 
     Aardvark.Opc.PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
 
+
+    // instrument app
+    use formInstrument = new Form(Width = 1280, Height = 800)
+
+    let instrumentApp = PRo3D.ViewerApp.start formInstrument runtime signature ViewerMode.Instrument bc
+    
+    // main app
     use form = new Form(Width = 1280, Height = 800)
+    
+    let mainApp = PRo3D.ViewerApp.start form runtime signature ViewerMode.Standard bc   
 
-    let mainApp = PRo3D.ViewerApp.start form runtime signature bc   
+    WebPart.startServer 4321 [
+        MutableApp.toWebPart runtime mainApp
+        path "/websocket" >=> handShake ws
+       // prefix "/instrument" >=> MutableApp.toWebPart runtime instrumentApp
+        Suave.Files.browseHome
+    ]
 
+    WebPart.startServer 4322 [
+        MutableApp.toWebPart runtime instrumentApp        
+        Suave.Files.browseHome
+    ]
+
+    // screenshot app
     let send msg =
         match msg with
-            | RemoteAction.SetCameraView cv ->
-                mainApp.update Guid.Empty (ViewerAction.SetCamera cv |> Seq.singleton)
-            | RemoteAction.SetView v ->                                
-                Log.line "Setting View %A" v
-                let frustum = Frustum.perspective v.fovH v.near v.far (float v.resolution.X / float v.resolution.Y)
-                let frustum = { 
-                    frustum with 
+          | RemoteAction.SetCameraView cv ->
+              mainApp.update Guid.Empty (ViewerAction.SetCamera cv |> Seq.singleton)
+          | RemoteAction.SetView v ->                                
+              Log.line "Setting View %A" v
+              let frustum = Frustum.perspective v.fovH v.near v.far (float v.resolution.X / float v.resolution.Y)
+              let frustum = { 
+                  frustum with 
                       left   = frustum.left   - v.principalPoint.X
                       right  = frustum.right  - v.principalPoint.X
                       top    = frustum.top    - v.principalPoint.Y
                       bottom = frustum.bottom - v.principalPoint.Y
-                    }
-                mainApp.update Guid.Empty (ViewerAction.SetCameraAndFrustum2 (v.view,frustum) |> Seq.singleton)
+                  }
+              mainApp.update Guid.Empty (ViewerAction.SetCameraAndFrustum2 (v.view,frustum) |> Seq.singleton)
 
     let remoteApp = 
         App.start (PRo3D.RemoteControlApp.app "http://localhost:4321" send)
@@ -121,16 +142,12 @@ let main argv =
         Suave.Files.browseHome
     ] 
 
-    WebPart.startServer 4321 [ 
-        MutableApp.toWebPart runtime mainApp
-        path "/websocket" >=> handShake ws
-        Suave.Files.browseHome
-    ] 
+   
     
     use ctrl = new AardvarkCefBrowser()
     ctrl.Dock <- DockStyle.Fill
     form.Controls.Add ctrl    
-    form.Text <- "PRo3D Viewer - 2.5.0* - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH"
+    form.Text <- "PRo3D Viewer - 2.5.0** - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH"
     //form.WindowState <- FormWindowState.Minimized
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"
