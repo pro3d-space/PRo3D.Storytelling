@@ -569,7 +569,7 @@ module Surface =
                         
                     i [clazz "plus icon"
                        onMouseClick (fun _ -> 
-                         GroupsMessage(Groups.AddGroup path))] [] 
+                         GroupsMessage(Groups.AddGroup path))] []
                     |> UI.wrapToolTip "Add Group"   
                         
                     i [clazz "remove circle icon"
@@ -577,9 +577,9 @@ module Surface =
                          GroupsMessage(Groups.ClearGroup path))] [] 
                     |> UI.wrapToolTip "Clear Group"
                         
-                    i [clazz "remove icon red"
-                       onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
-                    |> UI.wrapToolTip "Remove Group"
+                    //i [clazz "remove icon red"
+                    //   onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
+                    //|> UI.wrapToolTip "Remove Group"
 
                     Incremental.i toggleAttributes AList.empty |> UI.wrapToolTip "Toggle Group"
                 ]

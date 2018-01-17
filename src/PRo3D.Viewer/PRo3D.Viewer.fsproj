@@ -76,12 +76,12 @@
     <Compile Include="ReferenceSystem-Model.fs" />
     <Compile Include="DipAndStrike.fs" />
     <Compile Include="ReferenceSystem.fs" />
-    <Compile Include="Drawing-Properties.fs" />
     <Compile Include="Surface-Model.fs" />
     <Compile Include="Navigation-Model.fs" />
     <Compile Include="Bookmark-Model.fs" />
     <Compile Include="GroupsModels.fs" />
     <Compile Include="Groups.fs" />
+    <Compile Include="Drawing-Properties.fs" />
     <Compile Include="Drawing\Drawing-Model.fs" />
     <Compile Include="Drawing\Drawing.fs" />
     <Compile Include="MeasurementsImporter.fs" />

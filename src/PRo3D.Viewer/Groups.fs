@@ -373,6 +373,12 @@ module Groups =
         require Html.semui (
             Html.table [                            
                 Html.row "Change Groupname:"[Html.SemUi.textBox (ts |> Mod.map (fun x -> x.name)) SetGroupName ]
+                //div [clazz "ui buttons inverted"] [
+                //    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                //        button [clazz "ui icon button"; attribute "data-content" "Remove Group"; onMouseClick (fun _ -> RemoveGroup (ts |> Mod.map (fun x -> x.path) |> Mod.force))] [ //
+                //                i [clazz "remove icon red"] [] ] 
+                //    )
+                //] 
             ]
         )
 
@@ -387,6 +393,27 @@ module Groups =
                 | None ->
                     return div[][] |> UI.map lifter
         }
+
+    let deleteLeaf (ts:TreeSelection) =
+        Html.table [                            
+                div [clazz "ui buttons inverted"] [
+                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                        button [clazz "ui icon button"; attribute "data-content" "Remove"; onMouseClick (fun _ -> RemoveChild (ts.id,ts.path))] [ //
+                                i [clazz "remove icon red"] [] ] 
+                    )
+                ] 
+            ]
+
+    let deleteGroup (ts:TreeSelection) =
+        Html.table [                            
+                div [clazz "ui buttons inverted"] [
+                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                        button [clazz "ui icon button"; attribute "data-content" "Remove Group"; onMouseClick (fun _ -> RemoveGroup ts.path)] [ //
+                                i [clazz "remove icon red"] [] ] 
+                    )
+                ] 
+            ]
+        //let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module SurfaceModel =

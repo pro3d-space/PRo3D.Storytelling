@@ -4,8 +4,10 @@ open Aardvark.Base
 open System
 open Aardvark.UI
 open Aardvark.Base.Incremental
+open PRo3D.Groups
 
 module AnnotationProperties = 
+    open Aardvark.UI.Static.Svg
             
     type Action = 
         | SetGeometry     of PRo3D.Geometry
@@ -16,6 +18,7 @@ module AnnotationProperties =
         | SetText         of string
         | ToggleVisible
         | ToggleShowDns
+       
 
     let update (model : Annotation) (act : Action) =
         match act with
@@ -35,6 +38,7 @@ module AnnotationProperties =
                 { model with showDns = (not model.showDns) }
             | ChangeColor a ->
                 { model with color = ColorPicker.update model.color a }
+
 
     let view (model : MAnnotation) =   
         
@@ -58,6 +62,7 @@ module AnnotationProperties =
                 Html.row "Length:"      [Incremental.text (length   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
                 Html.row "WayLength:"   [Incremental.text (wLength  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
             ]
+
         )
 
     let app = 
