@@ -605,7 +605,8 @@ module ViewerApp =
                   | MAnnotations ann -> AnnotationProperties.view ann
                   | _ -> div[][])
             
-            model.drawing.annotations |> Groups.viewSelected view AnnotationMessage                   
+            model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
+               
 
         let viewDipAndStrike (model:MModel) = 
             let view = (fun leaf ->
@@ -625,6 +626,20 @@ module ViewerApp =
             
         let viewPlanProperties (model:MModel) =
             model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage //RoverMessage
+
+        let deleteAnnotationLeaf (model:MModel) = 
+            let ts = model.drawing.annotations.activeChild
+            adaptive {  
+                let! ts = ts
+                return (Groups.deleteLeaf ts |> UI.map AnnotationGroupsMessageViewer)
+            } 
+
+        let deleteAnnotationGroup (model:MModel) = 
+            let ts = model.drawing.annotations.activeGroup
+            adaptive {  
+                let! ts = ts
+                return (Groups.deleteGroup ts |> UI.map AnnotationGroupsMessageViewer)
+            } 
             
         let annotationUI = 
             let prop = 
@@ -633,6 +648,14 @@ module ViewerApp =
                         match x with 
                           | SelectedItem.Group -> annotationGroupProperties m
                           | _ -> viewAnnotationProperties m 
+                    )
+
+            let delete = 
+                m.drawing.annotations.lastSelectedItem
+                    |> Mod.bind (fun x -> 
+                        match x with 
+                          | SelectedItem.Group -> deleteAnnotationGroup m
+                          | _ -> deleteAnnotationLeaf m 
                     )
             
             div [][
@@ -644,10 +667,14 @@ module ViewerApp =
                 ]
                 GuiEx.accordion "Properties" "Content" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle prop)
-                ] 
+                    Incremental.div AttributeMap.empty (AList.ofModSingle (delete))
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))
+                ]
+               
+                
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))] 
-            ]      
+                ]      
 
         let config (model:MModel) =
             adaptive {

@@ -144,9 +144,9 @@ module Bookmarks =
                          GroupsMessage(Groups.ClearGroup path))] [] 
                     |> UI.wrapToolTip "Clear Group"
                         
-                    i [clazz "remove icon red"
-                       onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
-                    |> UI.wrapToolTip "Remove Group"                    
+                    //i [clazz "remove icon red"
+                    //   onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
+                    //|> UI.wrapToolTip "Remove Group"                    
                 ]
                  
             let itemAttributes =

@@ -533,25 +533,30 @@ module ViewPlan =
 
     module UI =
 
-        let viewHeader (m:MViewPlan) (id:Guid) toggleMap =     
-                [
-                    Incremental.text m.name; text " "
+        let viewHeader (m:MViewPlan) (id:Guid) toggleMap = 
+            [
+                Incremental.text m.name; text " "
 
-                    i [clazz "home icon";                                                
-                        onClick (fun _ -> FlyToViewPlan id)
-                    ][] |> UI.wrapToolTip "FlyTo"                                                                                
+                i [clazz "home icon";                                                
+                    onClick (fun _ -> FlyToViewPlan id)
+                ][] |> UI.wrapToolTip "FlyTo"                                                                                
 
-                    Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Arrows"                                                                     
+                Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Arrows"                                                                     
 
-                    i [clazz "Remove icon red";                                             
-                        onClick (fun _ -> RemoveViewPlan id)
-                    ][] |> UI.wrapToolTip "Remove"                                         
-                ]    
+                i [clazz "Remove icon red";                                             
+                    onClick (fun _ -> RemoveViewPlan id)
+                ][] |> UI.wrapToolTip "Remove"                                         
+            ]    
 
         let viewViewPlans (m:MViewPlanModel) = 
-            let listAttr = AttributeMap.ofList [clazz "ui divided list inverted segment"; style "overflow-y : visible"] //;max-height: 30%"
-            Incremental.div listAttr (
+            let itemAttributes =
+                amap {
+                    yield clazz "ui divided list inverted segment"
+                    yield style "overflow-y : visible"
+                } |> AttributeMap.ofAMap
+            Incremental.div itemAttributes (
                 alist { 
+                    yield Incremental.i itemAttributes AList.empty
                     let! selected = m.selectedViewPlan
                     let viewPlans = m.viewPlans |> ASet.toAList
                     for vp in viewPlans do
@@ -579,12 +584,14 @@ module ViewPlan =
 
 
                         yield div [clazz "item"] [
+                            Incremental.i itemAttributes AList.empty
                             i [
                                 clazz "large cube middle aligned icon"; 
                                 style bgc
                                 onClick (fun _ -> SelectViewPlan vpid)
                             ][]
                             div [clazz "content"] [
+                                Incremental.i itemAttributes AList.empty
                                 div [clazz "header"] (
                                     viewHeader vp vpid toggleMap
                                 )      

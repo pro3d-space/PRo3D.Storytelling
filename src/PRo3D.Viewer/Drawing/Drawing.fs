@@ -385,7 +385,7 @@ module DrawingApp =
                                     alist {
                                         yield Incremental.text header
                                         yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"                                                                                                                
-                                        yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
+                                        //yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
                                     } 
                                 ) 
 
@@ -438,9 +438,9 @@ module DrawingApp =
                              GroupsMessage(Groups.ClearGroup path))] [] 
                         |> UI.wrapToolTip "Clear Group"
                         
-                        i [clazz "remove icon red"
-                           onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
-                        |> UI.wrapToolTip "Remove Group"
+                        //i [clazz "remove icon red"
+                        //   onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
+                        //|> UI.wrapToolTip "Remove Group"
 
                         Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
                     ]
