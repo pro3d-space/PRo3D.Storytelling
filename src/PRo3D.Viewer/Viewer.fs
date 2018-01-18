@@ -639,18 +639,18 @@ module ViewerApp =
         let viewPlanProperties (model:MModel) =
             model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage //RoverMessage
 
-        let deleteAnnotationLeaf (model:MModel) = 
+        let annotationLeafButtonns (model:MModel) = 
             let ts = model.drawing.annotations.activeChild
             adaptive {  
                 let! ts = ts
-                return (Groups.deleteLeaf ts |> UI.map AnnotationGroupsMessageViewer)
+                return (Groups.viewLeafButtons ts |> UI.map AnnotationGroupsMessageViewer)
             } 
 
-        let deleteAnnotationGroup (model:MModel) = 
+        let annotationGroupButtons (model:MModel) = 
             let ts = model.drawing.annotations.activeGroup
             adaptive {  
                 let! ts = ts
-                return (Groups.deleteGroup ts |> UI.map AnnotationGroupsMessageViewer)
+                return (Groups.viewGroupButtons ts |> UI.map AnnotationGroupsMessageViewer)
             } 
             
         let annotationUI = 
@@ -662,19 +662,19 @@ module ViewerApp =
                           | _ -> viewAnnotationProperties m 
                     )
 
-            let delete = 
+            let buttons = 
                 m.drawing.annotations.lastSelectedItem
                     |> Mod.bind (fun x -> 
                         match x with 
-                          | SelectedItem.Group -> deleteAnnotationGroup m
-                          | _ -> deleteAnnotationLeaf m 
+                          | SelectedItem.Group -> annotationGroupButtons m
+                          | _ -> annotationLeafButtonns m 
                     )
             
             div [][
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
                
                 GuiEx.accordion "Annotations" "Write" true [
-                    Groups.viewGroupButtons |> UI.map AnnotationGroupsMessageViewer
+                    //Groups.viewSelectionButtons |> UI.map AnnotationGroupsMessageViewer
                     DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
                 GuiEx.accordion "Properties" "Content" true [
@@ -682,7 +682,7 @@ module ViewerApp =
                 ]
                
                 GuiEx.accordion "Actions" "Asterisk" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle (delete))
+                    Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
                 ]     
                 
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
@@ -711,7 +711,21 @@ module ViewerApp =
                     CameraProperties.view m.scene.navigation.camera
                 ]
             ]          
-            
+        
+        let bookmarksLeafButtonns (model:MModel) = 
+            let ts = model.scene.bookmarksModel.bookmarks.activeChild
+            adaptive {  
+                let! ts = ts
+                return (Groups.viewLeafButtons ts |> UI.map BookmarkUIMessage)
+            } 
+
+        let bookmarksGroupButtons (model:MModel) = 
+            let ts = model.scene.bookmarksModel.bookmarks.activeGroup
+            adaptive {  
+                let! ts = ts
+                return (Groups.viewGroupButtons ts |> UI.map BookmarkUIMessage)
+            } 
+
         let bookmarkUI = 
             let item2 = 
                 m.scene.bookmarksModel.bookmarks.lastSelectedItem 
@@ -720,11 +734,18 @@ module ViewerApp =
                           | SelectedItem.Group -> bookmarkGroupProperties m
                           | _ -> viewBookmarkProperties m 
                     )
+            let buttons = 
+                m.scene.bookmarksModel.bookmarks.lastSelectedItem 
+                    |> Mod.bind (fun x -> 
+                        match x with 
+                          | SelectedItem.Group -> bookmarksGroupButtons m
+                          | _ -> bookmarksLeafButtonns m 
+                    )
             div [][
                 Bookmarks.UI.viewGUI |> UI.map BookmarkMessage
 
                 GuiEx.accordion "Bookmarks" "Write" true [
-                    Groups.viewGroupButtons |> UI.map BookmarkUIMessage
+                    //Groups.viewSelectionButtons |> UI.map BookmarkUIMessage
                     Bookmarks.viewBookmarksGroups m.scene.bookmarksModel |> UI.map BookmarkMessage 
                 ]
                 GuiEx.accordion "Properties" "Content" true [
@@ -732,6 +753,9 @@ module ViewerApp =
                                                                let! i = item
                                                                yield i})
                 ] 
+                GuiEx.accordion "Actions" "Asterisk" true [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
+                ]   
                 ]
 
         let viewPlannerUI = 

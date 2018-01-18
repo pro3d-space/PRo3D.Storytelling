@@ -676,6 +676,19 @@ module Surface =
             return (Groups.viewUI model.surfaces|> UI.map GroupsMessage)
         } 
     
+    let surfacesLeafButtonns (model:MSurfaceModel) = 
+        let ts = model.surfaces.activeChild
+        adaptive {  
+            let! ts = ts
+            return (Groups.viewLeafButtons ts |> UI.map GroupsMessage)
+        } 
+
+    let surfacesGroupButtons (model:MSurfaceModel) = 
+        let ts = model.surfaces.activeGroup
+        adaptive {  
+            let! ts = ts
+            return (Groups.viewGroupButtons ts |> UI.map GroupsMessage)
+        } 
     
     let surfaceUI (model:MSurfaceModel) =
         let item2 = 
@@ -685,15 +698,25 @@ module Surface =
                         | SelectedItem.Group -> surfaceGroupProperties model
                         | _ -> viewSurfaceProperties model
                 )
+        let buttons = 
+            model.surfaces.lastSelectedItem 
+                |> Mod.bind (fun x -> 
+                    match x with 
+                        | SelectedItem.Group -> surfacesGroupButtons model
+                        | _ -> surfacesLeafButtonns model
+                )
         div[][                            
             yield GuiEx.accordion "Surfaces" "Cubes" true [ 
-                Groups.viewGroupButtons |> UI.map GroupsMessage
+                //Groups.viewSelectionButtons |> UI.map GroupsMessage
                 viewSurfacesGroups model ]
             yield GuiEx.accordion "Properties" "Content" true [
                         Incremental.div AttributeMap.empty (alist{ let! item = item2
                                                                    let! i = item
                                                                    yield i})
             ]
+            yield GuiEx.accordion "Actions" "Asterisk" true [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
+                ]     
         ]
     
     

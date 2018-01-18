@@ -356,17 +356,21 @@ module Groups =
             yield onClick (fun _ -> action)
         } |> AttributeMap.ofAMap
 
-    let viewGroupButtons =
-        div [clazz "ui buttons inverted"] [
-            onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                button [clazz "ui icon button"; attribute "data-content" "Move Selection"; onMouseClick (fun _ -> MoveChilds)] [
-                        i [clazz "Move icon"] [] ] 
-            )
-            onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                button [clazz "ui icon button"; attribute "data-content" "Clear Selection"; onMouseClick (fun _ -> ClearSelection)] [
-                        i [clazz "Remove icon"] [] ]
-            )
-        ] 
+    let viewSelectionButtons =
+        Html.table [ 
+            div [clazz "ui buttons inverted"] [
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Move Selection"; onMouseClick (fun _ -> MoveChilds)] [
+                            i [clazz "Move icon"] [] ] 
+                )
+                ]
+            div [clazz "ui buttons inverted"] [
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Clear Selection"; onMouseClick (fun _ -> ClearSelection)] [
+                            i [clazz "Remove icon"] [] ]
+                )
+                ] 
+            ]
 
     let viewUI (model : MGroupsModel) =   
         let ts = model.activeGroup
@@ -404,7 +408,7 @@ module Groups =
                 ] 
             ]
 
-    let deleteGroup (ts:TreeSelection) =
+    let deleteClearGroup (ts:TreeSelection) =
         Html.table [                            
                 div [clazz "ui buttons inverted"] [
                     onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
@@ -412,7 +416,30 @@ module Groups =
                                 i [clazz "remove icon red"] [] ] 
                     )
                 ] 
+                div [clazz "ui buttons inverted"] [
+                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                        button [clazz "ui icon button"; attribute "data-content" "Clear Group"; onMouseClick (fun _ -> ClearGroup ts.path)] [ //
+                                i [clazz "remove circle icon"] [] ] 
+                    )
+                ] 
             ]
+
+    let viewGroupButtons (ts:TreeSelection)  =
+        require Html.semui (
+                Html.table [
+                     Html.row "Remove/Clear:"[deleteClearGroup ts]
+                     Html.row "Selection:"[ viewSelectionButtons ]
+                ]
+            )
+
+    let viewLeafButtons (ts:TreeSelection)  =
+        require Html.semui (
+                Html.table [
+                     Html.row "Remove:"[deleteLeaf ts]
+                     Html.row "Selection:"[ viewSelectionButtons ]
+                ]
+            )
+
         //let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
