@@ -312,6 +312,20 @@ module UI =
             dom.WithAttributes attr     
         )
 
+    let wrapToolTipBottom (text:string) (dom:DomNode<'a>) : DomNode<'a> =
+
+        let attr = 
+            [ attribute "title" text
+              attribute "data-position" "bottom center"
+              attribute "data-variation" "mini"] 
+                |> AttributeMap.ofList
+                |> AttributeMap.union dom.Attributes                
+                
+        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
+            dom.WithAttributes attr     
+        )
+
+
     let dropDown'' (values : alist<'a>)(selected : IMod<Option<'a>>) (change : Option<'a> -> 'msg) (f : 'a ->string)  =
 
         let attributes (name : string) =

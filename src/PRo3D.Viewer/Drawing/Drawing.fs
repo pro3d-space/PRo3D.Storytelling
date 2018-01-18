@@ -306,34 +306,33 @@ module DrawingApp =
 
         let viewAnnotationImportExport =
            div [clazz "ui buttons inverted"] [
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Save Annotations"; onMouseClick (fun _ -> Save)] [
-                            i [clazz "save icon"] [] ] 
-                )
-                //i [clazz "save icon"; onMouseClick (fun _ -> Save)] [] |> UI.wrapToolTip "Save Annotations" 
+                //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [ //attribute "data-content" "Save Annotations";
+                        i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
+               // )
                 
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Load Annotations"; onMouseClick (fun _ -> Load)] [
-                            i [clazz "folder outline icon"] [] ]
-                )
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Clear Annotation List"; onMouseClick (fun _ -> Clear)] [
-                            i [clazz "file outline icon"] [] ]
-                )
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Load recent Annotations"; onMouseClick (fun _ -> QuickLoad)] [
-                            i [clazz "folder icon"] [] ]
-                )
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "???"; onMouseClick (fun _ -> Send)] [
-                            i [clazz "send icon"] [] ]
-                )
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Undo"; onMouseClick (fun _ -> Undo)] [i [clazz "arrow left icon"] [] ]
-                )
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Redo"; onMouseClick (fun _ -> Redo)] [i [clazz "arrow right icon"] [] ]
-                )
+                //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [ //attribute "data-content" "Load Annotations";
+                        i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
+                //)
+                //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [    //attribute "data-content" "Clear Annotation List"; 
+                        i [clazz "file outline icon"] [] ] |> UI.wrapToolTipBottom "Clear Annotation List"
+                //)
+                //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [    //attribute "data-content" "Load recent Annotations"; 
+                        i [clazz "folder icon"] [] ] |> UI.wrapToolTipBottom "Load recent Annotations"
+                //)
+                //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Send)] [ //attribute "data-content" "???"; 
+                        i [clazz "send icon"] [] ] |> UI.wrapToolTipBottom "???"
+                //)
+                //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Undo)] [i [clazz "arrow left icon"] [] ]  |> UI.wrapToolTipBottom "Undo" //; attribute "data-content" "Undo"
+                //)
+                //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                button [clazz "ui icon button"; onMouseClick (fun _ -> Redo)] [i [clazz "arrow right icon"] [] ] |> UI.wrapToolTipBottom "Redo" //; attribute "data-content" "Redo"
+                //)
             ] 
          
       
@@ -433,10 +432,10 @@ module DrawingApp =
                              GroupsMessage(Groups.AddGroup path))] [] 
                         |> UI.wrapToolTip "Add Group"   
                         
-                        i [clazz "remove circle icon"
-                           onMouseClick (fun _ -> 
-                             GroupsMessage(Groups.ClearGroup path))] [] 
-                        |> UI.wrapToolTip "Clear Group"
+                        //i [clazz "remove circle icon"
+                        //   onMouseClick (fun _ -> 
+                        //     GroupsMessage(Groups.ClearGroup path))] [] 
+                        //|> UI.wrapToolTip "Clear Group"
                         
                         //i [clazz "remove icon red"
                         //   onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 

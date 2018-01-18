@@ -139,10 +139,10 @@ module Bookmarks =
                          GroupsMessage(Groups.AddGroup path))] [] 
                     |> UI.wrapToolTip "Add Group"   
                         
-                    i [clazz "remove circle icon"
-                       onMouseClick (fun _ -> 
-                         GroupsMessage(Groups.ClearGroup path))] [] 
-                    |> UI.wrapToolTip "Clear Group"
+                    //i [clazz "remove circle icon"
+                    //   onMouseClick (fun _ -> 
+                    //     GroupsMessage(Groups.ClearGroup path))] [] 
+                    //|> UI.wrapToolTip "Clear Group"
                         
                     //i [clazz "remove icon red"
                     //   onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
@@ -213,10 +213,10 @@ module Bookmarks =
 
         let viewGUI = 
          div [clazz "ui buttons inverted"] [
-                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                        button [clazz "ui icon button"; attribute "data-content" "Add Bookmark"; onMouseClick (fun _ -> AddBookmark )] [ //
-                                i [clazz "plus icon"] [] ] 
-                    )
+                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                        button [clazz "ui icon button"; onMouseClick (fun _ -> AddBookmark )] [ //
+                                i [clazz "plus icon"] [] ] |> UI.wrapToolTipBottom "Add Bookmark"
+                   // )
                 ] 
 
        
