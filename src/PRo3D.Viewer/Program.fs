@@ -81,29 +81,23 @@ let main argv =
     //printf "%A" attr
 
     Aardvark.Opc.PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
-
-
-    // instrument app
-    use formInstrument = new Form(Width = 1280, Height = 800)
-
-    let instrumentApp = PRo3D.ViewerApp.start formInstrument runtime signature ViewerMode.Instrument bc
-    
+        
     // main app
     use form = new Form(Width = 1280, Height = 800)
     
     let mainApp = PRo3D.ViewerApp.start form runtime signature ViewerMode.Standard bc   
 
     WebPart.startServer 4321 [
-        MutableApp.toWebPart runtime mainApp
+        MutableApp.toWebPart' runtime false mainApp
         path "/websocket" >=> handShake ws
        // prefix "/instrument" >=> MutableApp.toWebPart runtime instrumentApp
         Suave.Files.browseHome
     ]
 
-    WebPart.startServer 4322 [
-        MutableApp.toWebPart runtime instrumentApp        
-        Suave.Files.browseHome
-    ]
+    //WebPart.startServer 4322 [
+    //    MutableApp.toWebPart' runtime false instrumentApp        
+    //    Suave.Files.browseHome
+    //]
 
     // screenshot app
     let send msg =
