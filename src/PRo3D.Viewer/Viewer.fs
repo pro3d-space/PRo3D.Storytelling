@@ -919,7 +919,7 @@ module ViewerApp =
 
                         yield div[](GuiEx.adornerMenu sections topMenu (rest m))
                     | ViewerMode.Instrument -> 
-                        yield instrumentControl
+                        yield div[][]
                 }
                   
 
@@ -927,7 +927,7 @@ module ViewerApp =
             
         require (Html.semui @ [myCss]) (                             
             onBoot usingContext (                            
-                body [clazz "context example"; style "overflow-y:hidden"] [chooseView mode]
+                body [clazz "context example"; style "overflow-y:hidden"] [chooseView ViewerMode.Standard]
             )
         )
                

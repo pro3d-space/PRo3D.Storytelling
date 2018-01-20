@@ -85,7 +85,7 @@ let main argv =
     // main app
     use form = new Form(Width = 1280, Height = 800)
     
-    let mainApp = PRo3D.ViewerApp.start form runtime signature ViewerMode.Standard bc   
+    let mainApp = PRo3D.ViewerApp.start form runtime signature bc
 
     WebPart.startServer 4321 [
         MutableApp.toWebPart' runtime false mainApp
