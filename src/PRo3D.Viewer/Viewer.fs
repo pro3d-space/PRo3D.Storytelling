@@ -486,7 +486,7 @@ module ViewerApp =
                 |> Sg.noEvents
                 |> Sg.trafo(trafo)
    
-    let view (mode : ViewerMode) (m : MModel) =        
+    let view (m : MModel) =        
 
         let renderControlAttributes (model : MNavigationModel)  =            
 
@@ -512,14 +512,7 @@ module ViewerApp =
                     attribute "style" "width:70%; height: 100%; float:left"; ] 
             ]
 
-        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum
-
-        let instrumentAtt =            
-                (CameraController.extractAttributes m.instrumentCamera Navigation.Action.FreeFlyAction m.instrumentFrustum)                
-                |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)
-            
-                        
-        let instrumentCam = Mod.map2 Camera.create m.instrumentCamera.view m.instrumentFrustum
+                                               
 
         let overlayed =
             let annotations =
@@ -563,20 +556,12 @@ module ViewerApp =
                           let! sgo = m.scene.surfacesModel.sgSurfaces |> AMap.tryFind c
                           
                           match sgo with 
-                              | Some sg ->
-                                    let scaling pos =                            
-                                        Sg.computeInvariantScale 
-                                            m.scene.navigation.camera.view 
-                                            (Mod.constant 0.1)
-                                            pos 
-                                            (Mod.constant 0.5)
-                                            (Mod.constant 60.0)
-
+                              | Some sg ->                                  
                                     match kind with
                                     | TrafoKind.Translate ->                                               
-                                        return TranslateController.viewController (fun t -> Translate("", t)) scaling sg.trafo
+                                        return TranslateController.viewController (fun t -> Translate("", t)) m.scene.navigation.camera.view sg.trafo
                                     | TrafoKind.Rotate ->
-                                        return RotationController.viewController (fun t -> Rotate("", t)) scaling sg.trafo
+                                        return RotationController.viewController (fun t -> Rotate("", t)) m.scene.navigation.camera.view sg.trafo
                                     | _ -> return Sg.empty
                               | None -> 
                                 Log.warn "selected surface does not exist"
@@ -596,10 +581,9 @@ module ViewerApp =
             //, exploreCenter
             [controller; annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList
                                             
-        let cmds = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
-
+        let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
+        let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
         let control = DomNode.RenderControl(att, cam, cmds, None)
-        let instrumentControl = DomNode.RenderControl(instrumentAtt, instrumentCam, cmds, None)
 
         let annotationGroupProperties (model:MModel) =
             adaptive {                                
@@ -944,7 +928,7 @@ module ViewerApp =
 
                         yield div[](GuiEx.adornerMenu sections topMenu (rest m))
                     | ViewerMode.Instrument -> 
-                        yield instrumentControl
+                        yield div[][]
                 }
                   
 
@@ -952,7 +936,7 @@ module ViewerApp =
             
         require (Html.semui @ [myCss]) (                             
             onBoot usingContext (                            
-                body [clazz "context example"; style "overflow-y:hidden"] [chooseView mode]
+                body [clazz "context example"; style "overflow-y:hidden"] [chooseView ViewerMode.Standard]
             )
         )
                
@@ -993,7 +977,7 @@ module ViewerApp =
         let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
         { m with scene = { m.scene with viewPlans = vps } }
 
-    let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) (mode : ViewerMode) bc =
+    let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        
         let m = Scene.loadLastScene runtime signature m   
         let m = loadRoverData m
@@ -1001,7 +985,7 @@ module ViewerApp =
         App.start {
             unpersist = Unpersist.instance
             threads = pool runtime signature
-            view = view mode
+            view = view
             update = update w runtime signature bc
             initial = m
         }

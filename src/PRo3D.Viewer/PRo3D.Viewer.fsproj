@@ -342,6 +342,17 @@
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
       <ItemGroup>
+        <Reference Include="Aardvark.GPGPU">
+          <HintPath>..\..\packages\Aardvark.GPGPU\lib\net45\Aardvark.GPGPU.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
         <Reference Include="OpenCvSharp">
           <HintPath>..\..\packages\Aardvark.OpenCvSharp\lib\net40\OpenCvSharp.dll</HintPath>
           <Private>True</Private>
