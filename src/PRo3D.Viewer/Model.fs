@@ -61,7 +61,15 @@ type Points = list<V3d>
 
 type Projection = Linear = 0 | Viewpoint = 1 | Sky = 2
 type Geometry = Point = 0 | Line = 1 | Polyline = 2 | Polygon = 3 | DnS = 4
-type Semantic = Horizon0 = 0 | Horizon1 = 1 | Horizon2 = 2 | Horizon3 = 3 | Horizon4 = 4 | Crossbed = 5 | GrainSize = 6 | None = 7
+type Semantic = 
+    | Horizon0 = 0 
+    | Horizon1 = 1 
+    | Horizon2 = 2 
+    | Horizon3 = 3 
+    | Horizon4 = 4 
+    | Crossbed = 5 
+    | GrainSize = 6 
+    | None = 7
 
 [<DomainType>]
 type DipAndStrikeResults = {
