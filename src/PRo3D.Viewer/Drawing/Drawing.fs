@@ -304,6 +304,14 @@ module DrawingApp =
             
             color
 
+        let lastSelected (model : MGroupsModel) (a : MAnnotation) =
+            let id = a.key |> Mod.force
+            model.lastSelectedChild 
+                |> Mod.map( fun x -> match x with 
+                                        | Some xx -> xx = id
+                                        | _ -> false )
+                    
+
         let viewAnnotationImportExport =
            div [clazz "ui buttons inverted"] [
                 
@@ -357,6 +365,7 @@ module DrawingApp =
 
                     for a in annotations do 
                         let select = fun _ -> select (a,path)
+                        let! lastSel = lastSelected model a
                                 
                         let! c = mkColor model a
                         let bgc = sprintf "color: %s" (Html.ofC4b c)
@@ -375,7 +384,11 @@ module DrawingApp =
                                 //header
                                 yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
                                     alist {
-                                        yield Incremental.text header
+                                        if lastSel then
+                                            yield div[onClick select][ u[][Incremental.text header]]
+                                        else
+                                            yield div[onClick select][Incremental.text header]
+                                        //yield Incremental.text header
                                         yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"                                                                                                                
                                         //yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
                                     } 

@@ -478,6 +478,13 @@ module Surface =
         isSelected model s 
           |> Mod.bind (fun x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)
 
+    let lastSelected (model : MGroupsModel) (s : MSurface) =
+            let id = s.guid |> Mod.force
+            model.lastSelectedChild 
+                |> Mod.map( fun x -> match x with 
+                                        | Some xx -> xx = id
+                                        | _ -> false )
+
     let viewSurfacesInGroups (path:list<Index>) (model:MGroupsModel)(select : MSurface*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (surfaceIds: alist<Guid>) : alist<DomNode<'outer>> = 
             alist {
 
@@ -495,21 +502,22 @@ module Surface =
 
                     let select = fun _ -> select (s,path)
                     let! isSelected = isSelected model s
-                 //   let! c = mkColor model s
-                 //   let bgc = sprintf "color: %s" (Html.ofC4b c)
+                    let! lastSel = lastSelected model s
+                    let! c = mkColor model s
+                    let bgc = sprintf "color: %s" (Html.ofC4b c)
                     let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
                     let! key = s.guid
                                                                                     
                     let! absRelIcons = absRelIcons s
 
                     yield div [clazz "item"; style infoc] [
-                        i [clazz "large cube middle aligned icon"; onClick select;style infoc][] 
+                        i [clazz "large cube middle aligned icon"; onClick select;style bgc][] 
                        // i [clazz "ui circular label"][Incremental.text (s.priority.value |> Mod.map(sprintf "%.0f"))]
                         div [clazz "content"; style infoc] [
                             let desc = s.name
                             yield Incremental.div (AttributeMap.ofList [style infoc])(
                                 alist {
-                                    if isSelected then
+                                    if lastSel then
                                         yield div[onClick select][ u[][Incremental.text desc]]
                                     else
                                         yield div[onClick select][Incremental.text desc]
@@ -522,9 +530,9 @@ module Surface =
                                     yield i [clazz "folder icon"                                                
                                              onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"                                                                                
 
-                                    yield i [clazz "Remove icon red"
-                                             //onClick (fun _ -> lift <| RemoveSurface (key,path))] [] |> UI.wrapToolTip "Remove" 
-                                             onClick (fun _ -> RemoveSurface (key,path)) ][] |> UI.wrapToolTip "Remove"        
+                                    //yield i [clazz "Remove icon red"
+                                    //         //onClick (fun _ -> lift <| RemoveSurface (key,path))] [] |> UI.wrapToolTip "Remove" 
+                                    //         onClick (fun _ -> RemoveSurface (key,path)) ][] |> UI.wrapToolTip "Remove"        
                                     } 
                             ) 
                             //yield div [clazz "description"; style infoc] [
@@ -678,9 +686,13 @@ module Surface =
     
     let surfacesLeafButtonns (model:MSurfaceModel) = 
         let ts = model.surfaces.activeChild
+        let sel = model.surfaces.lastSelectedChild
         adaptive {  
             let! ts = ts
-            return (Groups.viewLeafButtons ts |> UI.map GroupsMessage)
+            let! sel = sel
+            match sel with
+                | Some x -> return (Groups.viewLeafButtons ts |> UI.map GroupsMessage)
+                | None -> return div[][]
         } 
 
     let surfacesGroupButtons (model:MSurfaceModel) = 
