@@ -71,6 +71,13 @@ module Bookmarks =
             
             color
 
+    let lastSelected (model : MGroupsModel) (b : MBookmark) =
+            let id = b.key |> Mod.force
+            model.lastSelectedChild 
+                |> Mod.map( fun x -> match x with 
+                                        | Some xx -> xx = id
+                                        | _ -> false )
+
     let viewBookmarks (path:list<Index>) (model:MGroupsModel)(select : MBookmark*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (bookmarks: alist<Guid>) : alist<DomNode<'outer>> = 
                      
         alist {
@@ -87,26 +94,30 @@ module Bookmarks =
                                 
                 let! c = mkColor model b
                 let bgc = sprintf "color: %s" (Html.ofC4b c)
+                let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
 
                 let select = fun _ -> select (b,path)
+                let! lastSel = lastSelected model b
                 let! key = b.key
 
                 yield div [clazz "item"; style bgc] [
                     i [clazz "large Sticky Note middle aligned icon"; onClick select;style bgc][] //i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
-                    div [clazz "content"; style bgc] [
+                    div [clazz "content"; style infoc] [
                         let desc = b.name
-                        yield Incremental.div (AttributeMap.ofList [clazz "header"])(
+                        yield Incremental.div (AttributeMap.ofList [clazz "header"; style infoc])(
                             alist {
                                     yield i [clazz "home icon"; 
-                                             onClick (fun _ -> lift <| Groups.UpdateCam key); 
-                                             style bgc][] |> UI.wrapToolTipRight "FlyTo"
+                                             onClick (fun _ -> lift <| Groups.UpdateCam key)][] |> UI.wrapToolTipRight "FlyTo"
                     
                                     yield i [clazz "Remove icon"; 
-                                             onClick (fun _ -> lift <| Groups.RemoveChild (key,path)); 
-                                             style bgc] [] |> UI.wrapToolTip "Remove"
+                                             onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"
                                 } 
                         ) 
-                        yield div [clazz "description"; style bgc] [Incremental.text desc]      
+                        if lastSel then
+                            yield div[onClick select][ u[][Incremental.text b.name]]
+                        else
+                            yield div[onClick select][Incremental.text b.name]
+                        //yield div [clazz "description"; style bgc] [Incremental.text desc]      
                     ]
                 ]
         }     

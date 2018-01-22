@@ -641,9 +641,13 @@ module ViewerApp =
 
         let annotationLeafButtonns (model:MModel) = 
             let ts = model.drawing.annotations.activeChild
+            let sel = model.drawing.annotations.lastSelectedChild
             adaptive {  
                 let! ts = ts
-                return (Groups.viewLeafButtons ts |> UI.map AnnotationGroupsMessageViewer)
+                let! sel = sel
+                match sel with
+                    | Some x -> return (Groups.viewLeafButtons ts |> UI.map AnnotationGroupsMessageViewer)
+                    | None -> return div[][]
             } 
 
         let annotationGroupButtons (model:MModel) = 
@@ -714,9 +718,14 @@ module ViewerApp =
         
         let bookmarksLeafButtonns (model:MModel) = 
             let ts = model.scene.bookmarksModel.bookmarks.activeChild
+            let sel = model.scene.bookmarksModel.bookmarks.lastSelectedChild
             adaptive {  
                 let! ts = ts
-                return (Groups.viewLeafButtons ts |> UI.map BookmarkUIMessage)
+                let! sel = sel
+                match sel with
+                    | Some x -> return (Groups.viewLeafButtons ts |> UI.map BookmarkUIMessage)
+                    | None -> return (div[][])
+                
             } 
 
         let bookmarksGroupButtons (model:MModel) = 

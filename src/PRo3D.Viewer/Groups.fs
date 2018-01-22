@@ -13,7 +13,8 @@ open PRo3D
 
 module Groups =
     open DomainModel        
-    open Aardvark.Base.Geometry.BvhTree        
+    open Aardvark.Base.Geometry.BvhTree   
+    open Aardvark.Base.HSet
 
     //open Aardvark.UI.Static.Svg
    
@@ -143,7 +144,7 @@ module Groups =
             { model with 
                 flat = model.flat |> HMap.add leaf.id leaf; 
                 lastSelectedChild = Some leaf.id; 
-                selectedChilds = HSet.empty |> HSet.add treeSelection
+                selectedChilds = model.selectedChilds |> HSet.add treeSelection
             }
 
         let func = (fun (x : Node) -> { x with leaves = x.leaves |> PList.prepend leaf.id })
@@ -175,9 +176,9 @@ module Groups =
 
         if removeFromFlat then
             let flat' = m.flat |> HMap.remove id
-            { m with rootGroup = root'; flat = flat' }
+            { m with rootGroup = root'; flat = flat'; lastSelectedChild = None }
         else
-            { m with rootGroup = root' } 
+            { m with rootGroup = root'; lastSelectedChild = None } 
 
     let rec removeSelected (selection:list<TreeSelection>) (removeFromFlat:bool) (m:GroupsModel)  =
         match selection with
@@ -185,8 +186,7 @@ module Groups =
                 let m' = removeLeaf m x.id x.path removeFromFlat
                 removeSelected rest removeFromFlat m'
           |_ -> m
-
-    
+                    
     let moveChildren m =
        
         let toMove = 
@@ -208,7 +208,18 @@ module Groups =
         let sel = (m.selectedChilds |> HSet.map( fun x -> {x with path = m.activeGroup.path }))
         { m with selectedChilds = sel}        
 
-    
+    let checkSelection model =
+        model.selectedChilds 
+            |> HSet.map( fun x -> if model.flat.ContainsKey x.id then Some x else None)
+            |> HSet.choose( fun x -> x)   
+
+    let checkLastSelected model = 
+        match model.lastSelectedChild with
+            | Some x -> if isEmpty (model.selectedChilds |> HSet.filter ( fun y -> y.id = x)) then
+                            None
+                        else Some x
+            | _ -> None 
+
     let update (model : GroupsModel) (action : Action) =
         printfn "action: %A" action
         match action with
@@ -257,13 +268,13 @@ module Groups =
                     fun (x:Node) (id:Guid) -> { x with subNodes = removeGroup x id }
 
                 let root' = updateStructureAt p func model.rootGroup
-                
-                { model with
-                    rootGroup = root'
-                    flat = flat' 
-                    lastSelectedChild = None
-                    selectedChilds = HSet.empty }
-                
+                let m' = { model with rootGroup = root'; flat = flat' }
+
+                let selection = checkSelection m'
+                let last = checkLastSelected m'
+
+                { m' with selectedChilds = selection ; lastSelectedChild = last }
+
             | AddChildren (p,cs) ->
                 failwith "addchildren"
                 //AddChildren p cs model
@@ -292,21 +303,28 @@ module Groups =
                     | Some id -> model |> updateLeaf id (fun x -> Leaf.setName x t)
                     | None -> model
             | ClearGroup p -> 
-                failwith "clear group"
+                //failwith "clear group"
 
-                //let selection = 
-                //  model.selectedChilds 
-                //    |> HSet.choose (fun x -> 
-                //        match x.path = p with
-                //          | true -> Some x
-                //          | _    -> None )
+                //delete from flat
+                let flat' = 
+                    model.rootGroup 
+                      |> getNode p
+                      |> collectLeaves                
+                      |> PList.toList 
+                      |> List.fold (fun rest k -> HMap.remove k rest) model.flat
 
-                //let func = (function (x:Group) -> { x with childList = plist.Empty })
-                //let newRoot = updateItemAt p func model.rootGroup
-                //let m = { model with selectedChilds = selection }
-                //let m' = updateGroups m newRoot (flatten newRoot)
-                //m'
-                model
+                //delet from hierarchy                                
+                let func = 
+                    fun (x:Node) -> { x with leaves = plist.Empty }
+
+                let root' = updateNodeAt p func model.rootGroup
+                let m' = { model with rootGroup = root'; flat = flat' }
+
+                let selection = checkSelection m'
+                let last = checkLastSelected m'
+
+                { m' with selectedChilds = selection ; lastSelectedChild = last }
+
             | SelectChilds (p,id,s) ->
                 let selected = model.selectedChilds
                 let treeSelection = {
@@ -321,13 +339,20 @@ module Groups =
                     then 
                         HSet.remove treeSelection selected
                     else
-                        HSet.add treeSelection HSet.empty
+                        HSet.add treeSelection selected //HSet.empty
 
+                let showProps =
+                    if HSet.contains treeSelection selection
+                    then
+                        Some id
+                    else 
+                        None
+                        
                 { model with 
                     selectedChilds    = selection; 
                     activeChild       = treeSelection; 
                     lastSelectedItem  = SelectedItem.Child;
-                    lastSelectedChild = Some id }
+                    lastSelectedChild = showProps } //Some id
             | ToggleGroup p ->
                 
                 let leaves = 
@@ -341,7 +366,7 @@ module Groups =
                 let m = moveChildren model
                 m
             | ClearSelection ->
-                { model with selectedChilds = hset.Empty }
+                { model with selectedChilds = hset.Empty; lastSelectedChild = None }
             | UpdateCam id -> model
             | _ -> model
     
@@ -439,6 +464,10 @@ module Groups =
                      Html.row "Selection:"[ viewSelectionButtons ]
                 ]
             )
+
+    let showNothing : DomNode<Action> = 
+        require Html.semui (div [][]
+                )
 
         //let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
