@@ -933,15 +933,7 @@ module ViewerApp =
                
     /// Thread Pool stuff
     let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =         
-        //let imports =
-        //    proclist {
-        //        for opcPath in m.importOpcs do
-        //            let h = System.IO.Directory.EnumerateDirectories opcPath
-        //            let scene = { Aardvark.Opc.Configurations.Network.mars() with patchHierarchies = h }  
-        //            let sg = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
-        //            yield AddSg sg
-        //    }
-     
+             
         let drawing =
             DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage
        
@@ -962,6 +954,12 @@ module ViewerApp =
           | Some path -> 
                 let wp = Serialization.loadAs<plist<WayPoint>> path
                 { m with waypoints = wp }
+          | None -> m
+
+    let loadLastAnnotations (m:Model) = 
+        match Serialization.fileExists "./lastmeasure" with
+          | Some path -> 
+                Groups.loadGroups path |> Lenses.set' _annotations m
           | None -> m
 
     let loadRoverData (m:Model) =
