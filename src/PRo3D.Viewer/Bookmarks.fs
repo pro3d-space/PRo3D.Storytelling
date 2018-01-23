@@ -78,7 +78,13 @@ module Bookmarks =
                                         | Some xx -> xx = id
                                         | _ -> false )
 
-    let viewBookmarks (path:list<Index>) (model:MGroupsModel)(select : MBookmark*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (bookmarks: alist<Guid>) : alist<DomNode<'outer>> = 
+    let isSingleSelect (model : MGroupsModel) (b : MBookmark) =
+            model.singleSelectLeaf |> Mod.map( fun x -> 
+                match x with 
+                  | Some selected -> selected = (b.key |> Mod.force)
+                  | None -> false )
+
+    let viewBookmarks (path:list<Index>) (model:MGroupsModel) (singleSelect : MBookmark*list<Index> -> 'outer) (multiSelect : MBookmark*list<Index> -> 'outer) (lift : Groups.Action -> 'outer) (bookmarks: alist<Guid>) : alist<DomNode<'outer>> = 
                      
         alist {
 
@@ -96,14 +102,16 @@ module Bookmarks =
                 let bgc = sprintf "color: %s" (Html.ofC4b c)
                 let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
 
-                let select = fun _ -> select (b,path)
-                let! lastSel = lastSelected model b
+                let singleSelect = fun _ -> singleSelect(b,path)
+                let multiSelect  = fun _ -> multiSelect(b,path)
+                let! selected = b |> isSingleSelect model
+
                 let! key = b.key
 
                 yield div [clazz "item"; style bgc] [
-                    i [clazz "large Sticky Note middle aligned icon"; onClick select;style bgc][] //i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                    i [clazz "large Sticky Note middle aligned icon"; onClick multiSelect;style bgc][] 
                     div [clazz "content"; style infoc] [
-                        let desc = b.name
+                        //let desc = b.name
                         yield Incremental.div (AttributeMap.ofList [clazz "header"; style infoc])(
                             alist {
                                     yield i [clazz "home icon"; 
@@ -113,10 +121,10 @@ module Bookmarks =
                                              onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"
                                 } 
                         ) 
-                        if lastSel then
-                            yield div[onClick select][ u[][Incremental.text b.name]]
+                        if selected then
+                            yield div[onClick singleSelect][ u[][Incremental.text b.name]]
                         else
-                            yield div[onClick select][Incremental.text b.name]
+                            yield div[onClick singleSelect][Incremental.text b.name]
                         //yield div [clazz "description"; style bgc] [Incremental.text desc]      
                     ]
                 ]
@@ -180,9 +188,13 @@ module Bookmarks =
 
             let leafDomNodes = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
-            let select = 
+            let singleSelect = 
+                    fun (a:MBookmark,path:list<Index>) -> 
+                        Action.GroupsMessage(Groups.SingleSelectLeaf (path, a.key |> Mod.force, ""))
+
+            let multiSelect = 
                 fun (a:MBookmark,path:list<Index>) -> 
-                    Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key |> Mod.force, a.name |> Mod.force))
+                    Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key |> Mod.force, ""))
 
             let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
@@ -197,7 +209,7 @@ module Bookmarks =
                                 yield! leafDomNodes
 
                             if isExpanded then 
-                                yield! viewBookmarks path model select lift group.leaves
+                                yield! viewBookmarks path model singleSelect multiSelect lift group.leaves
                         }
                     )  
                             

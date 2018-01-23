@@ -558,8 +558,15 @@ module DrawingApp =
                         let lineLengthScale = 
                             Sg.computeInvariantScale view conf.nearPlane center conf.arrowLength conf.hfov
                         
+                        let box = new Box3d(anno.points |> AList.toArray) 
                         let planeScale = 
                             Sg.computeInvariantScale view conf.nearPlane center conf.dnsPlaneSize conf.hfov
+
+                        let scale = 
+                            adaptive{
+                                let! ps = planeScale
+                                return ps * box.Size.[box.MajorDim]
+                                }
                                                                         
                         let radius =   lineLengthScale |> Mod.map(fun d -> d * 0.05)
                         let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
@@ -572,7 +579,7 @@ module DrawingApp =
                         let discTrafo =
                             Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
 
-                        yield discISg color planeScale height discTrafo 
+                        yield discISg color scale height discTrafo 
 
                         let! dip = x.dipDirection
 

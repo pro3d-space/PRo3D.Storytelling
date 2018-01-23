@@ -326,13 +326,19 @@ module Groups =
 
                 { m' with selectedLeaves = selection ; singleSelectLeaf = last }
             | SingleSelectLeaf (p,id,s) ->
-
+                let treeSelection = {
+                    id = id
+                    path = p
+                    name = s
+                    }
                 let single = 
                     match model.singleSelectLeaf with
                       | Some s -> if s = id then None else Some id
                       | None -> Some id
 
-                { model with singleSelectLeaf = single }
+                { model with singleSelectLeaf = single; 
+                             activeChild = treeSelection; 
+                             lastSelectedItem = SelectedItem.Child }
             | AddLeafToSelection (p,id,s) ->
                 let selected = model.selectedLeaves
                 let treeSelection = {
@@ -358,8 +364,8 @@ module Groups =
                         
                 { model with 
                     selectedLeaves    = selection; 
-                    activeChild       = treeSelection; 
-                    lastSelectedItem  = SelectedItem.Child }
+                    activeChild       = treeSelection; }
+                    //lastSelectedItem  = SelectedItem.Child 
                     //singleSelectLeaf = showProps } //Some id
             | ToggleGroup p ->
                 
@@ -374,7 +380,7 @@ module Groups =
                 let m = moveChildren model
                 m
             | ClearSelection ->
-                { model with selectedLeaves = hset.Empty; singleSelectLeaf = None }
+                { model with selectedLeaves = hset.Empty; } //singleSelectLeaf = None
             | UpdateCam id -> model
             | _ -> model
     

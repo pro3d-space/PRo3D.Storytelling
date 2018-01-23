@@ -485,7 +485,13 @@ module Surface =
                                         | Some xx -> xx = id
                                         | _ -> false )
 
-    let viewSurfacesInGroups (path:list<Index>) (model:MGroupsModel)(select : MSurface*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (surfaceIds: alist<Guid>) : alist<DomNode<'outer>> = 
+    let isSingleSelect (model : MGroupsModel) (s : MSurface) =
+            model.singleSelectLeaf |> Mod.map( fun x -> 
+                match x with 
+                  | Some selected -> selected = (s.guid |> Mod.force)
+                  | None -> false )
+
+    let viewSurfacesInGroups (path:list<Index>) (model:MGroupsModel) (singleSelect : MSurface*list<Index> -> 'outer) (multiSelect : MSurface*list<Index> -> 'outer) (lift : Groups.Action -> 'outer) (surfaceIds: alist<Guid>) : alist<DomNode<'outer>> = 
             alist {
 
                 let surfaces = 
@@ -500,9 +506,10 @@ module Surface =
                                                   | _-> None )
                 for s in surfaces do
 
-                    let select = fun _ -> select (s,path)
-                    let! isSelected = isSelected model s
-                    let! lastSel = lastSelected model s
+                    let singleSelect = fun _ -> singleSelect(s,path)
+                    let multiSelect  = fun _ -> multiSelect(s,path)
+                    let! selected = s |> isSingleSelect model
+
                     let! c = mkColor model s
                     let bgc = sprintf "color: %s" (Html.ofC4b c)
                     let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
@@ -511,16 +518,15 @@ module Surface =
                     let! absRelIcons = absRelIcons s
 
                     yield div [clazz "item"; style infoc] [
-                        i [clazz "large cube middle aligned icon"; onClick select;style bgc][] 
-                       // i [clazz "ui circular label"][Incremental.text (s.priority.value |> Mod.map(sprintf "%.0f"))]
+                        i [clazz "large cube middle aligned icon"; onClick multiSelect;style bgc][] 
                         div [clazz "content"; style infoc] [
                             let desc = s.name
                             yield Incremental.div (AttributeMap.ofList [style infoc])(
                                 alist {
-                                    if lastSel then
-                                        yield div[onClick select][ u[][Incremental.text desc]]
+                                    if selected then
+                                        yield div[onClick singleSelect][ u[][Incremental.text desc]]
                                     else
-                                        yield div[onClick select][Incremental.text desc]
+                                        yield div[onClick singleSelect][Incremental.text desc]
  
                                     yield i [clazz "home icon"                                                
                                              onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                                                
@@ -530,16 +536,9 @@ module Surface =
                                     yield i [clazz "folder icon"                                                
                                              onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"                                                                                
 
-                                    //yield i [clazz "Remove icon red"
-                                    //         //onClick (fun _ -> lift <| RemoveSurface (key,path))] [] |> UI.wrapToolTip "Remove" 
-                                    //         onClick (fun _ -> RemoveSurface (key,path)) ][] |> UI.wrapToolTip "Remove"        
                                     } 
                             ) 
-                            //yield div [clazz "description"; style infoc] [
-                            //    Incremental.text (
-                            //        s.relativePaths
-                            //            |> Mod.map (fun d -> sprintf " | local: %A" (d)))
-                            //]                                    
+                                           
                         ]
                     ]
             }
@@ -601,9 +600,13 @@ module Surface =
                     else yield style "hidden"
                 }         
 
+            let singleSelect = 
+                    fun (s:MSurface,path:list<Index>) -> 
+                        Action.GroupsMessage(Groups.SingleSelectLeaf (path, s.guid |> Mod.force, ""))
 
-            let select = fun (a:MSurface,path:list<Index>) -> 
-                Action.GroupsMessage(Groups.AddLeafToSelection (path, a.guid |> Mod.force, a.name |> Mod.force))
+            let multiSelect = 
+                fun (s:MSurface,path:list<Index>) -> 
+                    Action.GroupsMessage(Groups.AddLeafToSelection (path, s.guid |> Mod.force, ""))
 
             let lift = fun (a:Groups.Action) -> (GroupsMessage a)
 
@@ -617,7 +620,7 @@ module Surface =
                                 if isExpanded then yield! children
                                 
                                 if isExpanded then 
-                                    yield! viewSurfacesInGroups path model select lift group.leaves
+                                    yield! viewSurfacesInGroups path model singleSelect multiSelect lift group.leaves
                             }
                         )  
                                 
