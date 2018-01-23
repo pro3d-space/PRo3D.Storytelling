@@ -48,7 +48,7 @@ module ViewerApp =
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
-    let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.surfaces  |. GroupsModel.Lens.lastSelectedChild
+    let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.surfaces  |. GroupsModel.Lens.singleSelectLeaf
        
     // navigation
     let _navigation = Model.Lens.scene |. Scene.Lens.navigation
@@ -162,7 +162,7 @@ module ViewerApp =
                         let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
                         { m with scene = { m.scene with surfacesModel = s}}
             | AnnotationMessage msg,_,_ ->                
-                match m.drawing.annotations.lastSelectedChild with
+                match m.drawing.annotations.singleSelectLeaf with
                   | Some selected ->                             
                       let f = (fun x ->
                           let a = x |> Leaf.toAnnotation
@@ -548,7 +548,7 @@ module ViewerApp =
 
             let controller = 
                 adaptive {
-                    let! selected = m.scene.surfacesModel.surfaces.lastSelectedChild
+                    let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
                     let! kind = m.trafoKind
                     match selected with
                       | Some c ->                           
@@ -625,7 +625,7 @@ module ViewerApp =
 
         let annotationLeafButtonns (model:MModel) = 
             let ts = model.drawing.annotations.activeChild
-            let sel = model.drawing.annotations.lastSelectedChild
+            let sel = model.drawing.annotations.singleSelectLeaf
             adaptive {  
                 let! ts = ts
                 let! sel = sel
@@ -702,7 +702,7 @@ module ViewerApp =
         
         let bookmarksLeafButtonns (model:MModel) = 
             let ts = model.scene.bookmarksModel.bookmarks.activeChild
-            let sel = model.scene.bookmarksModel.bookmarks.lastSelectedChild
+            let sel = model.scene.bookmarksModel.bookmarks.singleSelectLeaf
             adaptive {  
                 let! ts = ts
                 let! sel = sel

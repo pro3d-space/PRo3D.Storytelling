@@ -204,7 +204,7 @@ module ViewerUtils =
         (Navigation.UI.frustum near far)
 
     let renderCommands sgGrouped overlayed (m:MModel) =
-        let selected = m.scene.surfacesModel.surfaces.lastSelectedChild
+        let selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
 
         let grouped = 
             sgGrouped |> AList.map(

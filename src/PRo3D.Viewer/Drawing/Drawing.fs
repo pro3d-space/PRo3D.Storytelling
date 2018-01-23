@@ -59,11 +59,9 @@ module DrawingApp =
               | Some a -> 
                 let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
                 bc.Add json                    
-                                  
-                
+                                                  
                 model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true
-                
-                
+                                
               | None -> model.annotations             
 
         { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
@@ -297,19 +295,18 @@ module DrawingApp =
             let id = a.key |> Mod.force
 
             let color =  
-                model.selectedChilds
+                model.selectedLeaves
                     |> ASet.map(fun x -> x.id = id)
                     |> ASet.contains true
                     |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
             
             color
 
-        let lastSelected (model : MGroupsModel) (a : MAnnotation) =
-            let id = a.key |> Mod.force
-            model.lastSelectedChild 
-                |> Mod.map( fun x -> match x with 
-                                        | Some xx -> xx = id
-                                        | _ -> false )
+        let isSingleSelect (model : MGroupsModel) (a : MAnnotation) =
+            model.singleSelectLeaf |> Mod.map( fun x -> 
+                match x with 
+                  | Some selected -> selected = (a.key |> Mod.force)
+                  | None -> false )
                     
 
         let viewAnnotationImportExport =
@@ -340,65 +337,65 @@ module DrawingApp =
          
       
 
-        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(select : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<Guid>) : alist<DomNode<'outer>> =
+        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(singleSelect : MAnnotation*list<Index> -> 'outer)(multiSelect : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<Guid>) : alist<DomNode<'outer>> =
                            
-                alist { 
+            alist { 
 
-                    let annotations = 
-                        annotations
-                          |> AList.choose (
-                            fun x -> 
-                                let anno = 
-                                  model.flat 
-                                    |> AMap.tryFind x 
-                                    |> Mod.map(fun y -> 
-                                       match y with 
-                                         | Some k -> Some (k |> Mod.force)
-                                         | None -> Log.error "annotation with guid %A does not exist" x; None)                                
-                                match anno |> Mod.force with
-                                  | Some a -> 
-                                    match a with
-                                      | MAnnotations manno -> Some manno
-                                      | _ -> None
-                                  | None -> None
-                            )                          
+                let annotations = 
+                    annotations
+                      |> AList.choose (
+                        fun x -> 
+                            let anno = 
+                              model.flat 
+                                |> AMap.tryFind x 
+                                |> Mod.map(fun y -> 
+                                   match y with 
+                                     | Some k -> Some (k |> Mod.force)
+                                     | None -> Log.error "annotation with guid %A does not exist" x; None)                                
+                            match anno |> Mod.force with
+                              | Some a -> 
+                                match a with
+                                  | MAnnotations manno -> Some manno
+                                  | _ -> None
+                              | None -> None
+                        )                          
 
-                    for a in annotations do 
-                        let select = fun _ -> select (a,path)
-                        let! lastSel = lastSelected model a
-                                
-                        let! c = mkColor model a
-                        let bgc = sprintf "color: %s" (Html.ofC4b c)
-                        let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
+                for a in annotations do 
+                    let singleSelect = fun _ -> singleSelect(a,path)
+                    let multiSelect  = fun _ -> multiSelect(a,path)
+                    let! selected = a |> isSingleSelect model
+                            
+                    let! c = mkColor model a
+                    let bgc = sprintf "color: %s" (Html.ofC4b c)
+                    let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
 
-                        let! visible = a.visible
-                        let visibleIcon = if visible then "unhide icon" else "hide icon"
-                        let key = a.key |> Mod.force
+                    let! visible = a.visible
+                    let visibleIcon = if visible then "unhide icon" else "hide icon"
+                    let key = a.key |> Mod.force
 
-                        yield div [clazz "item"] [
-                            i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
-                            div [clazz "content"] [
-                                let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
-                                let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
+                    yield div [clazz "item"] [
+                        i [clazz "large Sticky Note middle aligned icon";onClick multiSelect; style bgc][]
+                        div [clazz "content"] [
+                            let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
+                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
 
-                                //header
-                                yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
-                                    alist {
-                                        if lastSel then
-                                            yield div[onClick select][ u[][Incremental.text header]]
-                                        else
-                                            yield div[onClick select][Incremental.text header]
-                                        //yield Incremental.text header
-                                        yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"                                                                                                                
-                                        //yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
-                                    } 
-                                ) 
+                            //header
+                            yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
+                                alist {
+                                    if selected then
+                                        yield div[onClick singleSelect][u[][Incremental.text header]]
+                                    else
+                                        yield div[onClick singleSelect][Incremental.text header]
+                                    //yield Incremental.text header
+                                    yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"
+                                } 
+                            ) 
 
-                                //description
-                                yield div [clazz "description";style ac ] [Incremental.text desc]      
-                            ]
+                            //description
+                            yield div [clazz "description";style ac ] [Incremental.text desc]      
                         ]
-                }     
+                    ]
+            }     
               
         let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<Action>> =
 
@@ -460,7 +457,14 @@ module DrawingApp =
                     }         
 
 
-                let select = fun (a:MAnnotation,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force, ""))  // Select (path, a.key |> Mod.force)
+                let singleSelect = 
+                    fun (a:MAnnotation,path:list<Index>) -> 
+                        Action.GroupsMessage(Groups.SingleSelectLeaf (path, a.key |> Mod.force, ""))
+
+                let multiSelect = 
+                    fun (a:MAnnotation,path:list<Index>) -> 
+                        Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key |> Mod.force, ""))
+
                 let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
                 yield div [ clazz "item"] [
@@ -473,7 +477,7 @@ module DrawingApp =
                                 if isExpanded then yield! subNodes
 
                                 if isExpanded then 
-                                    yield! viewAnnotationsInGroup path model select lift group.leaves
+                                    yield! viewAnnotationsInGroup path model singleSelect multiSelect lift group.leaves
                             }
                          )  
                                 
@@ -670,7 +674,7 @@ module DrawingApp =
                 adaptive {
                     let! m = m 
                     if m then return sg
-                    else return Sg.ofSeq []
+                    else return Sg.empty
                 } |> ASet.ofModSingle
 
             let dots  = dots |> optional (Sg.dots anno.points c view)
@@ -708,12 +712,25 @@ module DrawingApp =
                     dnsPlaneSize   = msmallConfig.getDnsPlaneSize   mbigConfig
                 }
 
+           
+
             let annotations =
                 aset {
                     for (_,a) in annoSet do
+                       let! selected = UI.isSingleSelect model.annotations a
                        let c = UI.mkColor model.annotations a
-                       let dots = a.geometry |> Mod.map(fun geo -> match geo with | Geometry.Line | Geometry.Point -> true | _ -> false)                       
+                       let dots = 
+                        a.geometry |> Mod.map(fun geo -> 
+                            match geo, selected with 
+                            | Geometry.Line,false | Geometry.Point, false -> true 
+                            | _ -> false)
+
                        yield finishedAnnotation a cam c config dots
+
+                       if selected then
+                          yield Sg.dots a.points (Mod.constant C4b.VRVisGreen) cam
+                       else
+                          yield Sg.empty
                 } |> Sg.set
                                 
             Sg.ofList [

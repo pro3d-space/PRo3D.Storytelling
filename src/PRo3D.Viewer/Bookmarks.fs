@@ -64,7 +64,7 @@ module Bookmarks =
             let id = b.key |> Mod.force
 
             let color =  
-                model.selectedChilds
+                model.selectedLeaves
                     |> ASet.map(fun x -> x.id = id)
                     |> ASet.contains true
                     |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)
@@ -73,7 +73,7 @@ module Bookmarks =
 
     let lastSelected (model : MGroupsModel) (b : MBookmark) =
             let id = b.key |> Mod.force
-            model.lastSelectedChild 
+            model.singleSelectLeaf 
                 |> Mod.map( fun x -> match x with 
                                         | Some xx -> xx = id
                                         | _ -> false )
@@ -180,7 +180,10 @@ module Bookmarks =
 
             let leafDomNodes = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
-            let select = fun (a:MBookmark,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force, a.name |> Mod.force))
+            let select = 
+                fun (a:MBookmark,path:list<Index>) -> 
+                    Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key |> Mod.force, a.name |> Mod.force))
+
             let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
             yield div [ clazz "item"] [

@@ -196,16 +196,16 @@ module Mutable =
         let _activeChild = ResetMod.Create(__initial.activeChild)
         let _flat = MMap.Create(__initial.flat, (fun v -> MLeaf.Create(v)), (fun (m,v) -> MLeaf.Update(m, v)), (fun v -> v))
         let _lastSelectedItem = ResetMod.Create(__initial.lastSelectedItem)
-        let _selectedChilds = MSet.Create(__initial.selectedChilds)
-        let _lastSelectedChild = MOption.Create(__initial.lastSelectedChild)
+        let _selectedLeaves = MSet.Create(__initial.selectedLeaves)
+        let _singleSelectLeaf = MOption.Create(__initial.singleSelectLeaf)
         
         member x.rootGroup = _rootGroup
         member x.activeGroup = _activeGroup :> IMod<_>
         member x.activeChild = _activeChild :> IMod<_>
         member x.flat = _flat :> amap<_,_>
         member x.lastSelectedItem = _lastSelectedItem :> IMod<_>
-        member x.selectedChilds = _selectedChilds :> aset<_>
-        member x.lastSelectedChild = _lastSelectedChild :> IMod<_>
+        member x.selectedLeaves = _selectedLeaves :> aset<_>
+        member x.singleSelectLeaf = _singleSelectLeaf :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Groups.GroupsModel) =
@@ -217,8 +217,8 @@ module Mutable =
                 ResetMod.Update(_activeChild,v.activeChild)
                 MMap.Update(_flat, v.flat)
                 ResetMod.Update(_lastSelectedItem,v.lastSelectedItem)
-                MSet.Update(_selectedChilds, v.selectedChilds)
-                MOption.Update(_lastSelectedChild, v.lastSelectedChild)
+                MSet.Update(_selectedLeaves, v.selectedLeaves)
+                MOption.Update(_singleSelectLeaf, v.singleSelectLeaf)
                 
         
         static member Create(__initial : PRo3D.Groups.GroupsModel) : MGroupsModel = MGroupsModel(__initial)
@@ -265,17 +265,17 @@ module Mutable =
                     override x.Set(r,v) = { r with lastSelectedItem = v }
                     override x.Update(r,f) = { r with lastSelectedItem = f r.lastSelectedItem }
                 }
-            let selectedChilds =
+            let selectedLeaves =
                 { new Lens<PRo3D.Groups.GroupsModel, Aardvark.Base.hset<PRo3D.Groups.TreeSelection>>() with
-                    override x.Get(r) = r.selectedChilds
-                    override x.Set(r,v) = { r with selectedChilds = v }
-                    override x.Update(r,f) = { r with selectedChilds = f r.selectedChilds }
+                    override x.Get(r) = r.selectedLeaves
+                    override x.Set(r,v) = { r with selectedLeaves = v }
+                    override x.Update(r,f) = { r with selectedLeaves = f r.selectedLeaves }
                 }
-            let lastSelectedChild =
+            let singleSelectLeaf =
                 { new Lens<PRo3D.Groups.GroupsModel, Microsoft.FSharp.Core.option<System.Guid>>() with
-                    override x.Get(r) = r.lastSelectedChild
-                    override x.Set(r,v) = { r with lastSelectedChild = v }
-                    override x.Update(r,f) = { r with lastSelectedChild = f r.lastSelectedChild }
+                    override x.Get(r) = r.singleSelectLeaf
+                    override x.Set(r,v) = { r with singleSelectLeaf = v }
+                    override x.Update(r,f) = { r with singleSelectLeaf = f r.singleSelectLeaf }
                 }
     
     

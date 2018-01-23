@@ -408,7 +408,7 @@ module Surface =
         match action with
             | SurfacePropertiesMessage msg ->                
                 let m = 
-                  match model.surfaces.lastSelectedChild with
+                  match model.surfaces.singleSelectLeaf with
                     | Some s -> 
                       let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface                        
                       let s' = SurfaceProperties.update surface msg
@@ -470,7 +470,7 @@ module Surface =
     let isSelected (model : MGroupsModel) (s : MSurface) =
         let id = s.guid |> Mod.force
             
-        model.selectedChilds
+        model.selectedLeaves
           |> ASet.map(fun x -> x.id = id)
           |> ASet.contains true
     
@@ -480,7 +480,7 @@ module Surface =
 
     let lastSelected (model : MGroupsModel) (s : MSurface) =
             let id = s.guid |> Mod.force
-            model.lastSelectedChild 
+            model.singleSelectLeaf 
                 |> Mod.map( fun x -> match x with 
                                         | Some xx -> xx = id
                                         | _ -> false )
@@ -578,16 +578,7 @@ module Surface =
                     i [clazz "plus icon"
                        onMouseClick (fun _ -> 
                          GroupsMessage(Groups.AddGroup path))] []
-                    |> UI.wrapToolTip "Add Group"   
-                        
-                    //i [clazz "remove circle icon"
-                    //   onMouseClick (fun _ -> 
-                    //     GroupsMessage(Groups.ClearGroup path))] [] 
-                    //|> UI.wrapToolTip "Clear Group"
-                        
-                    //i [clazz "remove icon red"
-                    //   onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
-                    //|> UI.wrapToolTip "Remove Group"
+                    |> UI.wrapToolTip "Add Group"                                          
 
                     Incremental.i toggleAttributes AList.empty |> UI.wrapToolTip "Toggle Group"
                 ]
@@ -612,7 +603,7 @@ module Surface =
 
 
             let select = fun (a:MSurface,path:list<Index>) -> 
-                Action.GroupsMessage(Groups.SelectChilds (path, a.guid |> Mod.force, a.name |> Mod.force))
+                Action.GroupsMessage(Groups.AddLeafToSelection (path, a.guid |> Mod.force, a.name |> Mod.force))
 
             let lift = fun (a:Groups.Action) -> (GroupsMessage a)
 
@@ -666,7 +657,7 @@ module Surface =
 
     let viewSurfaceProperties (model:MSurfaceModel) =
         adaptive {
-            let! guid = model.surfaces.lastSelectedChild
+            let! guid = model.surfaces.singleSelectLeaf
             
             match guid with
                 | Some i -> 
@@ -686,7 +677,7 @@ module Surface =
     
     let surfacesLeafButtonns (model:MSurfaceModel) = 
         let ts = model.surfaces.activeChild
-        let sel = model.surfaces.lastSelectedChild
+        let sel = model.surfaces.singleSelectLeaf
         adaptive {  
             let! ts = ts
             let! sel = sel

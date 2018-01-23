@@ -31,7 +31,8 @@ module Groups =
         | SetGroupName          of string
         | SetChildName          of string
         | ClearGroup            of list<Index>
-        | SelectChilds          of list<Index>*Guid*string 
+        | AddLeafToSelection    of list<Index>*Guid*string 
+        | SingleSelectLeaf      of list<Index>*Guid*string 
         | ToggleGroup           of list<Index>
         | MoveChilds      
         | ClearSelection
@@ -143,8 +144,8 @@ module Groups =
         let model = 
             { model with 
                 flat = model.flat |> HMap.add leaf.id leaf; 
-                lastSelectedChild = Some leaf.id; 
-                selectedChilds = model.selectedChilds |> HSet.add treeSelection
+                singleSelectLeaf = if select then Some leaf.id else None
+                //selectedLeaves = model.selectedLeaves |> HSet.add treeSelection
             }
 
         let func = (fun (x : Node) -> { x with leaves = x.leaves |> PList.prepend leaf.id })
@@ -166,7 +167,7 @@ module Groups =
 
                
     let removeFromSelection id path model =
-        { model with selectedChilds = model.selectedChilds |> HSet.remove( { id = id; path = path; name = "" } ) }
+        { model with selectedLeaves = model.selectedLeaves |> HSet.remove( { id = id; path = path; name = "" } ) }
     
     let removeLeaf model (id:Guid) path removeFromFlat =
         let func = (fun (x:Node) -> { x with leaves = x.leaves |> PList.remove' id })
@@ -176,9 +177,9 @@ module Groups =
 
         if removeFromFlat then
             let flat' = m.flat |> HMap.remove id
-            { m with rootGroup = root'; flat = flat'; lastSelectedChild = None }
+            { m with rootGroup = root'; flat = flat'; singleSelectLeaf = None }
         else
-            { m with rootGroup = root'; lastSelectedChild = None } 
+            { m with rootGroup = root'; singleSelectLeaf = None } 
 
     let rec removeSelected (selection:list<TreeSelection>) (removeFromFlat:bool) (m:GroupsModel)  =
         match selection with
@@ -190,7 +191,7 @@ module Groups =
     let moveChildren m =
        
         let toMove = 
-            m.selectedChilds
+            m.selectedLeaves
               |> HSet.choose (fun x -> m.flat |> HMap.tryFind x.id)
               |> HSet.toSeq
               |> PList.ofSeq
@@ -199,23 +200,23 @@ module Groups =
         // * add leaves to destination group
         let m = 
           m
-            |> removeSelected    (m.selectedChilds |> HSet.toList) false
+            |> removeSelected    (m.selectedLeaves |> HSet.toList) false
             |> updateActiveGroup (fun (x:Node) -> 
                 let ids = (toMove |> PList.map(fun x -> x.id))
                 { x with leaves = x.leaves |> PList.append' ids })
          
         // update selection paths
-        let sel = (m.selectedChilds |> HSet.map( fun x -> {x with path = m.activeGroup.path }))
-        { m with selectedChilds = sel}        
+        let sel = (m.selectedLeaves |> HSet.map( fun x -> {x with path = m.activeGroup.path }))
+        { m with selectedLeaves = sel}        
 
     let checkSelection model =
-        model.selectedChilds 
+        model.selectedLeaves 
             |> HSet.map( fun x -> if model.flat.ContainsKey x.id then Some x else None)
             |> HSet.choose( fun x -> x)   
 
     let checkLastSelected model = 
-        match model.lastSelectedChild with
-            | Some x -> if isEmpty (model.selectedChilds |> HSet.filter ( fun y -> y.id = x)) then
+        match model.singleSelectLeaf with
+            | Some x -> if isEmpty (model.selectedLeaves |> HSet.filter ( fun y -> y.id = x)) then
                             None
                         else Some x
             | _ -> None 
@@ -243,8 +244,8 @@ module Groups =
                     {    
                         name      = "newGroup" 
                         key       = Guid.NewGuid()
-                        leaves = plist.Empty
-                        subNodes = plist.Empty
+                        leaves    = plist.Empty
+                        subNodes  = plist.Empty
                         visible   = true
                         expanded  = true
                     }
@@ -273,7 +274,7 @@ module Groups =
                 let selection = checkSelection m'
                 let last = checkLastSelected m'
 
-                { m' with selectedChilds = selection ; lastSelectedChild = last }
+                { m' with selectedLeaves = selection ; singleSelectLeaf = last }
 
             | AddChildren (p,cs) ->
                 failwith "addchildren"
@@ -299,7 +300,7 @@ module Groups =
                     activeGroup = { model.activeGroup with name = t }
                 }
             | SetChildName t -> 
-                match model.lastSelectedChild with
+                match model.singleSelectLeaf with
                     | Some id -> model |> updateLeaf id (fun x -> Leaf.setName x t)
                     | None -> model
             | ClearGroup p -> 
@@ -323,10 +324,17 @@ module Groups =
                 let selection = checkSelection m'
                 let last = checkLastSelected m'
 
-                { m' with selectedChilds = selection ; lastSelectedChild = last }
+                { m' with selectedLeaves = selection ; singleSelectLeaf = last }
+            | SingleSelectLeaf (p,id,s) ->
 
-            | SelectChilds (p,id,s) ->
-                let selected = model.selectedChilds
+                let single = 
+                    match model.singleSelectLeaf with
+                      | Some s -> if s = id then None else Some id
+                      | None -> Some id
+
+                { model with singleSelectLeaf = single }
+            | AddLeafToSelection (p,id,s) ->
+                let selected = model.selectedLeaves
                 let treeSelection = {
                     id = id
                     path = p
@@ -349,10 +357,10 @@ module Groups =
                         None
                         
                 { model with 
-                    selectedChilds    = selection; 
+                    selectedLeaves    = selection; 
                     activeChild       = treeSelection; 
-                    lastSelectedItem  = SelectedItem.Child;
-                    lastSelectedChild = showProps } //Some id
+                    lastSelectedItem  = SelectedItem.Child }
+                    //singleSelectLeaf = showProps } //Some id
             | ToggleGroup p ->
                 
                 let leaves = 
@@ -366,7 +374,7 @@ module Groups =
                 let m = moveChildren model
                 m
             | ClearSelection ->
-                { model with selectedChilds = hset.Empty; lastSelectedChild = None }
+                { model with selectedLeaves = hset.Empty; singleSelectLeaf = None }
             | UpdateCam id -> model
             | _ -> model
     
@@ -413,7 +421,7 @@ module Groups =
 
     let viewSelected (view : MLeaf -> DomNode<'a>) (lifter : 'a -> 'b) (model : MGroupsModel) : IMod<DomNode<'b>> = 
         adaptive {
-            let! selected = model.lastSelectedChild
+            let! selected = model.singleSelectLeaf
             match selected with
                 | Some guid -> 
                     let item = 
@@ -485,7 +493,7 @@ module SurfaceModel =
 
     let initSurfaceGroups group flat selected = 
         let surfaces = GroupsModel.initial
-        { surfaces with rootGroup = group; lastSelectedChild = selected; flat = flat }
+        { surfaces with rootGroup = group; singleSelectLeaf = selected; flat = flat }
 
     let initSurfaceModel group flat selected =
         let surfaces = initSurfaceGroups group flat selected
@@ -500,7 +508,7 @@ module SurfaceModel =
         Pickler.product initSurfaceModel
         ^+ Pickler.field (fun s -> s.surfaces.rootGroup)             Pickler.auto<Node> //Surface
         ^+ Pickler.field (fun s -> s.surfaces.flat)                  Pickler.auto<hmap<Guid,Leaf>> //Surface
-        ^. Pickler.field (fun s -> s.surfaces.lastSelectedChild)     Pickler.auto<option<Guid>> //Pickler.auto<option<Surface>>
+        ^. Pickler.field (fun s -> s.surfaces.singleSelectLeaf)     Pickler.auto<option<Guid>> //Pickler.auto<option<Surface>>
 
     let initial = initSurfaceModel Group.initRoot hmap.Empty None   
     

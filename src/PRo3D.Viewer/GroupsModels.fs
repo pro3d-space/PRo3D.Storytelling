@@ -102,8 +102,8 @@ type GroupsModel = {
     activeChild          : TreeSelection
     flat                 : hmap<Guid,Leaf>
     lastSelectedItem     : SelectedItem
-    selectedChilds       : hset<TreeSelection> 
-    lastSelectedChild    : option<Guid>
+    selectedLeaves       : hset<TreeSelection> 
+    singleSelectLeaf     : option<Guid>
     }
 
 module Leaf =
@@ -162,8 +162,8 @@ module GroupsModel =
         activeChild = Group.initTreeSelection
         flat = hmap.Empty
         lastSelectedItem = SelectedItem.Child
-        selectedChilds = hset.Empty
-        lastSelectedChild = None
+        selectedLeaves = hset.Empty
+        singleSelectLeaf = None
         }
 
         
