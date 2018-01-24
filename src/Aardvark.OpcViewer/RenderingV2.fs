@@ -116,6 +116,12 @@ module PatchLod =
         member x.Decider = decider
         member x.UseCompressedTextures = useCompressedTextures
     
+    type dispOption<'a> = 
+        { content : Option<'a> }        
+        interface System.IDisposable with 
+            member x.Dispose() = ()
+    
+
 
     [<Semantic>]
     type PatchNodeSem() =
@@ -158,53 +164,65 @@ module PatchLod =
                     | Some (g, elapsedIndex) ->
 
                         //let g = RenderObject.Empty
-                   
+                        
                         let textureId : IMod<int> = 
                             attributeParams 
-                              |> Mod.map(fun x ->
+                                |> Mod.map(fun x ->
                                     match x.selectedTexture with
-                                      | Some i -> i
-                                      | None -> 0
-                              )
+                                        | Some i -> i
+                                        | None -> 0
+                                )
 
                         let scalarId : IMod<int> =
-                             attributeParams 
-                              |> Mod.map(fun x ->
+                                attributeParams 
+                                |> Mod.map(fun x ->
                                     match x.selectedScalar with
-                                      | Some i -> i
-                                      | None -> -1
-                              )
+                                        | Some i -> i
+                                        | None -> -1
+                                )
 
                         let oldTexture = ref None
 
-                        let tex =
-                            textureId |> Mod.map (fun id ->                            
-                                let texturePath = Patch.extractTexturePath n.BaseDir p.info id
-                                let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
-                                let tex,d =
-                                    if n.UseCompressedTextures then
-                                        CompressedImage.load runtime texturePath config false
-                                    else 
-                                        FileTexture(texturePath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
-                                match !oldTexture with
-                                    | None -> 
-                                        oldTexture := Some d
-                                        tex
-                                    | Some old -> 
-                                        oldTexture := Some d
-                                        old.Dispose()
-                                        tex
-                            )
+                        let tex =   
+                            
+                                textureId |> Mod.map (fun id ->   
+
+                                        let texturePath = Patch.extractTexturePath n.BaseDir p.info id
+                                        try
+                                            
+                                            let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
+                                            let tex,d =
+                                                if n.UseCompressedTextures then
+                                                    CompressedImage.load runtime texturePath config false
+                                                else 
+                                                    FileTexture(texturePath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
+                                            match !oldTexture with
+                                                | None -> 
+                                                    oldTexture := Some d
+                                                    tex
+                                                | Some old -> 
+                                                    oldTexture := Some d
+                                                    old.Dispose()
+                                                    tex
+                                        with
+                                        | _ -> 
+                                            Log.error("crahsed texture")
+                                            let config = { wantMipMaps = false; wantSrgb = false; wantCompressed = false }
+                                            let tex, d = FileTexture(texturePath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
+                                            tex
+                                )
+                            
+                            
 
                         let scl = 
                             scalarId |> Mod.bind ( fun id ->                                 
                                     let x = p.info.Attributes |> List.rev |> List.tryItem id
                                     match x with
-                                      | Some name ->
+                                        | Some name ->
                                             let arr = Path.combine [n.BaseDir; "Patches"; p.info.Name; name] |> fromFile<double>
                                             let buffer = ArrayBuffer(arr.Value.Data |> Array.map (fun a -> float32 a)) :> IBuffer
                                             Mod.constant buffer 
-                                      | None -> 
+                                        | None -> 
                                             let a  = SingleValueBuffer(Mod.constant V4f.OOOO) 
                                             a :> IMod<_>
                                 )
@@ -255,7 +273,9 @@ module PatchLod =
                             let t = tex :> IMod
                             { new IUniformProvider with
                                 member x.TryGetUniform(scope, sem) =
-                                    if sem = DefaultSemantic.DiffuseColorTexture then Some t
+                                    if sem = DefaultSemantic.DiffuseColorTexture 
+                                    then 
+                                        Some t
                                     else
                                         match string sem with
                                             | "LoDColor" -> 
@@ -299,26 +319,37 @@ module PatchLod =
                                     runtime.DeleteBuffer(pos)
                                     runtime.DeleteBuffer(tc)
                             }
-
-                        let prepared =  runtime.PrepareRenderObject(n.Signature, ro)
                         
-                        GL.Sync()
+                        try
+                            let prepared =  runtime.PrepareRenderObject(n.Signature, ro)
+                        
+                        
+                            GL.Sync()
 
-                        prepareTime.Stop()
-                        Statistics.emitLoaded prepareTime.MicroTime createTime elapsedIndex
-                        Some prepared
-                    | None -> None
+                        
+
+                            prepareTime.Stop()
+                            Statistics.emitLoaded prepareTime.MicroTime createTime elapsedIndex
+                            { content = Some prepared }
+                        
+                        with
+                        | _ -> 
+                            Log.error("0 size texture")
+                            { content = None }
+                        
+                    | None ->
+                        { content = None }
                     
 
             let prepare (patch : RenderPatch) =
                 load {
                     let res = preparePatch patch
-                    return res.Value
-                    //match res with
-                    //| Some r ->
-                    //    do! Load.disposeOnCancel r
-                    //    return Some r
-                    //| None -> return None
+                    //return res
+                    match res.content with
+                    | Some r ->
+                        do! Load.disposeOnCancel r
+                        return { content = Some r }
+                    | None -> return { content = None }
                 } |> n.Runner.Enqueue
 
             let rec flattenHorizon (t : RoseTree<RenderPatch>) =
@@ -343,7 +374,7 @@ module PatchLod =
                     delta
                 )
                 objects 
-                    |> ASet.mapUse (fun a -> use __ = runtime.ContextLock in (preparePatch a).Value)
+                    |> ASet.mapUse (fun a -> use __ = runtime.ContextLock in (preparePatch a).content.Value)
                     |> ASet.map (fun a -> a :> IRenderObject)
 
             let asyncRenderObjects =
@@ -352,7 +383,9 @@ module PatchLod =
                     |> Mod.constant
                     |> RoseTree.filter godeeper
                     |> RoseTree.mapAsync prepare
-                    |> RoseTree.flatten (fun p -> p :> IRenderObject)
+                    |> RoseTree.flatten (fun p -> p.content)
+                    |> ASet.choose id
+                    |> ASet.map(fun x -> x :> IRenderObject)
 
             
             match useAsyncLoading with

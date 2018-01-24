@@ -202,7 +202,7 @@ module Patch =
         match pos with
         | Some positions ->
 
-            let coordinates = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>        
+            let coords = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>        
         
             //let scalars = 
             //    List.tryHead p.Attributes 
@@ -210,33 +210,37 @@ module Patch =
 
             sw.Stop()
 
-            let coordinates = coordinates.Value.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
+            match coords with
+            | Some coordinates ->
 
-            let index = createIndex (positions.AsMatrix())
+                let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
 
-            let a : float = 0.0
+                let index = createIndex (positions.AsMatrix())
 
-            let indexAttributes =
-                let def = [
-                    DefaultSemantic.Positions, positions.Data :> Array
-                    DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array            
-                ]
+                let a : float = 0.0
 
-                //let def = 
-                //    match scalars with
-                //      | Some a -> List.append def [Sym.ofString("Scalar"), (a.Data |> Array.map (fun x -> float32 x) :> Array)]
-                //      | None   -> def
+                let indexAttributes =
+                    let def = [
+                        DefaultSemantic.Positions, positions.Data :> Array
+                        DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array            
+                    ]
 
-                def |> SymDict.ofList 
+                    //let def = 
+                    //    match scalars with
+                    //      | Some a -> List.append def [Sym.ofString("Scalar"), (a.Data |> Array.map (fun x -> float32 x) :> Array)]
+                    //      | None   -> def
 
-            let geometry =
-                IndexedGeometry(
-                    Mode              = IndexedGeometryMode.TriangleList,
-                    IndexArray        = index,
-                    IndexedAttributes = indexAttributes
-                )
-                                        
-            Some (geometry, sw.MicroTime)
+                    def |> SymDict.ofList 
+
+                let geometry =
+                    IndexedGeometry(
+                        Mode              = IndexedGeometryMode.TriangleList,
+                        IndexArray        = index,
+                        IndexedAttributes = indexAttributes
+                    )
+                                            
+                Some (geometry, sw.MicroTime)
+            | None -> None
         | None -> None
 
     let extractTexturePath (baseDir : string) (patchInfo : PatchFileInfo) (texNumber : int) =
