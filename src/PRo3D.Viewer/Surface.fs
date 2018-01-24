@@ -296,10 +296,10 @@ module Surface =
         let positions = kd.objectSetPath |> Aara.fromFile<V3f>
 
         let data = 
-            positions.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
+            positions.Value.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
 
         let invalidIndices = getInvalidIndices data
-        let index = PRo3DCSharp.ComputeIndexArray(positions.Size.XY.ToV2i(), invalidIndices)                
+        let index = PRo3DCSharp.ComputeIndexArray(positions.Value.Size.XY.ToV2i(), invalidIndices)                
                 
         let triangles =             
             index 

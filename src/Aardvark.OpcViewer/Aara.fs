@@ -21,12 +21,16 @@ open Aardvark.Opc
 module Aara =
 
     let readerChars2String (f : Stream)  = 
-        let cnt = f.ReadByte()
-        
-        let target = Array.zeroCreate cnt
-        let read = f.Read(target,0,cnt)
-        if cnt <> read then failwith ""
-        System.Text.Encoding.Default.GetString target
+      let cnt = f.ReadByte()
+                
+      match (cnt <= 0) with
+        | true ->
+            None
+        | false ->
+            let target = Array.zeroCreate cnt
+            let read = f.Read(target,0,cnt)
+            if cnt <> read then failwith ""
+            Some (System.Text.Encoding.Default.GetString target)
 
     let loadRaw<'a  when 'a : (new : unit -> 'a) and 'a : struct and 'a :> ValueType> (elementCount : int) (f : Stream)  =
         let result = Array.zeroCreate<'a> elementCount
@@ -63,33 +67,35 @@ module Aara =
     let loadFromStream<'a when 'a : unmanaged> (f : Stream) =
         let binaryReader = new BinaryReader(f,Text.Encoding.ASCII, true)
         let typeName = readerChars2String f
-        let dimensions = f.ReadByte() |> int
-        let sizes = [| for d in 0 .. dimensions - 1 do yield binaryReader.ReadInt32() |]
+        match typeName with
+        | Some tn ->
+            let dimensions = f.ReadByte() |> int
+            let sizes = [| for d in 0 .. dimensions - 1 do yield binaryReader.ReadInt32() |]
 
-        let elementCount = sizes |> Array.fold ((*)) 1
+            let elementCount = sizes |> Array.fold ((*)) 1
 
         
-        let result =
-            if typeof<'a>.Name = typeName then
-                loadRaw2<'a> elementCount f
-            else
-                match typeName with
-                    | "V3d" -> f |> loadRaw<V3d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V3d>
-                    | "V2d" -> f |> loadRaw<V2d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V2d>
-                    | "double" -> f |> loadRaw<double> elementCount |> PrimitiveValueConverter.arrayConverter typeof<double>
-                //    | "float" -> f |> loadRaw<float32> elementCount |> PrimitiveValueConverter.arrayConverter typeof<float32>
+            let result =
+                if typeof<'a>.Name = tn then
+                    loadRaw2<'a> elementCount f
+                else
+                    match tn with
+                        | "V3d" -> f |> loadRaw<V3d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V3d>
+                        | "V2d" -> f |> loadRaw<V2d> elementCount |> PrimitiveValueConverter.arrayConverter typeof<V2d>
+                        | "double" -> f |> loadRaw<double> elementCount |> PrimitiveValueConverter.arrayConverter typeof<double>
+                    //    | "float" -> f |> loadRaw<float32> elementCount |> PrimitiveValueConverter.arrayConverter typeof<float32>
+                        | _ -> failwith ""
+
+            let dim =
+                match sizes with
+                    | [| x |] -> V3i(x,1,1)
+                    | [| x; y |] -> V3i(x,y,1)
+                    | [| x; y; z |] -> V3i(x,y,z)
                     | _ -> failwith ""
 
-
-
-        let dim =
-            match sizes with
-                | [| x |] -> V3i(x,1,1)
-                | [| x; y |] -> V3i(x,y,1)
-                | [| x; y; z |] -> V3i(x,y,z)
-                | _ -> failwith ""
-
-        Volume<'a>(result, dim)
+            Some (Volume<'a>(result, dim))
+        | None -> None
+            
 
     let fromFile<'a when 'a : unmanaged and 'a : (new : unit -> 'a) and 'a : struct and 'a :> ValueType> (s : string) =
         use fs = File.OpenRead(s)
@@ -191,44 +197,47 @@ module Patch =
     let load (baseDir : string) (p : PatchFileInfo)  =
         let sw = System.Diagnostics.Stopwatch()
         sw.Start()
-        let positions = Path.combine [baseDir; "Patches"; p.Name; p.Positions] |> fromFile<V3f>
-        let coordinates = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>        
+        let pos = Path.combine [baseDir; "Patches"; p.Name; p.Positions] |> fromFile<V3f>
+
+        match pos with
+        | Some positions ->
+
+            let coordinates = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>        
         
+            //let scalars = 
+            //    List.tryHead p.Attributes 
+            //        |> Option.map(fun x -> Path.combine [baseDir; "Patches"; p.Name; x] |> fromFile<double>)       
 
-        let scalars = 
-            List.tryHead p.Attributes 
-                |> Option.map(fun x -> Path.combine [baseDir; "Patches"; p.Name; x] |> fromFile<double>)       
+            sw.Stop()
 
-        sw.Stop()
+            let coordinates = coordinates.Value.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
 
-        let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
+            let index = createIndex (positions.AsMatrix())
 
-        let index = createIndex (positions.AsMatrix())
+            let a : float = 0.0
 
-        let a : float = 0.0
+            let indexAttributes =
+                let def = [
+                    DefaultSemantic.Positions, positions.Data :> Array
+                    DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array            
+                ]
 
-        let indexAttributes =
-            let def = [
-                DefaultSemantic.Positions, positions.Data :> Array
-                DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array            
-            ]
+                //let def = 
+                //    match scalars with
+                //      | Some a -> List.append def [Sym.ofString("Scalar"), (a.Data |> Array.map (fun x -> float32 x) :> Array)]
+                //      | None   -> def
 
-            //let def = 
-            //    match scalars with
-            //      | Some a -> List.append def [Sym.ofString("Scalar"), (a.Data |> Array.map (fun x -> float32 x) :> Array)]
-            //      | None   -> def
+                def |> SymDict.ofList 
 
-            def |> SymDict.ofList 
-
-
-        let geometry =
-            IndexedGeometry(
-                Mode              = IndexedGeometryMode.TriangleList,
-                IndexArray        = index,
-                IndexedAttributes = indexAttributes
-            )
+            let geometry =
+                IndexedGeometry(
+                    Mode              = IndexedGeometryMode.TriangleList,
+                    IndexArray        = index,
+                    IndexedAttributes = indexAttributes
+                )
                                         
-        geometry, sw.MicroTime
+            Some (geometry, sw.MicroTime)
+        | None -> None
 
     let extractTexturePath (baseDir : string) (patchInfo : PatchFileInfo) (texNumber : int) =
         let t = patchInfo.Textures |> List.item texNumber
