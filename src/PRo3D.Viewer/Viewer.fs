@@ -34,8 +34,7 @@ open PRo3D.Groups
 //open Viewer.Mutable.ModelModule.Lens
 //open Mutable.AnnotationGroupModule.Lens
  
-module ViewerApp =    
-            
+module ViewerApp =
     open Surface   
     open System.Collections.Concurrent   
     open Scene   
@@ -43,12 +42,11 @@ module ViewerApp =
     open Aardvark.UI.Trafos
     open Aardvark.SceneGraph.SgFSharp.Sg
     open PRo3d.Align
-    open Aardvark.Rendering.GL.OpenGl.Pointers
                  
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
     let _sgSurfaces      = _surfacesModel   |. SurfaceModel.Lens.sgSurfaces
-    let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.surfaces  |. GroupsModel.Lens.singleSelectLeaf
+    let _selectedSurface = _surfacesModel   |. SurfaceModel.Lens.surfaces  |. GroupsModel.Lens.lastSelectedChild
        
     // navigation
     let _navigation = Model.Lens.scene |. Scene.Lens.navigation
@@ -150,9 +148,7 @@ module ViewerApp =
                 let ag = m.drawing.annotations 
                 { m with drawing = { m.drawing with annotations = Groups.update ag msg}}
             | DrawingMessage msg, Interactions.DrawAnnotation,_->
-                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
-
-                { m with drawing = drawing; } |> stash
+                { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg } |> stash
             | SurfaceActions msg,_,_ ->
                 match msg with
                     | SurfaceApp.Action.FlyToSurface id -> 
@@ -162,7 +158,7 @@ module ViewerApp =
                         let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
                         { m with scene = { m.scene with surfacesModel = s}}
             | AnnotationMessage msg,_,_ ->                
-                match m.drawing.annotations.singleSelectLeaf with
+                match m.drawing.annotations.lastSelectedChild with
                   | Some selected ->                             
                       let f = (fun x ->
                           let a = x |> Leaf.toAnnotation
@@ -180,13 +176,10 @@ module ViewerApp =
                 { m with scene = { m.scene with bookmarksModel = {m.scene.bookmarksModel with bookmarks = bm }}} 
             | RoverMessage msg,_,_ ->
                 let roverModel = RoverApp.update m.scene.viewPlans.roverModel msg
-                let viewPlanModel = ViewPlan.updateViewPlanFromRover roverModel m.scene.viewPlans
-                { m with scene = { m.scene with viewPlans = viewPlanModel}}  
+                { m with scene = { m.scene with viewPlans = { m.scene.viewPlans with roverModel = roverModel }}}  
             | ViewPlanMessage msg,_,_ ->
-                //let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
-                //{ m with scene = { m.scene with viewPlans = viewPlanModel}}  
-                let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation m
-                { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }}  
+                let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
+                { m with scene = { m.scene with viewPlans = viewPlanModel}}  
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolders w with
                     | [] -> m
@@ -197,38 +190,21 @@ module ViewerApp =
                                 |> List.map Surface.mk
                                 |> PList.ofList
 
-                        let m = Scene.import' runtime signature surfaces m
-
-                        let surfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
-                        let head = surfaces |> List.tryHead
-                        match head with
-                          | Some v ->
-
-                            let fullBb = 
-                                surfaces 
-                                  |> List.map(fun x -> x.globalBB) 
-                                  |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
-
-                            let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
-                            let (refSystem',_)= 
-                                ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
-                                                                
-                            { m with scene = { m.scene with referenceSystem = refSystem' }} |> updateCameraUp
-                          | None -> m
-                                                                       
+                        Scene.import' runtime signature surfaces m
             | ImportAnnotationGroups,_,_ ->
                 match Dialogs.openDialog w with
                     | Some x -> 
                         //update groups
-                        let imported, flat = AnnotationGroupsImporter.startImporter x
-
                         let newGroups = 
                             m.drawing.annotations.rootGroup.subNodes
-                              |> PList.append' imported
+                              |> PList.append' (AnnotationGroupsImporter.startImporter x)
 
-                        let m' = m |> Lenses.set _groups newGroups                        
+                        let m' = m |> Lenses.set _groups newGroups
 
-                        m' |> Lenses.set _flat flat
+                        //updat flat layout
+                        let flatAnnotations = failwith "import" // m'.drawing.annotations.rootGroup |> Groups.flatten
+
+                        m' |> Lenses.set _flat flatAnnotations
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
@@ -275,7 +251,7 @@ module ViewerApp =
                                 Log.stop()
                                 { m with drawing = drawing } |> stash
                             | Interactions.PlaceCoordinateSystem -> 
-                                
+                                //let refsystem' = ReferenceSystemApp.update m.scene.config innerConfig m.scene.referenceSystem a
                                 let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
                                 let (refSystem',_)= 
                                     ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
@@ -293,7 +269,7 @@ module ViewerApp =
                             | Interactions.PlaceRover ->
                                 let camState = m.scene.navigation.camera
                                 let ref = m.scene.referenceSystem 
-                                let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
+                                let viewPlans' = ViewPlan.update (m.scene.viewPlans) camState (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m))))
                                 { m with scene = {m.scene with viewPlans = viewPlans' } }
                             | Interactions.AlignPick -> 
                                 { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = hit; surfaceName = surf.guid}))}
@@ -345,10 +321,7 @@ module ViewerApp =
                     let m =
                         match m.interaction with
                             | Interactions.DrawAnnotation -> 
-                                let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing drawingAction } |> stash
-                                match drawingAction with
-                                  | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
-                                  | _ -> m                                
+                                { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing drawingAction; } |> stash
                             | Interactions.AlignPick -> 
                                 match k with
                                  | Aardvark.Application.Keys.Enter -> 
@@ -488,7 +461,7 @@ module ViewerApp =
    
     let view (m : MModel) =        
 
-        let renderControlAttributes (model : MNavigationModel)  =            
+        let renderControlAttributes (model : MNavigationModel) =            
 
             amap {
                 let! state = model.navigationMode
@@ -501,6 +474,7 @@ module ViewerApp =
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
+        let cam = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum
 
         let att = 
             AttributeMap.unionMany [
@@ -511,8 +485,6 @@ module ViewerApp =
                     onKeyUp (KeyUp)
                     attribute "style" "width:70%; height: 100%; float:left"; ] 
             ]
-
-                                               
 
         let overlayed =
             let annotations =
@@ -548,7 +520,7 @@ module ViewerApp =
 
             let controller = 
                 adaptive {
-                    let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
+                    let! selected = m.scene.surfacesModel.surfaces.lastSelectedChild
                     let! kind = m.trafoKind
                     match selected with
                       | Some c ->                           
@@ -556,12 +528,20 @@ module ViewerApp =
                           let! sgo = m.scene.surfacesModel.sgSurfaces |> AMap.tryFind c
                           
                           match sgo with 
-                              | Some sg ->                                  
+                              | Some sg ->
+                                    let scaling pos =                            
+                                        Sg.computeInvariantScale 
+                                            m.scene.navigation.camera.view 
+                                            (Mod.constant 0.1)
+                                            pos 
+                                            (Mod.constant 0.5)
+                                            (Mod.constant 60.0)
+
                                     match kind with
                                     | TrafoKind.Translate ->                                               
-                                        return TranslateController.viewController (fun t -> Translate("", t)) m.scene.navigation.camera.view sg.trafo
+                                        return TranslateController.viewController (fun t -> Translate("", t)) scaling sg.trafo
                                     | TrafoKind.Rotate ->
-                                        return RotationController.viewController (fun t -> Rotate("", t)) m.scene.navigation.camera.view sg.trafo
+                                        return RotationController.viewController (fun t -> Rotate("", t)) scaling sg.trafo
                                     | _ -> return Sg.empty
                               | None -> 
                                 Log.warn "selected surface does not exist"
@@ -569,7 +549,8 @@ module ViewerApp =
                       | None -> return Sg.empty
                     
                 } |> Sg.dynamic
-            
+
+            //[controller; annotations; refSystem; exploreCenter] |> Sg.ofList
             let viewPlans =
                 ViewPlan.Sg.view 
                     m.scene.config 
@@ -578,11 +559,9 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
-            //, exploreCenter
-            [controller; annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList
+            [controller; annotations; refSystem; alignment; exploreCenter; viewPlans] |> Sg.ofList
                                             
-        let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
-        let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
+        let cmds = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let control = DomNode.RenderControl(att, cam, cmds, None)
 
         let annotationGroupProperties (model:MModel) =
@@ -601,8 +580,7 @@ module ViewerApp =
                   | MAnnotations ann -> AnnotationProperties.view ann
                   | _ -> div[][])
             
-            model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
-               
+            model.drawing.annotations |> Groups.viewSelected view AnnotationMessage                   
 
         let viewDipAndStrike (model:MModel) = 
             let view = (fun leaf ->
@@ -621,25 +599,7 @@ module ViewerApp =
             model.scene.bookmarksModel.bookmarks |> Groups.viewSelected view BookmarkUIMessage
             
         let viewPlanProperties (model:MModel) =
-            model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage //RoverMessage
-
-        let annotationLeafButtonns (model:MModel) = 
-            let ts = model.drawing.annotations.activeChild
-            let sel = model.drawing.annotations.singleSelectLeaf
-            adaptive {  
-                let! ts = ts
-                let! sel = sel
-                match sel with
-                    | Some x -> return (Groups.viewLeafButtons ts |> UI.map AnnotationGroupsMessageViewer)
-                    | None -> return div[][]
-            } 
-
-        let annotationGroupButtons (model:MModel) = 
-            let ts = model.drawing.annotations.activeGroup
-            adaptive {  
-                let! ts = ts
-                return (Groups.viewGroupButtons ts |> UI.map AnnotationGroupsMessageViewer)
-            } 
+            model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties  RoverMessage
             
         let annotationUI = 
             let prop = 
@@ -649,35 +609,20 @@ module ViewerApp =
                           | SelectedItem.Group -> annotationGroupProperties m
                           | _ -> viewAnnotationProperties m 
                     )
-
-            let buttons = 
-                m.drawing.annotations.lastSelectedItem
-                    |> Mod.bind (fun x -> 
-                        match x with 
-                          | SelectedItem.Group -> annotationGroupButtons m
-                          | _ -> annotationLeafButtonns m 
-                    )
             
             div [][
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
                
                 GuiEx.accordion "Annotations" "Write" true [
-                    //Groups.viewSelectionButtons |> UI.map AnnotationGroupsMessageViewer
+                    Groups.viewGroupButtons |> UI.map AnnotationGroupsMessageViewer
                     DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
                 GuiEx.accordion "Properties" "Content" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle prop)                                        
-                ]
-               
-                GuiEx.accordion "Actions" "Asterisk" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
-                ]     
-                
+                    Incremental.div AttributeMap.empty (AList.ofModSingle prop)
+                ] 
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))] 
-                ]      
-
-
+            ]      
 
         let config (model:MModel) =
             adaptive {
@@ -699,26 +644,7 @@ module ViewerApp =
                     CameraProperties.view m.scene.navigation.camera
                 ]
             ]          
-        
-        let bookmarksLeafButtonns (model:MModel) = 
-            let ts = model.scene.bookmarksModel.bookmarks.activeChild
-            let sel = model.scene.bookmarksModel.bookmarks.singleSelectLeaf
-            adaptive {  
-                let! ts = ts
-                let! sel = sel
-                match sel with
-                    | Some x -> return (Groups.viewLeafButtons ts |> UI.map BookmarkUIMessage)
-                    | None -> return (div[][])
-                
-            } 
-
-        let bookmarksGroupButtons (model:MModel) = 
-            let ts = model.scene.bookmarksModel.bookmarks.activeGroup
-            adaptive {  
-                let! ts = ts
-                return (Groups.viewGroupButtons ts |> UI.map BookmarkUIMessage)
-            } 
-
+            
         let bookmarkUI = 
             let item2 = 
                 m.scene.bookmarksModel.bookmarks.lastSelectedItem 
@@ -727,18 +653,11 @@ module ViewerApp =
                           | SelectedItem.Group -> bookmarkGroupProperties m
                           | _ -> viewBookmarkProperties m 
                     )
-            let buttons = 
-                m.scene.bookmarksModel.bookmarks.lastSelectedItem 
-                    |> Mod.bind (fun x -> 
-                        match x with 
-                          | SelectedItem.Group -> bookmarksGroupButtons m
-                          | _ -> bookmarksLeafButtonns m 
-                    )
             div [][
                 Bookmarks.UI.viewGUI |> UI.map BookmarkMessage
 
                 GuiEx.accordion "Bookmarks" "Write" true [
-                    //Groups.viewSelectionButtons |> UI.map BookmarkUIMessage
+                    Groups.viewGroupButtons |> UI.map BookmarkUIMessage
                     Bookmarks.viewBookmarksGroups m.scene.bookmarksModel |> UI.map BookmarkMessage 
                 ]
                 GuiEx.accordion "Properties" "Content" true [
@@ -746,9 +665,6 @@ module ViewerApp =
                                                                let! i = item
                                                                yield i})
                 ] 
-                GuiEx.accordion "Actions" "Asterisk" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
-                ]   
                 ]
 
         let viewPlannerUI = 
@@ -768,38 +684,18 @@ module ViewerApp =
                 ("Annotations", annotationUI) 
                 ("Config", configUI)            
                 ("Bookmarks", bookmarkUI) 
-                ("ViewPlanner", viewPlannerUI)
+                //("ViewPlanner", viewPlannerUI)
             ] "Data" 
       
-        let dynamicTop =
-            adaptive {
-                let! interaction = m.interaction
-                match interaction with
-                  | Interactions.DrawAnnotation -> 
-                    return DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
-                  | Interactions.PlaceRover ->
-                    return ViewPlan.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
-                  | Interactions.PlaceCoordinateSystem -> 
-                    return Html.Layout.horizontal [
-                        Html.Layout.boxH [ Html.SemUi.dropDown' m.scene.referenceSystem.scaleChart m.scene.referenceSystem.selectedScale ReferenceSystemApp.Action.SetScale id ]
-                        Html.Layout.boxH [ i [clazz "large Unhide icon"][] ]
-                        Html.Layout.boxH [ Html.SemUi.toggleBox m.scene.referenceSystem.isVisible ReferenceSystemApp.Action.ToggleVisible  ]
-                        
-                        ] |> UI.map ReferenceSystemMessage
-                  | _ -> 
-                    return div[][]
-            }
-
         let topMenu = [
-             Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
-
              Html.Layout.horizontal [
                 Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
                 Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
-             ]             
-                         
-             Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
-             
+             ]
+
+             Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
+             DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
+             ViewPlan.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
 
              //button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
              //button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
@@ -810,7 +706,7 @@ module ViewerApp =
                 alist {
                     let! t = tab
                     match t with
-                      | TabMenu.Surfaces -> 
+                      | TabMenu.Data -> 
                             yield SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions
                       | TabMenu.Annotations -> 
                             yield annotationUI
@@ -818,8 +714,6 @@ module ViewerApp =
                             yield bookmarkUI
                       | TabMenu.Config -> 
                             yield configUI
-                      | TabMenu.Viewplanner -> 
-                            yield viewPlannerUI
                       | _-> failwith "tab not supported"
                     
                 }
@@ -828,9 +722,8 @@ module ViewerApp =
         let rest (model : MModel) = 
             [             
                 control
-                div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
+                div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden"] [
                     div[style "height:41px"][text "spacer"]
-                    div [clazz "ui large black horizontal label"][text "Show Tab:"]
                     Html.SemUi.dropDown model.tabMenu SetTabMenu
                     viewTabs model.tabMenu                    
                 ]            
@@ -912,37 +805,28 @@ module ViewerApp =
                     ]
                 ]
 
-        let chooseView (mode : ViewerMode) =
-
-            let stuff = 
-                alist {                                     
-                    match mode with
-                    | ViewerMode.Standard -> 
-                        let sections = [
-                            "blank", [div[style "height:15px"][]]
-                            "Scene", [sceneTools]
-                            "Recent", [recentScenes]
-                            "Add Surface", [openSurface]                
-                            "Import AnnotationGroups", [importAnnotationGroups]]   
-
-
-                        yield div[](GuiEx.adornerMenu sections topMenu (rest m))
-                    | ViewerMode.Instrument -> 
-                        yield div[][]
-                }
-                  
-
-            Incremental.div AttributeMap.empty stuff
-            
-        require (Html.semui @ [myCss]) (                             
+        require (Html.semui @ [myCss]) (
+            let sections = [
+                "blank", [div[style "height:15px"][]]                
+                "Scene", [sceneTools]
+                "Recent", [recentScenes]
+                "Add Surface", [openSurface]                
+                "Import AnnotationGroups", [importAnnotationGroups]]                              
             onBoot usingContext (                            
-                body [clazz "context example"; style "overflow-y:hidden"] [chooseView ViewerMode.Standard]
-            )
-        )
+                body [clazz "context example"; style "overflow-y:hidden"] (GuiEx.adornerMenu sections topMenu (rest m))                                  
+        ))
                
     /// Thread Pool stuff
     let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =         
-             
+        //let imports =
+        //    proclist {
+        //        for opcPath in m.importOpcs do
+        //            let h = System.IO.Directory.EnumerateDirectories opcPath
+        //            let scene = { Aardvark.Opc.Configurations.Network.mars() with patchHierarchies = h }  
+        //            let sg = Aardvark.Opc.Viewer.createPlainSceneGraph runtime signature scene
+        //            yield AddSg sg
+        //    }
+     
         let drawing =
             DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage
        
@@ -963,12 +847,6 @@ module ViewerApp =
           | Some path -> 
                 let wp = Serialization.loadAs<plist<WayPoint>> path
                 { m with waypoints = wp }
-          | None -> m
-
-    let loadLastAnnotations (m:Model) = 
-        match Serialization.fileExists "./lastmeasure" with
-          | Some path -> 
-                Groups.loadGroups path |> Lenses.set' _annotations m
           | None -> m
 
     let loadRoverData (m:Model) =

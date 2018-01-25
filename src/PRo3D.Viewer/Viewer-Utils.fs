@@ -72,7 +72,7 @@ type ViewerAction =
 
 
 module ViewerUtils =
-    //open OpenCvSharp.XFeatures2D
+    open OpenCvSharp.XFeatures2D
     
     let colormap = 
         let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
@@ -204,7 +204,7 @@ module ViewerUtils =
         (Navigation.UI.frustum near far)
 
     let renderCommands sgGrouped overlayed (m:MModel) =
-        let selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
+        let selected = m.scene.surfacesModel.surfaces.lastSelectedChild
 
         let grouped = 
             sgGrouped |> AList.map(

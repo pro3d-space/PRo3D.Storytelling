@@ -335,10 +335,16 @@ module Mutable =
         let _rovers = MMap.Create(__initial.rovers, (fun v -> MRover.Create(v)), (fun (m,v) -> MRover.Update(m, v)), (fun v -> v))
         let _platforms = MMap.Create(__initial.platforms)
         let _selectedRover = MOption.Create(__initial.selectedRover, (fun v -> MRover.Create(v)), (fun (m,v) -> MRover.Update(m, v)), (fun v -> v))
+        let _selectedInstrument = MOption.Create(__initial.selectedInstrument, (fun v -> MInstrument.Create(v)), (fun (m,v) -> MInstrument.Update(m, v)), (fun v -> v))
+        let _selectedAxis = MOption.Create(__initial.selectedAxis, (fun v -> MAxis.Create(v)), (fun (m,v) -> MAxis.Update(m, v)), (fun v -> v))
+        let _currentAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.currentAngle)
         
         member x.rovers = _rovers :> amap<_,_>
         member x.platforms = _platforms :> amap<_,_>
         member x.selectedRover = _selectedRover :> IMod<_>
+        member x.selectedInstrument = _selectedInstrument :> IMod<_>
+        member x.selectedAxis = _selectedAxis :> IMod<_>
+        member x.currentAngle = _currentAngle
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3d.RoverModel) =
@@ -348,6 +354,9 @@ module Mutable =
                 MMap.Update(_rovers, v.rovers)
                 MMap.Update(_platforms, v.platforms)
                 MOption.Update(_selectedRover, v.selectedRover)
+                MOption.Update(_selectedInstrument, v.selectedInstrument)
+                MOption.Update(_selectedAxis, v.selectedAxis)
+                Aardvark.UI.Mutable.MNumericInput.Update(_currentAngle, v.currentAngle)
                 
         
         static member Create(__initial : PRo3d.RoverModel) : MRoverModel = MRoverModel(__initial)
@@ -382,13 +391,30 @@ module Mutable =
                     override x.Set(r,v) = { r with selectedRover = v }
                     override x.Update(r,f) = { r with selectedRover = f r.selectedRover }
                 }
+            let selectedInstrument =
+                { new Lens<PRo3d.RoverModel, Microsoft.FSharp.Core.option<PRo3d.Instrument>>() with
+                    override x.Get(r) = r.selectedInstrument
+                    override x.Set(r,v) = { r with selectedInstrument = v }
+                    override x.Update(r,f) = { r with selectedInstrument = f r.selectedInstrument }
+                }
+            let selectedAxis =
+                { new Lens<PRo3d.RoverModel, Microsoft.FSharp.Core.option<PRo3d.Axis>>() with
+                    override x.Get(r) = r.selectedAxis
+                    override x.Set(r,v) = { r with selectedAxis = v }
+                    override x.Update(r,f) = { r with selectedAxis = f r.selectedAxis }
+                }
+            let currentAngle =
+                { new Lens<PRo3d.RoverModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.currentAngle
+                    override x.Set(r,v) = { r with currentAngle = v }
+                    override x.Update(r,f) = { r with currentAngle = f r.currentAngle }
+                }
     
     
     type MViewPlan(__initial : PRo3d.ViewPlan) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.ViewPlan> = Aardvark.Base.Incremental.EqModRef<PRo3d.ViewPlan>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.ViewPlan>
         let _id = ResetMod.Create(__initial.id)
-        let _name = ResetMod.Create(__initial.name)
         let _position = ResetMod.Create(__initial.position)
         let _lookAt = ResetMod.Create(__initial.lookAt)
         let _viewerState = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.viewerState)
@@ -396,12 +422,8 @@ module Mutable =
         let _rover = MRover.Create(__initial.rover)
         let _roverTrafo = ResetMod.Create(__initial.roverTrafo)
         let _isVisible = ResetMod.Create(__initial.isVisible)
-        let _selectedInstrument = MOption.Create(__initial.selectedInstrument, (fun v -> MInstrument.Create(v)), (fun (m,v) -> MInstrument.Update(m, v)), (fun v -> v))
-        let _selectedAxis = MOption.Create(__initial.selectedAxis, (fun v -> MAxis.Create(v)), (fun (m,v) -> MAxis.Update(m, v)), (fun v -> v))
-        let _currentAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.currentAngle)
         
         member x.id = _id :> IMod<_>
-        member x.name = _name :> IMod<_>
         member x.position = _position :> IMod<_>
         member x.lookAt = _lookAt :> IMod<_>
         member x.viewerState = _viewerState
@@ -409,9 +431,6 @@ module Mutable =
         member x.rover = _rover
         member x.roverTrafo = _roverTrafo :> IMod<_>
         member x.isVisible = _isVisible :> IMod<_>
-        member x.selectedInstrument = _selectedInstrument :> IMod<_>
-        member x.selectedAxis = _selectedAxis :> IMod<_>
-        member x.currentAngle = _currentAngle
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3d.ViewPlan) =
@@ -419,7 +438,6 @@ module Mutable =
                 __current.Value <- v
                 
                 ResetMod.Update(_id,v.id)
-                ResetMod.Update(_name,v.name)
                 ResetMod.Update(_position,v.position)
                 ResetMod.Update(_lookAt,v.lookAt)
                 Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_viewerState, v.viewerState)
@@ -427,9 +445,6 @@ module Mutable =
                 MRover.Update(_rover, v.rover)
                 ResetMod.Update(_roverTrafo,v.roverTrafo)
                 ResetMod.Update(_isVisible,v.isVisible)
-                MOption.Update(_selectedInstrument, v.selectedInstrument)
-                MOption.Update(_selectedAxis, v.selectedAxis)
-                Aardvark.UI.Mutable.MNumericInput.Update(_currentAngle, v.currentAngle)
                 
         
         static member Create(__initial : PRo3d.ViewPlan) : MViewPlan = MViewPlan(__initial)
@@ -451,12 +466,6 @@ module Mutable =
                     override x.Get(r) = r.id
                     override x.Set(r,v) = { r with id = v }
                     override x.Update(r,f) = { r with id = f r.id }
-                }
-            let name =
-                { new Lens<PRo3d.ViewPlan, Microsoft.FSharp.Core.string>() with
-                    override x.Get(r) = r.name
-                    override x.Set(r,v) = { r with name = v }
-                    override x.Update(r,f) = { r with name = f r.name }
                 }
             let position =
                 { new Lens<PRo3d.ViewPlan, Aardvark.Base.V3d>() with
@@ -499,24 +508,6 @@ module Mutable =
                     override x.Get(r) = r.isVisible
                     override x.Set(r,v) = { r with isVisible = v }
                     override x.Update(r,f) = { r with isVisible = f r.isVisible }
-                }
-            let selectedInstrument =
-                { new Lens<PRo3d.ViewPlan, Microsoft.FSharp.Core.option<PRo3d.Instrument>>() with
-                    override x.Get(r) = r.selectedInstrument
-                    override x.Set(r,v) = { r with selectedInstrument = v }
-                    override x.Update(r,f) = { r with selectedInstrument = f r.selectedInstrument }
-                }
-            let selectedAxis =
-                { new Lens<PRo3d.ViewPlan, Microsoft.FSharp.Core.option<PRo3d.Axis>>() with
-                    override x.Get(r) = r.selectedAxis
-                    override x.Set(r,v) = { r with selectedAxis = v }
-                    override x.Update(r,f) = { r with selectedAxis = f r.selectedAxis }
-                }
-            let currentAngle =
-                { new Lens<PRo3d.ViewPlan, Aardvark.UI.NumericInput>() with
-                    override x.Get(r) = r.currentAngle
-                    override x.Set(r,v) = { r with currentAngle = v }
-                    override x.Update(r,f) = { r with currentAngle = f r.currentAngle }
                 }
     
     

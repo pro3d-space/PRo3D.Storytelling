@@ -39,7 +39,7 @@ module Bookmarks =
                     getNewBookmark (navigation.Get outerModel) model.bookmarks.flat.Count
                 
                 let groups = 
-                    Groups.addLeafToActiveGroup (Leaf.Bookmarks newBm) true model.bookmarks
+                    Groups.addLeafToActiveGroup (Leaf.Bookmarks newBm) model.bookmarks
                 
                 outerModel, { model with bookmarks = groups}
             | GroupsMessage msg -> 
@@ -64,27 +64,14 @@ module Bookmarks =
             let id = b.key |> Mod.force
 
             let color =  
-                model.selectedLeaves
+                model.selectedChilds
                     |> ASet.map(fun x -> x.id = id)
                     |> ASet.contains true
                     |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)
             
             color
 
-    let lastSelected (model : MGroupsModel) (b : MBookmark) =
-            let id = b.key |> Mod.force
-            model.singleSelectLeaf 
-                |> Mod.map( fun x -> match x with 
-                                        | Some xx -> xx = id
-                                        | _ -> false )
-
-    let isSingleSelect (model : MGroupsModel) (b : MBookmark) =
-            model.singleSelectLeaf |> Mod.map( fun x -> 
-                match x with 
-                  | Some selected -> selected = (b.key |> Mod.force)
-                  | None -> false )
-
-    let viewBookmarks (path:list<Index>) (model:MGroupsModel) (singleSelect : MBookmark*list<Index> -> 'outer) (multiSelect : MBookmark*list<Index> -> 'outer) (lift : Groups.Action -> 'outer) (bookmarks: alist<Guid>) : alist<DomNode<'outer>> = 
+    let viewBookmarks (path:list<Index>) (model:MGroupsModel)(select : MBookmark*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (bookmarks: alist<Guid>) : alist<DomNode<'outer>> = 
                      
         alist {
 
@@ -100,32 +87,26 @@ module Bookmarks =
                                 
                 let! c = mkColor model b
                 let bgc = sprintf "color: %s" (Html.ofC4b c)
-                let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
 
-                let singleSelect = fun _ -> singleSelect(b,path)
-                let multiSelect  = fun _ -> multiSelect(b,path)
-                let! selected = b |> isSingleSelect model
-
+                let select = fun _ -> select (b,path)
                 let! key = b.key
 
                 yield div [clazz "item"; style bgc] [
-                    i [clazz "large Sticky Note middle aligned icon"; onClick multiSelect;style bgc][] 
-                    div [clazz "content"; style infoc] [
-                        //let desc = b.name
-                        yield Incremental.div (AttributeMap.ofList [clazz "header"; style infoc])(
+                    i [clazz "large Sticky Note middle aligned icon"; onClick select;style bgc][] //i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                    div [clazz "content"; style bgc] [
+                        let desc = b.name
+                        yield Incremental.div (AttributeMap.ofList [clazz "header"])(
                             alist {
                                     yield i [clazz "home icon"; 
-                                             onClick (fun _ -> lift <| Groups.UpdateCam key)][] |> UI.wrapToolTipRight "FlyTo"
+                                             onClick (fun _ -> lift <| Groups.UpdateCam key); 
+                                             style bgc][] |> UI.wrapToolTipRight "FlyTo"
                     
                                     yield i [clazz "Remove icon"; 
-                                             onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"
+                                             onClick (fun _ -> lift <| Groups.RemoveChild (key,path)); 
+                                             style bgc] [] |> UI.wrapToolTip "Remove"
                                 } 
                         ) 
-                        if selected then
-                            yield div[onClick singleSelect][ u[][Incremental.text b.name]]
-                        else
-                            yield div[onClick singleSelect][Incremental.text b.name]
-                        //yield div [clazz "description"; style bgc] [Incremental.text desc]      
+                        yield div [clazz "description"; style bgc] [Incremental.text desc]      
                     ]
                 ]
         }     
@@ -158,14 +139,14 @@ module Bookmarks =
                          GroupsMessage(Groups.AddGroup path))] [] 
                     |> UI.wrapToolTip "Add Group"   
                         
-                    //i [clazz "remove circle icon"
-                    //   onMouseClick (fun _ -> 
-                    //     GroupsMessage(Groups.ClearGroup path))] [] 
-                    //|> UI.wrapToolTip "Clear Group"
+                    i [clazz "remove circle icon"
+                       onMouseClick (fun _ -> 
+                         GroupsMessage(Groups.ClearGroup path))] [] 
+                    |> UI.wrapToolTip "Clear Group"
                         
-                    //i [clazz "remove icon red"
-                    //   onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
-                    //|> UI.wrapToolTip "Remove Group"                    
+                    i [clazz "remove icon red"
+                       onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
+                    |> UI.wrapToolTip "Remove Group"                    
                 ]
                  
             let itemAttributes =
@@ -188,14 +169,7 @@ module Bookmarks =
 
             let leafDomNodes = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
-            let singleSelect = 
-                    fun (a:MBookmark,path:list<Index>) -> 
-                        Action.GroupsMessage(Groups.SingleSelectLeaf (path, a.key |> Mod.force, ""))
-
-            let multiSelect = 
-                fun (a:MBookmark,path:list<Index>) -> 
-                    Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key |> Mod.force, ""))
-
+            let select = fun (a:MBookmark,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force, a.name |> Mod.force))
             let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
             yield div [ clazz "item"] [
@@ -209,7 +183,7 @@ module Bookmarks =
                                 yield! leafDomNodes
 
                             if isExpanded then 
-                                yield! viewBookmarks path model singleSelect multiSelect lift group.leaves
+                                yield! viewBookmarks path model select lift group.leaves
                         }
                     )  
                             
@@ -239,10 +213,10 @@ module Bookmarks =
 
         let viewGUI = 
          div [clazz "ui buttons inverted"] [
-                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                        button [clazz "ui icon button"; onMouseClick (fun _ -> AddBookmark )] [ //
-                                i [clazz "plus icon"] [] ] |> UI.wrapToolTipBottom "Add Bookmark"
-                   // )
+                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                        button [clazz "ui icon button"; attribute "data-content" "Add Bookmark"; onMouseClick (fun _ -> AddBookmark )] [ //
+                                i [clazz "plus icon"] [] ] 
+                    )
                 ] 
 
        

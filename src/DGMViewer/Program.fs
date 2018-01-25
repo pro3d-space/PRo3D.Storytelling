@@ -14,8 +14,6 @@ open Aardvark.Rendering.GL
 
 module DGM = 
 
-
-
     let inline isNan (v : V3f) = v.AnyNaN
 
     let slowSystemParseDouble (c : char[], start : int, endIndex : int) =

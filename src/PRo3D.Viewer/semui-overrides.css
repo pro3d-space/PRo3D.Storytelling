@@ -44,10 +44,6 @@ button, input, optgroup, select, textarea {
     border: 0px
 }        
 
-div.sp-replacer.sp-light {
-	width: 50px
-}
-
 /*div.content.active {
     overflow-y : auto;    
     max-height: 30%    

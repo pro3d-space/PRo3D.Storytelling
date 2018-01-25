@@ -59,9 +59,9 @@ module DrawingApp =
               | Some a -> 
                 let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
                 bc.Add json                    
-                                                  
-                model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true
-                                
+                    
+                model.annotations 
+                  |> Groups.addLeafToActiveGroup (Leaf.Annotations a)
               | None -> model.annotations             
 
         { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
@@ -105,9 +105,7 @@ module DrawingApp =
                 | None ->  //no working state, start new working annotation
                     { 
                         //annotation states should be immutable after creation
-                        //(Annotation.make model.projection model.geometry model.semantic surfaceName)  
-                        //    with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
-                        (Annotation.make2 model.projection model.geometry model.color model.thickness surfaceName)
+                        (Annotation.make model.projection model.geometry model.semantic surfaceName)  
                             with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
                     }, None
 
@@ -232,10 +230,6 @@ module DrawingApp =
                     { model with geometry = mode }
             | SetProjection mode, _ ->
                     { model with projection = mode }                  
-            | ChangeColor c, _ -> 
-                { model with color = ColorPicker.update model.color c }
-            | ChangeThickness th, _ ->
-                { model with thickness = Numeric.update model.thickness th }
             | SetExportPath s, _ ->
                     { model with exportPath = s }
             | Export, _ ->
@@ -255,9 +249,9 @@ module DrawingApp =
                 match Dialogs.openDialog w with
                     | None -> model
                     | Some path -> 
-                        { model with annotations = Groups.loadGroups path }
+                        { model with annotations = Groups.loadAnnotationGroups path }
             | QuickLoad,_ ->  
-                let groups = Groups.loadGroups "./lastMeasure" 
+                let groups = Groups.loadAnnotationGroups "./lastMeasure" 
                 { model with annotations = groups }
             | Send, _ ->                                                      
                 model
@@ -286,116 +280,121 @@ module DrawingApp =
                 Html.Layout.boxH [ i [clazz "large Write icon"][] ]
                 Html.Layout.boxH [ Html.SemUi.dropDown model.geometry SetGeometry ]
                 Html.Layout.boxH [ Html.SemUi.dropDown model.projection SetProjection ]
-                Html.Layout.boxH [ ColorPicker.view model.color |> UI.map ChangeColor; div[][] ]
-                Html.Layout.boxH [ Numeric.view' [InputBox] model.thickness |> UI.map ChangeThickness ]
-              //  Html.Layout.boxH [ Html.SemUi.dropDown model.semantic SetSemantic ]                
+                Html.Layout.boxH [ Html.SemUi.dropDown model.semantic SetSemantic ]                
             ]
-                      
+
+        let viewAnnotationToolsSlim (model:MDrawingModel) =
+            Html.SemUi.stuffStack[                                            
+                Html.SemUi.dropDown model.geometry SetGeometry
+                Html.SemUi.dropDown model.projection SetProjection
+                Html.SemUi.dropDown model.semantic SetSemantic
+            ]  
+
+        let viewAnnotationTools (model:MDrawingModel)=  
+            Html.table [                            
+             //   Html.row "Text:" [Html.SemUi.textBox model.exportPath SetExportPath ]
+                Html.row "Geometry:" [Html.SemUi.dropDown model.geometry SetGeometry]
+                Html.row "Projections:" [Html.SemUi.dropDown model.projection SetProjection]
+                Html.row "Semantic:" [Html.SemUi.dropDown model.semantic SetSemantic]
+            ]    
+
+        let viewAnnotationToolsAcc (model:MDrawingModel)=  
+            Html.SemUi.accordion "Annotation Tools" "Write" true [
+                viewAnnotationTools model            
+            ]
+        
         let mkColor (model : MGroupsModel) (a : MAnnotation) =
             let id = a.key |> Mod.force
 
             let color =  
-                model.selectedLeaves
+                model.selectedChilds
                     |> ASet.map(fun x -> x.id = id)
                     |> ASet.contains true
                     |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
             
             color
 
-        let isSingleSelect (model : MGroupsModel) (a : MAnnotation) =
-            model.singleSelectLeaf |> Mod.map( fun x -> 
-                match x with 
-                  | Some selected -> selected = (a.key |> Mod.force)
-                  | None -> false )
-                    
-
         let viewAnnotationImportExport =
            div [clazz "ui buttons inverted"] [
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Save Annotations"; onMouseClick (fun _ -> Save)] [
+                            i [clazz "save icon"] [] ] 
+                )
+                //i [clazz "save icon"; onMouseClick (fun _ -> Save)] [] |> UI.wrapToolTip "Save Annotations" 
                 
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
-                    i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
-                                               
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
-                    i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
-                
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
-                    i [clazz "file outline icon"] [] ] |> UI.wrapToolTipBottom "Clear Annotation List"
-                                
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
-                //    i [clazz "folder icon"] [] ] |> UI.wrapToolTipBottom "Load recent Annotations"
-                                
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> Send)] [
-                //    i [clazz "send icon"] [] ] |> UI.wrapToolTipBottom "???"
-                
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> Undo)] [
-                //    i [clazz "arrow left icon"] [] ]  |> UI.wrapToolTipBottom "Undo"
-                
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> Redo)] [
-                //    i [clazz "arrow right icon"] [] ] |> UI.wrapToolTipBottom "Redo"
-                
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Load Annotations"; onMouseClick (fun _ -> Load)] [
+                            i [clazz "folder outline icon"] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Clear Annotation List"; onMouseClick (fun _ -> Clear)] [
+                            i [clazz "file outline icon"] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Load recent Annotations"; onMouseClick (fun _ -> QuickLoad)] [
+                            i [clazz "folder icon"] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "???"; onMouseClick (fun _ -> Send)] [
+                            i [clazz "send icon"] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Undo"; onMouseClick (fun _ -> Undo)] [i [clazz "arrow left icon"] [] ]
+                )
+                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    button [clazz "ui icon button"; attribute "data-content" "Redo"; onMouseClick (fun _ -> Redo)] [i [clazz "arrow right icon"] [] ]
+                )
             ] 
          
       
 
-        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(singleSelect : MAnnotation*list<Index> -> 'outer)(multiSelect : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<Guid>) : alist<DomNode<'outer>> =
+        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(select : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<Guid>) : alist<DomNode<'outer>> =
                            
-            alist { 
+                alist { 
 
-                let annotations = 
-                    annotations
-                      |> AList.choose (
-                        fun x -> 
-                            let anno = 
-                              model.flat 
-                                |> AMap.tryFind x 
-                                |> Mod.map(fun y -> 
-                                   match y with 
-                                     | Some k -> Some (k |> Mod.force)
-                                     | None -> Log.error "annotation with guid %A does not exist" x; None)                                
-                            match anno |> Mod.force with
-                              | Some a -> 
-                                match a with
-                                  | MAnnotations manno -> Some manno
-                                  | _ -> None
-                              | None -> None
-                        )                          
+                    let annotations = 
+                        annotations
+                          |> AList.map (
+                            fun x -> 
+                            let a = model.flat |> AMap.find x |> Mod.bind(id)
+                            a
+                            )
+                          |> AList.choose( fun x -> 
+                            match (x |> Mod.force) with
+                                | MAnnotations a -> Some a
+                                | _-> None )
 
-                for a in annotations do 
-                    let singleSelect = fun _ -> singleSelect(a,path)
-                    let multiSelect  = fun _ -> multiSelect(a,path)
-                    let! selected = a |> isSingleSelect model
-                            
-                    let! c = mkColor model a
-                    let bgc = sprintf "color: %s" (Html.ofC4b c)
-                    let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
+                    for a in annotations do 
+                        let select = fun _ -> select (a,path)
+                                
+                        let! c = mkColor model a
+                        let bgc = sprintf "color: %s" (Html.ofC4b c)
+                        let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
 
-                    let! visible = a.visible
-                    let visibleIcon = if visible then "unhide icon" else "hide icon"
-                    let key = a.key |> Mod.force
+                        let! visible = a.visible
+                        let visibleIcon = if visible then "unhide icon" else "hide icon"
+                        let key = a.key |> Mod.force
 
-                    yield div [clazz "item"] [
-                        i [clazz "large Sticky Note middle aligned icon";onClick multiSelect; style bgc][]
-                        div [clazz "content"] [
-                            let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
-                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
+                        yield div [clazz "item"] [
+                            i [clazz "large Sticky Note middle aligned icon";onClick select; style bgc][]
+                            div [clazz "content"] [
+                                let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
+                                let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
 
-                            //header
-                            yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
-                                alist {
-                                    if selected then
-                                        yield div[onClick singleSelect][u[][Incremental.text header]]
-                                    else
-                                        yield div[onClick singleSelect][Incremental.text header]
-                                    //yield Incremental.text header
-                                    yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"
-                                } 
-                            ) 
+                                //header
+                                yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
+                                    alist {
+                                        yield Incremental.text header
+                                        yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"                                                                                                                
+                                        yield i [ clazz "Remove icon"; onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"                                                        
+                                    } 
+                                ) 
 
-                            //description
-                            yield div [clazz "description";style ac ] [Incremental.text desc]      
+                                //description
+                                yield div [clazz "description";style ac ] [Incremental.text desc]      
+                            ]
                         ]
-                    ]
-            }     
+                }     
               
         let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<Action>> =
 
@@ -404,7 +403,7 @@ module DrawingApp =
                 let! s = model.activeGroup
                 
                 
-                let subNodes = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
+                let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
                 let icon =
                     adaptive {
@@ -433,7 +432,16 @@ module DrawingApp =
                         i [clazz "plus icon"
                            onMouseClick (fun _ -> 
                              GroupsMessage(Groups.AddGroup path))] [] 
-                        |> UI.wrapToolTip "Add Group"                        
+                        |> UI.wrapToolTip "Add Group"   
+                        
+                        i [clazz "remove circle icon"
+                           onMouseClick (fun _ -> 
+                             GroupsMessage(Groups.ClearGroup path))] [] 
+                        |> UI.wrapToolTip "Clear Group"
+                        
+                        i [clazz "remove icon red"
+                           onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
+                        |> UI.wrapToolTip "Remove Group"
 
                         Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
                     ]
@@ -441,8 +449,8 @@ module DrawingApp =
                 let itemAttributes =
                     amap {
                         yield onMouseClick (fun _ -> Action.GroupsMessage(Groups.ToggleExpand path))
-                        let! expanded = group.expanded
-                        if expanded 
+                        let! selected = group.expanded
+                        if selected 
                         then yield clazz "icon large outline open folder"
                         else yield clazz "icon large outline folder"
                         yield style "overflow-y : visible"
@@ -457,14 +465,7 @@ module DrawingApp =
                     }         
 
 
-                let singleSelect = 
-                    fun (a:MAnnotation,path:list<Index>) -> 
-                        Action.GroupsMessage(Groups.SingleSelectLeaf (path, a.key |> Mod.force, ""))
-
-                let multiSelect = 
-                    fun (a:MAnnotation,path:list<Index>) -> 
-                        Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key |> Mod.force, ""))
-
+                let select = fun (a:MAnnotation,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.key |> Mod.force, ""))  // Select (path, a.key |> Mod.force)
                 let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
                 yield div [ clazz "item"] [
@@ -474,10 +475,10 @@ module DrawingApp =
                          Incremental.div (AttributeMap.ofAMap childrenAttribs) (                          
                             alist { 
                                 let! isExpanded = group.expanded
-                                if isExpanded then yield! subNodes
+                                if isExpanded then yield! children
 
                                 if isExpanded then 
-                                    yield! viewAnnotationsInGroup path model singleSelect multiSelect lift group.leaves
+                                    yield! viewAnnotationsInGroup path model select lift group.leaves
                             }
                          )  
                                 
@@ -558,15 +559,8 @@ module DrawingApp =
                         let lineLengthScale = 
                             Sg.computeInvariantScale view conf.nearPlane center conf.arrowLength conf.hfov
                         
-                        let box = new Box3d(anno.points |> AList.toArray) 
                         let planeScale = 
                             Sg.computeInvariantScale view conf.nearPlane center conf.dnsPlaneSize conf.hfov
-
-                        let scale = 
-                            adaptive{
-                                let! ps = planeScale
-                                return ps * box.Size.[box.MajorDim]
-                                }
                                                                         
                         let radius =   lineLengthScale |> Mod.map(fun d -> d * 0.05)
                         let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
@@ -579,7 +573,7 @@ module DrawingApp =
                         let discTrafo =
                             Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
 
-                        yield discISg color scale height discTrafo 
+                        yield discISg color planeScale height discTrafo 
 
                         let! dip = x.dipDirection
 
@@ -666,13 +660,54 @@ module DrawingApp =
                 Sg.lines polyPoints color thickness trafo key //polyline
                 Sg.dots points color view                     //support points
             ]         
-        
-        let textFromAnno (view : IMod<CameraView>) conf (anno : MAnnotation) = 
+
+        let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) = 
+            let right = forw.Cross up
+
+            let rotTrafo = 
+                new Trafo3d(
+                    new M44d(
+                        right.X, up.X, forw.X, 0.0,
+                        right.Y, up.Y, forw.Y, 0.0,
+                        right.Z, up.Z, forw.Z, 0.0,
+                        0.0,     0.0,  0.0,    1.0
+                    ),
+                    new M44d(
+                        right.X, right.Y, right.Z, 0.0,
+                        up.X,    up.Y,    up.Z,    0.0,
+                        forw.X,  forw.Y,  forw.Z,  0.0,
+                        0.0,     0.0,     0.0,     1.0
+                    )
+            )
+            
+            rotTrafo * modelt
+
+        let text (view : IMod<CameraView>) conf (anno : MAnnotation) =
+
             let points = anno.points |> AList.toMod
             let pos = 
                 points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
 
-            Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo anno.text
+            let invScaleTrafo = 
+                Sg.computeInvariantScale view conf.nearPlane pos (Mod.constant 0.1) conf.hfov |> Mod.map Trafo3d.Scale
+
+            let billboardTrafo = 
+                adaptive {
+                    let! v = view
+                    let! modelt = anno.modelTrafo
+
+                    return screenAligned v.Forward v.Up modelt
+                }
+            let bounds : Border2d = { left = 0.1; right = 0.1; top = 0.1; bottom = 0.1 }
+
+            Sg.textWithBackground (Font.create "Consolas" FontStyle.Regular) C4b.White C4b.Black bounds anno.text
+                |> Sg.noEvents
+                |> Sg.shader {
+                        do! Aardvark.Opc.Shader.stableTrafo
+                    }
+                // |> Sg.transform (Trafo3d.FromOrthoNormalBasis(-V3d.IOO, V3d.OOI, V3d.OIO))
+                |> Sg.trafo invScaleTrafo
+                |> Sg.trafo billboardTrafo                
 
         let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
             let points = getPolyline anno
@@ -681,12 +716,12 @@ module DrawingApp =
                 adaptive {
                     let! m = m 
                     if m then return sg
-                    else return Sg.empty
+                    else return Sg.ofSeq []
                 } |> ASet.ofModSingle
 
             let dots  = dots |> optional (Sg.dots anno.points c view)
             let dns   = anno.showDns  |> optional (drawDns anno view conf)
-            let texts = anno.text |> Mod.map (String.isEmpty >> not) |> optional (textFromAnno view conf anno)
+            let texts = anno.text |> Mod.map (String.isEmpty >> not) |> optional (text view conf anno)
             let sgs = ASet.unionMany' [dots; dns; texts]
 
             Sg.ofList [
@@ -719,25 +754,12 @@ module DrawingApp =
                     dnsPlaneSize   = msmallConfig.getDnsPlaneSize   mbigConfig
                 }
 
-           
-
             let annotations =
                 aset {
                     for (_,a) in annoSet do
-                       let! selected = UI.isSingleSelect model.annotations a
                        let c = UI.mkColor model.annotations a
-                       let dots = 
-                        a.geometry |> Mod.map(fun geo -> 
-                            match geo, selected with 
-                            | Geometry.Line,false | Geometry.Point, false -> true 
-                            | _ -> false)
-
+                       let dots = a.geometry |> Mod.map(fun geo -> match geo with | Geometry.Line | Geometry.Point -> true | _ -> false)                       
                        yield finishedAnnotation a cam c config dots
-
-                       if selected then
-                          yield Sg.dots a.points (Mod.constant C4b.VRVisGreen) cam
-                       else
-                          yield Sg.empty
                 } |> Sg.set
                                 
             Sg.ofList [

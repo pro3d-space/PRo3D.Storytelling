@@ -61,15 +61,7 @@ type Points = list<V3d>
 
 type Projection = Linear = 0 | Viewpoint = 1 | Sky = 2
 type Geometry = Point = 0 | Line = 1 | Polyline = 2 | Polygon = 3 | DnS = 4
-type Semantic = 
-    | Horizon0 = 0 
-    | Horizon1 = 1 
-    | Horizon2 = 2 
-    | Horizon3 = 3 
-    | Horizon4 = 4 
-    | Crossbed = 5 
-    | GrainSize = 6 
-    | None = 7
+type Semantic = Horizon0 = 0 | Horizon1 = 1 | Horizon2 = 2 | Horizon3 = 3 | Horizon4 = 4 | Crossbed = 5 | GrainSize = 6
 
 [<DomainType>]
 type DipAndStrikeResults = {
@@ -217,29 +209,6 @@ module Annotation =
             text = ""
             modelTrafo = Trafo3d.Identity
             showDns = match semantic with | Semantic.Crossbed -> true | _ -> false 
-            surfaceName = surfName
-        }
-
-    let make2 (projection) (geometry) (color) (thickness) (surfName) : Annotation  = 
-               
-        {
-            key         = Guid.NewGuid()
-            geometry    = geometry
-            semantic    = Semantic.None
-            points      = plist.Empty
-            segments    = plist.Empty //[]
-            color       = color
-            thickness   = thickness
-            results     = None
-            dnsResults  = None            
-            projection  = projection
-            visible     = true
-            text        = ""
-            modelTrafo  = Trafo3d.Identity
-            showDns     = 
-                match geometry with 
-                  | Geometry.DnS -> true 
-                  | _ -> false 
             surfaceName = surfName
         }
 

@@ -61,21 +61,16 @@ type Interactions =
     | AlignPick             = 5
 
 type TabMenu = 
-    | Surfaces    = 0
+    | Data        = 0
     | Annotations = 1
-    | Viewplanner = 2
-    | Bookmarks   = 3
-    | Config      = 4
+    | Bookmarks   = 2
+    | Config      = 3
 
 
 type WayPoint = {
     name : string
     cv   : CameraView
 }
-
-type ViewerMode =
-    | Standard
-    | Instrument
 
 [<DomainType>]
 type Model = { 
@@ -95,9 +90,6 @@ type Model = {
 
     alignment       : AlignmentModel
     tabMenu         : TabMenu
-    
-    instrumentCamera : CameraControllerState    
-    instrumentFrustum : Frustum
 
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
@@ -150,8 +142,5 @@ module Viewer =
         past            = None
         future          = None
 
-        tabMenu = TabMenu.Surfaces
-        
-        instrumentCamera = { CameraController.initial with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }        
-        instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
+        tabMenu = TabMenu.Data
     }

@@ -36,7 +36,7 @@ module NaivePatchLoD =
         let ex = Path.GetExtension textureImage
         if ex = ".dds" then printfn "asdfasdasd"
 
-        (Patch.load baseDir patch.info).Value
+        Patch.load baseDir patch.info
             |> fst
             |> Sg.ofIndexedGeometry
             |> Sg.uniform "LoDColor" (Mod.constant (Map.find depth colors))

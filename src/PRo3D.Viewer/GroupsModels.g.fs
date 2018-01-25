@@ -196,16 +196,16 @@ module Mutable =
         let _activeChild = ResetMod.Create(__initial.activeChild)
         let _flat = MMap.Create(__initial.flat, (fun v -> MLeaf.Create(v)), (fun (m,v) -> MLeaf.Update(m, v)), (fun v -> v))
         let _lastSelectedItem = ResetMod.Create(__initial.lastSelectedItem)
-        let _selectedLeaves = MSet.Create(__initial.selectedLeaves)
-        let _singleSelectLeaf = MOption.Create(__initial.singleSelectLeaf)
+        let _selectedChilds = MSet.Create(__initial.selectedChilds)
+        let _lastSelectedChild = MOption.Create(__initial.lastSelectedChild)
         
         member x.rootGroup = _rootGroup
         member x.activeGroup = _activeGroup :> IMod<_>
         member x.activeChild = _activeChild :> IMod<_>
         member x.flat = _flat :> amap<_,_>
         member x.lastSelectedItem = _lastSelectedItem :> IMod<_>
-        member x.selectedLeaves = _selectedLeaves :> aset<_>
-        member x.singleSelectLeaf = _singleSelectLeaf :> IMod<_>
+        member x.selectedChilds = _selectedChilds :> aset<_>
+        member x.lastSelectedChild = _lastSelectedChild :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Groups.GroupsModel) =
@@ -217,8 +217,8 @@ module Mutable =
                 ResetMod.Update(_activeChild,v.activeChild)
                 MMap.Update(_flat, v.flat)
                 ResetMod.Update(_lastSelectedItem,v.lastSelectedItem)
-                MSet.Update(_selectedLeaves, v.selectedLeaves)
-                MOption.Update(_singleSelectLeaf, v.singleSelectLeaf)
+                MSet.Update(_selectedChilds, v.selectedChilds)
+                MOption.Update(_lastSelectedChild, v.lastSelectedChild)
                 
         
         static member Create(__initial : PRo3D.Groups.GroupsModel) : MGroupsModel = MGroupsModel(__initial)
@@ -265,17 +265,17 @@ module Mutable =
                     override x.Set(r,v) = { r with lastSelectedItem = v }
                     override x.Update(r,f) = { r with lastSelectedItem = f r.lastSelectedItem }
                 }
-            let selectedLeaves =
+            let selectedChilds =
                 { new Lens<PRo3D.Groups.GroupsModel, Aardvark.Base.hset<PRo3D.Groups.TreeSelection>>() with
-                    override x.Get(r) = r.selectedLeaves
-                    override x.Set(r,v) = { r with selectedLeaves = v }
-                    override x.Update(r,f) = { r with selectedLeaves = f r.selectedLeaves }
+                    override x.Get(r) = r.selectedChilds
+                    override x.Set(r,v) = { r with selectedChilds = v }
+                    override x.Update(r,f) = { r with selectedChilds = f r.selectedChilds }
                 }
-            let singleSelectLeaf =
+            let lastSelectedChild =
                 { new Lens<PRo3D.Groups.GroupsModel, Microsoft.FSharp.Core.option<System.Guid>>() with
-                    override x.Get(r) = r.singleSelectLeaf
-                    override x.Set(r,v) = { r with singleSelectLeaf = v }
-                    override x.Update(r,f) = { r with singleSelectLeaf = f r.singleSelectLeaf }
+                    override x.Get(r) = r.lastSelectedChild
+                    override x.Set(r,v) = { r with lastSelectedChild = v }
+                    override x.Update(r,f) = { r with lastSelectedChild = f r.lastSelectedChild }
                 }
     
     
@@ -283,10 +283,8 @@ module Mutable =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsImporterModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.AnnotationGroupsImporterModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.AnnotationGroupsImporterModel>
         let _rootGroupI = MList.Create(__initial.rootGroupI, (fun v -> MNode.Create(v)), (fun (m,v) -> MNode.Update(m, v)), (fun v -> v))
-        let _flatI = MMap.Create(__initial.flatI, (fun v -> MLeaf.Create(v)), (fun (m,v) -> MLeaf.Update(m, v)), (fun v -> v))
         
         member x.rootGroupI = _rootGroupI :> alist<_>
-        member x.flatI = _flatI :> amap<_,_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Groups.AnnotationGroupsImporterModel) =
@@ -294,7 +292,6 @@ module Mutable =
                 __current.Value <- v
                 
                 MList.Update(_rootGroupI, v.rootGroupI)
-                MMap.Update(_flatI, v.flatI)
                 
         
         static member Create(__initial : PRo3D.Groups.AnnotationGroupsImporterModel) : MAnnotationGroupsImporterModel = MAnnotationGroupsImporterModel(__initial)
@@ -316,12 +313,6 @@ module Mutable =
                     override x.Get(r) = r.rootGroupI
                     override x.Set(r,v) = { r with rootGroupI = v }
                     override x.Update(r,f) = { r with rootGroupI = f r.rootGroupI }
-                }
-            let flatI =
-                { new Lens<PRo3D.Groups.AnnotationGroupsImporterModel, Aardvark.Base.hmap<System.Guid,PRo3D.Groups.Leaf>>() with
-                    override x.Get(r) = r.flatI
-                    override x.Set(r,v) = { r with flatI = v }
-                    override x.Update(r,f) = { r with flatI = f r.flatI }
                 }
     
     

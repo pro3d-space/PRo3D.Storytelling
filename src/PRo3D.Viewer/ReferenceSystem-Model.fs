@@ -4,7 +4,6 @@ open Aardvark.Base.Incremental
 open Aardvark.Base
 open Aardvark.UI
 
-
 [<DomainType>]
 type ReferenceSystem = {    
 
@@ -12,9 +11,6 @@ type ReferenceSystem = {
     north       : V3d
     up          : V3dInput
     isVisible   : bool       
-    size        : NumericInput
-    scaleChart    : plist<string>
-    selectedScale : string
 }
 
 type ReferenceSystemConfig<'a> = {
@@ -50,22 +46,11 @@ module ReferenceSystem =
         format  = "{0:0.0}"
     }
 
-    let initNum2 = {
-        value   = 1.0
-        min     = 0.0
-        max     = 1000.0
-        step    = 1.0
-        format  = "{0:0.000}"
-    }
-
     let initial = {
         origin = V3d.OOO
         north = V3d.IOO
         up = setV3d V3d.OOI
         isVisible = true              
-        size = initNum2
-        scaleChart = ["1km";"100m";"10m";"1m";"10cm";"1cm";"1mm";"0.1mm"] |> PList.ofList
-        selectedScale = "1m"
     }
 
     let initialConfig : ReferenceSystemConfig<ViewConfigModel> = {

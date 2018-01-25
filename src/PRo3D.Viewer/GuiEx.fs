@@ -96,15 +96,15 @@ module GuiEx =
             onBoot "$('#__ID__').accordion();" (
                 div [clazz "ui inverted segment"] [
                     div [clazz "ui inverted accordion fluid"] [
-                        div [clazz title; style "background-color: #282828"] [
-                                i [clazz (icon + " large icon circular")][]
+                        div [clazz title] [
+                                i [clazz (icon + " large icon circular")][]                                 
                                 text text'
                                 //Static.a [clazz "ui label"] [
                                 //    i [clazz (icon + " icon circular inverted")] []
                                 //    text text'
                                 //]
                         ]
-                        div [clazz content;  style "overflow-y : auto; max-height: 35%"] content'
+                        div [clazz content;  style "overflow-y : auto; max-height: 30%"] content'
                     ]
                 ]
             )

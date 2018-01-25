@@ -61,7 +61,7 @@ type Node = {
     key         : Guid
     name        : string
     leaves      : plist<Guid>
-    subNodes    : plist<Node>
+    subNodes   : plist<Node>
     visible     : bool
     expanded    : bool
 }
@@ -102,8 +102,8 @@ type GroupsModel = {
     activeChild          : TreeSelection
     flat                 : hmap<Guid,Leaf>
     lastSelectedItem     : SelectedItem
-    selectedLeaves       : hset<TreeSelection> 
-    singleSelectLeaf     : option<Guid>
+    selectedChilds       : hset<TreeSelection> 
+    lastSelectedChild    : option<Guid>
     }
 
 module Leaf =
@@ -162,15 +162,14 @@ module GroupsModel =
         activeChild = Group.initTreeSelection
         flat = hmap.Empty
         lastSelectedItem = SelectedItem.Child
-        selectedLeaves = hset.Empty
-        singleSelectLeaf = None
+        selectedChilds = hset.Empty
+        lastSelectedChild = None
         }
 
         
 [<DomainType>]
 type AnnotationGroupsImporterModel = {
     rootGroupI       : plist<Node>
-    flatI             : hmap<Guid,Leaf>
 }
 
 [<DomainType>]

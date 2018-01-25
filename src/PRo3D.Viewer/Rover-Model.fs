@@ -106,16 +106,15 @@ type RoverModel = {
     rovers             : hmap<string, Rover>
     platforms          : hmap<string, IPWrapper.SPlatform>
     selectedRover      : option<Rover>
-    //selectedInstrument : option<Instrument>
-    //selectedAxis       : option<Axis>
-    //currentAngle       : NumericInput
+    selectedInstrument : option<Instrument>
+    selectedAxis       : option<Axis>
+    currentAngle       : NumericInput
 }
 
 [<DomainType>]
 type ViewPlan = {
     [<PrimaryKey>]
     id                  : Guid
-    name                : string
     position            : V3d
     lookAt              : V3d
     viewerState         : CameraControllerState
@@ -123,9 +122,9 @@ type ViewPlan = {
     rover               : Rover
     roverTrafo          : Trafo3d
     isVisible           : bool
-    selectedInstrument  : option<Instrument>
-    selectedAxis        : option<Axis>
-    currentAngle        : NumericInput
+    //selectedInstrument  : option<Instrument>
+    //currentPanAngle     : NumericInput
+    //currentTiltAngle    : NumericInput
 }
 
 [<DomainType>]
@@ -150,9 +149,9 @@ module ViewPlanModel =
         rovers = hmap.Empty
         platforms = hmap.Empty
         selectedRover = None
-        //selectedInstrument = None
-        //selectedAxis = None
-        //currentAngle = currentAngle
+        selectedInstrument = None
+        selectedAxis = None
+        currentAngle = currentAngle
         }
 
     let initial = {

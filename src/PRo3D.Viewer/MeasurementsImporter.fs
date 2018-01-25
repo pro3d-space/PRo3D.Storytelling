@@ -97,7 +97,6 @@ module MeasurementsImporter =
                         | null -> false
                         | _ -> m.Element(xname "Closed").Value.ToBool()
         let style = (getStyle (m.Element(xname "LineAttributes")))
-        let id = (m.Element(xname "Id")).Value |> Guid.Parse
         let trafo = getTrafo (m.Element(xname "LocalToGlobal"))
         let points = 
             getPoints (m.Element(xname "Points")) anType 
@@ -114,13 +113,9 @@ module MeasurementsImporter =
                         let endPoint = s.endPoint |> trafo.Forward.TransformPos 
                         {s with startPoint = startPoint; endPoint = endPoint; points = ps}
                 )
-            
-       // let key = Guid.NewGuid()
-
-        Log.warn "Found %A" id
 
         let an = {
-                key = id
+                key = Guid.NewGuid()
                 geometry = getGeometry (anType, closed)
                 projection = Projection.Linear
                 semantic = Semantic.Horizon0

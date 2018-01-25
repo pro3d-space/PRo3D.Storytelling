@@ -143,7 +143,6 @@ module Sg =
     open Aardvark.SceneGraph
     open Aardvark.Base.Rendering
     open Aardvark.UI
-    open Aardvark.Rendering.Text
 
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
             adaptive {
@@ -240,48 +239,6 @@ module Sg =
           //  toEffect <| Aardvark.Opc.Shader.stableLight
         ]
 
-    let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) = 
-        let right = forw.Cross up
-        let rotTrafo = 
-            new Trafo3d(
-                new M44d(
-                    right.X, up.X, forw.X, 0.0,
-                    right.Y, up.Y, forw.Y, 0.0,
-                    right.Z, up.Z, forw.Z, 0.0,
-                    0.0,     0.0,  0.0,    1.0
-                ),
-                new M44d(
-                    right.X, right.Y, right.Z, 0.0,
-                    up.X,    up.Y,    up.Z,    0.0,
-                    forw.X,  forw.Y,  forw.Z,  0.0,
-                    0.0,     0.0,     0.0,     1.0
-                )
-        )
-        rotTrafo * modelt
-
-    let text (view : IMod<CameraView>) near hfov pos modelTrafo text  =
-           
-        let invScaleTrafo = 
-            computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale
-
-        let billboardTrafo = 
-            adaptive {
-                let! v = view
-                let! modelt = modelTrafo
-
-                return screenAligned v.Forward v.Up modelt
-            }
-        let bounds : Border2d = { left = 0.1; right = 0.1; top = 0.1; bottom = 0.1 }
-
-        Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
-            |> Sg.noEvents
-            |> Sg.shader {
-                    do! Aardvark.Opc.Shader.stableTrafo
-                }
-            // |> Sg.transform (Trafo3d.FromOrthoNormalBasis(-V3d.IOO, V3d.OOI, V3d.OIO))
-            |> Sg.trafo invScaleTrafo
-            |> Sg.trafo billboardTrafo  
-
 module UI =
     open Aardvark.UI
     open Aardvark.Base.Incremental
@@ -311,20 +268,6 @@ module UI =
         onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
             dom.WithAttributes attr     
         )
-
-    let wrapToolTipBottom (text:string) (dom:DomNode<'a>) : DomNode<'a> =
-
-        let attr = 
-            [ attribute "title" text
-              attribute "data-position" "bottom center"
-              attribute "data-variation" "mini"] 
-                |> AttributeMap.ofList
-                |> AttributeMap.union dom.Attributes                
-                
-        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
-            dom.WithAttributes attr     
-        )
-
 
     let dropDown'' (values : alist<'a>)(selected : IMod<Option<'a>>) (change : Option<'a> -> 'msg) (f : 'a ->string)  =
 

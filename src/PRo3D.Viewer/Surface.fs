@@ -32,7 +32,7 @@ module Surface =
                 index        = index
             }
 
-        let parseTexture (index : int)(node : XmlNode) : TextureLayer =
+        let parseTexture (index : int)(node : XmlNode) : TextureLayer =        
             { 
                 label = node |> get "Label" 
                 index = index
@@ -296,10 +296,10 @@ module Surface =
         let positions = kd.objectSetPath |> Aara.fromFile<V3f>
 
         let data = 
-            positions.Value.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
+            positions.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
 
         let invalidIndices = getInvalidIndices data
-        let index = PRo3DCSharp.ComputeIndexArray(positions.Value.Size.XY.ToV2i(), invalidIndices)                
+        let index = PRo3DCSharp.ComputeIndexArray(positions.Size.XY.ToV2i(), invalidIndices)                
                 
         let triangles =             
             index 
@@ -408,7 +408,7 @@ module Surface =
         match action with
             | SurfacePropertiesMessage msg ->                
                 let m = 
-                  match model.surfaces.singleSelectLeaf with
+                  match model.surfaces.lastSelectedChild with
                     | Some s -> 
                       let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface                        
                       let s' = SurfaceProperties.update surface msg
@@ -422,7 +422,7 @@ module Surface =
                 let sgSurfaces = model.sgSurfaces |> Surface.Files.expandLazyKdTreePaths scenePath (model.surfaces.flat |> Leaf.toSurfaces)
                 { model with sgSurfaces = sgSurfaces}
             | RemoveSurface (id,path) -> //model
-                let groups = Groups.removeLeaf model.surfaces id path true
+                let groups = Groups.removeLeaf model.surfaces id path false
                 let sg' = model.sgSurfaces |> HMap.remove id
                 { model with surfaces = groups; sgSurfaces = sg'} |> SurfaceModel.triggerSgGrouping              
             | OpenFolder id ->
@@ -439,18 +439,7 @@ module Surface =
                                     | None -> model      
                             | _ -> failwith "can only contain surfaces"
                     | None -> model
-            | GroupsMessage msg -> 
-                let groups = Groups.update model.surfaces msg
-
-                match msg with
-                  | Groups.Action.RemoveGroup _ ->
-                    let sgs = 
-                        model.sgSurfaces 
-                            |> HMap.filter(fun k _ -> groups.flat |> HMap.containsKey k)
-
-                    { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping
-                  | _ -> { model with surfaces = groups }
-                
+            | GroupsMessage msg -> { model with surfaces = Groups.update model.surfaces msg}
             | _ -> model
 
     let absRelIcons (m : MSurface)=
@@ -466,50 +455,32 @@ module Surface =
                     )
             return absRelIcons
         }    
-
-    let isSelected (model : MGroupsModel) (s : MSurface) =
-        let id = s.guid |> Mod.force
-            
-        model.selectedLeaves
-          |> ASet.map(fun x -> x.id = id)
-          |> ASet.contains true
     
     let mkColor (model : MGroupsModel) (s : MSurface) =
-        isSelected model s 
-          |> Mod.bind (fun x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)
-
-    let lastSelected (model : MGroupsModel) (s : MSurface) =
             let id = s.guid |> Mod.force
-            model.singleSelectLeaf 
-                |> Mod.map( fun x -> match x with 
-                                        | Some xx -> xx = id
-                                        | _ -> false )
 
-    let isSingleSelect (model : MGroupsModel) (s : MSurface) =
-            model.singleSelectLeaf |> Mod.map( fun x -> 
-                match x with 
-                  | Some selected -> selected = (s.guid |> Mod.force)
-                  | None -> false )
+            let color =  
+                model.selectedChilds
+                    |> ASet.map(fun x -> x.id = id)
+                    |> ASet.contains true
+                    |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)            
+            color
 
-    let viewSurfacesInGroups (path:list<Index>) (model:MGroupsModel) (singleSelect : MSurface*list<Index> -> 'outer) (multiSelect : MSurface*list<Index> -> 'outer) (lift : Groups.Action -> 'outer) (surfaceIds: alist<Guid>) : alist<DomNode<'outer>> = 
+    let viewSurfacesInGroups (path:list<Index>) (model:MGroupsModel)(select : MSurface*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (surfaceIds: alist<Guid>) : alist<DomNode<'outer>> = 
             alist {
 
                 let surfaces = 
                    surfaceIds 
                       |> AList.chooseM (fun x -> model.flat |> AMap.tryFind x)
 
-                let surfaces = 
-                   surfaces
-                      |> AList.map (fun x -> Mod.force x)
-                      |> AList.choose( fun x -> match x with
-                                                  | MSurfaces s -> Some s
-                                                  | _-> None )
+                let surfaces = surfaces
+                                |> AList.map (fun x -> Mod.force x)
+                                |> AList.choose( fun x -> match x with
+                                                            | MSurfaces s -> Some s
+                                                            | _-> None )
                 for s in surfaces do
 
-                    let singleSelect = fun _ -> singleSelect(s,path)
-                    let multiSelect  = fun _ -> multiSelect(s,path)
-                    let! selected = s |> isSingleSelect model
-
+                    let select = fun _ -> select (s,path)
                     let! c = mkColor model s
                     let bgc = sprintf "color: %s" (Html.ofC4b c)
                     let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
@@ -517,17 +488,14 @@ module Surface =
                                                                                     
                     let! absRelIcons = absRelIcons s
 
-                    yield div [clazz "item"; style infoc] [
-                        i [clazz "large cube middle aligned icon"; onClick multiSelect;style bgc][] 
-                        div [clazz "content"; style infoc] [
+                    yield div [clazz "item"; style bgc] [
+                        i [clazz "large cube middle aligned icon"; onClick select;style bgc][] 
+                        div [clazz "content"; style bgc] [
                             let desc = s.name
-                            yield Incremental.div (AttributeMap.ofList [style infoc])(
+                            yield Incremental.div (AttributeMap.ofList [clazz "header"; style infoc])(
                                 alist {
-                                    if selected then
-                                        yield div[onClick singleSelect][ u[][Incremental.text desc]]
-                                    else
-                                        yield div[onClick singleSelect][Incremental.text desc]
- 
+                                    yield Incremental.text desc
+
                                     yield i [clazz "home icon"                                                
                                              onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                                                
 
@@ -536,9 +504,16 @@ module Surface =
                                     yield i [clazz "folder icon"                                                
                                              onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"                                                                                
 
+                                    yield i [clazz "Remove icon red"
+                                             //onClick (fun _ -> lift <| RemoveSurface (key,path))] [] |> UI.wrapToolTip "Remove" 
+                                             onClick (fun _ -> RemoveSurface (key,path)) ][] |> UI.wrapToolTip "Remove"        
                                     } 
                             ) 
-                                           
+                            yield div [clazz "description"; style infoc] [
+                                Incremental.text (
+                                    s.relativePaths
+                                        |> Mod.map (fun d -> sprintf " | local: %A" (d)))
+                            ]                                    
                         ]
                     ]
             }
@@ -552,9 +527,11 @@ module Surface =
             let children = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
             let activeIcon =
-                adaptive {                    
+                adaptive {
+                    let active = s.id
                     let! group  =  group.key
-                    return if (s.id = group) then "circle icon" else "circle thin icon"
+
+                    return if (active = group) then "circle icon" else "circle thin icon"
                 }
 
             let setActive = Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)
@@ -576,8 +553,17 @@ module Surface =
                         
                     i [clazz "plus icon"
                        onMouseClick (fun _ -> 
-                         GroupsMessage(Groups.AddGroup path))] []
-                    |> UI.wrapToolTip "Add Group"                                          
+                         GroupsMessage(Groups.AddGroup path))] [] 
+                    |> UI.wrapToolTip "Add Group"   
+                        
+                    i [clazz "remove circle icon"
+                       onMouseClick (fun _ -> 
+                         GroupsMessage(Groups.ClearGroup path))] [] 
+                    |> UI.wrapToolTip "Clear Group"
+                        
+                    i [clazz "remove icon red"
+                       onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
+                    |> UI.wrapToolTip "Remove Group"
 
                     Incremental.i toggleAttributes AList.empty |> UI.wrapToolTip "Toggle Group"
                 ]
@@ -600,15 +586,9 @@ module Surface =
                     else yield style "hidden"
                 }         
 
-            let singleSelect = 
-                    fun (s:MSurface,path:list<Index>) -> 
-                        Action.GroupsMessage(Groups.SingleSelectLeaf (path, s.guid |> Mod.force, ""))
 
-            let multiSelect = 
-                fun (s:MSurface,path:list<Index>) -> 
-                    Action.GroupsMessage(Groups.AddLeafToSelection (path, s.guid |> Mod.force, ""))
-
-            let lift = fun (a:Groups.Action) -> (GroupsMessage a)
+            let select = fun (a:MSurface,path:list<Index>) -> Action.GroupsMessage(Groups.SelectChilds (path, a.guid |> Mod.force, a.name |> Mod.force))  // Select (path, a.key |> Mod.force)
+            let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
 
             yield div [ clazz "item"] [
                     Incremental.i itemAttributes AList.empty
@@ -620,7 +600,7 @@ module Surface =
                                 if isExpanded then yield! children
                                 
                                 if isExpanded then 
-                                    yield! viewSurfacesInGroups path model singleSelect multiSelect lift group.leaves
+                                    yield! viewSurfacesInGroups path model select lift group.leaves
                             }
                         )  
                                 
@@ -660,7 +640,7 @@ module Surface =
 
     let viewSurfaceProperties (model:MSurfaceModel) =
         adaptive {
-            let! guid = model.surfaces.singleSelectLeaf
+            let! guid = model.surfaces.lastSelectedChild
             
             match guid with
                 | Some i -> 
@@ -668,7 +648,7 @@ module Surface =
                     let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
                     let! surf = leaf 
                     let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
-                                       
+                   
                     return SurfaceProperties.view x |> UI.map SurfacePropertiesMessage
                 | None -> return div[][] |> UI.map SurfacePropertiesMessage 
         }                          
@@ -678,23 +658,6 @@ module Surface =
             return (Groups.viewUI model.surfaces|> UI.map GroupsMessage)
         } 
     
-    let surfacesLeafButtonns (model:MSurfaceModel) = 
-        let ts = model.surfaces.activeChild
-        let sel = model.surfaces.singleSelectLeaf
-        adaptive {  
-            let! ts = ts
-            let! sel = sel
-            match sel with
-                | Some x -> return (Groups.viewLeafButtons ts |> UI.map GroupsMessage)
-                | None -> return div[][]
-        } 
-
-    let surfacesGroupButtons (model:MSurfaceModel) = 
-        let ts = model.surfaces.activeGroup
-        adaptive {  
-            let! ts = ts
-            return (Groups.viewGroupButtons ts |> UI.map GroupsMessage)
-        } 
     
     let surfaceUI (model:MSurfaceModel) =
         let item2 = 
@@ -702,27 +665,17 @@ module Surface =
                 |> Mod.map (fun x -> 
                     match x with 
                         | SelectedItem.Group -> surfaceGroupProperties model
-                        | _ -> viewSurfaceProperties model
-                )
-        let buttons = 
-            model.surfaces.lastSelectedItem 
-                |> Mod.bind (fun x -> 
-                    match x with 
-                        | SelectedItem.Group -> surfacesGroupButtons model
-                        | _ -> surfacesLeafButtonns model
+                        | _ -> viewSurfaceProperties model 
                 )
         div[][                            
             yield GuiEx.accordion "Surfaces" "Cubes" true [ 
-                //Groups.viewSelectionButtons |> UI.map GroupsMessage
+                Groups.viewGroupButtons |> UI.map GroupsMessage
                 viewSurfacesGroups model ]
             yield GuiEx.accordion "Properties" "Content" true [
                         Incremental.div AttributeMap.empty (alist{ let! item = item2
                                                                    let! i = item
                                                                    yield i})
             ]
-            yield GuiEx.accordion "Actions" "Asterisk" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
-                ]     
         ]
     
     
