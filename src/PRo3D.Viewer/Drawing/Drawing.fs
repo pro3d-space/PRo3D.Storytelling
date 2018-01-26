@@ -43,9 +43,6 @@ module DrawingApp =
                     let points = [ 
                             for s in 0 .. PRo3D.Config.sampleCount do
                                 yield newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
-                                //match samplePoint p with
-                                //    | None -> ()
-                                //    | Some projectedPoint -> yield projectedPoint
                         ]
                     let newSegment = { startPoint = firstP; endPoint = lastP; points = PList.ofList points }
                     { a with segments = PList.append newSegment a.segments }
