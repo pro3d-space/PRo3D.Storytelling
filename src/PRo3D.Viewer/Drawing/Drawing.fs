@@ -29,9 +29,35 @@ module DrawingApp =
 
     open MBrace.FsPickler.Json   
     
+    let closePolyline (a:Annotation) = 
+        let firstP = a.points.[0]
+        let lastP = a.points.[(a.points.Count-1)]
+        match a.projection with
+            | Projection.Viewpoint | Projection.Sky ->     
+                let newSegment = { startPoint = firstP; endPoint = lastP; points = PList.ofList [firstP;lastP] }
+
+                if PRo3D.Config.useAsyncIntersections then
+                    { a with segments = PList.append newSegment a.segments }
+                else
+                    let dir = newSegment.endPoint - newSegment.startPoint
+                    let points = [ 
+                            for s in 0 .. PRo3D.Config.sampleCount do
+                                yield newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                                //match samplePoint p with
+                                //    | None -> ()
+                                //    | Some projectedPoint -> yield projectedPoint
+                        ]
+                    let newSegment = { startPoint = firstP; endPoint = lastP; points = PList.ofList points }
+                    { a with segments = PList.append newSegment a.segments }
+            | _ -> { a with points = a.points |> PList.append firstP }
+
+
     let getFinishedAnnotation up north (model : DrawingModel) =
         match model.working with
-            | Some w ->               
+            | Some w ->  
+                let w = match w.geometry with
+                        | Geometry.Polygon -> closePolyline w
+                        | _-> w 
                 let dns = 
                     match w.points.Count with 
                         | x when x > 2 ->
@@ -65,6 +91,8 @@ module DrawingApp =
               | None -> model.annotations             
 
         { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
+    
+    
 
     let addPoint up north samplePoint p model surfaceName bc =
         let working, newSegment = 

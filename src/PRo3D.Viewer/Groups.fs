@@ -283,12 +283,7 @@ module Groups =
             | RemoveChild (k,p) ->
                 removeLeaf model k p true
             | ToggleChildVisibility (c,p) -> 
-                failwith "togglechild visible"
-                //let func = (fun (x:Group) -> { x with childList = x.childList |> PList.applyNonEmpty (toggleChild c)})
-                //let newRoot = updateItemAt p func model.rootGroup
-                //let m' = updateGroups model newRoot (flatten newRoot)
-                //m'
-                model
+                model |> updateLeaf c (fun x -> Leaf.toggleVisibility x)   
             | UpdateChildProperties a ->
                 updateLeaf'' a model
             | SetGroupName t -> 
@@ -374,8 +369,12 @@ module Groups =
 
                 let f = (fun (k:Leaf) -> (k.setVisible (not k.visible)))
 
-                updateLeaves leaves f model
-               
+                let func = 
+                    fun (x:Node) -> { x with visible = not x.visible }
+                let m' = {model with rootGroup   = updateNodeAt p func model.rootGroup }
+
+                updateLeaves leaves f m'
+                
             | MoveChilds  -> 
                 let m = moveChildren model
                 m

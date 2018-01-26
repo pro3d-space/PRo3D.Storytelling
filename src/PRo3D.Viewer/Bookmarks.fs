@@ -117,8 +117,8 @@ module Bookmarks =
                                     yield i [clazz "home icon"; 
                                              onClick (fun _ -> lift <| Groups.UpdateCam key)][] |> UI.wrapToolTipRight "FlyTo"
                     
-                                    yield i [clazz "Remove icon"; 
-                                             onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"
+                                    //yield i [clazz "Remove icon"; 
+                                    //         onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"
                                 } 
                         ) 
                         if selected then

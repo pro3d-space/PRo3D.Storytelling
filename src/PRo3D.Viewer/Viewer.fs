@@ -941,7 +941,7 @@ module ViewerApp =
         )
                
     /// Thread Pool stuff
-    let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =         
+    let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =        
              
         let drawing =
             DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage
