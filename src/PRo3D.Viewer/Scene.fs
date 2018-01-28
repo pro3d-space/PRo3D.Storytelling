@@ -165,16 +165,21 @@ module Scene =
           |> SurfaceModel.triggerSgGrouping       
 
     let loadScene path m runtime signature =
-        let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
+        try
+            let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
         
-        let m = 
-            m |> Model.withScene (expandRelativePaths <| s)
+            let m = 
+                m |> Model.withScene (expandRelativePaths <| s)
 
-        let sModel = 
-            m.scene.surfacesModel 
-              |> prepareSurfaceModel runtime signature s.scenePath
+            let sModel = 
+                m.scene.surfacesModel 
+                  |> prepareSurfaceModel runtime signature s.scenePath
 
-        _surfaceModelLens.Set(m, sModel)        
+            _surfaceModelLens.Set(m, sModel)        
+        with _ ->
+            Log.error "Could not load selected scenefile %A. It is either outdated or not a valid scene" path
+            //Log.error "error %A" e
+            m
                     
     let loadLastScene runtime signature m =
         match Serialization.fileExists "./recent" with
