@@ -36,6 +36,63 @@ module Shader =
     //    [<Semantic("LightDir")>]    ldir    : V3d
     //}
 
+    let triangleFilter'' (input : Triangle<Vertex>) =
+        triangle {
+            let p0 = input.P0.wp.XYZ
+            let p1 = input.P1.wp.XYZ
+            let p2 = input.P2.wp.XYZ
+            let cross = Vec.cross (p1 - p0) (p2 - p0)            
+            let area = cross.LengthSquared
+            let maxArea = uniform?TriangleSize
+            let check = area < maxArea
+            if check then
+                yield input.P0 
+                yield input.P1
+                yield input.P2
+        }
+
+    let triangleFilter' (input : Triangle<Vertex>) =
+        triangle {
+            let p0 = input.P0.wp.XYZ
+            let p1 = input.P1.wp.XYZ
+            let p2 = input.P2.wp.XYZ
+
+            let maxRel = uniform?TriangleSize
+
+            let a = (p1 - p0).Length < maxRel
+            let b = (p2 - p1).Length < maxRel
+            let c = (p0 - p2).Length < maxRel                        
+
+            let check = a && b && c
+            if check then
+                yield input.P0 
+                yield input.P1
+                yield input.P2
+        }
+
+    let triangleFilter (input : Triangle<Vertex>) =
+        triangle {
+            let p0 = input.P0.wp.XYZ
+            let p1 = input.P1.wp.XYZ
+            let p2 = input.P2.wp.XYZ
+
+            let maxRel = uniform?TriangleSize
+
+            let a = (p1 - p0).Normalized
+            let b = (p2 - p1).Normalized
+            let c = (p0 - p2).Normalized          
+
+            let alpha = (a.Dot b).Abs() < maxRel
+            let beta  = (b.Dot c).Abs() < maxRel
+            let gamma = (c.Dot a).Abs() < maxRel
+
+            let check = alpha && beta && gamma
+            if check then
+                yield input.P0 
+                yield input.P1
+                yield input.P2
+        }
+
     let LoDColor  (v : Vertex) =
         fragment {
             if uniform?LodVisEnabled then

@@ -24,6 +24,7 @@ module Mutable =
         let _isVisible = ResetMod.Create(__initial.isVisible)
         let _quality = Aardvark.UI.Mutable.MNumericInput.Create(__initial.quality)
         let _priority = Aardvark.UI.Mutable.MNumericInput.Create(__initial.priority)
+        let _triangleSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.triangleSize)
         let _preTransform = ResetMod.Create(__initial.preTransform)
         let _scalarLayers = MList.Create(__initial.scalarLayers)
         let _selectedScalar = MOption.Create(__initial.selectedScalar)
@@ -41,6 +42,7 @@ module Mutable =
         member x.isVisible = _isVisible :> IMod<_>
         member x.quality = _quality
         member x.priority = _priority
+        member x.triangleSize = _triangleSize
         member x.preTransform = _preTransform :> IMod<_>
         member x.scalarLayers = _scalarLayers :> alist<_>
         member x.selectedScalar = _selectedScalar :> IMod<_>
@@ -63,6 +65,7 @@ module Mutable =
                 ResetMod.Update(_isVisible,v.isVisible)
                 Aardvark.UI.Mutable.MNumericInput.Update(_quality, v.quality)
                 Aardvark.UI.Mutable.MNumericInput.Update(_priority, v.priority)
+                Aardvark.UI.Mutable.MNumericInput.Update(_triangleSize, v.triangleSize)
                 ResetMod.Update(_preTransform,v.preTransform)
                 MList.Update(_scalarLayers, v.scalarLayers)
                 MOption.Update(_selectedScalar, v.selectedScalar)
@@ -150,6 +153,12 @@ module Mutable =
                     override x.Set(r,v) = { r with priority = v }
                     override x.Update(r,f) = { r with priority = f r.priority }
                 }
+            let triangleSize =
+                { new Lens<PRo3D.Surfaces.Surface, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.triangleSize
+                    override x.Set(r,v) = { r with triangleSize = v }
+                    override x.Update(r,f) = { r with triangleSize = f r.triangleSize }
+                }
             let preTransform =
                 { new Lens<PRo3D.Surfaces.Surface, Aardvark.Base.Trafo3d>() with
                     override x.Get(r) = r.preTransform
@@ -185,13 +194,12 @@ module Mutable =
     type MSgSurface(__initial : PRo3D.Surfaces.SgSurface) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurface> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.SgSurface>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurface>
-        let _surface = ResetMod.Create(__initial.surface)
         let _trafo = Aardvark.UI.Trafos.Mutable.MTransformation.Create(__initial.trafo)
         let _globalBB = ResetMod.Create(__initial.globalBB)
         let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
         let _kdTree = MMap.Create(__initial.kdTree)
         
-        member x.surface = _surface :> IMod<_>
+        member x.surface = __current.Value.surface
         member x.trafo = _trafo
         member x.globalBB = _globalBB :> IMod<_>
         member x.sceneGraph = _sceneGraph :> IMod<_>
@@ -202,7 +210,6 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
-                ResetMod.Update(_surface,v.surface)
                 Aardvark.UI.Trafos.Mutable.MTransformation.Update(_trafo, v.trafo)
                 ResetMod.Update(_globalBB,v.globalBB)
                 ResetMod.Update(_sceneGraph,v.sceneGraph)

@@ -580,8 +580,8 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
-            //, exploreCenter
-            [controller; annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList
+            //controller, exploreCenter
+            [annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList
                                             
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          

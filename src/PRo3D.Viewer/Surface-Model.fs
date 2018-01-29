@@ -56,6 +56,8 @@ type Surface = {
     quality       : NumericInput
     priority      : NumericInput
 
+    triangleSize  : NumericInput
+
     preTransform  : Trafo3d
     
 
@@ -68,6 +70,7 @@ type Surface = {
 
 [<DomainType>]
 type SgSurface = {    
+    [<NonIncremental>]
     surface     : Guid    
     trafo       : Transformation
     globalBB    : Box3d
@@ -84,6 +87,16 @@ module Init =
                 step = 0.1
                 format = "{0:0.0}"
             }
+
+    let triangleSize =
+        {
+            value = 1.0
+            min =  0.0
+            max = 1.0
+            step = 0.001
+            format = "{0:0.000}"
+        }
+
 
     let priority = 
         {

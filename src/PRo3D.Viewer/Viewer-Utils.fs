@@ -75,7 +75,7 @@ module ViewerUtils =
     //open OpenCvSharp.XFeatures2D
     
     let colormap = 
-        let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
+        let config = { wantMipMaps = false; wantSrgb = false; wantCompressed = false }
         FileTexture("HueColorMap.png",config) :> ITexture
 
     let pickable' (pick :IMod<Pickable>) (sg: ISg) =
@@ -108,12 +108,12 @@ module ViewerUtils =
 
     let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (globalBB : IMod<Box3d>) =
         
-        let surf = lookUp (surface.surface |> Mod.force) blarg
+        let surf = lookUp (surface.surface) blarg
 
-        let isSelected = Mod.map2(fun x y->
+        let isSelected = Mod.map(fun x ->
           match x with
-            | Some id -> id = y
-            | None -> false) selectedId surface.surface
+            | Some id -> id = surface.surface
+            | None -> false) selectedId 
 
         let createSg (sg : ISg) =
             sg 
@@ -145,7 +145,7 @@ module ViewerUtils =
                 let! scalar = s.selectedScalar
                 return scalar.IsSome
             }
-
+       
         let sg = 
             surface.sceneGraph 
                 |> Mod.map createSg
@@ -154,6 +154,12 @@ module ViewerUtils =
                 |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
                 |> Sg.uniform "falseColors"    selectedScalar
                 |> Sg.uniform "MinMax"         (surface |> rangeToMinMax)
+                |> Sg.uniform "TriangleSize" (
+                        adaptive {
+                            let! s = surf
+                            let! size = s.triangleSize.value
+                            return size
+                        })
                 |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
                 |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
                 |> Sg.LodParameters( 
@@ -228,6 +234,7 @@ module ViewerUtils =
                             Shader.selectionColor |> toEffect       
                             Shader.LoDColor |> toEffect
                             Shader.falseColor |> toEffect
+                            Shader.triangleFilter |> toEffect
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
