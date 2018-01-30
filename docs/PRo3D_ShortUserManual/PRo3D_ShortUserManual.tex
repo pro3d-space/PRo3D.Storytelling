@@ -1,0 +1,183 @@
+
+%% Based on a TeXnicCenter-Template, which was
+%% created by Christoph Börensen
+%% and slightly modified by Tino Weinkauf.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[a4paper,12pt]{article} %scrartcl This is a special class provided by the KOMA script, which does a lot of adjustments to adapt the standard LaTeX classes to european habits, change to [a4paper,12pt,twoside] for doublesided layout
+
+
+%########################### Preferences #################################
+
+
+% ******** vmargin settings *********
+\usepackage{vmargin} %This give you full control over the used page arae, it maybe not the idea od Latex to do so, but I wanted to reduce to amount of white space on the page
+\setpapersize{A4}
+\setmargins{3.5cm}%			%linker Rand, left edge
+					 {1.5cm}%     %oberer Rand, top edge
+           {14.7cm}%		%Textbreite, text width
+           {23.42cm}%   %Texthoehe, text hight
+           {30pt}%			%Kopfzeilenhöhe, header hight
+           {1cm}%   	  %Kopfzeilenabstand, header distance
+           {0pt}%				%Fußzeilenhoehe footer hight
+           {2cm}%    	  %Fusszeilenabstand, footer distance   
+\setlength{\parindent}{0pt}  % keine Einrückung nach Absatz
+
+% ********* Font definiton ************
+\usepackage{t1enc} % as usual
+\usepackage[latin1]{inputenc} % as usual
+\usepackage{times}		
+\usepackage{fancyhdr}
+\usepackage[table]{xcolor}
+\usepackage{longtable}
+\usepackage{wallpaper}
+
+% ********* for code listing ************
+\usepackage{listings}  
+\usepackage{color}
+\definecolor{gray}{rgb}{0.4,0.4,0.4}
+\definecolor{darkblue}{rgb}{0.0,0.0,0.6}
+\definecolor{cyan}{rgb}{0.0,0.6,0.6}
+
+\lstloadlanguages{XML}
+
+%\lstdefinelanguage{XML}
+%{
+  %morestring=[b]",
+  %morestring=[s]{>}{<},
+%%  morecomment=[s]{<?}{?>},
+  %morecomment=[s][\color{orange}]{<!--}{-->},
+  %stringstyle=\color{black},
+  %identifierstyle=\color{darkblue},
+  %keywordstyle=\color{red},
+  %morekeywords={xmlns,version,type,num},
+	%showstringspaces=false,
+%}
+
+
+%\usepackage{mathptmx}  	%mathematical fonts for use with times, I encountered some problems using this package togather with pdftex, which I was not able to resolve
+
+% ********* Graphics definition *******
+\usepackage[pdftex]{graphicx} % required to import graphic files
+\usepackage{eso-pic} % these two are required to add the little picture on top of every page
+\usepackage{everyshi} % these two are required to add the little picture on top of every page
+\renewcommand{\floatpagefraction}{0.7} %default:0.5 allows two big pictures on one page
+\usepackage{wrapfig}
+
+%********** Enybeling Hyperlinks *******
+\usepackage[pdfborder=000,pdftex=true]{hyperref}% this enables jumping from a reference and table of content in the pdf file to its target
+
+% ********* Table layout **************
+\usepackage{booktabs}	  	%design of table, has an excellent documentation
+\usepackage{multirow}     % multirows in tables
+
+% ********* Caption Layout ************
+\usepackage{ccaption} % allows special formating of the captions
+\captionnamefont{\bf\footnotesize\sffamily} % defines the font of the caption name (e.g. Figure: or Table:)
+\captiontitlefont{\footnotesize\sffamily} % defines the font of the caption text (same as above, but not bold)
+\setlength{\abovecaptionskip}{0mm} %lowers the distace of captions to the figure
+
+\usepackage{scrpage2} %header and footer using the options for the KOMA script
+\renewcommand{\headfont}{\footnotesize\sffamily} % font for the header
+\renewcommand{\pnumfont}{\footnotesize\sffamily} % font for the pagenumbers
+
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+% set colors for links and URLs
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks=true,
+	linkcolor=black,
+	urlcolor=blue}
+
+%this defines the page style for the first pages: all empty
+\renewpagestyle{plain}%
+	{(\textwidth,0pt)%
+		{\hfill}{\hfill}{\hfill}%
+	(\textwidth,0pt)}%
+	{(\textwidth,0pt)%	
+		{\hfill}{\hfill}{\hfill}%
+	(\textwidth,0pt)}
+
+%----------------------------------------------------------------------------------------
+%	BEGIN DOCUMENT
+%----------------------------------------------------------------------------------------
+
+\pagestyle{plain} % on headers or footers on the first page
+
+\begin{document}
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+\begin{center}
+\ThisCenterWallPaper{0.9}{pics/Title_SUM.png}
+\end{center}
+
+\newpage
+
+\pagestyle{fancy} % now we want to have headers and footers
+
+%----------------------------------------------------------------------------------------
+%	Header and Footer
+%----------------------------------------------------------------------------------------
+\fancyhf{} %alle Kopf- und Fußzeilenfelder bereinigen
+\fancyhead[R]{} %Kopfzeile rechts
+\fancyhead[C]{} %zentrierte Kopfzeile
+\fancyhead[L]{\includegraphics[height=30pt]{pics/logosSUM.png}} %Kopfzeile links
+\renewcommand{\headrulewidth}{0.4pt} %obere Trennlinie
+\fancyfoot[L]{{PRo3D 2.0}} 
+\fancyfoot[R]{\thepage} 
+\renewcommand{\footrulewidth}{0.4pt} %untere Trennlinie
+
+%----------------------------------------------------------------------------------------
+%	Change Records 
+%----------------------------------------------------------------------------------------
+
+%\begin{table}[h]
+	%\centering
+	%
+		%\caption{\textbf{Change Records}}
+		%\label{tab:changeRecs}
+		%
+		%\rowcolors{1}{lightgray}{white}
+%
+		%\begin{tabular}{c c p{7cm} p{3cm}}
+			%\textbf{ISSUE} & \textbf{DATE} & \textbf{§ CHANGE RECORDS} & \textbf{AUTHOR} \\
+			%\hline
+			%1.0 & 2018-01-23 & Initial Version & Ortner, Fritz
+		%\end{tabular}
+%
+%\end{table}
+
+\newpage
+
+%----------------------------------------------------------------------------------------
+%	Table of Contents + List of Figures
+%----------------------------------------------------------------------------------------
+\tableofcontents
+%\listoffigures
+
+\newpage
+%----------------------------------------------------------------------------------------
+%	Section: Introduction
+%----------------------------------------------------------------------------------------
+\include{Introduction}
+%----------------------------------------------------------------------------------------
+%	Section: Start
+%----------------------------------------------------------------------------------------
+\include{Start}
+%----------------------------------------------------------------------------------------
+%	Section: Viewer Actions
+%----------------------------------------------------------------------------------------
+\include{ViewerActions}
+%----------------------------------------------------------------------------------------
+%	Section: Viewer Features
+%----------------------------------------------------------------------------------------
+\include{ViewerFeatures}
+%----------------------------------------------------------------------------------------
+%	END OF DOCUMENT
+%----------------------------------------------------------------------------------------
+\end{document}
+
