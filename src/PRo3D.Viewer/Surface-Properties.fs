@@ -24,6 +24,7 @@ module SurfaceProperties =
         | SetName        of string
         | ToggleVisible 
         | SetQuality     of Numeric.Action
+        | SetTriangleSize of Numeric.Action
         | SetPriority    of Numeric.Action
         | SetScalarMap   of Option<ScalarLayer>
         | SetTexturesMap of Option<TextureLayer>
@@ -38,6 +39,8 @@ module SurfaceProperties =
                 { model with name = s }
             | ToggleVisible ->
                 { model with isVisible = not model.isVisible }
+            | SetTriangleSize a ->
+                { model with triangleSize = Numeric.update model.triangleSize a }
             | SetQuality a ->
                 { model with quality = Numeric.update model.quality a }
             | SetPriority a ->
@@ -68,6 +71,7 @@ module SurfaceProperties =
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
                 Html.row "Priority:"    [Numeric.view' [NumericInputType.InputBox] model.priority |> UI.map SetPriority ]       
                 Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider]   model.quality  |> UI.map SetQuality ]
+                Html.row "TriangleSize:"     [Numeric.view' [NumericInputType.InputBox]   model.triangleSize  |> UI.map SetTriangleSize ]
                 Html.row "Fillmode:"    [Html.SemUi.dropDown model.fillMode SetFillMode]
                 Html.row "Scalars:"     [UI.dropDown'' model.scalarLayers  model.selectedScalar   (fun x -> SetScalarMap x)   (fun x -> x.label)]
                 Html.row "Textures:"    [UI.dropDown'' model.textureLayers model.selectedTexture  (fun x -> SetTexturesMap x) (fun x -> x.label)]

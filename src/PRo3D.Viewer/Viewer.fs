@@ -66,17 +66,19 @@ module ViewerApp =
         let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value             
 
         _view.Set(m,view)
+
+    let lookAtBoundingBox (bb : Box3d) (m : Model) =
+        let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value                
+        m |> Lenses.set _view view
     
     let lookAtSurface (m : Model) id =
         let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
         match surf with
             | Some s ->
                 let bb = s.globalBB
-                let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value
-                
-                m |> Lenses.set _view view
+                m |> lookAtBoundingBox bb
             | None -> m
-    
+
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
        
@@ -213,7 +215,7 @@ module ViewerApp =
                             let (refSystem',_)= 
                                 ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
                                                                 
-                            { m with scene = { m.scene with referenceSystem = refSystem' }} |> updateCameraUp
+                            { m with scene = { m.scene with referenceSystem = refSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB
                           | None -> m
                                                                        
             | ImportAnnotationGroups,_,_ ->
@@ -578,8 +580,8 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
-            //, exploreCenter
-            [controller; annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList
+            //controller, exploreCenter
+            [annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList
                                             
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          

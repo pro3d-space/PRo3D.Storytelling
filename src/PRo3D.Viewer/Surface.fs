@@ -232,6 +232,8 @@ module Surface =
             selectedScalar  = None
             textureLayers   = PList.empty
             selectedTexture = None            
+
+            triangleSize = Init.triangleSize
         }       
 
     let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = 
