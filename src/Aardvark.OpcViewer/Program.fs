@@ -39,7 +39,7 @@ module Serialization =
 [<AutoOpen>]
 module KdTrees =
     open MBrace.FsPickler
-    open MBrace.FsPickler.Combinators
+    open MBrace.FsPickler.Combinators                                                                                                                                                                                                                                                                                                                                                
     open Aardvark.VRVis
 
     type LazyKdTree = {

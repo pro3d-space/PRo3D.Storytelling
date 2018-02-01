@@ -149,9 +149,9 @@ module Annotation =
     
     let getHeightDelta (p:V3d) (upVec:V3d) = (p * upVec).Length
 
-    let calcResultsPoint (point:V3d) (trafo:Trafo3d) (upVec:V3d) =
-        let p = point //trafo.Forward.TransformPos(point)
-        {   height = getHeightDelta p upVec
+    let calcResultsPoint = //(point:V3d) (trafo:Trafo3d) (upVec:V3d) 
+        //let p = point //trafo.Forward.TransformPos(point)
+        {   height = 0.0
             heightDelta = 0.0
             length = 0.0
             wayLength = 0.0
@@ -188,7 +188,7 @@ module Annotation =
 
         let hcount = heights.Length
 
-        {   height = heights |> List.max
+        {   height = (heights |> List.max) - (heights |> List.min)
             heightDelta = Fun.Abs (heights.[hcount-1] - heights.[0])
             length = dist
             wayLength = way
@@ -197,7 +197,7 @@ module Annotation =
     let calculateAnnotationResults (model:Annotation) (upVec:V3d) =
         match model.points.Count with
             | x when x > 1 -> calcResultsLine model upVec
-            | _ -> calcResultsPoint model.points.[0] model.modelTrafo upVec
+            | _ -> calcResultsPoint //model.points.[0] model.modelTrafo upVec
 
     let make (projection) (geometry) (semantic) (surfName) : Annotation  = 
         let thickness = thickness.[int semantic]
