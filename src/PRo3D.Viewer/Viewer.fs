@@ -152,15 +152,14 @@ module ViewerApp =
                 let ag = m.drawing.annotations 
                 { m with drawing = { m.drawing with annotations = Groups.update ag msg}}
             | DrawingMessage msg, Interactions.DrawAnnotation,_->
-                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
-
+                let drawing = 
+                    DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
                 { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
                 match msg with
                     | SurfaceApp.Action.FlyToSurface id -> 
                         lookAtSurface m id
-                    | _ ->  
-                        Log.warn "%A" msg
+                    | _ ->
                         let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
                         { m with scene = { m.scene with surfacesModel = s}}
             | AnnotationMessage msg,_,_ ->                

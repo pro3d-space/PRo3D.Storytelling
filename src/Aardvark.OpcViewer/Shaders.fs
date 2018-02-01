@@ -53,15 +53,15 @@ module Shader =
 
     let triangleFilter' (input : Triangle<Vertex>) =
         triangle {
-            let p0 = input.P0.wp.XYZ
-            let p1 = input.P1.wp.XYZ
-            let p2 = input.P2.wp.XYZ
+            let A = input.P0.wp.XYZ
+            let B = input.P1.wp.XYZ
+            let C = input.P2.wp.XYZ
 
             let maxRel = uniform?TriangleSize
 
-            let a = (p1 - p0).Length < maxRel
-            let b = (p2 - p1).Length < maxRel
-            let c = (p0 - p2).Length < maxRel                        
+            let a = (B - A).Length < maxRel
+            let b = (C - B).Length < maxRel
+            let c = (A - C).Length < maxRel                        
 
             let check = a && b && c
             if check then

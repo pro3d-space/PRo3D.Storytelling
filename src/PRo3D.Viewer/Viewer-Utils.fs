@@ -157,8 +157,8 @@ module ViewerUtils =
                 |> Sg.uniform "TriangleSize" (
                         adaptive {
                             let! s = surf
-                            let! size = s.triangleSize.value
-                            return size
+                            let! maxAngle = s.triangleSize.value
+                            return maxAngle |> Double.radiansFromDegrees |> Math.Cos
                         })
                 |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
                 |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
