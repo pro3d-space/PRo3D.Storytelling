@@ -18,6 +18,37 @@ For surfaces, annotations and bookmarks it is possible to group them, as describ
 \subsection{Surfaces}
 \label{sec:surfaces}
 
+\begin{figure}[h]
+    	\centering
+    		\includegraphics[width=0.5\textwidth]{pics/SurfacesAI.png}
+    	\caption[Viewer Features Surfaces]{The surfaces tab.}
+    	\label{fig:surfaces}
+   \end{figure}
+
+The listing shows all surfaces in the scene. You can classify them in any group and subgroup layers, described in Section~\ref{sec:grouping}.
+You can select a surface by clicking on the surface's name. Then you can see the surface's properties in the properties panel and use the actions in the actions panel. 
+It is also possible to select multiple surfaces by clicking the square icon in front of each surface. The selected surfaces have a green square in the list. The multiselection is used to move one ore more surfaces from one group to the active group.
+Under the surface's name is a little menu:
+\begin{itemize}
+	\item \textit{FlyTo}: A click on the button triggers a FlyTo animation.
+	\item \textit{portable}: This creates a folder hierarchy as used in the old viewer version. A scene file is created and the surfaces are copied to the surface folder.
+	\item \textit{openFolder}: Opens the folder where the scene file resides.	
+\end{itemize}
+
+In the surface properties panel are some adjustments possible:
+\begin{itemize}
+	\item \textit{Name}: The surface's name. You can change it in the text field and press ``enter''.
+	\item \textit{Visible}: The surface is visible (checked) or not (unchecked).
+	\item \textit{Priority}:  Often multiple surfaces are available for a certain area on the planet surface. These surfaces represent the same piece of ground and typically overlap. This parameter allows to assign a priority to a surface to tell the graphics card which surface should be rendered in front. Lower numbers mean a higher priority in rendering, with 0 being the highest priority. You can also give the highest priority surface a ranking of, for instance, 0.1 (= 10cm) to make annotations more visible. The priority can be dynamically changed via the surface properties so you can try out what works best.
+	\item \textit{Quality}: 
+	\item \textit{TriangleSize}:
+	\item \textit{FillMode}: You can switch between solid/ wireframe/ point rendering of the geometry.
+	\item \textit{Scalars}:
+	\item \textit{Textures}:
+	\item \textit{Cull Faces}:
+\end{itemize}
+
+The surfaces actions are described in Section~\ref{sec:leafActions}.
 %----------------------------------------------------------------------------------------
 %	SubSection: Annotations
 %----------------------------------------------------------------------------------------
@@ -27,7 +58,7 @@ For surfaces, annotations and bookmarks it is possible to group them, as describ
 \begin{figure}[h]
     	\centering
     		\includegraphics[width=0.5\textwidth]{pics/AnnotationsTabAI.png}
-    	\caption[Viewer Features]{The annotations tab.}
+    	\caption[Viewer Features Annotations]{The annotations tab.}
     	\label{fig:annoProps}
    \end{figure}
 	
@@ -39,7 +70,7 @@ The annotations tab consists of four parts (Figure~\ref{fig:annoProps}):
 In contrast to all other viewer features, the annotations are NOT saved in the scene file!
 There is a separate menu on top of the annotations tab:
 \begin{itemize}
-	\item \textit{Save Annotations}: Opens a ``Save As'' window. Give your annoations xml file a name and click the ``Save'' button.
+	\item \textit{Save Annotations}: Opens a ``Save As'' window. Give your annotations xml file a name and click the ``Save'' button.
 	\item \textit{Load Annotations}: Select the annotations xml file and press the ``Open'' button. 
 	\item \textit{Clear Annotation List}: This clears the whole annotation list.
 \end{itemize}
@@ -47,21 +78,35 @@ There is a separate menu on top of the annotations tab:
 %----------------------------------------------------------------------------------------Annotations listing
 \subsubsection{Annotations Listing}
 
-The listing shows all annotations in the scene. You can classify them in any group and subgroups, described in Section~\ref{sec:grouping}.
-You can select one annotation by clicking on the annotation's name. Then you can see the annotation's properties in the properties panel and use the actions in the actions panel. 
-It is also possible to select more annotations by clicking the square icon in front of each annotation. The selected annotatios have a green color in the viewer and a green square in the list. The multiselection is used to move one ore more annotations from one group to the active group.
+The listing shows all annotations in the scene. You can classify them in any group and subgroup layers, described in Section~\ref{sec:grouping}.
+You can select an annotation by clicking on the annotation's name. Then you can see the annotation's properties in the properties panel and use the actions in the actions panel. 
+It is also possible to select more annotations by clicking the square icon in front of each annotation. The selected annotations have a green color in the viewer and a green square in the list. The multiselection is used to move one ore more annotations from one group to the active group.
 
 %----------------------------------------------------------------------------------------Annotations properties
 \subsubsection{Annotations Properties}
 
-The properties of the selected annotation (click on annotation's name) are shown. There you can get some information and change the settings.
+The properties of the selected annotation (click on annotation's name) are shown. There you can get information and change some of the settings:
+\begin{itemize}
+	\item \textit{Geometry}: Shows the annotation mode (described in Section~\ref{sec:drawAnnotation}). This is not changeable retrospectively.
+	\item \textit{Projection}: Shows the projection which determines the direction of the picking ray (described in Section~\ref{sec:drawAnnotation}, shown in Figure~\ref{fig:projection}). This is not changeable retrospectively.
+	\item \textit{Semantic}: 
+	\item \textit{Thickness}: You can change the annotation's line thickness.
+	\item \textit{Color}: You can change the annotation's color.
+	\item \textit{Text}: You can append a note. Write in the text field and press ``Enter''. The note will appear next to the annotation in the viewer. 
+	\item \textit{Visible}: The annotation is visible (checked) or not (unchecked).
+	\item \textit{ShowDnS}: For each annotation with more than three picking points Dip and Strike information (Section~\ref{sec:drawAnnotation}) is available. The DnS is visible (checked) or not (unchecked).
+	\item \textit{Height}:  The height between the annotation's start and end point.
+	\item \textit{HeightDelta}: The height difference between the highest and lowest point of the projected line.
+	\item \textit{Length}: The sum of direct distances between the picking points.
+	\item \textit{WayLength}: The sum of projected distances between the picking points.
+\end{itemize}
 
-The annotation actions are described in Section~\ref{sec:leafActions}.
+The annotations actions are described in Section~\ref{sec:leafActions}.
 
 %----------------------------------------------------------------------------------------Import AnnotationGroups
 \subsubsection{Import Annotations from old viewer versions} 
 
-To import annotations from old scene files click the ``browse'' buttion in the \textbf{ImportAnnotationGroups} section in the Scene Menu (Figure~\ref{fig:StartMenu}). This opens a folder browser dialog, where you can select an old scene file an click ''Open''.
+To import annotations from old scene files click the ``browse'' button in the \textbf{ImportAnnotationGroups} section in the Scene Menu (Figure~\ref{fig:StartMenu}). This opens a folder browser dialog, where you can select an old scene file an click ''Open''.
 The annotations are loaded in the same group hierarchy to the ``root'' group.
 
 
@@ -80,7 +125,7 @@ The annotations are loaded in the same group hierarchy to the ``root'' group.
 \begin{figure}[h]
     	\centering
     		\includegraphics[width=0.5\textwidth]{pics/bookmarks.png}
-    	\caption[Bookmarks]{The bookmarks tab.}
+    	\caption[Viewer Features Bookmarks]{The bookmarks tab.}
     	\label{fig:bookmarks}
    \end{figure}
 	

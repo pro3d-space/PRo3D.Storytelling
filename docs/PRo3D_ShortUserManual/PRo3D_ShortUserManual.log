@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.17 (MiKTeX 2.9) (preloaded format=pdflatex 2016.10.5)  30 JAN 2018 13:32
+This is pdfTeX, Version 3.14159265-2.6-1.40.17 (MiKTeX 2.9) (preloaded format=pdflatex 2016.10.5)  1 FEB 2018 12:00
 entering extended mode
 **./PRo3D_ShortUserManual.tex
 (PRo3D_ShortUserManual.tex
@@ -774,18 +774,18 @@ File: pics/featureMenu.png Graphic file (type png)
 <use pics/featureMenu.png>
 Package pdftex.def Info: pics/featureMenu.png used on input line 8.
 (pdftex.def)             Requested size: 418.25542pt x 260.91325pt.
- <pics/AnnotationsTabAI.png, id=265, 417.7206pt x 637.9032pt>
-File: pics/AnnotationsTabAI.png Graphic file (type png)
- <use pics/AnnotationsTabAI.png>
-Package pdftex.def Info: pics/AnnotationsTabAI.png used on input line 29.
-(pdftex.def)             Requested size: 209.1277pt x 319.35962pt.
+ <pics/SurfacesAI.png, id=265, 285.2256pt x 505.89pt>
+File: pics/SurfacesAI.png Graphic file (type png)
+ <use pics/SurfacesAI.png>
+Package pdftex.def Info: pics/SurfacesAI.png used on input line 23.
+(pdftex.def)             Requested size: 209.1277pt x 370.92538pt.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 File: pics/logosSUM.png Graphic file (type png)
 <use pics/logosSUM.png>
-Package pdftex.def Info: pics/logosSUM.png used on input line 53.
+Package pdftex.def Info: pics/logosSUM.png used on input line 41.
 (pdftex.def)             Requested size: 163.0831pt x 30.0pt.
 
 
@@ -798,13 +798,47 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
 
 
  <./pics/featureMenu.png>]
-Overfull \hbox (5.36377pt too wide) in paragraph at lines 57--58
+File: pics/logosSUM.png Graphic file (type png)
+ <use pics/logosSUM.png>
+Package pdftex.def Info: pics/logosSUM.png used on input line 46.
+(pdftex.def)             Requested size: 163.0831pt x 30.0pt.
+
+
+Package Fancyhdr Warning: \headheight is too small (30.0pt): 
+ Make it at least 34.35004pt.
+ We now make it that large for the rest of the document.
+ This may cause the page layout to be inconsistent, however.
+
+[15 <./pics/SurfacesAI.png (PNG copy)>] <pics/AnnotationsTabAI.png, id=278, 417.7206pt x 637.9032pt>
+File: pics/AnnotationsTabAI.png Graphic file (type png)
+
+<use pics/AnnotationsTabAI.png>
+Package pdftex.def Info: pics/AnnotationsTabAI.png used on input line 60.
+(pdftex.def)             Requested size: 209.1277pt x 319.35962pt.
+File: pics/logosSUM.png Graphic file (type png)
+ <use pics/logosSUM.png>
+Package pdftex.def Info: pics/logosSUM.png used on input line 75.
+(pdftex.def)             Requested size: 163.0831pt x 30.0pt.
+
+
+Package Fancyhdr Warning: \headheight is too small (30.0pt): 
+ Make it at least 34.35004pt.
+ We now make it that large for the rest of the document.
+ This may cause the page layout to be inconsistent, however.
+
+[16 <./pics/AnnotationsTabAI.png>]
+Overfull \hbox (5.36377pt too wide) in paragraph at lines 88--89
 \T1/phv/m/n/12 The prop-er-ties of the se-lected an-no-ta-tion (click on an-no-ta-tion's name) are shown.
+ []
+
+
+Overfull \hbox (11.39845pt too wide) in paragraph at lines 97--98
+\T1/phv/m/n/12 and Strike in-for-ma-tion (Sec-tion [][]3.3[][]) is avail-able. The DnS is vis-i-ble (checked)
  []
 
 File: pics/logosSUM.png Graphic file (type png)
 <use pics/logosSUM.png>
-Package pdftex.def Info: pics/logosSUM.png used on input line 77.
+Package pdftex.def Info: pics/logosSUM.png used on input line 111.
 (pdftex.def)             Requested size: 163.0831pt x 30.0pt.
 
 
@@ -813,20 +847,31 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
  We now make it that large for the rest of the document.
  This may cause the page layout to be inconsistent, however.
 
-[15 <./pics/AnnotationsTabAI.png>] <pics/bookmarks.png, id=281, 271.7352pt x 602.7318pt>
+[17] <pics/bookmarks.png, id=297, 271.7352pt x 602.7318pt>
 File: pics/bookmarks.png Graphic file (type png)
  <use pics/bookmarks.png>
-Package pdftex.def Info: pics/bookmarks.png used on input line 82.
+Package pdftex.def Info: pics/bookmarks.png used on input line 127.
 (pdftex.def)             Requested size: 209.1277pt x 463.8566pt.
+File: pics/logosSUM.png Graphic file (type png)
+ <use pics/logosSUM.png>
+Package pdftex.def Info: pics/logosSUM.png used on input line 135.
+(pdftex.def)             Requested size: 163.0831pt x 30.0pt.
 
-<pics/ViewerConfigAI.png, id=283, 598.8774pt x 530.9436pt>
+
+Package Fancyhdr Warning: \headheight is too small (30.0pt): 
+ Make it at least 34.35004pt.
+ We now make it that large for the rest of the document.
+ This may cause the page layout to be inconsistent, however.
+
+[18 <./pics/bookmarks.png>] <pics/ViewerConfigAI.png, id=305, 598.8774pt x 530.9436pt>
 File: pics/ViewerConfigAI.png Graphic file (type png)
  <use pics/ViewerConfigAI.png>
-Package pdftex.def Info: pics/ViewerConfigAI.png used on input line 99.
+Package pdftex.def Info: pics/ViewerConfigAI.png used on input line 144.
 (pdftex.def)             Requested size: 334.6056pt x 296.64584pt.
 File: pics/logosSUM.png Graphic file (type png)
- <use pics/logosSUM.png>
-Package pdftex.def Info: pics/logosSUM.png used on input line 102.
+
+<use pics/logosSUM.png>
+Package pdftex.def Info: pics/logosSUM.png used on input line 164.
 (pdftex.def)             Requested size: 163.0831pt x 30.0pt.
 
 
@@ -835,23 +880,11 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
  We now make it that large for the rest of the document.
  This may cause the page layout to be inconsistent, however.
 
-[16 <./pics/bookmarks.png>]
-File: pics/logosSUM.png Graphic file (type png)
- <use pics/logosSUM.png>
-Package pdftex.def Info: pics/logosSUM.png used on input line 122.
-(pdftex.def)             Requested size: 163.0831pt x 30.0pt.
-
-
-Package Fancyhdr Warning: \headheight is too small (30.0pt): 
- Make it at least 34.35004pt.
- We now make it that large for the rest of the document.
- This may cause the page layout to be inconsistent, however.
-
-[17 <./pics/ViewerConfigAI.png>] <pics/GroupsProperties.png, id=306, 271.2534pt x 528.5346pt>
+[19 <./pics/ViewerConfigAI.png>] <pics/GroupsProperties.png, id=323, 271.2534pt x 528.5346pt>
 File: pics/GroupsProperties.png Graphic file (type png)
 
 <use pics/GroupsProperties.png>
-Package pdftex.def Info: pics/GroupsProperties.png used on input line 145.
+Package pdftex.def Info: pics/GroupsProperties.png used on input line 190.
 (pdftex.def)             Requested size: 209.1277pt x 407.48099pt.
 
 
@@ -859,7 +892,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 File: pics/logosSUM.png Graphic file (type png)
 <use pics/logosSUM.png>
-Package pdftex.def Info: pics/logosSUM.png used on input line 168.
+Package pdftex.def Info: pics/logosSUM.png used on input line 210.
 (pdftex.def)             Requested size: 163.0831pt x 30.0pt.
 
 
@@ -868,7 +901,19 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
  We now make it that large for the rest of the document.
  This may cause the page layout to be inconsistent, however.
 
-[18])
+[20]
+File: pics/logosSUM.png Graphic file (type png)
+ <use pics/logosSUM.png>
+Package pdftex.def Info: pics/logosSUM.png used on input line 222.
+(pdftex.def)             Requested size: 163.0831pt x 30.0pt.
+
+
+Package Fancyhdr Warning: \headheight is too small (30.0pt): 
+ Make it at least 34.35004pt.
+ We now make it that large for the rest of the document.
+ This may cause the page layout to be inconsistent, however.
+
+[21 <./pics/GroupsProperties.png>])
 File: pics/logosSUM.png Graphic file (type png)
  <use pics/logosSUM.png>
 Package pdftex.def Info: pics/logosSUM.png used on input line 178.
@@ -880,11 +925,10 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
  We now make it that large for the rest of the document.
  This may cause the page layout to be inconsistent, however.
 
-[19 <./pics/GroupsProperties.png>]
+[22]
 Package atveryend Info: Empty hook `BeforeClearDocument' on input line 182.
 Package atveryend Info: Empty hook `AfterLastShipout' on input line 182.
- (PRo3D_ShortUserManual.aux (Introduction.aux) (Start.aux) (ViewerActions.aux)
-(ViewerFeatures.aux))
+ (PRo3D_ShortUserManual.aux (Introduction.aux) (Start.aux) (ViewerActions.aux) (ViewerFeatures.aux))
 Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 182.
 Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 182.
 Package rerunfilecheck Info: File `PRo3D_ShortUserManual.out' has not changed.
@@ -892,20 +936,20 @@ Package rerunfilecheck Info: File `PRo3D_ShortUserManual.out' has not changed.
 Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 182.
  ) 
 Here is how much of TeX's memory you used:
- 8465 strings out of 493334
- 123784 string characters out of 3136672
- 226694 words of memory out of 3000000
- 11754 multiletter control sequences out of 15000+200000
+ 8475 strings out of 493334
+ 123937 string characters out of 3136672
+ 226771 words of memory out of 3000000
+ 11759 multiletter control sequences out of 15000+200000
  30328 words of font info for 40 fonts, out of 3000000 for 9000
  1141 hyphenation exceptions out of 8191
- 41i,15n,43p,668b,402s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 41i,15n,43p,685b,402s stack positions out of 5000i,500n,10000p,200000b,50000s
 {C:/Program Files (x86)/MiKTeX 2.9/fonts/enc/dvips/fontname/8r.enc}<C:/Program Files (x86)/MiKTeX 2.9/fonts/type1/publ
 ic/amsfonts/cm/cmsy10.pfb><C:/Program Files (x86)/MiKTeX 2.9/fonts/type1/urw/helvetic/uhvb8a.pfb><C:/Program Files (x86)
 /MiKTeX 2.9/fonts/type1/urw/helvetic/uhvr8a.pfb><C:/Program Files (x86)/MiKTeX 2.9/fonts/type1/urw/helvetic/uhvro8a.pfb>
 
-Output written on PRo3D_ShortUserManual.pdf (19 pages, 8629255 bytes).
+Output written on PRo3D_ShortUserManual.pdf (22 pages, 8680391 bytes).
 PDF statistics:
- 350 PDF objects out of 1000 (max. 8388607)
- 64 named destinations out of 1000 (max. 500000)
- 315 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 371 PDF objects out of 1000 (max. 8388607)
+ 68 named destinations out of 1000 (max. 500000)
+ 320 words of extra memory for PDF output out of 10000 (max. 10000000)
 
