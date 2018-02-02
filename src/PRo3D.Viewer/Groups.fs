@@ -85,22 +85,19 @@ module Groups =
         let f = (fun _ -> l)
         updateLeaf l.id f m        
    
-    let createUpdate f (m:GroupsModel) id =
-        let (leaf : option<Leaf>) = 
-            m.flat |> HMap.tryFind id
-
-        match leaf with
-        | Some l -> HMap.single l.id (f l)
-        | None   -> HMap.empty
+    let createUpdate f (m:GroupsModel) id =        
+        match (m.flat |> HMap.tryFind id) with
+          | Some leaf -> HMap.single leaf.id (f leaf)
+          | None      -> HMap.empty
 
     let updateLeaves leaves f model =
-        let flat' =
+        let flat =
           leaves
-          |> PList.toList
-          |> List.map  (createUpdate f model)
-          |> List.fold (fun a b -> HMap.union a b) model.flat
+            |> PList.toList
+            |> List.map  (createUpdate f model)
+            |> List.fold (fun a b -> HMap.union a b) model.flat
 
-        { model with flat = flat' }
+        { model with flat = flat }
 
     
     let loadGroups (path:string) =
