@@ -151,7 +151,7 @@ module ViewerApp =
             | AnnotationGroupsMessageViewer msg,_,_ ->
                 let ag = m.drawing.annotations 
                 { m with drawing = { m.drawing with annotations = Groups.update ag msg}}
-            | DrawingMessage msg, Interactions.DrawAnnotation,_->
+            | DrawingMessage msg,_,_-> //Interactions.DrawAnnotation
                 let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
 
                 { m with drawing = drawing; } |> stash
@@ -587,6 +587,11 @@ module ViewerApp =
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
         let control = DomNode.RenderControl(att, cam, cmds, None)
 
+        // instrument view control
+        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped ([]|> Sg.ofList) m
+        let icam     = Mod.map2 Camera.create m.scene.navigation.instrumentCam.view m.frustum          
+        let icontrol = DomNode.RenderControl(AttributeMap.Empty, cam, cmds, None)
+
         let annotationGroupProperties (model:MModel) =
             adaptive {                                
                 return (Groups.viewUI model.drawing.annotations |> UI.map AnnotationGroupsMessageViewer)
@@ -837,6 +842,11 @@ module ViewerApp =
                     viewTabs model.tabMenu                    
                 ]            
             ]
+
+        let instrumentView (model : MModel) = 
+            [             
+                control     
+            ]
         
         //Sidebar adorner
                 
@@ -930,16 +940,13 @@ module ViewerApp =
 
                         yield div[](GuiEx.adornerMenu sections topMenu (rest m))
                     | ViewerMode.Instrument -> 
-                        yield div[][]
-                }
-                  
-
-            Incremental.div AttributeMap.empty stuff
+                        yield div[][] //(GuiEx.adornerMenu [] [] (([icontrol]) m)
+                    }
             
         require (Html.semui @ [myCss]) (                             
-            onBoot usingContext (                            
-                body [clazz "context example"; style "overflow-y:hidden"] [chooseView ViewerMode.Standard]
-            )
+                onBoot usingContext (                            
+                    body [clazz "context example"; style "overflow-y:hidden"] [chooseView ViewerMode.Standard]
+                )
         )
                
     /// Thread Pool stuff

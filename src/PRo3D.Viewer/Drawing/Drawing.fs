@@ -580,8 +580,8 @@ module DrawingApp =
                         let color = 
                             DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
                                                                     
-                        let lineLengthScale = 
-                            Sg.computeInvariantScale view conf.nearPlane center conf.arrowLength conf.hfov
+                        //let lineLengthScale = 
+                        //    Sg.computeInvariantScale view conf.nearPlane center conf.arrowLength conf.hfov
                         
                         let box = new Box3d(anno.points |> AList.toArray) 
                         let planeScale = 
@@ -592,7 +592,10 @@ module DrawingApp =
                                 let! ps = planeScale
                                 return ps * box.Size.[box.MajorDim]
                                 }
-                                                                        
+                        let discScale = scale |> Mod.map( fun s -> s * 0.75)
+                        let lineLengthScale = 
+                            Sg.computeInvariantScale view conf.nearPlane center discScale conf.hfov
+
                         let radius =   lineLengthScale |> Mod.map(fun d -> d * 0.05)
                         let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
                         let height =   planeScale |> Mod.map(fun d -> d * 0.01)
@@ -612,7 +615,7 @@ module DrawingApp =
                         let dipLine = 
                             alist {
                                 let! c = center
-                                let! s = lineLengthScale
+                                let! s = scale
                                 //let! f = conf.arrowSize.value
 
                                 yield c
@@ -628,7 +631,7 @@ module DrawingApp =
 
                         //strike vecs
                         let strikeLen = 
-                            Mod.map2(fun (str:V3d) s -> str.Normalized * s * 0.66) x.strikeDirection lineLengthScale
+                            Mod.map2(fun (str:V3d) s -> str.Normalized * s * 0.66) x.strikeDirection scale //lineLengthScale
 
                         let strikeLine1 =
                             alist {

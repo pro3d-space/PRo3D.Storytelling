@@ -89,7 +89,7 @@ module Groups =
           leaves
           |> PList.toList
           |> List.map  (fun x -> updateLeaf' x f model)
-          |> List.fold (fun a b -> HMap.union a b) HMap.empty
+          |> List.fold (fun a b -> HMap.union b a) HMap.empty
 
         { model with flat = flat' }
 
