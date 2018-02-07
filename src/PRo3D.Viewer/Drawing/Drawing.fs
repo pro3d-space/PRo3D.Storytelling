@@ -529,7 +529,7 @@ module DrawingApp =
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
                             do! DefaultSurfaces.vertexColor
-                            do! DefaultSurfaces.simpleLighting
+                            do! Aardvark.Opc.Shader.stableLight
                         }
                         |> Sg.trafo(trafo) 
 

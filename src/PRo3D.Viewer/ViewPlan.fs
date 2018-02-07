@@ -24,6 +24,7 @@ module ViewPlan =
     open ViewPlanner
     open Aardvark.Base.MultimethodTest
     open OpenCvSharp
+    open Aardvark.Geometry
     
 
     type Action =

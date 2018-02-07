@@ -277,6 +277,7 @@ module Surface =
 
     open PRo3DCompability    
     open Aardvark.VRVis
+    open Aardvark.Geometry
     
     type Action =
         | SurfacePropertiesMessage  of SurfaceProperties.Action

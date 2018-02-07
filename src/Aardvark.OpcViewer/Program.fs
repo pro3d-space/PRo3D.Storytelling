@@ -41,6 +41,7 @@ module KdTrees =
     open MBrace.FsPickler
     open MBrace.FsPickler.Combinators                                                                                                                                                                                                                                                                                                                                                
     open Aardvark.VRVis
+    open Aardvark.Geometry
 
     type LazyKdTree = {
         kdTree        : option<ConcreteKdIntersectionTree>

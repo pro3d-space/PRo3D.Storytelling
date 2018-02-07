@@ -37,6 +37,7 @@ nuget Aardvark.UI.Primitives                ~> 3.3.49
 nuget Aardvark.Service                      ~> 3.3.49
 nuget Aardvark.Cef.WinForms                 ~> 3.3.49
 nuget Aardvark.Cef                          ~> 3.3.49
+nuget SKGL                                  ~> 2.0.5.3
 
 nuget FShade ~> 3.3.17
 nuget FShade.Debug ~> 3.3.17
