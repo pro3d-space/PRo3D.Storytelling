@@ -55,14 +55,14 @@ module DrawingApp =
                 let w = match w.geometry with
                         | Geometry.Polygon -> closePolyline w
                         | _-> w 
-                let dns = 
-                    match w.points.Count with 
-                        | x when x > 2 ->
-                            //let up = 
-                            //let north = up.Cross(V3d.OOI.Cross(up))
-                            let result = w.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
-                            Some result //more acc. by using segments as well?
-                        | _ -> None 
+                let dns = w.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
+                    //match w.points.Count with 
+                    //    | x when x > 2 ->
+                    //        //let up = 
+                    //        //let north = up.Cross(V3d.OOI.Cross(up))
+                    //        let result = w.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
+                    //        Some result //more acc. by using segments as well?
+                    //    | _ -> None 
                 let results = Annotation.calculateAnnotationResults w up
                 Some { w with dnsResults = dns ; results = Some results }
             | None -> None
@@ -580,21 +580,31 @@ module DrawingApp =
                         let color = 
                             DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
                                                                     
-                        let lineLengthScale = 
-                            Sg.computeInvariantScale view conf.nearPlane center conf.arrowLength conf.hfov
+                        //let lineLengthScale = 
+                        //    Sg.computeInvariantScale view conf.nearPlane center conf.arrowLength conf.hfov
                         
                         let box = new Box3d(anno.points |> AList.toArray) 
-                        let planeScale = 
-                            Sg.computeInvariantScale view conf.nearPlane center conf.dnsPlaneSize conf.hfov
+                        //let planeScale = 
+                        //    Sg.computeInvariantScale view conf.nearPlane center conf.dnsPlaneSize conf.hfov
 
                         let scale = 
                             adaptive{
-                                let! ps = planeScale
+                                //let! ps = planeScale
+                                let! ps = conf.dnsPlaneSize
+                                
                                 return ps * box.Size.[box.MajorDim]
                                 }
-                                                                        
-                        let radius =   lineLengthScale |> Mod.map(fun d -> d * 0.05)
-                        let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
+
+                        let planeScale = 
+                            Sg.computeInvariantScale view conf.nearPlane center scale conf.hfov
+
+                        let discScale = planeScale |> Mod.map( fun s -> s * 0.375)
+
+                        let lineLengthScale = 
+                            Sg.computeInvariantScale view conf.nearPlane center planeScale conf.hfov
+
+                        let radius =   lineLengthScale |> Mod.map(fun d -> d * 0.003)
+                        let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.015)
                         let height =   planeScale |> Mod.map(fun d -> d * 0.01)
 
                         let posTrafo =
@@ -604,7 +614,7 @@ module DrawingApp =
                         let discTrafo =
                             Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
 
-                        yield discISg color scale height discTrafo 
+                        yield discISg color discScale height discTrafo 
 
                         let! dip = x.dipDirection
 
@@ -612,23 +622,23 @@ module DrawingApp =
                         let dipLine = 
                             alist {
                                 let! c = center
-                                let! s = lineLengthScale
+                                let! s = planeScale 
                                 //let! f = conf.arrowSize.value
 
                                 yield c
                                 yield c + dip.Normalized * s //* f
                             }                            
 
-                        yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key 
+                        yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key  
 
                         let coneTrafo = 
-                            Mod.map2(fun c s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(c + dip.Normalized * s)) center lineLengthScale
+                            Mod.map2(fun c s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(c + dip.Normalized * s)) center planeScale
 
                         yield coneISg color radius coneSize coneTrafo
 
                         //strike vecs
                         let strikeLen = 
-                            Mod.map2(fun (str:V3d) s -> str.Normalized * s * 0.66) x.strikeDirection lineLengthScale
+                            Mod.map2(fun (str:V3d) s -> str.Normalized * s * 0.66) x.strikeDirection planeScale //lineLengthScale
 
                         let strikeLine1 =
                             alist {

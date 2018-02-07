@@ -32,43 +32,47 @@ module DipAndStrike =
                             | _ -> 90.0 - angle
 
     let calculateDipAndStrikeResults (up:V3d) (north : V3d) (points:plist<V3d>)=
-        let v3dArray = points.AsList |> List.toArray // points.toArray not possible because of: int -> V3d[]
+        match points.Count with 
+            | x when x > 2 ->
+                let v3dArray = points.AsList |> List.toArray // points.toArray not possible because of: int -> V3d[]
 
-        //let p = v3dArray.[0]
-       // let up = p.Normalized        
+                //let p = v3dArray.[0]
+               // let up = p.Normalized        
 
-        let mutable plane = PlaneFitting.FitPlane3dLeastSquares(v3dArray)
-        let bb = new Box3d(points)
+                let mutable plane = PlaneFitting.FitPlane3dLeastSquares(v3dArray)
+                let bb = new Box3d(points)
 
-        let horP = new Plane3d(up, V3d.Zero)
+                let horP = new Plane3d(up, V3d.Zero)
 
-        //correct plane orientation - check if normals point in same direction
-        let height = horP.Height(plane.Normal)
-        let planeNormal = match height.Sign() with
-                            | -1 -> plane.Normal.Negated
-                            | _  -> plane.Normal
+                //correct plane orientation - check if normals point in same direction
+                let height = horP.Height(plane.Normal)
+                let planeNormal = match height.Sign() with
+                                    | -1 -> plane.Normal.Negated
+                                    | _  -> plane.Normal
 
-        plane.Normal <- planeNormal
+                plane.Normal <- planeNormal
 
-        //strike
-        let strike = up.Cross(planeNormal).Normalized
+                //strike
+                let strike = up.Cross(planeNormal).Normalized
 
-        //dip vector 
-        let dip = strike.Cross(planeNormal).Normalized
+                //dip vector 
+                let dip = strike.Cross(planeNormal).Normalized
 
-        //dip plane incline .. maximum dip angle
-        let v = strike.Cross(up).Normalized
+                //dip plane incline .. maximum dip angle
+                let v = strike.Cross(up).Normalized
 
-        let dns = {
-            plane = plane
-            dipAngle = Math.Acos(v.Dot(dip)).DegreesFromRadians()
-            dipDirection = dip
-            strikeDirection = strike
-            dipAzimuth = computeAzimuth v north up
-            strikeAzimuth = computeAzimuth strike north up
-            centerOfMass = bb.Center
-        }
-        dns
+                let dns = {
+                    plane = plane
+                    dipAngle = Math.Acos(v.Dot(dip)).DegreesFromRadians()
+                    dipDirection = dip
+                    strikeDirection = strike
+                    dipAzimuth = computeAzimuth v north up
+                    strikeAzimuth = computeAzimuth strike north up
+                    centerOfMass = bb.Center
+                }
+                Some dns
+            | _ -> None 
+        
 
     let dipColor (dipAngle:IMod<float>) (min:IMod<float>) (max:IMod<float>) =
         adaptive {
@@ -82,7 +86,7 @@ module DipAndStrike =
 
             return hsv.ToC3f().ToC4b()
         }
-
+    
     let viewUI (model : MAnnotation) =
 
         let da   = Mod.bindOption model.dnsResults Double.NaN (fun a -> a.dipAngle)

@@ -334,6 +334,14 @@ type MeasurementsImporterModel = {
     annotations : plist<Annotation>
 }
 
+type SurfaceTrafo = {
+    id : string
+    trafo: Trafo3d
+    }
+[<DomainType>]
+type SurfaceTrafoImporterModel = {
+    trafos : plist<SurfaceTrafo>
+}
    
 
 [<DomainType>]

@@ -132,7 +132,7 @@ module MeasurementsImporter =
                 dnsResults = None
                 modelTrafo = trafo
                 visible = true 
-                showDns = true
+                showDns = false
                 text = ""
                 surfaceName = ""
         }

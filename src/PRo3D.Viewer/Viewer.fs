@@ -151,7 +151,7 @@ module ViewerApp =
             | AnnotationGroupsMessageViewer msg,_,_ ->
                 let ag = m.drawing.annotations 
                 { m with drawing = { m.drawing with annotations = Groups.update ag msg}}
-            | DrawingMessage msg, Interactions.DrawAnnotation,_->
+            | DrawingMessage msg,_,_-> //Interactions.DrawAnnotation
                 let drawing = 
                     DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
                 { m with drawing = drawing; } |> stash
@@ -221,7 +221,7 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | Some x -> 
                         //update groups
-                        let imported, flat = AnnotationGroupsImporter.startImporter x
+                        let imported, flat = AnnotationGroupsImporter.startImporter x m.scene.referenceSystem
 
                         let newGroups = 
                             m.drawing.annotations.rootGroup.subNodes
@@ -230,6 +230,12 @@ module ViewerApp =
                         let m' = m |> Lenses.set _groups newGroups                        
 
                         m' |> Lenses.set _flat flat
+                    | None -> m   
+            | ImportSurfaceTrafo,_,_ ->
+                match Dialogs.openDialog w with
+                    | Some x ->
+                        let imported = SurfaceTrafoImporter.startImporter x 
+                        { m with scene = { m.scene with surfacesModel = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel}}      
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
@@ -586,6 +592,11 @@ module ViewerApp =
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
         let control = DomNode.RenderControl(att, cam, cmds, None)
 
+        // instrument view control
+        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped ([]|> Sg.ofList) m
+        let icam     = Mod.map2 Camera.create m.scene.navigation.instrumentCam.view m.frustum          
+        let icontrol = DomNode.RenderControl(AttributeMap.Empty, cam, cmds, None)
+
         let annotationGroupProperties (model:MModel) =
             adaptive {                                
                 return (Groups.viewUI model.drawing.annotations |> UI.map AnnotationGroupsMessageViewer)
@@ -836,6 +847,11 @@ module ViewerApp =
                     viewTabs model.tabMenu                    
                 ]            
             ]
+
+        let instrumentView (model : MModel) = 
+            [             
+                control     
+            ]
         
         //Sidebar adorner
                 
@@ -881,6 +897,12 @@ module ViewerApp =
                 onClick (fun _ -> ImportAnnotationGroups)
             ] 
 
+        let importSurfaceTrafos =
+            [ text "browse"] |> button [ 
+                clazz "ui button"
+                onClick (fun _ -> ImportSurfaceTrafo)
+            ] 
+
         let usingContext =             
             "$('.context.example .ui.sidebar')
               .sidebar({
@@ -924,21 +946,21 @@ module ViewerApp =
                             "Scene", [sceneTools]
                             "Recent", [recentScenes]
                             "Add Surface", [openSurface]                
-                            "Import AnnotationGroups", [importAnnotationGroups]]   
+                            "Import AnnotationGroups", [importAnnotationGroups]  
+                            "Import SurfaceTrafos", [importSurfaceTrafos]]  
 
 
                         yield div[](GuiEx.adornerMenu sections topMenu (rest m))
                     | ViewerMode.Instrument -> 
-                        yield div[][]
-                }
-                  
-
-            Incremental.div AttributeMap.empty stuff
+                        yield div[][] //(GuiEx.adornerMenu [] [] (([icontrol]) m)
+                    }
+            
+            Incremental.div AttributeMap.empty stuff    
             
         require (Html.semui @ [myCss]) (                             
-            onBoot usingContext (                            
-                body [clazz "context example"; style "overflow-y:hidden"] [chooseView ViewerMode.Standard]
-            )
+                onBoot usingContext (                            
+                    body [clazz "context example"; style "overflow-y:hidden"] [chooseView ViewerMode.Standard]
+                )
         )
                
     /// Thread Pool stuff

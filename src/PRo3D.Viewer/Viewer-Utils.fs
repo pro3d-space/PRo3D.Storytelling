@@ -47,6 +47,7 @@ type ViewerAction =
     | ImportSurface 
     //| ImportMeasurements 
     | ImportAnnotationGroups
+    | ImportSurfaceTrafo
     | DnSProperties             of PropertyActions
     | ConfigPropertiesMessage   of ConfigProperties.Action
     | QuickLoad1
