@@ -8,6 +8,8 @@ module AnnotationGroupsImporter =
     open Aardvark.Base
     open Aardvark.UI
     open PRo3D.Groups
+    open PRo3D.ReferenceSystem
+    open YoLo.Async
 
     let xname s = XName.Get(s)
 
@@ -21,13 +23,16 @@ module AnnotationGroupsImporter =
     //                sg |> HSet.ofList |> HSet.collect flatten
     //            HSet.union (c |> HSet.ofList) sga
 
-    let rec getGroups (m:XElement) : (Node * hmap<Guid,Leaf>) = 
+    let rec getGroups (m:XElement) up north : (Node * hmap<Guid,Leaf>) = 
         let name = (m.Element(xname "Name")).Value.ToString()
         let visible = (m.Element(xname "IsVisible")).Value.ToBool()
                            
         let annotations = (m.Elements(xname "Measurements").Elements(xname "object")) 
                             |> List.ofSeq
-                            |> List.map (fun x -> MeasurementsImporter.getAnnotation x)                           
+                            |> List.map (fun x -> MeasurementsImporter.getAnnotation x)
+                            |> List.map( fun x -> let dns = x.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
+                                                  let results = Annotation.calculateAnnotationResults x up
+                                                  { x with dnsResults = dns; results = Some results} )
                             |> List.map(fun x -> Leaf.Annotations x)
 
         let flat' = annotations |> List.map(fun x -> 
@@ -36,7 +41,7 @@ module AnnotationGroupsImporter =
 
         let bla = (m.Elements(xname "SubGroups")).Elements(xname "MeasurementGroup") |> List.ofSeq
 
-        let subGroupsNFlat = bla |> List.map (fun x -> getGroups x)
+        let subGroupsNFlat = bla |> List.map (fun x -> getGroups x up north)
         
         let flat' = 
             subGroupsNFlat 
@@ -67,12 +72,12 @@ module AnnotationGroupsImporter =
                     | _ -> ()
             }
 
-    let startImporter (path:string) =
+    let startImporter (path:string) (refSys:ReferenceSystem) =
         let reader = XmlReader.Create path
         let root = reader.StreamElements("MeasurementGroups") 
         let xGroups = (root.Elements(xname "MeasurementGroup")).ToListOfT<XElement>()
         printfn "%A" xGroups.Count
-        let groupsNFlat = xGroups |> Seq.map (fun x -> getGroups x)
+        let groupsNFlat = xGroups |> Seq.map (fun x -> getGroups x refSys.up.value refSys.north)
 
         let flat = 
             groupsNFlat 

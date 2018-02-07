@@ -405,7 +405,38 @@ module Surface =
                         closestHit
                 )
             |> Seq.tryPick(fun d -> Some d), cache
-        
+
+    let updateTrafo (trafo:SurfaceTrafo) (model:SurfaceModel) =
+        let getSurf = model.surfaces.flat |> HMap.map( fun id leaf -> let surf = leaf |> Leaf.toSurface
+                                                                      if surf.name = trafo.id then
+                                                                        Some surf
+                                                                        else
+                                                                        None
+                                                                        )
+                                            |>  HMap.choose( fun id y -> y)
+                                                              
+        match getSurf.IsEmpty with
+            | false -> let f = (fun y -> let surf = y |> Leaf.toSurface
+                                         { surf with preTransform = trafo.trafo} |> Leaf.Surfaces
+                                        )
+                       let ids = getSurf |> HMap.toList
+                       let id, surf = ids.[0]
+                       let g = Groups.updateLeaf id f model.surfaces 
+                       { model with surfaces = g} 
+            | _ -> model
+                 
+
+    let updateTrafos (trafos:plist<SurfaceTrafo>) (model:SurfaceModel) =
+        let rec update (p : list<SurfaceTrafo>) (model:SurfaceModel)  =
+            match p with
+              | x::rest -> 
+                match rest with
+                  | [] -> updateTrafo x model
+                  | _ ->  update rest (updateTrafo x model) 
+              | _ -> model
+        update (trafos |> PList.toList) model 
+
+
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
         match action with
             | SurfacePropertiesMessage msg ->                

@@ -86,6 +86,13 @@ module Dialogs =
     let openFolder (w : Form) =
         openDialog2 w true false
 
+module Double =
+    let degreesFromRadians (d:float) =
+        d.DegreesFromRadians()
+        
+    let radiansFromDegrees (d:float) =
+        d.RadiansFromDegrees()
+    
 module Box3d =
     let extendBy (box:Box3d) (b:Box3d) =
         box.ExtendBy(b)

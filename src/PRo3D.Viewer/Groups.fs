@@ -74,24 +74,30 @@ module Groups =
                   | Some k -> Some (f k)
                   | None   -> None )
           
-        HMap.alter id update model.flat
+        HMap.alter id update model.flat    
 
+        
     let updateLeaf id f model =
         let flat' = updateLeaf' id f model
         { model with flat = flat' }
 
-    let updateLeaf'' (l:Leaf) (m:GroupsModel) : GroupsModel =
+    let replaceLeaf (l:Leaf) (m:GroupsModel) : GroupsModel =
         let f = (fun _ -> l)
         updateLeaf l.id f m        
+   
+    let createUpdate f (m:GroupsModel) id =        
+        match (m.flat |> HMap.tryFind id) with
+          | Some leaf -> HMap.single leaf.id (f leaf)
+          | None      -> HMap.empty
 
     let updateLeaves leaves f model =
-        let flat' =
+        let flat =
           leaves
-          |> PList.toList
-          |> List.map  (fun x -> updateLeaf' x f model)
-          |> List.fold (fun a b -> HMap.union b a) HMap.empty
+            |> PList.toList
+            |> List.map  (createUpdate f model)
+            |> List.fold (fun a b -> HMap.union a b) model.flat
 
-        { model with flat = flat' }
+        { model with flat = flat }
 
     
     let loadGroups (path:string) =
@@ -285,7 +291,7 @@ module Groups =
             | ToggleChildVisibility (c,p) -> 
                 model |> updateLeaf c (fun x -> Leaf.toggleVisibility x)   
             | UpdateChildProperties a ->
-                updateLeaf'' a model
+                replaceLeaf a model
             | SetGroupName t -> 
                 let func = 
                     fun (x:Node) -> { x with name = t }
@@ -367,12 +373,12 @@ module Groups =
                 let leaves = 
                     getNode p model.rootGroup |> collectLeaves
 
-                let f = (fun (k:Leaf) -> (k.setVisible (not k.visible)))
 
                 let func = 
                     fun (x:Node) -> { x with visible = not x.visible }
                 let m' = {model with rootGroup   = updateNodeAt p func model.rootGroup }
 
+                let f = (fun (k:Leaf) -> (k.setVisible (not k.visible)))
                 updateLeaves leaves f m'
                 
             | MoveChilds  -> 
@@ -538,7 +544,7 @@ module SurfaceModel =
    
     let updateSingleSurface (s':PRo3D.Surfaces.Surface) (model:SurfaceModel) =
         let surfaces' = 
-            Groups.updateLeaf'' (Leaf.Surfaces s') model.surfaces      
+            Groups.replaceLeaf (Leaf.Surfaces s') model.surfaces      
 
         { model with surfaces = surfaces' } // sgSurfaces = sgSurfaces'; sgGrouped = group' }
 

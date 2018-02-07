@@ -466,6 +466,43 @@ module Mutable =
                 }
     
     
+    type MSurfaceTrafoImporterModel(__initial : PRo3D.SurfaceTrafoImporterModel) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.SurfaceTrafoImporterModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.SurfaceTrafoImporterModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.SurfaceTrafoImporterModel>
+        let _trafos = MList.Create(__initial.trafos)
+        
+        member x.trafos = _trafos :> alist<_>
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3D.SurfaceTrafoImporterModel) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                MList.Update(_trafos, v.trafos)
+                
+        
+        static member Create(__initial : PRo3D.SurfaceTrafoImporterModel) : MSurfaceTrafoImporterModel = MSurfaceTrafoImporterModel(__initial)
+        static member Update(m : MSurfaceTrafoImporterModel, v : PRo3D.SurfaceTrafoImporterModel) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3D.SurfaceTrafoImporterModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module SurfaceTrafoImporterModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let trafos =
+                { new Lens<PRo3D.SurfaceTrafoImporterModel, Aardvark.Base.plist<PRo3D.SurfaceTrafo>>() with
+                    override x.Get(r) = r.trafos
+                    override x.Set(r,v) = { r with trafos = v }
+                    override x.Update(r,f) = { r with trafos = f r.trafos }
+                }
+    
+    
     type MViewConfigModel(__initial : PRo3D.ViewConfigModel) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.ViewConfigModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.ViewConfigModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.ViewConfigModel>

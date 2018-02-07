@@ -90,10 +90,10 @@ module Init =
 
     let triangleSize =
         {
-            value = 1.0
+            value = 0.0
             min =  0.0
-            max = 1.0
-            step = 0.001
+            max = 60.0
+            step = 0.1
             format = "{0:0.000}"
         }
 

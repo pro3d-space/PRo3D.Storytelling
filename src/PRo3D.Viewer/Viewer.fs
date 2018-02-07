@@ -152,15 +152,14 @@ module ViewerApp =
                 let ag = m.drawing.annotations 
                 { m with drawing = { m.drawing with annotations = Groups.update ag msg}}
             | DrawingMessage msg,_,_-> //Interactions.DrawAnnotation
-                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
-
+                let drawing = 
+                    DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
                 { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
                 match msg with
                     | SurfaceApp.Action.FlyToSurface id -> 
                         lookAtSurface m id
-                    | _ ->  
-                        Log.warn "%A" msg
+                    | _ ->
                         let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
                         { m with scene = { m.scene with surfacesModel = s}}
             | AnnotationMessage msg,_,_ ->                
@@ -222,7 +221,7 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | Some x -> 
                         //update groups
-                        let imported, flat = AnnotationGroupsImporter.startImporter x
+                        let imported, flat = AnnotationGroupsImporter.startImporter x m.scene.referenceSystem
 
                         let newGroups = 
                             m.drawing.annotations.rootGroup.subNodes
@@ -231,6 +230,12 @@ module ViewerApp =
                         let m' = m |> Lenses.set _groups newGroups                        
 
                         m' |> Lenses.set _flat flat
+                    | None -> m   
+            | ImportSurfaceTrafo,_,_ ->
+                match Dialogs.openDialog w with
+                    | Some x ->
+                        let imported = SurfaceTrafoImporter.startImporter x 
+                        { m with scene = { m.scene with surfacesModel = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel}}      
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
@@ -892,6 +897,12 @@ module ViewerApp =
                 onClick (fun _ -> ImportAnnotationGroups)
             ] 
 
+        let importSurfaceTrafos =
+            [ text "browse"] |> button [ 
+                clazz "ui button"
+                onClick (fun _ -> ImportSurfaceTrafo)
+            ] 
+
         let usingContext =             
             "$('.context.example .ui.sidebar')
               .sidebar({
@@ -935,13 +946,16 @@ module ViewerApp =
                             "Scene", [sceneTools]
                             "Recent", [recentScenes]
                             "Add Surface", [openSurface]                
-                            "Import AnnotationGroups", [importAnnotationGroups]]   
+                            "Import AnnotationGroups", [importAnnotationGroups]  
+                            "Import SurfaceTrafos", [importSurfaceTrafos]]  
 
 
                         yield div[](GuiEx.adornerMenu sections topMenu (rest m))
                     | ViewerMode.Instrument -> 
                         yield div[][] //(GuiEx.adornerMenu [] [] (([icontrol]) m)
                     }
+            
+            Incremental.div AttributeMap.empty stuff    
             
         require (Html.semui @ [myCss]) (                             
                 onBoot usingContext (                            

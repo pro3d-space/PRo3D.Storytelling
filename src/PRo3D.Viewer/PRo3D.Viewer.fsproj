@@ -101,6 +101,7 @@
     <Compile Include="Scene.fs" />
     <Compile Include="LensConfigs.fs" />
     <Compile Include="AnnotationGroupsImporter.fs" />
+    <Compile Include="SurfaceTrafoImporter.fs" />
     <Compile Include="Viewer-Utils.fs" />
     <Compile Include="Viewer.fs" />
     <Compile Include="RemoteControlModel.fs" />
