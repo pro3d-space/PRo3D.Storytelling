@@ -334,8 +334,30 @@
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
       <ItemGroup>
+        <Reference Include="Aardvark.Geometry.Intersection">
+          <HintPath>..\..\packages\Aardvark.Geometry.Intersection\lib\net45\Aardvark.Geometry.Intersection.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
         <Reference Include="Aardvark.Geometry.PointTree">
           <HintPath>..\..\packages\Aardvark.Geometry.PointTree\lib\net45\Aardvark.Geometry.PointTree.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
+        <Reference Include="Aardvark.Geometry.PolyMesh">
+          <HintPath>..\..\packages\Aardvark.Geometry.PolyMesh\lib\net45\Aardvark.Geometry.PolyMesh.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -688,6 +710,17 @@
       <ItemGroup>
         <Reference Include="ICSharpCode.SharpZipLib">
           <HintPath>..\..\packages\SharpZipLib\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
+        <Reference Include="SKGL">
+          <HintPath>..\..\packages\SKGL\lib\SKGL.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>

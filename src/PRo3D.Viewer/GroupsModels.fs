@@ -12,6 +12,7 @@ open PRo3D.Navigation2
 
 open Aardvark.VRVis
 open Aardvark.Opc 
+open Aardvark.Geometry
 
 
 //type Groupable =

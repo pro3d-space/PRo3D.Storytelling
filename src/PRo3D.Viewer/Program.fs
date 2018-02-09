@@ -85,7 +85,16 @@ let main argv =
     // main app
     use form = new Form(Width = 1280, Height = 800)
     
-    let mainApp = PRo3D.ViewerApp.start form runtime signature bc
+    let mainApp = 
+        PRo3D.ViewerApp.start form runtime signature bc
+    
+    let domainError (sender:obj) (args:UnhandledExceptionEventArgs) =
+        let e = args.ExceptionObject :?> Exception;
+        Log.error "%A" e
+        MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |>ignore
+        ()
+
+    AppDomain.CurrentDomain.UnhandledException.AddHandler(UnhandledExceptionEventHandler(domainError))
 
     WebPart.startServer 4321 [
         MutableApp.toWebPart' runtime false mainApp
@@ -141,30 +150,13 @@ let main argv =
     use ctrl = new AardvarkCefBrowser()
     ctrl.Dock <- DockStyle.Fill
     form.Controls.Add ctrl    
-    form.Text <- "PRo3D Viewer - 2.5.3 - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH"
+    form.Text <- "PRo3D Viewer - 2.5.4 - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH"
     //form.WindowState <- FormWindowState.Minimized
     //form.Controls.Add (new Label()) |> ignore
-    ctrl.StartUrl <- "http://localhost:4321/"
+    ctrl.StartUrl <- "http://localhost:4321/"        
+    //ctrl.ShowDevTools()
 
-    
 
-    //PoseTrafoEstimation.SimilarityTrafo([|V3d.Zero|],[|V3d.One|],
-
-    //let directory = @".\InstrumentStuff"
-    //let errorCode = IPWrapper.Init(directory, directory)
-    //printfn "%A" errorCode
-
-    //let names = RoverProvider.platformNames()    
-    //printfn "%A" names
-
-    //let rover = RoverProvider.initRover (names |> Array.head)
-    //printfn "%A" rover
-
-    //IPWrapper.GetAvailablePlatforms(pointerArray, numberOfPlatforms);
-
-    //printfn "%A" errorCode
-
-    ctrl.ShowDevTools()
     Application.Run form
 
     //let p = Process.Start("chrome.exe", "--app=http://localhost:4321/")

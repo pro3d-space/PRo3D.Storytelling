@@ -235,7 +235,7 @@ module ViewerUtils =
                             Shader.selectionColor |> toEffect       
                             Shader.LoDColor |> toEffect
                             Shader.falseColor |> toEffect
-                            Shader.triangleFilter |> toEffect
+                         //   Shader.triangleFilter |> toEffect
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
