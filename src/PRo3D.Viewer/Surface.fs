@@ -130,6 +130,22 @@ module Surface =
                 let p = surface.importPath
                 if Directory.Exists p then Some p else None
 
+
+        /// strips away parts of a file path until the remaining depth is reached
+        let relativePath (path : string) (remaining : int) = 
+            path.Split(Path.DirectorySeparatorChar) 
+                |> List.ofArray 
+                |> List.rev 
+                |> List.take remaining 
+                |> List.rev 
+                |> Path.combine
+
+        let sceneRelativePath (path : string) = 
+            relativePath path 5
+
+        let surfaceRelativePath (path : string) =
+            relativePath path 4
+
         let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, PRo3D.Surfaces.Surface>) (sgSurfaces : hmap<Guid, SgSurface>) =
             match scenePath with
                 | Some sp -> 
@@ -140,16 +156,24 @@ module Surface =
                             s.kdTree |> HMap.map (fun _ k -> 
                                 match k with 
                                     | Level0KdTree.LazyKdTree lk when surf.relativePaths -> 
-                                        let kdTreeSub =
-                                            lk.kdtreePath.Split(Path.DirectorySeparatorChar) 
-                                                |> List.ofArray |> List.rev |> List.take 5 |> List.rev |> Path.combine  
-                                        let triangleSub =
-                                            lk.objectSetPath.Split(Path.DirectorySeparatorChar) 
-                                                |> List.ofArray |> List.rev |> List.take 5 |> List.rev |> Path.combine 
-                                        let trianglePath' = Path.Combine(path, triangleSub)
-                                        let kdtreePath' = Path.Combine(path, kdTreeSub)
-                                        LazyKdTree { lk with kdtreePath = kdtreePath'; objectSetPath = trianglePath' }
-                                    | Level0KdTree.LazyKdTree lk -> LazyKdTree lk
+                                        let kdTreeSub   = lk.kdtreePath    |> sceneRelativePath
+                                        let triangleSub = lk.objectSetPath |> sceneRelativePath
+                                        
+                                        LazyKdTree { 
+                                            lk with 
+                                                kdtreePath    = Path.Combine(path, triangleSub)
+                                                objectSetPath = Path.Combine(path, kdTreeSub)
+                                        }
+                                    | Level0KdTree.LazyKdTree lk -> 
+
+                                        let kdTreeSub   = lk.kdtreePath    |> surfaceRelativePath
+                                        let triangleSub = lk.objectSetPath |> surfaceRelativePath                                                                                
+
+                                        LazyKdTree {
+                                            lk with 
+                                                kdtreePath    = Path.Combine(surf.importPath, kdTreeSub)
+                                                objectSetPath = Path.Combine(surf.importPath, triangleSub)
+                                        }                                        
                                     | Level0KdTree.InCoreKdTree ik -> InCoreKdTree ik
                             )
                         { s with kdTree = kd }
