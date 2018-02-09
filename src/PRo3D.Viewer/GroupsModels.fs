@@ -141,6 +141,13 @@ module Leaf =
           | Leaf.Annotations a -> a
           | _ -> failwith "wrong type"
 
+    let toAnnotations annotations =
+        annotations
+            |> HMap.choose(fun _ x -> 
+                match x with
+                | Leaf.Annotations s -> Some s
+                | _ -> None )
+
     let childrenToAnnotations annos =
         annos
             |> HSet.choose(fun x -> 

@@ -79,6 +79,7 @@
     <Compile Include="Surface-Model.fs" />
     <Compile Include="Navigation-Model.fs" />
     <Compile Include="Bookmark-Model.fs" />
+    <Compile Include="Csv.fs" />
     <Compile Include="GroupsModels.fs" />
     <Compile Include="Groups.fs" />
     <Compile Include="Drawing-Properties.fs" />
@@ -126,6 +127,7 @@
     <Reference Include="CSharpUtils">
       <HintPath>..\..\bin\Debug\CSharpUtils.dll</HintPath>
     </Reference>
+    <Reference Include="FSharp.Data.TypeProviders, Version=4.3.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="mscorlib" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />

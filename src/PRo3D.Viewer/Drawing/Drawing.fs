@@ -300,6 +300,22 @@ module DrawingApp =
             | GroupsMessage msg,_ ->
                 let m = { model with annotations = Groups.update model.annotations msg}
                 m
+            | SaveCSV, _ -> 
+                let annotations =
+                    model.annotations.flat
+                        |> Leaf.toAnnotations
+                        |> HMap.toList 
+                        |> List.map snd
+                        |> List.map Csv.exportAnnotation
+                        |> Seq.ofList
+                        
+                let csvTable = Csv.Seq.csv ";" true (fun x -> x) annotations 
+
+                match Dialogs.saveDialog w with
+                    | None -> model
+                    | Some p -> 
+                        Csv.Seq.write (p+".csv") csvTable |> ignore
+                        model
             | _ -> model
 
     module UI =
@@ -345,6 +361,9 @@ module DrawingApp =
                 
                 button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
                     i [clazz "file outline icon"] [] ] |> UI.wrapToolTipBottom "Clear Annotation List"
+
+                button [clazz "ui icon button"; onMouseClick (fun _ -> SaveCSV)] [
+                    i [clazz "save icon inverted"] [] ] |> UI.wrapToolTipBottom "Save .csv"
                                 
                 //button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
                 //    i [clazz "folder icon"] [] ] |> UI.wrapToolTipBottom "Load recent Annotations"
