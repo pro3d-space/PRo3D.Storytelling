@@ -42,6 +42,7 @@ type Action =
         | UpVectorChanged         of V3d
         | NorthVectorChanged      of V3d
         | GroupsMessage   of Groups.Action
+        | SaveCSV
 
 [<DomainType>]
 type DrawingModel = {

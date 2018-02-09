@@ -439,6 +439,7 @@ module Surface =
                                                                         None
                                                                         )
                                             |>  HMap.choose( fun id y -> y)
+
                                                               
         match getSurf.IsEmpty with
             | false -> let f = (fun y -> let surf = y |> Leaf.toSurface
