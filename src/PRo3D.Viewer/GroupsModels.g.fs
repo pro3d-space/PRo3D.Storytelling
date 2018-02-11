@@ -419,7 +419,7 @@ module Mutable =
                     override x.Update(r,f) = { r with sgGrouped = f r.sgGrouped }
                 }
             let kdTreeCache =
-                { new Lens<PRo3D.Groups.SurfaceModel, Aardvark.Base.hmap<Microsoft.FSharp.Core.string,Aardvark.Geometry.ConcreteKdIntersectionTree>>() with
+                { new Lens<PRo3D.Groups.SurfaceModel, Aardvark.Base.hmap<Microsoft.FSharp.Core.string,Aardvark.VRVis.ConcreteKdIntersectionTree>>() with
                     override x.Get(r) = r.kdTreeCache
                     override x.Set(r,v) = { r with kdTreeCache = v }
                     override x.Update(r,f) = { r with kdTreeCache = f r.kdTreeCache }

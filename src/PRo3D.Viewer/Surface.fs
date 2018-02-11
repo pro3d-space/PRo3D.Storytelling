@@ -146,39 +146,37 @@ module Surface =
         let surfaceRelativePath (path : string) =
             relativePath path 4
 
-        let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, PRo3D.Surfaces.Surface>) (sgSurfaces : hmap<Guid, SgSurface>) =
-            match scenePath with
-                | Some sp -> 
-                    sgSurfaces |> HMap.map (fun _ s -> 
-                        let path = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
-                        let surf = surfaces |> HMap.find s.surface
-                        let kd =
-                            s.kdTree |> HMap.map (fun _ k -> 
-                                match k with 
-                                    | Level0KdTree.LazyKdTree lk when surf.relativePaths -> 
-                                        let kdTreeSub   = lk.kdtreePath    |> sceneRelativePath
-                                        let triangleSub = lk.objectSetPath |> sceneRelativePath
-                                        
-                                        LazyKdTree { 
-                                            lk with 
-                                                kdtreePath    = Path.Combine(path, triangleSub)
-                                                objectSetPath = Path.Combine(path, kdTreeSub)
-                                        }
-                                    | Level0KdTree.LazyKdTree lk -> 
-
-                                        let kdTreeSub   = lk.kdtreePath    |> surfaceRelativePath
-                                        let triangleSub = lk.objectSetPath |> surfaceRelativePath                                                                                
-
-                                        LazyKdTree {
-                                            lk with 
-                                                kdtreePath    = Path.Combine(surf.importPath, kdTreeSub)
-                                                objectSetPath = Path.Combine(surf.importPath, triangleSub)
-                                        }                                        
-                                    | Level0KdTree.InCoreKdTree ik -> InCoreKdTree ik
-                            )
-                        { s with kdTree = kd }
-                    )
-                | None -> sgSurfaces
+        let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, PRo3D.Surfaces.Surface>) (sgSurfaces : hmap<Guid, SgSurface>) =            
+           sgSurfaces 
+              |> HMap.map (fun _ s -> 
+                  let surf = surfaces |> HMap.find s.surface
+                  let kd =
+                      s.kdTree |> HMap.map (fun _ k -> 
+                          match k with 
+                              | Level0KdTree.LazyKdTree lk when surf.relativePaths && scenePath.IsSome -> // scene is portable                                        
+                                  let path = Path.Combine((Path.GetDirectoryName scenePath.Value),"Surfaces")
+                                  let kdTreeSub   = lk.kdtreePath    |> sceneRelativePath
+                                  let triangleSub = lk.objectSetPath |> sceneRelativePath
+                                          
+                                  LazyKdTree { 
+                                      lk with 
+                                          kdtreePath    = Path.Combine(path, triangleSub)
+                                          objectSetPath = Path.Combine(path, kdTreeSub)
+                                  }
+                              | Level0KdTree.LazyKdTree lk -> // surfaces have absolute paths
+                  
+                                  let kdTreeSub   = lk.kdtreePath    |> surfaceRelativePath
+                                  let triangleSub = lk.objectSetPath |> surfaceRelativePath                                                                                
+                  
+                                  LazyKdTree {
+                                      lk with 
+                                          kdtreePath    = Path.Combine(surf.importPath, kdTreeSub)
+                                          objectSetPath = Path.Combine(surf.importPath, triangleSub)
+                                  }
+                              | Level0KdTree.InCoreKdTree ik -> InCoreKdTree ik // kdtrees can be loaded as is
+                      )
+                  { s with kdTree = kd }
+            )                
 
         let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
             match scenePath with
