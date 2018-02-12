@@ -411,7 +411,7 @@ module Surface =
                             hitBoxes
                                 |> Seq.map(
                                     fun bb -> 
-                                        Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                        
+                                        //Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                        
 
                                         let hit, c = 
                                             r.Ray.Transformed(surf.preTransform.Backward) //combine pre and current transform
@@ -572,7 +572,7 @@ module Surface =
                     let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
                     let! key = s.guid
                                                                                     
-                    let! absRelIcons = absRelIcons s
+                //    let! absRelIcons = absRelIcons s
 
                     yield div [clazz "item"; style infoc] [
                         i [clazz "large cube middle aligned icon"; onClick multiSelect;style bgc][] 
@@ -588,7 +588,7 @@ module Surface =
                                     yield i [clazz "home icon"                                                
                                              onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                                                
 
-                                    yield Incremental.i (absRelIcons)(AList.empty) |> UI.wrapToolTip "portable"                                        
+                                  //  yield Incremental.i (absRelIcons)(AList.empty) |> UI.wrapToolTip "portable"                                        
 
                                     yield i [clazz "folder icon"                                                
                                              onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"                                                                                
