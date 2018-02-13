@@ -200,13 +200,13 @@ module ViewerApp =
 
                         let m = Scene.import' runtime signature surfaces m
 
-                        let surfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
-                        let head = surfaces |> List.tryHead
+                        let sgSurfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
+                        let head = sgSurfaces |> List.tryHead
                         match head with
                           | Some v ->
 
                             let fullBb = 
-                                surfaces 
+                               sgSurfaces 
                                   |> List.map(fun x -> x.globalBB) 
                                   |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
 

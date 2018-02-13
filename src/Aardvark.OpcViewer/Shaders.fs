@@ -86,7 +86,7 @@ module Shader =
             let beta  = (b.Dot c).Abs() < maxRel
             let gamma = (c.Dot a).Abs() < maxRel
 
-            let check = alpha && beta && gamma
+            let check = (alpha && beta && gamma) || maxRel >= 0.999999999999999
             if check then
                 yield input.P0 
                 yield input.P1

@@ -25,7 +25,7 @@ module Serialization =
     let binarySerializer = FsPickler.CreateBinarySerializer(picklerResolver = cache)    
 
     let save path (d : 'a) =    
-        let arr = binarySerializer.Pickle d     
+        let arr = binarySerializer.Pickle d    
         File.WriteAllBytes(path, arr);
         d
 

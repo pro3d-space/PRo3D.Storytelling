@@ -32,8 +32,12 @@ module DipAndStrike =
                             | _ -> 90.0 - angle
 
     let calculateDipAndStrikeResults (up:V3d) (north : V3d) (points:plist<V3d>)=
+
+        let points = points |> PList.filter(fun x -> not x.IsNaN)
+
         match points.Count with 
             | x when x > 2 ->
+
                 let v3dArray = points.AsList |> List.toArray // points.toArray not possible because of: int -> V3d[]
 
                 //let p = v3dArray.[0]

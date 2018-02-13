@@ -160,6 +160,8 @@ module ViewerUtils =
                         adaptive {
                             let! s = surf
                             let! maxAngle = s.triangleSize.value
+                            Log.warn "maxAngle: %A" maxAngle
+                            Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
                             return maxAngle |> Double.radiansFromDegrees |> Math.Cos
                         })
                 |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
@@ -202,7 +204,7 @@ module ViewerUtils =
                 //                    let t = Trafo3d.Translation(-x.Center)
                 //                    printfn "%A" t.Forward.C3.XYZ
                 //                    t))
-                |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))
+                |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))                
                 //|> Sg.trafo (surface.trafo.previewTrafo |> Mod.map(fun x -> printfn "%A" x.Forward.C3.XYZ; x))
         sg
 
@@ -231,12 +233,12 @@ module ViewerUtils =
                     set 
                         |> Sg.set
                         |> Sg.effect [
-                            Shader.stableTrafo |> toEffect                  
+                            Shader.stableTrafo             |> toEffect
                             DefaultSurfaces.diffuseTexture |> toEffect
-                            Shader.selectionColor |> toEffect       
-                            Shader.LoDColor |> toEffect
-                            Shader.falseColor |> toEffect
-                         //   Shader.triangleFilter |> toEffect
+                            Shader.selectionColor          |> toEffect       
+                            Shader.LoDColor                |> toEffect
+                            Shader.falseColor              |> toEffect                            
+                            Shader.triangleFilter          |> toEffect
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
