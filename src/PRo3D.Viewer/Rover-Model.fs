@@ -134,6 +134,8 @@ type ViewPlanModel = {
     selectedViewPlan    : option<ViewPlan>
     working             : list<V3d> // pos + lookAt
     roverModel          : RoverModel
+    instrumentCam       : CameraControllerState
+    instrumentFrustum   : Frustum
     }
 
 module ViewPlanModel =
@@ -160,6 +162,8 @@ module ViewPlanModel =
         selectedViewPlan = None
         working = list.Empty
         roverModel = initRoverModel
+        instrumentCam = { CameraController.initial with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }        
+        instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
         }
 
   

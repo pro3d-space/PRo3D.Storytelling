@@ -481,6 +481,10 @@ module ViewerApp =
                  //  | None -> m
             | SetTabMenu tab,_,_ ->
                 { m with tabMenu = tab }
+            | SwitchViewerMode _,_,_ -> 
+                match m.viewerMode with
+                    | ViewerMode.Standard -> { m with viewerMode = ViewerMode.Instrument }
+                    | ViewerMode.Instrument -> { m with viewerMode = ViewerMode.Standard }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -587,15 +591,15 @@ module ViewerApp =
 
             //controller, exploreCenter
             [annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList
-                                            
+        
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
         let control = DomNode.RenderControl(att, cam, cmds, None)
 
         // instrument view control
         let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped ([]|> Sg.ofList) m
-        let icam     = Mod.map2 Camera.create m.scene.navigation.instrumentCam.view m.frustum          
-        let icontrol = DomNode.RenderControl(AttributeMap.Empty, cam, cmds, None)
+        let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.frustum        
+        let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
 
         let annotationGroupProperties (model:MModel) =
             adaptive {                                
@@ -802,6 +806,14 @@ module ViewerApp =
                     return div[][]
             }
 
+        let switchViewerMode =
+            adaptive {
+                return [ text "switch"] |> button [ 
+                        clazz "ui button"
+                        onClick (fun _ -> SwitchViewerMode)
+                        ] 
+                }
+
         let topMenu = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
 
@@ -811,6 +823,8 @@ module ViewerApp =
              ]             
                          
              Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
+
+             Incremental.div AttributeMap.empty (AList.ofModSingle switchViewerMode)
              
 
              //button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
@@ -850,7 +864,13 @@ module ViewerApp =
 
         let instrumentView (model : MModel) = 
             [             
-                control     
+                icontrol
+                div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
+                    div[style "height:41px"][text "spacer"]
+                    div [clazz "ui large black horizontal label"][text "Show Tab:"]
+                    Html.SemUi.dropDown model.tabMenu SetTabMenu
+                    viewTabs model.tabMenu 
+                    ]
             ]
         
         //Sidebar adorner
@@ -935,10 +955,11 @@ module ViewerApp =
                     ]
                 ]
 
-        let chooseView (mode : ViewerMode) =
+        let chooseView = //(mode : ViewerMode)
 
             let stuff = 
-                alist {                                     
+                alist {
+                    let! mode = m.viewerMode
                     match mode with
                     | ViewerMode.Standard -> 
                         let sections = [
@@ -947,19 +968,22 @@ module ViewerApp =
                             "Recent", [recentScenes]
                             "Add Surface", [openSurface]                
                             "Import AnnotationGroups", [importAnnotationGroups]  
-                            "Import SurfaceTrafos", [importSurfaceTrafos]]  
-
-
+                            "Import SurfaceTrafos", [importSurfaceTrafos]]
+                            //"Switch View", [switchViewerMode] 
+                            
                         yield div[](GuiEx.adornerMenu sections topMenu (rest m))
-                    | ViewerMode.Instrument -> 
-                        yield div[][] //(GuiEx.adornerMenu [] [] (([icontrol]) m)
+                    | ViewerMode.Instrument ->
+                        //let isections = [
+                        //    "blank", [div[style "height:15px"][]]
+                        //    "Switch View", [switchViewerMode]]     
+                        yield div[](GuiEx.adornerMenu [] topMenu (instrumentView m)) 
                     }
             
             Incremental.div AttributeMap.empty stuff    
             
         require (Html.semui @ [myCss]) (                             
                 onBoot usingContext (                            
-                    body [clazz "context example"; style "overflow-y:hidden"] [chooseView ViewerMode.Standard]
+                    body [clazz "context example"; style "overflow-y:hidden"] [chooseView] //ViewerMode.Standard
                 )
         )
                

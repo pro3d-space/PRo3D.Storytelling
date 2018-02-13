@@ -222,7 +222,6 @@ module RoverApp =
             
 
     let updateRovers (r : Rover) (m : RoverModel) = 
-        
         let rovers' = 
             m.rovers 
                 |> HMap.update r.id (fun x -> 

@@ -218,8 +218,7 @@ module Mutable =
         let _trafoMode = ResetMod.Create(__initial.trafoMode)
         let _alignment = PRo3d.Align.Mutable.MAlignmentModel.Create(__initial.alignment)
         let _tabMenu = ResetMod.Create(__initial.tabMenu)
-        let _instrumentCamera = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.instrumentCamera)
-        let _instrumentFrustum = ResetMod.Create(__initial.instrumentFrustum)
+        let _viewerMode = ResetMod.Create(__initial.viewerMode)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
         
@@ -236,8 +235,7 @@ module Mutable =
         member x.trafoMode = _trafoMode :> IMod<_>
         member x.alignment = _alignment
         member x.tabMenu = _tabMenu :> IMod<_>
-        member x.instrumentCamera = _instrumentCamera
-        member x.instrumentFrustum = _instrumentFrustum :> IMod<_>
+        member x.viewerMode = _viewerMode :> IMod<_>
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         
@@ -259,8 +257,7 @@ module Mutable =
                 ResetMod.Update(_trafoMode,v.trafoMode)
                 PRo3d.Align.Mutable.MAlignmentModel.Update(_alignment, v.alignment)
                 ResetMod.Update(_tabMenu,v.tabMenu)
-                Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_instrumentCamera, v.instrumentCamera)
-                ResetMod.Update(_instrumentFrustum,v.instrumentFrustum)
+                ResetMod.Update(_viewerMode,v.viewerMode)
                 _past.Update(v.past)
                 _future.Update(v.future)
                 
@@ -357,17 +354,11 @@ module Mutable =
                     override x.Set(r,v) = { r with tabMenu = v }
                     override x.Update(r,f) = { r with tabMenu = f r.tabMenu }
                 }
-            let instrumentCamera =
-                { new Lens<PRo3D.Viewer.Model, Aardvark.UI.Primitives.CameraControllerState>() with
-                    override x.Get(r) = r.instrumentCamera
-                    override x.Set(r,v) = { r with instrumentCamera = v }
-                    override x.Update(r,f) = { r with instrumentCamera = f r.instrumentCamera }
-                }
-            let instrumentFrustum =
-                { new Lens<PRo3D.Viewer.Model, Aardvark.Base.Frustum>() with
-                    override x.Get(r) = r.instrumentFrustum
-                    override x.Set(r,v) = { r with instrumentFrustum = v }
-                    override x.Update(r,f) = { r with instrumentFrustum = f r.instrumentFrustum }
+            let viewerMode =
+                { new Lens<PRo3D.Viewer.Model, PRo3D.Viewer.ViewerMode>() with
+                    override x.Get(r) = r.viewerMode
+                    override x.Set(r,v) = { r with viewerMode = v }
+                    override x.Update(r,f) = { r with viewerMode = f r.viewerMode }
                 }
             let past =
                 { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with

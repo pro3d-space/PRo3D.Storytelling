@@ -115,12 +115,6 @@ module ViewPlan =
 
         trafoFromTranslatedBase position tilt forward right
 
-        //match checkSign up tilt with
-        //    | true -> let newTilt = tilt.Negated
-        //              let newRight = right.Negated
-        //              trafoFromTranslatedBase position newTilt forward newRight
-        //    | false -> trafoFromTranslatedBase position tilt forward right
-
         
     let calculateSurfaceContactPoint (roverWheel:V3d) (cache : hmap<string, ConcreteKdIntersectionTree>) (trafo:Trafo3d) (surfaceModel:SurfaceModel) =
         let tilt = trafo.Forward.UpperLeftM33().C2;
@@ -229,11 +223,25 @@ module ViewPlan =
 
     let removeViewPlan (vps:hset<ViewPlan>) (id:Guid) = 
         vps |> HSet.filter (fun x -> x.id <> id)   
+    
+    let transformExtrinsics (vp:ViewPlan) (ex:Extrinsics) =
+        { ex with position = vp.roverTrafo.Forward.TransformPos ex.position;
+                  camLookAt = vp.roverTrafo.Forward.TransformDir ex.camLookAt;
+                  camUp = vp.roverTrafo.Forward.TransformDir ex.camUp
+                   }
 
+    let updateInstrumentCam (vp:ViewPlan) (model:ViewPlanModel) =
+        match vp.selectedInstrument with
+            | Some i -> let ex = transformExtrinsics vp i.extrinsics
+                        let cam = { CameraController.initial with view = CameraView.lookAt ex.position ex.camLookAt ex.camUp } 
+                        { model with instrumentCam = cam } 
+            | _-> model
+        
     let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan)=
-        let vp'' = { vp with rover = roverModel.rovers  |> HMap.find vp.rover.id }  
-        let m'= { model with selectedViewPlan = Some vp''; viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then vp'' else x) }
-        { m' with roverModel = roverModel }
+        let vp' = { vp with rover = roverModel.rovers  |> HMap.find vp.rover.id }  
+        let m'= { model with selectedViewPlan = Some vp'; viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then vp' else x) }
+        let m'' = updateInstrumentCam vp' m'
+        { m'' with roverModel = roverModel }
 
     //let update (model : ViewPlanModel) (camState:CameraControllerState) (action : Action) =
     let update (model : ViewPlanModel) (action : Action) (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*ViewPlanModel) = 
@@ -275,7 +283,8 @@ module ViewPlan =
                 outerModel, { model with viewPlans = removeViewPlan model.viewPlans id; selectedViewPlan = vp' }
             | SelectInstrument i -> match model.selectedViewPlan with
                                         | Some vp -> let newVp = { vp with selectedInstrument = i }
-                                                     outerModel, { model with selectedViewPlan = Some newVp; viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then newVp else x) }
+                                                     let m' = updateInstrumentCam newVp model
+                                                     outerModel, { m' with selectedViewPlan = Some newVp; viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then newVp else x) }
                                         | None -> outerModel, model                                                     
             | SelectAxis a       -> match model.selectedViewPlan with
                                         | Some vp -> let newVp = { vp with selectedAxis = a }
@@ -286,7 +295,7 @@ module ViewPlan =
                                                         | Some ax -> 
                                                             let ax' = { ax with angle = Numeric.update ax.angle a } 
                                                             let vp' = { vp with rover = {vp.rover with axes = (vp.rover.axes |> HMap.update id (fun _ -> ax')) } }
-                                                            let roverModel' = RoverApp.updateAnglePlatform { roverId = vp.rover.id ;axisId = ax'.id ; angle = ax'.angle.value } model.roverModel
+                                                            let roverModel' = RoverApp.updateAnglePlatform { roverId = vp'.rover.id ;axisId = ax'.id ; angle = ax'.angle.value } model.roverModel
                                                             outerModel, updateRovers model roverModel' vp'
                                                         | None -> outerModel, model
                                       
@@ -303,7 +312,7 @@ module ViewPlan =
                                         | Some _ -> inst'
                                         | None   -> failwith "instrument not found")
                             let vp' = {vp with rover = {vp.rover with instruments = instruments'}; selectedInstrument = Some inst'}
-                            let roverModel' = RoverApp.updateFocusPlatform { roverId = vp.rover.id ; instrumentId = inst'.id ; focal = inst'.focal.value } model.roverModel
+                            let roverModel' = RoverApp.updateFocusPlatform { roverId = vp'.rover.id ; instrumentId = inst'.id ; focal = inst'.focal.value } model.roverModel
                             outerModel, updateRovers model roverModel' vp'
                         | None -> outerModel, model                                       
                     | None -> outerModel, model 

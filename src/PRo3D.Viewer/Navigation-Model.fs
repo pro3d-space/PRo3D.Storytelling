@@ -9,7 +9,7 @@ open Aardvark.Base
 [<DomainType>]
 type NavigationModel = {
     camera : CameraControllerState
-    instrumentCam : CameraControllerState
+    //instrumentCam : CameraControllerState
     navigationMode : NavigationMode      
     exploreCenter : V3d    
 }
@@ -18,7 +18,7 @@ type NavigationModel = {
 module NavigationModel =
     let initial = {
         camera = CameraController.initial  
-        instrumentCam = CameraController.initial
+        //instrumentCam = CameraController.initial
         navigationMode =  NavigationMode.FreeFly        
         exploreCenter = V3d.Zero // make option        
         }

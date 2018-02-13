@@ -14,12 +14,10 @@ module Mutable =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Navigation2.NavigationModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Navigation2.NavigationModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Navigation2.NavigationModel>
         let _camera = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.camera)
-        let _instrumentCam = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.instrumentCam)
         let _navigationMode = ResetMod.Create(__initial.navigationMode)
         let _exploreCenter = ResetMod.Create(__initial.exploreCenter)
         
         member x.camera = _camera
-        member x.instrumentCam = _instrumentCam
         member x.navigationMode = _navigationMode :> IMod<_>
         member x.exploreCenter = _exploreCenter :> IMod<_>
         
@@ -29,7 +27,6 @@ module Mutable =
                 __current.Value <- v
                 
                 Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_camera, v.camera)
-                Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_instrumentCam, v.instrumentCam)
                 ResetMod.Update(_navigationMode,v.navigationMode)
                 ResetMod.Update(_exploreCenter,v.exploreCenter)
                 
@@ -53,12 +50,6 @@ module Mutable =
                     override x.Get(r) = r.camera
                     override x.Set(r,v) = { r with camera = v }
                     override x.Update(r,f) = { r with camera = f r.camera }
-                }
-            let instrumentCam =
-                { new Lens<PRo3D.Navigation2.NavigationModel, Aardvark.UI.Primitives.CameraControllerState>() with
-                    override x.Get(r) = r.instrumentCam
-                    override x.Set(r,v) = { r with instrumentCam = v }
-                    override x.Update(r,f) = { r with instrumentCam = f r.instrumentCam }
                 }
             let navigationMode =
                 { new Lens<PRo3D.Navigation2.NavigationModel, PRo3D.NavigationMode>() with

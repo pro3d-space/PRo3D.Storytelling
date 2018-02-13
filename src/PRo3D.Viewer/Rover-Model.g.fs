@@ -527,11 +527,15 @@ module Mutable =
         let _selectedViewPlan = MOption.Create(__initial.selectedViewPlan, (fun v -> MViewPlan.Create(v)), (fun (m,v) -> MViewPlan.Update(m, v)), (fun v -> v))
         let _working = ResetMod.Create(__initial.working)
         let _roverModel = MRoverModel.Create(__initial.roverModel)
+        let _instrumentCam = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.instrumentCam)
+        let _instrumentFrustum = ResetMod.Create(__initial.instrumentFrustum)
         
         member x.viewPlans = _viewPlans :> aset<_>
         member x.selectedViewPlan = _selectedViewPlan :> IMod<_>
         member x.working = _working :> IMod<_>
         member x.roverModel = _roverModel
+        member x.instrumentCam = _instrumentCam
+        member x.instrumentFrustum = _instrumentFrustum :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3d.ViewPlanModel) =
@@ -542,6 +546,8 @@ module Mutable =
                 MOption.Update(_selectedViewPlan, v.selectedViewPlan)
                 ResetMod.Update(_working,v.working)
                 MRoverModel.Update(_roverModel, v.roverModel)
+                Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_instrumentCam, v.instrumentCam)
+                ResetMod.Update(_instrumentFrustum,v.instrumentFrustum)
                 
         
         static member Create(__initial : PRo3d.ViewPlanModel) : MViewPlanModel = MViewPlanModel(__initial)
@@ -581,4 +587,16 @@ module Mutable =
                     override x.Get(r) = r.roverModel
                     override x.Set(r,v) = { r with roverModel = v }
                     override x.Update(r,f) = { r with roverModel = f r.roverModel }
+                }
+            let instrumentCam =
+                { new Lens<PRo3d.ViewPlanModel, Aardvark.UI.Primitives.CameraControllerState>() with
+                    override x.Get(r) = r.instrumentCam
+                    override x.Set(r,v) = { r with instrumentCam = v }
+                    override x.Update(r,f) = { r with instrumentCam = f r.instrumentCam }
+                }
+            let instrumentFrustum =
+                { new Lens<PRo3d.ViewPlanModel, Aardvark.Base.Frustum>() with
+                    override x.Get(r) = r.instrumentFrustum
+                    override x.Set(r,v) = { r with instrumentFrustum = v }
+                    override x.Update(r,f) = { r with instrumentFrustum = f r.instrumentFrustum }
                 }
