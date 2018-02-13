@@ -233,8 +233,8 @@ module ViewPlan =
     let updateInstrumentCam (vp:ViewPlan) (model:ViewPlanModel) =
         match vp.selectedInstrument with
             | Some i -> let ex = transformExtrinsics vp i.extrinsics
-                        let cam = { CameraController.initial with view = CameraView.lookAt ex.position ex.camLookAt ex.camUp } 
-                        { model with instrumentCam = cam } 
+                        {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt ex.position ex.camLookAt ex.camUp }} //CameraController.initial
+                        //{ model with instrumentCam = cam } 
             | _-> model
         
     let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan)=
