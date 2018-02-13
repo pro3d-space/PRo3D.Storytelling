@@ -238,7 +238,11 @@ module ViewPlan =
             | _-> model
         
     let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan)=
-        let vp' = { vp with rover = roverModel.rovers  |> HMap.find vp.rover.id }  
+        let r = roverModel.rovers  |> HMap.find vp.rover.id
+        let i = match vp.selectedInstrument with
+                    | Some i -> Some (r.instruments |> HMap.find i.id)
+                    |_-> None
+        let vp' = { vp with rover = r; selectedInstrument = i }  
         let m'= { model with selectedViewPlan = Some vp'; viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then vp' else x) }
         let m'' = updateInstrumentCam vp' m'
         { m'' with roverModel = roverModel }
@@ -296,7 +300,9 @@ module ViewPlan =
                                                             let ax' = { ax with angle = Numeric.update ax.angle a } 
                                                             let vp' = { vp with rover = {vp.rover with axes = (vp.rover.axes |> HMap.update id (fun _ -> ax')) } }
                                                             let roverModel' = RoverApp.updateAnglePlatform { roverId = vp'.rover.id ;axisId = ax'.id ; angle = ax'.angle.value } model.roverModel
-                                                            outerModel, updateRovers model roverModel' vp'
+                                                            let m' = updateRovers model roverModel' vp'
+                                                            
+                                                            outerModel, m'
                                                         | None -> outerModel, model
                                       
                                         | None -> outerModel, model        
