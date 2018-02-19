@@ -40,8 +40,8 @@ module ViewPlan =
         | SetVPName        of string
     
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =
-        match path with
-            | Some p ->
+        //match path with
+        //    | Some p ->
                 let directory = @".\InstrumentStuff" 
                 let errorCode = IPWrapper.Init(directory, directory)
                 printfn "%A" errorCode
@@ -60,7 +60,7 @@ module ViewPlan =
                 printfn "found rover(s): %d" (rovs |> HMap.count)
         
                 { model with roverModel = { model.roverModel with rovers = rovs; platforms = plats } }
-            | _ -> model
+            //| _ -> model
 
     let updateViewPlans (vp:ViewPlan) (vps:hset<ViewPlan>) =
         vps

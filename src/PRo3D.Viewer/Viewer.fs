@@ -186,11 +186,7 @@ module ViewerApp =
             | RoverMessage msg,_,_ ->
                 let roverModel = RoverApp.update m.scene.viewPlans.roverModel msg
                 let viewPlanModel = ViewPlan.updateViewPlanFromRover roverModel m.scene.viewPlans
-                let m' = { m with scene = { m.scene with viewPlans = viewPlanModel}} 
-                m'
-                //match viewPlanModel.working.IsEmpty with
-                //    | true -> m' 
-                //    | false -> { m' with tabMenu = TabMenu.Viewplanner }
+                { m with scene = { m.scene with viewPlans = viewPlanModel}} 
             | ViewPlanMessage msg,_,_ ->
                 //let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
                 //{ m with scene = { m.scene with viewPlans = viewPlanModel}}  
@@ -309,7 +305,10 @@ module ViewerApp =
                                 let camState = m.scene.navigation.camera
                                 let ref = m.scene.referenceSystem 
                                 let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
-                                { m with scene = {m.scene with viewPlans = viewPlans' } }
+                                let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
+                                match m.scene.viewPlans.working.IsEmpty with
+                                    | true -> m' 
+                                    | false -> { m' with tabMenu = TabMenu.Viewplanner }
                             | Interactions.AlignPick -> 
                                 { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = hit; surfaceName = surf.guid}))}
                             | _ -> m
@@ -341,8 +340,8 @@ module ViewerApp =
                 Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
             | NewScene,_,_ ->
                 let m' = { PRo3D.Viewer.Viewer.initial with recent = m.recent }
-                m'
-                //loadRoverData m'
+                //m'
+                loadRoverData m'
             | KeyDown k, _, _ ->
                     let drawingAction =
                         match k with
