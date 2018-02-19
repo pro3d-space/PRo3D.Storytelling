@@ -9,7 +9,7 @@ open Aardvark.UI
 type ReferenceSystem = {    
 
     origin      : V3d
-    north       : V3d
+    north       : V3dInput
     up          : V3dInput
     isVisible   : bool       
     size        : NumericInput
@@ -59,12 +59,12 @@ module ReferenceSystem =
     }
 
     let initial = {
-        origin = V3d.OOO
-        north = V3d.IOO
-        up = setV3d V3d.OOI
-        isVisible = true              
-        size = initNum2
-        scaleChart = ["1km";"100m";"10m";"1m";"10cm";"1cm";"1mm";"0.1mm"] |> PList.ofList
+        origin        = V3d.OOO
+        north         = setV3d V3d.IOO
+        up            = setV3d V3d.OOI
+        isVisible     = true              
+        size          = initNum2
+        scaleChart    = ["1km";"100m";"10m";"1m";"10cm";"1cm";"1mm";"0.1mm"] |> PList.ofList
         selectedScale = "1m"
     }
 

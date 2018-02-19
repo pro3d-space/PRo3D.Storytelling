@@ -160,8 +160,8 @@ module Surface =
                                           
                                   LazyKdTree { 
                                       lk with 
-                                          kdtreePath    = Path.Combine(path, triangleSub)
-                                          objectSetPath = Path.Combine(path, kdTreeSub)
+                                          kdtreePath    = Path.Combine(path, kdTreeSub)
+                                          objectSetPath = Path.Combine(path, triangleSub)
                                   }
                               | Level0KdTree.LazyKdTree lk -> // surfaces have absolute paths
                   

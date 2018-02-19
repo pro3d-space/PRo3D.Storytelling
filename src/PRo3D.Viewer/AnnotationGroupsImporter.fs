@@ -77,7 +77,7 @@ module AnnotationGroupsImporter =
         let root = reader.StreamElements("MeasurementGroups") 
         let xGroups = (root.Elements(xname "MeasurementGroup")).ToListOfT<XElement>()
         printfn "%A" xGroups.Count
-        let groupsNFlat = xGroups |> Seq.map (fun x -> getGroups x refSys.up.value refSys.north)
+        let groupsNFlat = xGroups |> Seq.map (fun x -> getGroups x refSys.up.value refSys.north.value)
 
         let flat = 
             groupsNFlat 

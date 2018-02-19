@@ -18,8 +18,8 @@ module ReferenceSystemApp =
     type Action =
         | InferCoordSystem of V3d
         | SetOrigin        of V3d
-        | SetUp            of Vector3d.Action       
-        | SetNorth         of V3d
+        | SetUp            of Vector3d.Action
+        | SetNorth         of Vector3d.Action
         | ToggleVisible
         | SetScale         of string
         | SetArrowSize     of double
@@ -49,14 +49,17 @@ module ReferenceSystemApp =
             | InferCoordSystem p ->
                 let up = upVector p
                 let n = northVector up
-                { model with origin = p; north = n; up = ReferenceSystem.setV3d up }, bigConfig
+                { model with origin = p; north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up }, bigConfig
             | SetOrigin p -> 
                 { model with origin = p }, bigConfig
             | SetUp up ->    
                 let up = Vector3d.update model.up up
-                let up' = ReferenceSystem.setV3d up.value.Normalized
-                { model with up =  up'}, bigConfig
+                let up = ReferenceSystem.setV3d up.value.Normalized
+                { model with up =  up}, bigConfig
             | SetNorth  n     -> 
+                let n = Vector3d.update model.north n
+                let n = ReferenceSystem.setV3d n.value.Normalized
+                
                 { model with north = n }, bigConfig
             | ToggleVisible   -> 
                 { model with isVisible = not model.isVisible}, bigConfig
@@ -164,7 +167,7 @@ module ReferenceSystemApp =
             let thickness = minnerConfig.getArrowThickness mbigConfig
             let near      = minnerConfig.getNearDistance   mbigConfig
 
-            let east = Mod.map2(fun (l:V3d) (r:V3d) -> r.Cross(l) ) model.up.value model.north
+            let east = Mod.map2(fun (l:V3d) (r:V3d) -> r.Cross(l) ) model.up.value model.north.value
 
             let size = model.selectedScale |> Mod.map scaleToSize
 
@@ -180,7 +183,7 @@ module ReferenceSystemApp =
 
             let styleNorth : MarkerStyle = {
                 position  = model.origin
-                direction = model.north
+                direction = model.north.value
                 color     = Mod.constant C4b.Red
                 size      = size
                 thickness = thickness
@@ -216,7 +219,7 @@ module ReferenceSystemApp =
                 Html.table [                                                
                     Html.row "Pos:"     [Incremental.text (model.origin     |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Up:"      [Vector3d.view model.up |> UI.map SetUp ]
-                    Html.row "North:"   [Incremental.text (model.north      |> Mod.map (fun x -> x.ToString("0.00")))]
+                    Html.row "North:"   [Vector3d.view model.north |> UI.map SetNorth ]
                     Html.row "Bearing:" [text "not implemented"] // compute azimuth with view dir, north vector and up vector
                     Html.row "Pitch:"   [text "not implemented"] // same for pitch which relates to dip angle
                     Html.row "Height:"  [text "not implemented"]
