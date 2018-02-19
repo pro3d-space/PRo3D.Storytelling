@@ -131,7 +131,11 @@ module ViewerApp =
         let sel = _selectedSurface.Get(model) |> Option.bind(fun x -> _sgSurfaces.Get(model).TryFind x)
         match sel with
           | Some s -> s.trafo.grabbed.IsSome
-          | None -> false       
+          | None -> false   
+          
+    let loadRoverData (m:Model) =
+        let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
+        { m with scene = { m.scene with viewPlans = vps } }
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
@@ -182,7 +186,11 @@ module ViewerApp =
             | RoverMessage msg,_,_ ->
                 let roverModel = RoverApp.update m.scene.viewPlans.roverModel msg
                 let viewPlanModel = ViewPlan.updateViewPlanFromRover roverModel m.scene.viewPlans
-                { m with scene = { m.scene with viewPlans = viewPlanModel}}  
+                let m' = { m with scene = { m.scene with viewPlans = viewPlanModel}} 
+                m'
+                //match viewPlanModel.working.IsEmpty with
+                //    | true -> m' 
+                //    | false -> { m' with tabMenu = TabMenu.Viewplanner }
             | ViewPlanMessage msg,_,_ ->
                 //let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
                 //{ m with scene = { m.scene with viewPlans = viewPlanModel}}  
@@ -240,7 +248,7 @@ module ViewerApp =
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
             | QuickLoad2,_,_ ->                                
-                (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore                
+                (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore               
                 m
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
@@ -332,7 +340,9 @@ module ViewerApp =
             | LoadScene path,_,_ ->
                 Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
             | NewScene,_,_ ->
-                { PRo3D.Viewer.Viewer.initial with recent = m.recent }
+                let m' = { PRo3D.Viewer.Viewer.initial with recent = m.recent }
+                m'
+                //loadRoverData m'
             | KeyDown k, _, _ ->
                     let drawingAction =
                         match k with
@@ -1018,9 +1028,6 @@ module ViewerApp =
                 Groups.loadGroups path |> Lenses.set' _annotations m
           | None -> m
 
-    let loadRoverData (m:Model) =
-        let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
-        { m with scene = { m.scene with viewPlans = vps } }
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        
