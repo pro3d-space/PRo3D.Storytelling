@@ -335,7 +335,8 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | None -> m
                     | Some path -> 
-                        Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
+                        let m' = Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
+                        loadRoverData m'
             | LoadScene path,_,_ ->
                 Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
             | NewScene,_,_ ->

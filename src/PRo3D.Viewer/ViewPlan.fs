@@ -146,7 +146,7 @@ module ViewPlan =
         
         //eigenvector with largest eigenvalue is best fit line
         new V3d(eVecVals.R0)
-
+        
 
     let fitLineLeastSquares(points:list<V3d>) =
         let centroid = points.ComputeCentroid()
@@ -179,8 +179,8 @@ module ViewPlan =
         match checkSign up newTiltVec with
         | true -> let newTilt = newTiltVec.Negated
                   let newRight = newRightVec.Negated
-                  trafoFromTranslatedBase working.[1] newTilt forward newRight
-        | false -> trafoFromTranslatedBase working.[1] newTiltVec forward newRightVec
+                  trafoFromTranslatedBase working.[0] newTilt forward newRight
+        | false -> trafoFromTranslatedBase working.[0] newTiltVec forward newRightVec
         
 
     let createViewPlan (working:list<V3d>) (rover:Rover) (ref:ReferenceSystem) (camState:CameraControllerState) (kdTree:hmap<string, ConcreteKdIntersectionTree>) (surfaceModel:SurfaceModel) =
@@ -191,7 +191,7 @@ module ViewPlan =
                 |> List.map(fun x -> calculateSurfaceContactPoint x kdTree initTrafo surfaceModel) 
                 |> List.choose(fun x -> x)
 
-        let placementTrafo =
+        let placementTrafo = //initTrafo
             match (surfaceIntersectionPoints.Length > 2) with
                 | true -> calculateRoverPlacement working surfaceIntersectionPoints ref.up.value
                 | _ -> initTrafo
