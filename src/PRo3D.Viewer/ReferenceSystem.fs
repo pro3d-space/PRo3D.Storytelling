@@ -128,13 +128,13 @@ module ReferenceSystemApp =
                     style.text 
                       |> Mod.map(fun x ->
                         match x with 
-                          | Some text -> Sg.text cam near (Mod.constant 60.0) nLabelPos nPosTrafo (Mod.constant text)
+                          | Some text -> Sg.text cam near (Mod.constant 60.0) nLabelPos nPosTrafo (Mod.constant text) (Mod.constant 0.05)
                           | None -> Sg.empty)
 
 
                 
 
-                yield PRo3D.Sg.lines al style.color (style.thickness |> Mod.map(fun x -> x*2.0)) posTrafo (Mod.constant Guid.Empty)
+                yield PRo3D.Sg.lines al style.color (style.thickness |> Mod.map(fun x -> x*2.0)) posTrafo (Mod.constant Guid.Empty) 
                 //yield coneISg style.color radius coneSize coneTrafo //(Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + scaledLength))) //                 
                 yield label |> Sg.dynamic
             } |> Sg.set 
@@ -151,6 +151,7 @@ module ReferenceSystemApp =
               | "1km" -> 1000.0
               | "100m"-> 100.0
               | "10m" -> 10.0
+              | "2m"  -> 2.0
               | "1m"  -> 1.0
               | "10cm"-> 0.1
               | "1cm" -> 0.01
@@ -198,9 +199,7 @@ module ReferenceSystemApp =
                 text      = Mod.constant None
             }
 
-            let sizeText = 
-                model.selectedScale      
-                   |> Sg.text cam near (Mod.constant 60.0) model.origin (model.origin |> Mod.map Trafo3d.Translation)
+            let sizeText = Sg.text cam near (Mod.constant 60.0) model.origin (model.origin |> Mod.map Trafo3d.Translation) model.selectedScale (Mod.constant 0.05)
 
             Sg.ofList [
                 point model.origin (Mod.constant C4b.Red) cam

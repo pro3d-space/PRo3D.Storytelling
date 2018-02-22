@@ -4,6 +4,7 @@ open Aardvark.Service
 
 open System
 open System.Windows.Forms
+open System.Diagnostics
 
 open Aardvark.Base
 open Aardvark.Base.Geometry
@@ -495,6 +496,12 @@ module ViewerApp =
                 match m.viewerMode with
                     | ViewerMode.Standard -> { m with viewerMode = ViewerMode.Instrument }
                     | ViewerMode.Instrument -> { m with viewerMode = ViewerMode.Standard }
+
+            | OpenSceneFileLocation p,_,_ ->
+                match Dialogs.openDialog3 w p with
+                    | None -> m
+                    | Some path -> m
+            | NoAction s,_,_ -> m
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -823,6 +830,64 @@ module ViewerApp =
                         onClick (fun _ -> SwitchViewerMode)
                         ] 
                 }
+        let scenePath (model : MModel) = 
+            adaptive {
+                let! scenePath = model.scene.scenePath    
+                match scenePath with
+                    | Some p -> return div [clazz "ui large black horizontal label"][text p]
+                    | None -> return div[][]
+                }
+
+        let goToSceneFolder (model : MModel) = 
+            alist {
+                    let! scenePath = model.scene.scenePath 
+                    match scenePath with
+                        | Some p -> yield [ text "goTo"] |> button [ 
+                                        clazz "ui button"
+                                        onClick (fun _ -> OpenSceneFileLocation p)
+                                        ] 
+                        | None -> yield [ text "goTo"] |> button [ 
+                                        clazz "ui button"
+                                        ] 
+                } 
+
+        let scenePath (model : MModel) =   
+            //Incremental.div (AttributeMap.Empty) (   
+                alist {
+                    let! scenePath = model.scene.scenePath 
+                    let b = match scenePath with
+                                | Some p -> button [clazz "ui icon button white"; onMouseClick (fun _ -> OpenSceneFileLocation p)] [
+                                                i [clazz "folder icon"] [] ] |> UI.wrapToolTipBottom "Open Folder"
+                                | None -> button [clazz "ui icon button"] [
+                                                i [clazz "folder icon"] [] ] |> UI.wrapToolTipBottom "Open Folder"
+                                
+                    let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
+                    yield  Html.Layout.horizontal [
+                            //Html.Layout.boxH [ text "Scene Path:" ]
+                            Html.Layout.boxH [ Html.SemUi.textBox scenePath NoAction ]
+                            Html.Layout.boxH [ b ]
+                            ]
+                
+                        }
+                       // )
+                      
+        let scenePath2 (model : MModel) = 
+            Incremental.div (AttributeMap.Empty) (   
+                alist {
+                    let! scenePath = model.scene.scenePath 
+                    let b = match scenePath with
+                                | Some p ->  i [clazz "folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
+                                | None ->  i [clazz "folder icon" ][] |> UI.wrapToolTip "open folder"  
+                                
+                    let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
+                    yield  div [] [ 
+                            //Html.Layout.boxH [ text "Scene Path:" ]
+                            Html.Layout.boxH [ Html.SemUi.textBox scenePath NoAction ]
+                            Html.Layout.boxH [ b ]
+                            ]
+                
+                        }
+                        )
 
         let topMenu = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
@@ -830,11 +895,10 @@ module ViewerApp =
              Html.Layout.horizontal [
                 Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
                 Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
-             ]             
-                         
+             ]                        
              Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
-
              Incremental.div AttributeMap.empty (AList.ofModSingle switchViewerMode)
+             //Incremental.div AttributeMap.empty (scenePath2 m)
              
 
              //button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
@@ -860,12 +924,14 @@ module ViewerApp =
                     
                 }
             Incremental.div AttributeMap.empty nodes                        
-                     
+        
+        
         let rest (model : MModel) = 
-            [             
+            [   
                 control
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
                     div[style "height:41px"][text "spacer"]
+                    //Incremental.div AttributeMap.empty (scenePath2 model) 
                     div [clazz "ui large black horizontal label"][text "Show Tab:"]
                     Html.SemUi.dropDown model.tabMenu SetTabMenu
                     viewTabs model.tabMenu                    
@@ -913,6 +979,7 @@ module ViewerApp =
                     ]
                 )
             ]
+
 
         let openSurface =
             [ text "browse"] |> button [
@@ -975,6 +1042,7 @@ module ViewerApp =
                         let sections = [
                             "blank", [div[style "height:15px"][]]
                             "Scene", [sceneTools]
+                            "Scene Path", [scenePath2 m]
                             "Recent", [recentScenes]
                             "Add Surface", [openSurface]                
                             "Import AnnotationGroups", [importAnnotationGroups]  

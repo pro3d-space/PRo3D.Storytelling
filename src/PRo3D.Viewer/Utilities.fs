@@ -79,6 +79,17 @@ module Dialogs =
             else r <- []
         )) |> ignore
         r
+
+    let openDialog3 (w : Form) (path: string) =
+        let mutable r = Unchecked.defaultof<_>
+        w.Invoke(Action(fun _ -> 
+            let dialog = new OpenFileDialog()
+            dialog.InitialDirectory <- path
+            if dialog.ShowDialog() = DialogResult.OK then
+                r <- Some dialog.FileName
+            else r <- None
+        )) |> ignore
+        r
       
     let openFolders (w : Form) =
         openDialog2 w true true
@@ -266,10 +277,10 @@ module Sg =
         )
         rotTrafo * modelt
 
-    let text (view : IMod<CameraView>) near hfov pos modelTrafo text  =
+    let text (view : IMod<CameraView>) near hfov pos modelTrafo text size =
            
         let invScaleTrafo = 
-            computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale
+            computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
 
         let billboardTrafo = 
             adaptive {

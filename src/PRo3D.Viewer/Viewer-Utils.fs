@@ -71,6 +71,8 @@ type ViewerAction =
     | SurfaceActions            of SurfaceApp.Action
     | AlignmentActions          of PRo3d.Align.AlignmentActions
     | SetTabMenu                of TabMenu
+    | OpenSceneFileLocation     of string
+    | NoAction                  of string
 
 
 module ViewerUtils =

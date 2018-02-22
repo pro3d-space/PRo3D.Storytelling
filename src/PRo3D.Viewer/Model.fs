@@ -122,6 +122,7 @@ type Annotation = {
     visible     : bool
     showDns     : bool
     text        : string
+    textsize    : NumericInput
 
     surfaceName : string
 }
@@ -144,6 +145,14 @@ module Annotation =
         max     = 8.0
         step    = 1.0
         format  = "{0:0}"
+    }
+
+    let texts = {
+        value   = 0.05
+        min     = 0.01
+        max     = 5.0
+        step    = 0.01
+        format  = "{0:0.00}"
     }
 
     
@@ -215,6 +224,7 @@ module Annotation =
             projection = projection
             visible = true
             text = ""
+            textsize = texts
             modelTrafo = Trafo3d.Identity
             showDns = match semantic with | Semantic.Crossbed -> true | _ -> false 
             surfaceName = surfName
@@ -235,6 +245,7 @@ module Annotation =
             projection  = projection
             visible     = true
             text        = ""
+            textsize    = texts
             modelTrafo  = Trafo3d.Identity
             showDns     = 
                 match geometry with 
