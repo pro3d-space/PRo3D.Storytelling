@@ -18,6 +18,14 @@ module MeasurementsImporter =
         format = ""
         }
 
+    let textsize  = {
+        value = 0.05
+        min = 0.01
+        max = 5.0
+        step = 0.01
+        format = ""
+        }
+
     let getStyle (a:XElement) = {
         color = C4b.Parse(a.Element(xname "object").Element(xname "Color").Value)
         thickness = thickness a
@@ -134,6 +142,7 @@ module MeasurementsImporter =
                 visible = true 
                 showDns = false
                 text = ""
+                textsize = textsize
                 surfaceName = ""
         }
         an

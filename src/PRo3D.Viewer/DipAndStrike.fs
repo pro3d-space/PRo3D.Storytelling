@@ -31,6 +31,14 @@ module DipAndStrike =
                             | -1 -> angle + 90.0
                             | _ -> 90.0 - angle
 
+    let bearing (up:V3d) (north : V3d) (dir:V3d) =
+        computeAzimuth dir north up
+
+    let pitch (up:V3d) (dir:V3d) =
+        let ground = new Plane3d(up.Normalized, 0.0)
+        Math.Asin(ground.Height(dir)).DegreesFromRadians()
+
+
     let calculateDipAndStrikeResults (up:V3d) (north : V3d) (points:plist<V3d>)=
 
         let points = points |> PList.filter(fun x -> not x.IsNaN)

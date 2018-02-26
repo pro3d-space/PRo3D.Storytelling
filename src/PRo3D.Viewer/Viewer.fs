@@ -4,6 +4,7 @@ open Aardvark.Service
 
 open System
 open System.Windows.Forms
+open System.Diagnostics
 
 open Aardvark.Base
 open Aardvark.Base.Geometry
@@ -11,6 +12,7 @@ open Aardvark.Base.Incremental
 open Aardvark.Base.Incremental.Operators
 open Aardvark.Base.Rendering
 open Aardvark.SceneGraph
+open Aardvark.Rendering.NanoVg
 open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Rendering.Text
@@ -131,7 +133,11 @@ module ViewerApp =
         let sel = _selectedSurface.Get(model) |> Option.bind(fun x -> _sgSurfaces.Get(model).TryFind x)
         match sel with
           | Some s -> s.trafo.grabbed.IsSome
-          | None -> false       
+          | None -> false   
+          
+    let loadRoverData (m:Model) =
+        let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
+        { m with scene = { m.scene with viewPlans = vps } }
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
@@ -182,7 +188,7 @@ module ViewerApp =
             | RoverMessage msg,_,_ ->
                 let roverModel = RoverApp.update m.scene.viewPlans.roverModel msg
                 let viewPlanModel = ViewPlan.updateViewPlanFromRover roverModel m.scene.viewPlans
-                { m with scene = { m.scene with viewPlans = viewPlanModel}}  
+                { m with scene = { m.scene with viewPlans = viewPlanModel}} 
             | ViewPlanMessage msg,_,_ ->
                 //let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
                 //{ m with scene = { m.scene with viewPlans = viewPlanModel}}  
@@ -240,7 +246,7 @@ module ViewerApp =
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
             | QuickLoad2,_,_ ->                                
-                (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore                
+                (MeasurementsImporter.startImporter "E:\Aardwork\Exomars\_SCENES\cd - Copy\cd.xml") |> ignore               
                 m
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
@@ -301,7 +307,10 @@ module ViewerApp =
                                 let camState = m.scene.navigation.camera
                                 let ref = m.scene.referenceSystem 
                                 let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
-                                { m with scene = {m.scene with viewPlans = viewPlans' } }
+                                let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
+                                match m.scene.viewPlans.working.IsEmpty with
+                                    | true -> m' 
+                                    | false -> { m' with tabMenu = TabMenu.Viewplanner }
                             | Interactions.AlignPick -> 
                                 { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = hit; surfaceName = surf.guid}))}
                             | _ -> m
@@ -328,11 +337,14 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | None -> m
                     | Some path -> 
-                        Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
+                        let m' = Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
+                        loadRoverData m'
             | LoadScene path,_,_ ->
                 Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
             | NewScene,_,_ ->
-                { PRo3D.Viewer.Viewer.initial with recent = m.recent }
+                let m' = { PRo3D.Viewer.Viewer.initial with recent = m.recent }
+                //m'
+                loadRoverData m'
             | KeyDown k, _, _ ->
                     let drawingAction =
                         match k with
@@ -485,6 +497,12 @@ module ViewerApp =
                 match m.viewerMode with
                     | ViewerMode.Standard -> { m with viewerMode = ViewerMode.Instrument }
                     | ViewerMode.Instrument -> { m with viewerMode = ViewerMode.Standard }
+
+            | OpenSceneFileLocation p,_,_ ->
+                match Dialogs.openDialog3 w p with
+                    | None -> m
+                    | Some path -> m
+            | NoAction s,_,_ -> m
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -708,7 +726,7 @@ module ViewerApp =
                 ]
 
                 GuiEx.accordion "Coordinate System" "Map Signs" false [
-                    ReferenceSystemApp.UI.view m.scene.referenceSystem |> UI.map ReferenceSystemMessage
+                    ReferenceSystemApp.UI.view m.scene.referenceSystem m.scene.navigation.camera |> UI.map ReferenceSystemMessage
                 ]
 
                 GuiEx.accordion "Camera" "Camera Retro" false [
@@ -813,6 +831,68 @@ module ViewerApp =
                         onClick (fun _ -> SwitchViewerMode)
                         ] 
                 }
+        let scenePath (model : MModel) = 
+            adaptive {
+                let! scenePath = model.scene.scenePath    
+                match scenePath with
+                    | Some p -> return div [clazz "ui large black horizontal label"][text p]
+                    | None -> return div[][]
+                }
+
+        let goToSceneFolder (model : MModel) = 
+            alist {
+                    let! scenePath = model.scene.scenePath 
+                    match scenePath with
+                        | Some p -> yield [ text "goTo"] |> button [ 
+                                        clazz "ui button"
+                                        onClick (fun _ -> OpenSceneFileLocation p)
+                                        ] 
+                        | None -> yield [ text "goTo"] |> button [ 
+                                        clazz "ui button"
+                                        ] 
+                } 
+
+        let scenePath (model : MModel) =   
+            //Incremental.div (AttributeMap.Empty) (   
+                alist {
+                    let! scenePath = model.scene.scenePath 
+                    let b = match scenePath with
+                                | Some p -> button [clazz "ui icon button white"; onMouseClick (fun _ -> OpenSceneFileLocation p)] [
+                                                i [clazz "large folder icon"] [] ] |> UI.wrapToolTipBottom "Open Folder"
+                                | None -> button [clazz "ui icon button"] [
+                                                i [clazz "large folder icon"] [] ] |> UI.wrapToolTipBottom "Open Folder"
+                                
+                    let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
+                    yield  Html.Layout.horizontal [
+                            //Html.Layout.boxH [ text "Scene Path:" ]
+                            Html.Layout.boxH [ Html.SemUi.textBox scenePath NoAction ]
+                            Html.Layout.boxH [ b ]
+                            ]
+                
+                        }
+                       // )
+                      
+        let scenePath2 (model : MModel) = 
+            Incremental.div (AttributeMap.Empty) (   
+                alist {
+                    let! scenePath = model.scene.scenePath 
+                    let icon = 
+                      match scenePath with
+                        | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
+                        | None -> div[][] // i [clazz "large folder icon" ][] |> UI.wrapToolTip "open folder"  
+                                
+                    let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
+                    yield  div [] [ 
+                      //Html.Layout.boxH [ text "Scene Path:" ]
+                      Html.Layout.boxH [ 
+                        Incremental.text (scenePath 
+                            |> Mod.map(fun x -> 
+                                if x.IsEmpty() then "*new scene" else Path.GetFileName x))  
+                      ]
+                      Html.Layout.boxH [ icon ]
+                    ]
+                }
+            )
 
         let topMenu = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
@@ -820,11 +900,10 @@ module ViewerApp =
              Html.Layout.horizontal [
                 Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
                 Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
-             ]             
-                         
+             ]                        
              Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
-
              Incremental.div AttributeMap.empty (AList.ofModSingle switchViewerMode)
+             //Incremental.div AttributeMap.empty (scenePath2 m)
              
 
              //button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
@@ -850,12 +929,34 @@ module ViewerApp =
                     
                 }
             Incremental.div AttributeMap.empty nodes                        
-                     
+        
+        let textOverlays = 
+            Incremental.div (AttributeMap.Empty) (   
+                alist {
+                    let! view = m.scene.navigation.camera.view
+                    let! up = m.scene.referenceSystem.up.value
+                    let! north = m.scene.referenceSystem.north.value
+                    
+                    let bearing = sprintf "Bearing: %s" ((DipAndStrike.bearing up north view.Forward).ToString("0.00"))
+                    let pitch = sprintf "Pitch: %s" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
+                    let position = sprintf "Pos: %s" (view.Location.ToString("0.00"))
+
+                    yield div [clazz "ui"; style "position: absolute; top: 5%; left: 3%; width: 20%; float:right; height:60px" ][
+                        div[style "color: white; height:20px"][text bearing] //background: grey
+                        div[style "color: white;col;height:20px"][text pitch]
+                        div[style "color: white;col;height:20px"][text position]
+                        ]
+                    }
+                )
+
+        
         let rest (model : MModel) = 
-            [             
+            [   
                 control
+                textOverlays
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
                     div[style "height:41px"][text "spacer"]
+                    //Incremental.div AttributeMap.empty (scenePath2 model) 
                     div [clazz "ui large black horizontal label"][text "Show Tab:"]
                     Html.SemUi.dropDown model.tabMenu SetTabMenu
                     viewTabs model.tabMenu                    
@@ -875,7 +976,7 @@ module ViewerApp =
         
         //Sidebar adorner
                 
-        let sceneTools =
+        let sceneTools model =
             div [clazz "ui buttons inverted"] [ 
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "Save Scene"; onMouseClick (fun _ -> SaveScene)] [
@@ -903,6 +1004,28 @@ module ViewerApp =
                     ]
                 )
             ]
+
+            //Incremental.div (AttributeMap.Empty) (   
+            //    alist {
+            //        let! scenePath = model.scene.scenePath 
+            //        let icon = 
+            //          match scenePath with
+            //            | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
+            //            | None -> div[][] // i [clazz "large folder icon" ][] |> UI.wrapToolTip "open folder"  
+                                
+            //        let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
+            //        yield  div [] [ 
+            //          //Html.Layout.boxH [ text "Scene Path:" ]
+            //          Html.Layout.boxH [ 
+            //            Incremental.text (scenePath 
+            //                |> Mod.map(fun x -> 
+            //                    if x.IsEmpty() then "*new scene" else Path.GetFileName x))  
+            //          ]
+            //          Html.Layout.boxH [ icon ]
+            //        ]
+            //    }
+            //)
+
 
         let openSurface =
             [ text "browse"] |> button [
@@ -964,7 +1087,8 @@ module ViewerApp =
                     | ViewerMode.Standard -> 
                         let sections = [
                             "blank", [div[style "height:15px"][]]
-                            "Scene", [sceneTools]
+                            "Scene", [sceneTools m]
+                            "Scene Path", [scenePath2 m]
                             "Recent", [recentScenes]
                             "Add Surface", [openSurface]                
                             "Import AnnotationGroups", [importAnnotationGroups]  
@@ -1018,9 +1142,6 @@ module ViewerApp =
                 Groups.loadGroups path |> Lenses.set' _annotations m
           | None -> m
 
-    let loadRoverData (m:Model) =
-        let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
-        { m with scene = { m.scene with viewPlans = vps } }
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = PRo3D.Viewer.Viewer.initial        

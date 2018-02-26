@@ -64,8 +64,8 @@ module ReferenceSystem =
         up            = setV3d V3d.OOI
         isVisible     = true              
         size          = initNum2
-        scaleChart    = ["1km";"100m";"10m";"1m";"10cm";"1cm";"1mm";"0.1mm"] |> PList.ofList
-        selectedScale = "1m"
+        scaleChart = ["1km";"100m";"10m";"2m";"1m";"10cm";"1cm";"1mm";"0.1mm"] |> PList.ofList
+        selectedScale = "2m"
     }
 
     let initialConfig : ReferenceSystemConfig<ViewConfigModel> = {

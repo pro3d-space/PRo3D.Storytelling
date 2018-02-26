@@ -586,14 +586,12 @@ module Surface =
                                         yield div[onClick singleSelect][Incremental.text desc]
  
                                     yield i [clazz "home icon"                                                
-                                             onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                                                
-
-                                  //  yield Incremental.i (absRelIcons)(AList.empty) |> UI.wrapToolTip "portable"                                        
+                                             onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                             
 
                                     yield i [clazz "folder icon"                                                
-                                             onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"                                                                                
+                                             onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"
 
-                                    } 
+                                } 
                             ) 
                                            
                         ]

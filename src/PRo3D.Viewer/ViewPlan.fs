@@ -40,8 +40,8 @@ module ViewPlan =
         | SetVPName        of string
     
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =
-        match path with
-            | Some p ->
+        //match path with
+        //    | Some p ->
                 let directory = @".\InstrumentStuff" 
                 let errorCode = IPWrapper.Init(directory, directory)
                 printfn "%A" errorCode
@@ -60,7 +60,7 @@ module ViewPlan =
                 printfn "found rover(s): %d" (rovs |> HMap.count)
         
                 { model with roverModel = { model.roverModel with rovers = rovs; platforms = plats } }
-            | _ -> model
+            //| _ -> model
 
     let updateViewPlans (vp:ViewPlan) (vps:hset<ViewPlan>) =
         vps
@@ -146,7 +146,7 @@ module ViewPlan =
         
         //eigenvector with largest eigenvalue is best fit line
         new V3d(eVecVals.R0)
-
+        
 
     let fitLineLeastSquares(points:list<V3d>) =
         let centroid = points.ComputeCentroid()
@@ -179,8 +179,8 @@ module ViewPlan =
         match checkSign up newTiltVec with
         | true -> let newTilt = newTiltVec.Negated
                   let newRight = newRightVec.Negated
-                  trafoFromTranslatedBase working.[1] newTilt forward newRight
-        | false -> trafoFromTranslatedBase working.[1] newTiltVec forward newRightVec
+                  trafoFromTranslatedBase working.[0] newTilt forward newRight
+        | false -> trafoFromTranslatedBase working.[0] newTiltVec forward newRightVec
         
 
     let createViewPlan (working:list<V3d>) (rover:Rover) (ref:ReferenceSystem) (camState:CameraControllerState) (kdTree:hmap<string, ConcreteKdIntersectionTree>) (surfaceModel:SurfaceModel) =
@@ -191,7 +191,7 @@ module ViewPlan =
                 |> List.map(fun x -> calculateSurfaceContactPoint x kdTree initTrafo surfaceModel) 
                 |> List.choose(fun x -> x)
 
-        let placementTrafo =
+        let placementTrafo = //initTrafo
             match (surfaceIntersectionPoints.Length > 2) with
                 | true -> calculateRoverPlacement working surfaceIntersectionPoints ref.up.value
                 | _ -> initTrafo
@@ -652,7 +652,9 @@ module ViewPlan =
             alist {
                 for axis in (r.axes |> RoverApp.mapTolist) do
                     yield div[][Incremental.text axis.id; text "(deg)"]
-                    yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (axis.id |> Mod.force,x))
+                    //yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (axis.id |> Mod.force,x))
+                    let! id = axis.id
+                    yield Numeric.view' [InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
                     yield br[]
                     yield Incremental.text (axis.startPoint |> Mod.map (sprintf "%A"))
             }

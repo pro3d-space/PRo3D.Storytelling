@@ -237,6 +237,7 @@ module Mutable =
         let _visible = ResetMod.Create(__initial.visible)
         let _showDns = ResetMod.Create(__initial.showDns)
         let _text = ResetMod.Create(__initial.text)
+        let _textsize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.textsize)
         let _surfaceName = ResetMod.Create(__initial.surfaceName)
         
         member x.key = _key :> IMod<_>
@@ -253,6 +254,7 @@ module Mutable =
         member x.visible = _visible :> IMod<_>
         member x.showDns = _showDns :> IMod<_>
         member x.text = _text :> IMod<_>
+        member x.textsize = _textsize
         member x.surfaceName = _surfaceName :> IMod<_>
         
         member x.Current = __current :> IMod<_>
@@ -274,6 +276,7 @@ module Mutable =
                 ResetMod.Update(_visible,v.visible)
                 ResetMod.Update(_showDns,v.showDns)
                 ResetMod.Update(_text,v.text)
+                Aardvark.UI.Mutable.MNumericInput.Update(_textsize, v.textsize)
                 ResetMod.Update(_surfaceName,v.surfaceName)
                 
         
@@ -374,6 +377,12 @@ module Mutable =
                     override x.Get(r) = r.text
                     override x.Set(r,v) = { r with text = v }
                     override x.Update(r,f) = { r with text = f r.text }
+                }
+            let textsize =
+                { new Lens<PRo3D.Annotation, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.textsize
+                    override x.Set(r,v) = { r with textsize = v }
+                    override x.Update(r,f) = { r with textsize = f r.textsize }
                 }
             let surfaceName =
                 { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.string>() with

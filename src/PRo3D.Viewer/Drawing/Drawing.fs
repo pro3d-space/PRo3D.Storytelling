@@ -726,7 +726,7 @@ module DrawingApp =
             let pos = 
                 points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
 
-            Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo anno.text
+            Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo anno.text anno.textsize.value
 
         let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
             let points = getPolyline anno

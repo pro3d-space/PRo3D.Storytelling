@@ -16,6 +16,7 @@ module AnnotationProperties =
         | ChangeThickness of Numeric.Action
         | ChangeColor     of ColorPicker.Action
         | SetText         of string
+        | SetTextSize     of Numeric.Action
         | ToggleVisible
         | ToggleShowDns
        
@@ -32,6 +33,8 @@ module AnnotationProperties =
                 { model with thickness = Numeric.update model.thickness a }
             | SetText t ->
                 { model with text = t }
+             | SetTextSize s ->
+                { model with textsize = Numeric.update model.textsize s }
             | ToggleVisible ->
                 { model with visible = (not model.visible) }
             | ToggleShowDns ->
@@ -55,6 +58,7 @@ module AnnotationProperties =
                 Html.row "Thickness:"   [Numeric.view' [InputBox] model.thickness |> UI.map ChangeThickness ]
                 Html.row "Color:"       [ColorPicker.view model.color |> UI.map ChangeColor ]
                 Html.row "Text:"        [Html.SemUi.textBox model.text SetText ]
+                Html.row "TextSize:"    [Numeric.view' [InputBox] model.textsize |> UI.map SetTextSize ]
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.visible ToggleVisible ]
                 Html.row "Show DnS:"    [Html.SemUi.toggleBox model.showDns ToggleShowDns ]
                 Html.row "Height:"      [Incremental.text (height   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
