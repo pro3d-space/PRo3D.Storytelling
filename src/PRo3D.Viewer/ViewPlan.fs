@@ -652,7 +652,9 @@ module ViewPlan =
             alist {
                 for axis in (r.axes |> RoverApp.mapTolist) do
                     yield div[][Incremental.text axis.id; text "(deg)"]
-                    yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (axis.id |> Mod.force,x))
+                    //yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (axis.id |> Mod.force,x))
+                    let! id = axis.id
+                    yield Numeric.view' [InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
                     yield br[]
                     yield Incremental.text (axis.startPoint |> Mod.map (sprintf "%A"))
             }

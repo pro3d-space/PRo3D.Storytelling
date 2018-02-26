@@ -210,14 +210,31 @@ module ReferenceSystemApp =
             ] |> Sg.onOff(model.isVisible)
 
     module UI =
-        let view (model:MReferenceSystem) =
+        open Aardvark.UI.Primitives.Mutable
+
+        let view (model:MReferenceSystem) (camera:MCameraControllerState) =
+            let bearing = 
+                adaptive {
+                    let! up = model.up.value
+                    let! north = model.north 
+                    let! view = camera.view
+                    return DipAndStrike.bearing up north view.Forward
+                    }
+
+            let pitch = 
+                adaptive {
+                    let! up = model.up.value
+                    let! view = camera.view
+                    return DipAndStrike.pitch up view.Forward
+                    }
+
             require Html.semui (
                 Html.table [                                                
                     Html.row "Pos:"     [Incremental.text (model.origin     |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Up:"      [Vector3d.view model.up |> UI.map SetUp ]
                     Html.row "North:"   [Incremental.text (model.north      |> Mod.map (fun x -> x.ToString("0.00")))]
-                    Html.row "Bearing:" [text "not implemented"] // compute azimuth with view dir, north vector and up vector
-                    Html.row "Pitch:"   [text "not implemented"] // same for pitch which relates to dip angle
+                    Html.row "Bearing:" [Incremental.text (bearing |> Mod.map (fun x -> x.ToString("0.00")))] // compute azimuth with view dir, north vector and up vector
+                    Html.row "Pitch:"   [Incremental.text (pitch |> Mod.map (fun x -> x.ToString("0.00")))]  // same for pitch which relates to dip angle
                     Html.row "Height:"  [text "not implemented"]
                     Html.row "Visible:" [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
                     

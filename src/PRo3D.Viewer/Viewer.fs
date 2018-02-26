@@ -12,6 +12,7 @@ open Aardvark.Base.Incremental
 open Aardvark.Base.Incremental.Operators
 open Aardvark.Base.Rendering
 open Aardvark.SceneGraph
+open Aardvark.Rendering.NanoVg
 open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Rendering.Text
@@ -725,7 +726,7 @@ module ViewerApp =
                 ]
 
                 GuiEx.accordion "Coordinate System" "Map Signs" false [
-                    ReferenceSystemApp.UI.view m.scene.referenceSystem |> UI.map ReferenceSystemMessage
+                    ReferenceSystemApp.UI.view m.scene.referenceSystem m.scene.navigation.camera |> UI.map ReferenceSystemMessage
                 ]
 
                 GuiEx.accordion "Camera" "Camera Retro" false [
@@ -857,9 +858,9 @@ module ViewerApp =
                     let! scenePath = model.scene.scenePath 
                     let b = match scenePath with
                                 | Some p -> button [clazz "ui icon button white"; onMouseClick (fun _ -> OpenSceneFileLocation p)] [
-                                                i [clazz "folder icon"] [] ] |> UI.wrapToolTipBottom "Open Folder"
+                                                i [clazz "large folder icon"] [] ] |> UI.wrapToolTipBottom "Open Folder"
                                 | None -> button [clazz "ui icon button"] [
-                                                i [clazz "folder icon"] [] ] |> UI.wrapToolTipBottom "Open Folder"
+                                                i [clazz "large folder icon"] [] ] |> UI.wrapToolTipBottom "Open Folder"
                                 
                     let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
                     yield  Html.Layout.horizontal [
@@ -876,8 +877,8 @@ module ViewerApp =
                 alist {
                     let! scenePath = model.scene.scenePath 
                     let b = match scenePath with
-                                | Some p ->  i [clazz "folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
-                                | None ->  i [clazz "folder icon" ][] |> UI.wrapToolTip "open folder"  
+                                | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
+                                | None ->  i [clazz "large folder icon" ][] |> UI.wrapToolTip "open folder"  
                                 
                     let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
                     yield  div [] [ 
@@ -925,10 +926,30 @@ module ViewerApp =
                 }
             Incremental.div AttributeMap.empty nodes                        
         
+        let textOverlays = 
+            Incremental.div (AttributeMap.Empty) (   
+                alist {
+                    let! view = m.scene.navigation.camera.view
+                    let! up = m.scene.referenceSystem.up.value
+                    let! north = m.scene.referenceSystem.north
+                    
+                    let bearing = sprintf "Bearing: %s" ((DipAndStrike.bearing up north view.Forward).ToString("0.00"))
+                    let pitch = sprintf "Pitch: %s" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
+                    let position = sprintf "Pos: %s" (view.Location.ToString("0.00"))
+
+                    yield div [clazz "ui"; style "position: absolute; top: 5%; left: 3%; width: 20%; float:right; height:60px" ][
+                        div[style "color: white; height:20px"][text bearing] //background: grey
+                        div[style "color: white;col;height:20px"][text pitch]
+                        div[style "color: white;col;height:20px"][text position]
+                        ]
+                    }
+                )
+
         
         let rest (model : MModel) = 
             [   
                 control
+                textOverlays
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
                     div[style "height:41px"][text "spacer"]
                     //Incremental.div AttributeMap.empty (scenePath2 model) 
