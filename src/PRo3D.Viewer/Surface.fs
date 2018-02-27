@@ -160,8 +160,8 @@ module Surface =
                                           
                                   LazyKdTree { 
                                       lk with 
-                                          kdtreePath    = Path.Combine(path, triangleSub)
-                                          objectSetPath = Path.Combine(path, kdTreeSub)
+                                          kdtreePath    = Path.Combine(path, kdTreeSub)
+                                          objectSetPath = Path.Combine(path, triangleSub)
                                   }
                               | Level0KdTree.LazyKdTree lk -> // surfaces have absolute paths
                   
@@ -586,14 +586,12 @@ module Surface =
                                         yield div[onClick singleSelect][Incremental.text desc]
  
                                     yield i [clazz "home icon"                                                
-                                             onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                                                
-
-                                  //  yield Incremental.i (absRelIcons)(AList.empty) |> UI.wrapToolTip "portable"                                        
+                                             onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                             
 
                                     yield i [clazz "folder icon"                                                
-                                             onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"                                                                                
+                                             onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"
 
-                                    } 
+                                } 
                             ) 
                                            
                         ]

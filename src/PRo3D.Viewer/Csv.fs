@@ -89,7 +89,7 @@ module Csv =
             |> String.concat delimiter
 
     type Seq =
-        static member write (path:string) (data:seq<'a>): 'result = 
+        static member write (path:string) (data:seq<'a>)  = 
             use writer = new StreamWriter(path)
             data
             |> Seq.iter writer.WriteLine 

@@ -1,5 +1,7 @@
-﻿//namespace GuiExperiments
+﻿namespace GuiExperiments
 
+module bla =
+  let a = 5
 //open System
 //open Fablish
 

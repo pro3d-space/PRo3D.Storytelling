@@ -100,8 +100,8 @@ module ViewerApp =
     
     let drawingConfig : DrawingApp.SmallConfig<ReferenceSystem> =
         { 
-            up    = (ReferenceSystem.Lens.up |. V3dInput.Lens.value)
-            north = ReferenceSystem.Lens.north
+            up    = (ReferenceSystem.Lens.up    |. V3dInput.Lens.value)
+            north = (ReferenceSystem.Lens.north |. V3dInput.Lens.value)
         }
 
     let mdrawingConfig : DrawingApp.MSmallConfig<MViewConfigModel> =
@@ -499,9 +499,8 @@ module ViewerApp =
                     | ViewerMode.Instrument -> { m with viewerMode = ViewerMode.Standard }
 
             | OpenSceneFileLocation p,_,_ ->
-                match Dialogs.openDialog3 w p with
-                    | None -> m
-                    | Some path -> m
+                Process.Start("explorer.exe", Path.GetDirectoryName p) |> ignore
+                m
             | NoAction s,_,_ -> m
             | _ -> m       
                                    
@@ -831,65 +830,7 @@ module ViewerApp =
                         onClick (fun _ -> SwitchViewerMode)
                         ] 
                 }
-        let scenePath (model : MModel) = 
-            adaptive {
-                let! scenePath = model.scene.scenePath    
-                match scenePath with
-                    | Some p -> return div [clazz "ui large black horizontal label"][text p]
-                    | None -> return div[][]
-                }
-
-        let goToSceneFolder (model : MModel) = 
-            alist {
-                    let! scenePath = model.scene.scenePath 
-                    match scenePath with
-                        | Some p -> yield [ text "goTo"] |> button [ 
-                                        clazz "ui button"
-                                        onClick (fun _ -> OpenSceneFileLocation p)
-                                        ] 
-                        | None -> yield [ text "goTo"] |> button [ 
-                                        clazz "ui button"
-                                        ] 
-                } 
-
-        let scenePath (model : MModel) =   
-            //Incremental.div (AttributeMap.Empty) (   
-                alist {
-                    let! scenePath = model.scene.scenePath 
-                    let b = match scenePath with
-                                | Some p -> button [clazz "ui icon button white"; onMouseClick (fun _ -> OpenSceneFileLocation p)] [
-                                                i [clazz "large folder icon"] [] ] |> UI.wrapToolTipBottom "Open Folder"
-                                | None -> button [clazz "ui icon button"] [
-                                                i [clazz "large folder icon"] [] ] |> UI.wrapToolTipBottom "Open Folder"
-                                
-                    let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
-                    yield  Html.Layout.horizontal [
-                            //Html.Layout.boxH [ text "Scene Path:" ]
-                            Html.Layout.boxH [ Html.SemUi.textBox scenePath NoAction ]
-                            Html.Layout.boxH [ b ]
-                            ]
-                
-                        }
-                       // )
-                      
-        let scenePath2 (model : MModel) = 
-            Incremental.div (AttributeMap.Empty) (   
-                alist {
-                    let! scenePath = model.scene.scenePath 
-                    let b = match scenePath with
-                                | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
-                                | None ->  i [clazz "large folder icon" ][] |> UI.wrapToolTip "open folder"  
-                                
-                    let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
-                    yield  div [] [ 
-                            //Html.Layout.boxH [ text "Scene Path:" ]
-                            Html.Layout.boxH [ Html.SemUi.textBox scenePath NoAction ]
-                            Html.Layout.boxH [ b ]
-                            ]
-                
-                        }
-                        )
-
+               
         let topMenu = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
 
@@ -929,22 +870,29 @@ module ViewerApp =
         let textOverlays = 
             Incremental.div (AttributeMap.Empty) (   
                 alist {
-                    let! view = m.scene.navigation.camera.view
-                    let! up = m.scene.referenceSystem.up.value
-                    let! north = m.scene.referenceSystem.north
+                    let! view  = m.scene.navigation.camera.view
+                    let! up    = m.scene.referenceSystem.up.value
+                    let! north = m.scene.referenceSystem.north.value
                     
-                    let bearing = sprintf "Bearing: %s" ((DipAndStrike.bearing up north view.Forward).ToString("0.00"))
-                    let pitch = sprintf "Pitch: %s" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
-                    let position = sprintf "Pos: %s" (view.Location.ToString("0.00"))
+                    let bearing  = sprintf "Bearing: %s°" ((DipAndStrike.bearing up north view.Forward).ToString("0.00"))
+                    let pitch    = sprintf "Pitch:   %s°" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
+                    let position = sprintf "Pos:     %s"  (view.Location.ToString("0.00"))
 
-                    yield div [clazz "ui"; style "position: absolute; top: 5%; left: 3%; width: 20%; float:right; height:60px" ][
-                        div[style "color: white; height:20px"][text bearing] //background: grey
-                        div[style "color: white;col;height:20px"][text pitch]
-                        div[style "color: white;col;height:20px"][text position]
-                        ]
-                    }
-                )
-
+                    yield div [clazz "ui"; style "position: absolute; left:5px; top: 50px; float:left; height:60px" ][
+                        div[style "color: white; font-family:Consolas; height:20px"][text bearing]
+                        div[style "color: white; font-family:Consolas; height:20px"][text pitch]
+                        div[style "color: white; font-family:Consolas; height:20px"][text position]
+                    ]
+                    
+                    //yield div [clazz "ui"; style "position: absolute; top: 50px; float:left" ] [
+                    //    Html.table [                                            
+                    //        Html.row "Bearing:"  [text ((DipAndStrike.bearing up north view.Forward).ToString("0.00")) ]
+                    //        Html.row "Pitch:"    [text ((DipAndStrike.pitch up view.Forward).ToString("0.00")) ]
+                    //        Html.row "Position:" [text (view.Location.ToString("0.00")) ]
+                    //    ]
+                    //]
+                }
+            )
         
         let rest (model : MModel) = 
             [   
@@ -970,9 +918,9 @@ module ViewerApp =
                     ]
             ]
         
-        //Sidebar adorner
-                
-        let sceneTools =
+        //Sidebar adorner                
+        let sceneTools (model : MModel) =
+          div[][
             div [clazz "ui buttons inverted"] [ 
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "Save Scene"; onMouseClick (fun _ -> SaveScene)] [
@@ -1000,6 +948,30 @@ module ViewerApp =
                     ]
                 )
             ]
+
+            br[]
+            br[]
+
+            Incremental.div (AttributeMap.Empty) (   
+                alist {
+                    let! scenePath = model.scene.scenePath 
+                    let icon = 
+                      match scenePath with
+                        | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
+                        | None -> div[][] // i [clazz "large folder icon" ][] |> UI.wrapToolTip "open folder"  
+                                
+                    let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
+                    yield  div [] [ 
+                      //Html.Layout.boxH [ text "Scene Path:" ]
+                      Html.Layout.boxH [ 
+                        Incremental.text (scenePath 
+                            |> Mod.map(fun x -> 
+                                if x.IsEmpty() then "*new scene" else Path.GetFileName x))  
+                      ]
+                      Html.Layout.boxH [ icon ]
+                    ]
+                }
+            )]
 
 
         let openSurface =
@@ -1062,8 +1034,8 @@ module ViewerApp =
                     | ViewerMode.Standard -> 
                         let sections = [
                             "blank", [div[style "height:15px"][]]
-                            "Scene", [sceneTools]
-                            "Scene Path", [scenePath2 m]
+                            "Scene", [sceneTools m]
+                           // "Scene Path", [scenePath2 m]
                             "Recent", [recentScenes]
                             "Add Surface", [openSurface]                
                             "Import AnnotationGroups", [importAnnotationGroups]  
