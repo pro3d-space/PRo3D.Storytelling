@@ -598,33 +598,28 @@ module DrawingApp =
 
                         let color = 
                             DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
-                                                                    
-                        //let lineLengthScale = 
-                        //    Sg.computeInvariantScale view conf.nearPlane center conf.arrowLength conf.hfov
-                        
-                        let box = new Box3d(anno.points |> AList.toArray) 
-                        //let planeScale = 
-                        //    Sg.computeInvariantScale view conf.nearPlane center conf.dnsPlaneSize conf.hfov
-
+                                                                                            
                         let scale = 
                             adaptive{
                                 //let! ps = planeScale
                                 let! ps = conf.dnsPlaneSize
-                                
-                                return ps * box.Size.[box.MajorDim]
-                                }
+                                let! results = anno.results
+                                match results with
+                                  | Some r ->
+                                      let! l = r.length 
+                                      return ps * (l / 4.0)
+                                  | None -> 
+                                      return 1.0
+                            }
 
-                        let planeScale = 
-                            Sg.computeInvariantScale view conf.nearPlane center scale conf.hfov
+                        //let planeScale = 
+                        //    Sg.computeInvariantScale view conf.nearPlane center scale conf.hfov
 
-                        let discScale = planeScale |> Mod.map( fun s -> s * 0.375)
+                        let discRadius = scale //|> Mod.map( fun s -> s * 0.375)
 
-                        let lineLengthScale = 
-                            Sg.computeInvariantScale view conf.nearPlane center planeScale conf.hfov
+                        //let lineLengthScale = 
+                        //    Sg.computeInvariantScale view conf.nearPlane center planeScale conf.hfov
 
-                        let radius =   lineLengthScale |> Mod.map(fun d -> d * 0.003)
-                        let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.015)
-                        let height =   planeScale |> Mod.map(fun d -> d * 0.01)
 
                         let posTrafo =
                             center |> Mod.map(fun d -> Trafo3d.Translation(d))
@@ -633,44 +628,45 @@ module DrawingApp =
                         let discTrafo =
                             Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
 
-                        yield discISg color discScale height discTrafo 
+                        yield discISg color discRadius (discRadius |> Mod.map(fun d -> d * 0.01)) discTrafo 
 
+
+                        let coneRadius = scale |> Mod.map((*) 0.003)
+                        let coneSize   = scale |> Mod.map((*) 0.015)
+
+                        let lineLength = discRadius |> Mod.map ((*) 1.5)
+                        
+                        // dip arrow       
                         let! dip = x.dipDirection
+                        let! lineLength' = lineLength
+                        let! center' = center
 
-                        // dip vec       
                         let dipLine = 
-                            alist {
-                                let! c = center
-                                let! s = planeScale 
-                                //let! f = conf.arrowSize.value
-
-                                yield c
-                                yield c + dip.Normalized * s //* f
+                            alist {                                
+                                yield center'
+                                yield center' + dip.Normalized * lineLength'
                             }                            
 
                         yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key  
 
                         let coneTrafo = 
-                            Mod.map2(fun c s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(c + dip.Normalized * s)) center planeScale
+                            Mod.map2(fun c s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(c + dip.Normalized * s)) center scale
 
-                        yield coneISg color radius coneSize coneTrafo
+                        yield coneISg color coneRadius coneSize coneTrafo
 
-                        //strike vecs
-                        let strikeLen = 
-                            Mod.map2(fun (str:V3d) s -> str.Normalized * s * 0.66) x.strikeDirection planeScale //lineLengthScale
+                        //strikes lines
+                        let! strike = x.strikeDirection
 
                         let strikeLine1 =
-                            alist {
-                                let! c = center
-                                let! s = strikeLen
-                                yield c; yield c - s
+                            alist {                                
+                                yield center'
+                                yield center' - strike.Normalized * lineLength'
                             }
 
                         let strikeLine2 = 
                             alist {
-                                let! c = center
-                                let! s = strikeLen
-                                yield c; yield c + s
+                                yield center'
+                                yield center' + strike.Normalized * lineLength'
                             }                                            
 
                         yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key // strike1 vec
