@@ -521,7 +521,7 @@ module ViewerApp =
 
             amap {
                 let! state = model.navigationMode
-                
+              
                 match state with
                     | NavigationMode.FreeFly -> 
                         yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction m.frustum

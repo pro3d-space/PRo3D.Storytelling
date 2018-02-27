@@ -3,6 +3,7 @@
 open System
 open System.IO
 open Aardvark.Base
+open Aardvark.Base.Incremental
 open Aardvark.Opc    
 
 open PRo3D.Surfaces
@@ -47,6 +48,7 @@ module Model =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Scene =
     open Aardvark.Base.MultimethodTest       
+    //open Aardvark.Base.Incremental.Computation Expression Builders
     
     let _surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _flatSurfaces = Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.flat
@@ -162,7 +164,13 @@ module Scene =
 
         model 
           |> SurfaceModel.withSgSurfaces sgSurfaces 
-          |> SurfaceModel.triggerSgGrouping       
+          |> SurfaceModel.triggerSgGrouping    
+          
+    let setFrustum (m:Model) =
+       let near = m.scene.config.nearPlane.value
+       let far = m.scene.config.farPlane.value
+       Frustum.perspective 60.0 near far 1.0
+           
 
     let loadScene path m runtime signature =
         try
@@ -170,6 +178,8 @@ module Scene =
         
             let m = 
                 m |> Model.withScene (expandRelativePaths <| s)
+
+            let m = { m with frustum = setFrustum m }
 
             let sModel = 
                 m.scene.surfacesModel 
@@ -180,7 +190,8 @@ module Scene =
             Log.error "Could not load selected scenefile %A. It is either outdated or not a valid scene" path
             //Log.error "error %A" e
             m
-                    
+
+    
     let loadLastScene runtime signature m =
         match Serialization.fileExists "./recent" with
             | Some path  ->
@@ -190,7 +201,7 @@ module Scene =
                 match r.recentScenes |> HMap.toList |> List.sortByDescending (fun (_,v) -> v.writeDate) |> List.tryHead with
                     | Some (_,scenePath) ->
                         try
-                            loadScene scenePath.path m runtime signature        
+                           loadScene scenePath.path m runtime signature
                         with
                             | e ->
                                 Log.warn "Error parsing last scene: %s. loading empty" scenePath.path
