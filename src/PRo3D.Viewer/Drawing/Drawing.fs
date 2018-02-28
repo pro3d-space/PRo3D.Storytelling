@@ -552,8 +552,8 @@ module DrawingApp =
                         }
                         |> Sg.trafo(trafo) 
 
-        let coneISg color radius size trafo =  
-            Sg.cone 30 color radius size
+        let coneISg color radius height trafo =  
+            Sg.cone 30 color radius height
                         |> Sg.noEvents
                         |> Sg.shader {
                             do! Aardvark.Opc.Shader.stableTrafo
@@ -611,18 +611,11 @@ module DrawingApp =
                                   | None -> 
                                       return 1.0
                             }
+                        
+                        //let screenSpaceScale = Sg.computeInvariantScale view conf.nearPlane center scale conf.hfov
 
-                        //let planeScale = 
-                        //    Sg.computeInvariantScale view conf.nearPlane center scale conf.hfov
-
-                        let discRadius = scale //|> Mod.map( fun s -> s * 0.375)
-
-                        //let lineLengthScale = 
-                        //    Sg.computeInvariantScale view conf.nearPlane center planeScale conf.hfov
-
-
-                        let posTrafo =
-                            center |> Mod.map(fun d -> Trafo3d.Translation(d))
+                        let discRadius = scale //Mod.map2 (*) scale screenSpaceScale                        
+                        let posTrafo = center |> Mod.map Trafo3d.Translation
 
                         // disc
                         let discTrafo =
@@ -630,47 +623,41 @@ module DrawingApp =
 
                         yield discISg color discRadius (discRadius |> Mod.map(fun d -> d * 0.01)) discTrafo 
 
-
-                        let coneRadius = scale |> Mod.map((*) 0.003)
-                        let coneSize   = scale |> Mod.map((*) 0.015)
-
                         let lineLength = discRadius |> Mod.map ((*) 1.5)
                         
+                        let coneHeight = lineLength |> Mod.map((*) 0.2)
+                        let coneRadius = coneHeight |> Mod.map((*) 0.3)
+
                         // dip arrow       
                         let! dip = x.dipDirection
                         let! lineLength' = lineLength
                         let! center' = center
 
                         let dipLine = 
-                            alist {                                
+                            alist {
                                 yield center'
                                 yield center' + dip.Normalized * lineLength'
-                            }                            
+                            }
 
                         yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key  
 
                         let coneTrafo = 
-                            Mod.map2(fun c s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(c + dip.Normalized * s)) center scale
+                            lineLength |>
+                                Mod.map(fun s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(center' + dip.Normalized * s))
 
-                        yield coneISg color coneRadius coneSize coneTrafo
+                        yield coneISg color coneRadius coneHeight coneTrafo
 
                         //strikes lines
                         let! strike = x.strikeDirection
 
                         let strikeLine1 =
-                            alist {                                
-                                yield center'
+                            alist {                                                                
                                 yield center' - strike.Normalized * lineLength'
-                            }
-
-                        let strikeLine2 = 
-                            alist {
-                                yield center'
                                 yield center' + strike.Normalized * lineLength'
                             }                                            
 
-                        yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key // strike1 vec
-                        yield Sg.lines strikeLine2 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key // strike2 vec
+                        yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key
+                        
                     | None -> () 
                                
             } |> Sg.set

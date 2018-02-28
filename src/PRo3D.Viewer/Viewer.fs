@@ -1097,10 +1097,12 @@ module ViewerApp =
 
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
-        let m = PRo3D.Viewer.Viewer.initial        
-        let m = Scene.loadLastScene runtime signature m   
-        let m = loadRoverData m
-        
+        let m = 
+            PRo3D.Viewer.Viewer.initial 
+              |> Scene.loadLastScene runtime signature
+              |> loadRoverData
+              |> loadLastAnnotations        
+
         App.start {
             unpersist = Unpersist.instance
             threads = pool runtime signature
