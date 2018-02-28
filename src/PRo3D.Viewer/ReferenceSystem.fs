@@ -137,7 +137,7 @@ module ReferenceSystemApp =
 
                 
 
-                yield PRo3D.Sg.lines al style.color (style.thickness |> Mod.map(fun x -> x*2.0)) posTrafo (Mod.constant Guid.Empty) 
+                yield PRo3D.Sg.lines al style.color style.thickness posTrafo (Mod.constant Guid.Empty)
                 //yield coneISg style.color radius coneSize coneTrafo //(Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + scaledLength))) //                 
                 yield label |> Sg.dynamic
             } |> Sg.set 

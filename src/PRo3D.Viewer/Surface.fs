@@ -427,39 +427,34 @@ module Surface =
 
                         closestHit
                 )
-            |> Seq.tryPick(fun d -> Some d), cache
+            |> Seq.tryPick(fun d -> Some d), cache    
 
-    let updateTrafo (trafo:SurfaceTrafo) (model:SurfaceModel) =
-        let getSurf = model.surfaces.flat |> HMap.map( fun id leaf -> let surf = leaf |> Leaf.toSurface
-                                                                      if surf.name = trafo.id then
-                                                                        Some surf
-                                                                        else
-                                                                        None
-                                                                        )
-                                            |>  HMap.choose( fun id y -> y)
-
-                                                              
-        match getSurf.IsEmpty with
-            | false -> let f = (fun y -> let surf = y |> Leaf.toSurface
-                                         { surf with preTransform = trafo.trafo} |> Leaf.Surfaces
-                                        )
-                       let ids = getSurf |> HMap.toList
-                       let id, surf = ids.[0]
-                       let g = Groups.updateLeaf id f model.surfaces 
-                       { model with surfaces = g} 
-            | _ -> model
+    let updateTrafo (trafo:SurfaceTrafo) (surfaces:hmap<string,PRo3D.Surfaces.Surface>) (model:SurfaceModel) =                                
+      match surfaces.TryFind(trafo.id) with
+        | Some s -> 
+          let f = (fun _ -> { s with preTransform = trafo.trafo } |> Leaf.Surfaces)
+          let g = Groups.updateLeaf s.guid f model.surfaces
+          Log.line "MeasurementImporter: matched and updated %s" s.name
+          { model with surfaces = g} 
+        | None -> model
                  
-
     let updateTrafos (trafos:plist<SurfaceTrafo>) (model:SurfaceModel) =
-        let rec update (p : list<SurfaceTrafo>) (model:SurfaceModel)  =
-            match p with
-              | x::rest -> 
-                match rest with
-                  | [] -> updateTrafo x model
-                  | _ ->  update rest (updateTrafo x model) 
-              | _ -> model
-        update (trafos |> PList.toList) model 
-
+      let surfaces = 
+        model.surfaces.flat 
+          |> HMap.toList 
+          |> List.map(fun (_,v) -> 
+             let surf = v |> Leaf.toSurface
+             (surf.name, surf))
+          |> HMap.ofList
+      
+      let rec update (p : list<SurfaceTrafo>) (model:SurfaceModel)  =
+          match p with
+            | x::rest -> 
+              match rest with
+                | [] -> updateTrafo x surfaces model
+                | _ ->  update rest (updateTrafo x surfaces model) 
+            | _ -> model
+      update (trafos |> PList.toList) model
 
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
         match action with

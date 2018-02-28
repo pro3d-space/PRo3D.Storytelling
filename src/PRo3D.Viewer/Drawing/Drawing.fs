@@ -629,10 +629,11 @@ module DrawingApp =
                         let coneRadius = coneHeight |> Mod.map((*) 0.3)
 
                         // dip arrow       
-                        let! dip = x.dipDirection
+
                         let! lineLength' = lineLength
                         let! center' = center
 
+                        let! dip = x.dipDirection
                         let dipLine = 
                             alist {
                                 yield center'
@@ -649,7 +650,6 @@ module DrawingApp =
 
                         //strikes lines
                         let! strike = x.strikeDirection
-
                         let strikeLine1 =
                             alist {                                                                
                                 yield center' - strike.Normalized * lineLength'

@@ -122,10 +122,8 @@ module MeasurementsImporter =
                         let endPoint = s.endPoint |> trafo.Forward.TransformPos 
                         {s with startPoint = startPoint; endPoint = endPoint; points = ps}
                 )
-            
-       // let key = Guid.NewGuid()
 
-        Log.warn "Found %A" id
+        Log.line "TrafoImporter: Found %A in xml" id
 
         let an = {
                 key = id
