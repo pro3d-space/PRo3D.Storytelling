@@ -151,16 +151,18 @@ module ReferenceSystemApp =
 //["1km";"100m";"10m";"1m";"10cm";"1cm";"1mm";"0.1mm"] 
         let scaleToSize (a:string) =
             match a with
-              | "1km" -> 1000.0
-              | "100m"-> 100.0
-              | "10m" -> 10.0
-              | "2m"  -> 2.0
-              | "1m"  -> 1.0
-              | "10cm"-> 0.1
-              | "1cm" -> 0.01
-              | "1mm" -> 0.001
-              | "0.1mm" -> 0.0001
-              | _     -> 1.0
+              | "100km" -> 100000.0
+              | "10km"  ->  10000.0
+              | "1km"   ->   1000.0
+              | "100m"  ->    100.0
+              | "10m"   ->     10.0
+              | "2m"    ->      2.0
+              | "1m"    ->      1.0
+              | "10cm"  ->      0.1
+              | "1cm"   ->      0.01
+              | "1mm"   ->      0.001
+              | "0.1mm" ->      0.0001
+              | _       ->      1.0
 
         let view<'ma> (mbigConfig : 'ma) (minnerConfig : MInnerConfig<'ma>) (model:MReferenceSystem) (cam:IMod<CameraView>) : ISg<Action> =
                        

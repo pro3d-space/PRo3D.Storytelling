@@ -378,9 +378,7 @@ module DrawingApp =
                 //    i [clazz "arrow right icon"] [] ] |> UI.wrapToolTipBottom "Redo"
                 
             ] 
-         
-      
-
+               
         let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(singleSelect : MAnnotation*list<Index> -> 'outer)(multiSelect : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<Guid>) : alist<DomNode<'outer>> =
                            
             alist { 
@@ -447,7 +445,6 @@ module DrawingApp =
 
                 let! s = model.activeGroup
                 
-                
                 let subNodes = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
                 let icon =
@@ -496,10 +493,11 @@ module DrawingApp =
                     amap {
                         yield clazz "list"
                         let! isExpanded = group.expanded
-                        if isExpanded then yield style "visible"
-                        else yield style "hidden"
+                        if isExpanded then 
+                            yield style "visible"
+                        else 
+                            yield style "hidden"
                     }         
-
 
                 let singleSelect = 
                     fun (a:MAnnotation,path:list<Index>) -> 
@@ -509,28 +507,25 @@ module DrawingApp =
                     fun (a:MAnnotation,path:list<Index>) -> 
                         Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key |> Mod.force, ""))
 
-                let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
+                let lift = fun (a:Groups.Action) -> (GroupsMessage a)
 
                 yield div [ clazz "item"] [
                      Incremental.i itemAttributes AList.empty
-                     div [ clazz "content" ] [                         
+                     div [ clazz "content" ] [
                          div [ clazz "description noselect"] [desc]
                          Incremental.div (AttributeMap.ofAMap childrenAttribs) (                          
                             alist { 
                                 let! isExpanded = group.expanded
-                                if isExpanded then yield! subNodes
+                                if isExpanded then 
+                                    yield! subNodes
 
                                 if isExpanded then 
                                     yield! viewAnnotationsInGroup path model singleSelect multiSelect lift group.leaves
                             }
                          )  
-                                
                      ]
-                ]
-                
+                ]                
             }
-
-
 
         let viewAnnotationGroups (model:MDrawingModel) = 
              require Html.semui (
@@ -662,7 +657,7 @@ module DrawingApp =
                                
             } |> Sg.set
             
-        let getPolyline (a : MAnnotation) =
+        let getPolylinePoints (a : MAnnotation) =
             alist {                
                 let! hasSegments = a.segments |> AList.toMod |> Mod.map (fun d -> d |> PList.count > 0)
                 if hasSegments then
@@ -676,13 +671,13 @@ module DrawingApp =
                     yield! a.points
             }
 
-        let workingAnnotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
+        let drawWorkingAnnotation (anno : IMod<Option<MAnnotation>>)(view : IMod<CameraView>) = 
 
             let polyPoints =
                 alist {
                     let! anno = anno
                     match anno with
-                        | Some a -> yield! getPolyline a
+                        | Some a -> yield! getPolylinePoints a
                         | None -> ()
                 }
 
@@ -704,7 +699,7 @@ module DrawingApp =
                 Sg.dots points color view                     //support points
             ]         
         
-        let textFromAnno (view : IMod<CameraView>) conf (anno : MAnnotation) = 
+        let drawText (view : IMod<CameraView>) conf (anno : MAnnotation) = 
             let points = anno.points |> AList.toMod
             let pos = 
                 points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
@@ -712,7 +707,7 @@ module DrawingApp =
             Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo anno.text anno.textsize.value
 
         let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
-            let points = getPolyline anno
+            let points = getPolylinePoints anno
 
             let optional (sg : ISg<_>) (m : IMod<bool>) : aset<ISg<_>> =
                 adaptive {
@@ -723,7 +718,7 @@ module DrawingApp =
 
             let dots  = dots |> optional (Sg.dots anno.points c view)
             let dns   = anno.showDns  |> optional (drawDns anno view conf)
-            let texts = anno.text |> Mod.map (String.isEmpty >> not) |> optional (textFromAnno view conf anno)
+            let texts = anno.text |> Mod.map (String.isEmpty >> not) |> optional (drawText view conf anno)
             let sgs = ASet.unionMany' [dots; dns; texts]
 
             Sg.ofList [
@@ -742,7 +737,7 @@ module DrawingApp =
             // since set provides more degrees of freedom for the compiler           
             let annoSet = 
                 model.annotations.flat 
-                    |> AMap.chooseM(fun x y -> y |> Mod.map toAnnotationOpt) 
+                    |> AMap.chooseM(fun _ y -> y |> Mod.map toAnnotationOpt) 
                     |> AMap.toASet
 
             let config = 
@@ -755,9 +750,7 @@ module DrawingApp =
                     arrowThickness = msmallConfig.getArrowThickness mbigConfig
                     dnsPlaneSize   = msmallConfig.getDnsPlaneSize   mbigConfig
                 }
-
            
-
             let annotations =
                 aset {
                     for (_,a) in annoSet do
@@ -780,6 +773,6 @@ module DrawingApp =
             Sg.ofList [
                 brush model.hoverPosition; 
                 annotations
-                workingAnnotation model.working cam
+                drawWorkingAnnotation model.working cam
             ]
             
