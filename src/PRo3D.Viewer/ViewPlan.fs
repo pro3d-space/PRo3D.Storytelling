@@ -386,6 +386,7 @@ module ViewPlan =
                 thickness = thickness
                 hasArrow  = Mod.constant true
                 text      = Mod.constant None
+                fix       = Mod.constant false
             }
 
             let lookAt = { marker with direction = lookAtVec; color = (Mod.constant C4b.Yellow)}
@@ -460,6 +461,7 @@ module ViewPlan =
                                 thickness = thickness
                                 hasArrow  = Mod.constant true
                                 text      = Mod.constant None
+                                fix       = Mod.constant false
                             }
 
                             let up = { marker with direction = camUpTrans; color = (Mod.constant C4b.Red)}

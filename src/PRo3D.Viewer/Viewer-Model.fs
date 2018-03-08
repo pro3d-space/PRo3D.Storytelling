@@ -25,14 +25,15 @@ open PRo3d.Align
   
 [<DomainType>] 
 type Scene = {
-    navigation      : NavigationModel
-    interaction     : InteractionMode
-    surfacesModel   : SurfaceModel  
-    config          : ViewConfigModel
-    scenePath       : option<string>
-    referenceSystem : ReferenceSystem
-    bookmarksModel  : BookmarksModel
-    viewPlans       : ViewPlanModel
+    navigation        : NavigationModel
+    interaction       : InteractionMode
+    surfacesModel     : SurfaceModel  
+    config            : ViewConfigModel
+    scenePath         : option<string>
+    referenceSystem   : ReferenceSystem
+    orientationSystem : ReferenceSystem
+    bookmarksModel    : BookmarksModel
+    viewPlans         : ViewPlanModel
     //groups          : AnnotationGroupsModel
 }
 
@@ -124,6 +125,7 @@ module Viewer =
                 config          = ViewConfigModel.initial
                 scenePath       = None
                 referenceSystem = ReferenceSystem.initial
+                orientationSystem = ReferenceSystem.initial
                 bookmarksModel  = BookmarksModel.initial
                 viewPlans       = ViewPlanModel.initial
                 

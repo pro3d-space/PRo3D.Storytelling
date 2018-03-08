@@ -292,8 +292,10 @@ module ViewerApp =
                                 let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
                                 let (refSystem',_)= 
                                     ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
-                                                                
-                                let m = { m with scene = { m.scene with referenceSystem = refSystem' }}
+                                
+                                let origin = new V3d(m.frustum.right, m.frustum.bottom, 0.0)
+                                let os = { refSystem' with origin = origin }
+                                let m = { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = os }}
 
                                 //update camera upvector
                                 updateCameraUp m
@@ -437,6 +439,7 @@ module ViewerApp =
                                 
                 let refsystem',_ = ReferenceSystemApp.update m.scene.config refConfig m.scene.referenceSystem a
                 let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
+                let m = { m with scene = { m.scene with orientationSystem = refsystem' }}
 
                 let m =
                     match a with 
@@ -564,6 +567,15 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ReferenceSystemMessage
 
+            let orSystem =
+                ReferenceSystemApp.Sg.cview
+                    m.scene.config
+                    mrefConfig
+                    m.scene.orientationSystem
+                    m.scene.navigation.camera.view
+                    m.scene.navigation.exploreCenter
+                |> Sg.map ReferenceSystemMessage
+
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation
 
@@ -608,7 +620,7 @@ module ViewerApp =
                 |> Sg.map ViewPlanMessage
 
             //controller, exploreCenter
-            [annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList
+            [annotations; exploreCenter; refSystem; orSystem; alignment; viewPlans] |> Sg.ofList
         
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
@@ -899,10 +911,12 @@ module ViewerApp =
                     ]              
                 }
             )
+
         
         let rest (model : MModel) = 
             [   
                 control
+                //orientationSystem model
                 textOverlays
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
                     div[style "height:41px"][text "spacer"]
