@@ -501,8 +501,9 @@ module ViewerApp =
                     | ViewerMode.Standard -> { m with viewerMode = ViewerMode.Instrument }
                     | ViewerMode.Instrument -> { m with viewerMode = ViewerMode.Standard }
 
-            | OpenSceneFileLocation p,_,_ ->
-                Process.Start("explorer.exe", Path.GetDirectoryName p) |> ignore
+            | OpenSceneFileLocation p,_,_ ->                
+                let argument = sprintf "/select, \"%s\"" p
+                Process.Start("explorer.exe", argument) |> ignore
                 m
             | NoAction s,_,_ -> m
             | _ -> m       
@@ -884,17 +885,30 @@ module ViewerApp =
                 alist {
                     let! view  = m.scene.navigation.camera.view
                     let! up    = m.scene.referenceSystem.up.value
-                    let! north = m.scene.referenceSystem.north.value
-                    
-                    let bearing  = sprintf "Bearing: %s°" ((DipAndStrike.bearing up north view.Forward).ToString("0.00"))
-                    let pitch    = sprintf "Pitch:   %s°" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
-                    let position = sprintf "Pos:     %s"  (view.Location.ToString("0.00"))
+                    let! north = m.scene.referenceSystem.north.value                                        
 
-                    yield div [clazz "ui"; style "position: absolute; left:5px; top: 50px; float:left; height:60px" ][
-                        div[style "color: white; font-family:Consolas; height:20px"][text bearing]
-                        div[style "color: white; font-family:Consolas; height:20px"][text pitch]
-                        div[style "color: white; font-family:Consolas; height:20px"][text position]
-                    ]
+                    let bearing  = sprintf "%s°" ((DipAndStrike.bearing up north view.Forward).ToString("0.00"))
+                    let pitch    = sprintf "%s°" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
+                    let position = view.Location.ToString("0.00")
+                    
+                    let style' = "color: white; font-family:Consolas;"
+
+                    yield div [clazz "ui"; style "position: absolute; top: 50px; float:left" ] [
+                        table [] [
+                            tr[][
+                                td[style style'][text "Bearing: "]
+                                td[style style'][text bearing]
+                            ]
+                            tr[][
+                                td[style style'][text "Pitch: "]
+                                td[style style'][text pitch]
+                            ]
+                            tr[][
+                                td[style style'][text "Position: "]
+                                td[style style'][text position]
+                            ]
+                        ]
+                    ]              
                 }
             )
 
@@ -1097,10 +1111,12 @@ module ViewerApp =
 
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
-        let m = PRo3D.Viewer.Viewer.initial        
-        let m = Scene.loadLastScene runtime signature m   
-        let m = loadRoverData m
-        
+        let m = 
+            PRo3D.Viewer.Viewer.initial 
+              |> Scene.loadLastScene runtime signature
+              |> loadRoverData
+              |> loadLastAnnotations        
+
         App.start {
             unpersist = Unpersist.instance
             threads = pool runtime signature
