@@ -59,7 +59,7 @@ module ReferenceSystem =
     }
 
     let initial = {
-        origin        = V3d.OOO
+        origin        = V3d.IIO
         north         = setV3d V3d.IOO
         up            = setV3d V3d.OOI
         isVisible     = true              
