@@ -89,6 +89,7 @@ type Model = {
     recent          : Recent
     waypoints       : plist<WayPoint>
     frustum         : Frustum
+    overlayFrustum  : Frustum
     aspect          : double
 
     trafoKind       : TrafoKind
@@ -138,6 +139,7 @@ module Viewer =
         picking         = false
         
         frustum         = Frustum.perspective 60.0 0.1 10000.0 1.0
+        overlayFrustum  = Frustum.perspective 20.0 0.1 10000.0 1.0
         aspect          = 1.6
 
         recent          = { recentScenes = HMap.empty }

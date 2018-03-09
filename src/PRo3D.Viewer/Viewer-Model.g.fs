@@ -222,6 +222,7 @@ module Mutable =
         let _recent = MRecent.Create(__initial.recent)
         let _waypoints = MList.Create(__initial.waypoints)
         let _frustum = ResetMod.Create(__initial.frustum)
+        let _overlayFrustum = ResetMod.Create(__initial.overlayFrustum)
         let _aspect = ResetMod.Create(__initial.aspect)
         let _trafoKind = ResetMod.Create(__initial.trafoKind)
         let _trafoMode = ResetMod.Create(__initial.trafoMode)
@@ -239,6 +240,7 @@ module Mutable =
         member x.recent = _recent
         member x.waypoints = _waypoints :> alist<_>
         member x.frustum = _frustum :> IMod<_>
+        member x.overlayFrustum = _overlayFrustum :> IMod<_>
         member x.aspect = _aspect :> IMod<_>
         member x.trafoKind = _trafoKind :> IMod<_>
         member x.trafoMode = _trafoMode :> IMod<_>
@@ -261,6 +263,7 @@ module Mutable =
                 MRecent.Update(_recent, v.recent)
                 MList.Update(_waypoints, v.waypoints)
                 ResetMod.Update(_frustum,v.frustum)
+                ResetMod.Update(_overlayFrustum,v.overlayFrustum)
                 ResetMod.Update(_aspect,v.aspect)
                 ResetMod.Update(_trafoKind,v.trafoKind)
                 ResetMod.Update(_trafoMode,v.trafoMode)
@@ -332,6 +335,12 @@ module Mutable =
                     override x.Get(r) = r.frustum
                     override x.Set(r,v) = { r with frustum = v }
                     override x.Update(r,f) = { r with frustum = f r.frustum }
+                }
+            let overlayFrustum =
+                { new Lens<PRo3D.Viewer.Model, Aardvark.Base.Frustum>() with
+                    override x.Get(r) = r.overlayFrustum
+                    override x.Set(r,v) = { r with overlayFrustum = v }
+                    override x.Update(r,f) = { r with overlayFrustum = f r.overlayFrustum }
                 }
             let aspect =
                 { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.double>() with

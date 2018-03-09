@@ -154,16 +154,13 @@ module ReferenceSystemApp =
                  
             } |> Sg.set 
 
-        let directionMarkerFix (near:IMod<float>) (cam:IMod<CameraView>) (style : MarkerStyle) (exp:IMod<V3d>) =
-            aset{
-               
-                let! dirs = style.direction
-                
+        let directionMarkerFix (style : MarkerStyle) =
+            aset{ 
+
                 let lineLengthScale = style.size                    
                 let scaledLength = 
                     Mod.map2(fun (str:V3d) s -> str.Normalized * s) style.direction lineLengthScale
                 
-                let! cam1 = cam
                 //let scaledLength = dir * length
                 let al = 
                     alist {
@@ -174,43 +171,19 @@ module ReferenceSystemApp =
                     }
 
                 let posTrafo =
-                    //exp |> Mod.map(fun d -> Trafo3d.Translation(d))
                     style.position |> Mod.map(fun d -> Trafo3d.Translation(d))
-                let camTrafo = Trafo3d.Translation(cam1.Location).Inverse
-                let newTrafo = posTrafo |> Mod.map( fun d -> camTrafo * d )
-                let newTrafoInv = newTrafo |> Mod.map(fun d -> d.Inverse)
-
-                let posTrafoInv =
-                    exp |> Mod.map(fun d -> Trafo3d.Translation(d).Inverse)
                 
-                let nLabelPos = Mod.map2(fun l r -> l + r) style.position scaledLength
-                let nPosTrafo =
-                    nLabelPos |> Mod.map(fun d -> Trafo3d.Translation(d))
+                //let pT = 
+                //    adaptive {
+                //        let! v = cam
+                //        let! modelt = posTrafo
+                //        let! pos = style.position
 
-                
-                let label = 
-                    style.text 
-                      |> Mod.map(fun x ->
-                        match x with 
-                          | Some text -> Sg.text cam near (Mod.constant 60.0) nLabelPos nPosTrafo (Mod.constant text) (Mod.constant 0.05)
-                          | None -> Sg.empty)
-
-
-                let pT = 
-                    adaptive {
-                        let! v = cam
-                        let! modelt = posTrafo
-                        let! pos = style.position
-
-                        return PRo3D.Sg.fixPosition v.ViewTrafo v.Location v.Forward v.Up modelt
-                    }        
+                //        return PRo3D.Sg.fixPosition v.ViewTrafo v.Location v.Forward v.Up modelt
+                //    }        
                 
                 yield PRo3D.Sg.fixLines al style.color (style.thickness |> Mod.map(fun x -> x*2.0)) posTrafo (Mod.constant Guid.Empty) 
-                           //|> Sg.trafo posTrafoInv  
-                yield label |> Sg.dynamic
-                    
-                //yield coneISg style.color radius coneSize coneTrafo //(Mod.constant (Trafo3d.RotateInto(V3d.OOI, dir.Normalized) * Trafo3d.Translation(pos + scaledLength))) //                 
-                 
+                           
             } |> Sg.set 
 
            
@@ -299,18 +272,15 @@ module ReferenceSystemApp =
             ]   |> Sg.onOff(model.isVisible)
 
         let cview<'ma> (mbigConfig : 'ma) (minnerConfig : MInnerConfig<'ma>) (model:MReferenceSystem) (cam:IMod<CameraView>) (explorerCenter:IMod<V3d>) : ISg<Action> =
-            
-            let thickness = minnerConfig.getArrowThickness mbigConfig
-            let near      = minnerConfig.getNearDistance   mbigConfig
-            
-            let size = model.selectedScale |> Mod.map scaleToSize
+          
+            let size = Mod.constant(1.0) //model.selectedScale |> Mod.map scaleToSize
 
             let styleUp : MarkerStyle = {
                 position  = model.origin
                 direction = model.up.value
                 color     = Mod.constant C4b.Blue
                 size      = size
-                thickness = thickness
+                thickness = Mod.constant(2.0)
                 hasArrow  = Mod.constant false
                 text      = Mod.constant None
                 fix       = Mod.constant true
@@ -321,30 +291,27 @@ module ReferenceSystemApp =
                 direction = model.north.value
                 color     = Mod.constant C4b.Red
                 size      = size
-                thickness = thickness
+                thickness = Mod.constant(2.0)
                 hasArrow  = Mod.constant true
                 text      = Mod.constant (Some "N")
                 fix       = Mod.constant true
             }
 
-            let pT = 
-                adaptive {
-                    let! v = cam
-                    let! modelt = (model.origin |> Mod.map Trafo3d.Translation)
-                    let! pos = model.origin
+            //let pT = 
+            //    adaptive {
+            //        let! v = cam
+            //        let! modelt = (model.origin |> Mod.map Trafo3d.Translation)
+            //        let! pos = model.origin
 
-                    return PRo3D.Sg.fixPosition v.ViewTrafo v.Location v.Forward v.Up modelt
-                    //return PRo3D.Sg.screenAligned v.Forward v.Up modelt
-                }        
+            //        return PRo3D.Sg.fixPosition v.ViewTrafo v.Location v.Forward v.Up modelt
+            //        //return PRo3D.Sg.screenAligned v.Forward v.Up modelt
+            //    }        
 
-            let sizeText = Sg.text cam near (Mod.constant 60.0) model.origin (model.origin |> Mod.map Trafo3d.Translation) model.selectedScale (Mod.constant 0.05)
-                              
+        
             Sg.ofList [
-                point model.origin (Mod.constant C4b.Red) cam
-                sizeText
-                directionMarkerFix near cam styleUp explorerCenter
-                directionMarkerFix near cam styleNorth explorerCenter              
-            ]  |> Sg.onOff(model.isVisible)
+                directionMarkerFix styleUp 
+                directionMarkerFix styleNorth   //near cam styleNorth explorerCenter              
+            ]  //|> Sg.onOff(model.isVisible)
                 
 
     module UI =

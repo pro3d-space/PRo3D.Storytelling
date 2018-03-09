@@ -131,13 +131,13 @@ module Shader =
             let right = uniform.ViewTrafo.C0
             let up = uniform.ViewTrafo.C1
             let forw = uniform.ViewTrafo.C2
-            let camPos = uniform.CameraLocation
-            let mTrans = new M44d(
-                            1.0, 0.0, 0.0, 1.0,
-                            0.0, 1.0, 0.0, 1.0,
-                            0.0, 0.0, 1.0, 0.0,
-                            0.0, 0.0, 0.0,      1.0
-                        )
+            //let camPos = uniform.CameraLocation
+            //let mTrans = new M44d(
+            //                1.0, 0.0, 0.0, 1.0,
+            //                0.0, 1.0, 0.0, 1.0,
+            //                0.0, 0.0, 1.0, 0.0,
+            //                0.0, 0.0, 0.0,      1.0
+            //            )
             let mRot = new M44d(
                         right.X, up.X, forw.X, 0.0,
                         right.Y, up.Y, forw.Y, 0.0,
@@ -145,34 +145,32 @@ module Shader =
                         0.0,     0.0,  0.0,    1.0
                     )
             
-            let pR = uniform.ProjTrafo.C0
-            let pU = uniform.ProjTrafo.C1
-            let pF = uniform.ProjTrafo.C2
-            let pT = uniform.ProjTrafo.C3
+            //let pR = uniform.ProjTrafo.C0
+            //let pU = uniform.ProjTrafo.C1
+            //let pF = uniform.ProjTrafo.C2
+            //let pT = uniform.ProjTrafo.C3
 
-            let mProj = new M44d(
-                            pR.X, pU.X, pF.X, 0.0,
-                            pR.Y, pU.Y, pF.Y, 0.0,
-                            pR.Z, pU.Z, pF.Z, 0.0,
-                            0.0,     0.0,  0.0,    1.0
-                        )
-            let mProjT = new M44d(
-                            1.0, 0.0, 0.0, pT.X,
-                            0.0, 1.0, 0.0, pT.Y,
-                            0.0, 0.0, 1.0, pT.Z,
-                            0.0, 0.0, 0.0, 1.0
-                        )
-            let transVp = mTrans * v.pos
+            //let mProj = new M44d(
+            //                pR.X, pU.X, pF.X, 0.0,
+            //                pR.Y, pU.Y, pF.Y, 0.0,
+            //                pR.Z, pU.Z, pF.Z, 0.0,
+            //                0.0,     0.0,  0.0,    1.0
+            //            )
+            //let mProjT = new M44d(
+            //                1.0, 0.0, 0.0, pT.X,
+            //                0.0, 1.0, 0.0, pT.Y,
+            //                0.0, 0.0, 1.0, pT.Z,
+            //                0.0, 0.0, 0.0, 1.0
+            //            )
+            //let transVp = mTrans * v.pos
             let newModelView = mRot * uniform.ModelTrafo
-            let vpT =  newModelView * transVp
-            //let vp = mTrans.Inverse * vpT
             let vp = newModelView * v.pos
             let wp = uniform.ModelTrafo * v.pos
             return { 
                 v with
-                    pos  = mProjT * vp //uniform.ProjTrafo *
+                    pos  = vp //uniform.ProjTrafo *
                     wp   = wp
-                    n    = transformNormal v.n
+                    //n    = transformNormal v.n
                     ldir = V3d.Zero - vp.XYZ |> Vec.normalize
             } 
         } 

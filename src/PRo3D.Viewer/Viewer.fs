@@ -219,8 +219,10 @@ module ViewerApp =
                             let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
                             let (refSystem',_)= 
                                 ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
+                            let (orSystem',_)= 
+                                ReferenceSystemApp.update m.scene.config refConfig (m.scene.orientationSystem) refAction  
                                                                 
-                            { m with scene = { m.scene with referenceSystem = refSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB
+                            { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = orSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB
                           | None -> m
                                                                        
             | ImportAnnotationGroups,_,_ ->
@@ -293,10 +295,10 @@ module ViewerApp =
                                 let (refSystem',_)= 
                                     ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
                                 
-                                let origin = new V3d(m.frustum.right, m.frustum.bottom, 0.0)
+                                let origin = new V3d(m.overlayFrustum.right * 0.5, m.overlayFrustum.bottom * 0.5, 1.0)
                                 let os = { refSystem' with origin = origin }
                                 let m = { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = os }}
-
+                                
                                 //update camera upvector
                                 updateCameraUp m
                             | Interactions.PickExploreCenter ->
@@ -439,7 +441,7 @@ module ViewerApp =
                                 
                 let refsystem',_ = ReferenceSystemApp.update m.scene.config refConfig m.scene.referenceSystem a
                 let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
-                let m = { m with scene = { m.scene with orientationSystem = refsystem' }}
+                let m = { m with scene = { m.scene with orientationSystem = {m.scene.orientationSystem with up = refsystem'.up; north = refsystem'.north} }}
 
                 let m =
                     match a with 
@@ -543,9 +545,7 @@ module ViewerApp =
                     onKeyUp (KeyUp)
                     attribute "style" "width:70%; height: 100%; float:left"; ] 
             ]
-
-                                               
-
+            
         let overlayed =
             let annotations =
                 DrawingApp.Sg.view m.scene.config mdrawingConfig m.drawing m.scene.navigation.camera.view
@@ -567,14 +567,14 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ReferenceSystemMessage
 
-            let orSystem =
-                ReferenceSystemApp.Sg.cview
-                    m.scene.config
-                    mrefConfig
-                    m.scene.orientationSystem
-                    m.scene.navigation.camera.view
-                    m.scene.navigation.exploreCenter
-                |> Sg.map ReferenceSystemMessage
+            //let orSystem =
+            //    ReferenceSystemApp.Sg.cview
+            //        m.scene.config
+            //        mrefConfig
+            //        m.scene.orientationSystem
+            //        m.scene.navigation.camera.view
+            //        m.scene.navigation.exploreCenter
+            //    |> Sg.map ReferenceSystemMessage
 
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation
@@ -620,7 +620,7 @@ module ViewerApp =
                 |> Sg.map ViewPlanMessage
 
             //controller, exploreCenter
-            [annotations; exploreCenter; refSystem; orSystem; alignment; viewPlans] |> Sg.ofList
+            [annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList // orSystem;
         
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
@@ -878,7 +878,36 @@ module ViewerApp =
                       | _-> failwith "tab not supported"
                     
                 }
-            Incremental.div AttributeMap.empty nodes                        
+            Incremental.div AttributeMap.empty nodes   
+            
+        let arrowOverlay = 
+            let orSystem =
+                ReferenceSystemApp.Sg.cview
+                    m.scene.config
+                    mrefConfig
+                    m.scene.orientationSystem
+                    m.scene.navigation.camera.view
+                    m.scene.navigation.exploreCenter
+                |> Sg.map ReferenceSystemMessage
+                                                                       
+            let att2 = 
+                AttributeMap.unionMany [
+                    //renderControlAttributes m.scene.navigation
+                    [attribute "style" "width:10%; height: 20%; position: absolute; bottom: 10px; left: 10px; float:left"; attribute "data-samples" "8" ] |> AttributeMap.ofList //"width:10%; height: 20%; position: absolute; top: 100px; float:left"
+                    AttributeMap.ofList [
+                        //onKeyDown (KeyDown)
+                        //onKeyUp (KeyUp)
+                        attribute "style" "width:10%; height: 20%; position: absolute; bottom: 10px; left: 10px; float:left"; ] // right: 400px
+                ]
+            let cmds    = ViewerUtils.renderCommands AList.empty ([orSystem]|> Sg.ofList) m
+            let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.overlayFrustum//(Mod.constant(Frustum.perspective 20.0 0.1 10000.0 1.0))//m.frustum          
+            let control = (DomNode.RenderControl(att2, cam, cmds, None))
+            Incremental.div (AttributeMap.ofList[attribute "style" "color: #1B1C1E; border:5px"]) (   
+                alist {
+                    yield control
+                }
+            )
+
         
         let textOverlays = 
             Incremental.div (AttributeMap.Empty) (   
@@ -894,6 +923,7 @@ module ViewerApp =
                     let style' = "color: white; font-family:Consolas;"
 
                     yield div [clazz "ui"; style "position: absolute; top: 50px; float:left" ] [
+                        //arrowOverlay
                         table [] [
                             tr[][
                                 td[style style'][text "Bearing: "]
@@ -913,11 +943,14 @@ module ViewerApp =
             )
 
         
+        
         let rest (model : MModel) = 
             [   
                 control
                 //orientationSystem model
+                arrowOverlay
                 textOverlays
+                
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
                     div[style "height:41px"][text "spacer"]
                     //Incremental.div AttributeMap.empty (scenePath2 model) 

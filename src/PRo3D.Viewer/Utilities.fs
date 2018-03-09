@@ -295,8 +295,7 @@ module Sg =
             //|> Sg.depthTest (Mod.constant DepthTestMode.None)
 
     let fixLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
-        let box = points |> AList.toMod |> Mod.map (fun d -> if d.Count > 2 then Box3d d else Box3d.Unit)
-
+        
         let edges = edgeLines false points trafo
         let trafoInv = trafo |> Mod.map(fun d -> d.Inverse)                                                
         edges
@@ -308,7 +307,7 @@ module Sg =
                 do! DefaultSurfaces.vertexColor
                 do! DefaultSurfaces.thickLine    
             }                               
-            //|> Sg.trafo trafoInv
+            |> Sg.trafo trafoInv
             |> Sg.uniform "LineWidth" width
             
             
