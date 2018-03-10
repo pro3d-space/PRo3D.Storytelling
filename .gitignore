@@ -27,3 +27,4 @@ src\Aardvark.OpcViewer.psess
 **/out
 /src/Fable.UI/npm-debug.log
 /src/PRo3D.DomainModel/bin/Release
+/.paket/Paket.Restore.targets

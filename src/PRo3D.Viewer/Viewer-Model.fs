@@ -25,14 +25,15 @@ open PRo3d.Align
   
 [<DomainType>] 
 type Scene = {
-    navigation      : NavigationModel
-    interaction     : InteractionMode
-    surfacesModel   : SurfaceModel  
-    config          : ViewConfigModel
-    scenePath       : option<string>
-    referenceSystem : ReferenceSystem
-    bookmarksModel  : BookmarksModel
-    viewPlans       : ViewPlanModel
+    navigation        : NavigationModel
+    interaction       : InteractionMode
+    surfacesModel     : SurfaceModel  
+    config            : ViewConfigModel
+    scenePath         : option<string>
+    referenceSystem   : ReferenceSystem
+    orientationSystem : ReferenceSystem
+    bookmarksModel    : BookmarksModel
+    viewPlans         : ViewPlanModel
     //groups          : AnnotationGroupsModel
 }
 
@@ -88,6 +89,7 @@ type Model = {
     recent          : Recent
     waypoints       : plist<WayPoint>
     frustum         : Frustum
+    overlayFrustum  : Frustum
     aspect          : double
 
     trafoKind       : TrafoKind
@@ -124,6 +126,7 @@ module Viewer =
                 config          = ViewConfigModel.initial
                 scenePath       = None
                 referenceSystem = ReferenceSystem.initial
+                orientationSystem = ReferenceSystem.initial
                 bookmarksModel  = BookmarksModel.initial
                 viewPlans       = ViewPlanModel.initial
                 
@@ -136,6 +139,7 @@ module Viewer =
         picking         = false
         
         frustum         = Frustum.perspective 60.0 0.1 10000.0 1.0
+        overlayFrustum  = Frustum.perspective 20.0 0.1 10000.0 1.0
         aspect          = 1.6
 
         recent          = { recentScenes = HMap.empty }

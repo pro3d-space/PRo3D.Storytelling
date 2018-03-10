@@ -194,6 +194,69 @@ module Sg =
                     | None -> [||])
 
     let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
+
+    let fixPosition (viewTrafo: Trafo3d) (campos : V3d) (forw:V3d) (up:V3d) (modelt: Trafo3d) = 
+        //let right = modelt.Forward.C0
+        //let up = modelt.Forward.C1
+        //let forw = modelt.Forward.C2
+        let pos = modelt.Forward.C3
+        let trans = viewTrafo.Forward.C3
+        let transTrafo = 
+            new Trafo3d(
+                new M44d(
+                    1.0, 0.0, 0.0, -trans.X,
+                    0.0, 1.0, 0.0, -trans.Y,
+                    0.0, 0.0, 1.0, -trans.Z,
+                    0.0, 0.0, 0.0, 1.0
+                ),
+                new M44d(
+                    1.0, 0.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0, 0.0,
+                    0.0, 0.0, 1.0, 0.0,
+                    -trans.X, -trans.Y, -trans.Z, 1.0
+                )
+        )
+        let right = forw.Cross up
+        let rot = 
+            new Trafo3d(
+                new M44d(
+                    right.X, up.X, forw.X, pos.X,
+                    right.Y, up.Y, forw.Y, pos.Y,
+                    right.Z, up.Z, forw.Z, pos.Z,
+                    0.0,     0.0,  0.0,    1.0
+                ),
+                new M44d(
+                    right.X, right.Y, right.Z, 0.0,
+                    up.X,    up.Y,    up.Z,    0.0,
+                    forw.X,  forw.Y,  forw.Z,  0.0,
+                    pos.X,     pos.Y,     pos.Z,     1.0
+                )
+        )
+
+        //let mvf = viewTrafo.Forward
+        //let right = mvf.C0
+        //let up = mvf.C1
+        //let forw = mvf.C2
+        
+        let rotTrafo = 
+            new Trafo3d(
+                new M44d(
+                    right.X, up.X, forw.X, 0.0,
+                    right.Y, up.Y, forw.Y, 0.0,
+                    right.Z, up.Z, forw.Z, 0.0,
+                    0.0,     0.0,  0.0,    1.0
+                ),
+                new M44d(
+                    right.X, right.Y, right.Z, 0.0,
+                    up.X,    up.Y,    up.Z,    0.0,
+                    forw.X,  forw.Y,  forw.Z,  0.0,
+                    0.0, 0.0, 0.0, 1.0
+                )
+        )
+       
+        viewTrafo.Inverse * modelt
+        //rotTrafo * inv
+
                     
     let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
         let box = points |> AList.toMod |> Mod.map (fun d -> if d.Count > 2 then Box3d d else Box3d.Unit)
@@ -231,6 +294,23 @@ module Sg =
             //|> Sg.pass linePass
             //|> Sg.depthTest (Mod.constant DepthTestMode.None)
 
+    let fixLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
+        
+        let edges = edgeLines false points trafo
+        let trafoInv = trafo |> Mod.map(fun d -> d.Inverse)                                                
+        edges
+            |> Sg.lines color
+            |> Sg.noEvents
+            |> Sg.trafo trafo
+            |> Sg.shader {
+                do! Aardvark.Opc.Shader.fixPositionTrafo 
+                do! DefaultSurfaces.vertexColor
+                do! DefaultSurfaces.thickLine    
+            }                               
+            |> Sg.trafo trafoInv
+            |> Sg.uniform "LineWidth" width
+            
+            
     let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =
         adaptive {
             let! p = p
@@ -249,7 +329,7 @@ module Sg =
         aset {
             for p in points |> ASet.ofAList do
                 let scale = computeScale view (Mod.constant p) 5.0                               
-                yield mkDotISg color scale (Mod.constant (Trafo3d.Translation(p)))
+                yield mkDotISg color (Mod.constant 0.1) (Mod.constant (Trafo3d.Translation(p)))
         } 
         |> Sg.set
         |> Sg.effect [
@@ -258,7 +338,20 @@ module Sg =
           //  toEffect <| Aardvark.Opc.Shader.stableLight
         ]
 
-    let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) = 
+    let fixDots (points : alist<V3d>) (color : IMod<C4b>) (view : IMod<CameraView>) =
+        aset {
+            for p in points |> ASet.ofAList do
+                let scale = computeScale view (Mod.constant p) 5.0                               
+                yield mkDotISg color (Mod.constant 0.1) (Mod.constant (Trafo3d.Translation(p)))
+        } 
+        |> Sg.set
+        |> Sg.effect [
+            toEffect <| Aardvark.Opc.Shader.fixPositionTrafo
+            toEffect <| DefaultSurfaces.vertexColor
+        ]
+
+    
+    let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) =
         let right = forw.Cross up
         let rotTrafo = 
             new Trafo3d(
@@ -277,6 +370,7 @@ module Sg =
         )
         rotTrafo * modelt
 
+    
     let text (view : IMod<CameraView>) near hfov pos modelTrafo text size =
            
         let invScaleTrafo = 
