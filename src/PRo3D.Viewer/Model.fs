@@ -56,6 +56,12 @@ module Option =
           | true  -> Some v
           | false -> None
 
+type SphericalCoo = {
+        latitude  : double
+        longitude : double
+        altitude  : double
+        radian    : double
+    }
 
 type Points = list<V3d>
 

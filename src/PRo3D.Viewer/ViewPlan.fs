@@ -39,10 +39,30 @@ module ViewPlan =
         | ChangeFocal      of string * Numeric.Action
         | SetVPName        of string
     
+
+    let getLatLonAlt (p:V3d) : SphericalCoo = 
+        let directory = @".\InstrumentStuff" 
+        let test = @".\bin" 
+        let errorCode = CooTrafo.Init(test, directory)
+        printfn "%A" errorCode
+        
+        let mutable lat = double(0.00)
+        let mutable lon = double(0.00)
+        let mutable alt = double(0.00)
+        let bla = CooTrafo.Xyz2LatLonAlt("Mars", p.X, p.Y, p.Z, ref lat, ref lon, ref alt)
+        
+        CooTrafo.DeInit()
+        {
+            latitude = lat;
+            longitude = lon;
+            altitude = alt;
+            radian = 0.0;
+            }
+
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =
         //match path with
         //    | Some p ->
-                let directory = @".\InstrumentStuff" 
+                let directory = @".\InstrumentStuff"
                 let errorCode = IPWrapper.Init(directory, directory)
                 printfn "%A" errorCode
 
