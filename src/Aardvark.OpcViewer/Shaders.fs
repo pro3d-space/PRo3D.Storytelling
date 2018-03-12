@@ -166,11 +166,15 @@ module Shader =
             let newModelView = mRot * uniform.ModelTrafo
             let vp = newModelView * v.pos
             let wp = uniform.ModelTrafo * v.pos
+
+            let n = newModelView.Inverse.Transposed * V4d(v.n, 0.0)
+                        |> Vec.xyz
+                        |> Vec.normalize
             return { 
                 v with
                     pos  = vp //uniform.ProjTrafo *
                     wp   = wp
-                    //n    = transformNormal v.n
+                    n    = n //transformNormal v.n
                     ldir = V3d.Zero - vp.XYZ |> Vec.normalize
             } 
         } 

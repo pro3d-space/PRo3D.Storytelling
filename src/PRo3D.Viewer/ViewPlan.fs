@@ -45,19 +45,25 @@ module ViewPlan =
         let test = @".\bin" 
         let errorCode = CooTrafo.Init(test, directory)
         printfn "%A" errorCode
+
+        let init = double(0.0)
         
-        let mutable lat = double(0.00)
-        let mutable lon = double(0.00)
-        let mutable alt = double(0.00)
-        let bla = CooTrafo.Xyz2LatLonAlt("Mars", p.X, p.Y, p.Z, ref lat, ref lon, ref alt)
+        let mutable lat = init
+        let mutable lon = init
+        let mutable alt = init
+        let pX = double p.X
+        let pY = double p.Y
+        let pZ = double p.Z
+        let bla = CooTrafo.Xyz2LatLonAlt("Mars", pX, pY, pZ, ref lat, ref lon, ref alt)
         
+        let sc = {
+                    latitude = lat;
+                    longitude = lon;
+                    altitude = alt;
+                    radian = 0.0;
+                    }
         CooTrafo.DeInit()
-        {
-            latitude = lat;
-            longitude = lon;
-            altitude = alt;
-            radian = 0.0;
-            }
+        sc
 
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =
         //match path with
