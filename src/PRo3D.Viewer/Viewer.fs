@@ -158,9 +158,17 @@ module ViewerApp =
                 let ag = m.drawing.annotations 
                 { m with drawing = { m.drawing with annotations = Groups.update ag msg}}
             | DrawingMessage msg,_,_-> //Interactions.DrawAnnotation
-                let drawing = 
-                    DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
-                { m with drawing = drawing; } |> stash
+                match msg with
+                | Drawing.FlyToAnnotation id ->
+                    let _a = m |> Lenses.get _flat |> HMap.tryFind id |> Option.map Leaf.toAnnotation
+                    match _a with 
+                      | Some a ->                                                
+                          m |> lookAtBoundingBox (Box3d(a.points |> PList.toList))
+                      | None -> m                    
+                | _ ->
+                    let drawing = 
+                        DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
+                    { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
                 match msg with
                     | SurfaceApp.Action.FlyToSurface id -> 
@@ -920,10 +928,10 @@ module ViewerApp =
                     let pitch    = sprintf "%s°" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
                     let position = view.Location.ToString("0.00")
 
-                    let spericalc = ViewPlan.getLatLonAlt(view.Location)
-                    let lon = sprintf "%s°" ((spericalc.longitude).ToString("0.00"))
-                    let lat = sprintf "%s°" ((spericalc.latitude).ToString("0.00"))
-                    let alt = sprintf "%s°" ((spericalc.altitude).ToString("0.00"))
+                    //let spericalc = ViewPlan.getLatLonAlt(view.Location)
+                    //let lon = sprintf "%s°" ((spericalc.longitude).ToString("0.00"))
+                    //let lat = sprintf "%s°" ((spericalc.latitude).ToString("0.00"))
+                    //let alt = sprintf "%s°" ((spericalc.altitude).ToString("0.00"))
                     
                     let style' = "color: white; font-family:Consolas;"
 
@@ -942,18 +950,18 @@ module ViewerApp =
                                 td[style style'][text "Position: "]
                                 td[style style'][text position]
                             ]
-                            tr[][
-                                td[style style'][text "Longitude: "]
-                                td[style style'][text lon]
-                            ]
-                            tr[][
-                                td[style style'][text "Latitude: "]
-                                td[style style'][text lat]
-                            ]
-                            tr[][
-                                td[style style'][text "Altitude: "]
-                                td[style style'][text alt]
-                            ]
+                            //tr[][
+                            //    td[style style'][text "Longitude: "]
+                            //    td[style style'][text lon]
+                            //]
+                            //tr[][
+                            //    td[style style'][text "Latitude: "]
+                            //    td[style style'][text lat]
+                            //]
+                            //tr[][
+                            //    td[style style'][text "Altitude: "]
+                            //    td[style style'][text alt]
+                            //]
                         ]
                     ]              
                 }
@@ -1154,11 +1162,13 @@ module ViewerApp =
           | None -> m
 
     let loadLastAnnotations (m:Model) = 
-        match Serialization.fileExists "./lastmeasure" with
-          | Some path -> 
-                Groups.loadGroups path |> Lenses.set' _annotations m
-          | None -> m
-
+      match Serialization.fileExists "./lastmeasure" with
+        | Some path ->             
+            let groups = Groups.tryLoadGroups path 
+            match groups with
+            | Some g -> g |> Lenses.set' _annotations m
+            | None -> m
+        | None -> m
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = 

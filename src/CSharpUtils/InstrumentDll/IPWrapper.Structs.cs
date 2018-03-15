@@ -390,7 +390,7 @@ namespace ViewPlanner
 
             for (int i = 0; i < count; i++)
             {
-                outputArray[i] = (T)Marshal.PtrToStructure(elements[i], typeof(T));
+                outputArray[i] = (T)Marshal.PtrToStructure(elements[i], typeof(T));                
             }
 
             return outputArray;

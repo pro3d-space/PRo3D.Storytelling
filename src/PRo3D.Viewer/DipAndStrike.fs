@@ -54,13 +54,34 @@ module DipAndStrike =
                 let mutable plane = PlaneFitting.FitPlane3dLeastSquares(v3dArray)
                 let bb = new Box3d(points)
 
+                let distances = 
+                  points 
+                    |> PList.toList
+                    |> List.map(fun x -> (plane.Height x).Abs())
+
+                let avg = distances |> List.average
+                let max = distances |> List.max
+                let min = distances |> List.min
+
+                let sosq = 
+                  distances 
+                    |> List.map(fun (x:double) ->
+                        let k = (x.Abs() - avg)
+                        Math.Pow(k,2.0))
+                    |> List.sum
+
+                let std = Math.Sqrt (sosq / float (distances.Length - 1))
+
+                Log.line("[dipandStrike]: avg %f; max %f; min %f; std: %f") avg max min std
+
                 let horP = new Plane3d(up, V3d.Zero)
 
                 //correct plane orientation - check if normals point in same direction
                 let height = horP.Height(plane.Normal)
-                let planeNormal = match height.Sign() with
-                                    | -1 -> plane.Normal.Negated
-                                    | _  -> plane.Normal
+                let planeNormal = 
+                  match height.Sign() with
+                  | -1 -> plane.Normal.Negated
+                  | _  -> plane.Normal
 
                 plane.Normal <- planeNormal
 
@@ -74,13 +95,20 @@ module DipAndStrike =
                 let v = strike.Cross(up).Normalized
 
                 let dns = {
-                    plane = plane
-                    dipAngle = Math.Acos(v.Dot(dip)).DegreesFromRadians()
-                    dipDirection = dip
+                    plane           = plane
+                    dipAngle        = Math.Acos(v.Dot(dip)).DegreesFromRadians()
+                    dipDirection    = dip
                     strikeDirection = strike
-                    dipAzimuth = computeAzimuth v north up
-                    strikeAzimuth = computeAzimuth strike north up
-                    centerOfMass = bb.Center
+                    dipAzimuth      = computeAzimuth v north up
+                    strikeAzimuth   = computeAzimuth strike north up
+                    centerOfMass    = bb.Center
+                    error           = 
+                      { 
+                        avg = avg
+                        min = min
+                        max = max
+                        std = std
+                      }
                 }
                 Some dns
             | _ -> None 

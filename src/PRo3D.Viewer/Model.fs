@@ -78,6 +78,22 @@ type Semantic =
     | None = 7
 
 [<DomainType>]
+type Statistics = {
+  avg : float
+  min : float
+  max : float
+  std : float
+}
+
+module Statistics = 
+  let init = {
+    avg = Double.NaN
+    min = Double.NaN
+    max = Double.NaN
+    std = Double.NaN
+  }
+
+[<DomainType>]
 type DipAndStrikeResults = {
 
     plane : Plane3d
@@ -89,6 +105,8 @@ type DipAndStrikeResults = {
     strikeAzimuth : float
 
     centerOfMass : V3d
+
+    error : Statistics
 }
 
 [<DomainType>]

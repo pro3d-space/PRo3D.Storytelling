@@ -30,7 +30,7 @@ type Action =
         | Finish                
         | Undo
         | Redo
-        //| ToggleVisiblity         of Guid
+        | FlyToAnnotation  of Guid
         //| RemoveAnnotation        of list<Index>*Guid       
         | Send
         | Export

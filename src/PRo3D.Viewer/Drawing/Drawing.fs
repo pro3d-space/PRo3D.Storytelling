@@ -277,13 +277,18 @@ module DrawingApp =
                         Serialization.save "./lastMeasure" model.annotations |> ignore
                         { model with annotations = Serialization.save p model.annotations }
             | Load,_ ->                
-                match Dialogs.openDialog w with
+              match Dialogs.openDialog w with
+                | None -> model
+                | Some path -> 
+                  let groups = Groups.tryLoadGroups path
+                  match groups with 
+                    | Some g -> { model with annotations = g  }
                     | None -> model
-                    | Some path -> 
-                        { model with annotations = Groups.loadGroups path }
-            | QuickLoad,_ ->  
-                let groups = Groups.loadGroups "./lastMeasure" 
-                { model with annotations = groups }
+            | QuickLoad,_ ->                
+              let groups = Groups.tryLoadGroups "./lastMeasure" 
+              match groups with 
+                | Some g -> { model with annotations = g  }
+                | None -> model
             | Send, _ ->                                                      
                 model
             | Clear,_ ->
@@ -300,6 +305,8 @@ module DrawingApp =
             | GroupsMessage msg,_ ->
                 let m = { model with annotations = Groups.update model.annotations msg}
                 m
+            | FlyToAnnotation msg, _ ->
+                model
             | SaveCSV, _ -> 
                 let annotations =
                     model.annotations.flat
@@ -379,65 +386,67 @@ module DrawingApp =
                 
             ] 
                
-        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(singleSelect : MAnnotation*list<Index> -> 'outer)(multiSelect : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<Guid>) : alist<DomNode<'outer>> =
-                           
-            alist { 
+        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(singleSelect : MAnnotation*list<Index> -> 'outer)(multiSelect : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<Guid>) : alist<DomNode<'outer>> =                         
+          alist { 
+            let annotations = 
+              annotations
+                |> AList.choose (
+                  fun x -> 
+                      let anno = 
+                        model.flat 
+                          |> AMap.tryFind x 
+                          |> Mod.map(fun y -> 
+                             match y with 
+                               | Some k -> Some (k |> Mod.force)
+                               | None -> Log.error "annotation with guid %A does not exist" x; None)                                
+                      match anno |> Mod.force with
+                        | Some a -> 
+                          match a with
+                            | MAnnotations manno -> Some manno
+                            | _ -> None
+                        | None -> None
+                  )                          
 
-                let annotations = 
-                    annotations
-                      |> AList.choose (
-                        fun x -> 
-                            let anno = 
-                              model.flat 
-                                |> AMap.tryFind x 
-                                |> Mod.map(fun y -> 
-                                   match y with 
-                                     | Some k -> Some (k |> Mod.force)
-                                     | None -> Log.error "annotation with guid %A does not exist" x; None)                                
-                            match anno |> Mod.force with
-                              | Some a -> 
-                                match a with
-                                  | MAnnotations manno -> Some manno
-                                  | _ -> None
-                              | None -> None
-                        )                          
+            for a in annotations do 
+              let singleSelect = fun _ -> singleSelect(a,path)
+              let multiSelect  = fun _ -> multiSelect(a,path)
+              let! selected = a |> isSingleSelect model
+                      
+              let! c = mkColor model a
+              let bgc = sprintf "color: %s" (Html.ofC4b c)
+              let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
 
-                for a in annotations do 
-                    let singleSelect = fun _ -> singleSelect(a,path)
-                    let multiSelect  = fun _ -> multiSelect(a,path)
-                    let! selected = a |> isSingleSelect model
-                            
-                    let! c = mkColor model a
-                    let bgc = sprintf "color: %s" (Html.ofC4b c)
-                    let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
+              let! visible = a.visible
+              let visibleIcon = if visible then "unhide icon" else "hide icon"
+              let key = a.key |> Mod.force
 
-                    let! visible = a.visible
-                    let visibleIcon = if visible then "unhide icon" else "hide icon"
-                    let key = a.key |> Mod.force
+              yield div [clazz "item"] [
+                i [clazz "large Sticky Note middle aligned icon";onClick multiSelect; style bgc][]
+                div [clazz "content"] [
+                  let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
+                  let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
 
-                    yield div [clazz "item"] [
-                        i [clazz "large Sticky Note middle aligned icon";onClick multiSelect; style bgc][]
-                        div [clazz "content"] [
-                            let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
-                            let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.toMod |> Mod.map (fun d -> d.Count)) a.surfaceName
+                  //header
+                  yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
+                      alist {
+                          if selected then
+                              yield div[onClick singleSelect][u[][Incremental.text header]]
+                          else
+                              yield div[onClick singleSelect][Incremental.text header]
+                          //yield Incremental.text header
+                          yield i [
+                            clazz visibleIcon
+                            onClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"
 
-                            //header
-                            yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
-                                alist {
-                                    if selected then
-                                        yield div[onClick singleSelect][u[][Incremental.text header]]
-                                    else
-                                        yield div[onClick singleSelect][Incremental.text header]
-                                    //yield Incremental.text header
-                                    yield i [ clazz visibleIcon;  onClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))] [] |> UI.wrapToolTip "Toggle"
-                                } 
-                            ) 
+                          yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation key)][] |> UI.wrapToolTip "FlyTo"
+                      } 
+                  ) 
 
-                            //description
-                            yield div [clazz "description";style ac ] [Incremental.text desc]      
-                        ]
-                    ]
-            }     
+                  //description
+                  yield div [clazz "description";style ac ] [Incremental.text desc]      
+                ]
+              ]
+          }     
               
         let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<Action>> =
 

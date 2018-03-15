@@ -56,6 +56,9 @@ module ViewPlan =
         let pZ = double p.Z
         let bla = CooTrafo.Xyz2LatLonAlt("Mars", pX, pY, pZ, ref lat, ref lon, ref alt)
         
+        if bla <> 0 then
+            Log.line "cootrafo errorcode %A" bla
+
         let sc = {
                     latitude = lat;
                     longitude = lon;
