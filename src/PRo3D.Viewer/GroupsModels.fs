@@ -102,6 +102,7 @@ type GroupsModel = {
     activeGroup          : TreeSelection
     activeChild          : TreeSelection
     flat                 : hmap<Guid,Leaf>
+    groupsLookup         : hmap<Guid,string>
     lastSelectedItem     : SelectedItem
     selectedLeaves       : hset<TreeSelection> 
     singleSelectLeaf     : option<Guid>
@@ -157,22 +158,24 @@ module Leaf =
                     | _ -> None )
 
     let childrenToBookmarks bms =
-        bms
-            |> HSet.choose(fun x -> match x with
-                                        | Leaf.Bookmarks b -> Some b
-                                        | _ -> None )
+      bms
+        |> HSet.choose(fun x -> 
+          match x with
+            | Leaf.Bookmarks b -> Some b
+            | _ -> None )
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module GroupsModel =
     let initial = {
-        rootGroup = Group.initRoot
-        activeGroup = Group.initTreeSelection
-        activeChild = Group.initTreeSelection
-        flat = hmap.Empty
+        rootGroup        = Group.initRoot
+        activeGroup      = Group.initTreeSelection
+        activeChild      = Group.initTreeSelection
+        flat             = hmap.Empty
+        groupsLookup     = hmap.Empty
         lastSelectedItem = SelectedItem.Child
-        selectedLeaves = hset.Empty
+        selectedLeaves   = hset.Empty
         singleSelectLeaf = None
-        }
+    }
 
         
 [<DomainType>]

@@ -37,6 +37,10 @@ open PRo3D.Groups
 //open Mutable.AnnotationGroupModule.Lens
  
 module ViewerApp =    
+
+    type muh = {
+       error : double
+    }
             
     open Surface   
     open System.Collections.Concurrent   
@@ -61,6 +65,7 @@ module ViewerApp =
     let _drawing         = Model.Lens.drawing
     let _annotations     = _drawing |. DrawingModel.Lens.annotations
     let _flat            = _annotations  |. GroupsModel.Lens.flat    
+    let _lookUp          = _annotations  |. GroupsModel.Lens.groupsLookup
     let _groups          = _annotations  |. GroupsModel.Lens.rootGroup |. Node.Lens.subNodes
        
     let lookAtData (m : Model) =         
@@ -237,15 +242,44 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | Some x -> 
                         //update groups
-                        let imported, flat = AnnotationGroupsImporter.startImporter x m.scene.referenceSystem
+                        let imported, flat, lookup = AnnotationGroupsImporter.startImporter x m.scene.referenceSystem
 
                         let newGroups = 
                             m.drawing.annotations.rootGroup.subNodes
                               |> PList.append' imported
 
-                        let m' = m |> Lenses.set _groups newGroups                        
+                        let inline median input = 
+                          let sorted = input |> Seq.toArray |> Array.sort
+                          let m1,m2 = 
+                              let len = sorted.Length-1 |> float
+                              len/2. |> floor |> int, len/2. |> ceil |> int 
+                          (sorted.[m1] + sorted.[m2] |> float)/2.
 
-                        m' |> Lenses.set _flat flat
+                        let stuff = 
+                          flat 
+                            |> HMap.toList 
+                            |> List.map snd 
+                            |> List.map Leaf.toAnnotation
+                            |> List.filter(fun x -> x.geometry = Geometry.DnS)
+                            |> List.map(fun x -> x.points |> DipAndStrike.calculateDnsErrors)
+                            |> List.concat
+                            
+                        let avg = stuff |> List.average
+                        let med = stuff |> List.toArray |> median
+                        let std = DipAndStrike.computeStandardDeviation avg stuff
+                        Log.line "%f %f %f" std avg med
+                            
+                        let result = stuff |> List.map(fun x -> { error = x } )
+
+
+
+                        let csvTable = Csv.Seq.csv ";" true id result
+                        Csv.Seq.write ("./error.csv") csvTable |> ignore
+
+                        m 
+                          |> Lenses.set _groups newGroups
+                          |> Lenses.set _lookUp lookup
+                          |> Lenses.set _flat flat
                     | None -> m   
             | ImportSurfaceTrafo,_,_ ->
                 match Dialogs.openDialog w with
@@ -973,7 +1007,7 @@ module ViewerApp =
             [   
                 control
                 //orientationSystem model
-                arrowOverlay
+               // arrowOverlay
                 textOverlays
                 
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [

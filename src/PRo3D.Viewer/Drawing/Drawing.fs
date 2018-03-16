@@ -313,10 +313,10 @@ module DrawingApp =
                         |> Leaf.toAnnotations
                         |> HMap.toList 
                         |> List.map snd
-                        |> List.map Csv.exportAnnotation
-                        |> Seq.ofList
+                        |> List.map (Csv.exportAnnotation model.annotations.groupsLookup)
+                      //  |> Seq.ofList
                         
-                let csvTable = Csv.Seq.csv ";" true (fun x -> x) annotations 
+                let csvTable = Csv.Seq.csv ";" true id annotations
 
                 match Dialogs.saveDialog w with
                     | None -> model

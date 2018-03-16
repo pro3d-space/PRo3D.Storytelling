@@ -38,6 +38,32 @@ module DipAndStrike =
         let ground = new Plane3d(up.Normalized, 0.0)
         Math.Asin(ground.Height(dir)).DegreesFromRadians()
 
+    let computeStandardDeviation avg (input : List<float>) =
+
+      let sosq = 
+        input 
+          |> List.map(fun (x:double) ->
+              let k = (x.Abs() - avg)
+              Math.Pow(k,2.0))
+          |> List.sum
+
+      Math.Sqrt (sosq / float (input.Length - 1))
+
+    let calculateDnsErrors (points:plist<V3d>) =
+      let points = points |> PList.filter(fun x -> not x.IsNaN)
+
+      if points.Count < 3 then []
+      else
+        let v3dArray = points.AsList |> List.toArray
+        let mutable plane = PlaneFitting.FitPlane3dLeastSquares(v3dArray)
+
+        let distances = 
+          points 
+            |> PList.toList
+            |> List.map(fun x -> (plane.Height x))
+
+        distances
+      
 
     let calculateDipAndStrikeResults (up:V3d) (north : V3d) (points:plist<V3d>)=
 
@@ -62,15 +88,8 @@ module DipAndStrike =
                 let avg = distances |> List.average
                 let max = distances |> List.max
                 let min = distances |> List.min
-
-                let sosq = 
-                  distances 
-                    |> List.map(fun (x:double) ->
-                        let k = (x.Abs() - avg)
-                        Math.Pow(k,2.0))
-                    |> List.sum
-
-                let std = Math.Sqrt (sosq / float (distances.Length - 1))
+             
+                let std = distances |> computeStandardDeviation avg
 
                 Log.line("[dipandStrike]: avg %f; max %f; min %f; std: %f") avg max min std
 

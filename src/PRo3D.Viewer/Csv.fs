@@ -41,13 +41,15 @@ module Csv =
         errorStd      : float
 
         text          : string
+        groupName     : string
 
         x             : double
         y             : double
         z             : double
     }
 
-    let exportAnnotation (a:Annotation) =
+    let exportAnnotation (lookUp) (a:Annotation) =
+      
       let results = 
         match a.results with
           | Some r -> r
@@ -90,19 +92,19 @@ module Csv =
       let c = Box3d(points).Center
 
       {   
-        key           = a.key;
-        geometry      = a.geometry;
-        projection    = a.projection;
-        semantic      = a.semantic;
-        color         = a.color.ToString();
-        thickness     = a.thickness.value;        
-        height        = results.height;
-        heightDelta   = results.heightDelta;
-        length        = results.length;
-        wayLength     = results.wayLength;        
-        dipAngle      = dnsResults.dipAngle;
-        dipAzimuth    = dnsResults.dipAzimuth;
-        strikeAzimuth = dnsResults.strikeAzimuth;
+        key           = a.key
+        geometry      = a.geometry
+        projection    = a.projection
+        semantic      = a.semantic
+        color         = a.color.ToString()
+        thickness     = a.thickness.value
+        height        = results.height
+        heightDelta   = results.heightDelta
+        length        = results.length
+        wayLength     = results.wayLength
+        dipAngle      = dnsResults.dipAngle
+        dipAzimuth    = dnsResults.dipAzimuth
+        strikeAzimuth = dnsResults.strikeAzimuth
 
         errorAvg = dnsResults.errorAvg
         errorMin = dnsResults.errorMin 
@@ -110,15 +112,12 @@ module Csv =
         errorStd = dnsResults.errorStd
 
         text          = a.text;
+        groupName     = lookUp |> HMap.find a.key
+
         x             = c.X;
         y             = c.Y;
         z             = c.Z;
       }
-
-
-    let getAnnorationExportData (annotations: list<Annotation>) =
-        annotations |> List.map(fun x -> exportAnnotation x)
-
 
     // Code from http://www.fssnip.net/3U/title/CSV-writer ----------------------------------------------------------------
     type Array =
