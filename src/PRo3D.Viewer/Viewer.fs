@@ -248,33 +248,31 @@ module ViewerApp =
                             m.drawing.annotations.rootGroup.subNodes
                               |> PList.append' imported
 
-                        let inline median input = 
-                          let sorted = input |> Seq.toArray |> Array.sort
-                          let m1,m2 = 
-                              let len = sorted.Length-1 |> float
-                              len/2. |> floor |> int, len/2. |> ceil |> int 
-                          (sorted.[m1] + sorted.[m2] |> float)/2.
+                        //let inline median input = 
+                        //  let sorted = input |> Seq.toArray |> Array.sort
+                        //  let m1,m2 = 
+                        //      let len = sorted.Length-1 |> float
+                        //      len/2. |> floor |> int, len/2. |> ceil |> int 
+                        //  (sorted.[m1] + sorted.[m2] |> float)/2.
 
-                        let stuff = 
-                          flat 
-                            |> HMap.toList 
-                            |> List.map snd 
-                            |> List.map Leaf.toAnnotation
-                            |> List.filter(fun x -> x.geometry = Geometry.DnS)
-                            |> List.map(fun x -> x.points |> DipAndStrike.calculateDnsErrors)
-                            |> List.concat
+                        //let stuff = 
+                        //  flat 
+                        //    |> HMap.toList 
+                        //    |> List.map snd 
+                        //    |> List.map Leaf.toAnnotation
+                        //    |> List.filter(fun x -> x.geometry = Geometry.DnS)
+                        //    |> List.map(fun x -> x.points |> DipAndStrike.calculateDnsErrors)
+                        //    |> List.concat
                             
-                        let avg = stuff |> List.average
-                        let med = stuff |> List.toArray |> median
-                        let std = DipAndStrike.computeStandardDeviation avg stuff
-                        Log.line "%f %f %f" std avg med
+                        //let avg = stuff |> List.average
+                        //let med = stuff |> List.toArray |> median
+                        //let std = DipAndStrike.computeStandardDeviation avg stuff
+                        //Log.line "%f %f %f" std avg med
                             
-                        let result = stuff |> List.map(fun x -> { error = x } )
+                        //let result = stuff |> List.map(fun x -> { error = x } )
 
-
-
-                        let csvTable = Csv.Seq.csv ";" true id result
-                        Csv.Seq.write ("./error.csv") csvTable |> ignore
+                        //let csvTable = Csv.Seq.csv ";" true id result
+                        //Csv.Seq.write ("./error.csv") csvTable |> ignore
 
                         m 
                           |> Lenses.set _groups newGroups
