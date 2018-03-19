@@ -13,25 +13,28 @@ module Mutable =
     type MStatistics(__initial : PRo3D.Statistics) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Statistics> = Aardvark.Base.Incremental.EqModRef<PRo3D.Statistics>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Statistics>
-        let _avg = ResetMod.Create(__initial.avg)
+        let _average = ResetMod.Create(__initial.average)
         let _min = ResetMod.Create(__initial.min)
         let _max = ResetMod.Create(__initial.max)
-        let _std = ResetMod.Create(__initial.std)
+        let _stdev = ResetMod.Create(__initial.stdev)
+        let _sumOfSquares = ResetMod.Create(__initial.sumOfSquares)
         
-        member x.avg = _avg :> IMod<_>
+        member x.average = _average :> IMod<_>
         member x.min = _min :> IMod<_>
         member x.max = _max :> IMod<_>
-        member x.std = _std :> IMod<_>
+        member x.stdev = _stdev :> IMod<_>
+        member x.sumOfSquares = _sumOfSquares :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Statistics) =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
-                ResetMod.Update(_avg,v.avg)
+                ResetMod.Update(_average,v.average)
                 ResetMod.Update(_min,v.min)
                 ResetMod.Update(_max,v.max)
-                ResetMod.Update(_std,v.std)
+                ResetMod.Update(_stdev,v.stdev)
+                ResetMod.Update(_sumOfSquares,v.sumOfSquares)
                 
         
         static member Create(__initial : PRo3D.Statistics) : MStatistics = MStatistics(__initial)
@@ -48,11 +51,11 @@ module Mutable =
     module Statistics =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
-            let avg =
+            let average =
                 { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
-                    override x.Get(r) = r.avg
-                    override x.Set(r,v) = { r with avg = v }
-                    override x.Update(r,f) = { r with avg = f r.avg }
+                    override x.Get(r) = r.average
+                    override x.Set(r,v) = { r with average = v }
+                    override x.Update(r,f) = { r with average = f r.average }
                 }
             let min =
                 { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
@@ -66,11 +69,17 @@ module Mutable =
                     override x.Set(r,v) = { r with max = v }
                     override x.Update(r,f) = { r with max = f r.max }
                 }
-            let std =
+            let stdev =
                 { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
-                    override x.Get(r) = r.std
-                    override x.Set(r,v) = { r with std = v }
-                    override x.Update(r,f) = { r with std = f r.std }
+                    override x.Get(r) = r.stdev
+                    override x.Set(r,v) = { r with stdev = v }
+                    override x.Update(r,f) = { r with stdev = f r.stdev }
+                }
+            let sumOfSquares =
+                { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.sumOfSquares
+                    override x.Set(r,v) = { r with sumOfSquares = v }
+                    override x.Update(r,f) = { r with sumOfSquares = f r.sumOfSquares }
                 }
     
     

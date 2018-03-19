@@ -316,12 +316,12 @@ module DrawingApp =
                         |> List.map (Csv.exportAnnotation model.annotations.groupsLookup)
                       //  |> Seq.ofList
                         
-                let csvTable = Csv.Seq.csv ";" true id annotations
+                let csvTable = Csv.Seq.csv "," true id annotations
 
                 match Dialogs.saveDialog w with
                     | None -> model
                     | Some p -> 
-                        Csv.Seq.write (p+".csv") csvTable |> ignore
+                        Csv.Seq.write (p) csvTable |> ignore
                         model
             | _ -> model
 

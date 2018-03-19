@@ -17,6 +17,7 @@ module Csv =
         errorMin      : float
         errorMax      : float
         errorStd      : float
+        errorSos      : float
         }
    
     type ExportAnnotation = {
@@ -27,6 +28,8 @@ module Csv =
         color         : string
         thickness     : float        
 
+
+        points        : int
         height        : float
         heightDelta   : float
         length        : float
@@ -39,6 +42,7 @@ module Csv =
         errorMin      : float
         errorMax      : float
         errorStd      : float
+        sumOfSquares  : float
 
         text          : string
         groupName     : string
@@ -68,10 +72,11 @@ module Csv =
               dipAngle      = x.dipAngle
               dipAzimuth    = x.dipAzimuth
               strikeAzimuth = x.strikeAzimuth
-              errorAvg      = x.error.avg
+              errorAvg      = x.error.average
               errorMin      = x.error.min
               errorMax      = x.error.max
-              errorStd      = x.error.std
+              errorStd      = x.error.stdev
+              errorSos      = x.error.sumOfSquares
             }
           | None -> 
             { 
@@ -82,6 +87,7 @@ module Csv =
               errorMin      = Double.NaN
               errorMax      = Double.NaN
               errorStd      = Double.NaN
+              errorSos      = Double.NaN
             }
 
       let points = 
@@ -98,6 +104,9 @@ module Csv =
         semantic      = a.semantic
         color         = a.color.ToString()
         thickness     = a.thickness.value
+        points        = a.points.Count
+
+
         height        = results.height
         heightDelta   = results.heightDelta
         length        = results.length
@@ -106,10 +115,11 @@ module Csv =
         dipAzimuth    = dnsResults.dipAzimuth
         strikeAzimuth = dnsResults.strikeAzimuth
 
-        errorAvg = dnsResults.errorAvg
-        errorMin = dnsResults.errorMin 
-        errorMax = dnsResults.errorMax
-        errorStd = dnsResults.errorStd
+        errorAvg     = dnsResults.errorAvg
+        errorMin     = dnsResults.errorMin 
+        errorMax     = dnsResults.errorMax
+        errorStd     = dnsResults.errorStd
+        sumOfSquares = dnsResults.errorSos
 
         text          = a.text;
         groupName     = lookUp |> HMap.find a.key

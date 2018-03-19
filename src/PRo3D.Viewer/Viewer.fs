@@ -248,6 +248,13 @@ module ViewerApp =
                             m.drawing.annotations.rootGroup.subNodes
                               |> PList.append' imported
 
+                        let flat = 
+                          flat 
+                            |> HMap.map(fun k v -> 
+                              let a = v |> Leaf.toAnnotation
+                              let a' = if a.geometry = Geometry.DnS then { a with showDns = true } else a                                                             
+                              a'|> Leaf.Annotations)                                  
+
                         //let inline median input = 
                         //  let sorted = input |> Seq.toArray |> Array.sort
                         //  let m1,m2 = 
@@ -281,9 +288,27 @@ module ViewerApp =
                     | None -> m   
             | ImportSurfaceTrafo,_,_ ->
                 match Dialogs.openDialog w with
-                    | Some x ->
-                        let imported = SurfaceTrafoImporter.startImporter x 
-                        { m with scene = { m.scene with surfacesModel = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel}}      
+                    | Some path ->
+                        let imported = SurfaceTrafoImporter.startImporter path
+
+                        let filterIds = File.ReadLines (Path.ChangeExtension(path,".filter")) |> Seq.toList
+
+                        let k = 
+                          imported 
+                            |> PList.toList 
+                            |> List.filter(fun x -> List.contains x.id filterIds) 
+                            |> List.map (fun x ->
+                              {
+                                id = x.id
+                                shift = x.trafo.Forward.C3.XYZ.Length
+                              })
+
+                        let csvTable = Csv.Seq.csv "," true id k
+                        Csv.Seq.write (@"./shift.csv") csvTable |> ignore
+
+                        let s = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel
+                        m |> Lenses.set _surfaceModelLens s
+                        
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     

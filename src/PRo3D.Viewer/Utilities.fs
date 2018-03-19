@@ -42,7 +42,7 @@ module Serialization =
     let fileExists filePath =
         match System.IO.File.Exists filePath with
             | true -> Some filePath
-            | false -> None
+            | false -> None       
 
 module Dialogs =
     open Microsoft.WindowsAPICodePack.Dialogs    

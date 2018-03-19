@@ -85,13 +85,15 @@ module DipAndStrike =
                     |> PList.toList
                     |> List.map(fun x -> (plane.Height x).Abs())
 
+                let sos = distances |> List.map(fun x -> x * x) |> List.sum /// (float distances.Length)
+                
                 let avg = distances |> List.average
                 let max = distances |> List.max
                 let min = distances |> List.min
              
                 let std = distances |> computeStandardDeviation avg
 
-                Log.line("[dipandStrike]: avg %f; max %f; min %f; std: %f") avg max min std
+                Log.line("[dipandStrike]: avg %f; max %f; min %f; std: %f; sols: %f") avg max min std sos
 
                 let horP = new Plane3d(up, V3d.Zero)
 
@@ -123,10 +125,11 @@ module DipAndStrike =
                     centerOfMass    = bb.Center
                     error           = 
                       { 
-                        avg = avg
+                        average = avg
                         min = min
                         max = max
-                        std = std
+                        stdev = std
+                        sumOfSquares = sos
                       }
                 }
                 Some dns

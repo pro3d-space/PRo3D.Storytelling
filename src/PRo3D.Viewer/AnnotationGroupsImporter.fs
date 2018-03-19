@@ -33,8 +33,12 @@ module AnnotationGroupsImporter =
           |> List.map MeasurementsImporter.getAnnotation
           |> List.map(fun x -> 
               let dns = 
-                x.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
-              let results = Annotation.calculateAnnotationResults x up
+                x.points 
+                  |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
+
+              let results = 
+                Annotation.calculateAnnotationResults x up
+
               { x with dnsResults = dns; results = Some results} )
           |> List.map Leaf.Annotations
 
