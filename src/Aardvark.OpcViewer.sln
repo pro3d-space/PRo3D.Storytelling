@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27004.2008
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Aardvark.OpcViewer", "Aardvark.Opc\Aardvark.Opc.fsproj", "{3B784CE7-F853-449A-A860-8D735C2A3F74}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Aardvark.Opc", "Aardvark.Opc\Aardvark.Opc.fsproj", "{3B784CE7-F853-449A-A860-8D735C2A3F74}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DGMViewer", "DGMViewer\DGMViewer.fsproj", "{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}"
 EndProject

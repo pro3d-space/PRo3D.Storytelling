@@ -1,0 +1,17 @@
+Aardvark.Base
+Aardvark.Base.IO
+Aardvark.Base.Incremental
+Aardvark.Base.FSharp
+
+Aardvark.Base.Rendering
+Aardvark.Application.WinForms.GL
+Aardvark.SceneGraph
+Aardvark.Rendering.NanoVg
+
+Aardvark.VRVis.Geometry
+
+FSharp.Core
+Fsunit
+FParsec
+FsPickler
+

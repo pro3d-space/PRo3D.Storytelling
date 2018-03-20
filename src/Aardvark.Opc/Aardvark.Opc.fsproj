@@ -8,7 +8,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>3b784ce7-f853-449a-a860-8d735c2a3f74</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Aardvark.OpcViewer</RootNamespace>
+    <RootNamespace>Aardvark.Opc</RootNamespace>
     <AssemblyName>Aardvark.Opc</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
