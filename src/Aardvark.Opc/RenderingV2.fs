@@ -80,273 +80,249 @@ module AttributeParametersSg =
 
 
 module PatchLod =
-    open Aardvark.Base.Rendering
-    open Aardvark.Base.Ag
-    open Aardvark.SceneGraph.Semantics
-    open Aardvark.SceneGraph.Semantics.TrafoSemantics
-    open Aardvark.Base.MultimethodTest
+  open Aardvark.Base.Rendering
+  open Aardvark.Base.Ag
+  open Aardvark.SceneGraph.Semantics
+  open Aardvark.SceneGraph.Semantics.TrafoSemantics
+  open Aardvark.Base.MultimethodTest
 
-    let mutable useAsyncLoading = true
+  let mutable useAsyncLoading = true
 
-    let rec toRoseTree (p : QTree<'a>) =
-        match p with
-            | QTree.Leaf v -> Leaf v
-            | QTree.Node(v,children) -> Node(v,children |> Array.toList |> List.map toRoseTree)
+  let rec toRoseTree (p : QTree<'a>) =
+      match p with
+          | QTree.Leaf v -> Leaf v
+          | QTree.Node(v,children) -> Node(v,children |> Array.toList |> List.map toRoseTree)
 
-    type RenderPatch =
-        {
-            info            : PatchFileInfo
-            level           : int
-            triangleSize    : float
-            trafo           : IMod<Trafo3d>
-        }
+  type RenderPatch =
+      {
+          info            : PatchFileInfo
+          level           : int
+          triangleSize    : float
+          trafo           : IMod<Trafo3d>
+      }
 
-    type LodDecider = AdaptiveToken -> IMod<Trafo3d> -> IMod<Trafo3d> -> RenderPatch -> IMod<LodParameters> -> bool 
+  type LodDecider = AdaptiveToken -> IMod<Trafo3d> -> IMod<Trafo3d> -> RenderPatch -> IMod<LodParameters> -> bool 
 
-    type PatchNode(signature : IFramebufferSignature, runner : Load.Runner, 
-                   baseDir : string, decider : LodDecider, 
-                   useCompressedTextures : bool, p : RoseTree<Patch>) =
-        interface ISg
-        member x.Tree = p        
-        member x.Signature = signature
-        member x.Runner = runner
-        member x.BaseDir = baseDir
-        member x.Decider = decider
-        member x.UseCompressedTextures = useCompressedTextures
-    
+  type PatchNode(signature : IFramebufferSignature, runner : Load.Runner, 
+                 baseDir : string, decider : LodDecider, 
+                 useCompressedTextures : bool, p : RoseTree<Patch>) =
+      interface ISg
+      member x.Tree = p        
+      member x.Signature = signature
+      member x.Runner = runner
+      member x.BaseDir = baseDir
+      member x.Decider = decider
+      member x.UseCompressedTextures = useCompressedTextures
+  
 
-    [<Semantic>]
-    type PatchNodeSem() =
+  [<Semantic>]
+  type PatchNodeSem() =
 
-        let toRenderPatch (modelTrafoStack : list<IMod<Trafo3d>>) (p : Patch) =
-            {
-                info         = p.info
-                level        = p.level
-                triangleSize = p.triangleSize
-                trafo        = flattenStack (Mod.constant p.info.Local2Global :: modelTrafoStack)
-            }
+    let toRenderPatch (modelTrafoStack : list<IMod<Trafo3d>>) (p : Patch) =
+      {
+          info         = p.info
+          level        = p.level
+          triangleSize = p.triangleSize
+          trafo        = flattenStack (Mod.constant p.info.Local2Global :: modelTrafoStack)
+      }
 
-        member x.RenderObjects(n : PatchNode) : aset<IRenderObject> =
+    member x.RenderObjects(n : PatchNode) : aset<IRenderObject> =
 
-            let height = n.Tree |> RoseTree.height
+      let height = n.Tree |> RoseTree.height
 
-            // Grab inherited attributes
-            let runtime         = n.Runtime
-            let scope           = Ag.getContext()
-            let trafoStack      = n.ModelTrafoStack
-            let v               = n.ViewTrafo
-            let proj            = n.ProjTrafo
-            let ro              = RenderObject.ofScope scope      
-            let lodParameters   = n.LodParameters          
-            let attributeParams = n.AttributeParameters
+      // Grab inherited attributes
+      let runtime         = n.Runtime
+      let scope           = Ag.getContext()
+      let trafoStack      = n.ModelTrafoStack
+      let v               = n.ViewTrafo
+      let proj            = n.ProjTrafo
+      let ro              = RenderObject.ofScope scope      
+      let lodParameters   = n.LodParameters          
+      let attributeParams = n.AttributeParameters
 
-            // prepare data for lod metric
-            let vp   = Mod.map2 (*) n.ViewTrafo n.ProjTrafo
-            let godeeper (self : AdaptiveToken) (p : RenderPatch) =
-                n.Decider self n.ViewTrafo n.ProjTrafo p lodParameters
+      // prepare data for lod metric
+      let vp   = Mod.map2 (*) n.ViewTrafo n.ProjTrafo
+      let godeeper (self : AdaptiveToken) (p : RenderPatch) =
+        n.Decider self n.ViewTrafo n.ProjTrafo p lodParameters
 
-            let preparePatch (p : RenderPatch) =
+      let preparePatch (p : RenderPatch) =
 
-                    let prepareTime = System.Diagnostics.Stopwatch()
-                    prepareTime.Start()
+        let prepareTime = System.Diagnostics.Stopwatch()
+        prepareTime.Start()
 
-                    let (g, elapsedIndex), createTime = timed (fun () -> 
-                            Patch.load n.BaseDir p.info)
-                   
-                    let textureId : IMod<int> = 
-                        attributeParams 
-                          |> Mod.map(fun x ->
-                                match x.selectedTexture with
-                                  | Some i -> i
-                                  | None -> 0
-                          )
+        let (g, elapsedIndex), createTime = timed (fun () -> 
+          Patch.load n.BaseDir p.info)
+        
+        let textureId : IMod<int> = 
+          attributeParams 
+            |> Mod.map(fun x ->
+                  match x.selectedTexture with
+                    | Some i -> i
+                    | None -> 0
+            )
 
-                    let scalarId : IMod<int> =
-                         attributeParams 
-                          |> Mod.map(fun x ->
-                                match x.selectedScalar with
-                                  | Some i -> i
-                                  | None -> -1
-                          )
+        let scalarId : IMod<int> =
+          attributeParams 
+           |> Mod.map(fun x ->
+                 match x.selectedScalar with
+                   | Some i -> i
+                   | None -> -1
+           )
 
-                    let oldTexture = ref None
+        let oldTexture = ref None
 
-                    let tex =
-                        textureId |> Mod.map (fun id ->                            
-                            let texturePath = Patch.extractTexturePath n.BaseDir p.info id
-                            let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
-                            let tex,d =
-                                if n.UseCompressedTextures then
-                                    CompressedImage.load runtime texturePath config false
-                                else 
-                                    FileTexture(texturePath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
-                            match !oldTexture with
-                                | None -> 
-                                    oldTexture := Some d
-                                    tex
-                                | Some old -> 
-                                    oldTexture := Some d
-                                    old.Dispose()
-                                    tex
-                        )
+        let tex =
+          textureId |> Mod.map (fun id ->                            
+            let texturePath = Patch.extractTexturePath n.BaseDir p.info id
+            let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
+            let tex,d =
+              if n.UseCompressedTextures then
+                  CompressedImage.load runtime texturePath config false
+              else 
+                  FileTexture(texturePath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
+            match !oldTexture with
+              | None -> 
+                oldTexture := Some d
+                tex
+              | Some old -> 
+                oldTexture := Some d
+                old.Dispose()
+                tex
+          )
 
-                    let scl = 
-                        scalarId |> Mod.bind ( fun id ->                                 
-                                let x = p.info.Attributes |> List.rev |> List.tryItem id
-                                match x with
-                                  | Some name ->
-                                        let arr = Path.combine [n.BaseDir; "Patches"; p.info.Name; name] |> fromFile<double>
-                                        let buffer = ArrayBuffer(arr.Data |> Array.map (fun a -> float32 a)) :> IBuffer
-                                        Mod.constant buffer 
-                                  | None -> 
-                                        let a  = SingleValueBuffer(Mod.constant V4f.OOOO) 
-                                        a :> IMod<_>
-                            )
-                    
-                    //let texturePath = Patch.extractTexturePath n.BaseDir p.info 0
-
-                    //let tex,onTextureDispose = 
-                    //    let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
-                    //    if n.UseCompressedTextures then
-                    //        CompressedImage.load runtime texturePath config false
-                    //    else 
-                    //        FileTexture(texturePath,config) :> ITexture, { new IDisposable with member x.Dispose() = () }
-
-                    let ro = RenderObject.Clone(ro)
-
-                    let prepareBuffer (a : ArrayBuffer) = runtime.PrepareBuffer(a) 
-
-                    let idx     = ArrayBuffer(g.IndexArray) 
-                                    |> prepareBuffer
-                    let pos     = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.Positions]) 
-                                    |> prepareBuffer
-                    let tc      = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.DiffuseColorCoordinates]) 
-                                    |> prepareBuffer
-                    
-                    //let bla =
-                    //    match (g.IndexedAttributes.TryGetValue (Sym.ofString("Scalar"))) with
-                    //      | true, value -> 0 (* do something with value *)
-                    //      | _           -> 0 (* handle the case of value not found *)
-
-
-                    //let scalar  = ArrayBuffer(g.IndexedAttributes.[Sym.ofString("Scalar")]) 
-                    //                |> prepareBuffer                        
-                          
-                    ro.Indices <- BufferView(Mod.constant (idx :> IBuffer), typeof<int>) |> Some
-                    
-                    let attributestList = [ 
-                        DefaultSemantic.Positions, BufferView(Mod.constant (pos :> IBuffer), typeof<V3f>)
-                        DefaultSemantic.DiffuseColorCoordinates, BufferView(Mod.constant (tc :> IBuffer), typeof<V2f>)    
-                        Sym.ofString("Scalar"), BufferView(scl, typeof<float32>)
-                    ]
-                    
-                    ro.VertexAttributes <- 
-                        AttributeProvider.ofList attributestList
-
-                    
-                    let old = ro.Uniforms
-                    ro.Uniforms <-
-                        let t = tex :> IMod
-                        { new IUniformProvider with
-                            member x.TryGetUniform(scope, sem) =
-                                if sem = DefaultSemantic.DiffuseColorTexture then Some t
-                                else
-                                    match string sem with
-                                        | "LoDColor" -> 
-                                            let min = 120.0
-                                            let size = -120.0
-                                            let factor = float p.level / (float height - 1.0)
-                                            let c = hsv2rgb 0.0 factor 1.0
-                                            //let c = hsv2rgb (min + factor * size) 0.6 1.0
-                                            Mod.constant c :> IMod |> Some
-                                        | "ModelTrafo" -> p.trafo :> IMod |> Some
-                                        //| "ModelViewTrafo" -> p.trafo <*> v :> IMod |> Some
-                                        //| "ModelViewProjTrafo" -> p.trafo <*> vp :> IMod |> Some
-                                        //| "ModelTrafoInv" -> p.trafo |> inverse :> IMod |> Some
-                                        //| "ModelViewTrafoInv" -> p.trafo <*> v |> inverse :> IMod |> Some
-                                        //| "ModelViewProjTrafoInv" -> p.trafo <*> vp |> inverse :> IMod |> Some
-                                        | _ -> 
-                                            lock old (fun () -> old.TryGetUniform(scope, sem))
-
-                            member x.Dispose() =
-                                old.Dispose()
-                        }
-
-                    let call =
-                        DrawCallInfo(
-                            FaceVertexCount = g.IndexArray.Length,
-                            InstanceCount = 1,
-                            FirstIndex = 0,
-                            FirstInstance = 0,
-                            BaseVertex = 0
-                        )
-
-                    ro.DrawCallInfos <- Mod.constant [call]
-                    ro.Mode <- Mod.constant g.Mode
-
-                    ro.Activate <- fun () -> 
-                        { new IDisposable with
-                            member x.Dispose() = 
-                                //onTextureDispose.Dispose()
-                                !oldTexture |> Option.iter (fun d -> d.Dispose())
-                                runtime.DeleteBuffer(idx)
-                                runtime.DeleteBuffer(pos)
-                                runtime.DeleteBuffer(tc)
-                        }
-
-                    let prepared =  runtime.PrepareRenderObject(n.Signature, ro)
-                        
-                    GL.Sync()
-
-                    prepareTime.Stop()
-                    Statistics.emitLoaded prepareTime.MicroTime createTime elapsedIndex
-                    prepared
-                    
-
-            let prepare (patch : RenderPatch) =
-                load {
-                    let res = preparePatch patch
-                    do! Load.disposeOnCancel res 
-                    return res
-                } |> n.Runner.Enqueue
-
-            let rec flattenHorizon (t : RoseTree<RenderPatch>) =
-                match t with
-                    | Empty -> []
-                    | Leaf v -> [v]
-                    | Node(c,[]) -> [c]
-                    | Node(c,xs) ->
-                        xs |> List.collect flattenHorizon                
-
-            let syncRenderObjects =
-                let lodedTree =
-                    n.Tree
-                    |> RoseTree.map (toRenderPatch trafoStack)
-                    |> Mod.constant
-                    |> RoseTree.filter godeeper
-                let objects = ASet.custom (fun token state ->
-                    let currentTree = lodedTree.GetValue token
-                    let currentObjects = flattenHorizon currentTree |> HRefSet.ofList
-                    let delta = HRefSet.computeDelta state currentObjects 
-                    printfn "delta=%A" delta.Count
-                    delta
-                )
-                objects 
-                    |> ASet.mapUse (fun a -> use __ = runtime.ContextLock in preparePatch a)
-                    |> ASet.map (fun a -> a :> IRenderObject)
-
-            let asyncRenderObjects =
-                n.Tree
-                    |> RoseTree.map (toRenderPatch trafoStack)
-                    |> Mod.constant
-                    |> RoseTree.filter godeeper
-                    |> RoseTree.mapAsync prepare
-                    |> RoseTree.flatten (fun p -> p :> IRenderObject)
-
+        let scl = 
+          scalarId 
+            |> Mod.bind (fun id ->                                 
+              let x = p.info.Attributes |> List.rev |> List.tryItem id
+              match x with
+                | Some name ->
+                      let arr = Path.combine [n.BaseDir; "Patches"; p.info.Name; name] |> fromFile<double>
+                      let buffer = ArrayBuffer(arr.Data |> Array.map (fun a -> float32 a)) :> IBuffer
+                      Mod.constant buffer 
+                | None -> 
+                      let a  = SingleValueBuffer(Mod.constant V4f.OOOO) 
+                      a :> IMod<_>
+            )
             
-            match useAsyncLoading with
-                | false -> syncRenderObjects
-                | true -> asyncRenderObjects
+        let ro = RenderObject.Clone(ro)
+
+        let prepareBuffer (a : ArrayBuffer) = runtime.PrepareBuffer(a) 
+
+        let idx = ArrayBuffer(g.IndexArray) |> prepareBuffer
+        let pos = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.Positions]) |> prepareBuffer
+        let tc  = ArrayBuffer(g.IndexedAttributes.[DefaultSemantic.DiffuseColorCoordinates]) |> prepareBuffer                   
+              
+        ro.Indices <- BufferView(Mod.constant (idx :> IBuffer), typeof<int>) |> Some
+        
+        let attributestList = [ 
+          DefaultSemantic.Positions, BufferView(Mod.constant (pos :> IBuffer), typeof<V3f>)
+          DefaultSemantic.DiffuseColorCoordinates, BufferView(Mod.constant (tc :> IBuffer), typeof<V2f>)    
+          Sym.ofString("Scalar"), BufferView(scl, typeof<float32>)
+        ]
+        
+        ro.VertexAttributes <- 
+          AttributeProvider.ofList attributestList
+
+        let old = ro.Uniforms
+        ro.Uniforms <-
+          let t = tex :> IMod
+          { new IUniformProvider with
+              member x.TryGetUniform(scope, sem) =
+                if sem = DefaultSemantic.DiffuseColorTexture then Some t
+                else
+                  match string sem with
+                    | "LoDColor" ->                       
+                      let factor = float p.level / (float height - 1.0)
+                      let c = hsv2rgb 0.0 factor 1.0                      
+                      Mod.constant c :> IMod |> Some
+                    | "ModelTrafo" -> p.trafo :> IMod |> Some
+                    //| "ModelViewTrafo" -> p.trafo <*> v :> IMod |> Some
+                    //| "ModelViewProjTrafo" -> p.trafo <*> vp :> IMod |> Some
+                    //| "ModelTrafoInv" -> p.trafo |> inverse :> IMod |> Some
+                    //| "ModelViewTrafoInv" -> p.trafo <*> v |> inverse :> IMod |> Some
+                    //| "ModelViewProjTrafoInv" -> p.trafo <*> vp |> inverse :> IMod |> Some
+                    | _ -> 
+                      lock old (fun () -> old.TryGetUniform(scope, sem))
+
+              member x.Dispose() =
+                  old.Dispose()
+          }
+
+        let call =
+          DrawCallInfo(
+            FaceVertexCount = g.IndexArray.Length,
+            InstanceCount   = 1,
+            FirstIndex      = 0,
+            FirstInstance   = 0,
+            BaseVertex      = 0
+          )
+
+        ro.DrawCallInfos <- Mod.constant [call]
+        ro.Mode <- Mod.constant g.Mode
+
+        ro.Activate <- fun () -> 
+          { new IDisposable with
+              member x.Dispose() = 
+                  //onTextureDispose.Dispose()
+                  !oldTexture |> Option.iter (fun d -> d.Dispose())
+                  runtime.DeleteBuffer(idx)
+                  runtime.DeleteBuffer(pos)
+                  runtime.DeleteBuffer(tc)
+          }
+
+        let prepared = runtime.PrepareRenderObject(n.Signature, ro)
+            
+        GL.Sync()
+
+        prepareTime.Stop()
+        Statistics.emitLoaded prepareTime.MicroTime createTime elapsedIndex
+        prepared
+              
+      let prepare (patch : RenderPatch) =
+        load {
+            let res = preparePatch patch
+            do! Load.disposeOnCancel res 
+            return res
+        } |> n.Runner.Enqueue
+
+      let rec flattenHorizon (t : RoseTree<RenderPatch>) =
+        match t with
+          | Empty -> []
+          | Leaf v -> [v]
+          | Node(c,[]) -> [c]
+          | Node(c,xs) ->
+              xs |> List.collect flattenHorizon
+
+      let syncRenderObjects =
+        let lodedTree =
+          n.Tree
+            |> RoseTree.map (toRenderPatch trafoStack)
+            |> Mod.constant
+            |> RoseTree.filter godeeper
+        let objects = 
+          ASet.custom (fun token state ->
+            let currentTree    = lodedTree.GetValue token
+            let currentObjects = flattenHorizon currentTree |> HRefSet.ofList
+            let delta          = HRefSet.computeDelta state currentObjects 
+            printfn "delta=%A" delta.Count
+            delta
+          )
+
+        objects 
+          |> ASet.mapUse (fun a -> use __ = runtime.ContextLock in preparePatch a)
+          |> ASet.map (fun a -> a :> IRenderObject)
+
+      let asyncRenderObjects =
+        n.Tree
+          |> RoseTree.map (toRenderPatch trafoStack)
+          |> Mod.constant
+          |> RoseTree.filter godeeper
+          |> RoseTree.mapAsync prepare
+          |> RoseTree.flatten (fun p -> p :> IRenderObject)
+      
+      match useAsyncLoading with
+        | false -> syncRenderObjects
+        | true -> asyncRenderObjects
 
 
 module Sg =
