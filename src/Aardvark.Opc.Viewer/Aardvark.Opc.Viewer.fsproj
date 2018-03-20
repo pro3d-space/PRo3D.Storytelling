@@ -28,6 +28,7 @@
     <DocumentationFile>
     </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
+    <StartArguments>mars</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -60,7 +61,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />
-    <Compile Include="C:\_work\PRo3D\src\Aardvark.Opc.Viewer\Program.fs" />
+    <Compile Include="C:\_Work\_REPOS\PRo3D\src\Aardvark.Opc.Viewer\Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

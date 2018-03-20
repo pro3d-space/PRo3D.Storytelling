@@ -152,14 +152,14 @@ module Viewer =
 
         // create level of detail hierarchy (Sg)
         let g = 
-            patchHierarchies 
-            |> List.map (fun h ->                     
-                    let sg = Sg.patchLod signature runner h.baseDir 
-                                    scene.lodDecider scene.useCompressedTextures                                 
-                                    (PatchLod.toRoseTree h.tree)                                    
-                    sg
-               ) 
-            |> Sg.ofList
+          patchHierarchies 
+          |> List.map (fun h ->                     
+            let sg = 
+              Sg.patchLod signature runner h.baseDir 
+                scene.lodDecider scene.useCompressedTextures                                 
+                (PatchLod.toRoseTree h.tree)
+            sg) 
+          |> Sg.ofList
         
 
         let lodVisEnabled = Mod.init false
@@ -264,6 +264,31 @@ module Viewer =
                 |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)                
         sg
 
+    let createSceneGraph2 (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (time : IMod<_>) scene = 
+
+      let bb = scene.boundingBox    
+      
+      let speed = Mod.init scene.speed
+
+      let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
+
+      let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
+      let view = initialView |> DefaultCameraController.controlWithSpeed speed mouse keyboard time
+      
+      let proj = sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))      
+
+      let sg = Aardvark.Opc.Sg2.createFlatISg scene
+
+      sg
+       |> Sg.transform preTransform
+       |> Sg.effect [
+          DefaultSurfaces.trafo |> toEffect
+          DefaultSurfaces.constantColor C4f.White |> toEffect
+          DefaultSurfaces.diffuseTexture |> toEffect                    
+       ]
+       |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
+       |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)
+
     let run (scene : OpcScene) =
 
         Aardvark.Base.Ag.initialize()
@@ -273,7 +298,8 @@ module Viewer =
         let win = app.CreateSimpleRenderWindow()
         win.Text <- "Aardvark rocks OPCs \\o/"
 
-        let sg = createSceneGraph win.Runtime win.Sizes win.Mouse win.Keyboard win.FramebufferSignature win.Time scene
+        //let sg = createSceneGraph win.Runtime win.Sizes win.Mouse win.Keyboard win.FramebufferSignature win.Time scene
+        let sg = createSceneGraph2 win.Sizes win.Mouse win.Keyboard win.Time scene
     
         let cfg =  { BackendConfiguration.Default  with useDebugOutput = false }
         let task =
@@ -287,14 +313,14 @@ module Viewer =
         0
 
 
-    open Configurations.Network
+    open Configurations.OrtiPc
 
     [<EntryPoint>]
     let main argv =
         //run ( Configurations.Network.testSurf () )
         match argv.ToLower() with
-            | [| "perjen" |] -> run ( perjen () )
-            | [| "mola" |] -> run ( mola () )
+            //| [| "perjen" |] -> run ( perjen () )
+            //| [| "mola" |] -> run ( mola () )
             | [| "mars" |] -> run ( mars () )
             | _ -> 
                 printfn "wrong arguments: %A, synopsis: Aardvark.OpenViewer [perjen|mola|mars]" argv

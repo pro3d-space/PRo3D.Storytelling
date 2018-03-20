@@ -67,7 +67,7 @@ module Configurations =
                 far              = 10000.0
                 speed            = 5.0
                 lodDecider       = DefaultMetrics.mars
-            }
+            }        
 
     module HarriPc =
 
