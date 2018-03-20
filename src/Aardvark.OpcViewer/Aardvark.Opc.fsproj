@@ -13,7 +13,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
-    <Name>Aardvark.OpcViewer</Name>
+    <Name>Aardvark.Opc</Name>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -79,7 +79,6 @@
     <Compile Include="RenderingV2.fs" />
     <Compile Include="Shaders.fs" />
     <Compile Include="Properties.fs" />
-    <Compile Include="DomainModel.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />
     <Content Include="App.config">

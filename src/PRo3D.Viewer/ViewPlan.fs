@@ -41,33 +41,37 @@ module ViewPlan =
     
 
     let getLatLonAlt (p:V3d) : SphericalCoo = 
-        let directory = @".\InstrumentStuff" 
-        let test = @".\bin" 
-        let errorCode = CooTrafo.Init(test, directory)
-        printfn "%A" errorCode
+      let directory = @".\InstrumentStuff" 
+      let test = @".\bin" 
+      let errorCode = CooTrafo.Init(test, directory)
+      printfn "%A" errorCode
+      
+      let init = double(0.0)
+      
+      let lat = ref init
+      let lon = ref init
+      let alt = ref init
 
-        let init = double(0.0)
-        
-        let mutable lat = init
-        let mutable lon = init
-        let mutable alt = init
-        let pX = double p.X
-        let pY = double p.Y
-        let pZ = double p.Z
-        let bla = CooTrafo.Xyz2LatLonAlt("Mars", pX, pY, pZ, ref lat, ref lon, ref alt)
-        
-        if bla <> 0 then
-            Log.line "cootrafo errorcode %A" bla
+      let pX  = double p.X
+      let pY  = double p.Y
+      let pZ  = double p.Z
 
-        let sc = {
-                    latitude = lat;
-                    longitude = lon;
-                    altitude = alt;
-                    radian = 0.0;
-                    }
-        CooTrafo.DeInit()
-        sc
-
+      let errorCode = 
+        CooTrafo.Xyz2LatLonAlt("Mars", pX, pY, pZ, lat, lon, alt)
+      
+      if errorCode <> 0 then
+        Log.line "[CooTrafo:] cootrafo errorcode %A" errorCode
+      
+      let sc = 
+        {
+          latitude  = !lat
+          longitude = !lon
+          altitude  = !alt
+          radian    = 0.0
+        }
+      CooTrafo.DeInit()
+      sc
+      
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =
         //match path with
         //    | Some p ->

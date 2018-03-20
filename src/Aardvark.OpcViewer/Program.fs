@@ -109,8 +109,7 @@ module KdTrees =
 
 module Viewer = 
     open Aardvark.Base.Rendering.Effects
-    open FShade
-    open DomainModel
+    open FShade    
 
     let mutable hackRunner = None
 
@@ -383,7 +382,6 @@ module Viewer =
 
     open Configurations.Network
 
-
     [<EntryPoint>]
     let main argv =
         //run ( Configurations.Network.testSurf () )
@@ -395,87 +393,3 @@ module Viewer =
                 printfn "wrong arguments: %A, synopsis: Aardvark.OpenViewer [perjen|mola|mars]" argv
                 System.Environment.Exit 1 
                 0
-
-
-//    System.Environment.Exit 0
-
-//    let sg = 
-//        match hier with
-//            | dir,Node(patch,_) ->
-//                Patch.load dir patch.info
-//                    |> Sg.ofIndexedGeometry
-//                    //|> Sg.trafo (Mod.constant patch.info.Local2Global)
-//                    |> Sg.effect [
-//                        DefaultSurfaces.trafo |> toEffect
-//                        DefaultSurfaces.constantColor C4f.White |> toEffect
-//                        DefaultSurfaces.simpleLighting |> toEffect
-//                    ]
-//            | _ ->
-//                failwith ""
-
-
-//    let rec collect current  =
-//        seq {
-//            match current with
-//                | Node(n, xs) ->
-//                   for x in xs do yield! collect x
-//                | Leaf(patch) ->
-//                   let tex = patch.info.Textures |> List.head 
-//                   let fullPath = Path.combine [patch.info.BaseDir; tex.fileName]
-//                   let fullPath = System.IO.Path.ChangeExtension(fullPath,".dds")
-//                   yield 
-//                    Patch.load patch.info
-//                     |> Sg.ofIndexedGeometry
-//                     |> Sg.diffuseFileTexture' fullPath true
-//                     |> Sg.trafo (Mod.constant patch.info.Local2Global)
-//        }
-
-//
-//    let mutable loadedTextures = 0
-//
-//    let loadTextures (baseDir : string) (compressed : bool) (p : Patch) =
-//        loadedTextures <- loadedTextures + 1
-//        let t = p.info.Textures |> List.head
-//        let sourcePath = Path.combine [baseDir; "Images"; t.fileName]
-//        let extensions = [ ".texCache"; ".dds"; ".tif"; ".tiff"]
-//
-//        let rec tryFindTex exts path =
-//            match exts with
-//                | x::xs -> 
-//                    let cuzrrent = System.IO.Path.ChangeExtension(path,x)
-//                    if File.Exists cuzrrent then cuzrrent else tryFindTex xs path
-//                | [] -> failwithf "texture not found: %s" path
-//
-//
-//        let fullPath = tryFindTex extensions sourcePath
-//        let cacheFileName = sprintf "%s.cache" fullPath
-//        let cacheInfo = sprintf "%s.cacheInfo" fullPath
-//        //if File.Exists cacheFileName then File.Delete cacheFileName
-//
-//        //CompressedImage.ensureCache runtime fullPath
-//
-//        let killTexture =  
-//            if compressed then
-//                CompressedImage.load runtime fullPath { wantMipMaps = true; wantSrgb = false; wantCompressed = false } true |> snd
-//            else
-//                let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = false }
-//                let t = FileTexture(fullPath,config) :> ITexture
-//                let b = runtime.PrepareTexture(t)
-//                
-//                { new IDisposable with member x.Dispose() = runtime.DeleteTexture b }
-//        killTexture.Dispose()
-//
-//
-//    let testLoading (runtime : IRuntime) compressed = 
-//        loadedTextures <- 0
-//        use ctx = runtime.ContextLock
-//        let sw = System.Diagnostics.Stopwatch()
-//        sw.Start()
-//        let textures = patchHierarchies |> List.map (fun (dir,h) -> QTree.map (loadTextures dir compressed) h)
-//        sw.Stop()
-//        printfn "compressed=%A; took: %A, time per tex: %Ams" compressed sw.MicroTime (float sw.Elapsed.TotalMilliseconds / float loadedTextures)
-//        ()
-//
-//    //testLoading true
-    //let g = patchHierarchies |> Seq.map (NaivePatchLoD.toSg preTransform) |> Sg.ofSeq
-    //let g = patchHierarchies |> Seq.collect collect |> Sg.ofSeq

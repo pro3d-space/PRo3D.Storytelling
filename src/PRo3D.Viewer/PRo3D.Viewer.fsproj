@@ -135,12 +135,14 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Windows.Forms" />
-    <ProjectReference Include="..\Aardvark.OpcViewer\Aardvark.OpcViewer.fsproj">
-      <Name>Aardvark.OpcViewer</Name>
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aardvark.OpcViewer\Aardvark.Opc.fsproj">
+      <Name>Aardvark.Opc</Name>
       <Project>{3b784ce7-f853-449a-a860-8d735c2a3f74}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
