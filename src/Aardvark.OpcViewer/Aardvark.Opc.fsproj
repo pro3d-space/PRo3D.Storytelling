@@ -9,7 +9,7 @@
     <ProjectGuid>3b784ce7-f853-449a-a860-8d735c2a3f74</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>Aardvark.OpcViewer</RootNamespace>
-    <AssemblyName>Aardvark.OpcViewer</AssemblyName>
+    <AssemblyName>Aardvark.Opc</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
@@ -75,7 +75,6 @@
     <Compile Include="PathFileInfo.fs" />
     <Compile Include="Aara.fs" />
     <Compile Include="RenderUtilities.fs" />
-    <Compile Include="RenderingV1.fs" />
     <Compile Include="RenderingV2.fs" />
     <Compile Include="Shaders.fs" />
     <Compile Include="Properties.fs" />

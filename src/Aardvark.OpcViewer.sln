@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27004.2008
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Aardvark.Opc", "Aardvark.OpcViewer\Aardvark.Opc.fsproj", "{3B784CE7-F853-449A-A860-8D735C2A3F74}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Aardvark.OpcViewer", "Aardvark.Opc\Aardvark.Opc.fsproj", "{3B784CE7-F853-449A-A860-8D735C2A3F74}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DGMViewer", "DGMViewer\DGMViewer.fsproj", "{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}"
 EndProject
@@ -13,6 +13,8 @@ EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "GuiExperiments", "GuiExperiments\GuiExperiments.fsproj", "{235D4180-085D-4BBC-8DF0-D0C8B75AF573}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PRo3D.Viewer", "PRo3D.Viewer\PRo3D.Viewer.fsproj", "{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Aardvark.Opc.Viewer", "Aardvark.Opc.Viewer\Aardvark.Opc.Viewer.fsproj", "{25CD84C6-6892-49DE-8210-7C48B8B7FFB6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,6 +46,10 @@ Global
 		{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}.Release|Any CPU.Build.0 = Release|Any CPU
+		{25CD84C6-6892-49DE-8210-7C48B8B7FFB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{25CD84C6-6892-49DE-8210-7C48B8B7FFB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{25CD84C6-6892-49DE-8210-7C48B8B7FFB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{25CD84C6-6892-49DE-8210-7C48B8B7FFB6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

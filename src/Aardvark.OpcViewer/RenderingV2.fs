@@ -19,8 +19,6 @@ module Helpers =
     let (<*>) (a : IMod<Trafo3d>) (b : IMod<Trafo3d>) = Mod.map2 (*) a b
     let inverse (m : IMod<Trafo3d>) = m |> Mod.map (fun t -> t.Inverse)
 
-
-
 type LodParameters = { frustum : Frustum; size : V2i; factor : float; trafo: Trafo3d }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
