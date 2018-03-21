@@ -38,6 +38,32 @@ module DipAndStrike =
         let ground = new Plane3d(up.Normalized, 0.0)
         Math.Asin(ground.Height(dir)).DegreesFromRadians()
 
+    let computeStandardDeviation avg (input : List<float>) =
+
+      let sosq = 
+        input 
+          |> List.map(fun (x:double) ->
+              let k = (x.Abs() - avg)
+              Math.Pow(k,2.0))
+          |> List.sum
+
+      Math.Sqrt (sosq / float (input.Length - 1))
+
+    let calculateDnsErrors (points:plist<V3d>) =
+      let points = points |> PList.filter(fun x -> not x.IsNaN)
+
+      if points.Count < 3 then []
+      else
+        let v3dArray = points.AsList |> List.toArray
+        let mutable plane = PlaneFitting.FitPlane3dLeastSquares(v3dArray)
+
+        let distances = 
+          points 
+            |> PList.toList
+            |> List.map(fun x -> (plane.Height x))
+
+        distances
+      
 
     let calculateDipAndStrikeResults (up:V3d) (north : V3d) (points:plist<V3d>)=
 
@@ -54,13 +80,29 @@ module DipAndStrike =
                 let mutable plane = PlaneFitting.FitPlane3dLeastSquares(v3dArray)
                 let bb = new Box3d(points)
 
+                let distances = 
+                  points 
+                    |> PList.toList
+                    |> List.map(fun x -> (plane.Height x).Abs())
+
+                let sos = distances |> List.map(fun x -> x * x) |> List.sum /// (float distances.Length)
+                
+                let avg = distances |> List.average
+                let max = distances |> List.max
+                let min = distances |> List.min
+             
+                let std = distances |> computeStandardDeviation avg
+
+                Log.line("[dipandStrike]: avg %f; max %f; min %f; std: %f; sols: %f") avg max min std sos
+
                 let horP = new Plane3d(up, V3d.Zero)
 
                 //correct plane orientation - check if normals point in same direction
                 let height = horP.Height(plane.Normal)
-                let planeNormal = match height.Sign() with
-                                    | -1 -> plane.Normal.Negated
-                                    | _  -> plane.Normal
+                let planeNormal = 
+                  match height.Sign() with
+                  | -1 -> plane.Normal.Negated
+                  | _  -> plane.Normal
 
                 plane.Normal <- planeNormal
 
@@ -74,13 +116,21 @@ module DipAndStrike =
                 let v = strike.Cross(up).Normalized
 
                 let dns = {
-                    plane = plane
-                    dipAngle = Math.Acos(v.Dot(dip)).DegreesFromRadians()
-                    dipDirection = dip
+                    plane           = plane
+                    dipAngle        = Math.Acos(v.Dot(dip)).DegreesFromRadians()
+                    dipDirection    = dip
                     strikeDirection = strike
-                    dipAzimuth = computeAzimuth v north up
-                    strikeAzimuth = computeAzimuth strike north up
-                    centerOfMass = bb.Center
+                    dipAzimuth      = computeAzimuth v north up
+                    strikeAzimuth   = computeAzimuth strike north up
+                    centerOfMass    = bb.Center
+                    error           = 
+                      { 
+                        average = avg
+                        min = min
+                        max = max
+                        stdev = std
+                        sumOfSquares = sos
+                      }
                 }
                 Some dns
             | _ -> None 

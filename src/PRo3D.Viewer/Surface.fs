@@ -567,7 +567,7 @@ module Surface =
                     let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
                     let! key = s.guid
                                                                                     
-                //    let! absRelIcons = absRelIcons s
+                    let! absRelIcons = absRelIcons s
 
                     yield div [clazz "item"; style infoc] [
                         i [clazz "large cube middle aligned icon"; onClick multiSelect;style bgc][] 
@@ -585,6 +585,8 @@ module Surface =
 
                                     yield i [clazz "folder icon"                                                
                                              onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"
+
+                                    yield Incremental.i (absRelIcons) (AList.empty)
 
                                 } 
                             ) 

@@ -46,7 +46,7 @@ module SurfaceTrafoImporter =
         let reader = XmlReader.Create path
         let surfaces = reader.StreamElements("Surfaces").Elements(xname "Surface")
         surfaces 
-            |> Seq.map (fun x -> getData x)
+            |> Seq.map getData
             |> PList.ofSeq  
         
 

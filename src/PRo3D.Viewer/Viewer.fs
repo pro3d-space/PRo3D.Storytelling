@@ -37,6 +37,10 @@ open PRo3D.Groups
 //open Mutable.AnnotationGroupModule.Lens
  
 module ViewerApp =    
+
+    type muh = {
+       error : double
+    }
             
     open Surface   
     open System.Collections.Concurrent   
@@ -61,6 +65,7 @@ module ViewerApp =
     let _drawing         = Model.Lens.drawing
     let _annotations     = _drawing |. DrawingModel.Lens.annotations
     let _flat            = _annotations  |. GroupsModel.Lens.flat    
+    let _lookUp          = _annotations  |. GroupsModel.Lens.groupsLookup
     let _groups          = _annotations  |. GroupsModel.Lens.rootGroup |. Node.Lens.subNodes
        
     let lookAtData (m : Model) =         
@@ -158,9 +163,17 @@ module ViewerApp =
                 let ag = m.drawing.annotations 
                 { m with drawing = { m.drawing with annotations = Groups.update ag msg}}
             | DrawingMessage msg,_,_-> //Interactions.DrawAnnotation
-                let drawing = 
-                    DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
-                { m with drawing = drawing; } |> stash
+                match msg with
+                | Drawing.FlyToAnnotation id ->
+                    let _a = m |> Lenses.get _flat |> HMap.tryFind id |> Option.map Leaf.toAnnotation
+                    match _a with 
+                      | Some a ->                                                
+                          m |> lookAtBoundingBox (Box3d(a.points |> PList.toList))
+                      | None -> m                    
+                | _ ->
+                    let drawing = 
+                        DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
+                    { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
                 match msg with
                     | SurfaceApp.Action.FlyToSurface id -> 
@@ -229,21 +242,73 @@ module ViewerApp =
                 match Dialogs.openDialog w with
                     | Some x -> 
                         //update groups
-                        let imported, flat = AnnotationGroupsImporter.startImporter x m.scene.referenceSystem
+                        let imported, flat, lookup = AnnotationGroupsImporter.startImporter x m.scene.referenceSystem
 
                         let newGroups = 
                             m.drawing.annotations.rootGroup.subNodes
                               |> PList.append' imported
 
-                        let m' = m |> Lenses.set _groups newGroups                        
+                        let flat = 
+                          flat 
+                            |> HMap.map(fun k v -> 
+                              let a = v |> Leaf.toAnnotation
+                              let a' = if a.geometry = Geometry.DnS then { a with showDns = true } else a                                                             
+                              a'|> Leaf.Annotations)                                  
 
-                        m' |> Lenses.set _flat flat
+                        //let inline median input = 
+                        //  let sorted = input |> Seq.toArray |> Array.sort
+                        //  let m1,m2 = 
+                        //      let len = sorted.Length-1 |> float
+                        //      len/2. |> floor |> int, len/2. |> ceil |> int 
+                        //  (sorted.[m1] + sorted.[m2] |> float)/2.
+
+                        //let stuff = 
+                        //  flat 
+                        //    |> HMap.toList 
+                        //    |> List.map snd 
+                        //    |> List.map Leaf.toAnnotation
+                        //    |> List.filter(fun x -> x.geometry = Geometry.DnS)
+                        //    |> List.map(fun x -> x.points |> DipAndStrike.calculateDnsErrors)
+                        //    |> List.concat
+                            
+                        //let avg = stuff |> List.average
+                        //let med = stuff |> List.toArray |> median
+                        //let std = DipAndStrike.computeStandardDeviation avg stuff
+                        //Log.line "%f %f %f" std avg med
+                            
+                        //let result = stuff |> List.map(fun x -> { error = x } )
+
+                        //let csvTable = Csv.Seq.csv ";" true id result
+                        //Csv.Seq.write ("./error.csv") csvTable |> ignore
+
+                        m 
+                          |> Lenses.set _groups newGroups
+                          |> Lenses.set _lookUp lookup
+                          |> Lenses.set _flat flat
                     | None -> m   
             | ImportSurfaceTrafo,_,_ ->
                 match Dialogs.openDialog w with
-                    | Some x ->
-                        let imported = SurfaceTrafoImporter.startImporter x 
-                        { m with scene = { m.scene with surfacesModel = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel}}      
+                    | Some path ->
+                        let imported = SurfaceTrafoImporter.startImporter path
+
+                        let filterIds = File.ReadLines (Path.ChangeExtension(path,".filter")) |> Seq.toList
+
+                        let k = 
+                          imported 
+                            |> PList.toList 
+                            |> List.filter(fun x -> List.contains x.id filterIds) 
+                            |> List.map (fun x ->
+                              {
+                                id = x.id
+                                shift = x.trafo.Forward.C3.XYZ.Length
+                              })
+
+                        let csvTable = Csv.Seq.csv "," true id k
+                        Csv.Seq.write (@"./shift.csv") csvTable |> ignore
+
+                        let s = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel
+                        m |> Lenses.set _surfaceModelLens s
+                        
                     | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
@@ -920,10 +985,10 @@ module ViewerApp =
                     let pitch    = sprintf "%s°" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
                     let position = view.Location.ToString("0.00")
 
-                    let spericalc = ViewPlan.getLatLonAlt(view.Location)
+                    let spericalc = CooTransformation.getLatLonAlt(view.Location)
                     let lon = sprintf "%s°" ((spericalc.longitude).ToString("0.00"))
                     let lat = sprintf "%s°" ((spericalc.latitude).ToString("0.00"))
-                    let alt = sprintf "%s°" ((spericalc.altitude).ToString("0.00"))
+                    let alt = sprintf "%s" ((spericalc.altitude).ToString("0.00"))
                     
                     let style' = "color: white; font-family:Consolas;"
 
@@ -965,7 +1030,7 @@ module ViewerApp =
             [   
                 control
                 //orientationSystem model
-                arrowOverlay
+               // arrowOverlay
                 textOverlays
                 
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
@@ -1154,19 +1219,21 @@ module ViewerApp =
           | None -> m
 
     let loadLastAnnotations (m:Model) = 
-        match Serialization.fileExists "./lastmeasure" with
-          | Some path -> 
-                Groups.loadGroups path |> Lenses.set' _annotations m
-          | None -> m
-
+      match Serialization.fileExists "./lastmeasure" with
+        | Some path ->             
+            let groups = Groups.tryLoadGroups path 
+            match groups with
+            | Some g -> g |> Lenses.set' _annotations m
+            | None -> m
+        | None -> m
 
     let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = 
             PRo3D.Viewer.Viewer.initial 
               |> Scene.loadLastScene runtime signature
               |> loadRoverData
-              |> loadLastAnnotations        
-
+              |> loadLastAnnotations  
+              
         App.start {
             unpersist = Unpersist.instance
             threads = pool runtime signature

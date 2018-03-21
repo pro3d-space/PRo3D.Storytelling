@@ -100,9 +100,12 @@ module Groups =
         { model with flat = flat }
 
     
-    let loadGroups (path:string) =
-        Serialization.loadAs<PRo3D.Groups.GroupsModel> path       //let groups =    
-        //{ groups with flat = (flatten groups.rootGroup) } 
+    let tryLoadGroups (path:string) =
+      try
+        Some (Serialization.loadAs<PRo3D.Groups.GroupsModel> path)
+      with _ ->
+        Log.error "[loadGroups:] couldn't load %s" path
+        None        
 
     let updateNodeAt (p : list<Index>) (f : Node -> Node) (t : Node) = 
         let rec go (p : list<Index>) (t : Node) =

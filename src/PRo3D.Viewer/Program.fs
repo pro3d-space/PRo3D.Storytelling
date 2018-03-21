@@ -87,6 +87,8 @@ let main argv =
     
     let mainApp = 
         PRo3D.ViewerApp.start form runtime signature bc
+
+    CooTransformation.initCooTrafo
     
     let domainError (sender:obj) (args:UnhandledExceptionEventArgs) =
         let e = args.ExceptionObject :?> Exception;
@@ -148,7 +150,7 @@ let main argv =
     use ctrl = new AardvarkCefBrowser()
     ctrl.Dock <- DockStyle.Fill
     form.Controls.Add ctrl    
-    form.Text <- "PRo3D Viewer - 2.6.1* - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH"
+    form.Text <- "PRo3D Viewer - 2.6.2* - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH"
     //form.WindowState <- FormWindowState.Minimized
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"        
@@ -166,5 +168,7 @@ let main argv =
     ////Console.ReadLine() |> ignore
     //if p.HasExited |> not then p.Kill()
     ////sem.Wait()
+
+    CooTransformation.deInitCooTrafo
 
     0

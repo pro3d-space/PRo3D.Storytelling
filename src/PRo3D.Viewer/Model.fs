@@ -78,31 +78,46 @@ type Semantic =
     | None = 7
 
 [<DomainType>]
+type Statistics = {
+  average      : float
+  min          : float
+  max          : float
+  stdev        : float
+  sumOfSquares : float
+}
+
+module Statistics = 
+  let init = {
+    average      = Double.NaN
+    min          = Double.NaN
+    max          = Double.NaN
+    stdev        = Double.NaN
+    sumOfSquares = Double.NaN
+  }
+
+[<DomainType>]
 type DipAndStrikeResults = {
-
-    plane : Plane3d
-
-    dipAngle : float
-    dipDirection : V3d
+    plane           : Plane3d
+    dipAngle        : float
+    dipDirection    : V3d
     strikeDirection : V3d
-    dipAzimuth : float
-    strikeAzimuth : float
-
-    centerOfMass : V3d
+    dipAzimuth      : float
+    strikeAzimuth   : float
+    centerOfMass    : V3d
+    error           : Statistics
 }
 
 [<DomainType>]
 type AnnotationResults = {
-
-    height : float
+    height      : float
     heightDelta : float
-    length : float
-    wayLength : float
+    length      : float
+    wayLength   : float
 }
 [<DomainType>]
 type Segment = {
     startPoint : V3d
-    endPoint : V3d
+    endPoint   : V3d
     
     points : plist<V3d> 
 }
@@ -354,7 +369,13 @@ type MeasurementsImporterModel = {
 type SurfaceTrafo = {
     id : string
     trafo: Trafo3d
-    }
+}
+
+type SurfaceShift = {
+    id : string
+    shift: float
+}
+
 [<DomainType>]
 type SurfaceTrafoImporterModel = {
     trafos : plist<SurfaceTrafo>

@@ -23,40 +23,68 @@ module AnnotationGroupsImporter =
     //                sg |> HSet.ofList |> HSet.collect flatten
     //            HSet.union (c |> HSet.ofList) sga
 
-    let rec getGroups (m:XElement) up north : (Node * hmap<Guid,Leaf>) = 
-        let name = (m.Element(xname "Name")).Value.ToString()
-        let visible = (m.Element(xname "IsVisible")).Value.ToBool()
-                           
-        let annotations = (m.Elements(xname "Measurements").Elements(xname "object")) 
-                            |> List.ofSeq
-                            |> List.map (fun x -> MeasurementsImporter.getAnnotation x)
-                            |> List.map( fun x -> let dns = x.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
-                                                  let results = Annotation.calculateAnnotationResults x up
-                                                  { x with dnsResults = dns; results = Some results} )
-                            |> List.map(fun x -> Leaf.Annotations x)
+    let rec getGroups up north (m:XElement) : (Node * hmap<Guid,Leaf> * hmap<Guid,string>) = 
+      let name    = (m.Element(xname "Name")).Value.ToString()
+      let visible = (m.Element(xname "IsVisible")).Value.ToBool()
+                         
+      let annotations = 
+        (m.Elements(xname "Measurements").Elements(xname "object")) 
+          |> List.ofSeq
+          |> List.map MeasurementsImporter.getAnnotation
+          |> List.map(fun x -> 
+              let dns = 
+                x.points 
+                  |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
 
-        let flat' = annotations |> List.map(fun x -> 
-                                    Log.warn "added key %A" x.id
-                                    x.id, x) |> HMap.ofList
+              let results = 
+                Annotation.calculateAnnotationResults x up
 
-        let bla = (m.Elements(xname "SubGroups")).Elements(xname "MeasurementGroup") |> List.ofSeq
+              { x with dnsResults = dns; results = Some results} )
+          |> List.map Leaf.Annotations
 
-        let subGroupsNFlat = bla |> List.map (fun x -> getGroups x up north)
-        
-        let flat' = 
-            subGroupsNFlat 
-              |> List.map (fun (_,x) -> x)             
-              |> List.fold (fun acc x -> HMap.union acc x) flat'
+      let flat' = 
+        annotations 
+          |> List.map(fun x -> x.id, x) 
+          |> HMap.ofList
+      
+      let subGroupsNFlatNLookup = 
+        (m.Elements(xname "SubGroups")).Elements(xname "MeasurementGroup") 
+          |> List.ofSeq 
+          |> List.map(fun x -> getGroups up north x)     
+      
+      let flat' = 
+        subGroupsNFlatNLookup 
+          |> List.map (fun (_,x,_) -> x)             
+          |> List.fold (fun acc x -> HMap.union acc x) flat'
 
-        let g = {
-                key = Guid.NewGuid()
-                name = name
-                leaves = annotations |> Seq.map(fun x -> x.id) |> PList.ofSeq
-                subNodes = subGroupsNFlat |> Seq.map(fun (x,_) -> x) |> PList.ofSeq
-                visible = visible
-                expanded = true
-                }
-        (g, flat')
+      let nodes = 
+        subGroupsNFlatNLookup 
+          |> List.map (fun (x,_,_) -> x)             
+          |> PList.ofList
+
+      // collect lookups from subnodes
+      let lookUp = 
+        subGroupsNFlatNLookup 
+          |> List.map (fun (_,_,x) -> x)             
+          |> List.fold (fun acc x -> HMap.union acc x) HMap.empty
+
+      // add current annotations to lookup
+      let lookUp' =
+        annotations 
+          |> List.map(fun x -> HMap.add x.id name HMap.empty)
+          |> List.fold(fun a b -> HMap.union a b ) lookUp
+
+      let g = 
+        {
+          key      = Guid.NewGuid()
+          name     = name
+          leaves   = annotations |> List.map(fun x -> x.id) |> PList.ofList
+          subNodes = nodes
+          visible  = visible
+          expanded = true
+        }
+
+      (g, flat', lookUp')
 
     type XmlReader with
     /// Returns a lazy sequence of XElements matching a given name to start from
@@ -77,18 +105,26 @@ module AnnotationGroupsImporter =
         let root = reader.StreamElements("MeasurementGroups") 
         let xGroups = (root.Elements(xname "MeasurementGroup")).ToListOfT<XElement>()
         printfn "%A" xGroups.Count
-        let groupsNFlat = xGroups |> Seq.map (fun x -> getGroups x refSys.up.value refSys.north.value)
+        let groupsNFlat = 
+          xGroups 
+            |> Seq.toList
+            |> List.map(getGroups refSys.up.value refSys.north.value)
 
         let flat = 
-            groupsNFlat 
-              |> Seq.map (fun (_,x) -> x) 
-              |> Seq.toList 
-              |> List.fold (fun acc x -> HMap.union acc x) HMap.empty
+          groupsNFlat 
+            |> List.map (fun (_,x,_) -> x)
+            |> List.fold (fun acc x -> HMap.union acc x) HMap.empty
 
         let groups = 
-            groupsNFlat |> Seq.map (fun (x,_) -> x) |> PList.ofSeq  
+          groupsNFlat |> List.map (fun (x,_,_) -> x) |> PList.ofList
 
-        groups, flat
+        
+        let lookup = 
+          groupsNFlat 
+            |> List.map (fun (_,_,x) -> x)
+            |> List.fold (fun acc x -> HMap.union acc x) HMap.empty        
+
+        groups, flat, lookup
 
 
     //type Action =

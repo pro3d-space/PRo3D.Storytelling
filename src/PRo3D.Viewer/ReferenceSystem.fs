@@ -40,7 +40,7 @@ module ReferenceSystemApp =
             getNearDistance   : 'ma -> IMod<float>
         }
     
-    let upVector (point:V3d) = point.Normalized
+    let upVector (point:V3d) = CooTransformation.getUpVector point //point.Normalized
     
     let northVector (up:V3d) =
         let east = V3d.OOI.Cross(up)
@@ -340,7 +340,7 @@ module ReferenceSystemApp =
                     Html.row "North:"   [Vector3d.view model.north |> UI.map SetNorth ]
                     Html.row "Bearing:" [Incremental.text (bearing |> Mod.map (fun x -> x.ToString("0.00")))] // compute azimuth with view dir, north vector and up vector
                     Html.row "Pitch:"   [Incremental.text (pitch |> Mod.map (fun x -> x.ToString("0.00")))]  // same for pitch which relates to dip angle
-                    Html.row "Height:"  [text "not implemented"]
+                    Html.row "Height:"  [Incremental.text (model.origin |> Mod.map (fun x -> (CooTransformation.getHeight x).ToString("0.00")))]
                     Html.row "Visible:" [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
                     
                 ]

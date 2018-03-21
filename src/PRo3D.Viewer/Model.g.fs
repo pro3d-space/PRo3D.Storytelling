@@ -10,6 +10,79 @@ module Mutable =
 
     
     
+    type MStatistics(__initial : PRo3D.Statistics) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Statistics> = Aardvark.Base.Incremental.EqModRef<PRo3D.Statistics>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Statistics>
+        let _average = ResetMod.Create(__initial.average)
+        let _min = ResetMod.Create(__initial.min)
+        let _max = ResetMod.Create(__initial.max)
+        let _stdev = ResetMod.Create(__initial.stdev)
+        let _sumOfSquares = ResetMod.Create(__initial.sumOfSquares)
+        
+        member x.average = _average :> IMod<_>
+        member x.min = _min :> IMod<_>
+        member x.max = _max :> IMod<_>
+        member x.stdev = _stdev :> IMod<_>
+        member x.sumOfSquares = _sumOfSquares :> IMod<_>
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3D.Statistics) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                ResetMod.Update(_average,v.average)
+                ResetMod.Update(_min,v.min)
+                ResetMod.Update(_max,v.max)
+                ResetMod.Update(_stdev,v.stdev)
+                ResetMod.Update(_sumOfSquares,v.sumOfSquares)
+                
+        
+        static member Create(__initial : PRo3D.Statistics) : MStatistics = MStatistics(__initial)
+        static member Update(m : MStatistics, v : PRo3D.Statistics) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3D.Statistics> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module Statistics =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let average =
+                { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.average
+                    override x.Set(r,v) = { r with average = v }
+                    override x.Update(r,f) = { r with average = f r.average }
+                }
+            let min =
+                { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.min
+                    override x.Set(r,v) = { r with min = v }
+                    override x.Update(r,f) = { r with min = f r.min }
+                }
+            let max =
+                { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.max
+                    override x.Set(r,v) = { r with max = v }
+                    override x.Update(r,f) = { r with max = f r.max }
+                }
+            let stdev =
+                { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.stdev
+                    override x.Set(r,v) = { r with stdev = v }
+                    override x.Update(r,f) = { r with stdev = f r.stdev }
+                }
+            let sumOfSquares =
+                { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
+                    override x.Get(r) = r.sumOfSquares
+                    override x.Set(r,v) = { r with sumOfSquares = v }
+                    override x.Update(r,f) = { r with sumOfSquares = f r.sumOfSquares }
+                }
+    
+    
     type MDipAndStrikeResults(__initial : PRo3D.DipAndStrikeResults) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.DipAndStrikeResults> = Aardvark.Base.Incremental.EqModRef<PRo3D.DipAndStrikeResults>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.DipAndStrikeResults>
@@ -20,6 +93,7 @@ module Mutable =
         let _dipAzimuth = ResetMod.Create(__initial.dipAzimuth)
         let _strikeAzimuth = ResetMod.Create(__initial.strikeAzimuth)
         let _centerOfMass = ResetMod.Create(__initial.centerOfMass)
+        let _error = MStatistics.Create(__initial.error)
         
         member x.plane = _plane :> IMod<_>
         member x.dipAngle = _dipAngle :> IMod<_>
@@ -28,6 +102,7 @@ module Mutable =
         member x.dipAzimuth = _dipAzimuth :> IMod<_>
         member x.strikeAzimuth = _strikeAzimuth :> IMod<_>
         member x.centerOfMass = _centerOfMass :> IMod<_>
+        member x.error = _error
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.DipAndStrikeResults) =
@@ -41,6 +116,7 @@ module Mutable =
                 ResetMod.Update(_dipAzimuth,v.dipAzimuth)
                 ResetMod.Update(_strikeAzimuth,v.strikeAzimuth)
                 ResetMod.Update(_centerOfMass,v.centerOfMass)
+                MStatistics.Update(_error, v.error)
                 
         
         static member Create(__initial : PRo3D.DipAndStrikeResults) : MDipAndStrikeResults = MDipAndStrikeResults(__initial)
@@ -98,6 +174,12 @@ module Mutable =
                     override x.Get(r) = r.centerOfMass
                     override x.Set(r,v) = { r with centerOfMass = v }
                     override x.Update(r,f) = { r with centerOfMass = f r.centerOfMass }
+                }
+            let error =
+                { new Lens<PRo3D.DipAndStrikeResults, PRo3D.Statistics>() with
+                    override x.Get(r) = r.error
+                    override x.Set(r,v) = { r with error = v }
+                    override x.Update(r,f) = { r with error = f r.error }
                 }
     
     

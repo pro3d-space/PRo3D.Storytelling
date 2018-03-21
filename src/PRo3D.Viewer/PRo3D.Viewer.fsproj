@@ -74,6 +74,7 @@
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
     <Compile Include="ReferenceSystem-Model.fs" />
+    <Compile Include="CooTransformation.fs" />
     <Compile Include="DipAndStrike.fs" />
     <Compile Include="ReferenceSystem.fs" />
     <Compile Include="Surface-Model.fs" />

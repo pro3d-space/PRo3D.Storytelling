@@ -195,6 +195,7 @@ module Mutable =
         let _activeGroup = ResetMod.Create(__initial.activeGroup)
         let _activeChild = ResetMod.Create(__initial.activeChild)
         let _flat = MMap.Create(__initial.flat, (fun v -> MLeaf.Create(v)), (fun (m,v) -> MLeaf.Update(m, v)), (fun v -> v))
+        let _groupsLookup = MMap.Create(__initial.groupsLookup)
         let _lastSelectedItem = ResetMod.Create(__initial.lastSelectedItem)
         let _selectedLeaves = MSet.Create(__initial.selectedLeaves)
         let _singleSelectLeaf = MOption.Create(__initial.singleSelectLeaf)
@@ -203,6 +204,7 @@ module Mutable =
         member x.activeGroup = _activeGroup :> IMod<_>
         member x.activeChild = _activeChild :> IMod<_>
         member x.flat = _flat :> amap<_,_>
+        member x.groupsLookup = _groupsLookup :> amap<_,_>
         member x.lastSelectedItem = _lastSelectedItem :> IMod<_>
         member x.selectedLeaves = _selectedLeaves :> aset<_>
         member x.singleSelectLeaf = _singleSelectLeaf :> IMod<_>
@@ -216,6 +218,7 @@ module Mutable =
                 ResetMod.Update(_activeGroup,v.activeGroup)
                 ResetMod.Update(_activeChild,v.activeChild)
                 MMap.Update(_flat, v.flat)
+                MMap.Update(_groupsLookup, v.groupsLookup)
                 ResetMod.Update(_lastSelectedItem,v.lastSelectedItem)
                 MSet.Update(_selectedLeaves, v.selectedLeaves)
                 MOption.Update(_singleSelectLeaf, v.singleSelectLeaf)
@@ -258,6 +261,12 @@ module Mutable =
                     override x.Get(r) = r.flat
                     override x.Set(r,v) = { r with flat = v }
                     override x.Update(r,f) = { r with flat = f r.flat }
+                }
+            let groupsLookup =
+                { new Lens<PRo3D.Groups.GroupsModel, Aardvark.Base.hmap<System.Guid,Microsoft.FSharp.Core.string>>() with
+                    override x.Get(r) = r.groupsLookup
+                    override x.Set(r,v) = { r with groupsLookup = v }
+                    override x.Update(r,f) = { r with groupsLookup = f r.groupsLookup }
                 }
             let lastSelectedItem =
                 { new Lens<PRo3D.Groups.GroupsModel, PRo3D.Groups.SelectedItem>() with
