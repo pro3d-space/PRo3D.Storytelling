@@ -48,20 +48,32 @@ module ViewPlan =
 
         let init = double(0.0)
         
-        let mutable lat = init
-        let mutable lon = init
-        let mutable alt = init
-        let pX = double p.X
-        let pY = double p.Y
-        let pZ = double p.Z
-        let bla = CooTrafo.Xyz2LatLonAlt("Mars", pX, pY, pZ, ref lat, ref lon, ref alt)
+        let mutable dLat = init
+        let mutable dLon = init
+        let mutable dAlt = init
+        //let pX = double p.X
+        //let pY = double p.Y
+        //let pZ = double p.Z
+        let dX = 2341053.0
+        let dY = 2358995.0
+        let dZ = 685294.0
+        let bla = CooTrafo.Xyz2LatLonAlt("Mars", dX, dY, dZ, ref dLat, ref dLon, ref dAlt)
         
-        let sc = {
-                    latitude = lat;
-                    longitude = lon;
-                    altitude = alt;
-                    radian = 0.0;
-                    }
+        let sc = match bla with
+                    | 0 ->  {
+                            latitude = dLat
+                            longitude = dLon
+                            altitude = dAlt
+                            radian = 0.0
+                            }
+                    | _ ->  {
+                            latitude = dLat
+                            longitude = dLon
+                            altitude = dAlt
+                            radian = 0.0
+                            }
+           
+      
         CooTrafo.DeInit()
         sc
 
