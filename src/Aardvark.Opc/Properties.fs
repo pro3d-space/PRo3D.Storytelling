@@ -60,12 +60,12 @@ module Configurations =
                 useCompressedTextures = true
                 preTransform     = Trafo3d.Identity
                 patchHierarchies = 
-                        System.IO.Directory.GetDirectories(@"D:\_WORK\Aardwork\Exomars\_Scenes\MSL_Mastcam_Sol318\Surface") 
+                        System.IO.Directory.GetDirectories(@"E:\Aardwork\Exomars\_SCN\GardenCity Data") 
                         |> Seq.collect System.IO.Directory.GetDirectories
-                boundingBox      = Box3d.Parse("[[-2490136.401072104, 2285878.413405098, -271417.754880811], [-2490134.590369504, 2285880.810397286, -271414.202594255]]") 
+                boundingBox      = Box3d.Parse("[[-2486972.923809925, 2288926.293124544, -275794.479790366], [-2486972.675580427, 2288926.581096648, -275793.402162172]]") 
                 near             = 0.1
                 far              = 10000.0
-                speed            = 5.0
+                speed            = 3.0
                 lodDecider       = DefaultMetrics.mars
             }        
 

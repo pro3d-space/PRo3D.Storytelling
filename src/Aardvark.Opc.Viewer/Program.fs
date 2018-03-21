@@ -272,10 +272,14 @@ module Viewer =
 
       let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
 
-      let initialView = CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
-      let view = initialView |> DefaultCameraController.controlWithSpeed speed mouse keyboard time
+      let initialView = 
+        CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
+
+      let view = 
+        initialView |> DefaultCameraController.controlWithSpeed speed mouse keyboard time
       
-      let proj = sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))      
+      let proj = 
+        sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))      
 
       let sg = Aardvark.Opc.Sg2.createFlatISg scene
 
@@ -284,7 +288,7 @@ module Viewer =
        |> Sg.effect [
           DefaultSurfaces.trafo |> toEffect
           DefaultSurfaces.constantColor C4f.White |> toEffect
-          DefaultSurfaces.diffuseTexture |> toEffect                    
+          DefaultSurfaces.diffuseTexture |> toEffect
        ]
        |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
        |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)
@@ -304,8 +308,8 @@ module Viewer =
         let cfg =  { BackendConfiguration.Default  with useDebugOutput = false }
         let task =
             RenderTask.ofList [
-                app.Runtime.CompileClear(win.FramebufferSignature, Mod.constant C4f.Gray)
-                app.Runtime.CompileRender(win.FramebufferSignature, cfg, sg)  |> DefaultOverlays.withStatistics
+                app.Runtime.CompileClear(win.FramebufferSignature, (Mod.constant(C4b(30,30,30, 255).ToC4f())))
+                app.Runtime.CompileRender(win.FramebufferSignature, cfg, sg) // |> DefaultOverlays.withStatistics
             ]
 
         win.RenderTask <- task

@@ -197,13 +197,13 @@ module Mutable =
         let _trafo = Aardvark.UI.Trafos.Mutable.MTransformation.Create(__initial.trafo)
         let _globalBB = ResetMod.Create(__initial.globalBB)
         let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
-        let _kdTree = ResetMod.Create(__initial.kdTree)
+        let _kdTree = MMap.Create(__initial.kdTree)
         
         member x.surface = __current.Value.surface
         member x.trafo = _trafo
         member x.globalBB = _globalBB :> IMod<_>
         member x.sceneGraph = _sceneGraph :> IMod<_>
-        member x.kdTree = _kdTree :> IMod<_>
+        member x.kdTree = _kdTree :> amap<_,_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.SgSurface) =
@@ -213,7 +213,7 @@ module Mutable =
                 Aardvark.UI.Trafos.Mutable.MTransformation.Update(_trafo, v.trafo)
                 ResetMod.Update(_globalBB,v.globalBB)
                 ResetMod.Update(_sceneGraph,v.sceneGraph)
-                ResetMod.Update(_kdTree,v.kdTree)
+                MMap.Update(_kdTree, v.kdTree)
                 
         
         static member Create(__initial : PRo3D.Surfaces.SgSurface) : MSgSurface = MSgSurface(__initial)
@@ -255,7 +255,7 @@ module Mutable =
                     override x.Update(r,f) = { r with sceneGraph = f r.sceneGraph }
                 }
             let kdTree =
-                { new Lens<PRo3D.Surfaces.SgSurface, Microsoft.FSharp.Core.obj>() with
+                { new Lens<PRo3D.Surfaces.SgSurface, Aardvark.Base.hmap<Aardvark.Base.Box3d,Aardvark.Opc.KdTrees.Level0KdTree>>() with
                     override x.Get(r) = r.kdTree
                     override x.Set(r,v) = { r with kdTree = v }
                     override x.Update(r,f) = { r with kdTree = f r.kdTree }

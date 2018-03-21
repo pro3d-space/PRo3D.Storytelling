@@ -186,7 +186,6 @@ type Patch =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Patch =
     let ofInfo (level : int) (size: float) (p : PatchFileInfo) = { level = level; info = p; triangleSize = size }
-
         
     let load (baseDir : string) (p : PatchFileInfo)  =
         let sw = System.Diagnostics.Stopwatch()
@@ -219,7 +218,6 @@ module Patch =
             //      | None   -> def
 
             def |> SymDict.ofList 
-
 
         let geometry =
             IndexedGeometry(
