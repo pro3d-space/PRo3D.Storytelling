@@ -87,6 +87,8 @@ let main argv =
     
     let mainApp = 
         PRo3D.ViewerApp.start form runtime signature bc
+
+    CooTransformation.initCooTrafo
     
     let domainError (sender:obj) (args:UnhandledExceptionEventArgs) =
         let e = args.ExceptionObject :?> Exception;
@@ -166,5 +168,7 @@ let main argv =
     ////Console.ReadLine() |> ignore
     //if p.HasExited |> not then p.Kill()
     ////sem.Wait()
+
+    CooTransformation.deInitCooTrafo
 
     0

@@ -985,10 +985,10 @@ module ViewerApp =
                     let pitch    = sprintf "%s°" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
                     let position = view.Location.ToString("0.00")
 
-                    //let spericalc = ViewPlan.getLatLonAlt(view.Location)
-                    //let lon = sprintf "%s°" ((spericalc.longitude).ToString("0.00"))
-                    //let lat = sprintf "%s°" ((spericalc.latitude).ToString("0.00"))
-                    //let alt = sprintf "%s°" ((spericalc.altitude).ToString("0.00"))
+                    let spericalc = CooTransformation.getLatLonAlt(view.Location)
+                    let lon = sprintf "%s°" ((spericalc.longitude).ToString("0.00"))
+                    let lat = sprintf "%s°" ((spericalc.latitude).ToString("0.00"))
+                    let alt = sprintf "%s" ((spericalc.altitude).ToString("0.00"))
                     
                     let style' = "color: white; font-family:Consolas;"
 
@@ -1007,18 +1007,18 @@ module ViewerApp =
                                 td[style style'][text "Position: "]
                                 td[style style'][text position]
                             ]
-                            //tr[][
-                            //    td[style style'][text "Longitude: "]
-                            //    td[style style'][text lon]
-                            //]
-                            //tr[][
-                            //    td[style style'][text "Latitude: "]
-                            //    td[style style'][text lat]
-                            //]
-                            //tr[][
-                            //    td[style style'][text "Altitude: "]
-                            //    td[style style'][text alt]
-                            //]
+                            tr[][
+                                td[style style'][text "Longitude: "]
+                                td[style style'][text lon]
+                            ]
+                            tr[][
+                                td[style style'][text "Latitude: "]
+                                td[style style'][text lat]
+                            ]
+                            tr[][
+                                td[style style'][text "Altitude: "]
+                                td[style style'][text alt]
+                            ]
                         ]
                     ]              
                 }
@@ -1232,8 +1232,8 @@ module ViewerApp =
             PRo3D.Viewer.Viewer.initial 
               |> Scene.loadLastScene runtime signature
               |> loadRoverData
-              |> loadLastAnnotations        
-
+              |> loadLastAnnotations  
+              
         App.start {
             unpersist = Unpersist.instance
             threads = pool runtime signature
