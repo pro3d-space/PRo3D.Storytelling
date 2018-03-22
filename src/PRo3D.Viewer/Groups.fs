@@ -11,8 +11,7 @@ open PRo3D
 //open PRo3D.Surfaces
 
 
-module Groups =
-    open DomainModel        
+module Groups =    
     open Aardvark.Base.Geometry.BvhTree   
     open Aardvark.Base.HSet
 

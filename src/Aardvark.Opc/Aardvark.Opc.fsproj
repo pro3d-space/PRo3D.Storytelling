@@ -7,13 +7,13 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>3b784ce7-f853-449a-a860-8d735c2a3f74</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>Aardvark.OpcViewer</RootNamespace>
-    <AssemblyName>Aardvark.OpcViewer</AssemblyName>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Aardvark.Opc</RootNamespace>
+    <AssemblyName>Aardvark.Opc</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
-    <Name>Aardvark.OpcViewer</Name>
+    <Name>Aardvark.Opc</Name>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -72,15 +72,14 @@
     <Compile Include="Staging\Proc.fs" />
     <Compile Include="Staging\LoadProc.fs" />
     <Compile Include="Staging\HiearchicalLoD.fs" />
-    <Compile Include="PathFileInfo.fs" />
+    <Compile Include="C:\_work\PRo3D\src\Aardvark.Opc\PatchFileInfo.fs" />
     <Compile Include="Aara.fs" />
     <Compile Include="RenderUtilities.fs" />
-    <Compile Include="RenderingV1.fs" />
     <Compile Include="RenderingV2.fs" />
     <Compile Include="Shaders.fs" />
     <Compile Include="Properties.fs" />
-    <Compile Include="DomainModel.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="KdTrees.fs" />
+    <Compile Include="Sg.fs" />
     <None Include="paket.references" />
     <Content Include="App.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

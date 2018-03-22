@@ -45,7 +45,7 @@ module ViewerApp =
     open Surface   
     open System.Collections.Concurrent   
     open Scene   
-    open DomainModel.Surfaces
+    //open DomainModel.Surfaces
     open Aardvark.UI.Trafos
     open Aardvark.SceneGraph.SgFSharp.Sg
     open PRo3d.Align

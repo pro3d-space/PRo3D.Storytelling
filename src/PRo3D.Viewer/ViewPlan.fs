@@ -45,7 +45,7 @@ module ViewPlan =
     //    let test = @".\bin" 
     //    let errorCode = CooTrafo.Init(test, directory)
     //    printfn "%A" errorCode
-
+      
     //let getLatLonAlt (p:V3d) : SphericalCoo = 
     //    //let directory = @".\InstrumentStuff" 
     //    //let test = @".\bin" 
@@ -53,7 +53,7 @@ module ViewPlan =
     //    //printfn "%A" errorCode
 
     //    let init = double(0.0)
-        
+      
     //    let lat = ref init
     //    let lon = ref init
     //    let alt = ref init
@@ -61,7 +61,7 @@ module ViewPlan =
     //    let pY = double p.Y
     //    let pZ = double p.Z
     //    let bla = CooTrafo.Xyz2LatLonAlt("Mars", pX, pY, pZ, lat, lon, alt)
-        
+      
     //    if bla <> 0 then
     //        Log.line "cootrafo errorcode %A" bla
 
@@ -73,7 +73,7 @@ module ViewPlan =
     //                }
     //    //CooTrafo.DeInit()
     //    sc
-
+      
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =
         //match path with
         //    | Some p ->

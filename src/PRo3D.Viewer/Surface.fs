@@ -17,6 +17,7 @@ open PRo3D.Groups
 module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg
     open Aardvark.UI.Trafos    
+    open Aardvark.Opc.Viewer
     
     module SurfaceAttributes = 
         open System.Xml

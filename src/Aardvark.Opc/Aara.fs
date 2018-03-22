@@ -186,7 +186,6 @@ type Patch =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Patch =
     let ofInfo (level : int) (size: float) (p : PatchFileInfo) = { level = level; info = p; triangleSize = size }
-
         
     let load (baseDir : string) (p : PatchFileInfo)  =
         let sw = System.Diagnostics.Stopwatch()
@@ -210,7 +209,7 @@ module Patch =
         let indexAttributes =
             let def = [
                 DefaultSemantic.Positions, positions.Data :> Array
-                DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array            
+                DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
             ]
 
             //let def = 
@@ -219,7 +218,6 @@ module Patch =
             //      | None   -> def
 
             def |> SymDict.ofList 
-
 
         let geometry =
             IndexedGeometry(
@@ -241,7 +239,6 @@ module Patch =
                     let current = System.IO.Path.ChangeExtension(path,x)
                     if File.Exists current then current else tryFindTex xs path
                 | [] -> failwithf "texture not found: %s" path
-
 
         tryFindTex extensions sourcePath
 
@@ -299,7 +296,6 @@ module PatchHierarchy =
 
         let tree = mkTree rootPatch
         tree, avgSizes |> Array.rev
-
 
     let load (fileName : string) =
         let dir = Path.GetDirectoryName(Path.GetDirectoryName fileName)
