@@ -60,7 +60,7 @@ module Configurations =
                 useCompressedTextures = true
                 preTransform     = Trafo3d.Identity
                 patchHierarchies = 
-                        System.IO.Directory.GetDirectories(@"E:\Aardwork\Exomars\_SCN\GardenCity Data") 
+                        System.IO.Directory.GetDirectories(@"E:\Aardwork\Exomars\_SCN\GardenCity") 
                         |> Seq.collect System.IO.Directory.GetDirectories
                 boundingBox      = Box3d.Parse("[[-2486972.923809925, 2288926.293124544, -275794.479790366], [-2486972.675580427, 2288926.581096648, -275793.402162172]]") 
                 near             = 0.1
