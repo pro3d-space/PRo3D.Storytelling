@@ -20,6 +20,7 @@ module Mutable =
         let _size = Aardvark.UI.Mutable.MNumericInput.Create(__initial.size)
         let _scaleChart = MList.Create(__initial.scaleChart)
         let _selectedScale = ResetMod.Create(__initial.selectedScale)
+        let _planet = ResetMod.Create(__initial.planet)
         
         member x.origin = _origin :> IMod<_>
         member x.north = _north
@@ -28,6 +29,7 @@ module Mutable =
         member x.size = _size
         member x.scaleChart = _scaleChart :> alist<_>
         member x.selectedScale = _selectedScale :> IMod<_>
+        member x.planet = _planet :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.ReferenceSystem.ReferenceSystem) =
@@ -41,6 +43,7 @@ module Mutable =
                 Aardvark.UI.Mutable.MNumericInput.Update(_size, v.size)
                 MList.Update(_scaleChart, v.scaleChart)
                 ResetMod.Update(_selectedScale,v.selectedScale)
+                ResetMod.Update(_planet,v.planet)
                 
         
         static member Create(__initial : PRo3D.ReferenceSystem.ReferenceSystem) : MReferenceSystem = MReferenceSystem(__initial)
@@ -98,4 +101,10 @@ module Mutable =
                     override x.Get(r) = r.selectedScale
                     override x.Set(r,v) = { r with selectedScale = v }
                     override x.Update(r,f) = { r with selectedScale = f r.selectedScale }
+                }
+            let planet =
+                { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, PRo3D.ReferenceSystem.Planet>() with
+                    override x.Get(r) = r.planet
+                    override x.Set(r,v) = { r with planet = v }
+                    override x.Update(r,f) = { r with planet = f r.planet }
                 }

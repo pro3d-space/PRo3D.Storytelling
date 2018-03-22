@@ -5,6 +5,10 @@ open Aardvark.Base
 open Aardvark.UI
 
 
+type Planet = 
+    | Earth = 0
+    | Mars = 1
+
 [<DomainType>]
 type ReferenceSystem = {    
 
@@ -15,6 +19,7 @@ type ReferenceSystem = {
     size        : NumericInput
     scaleChart    : plist<string>
     selectedScale : string
+    planet        : Planet
 }
 
 type ReferenceSystemConfig<'a> = {
@@ -66,6 +71,7 @@ module ReferenceSystem =
         size          = initNum2
         scaleChart = ["100km"; "10km"; "1km";"100m";"10m";"2m";"1m";"10cm";"1cm";"1mm";"0.1mm"] |> PList.ofList
         selectedScale = "2m"
+        planet = Planet.Mars
     }
 
     let initialConfig : ReferenceSystemConfig<ViewConfigModel> = {

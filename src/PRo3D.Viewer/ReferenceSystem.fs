@@ -26,6 +26,7 @@ module ReferenceSystemApp =
         | SetScale         of string
         | SetArrowSize     of double
     //    | SetViewConfig    of ViewConfigModel
+        | SetPlanet        of Planet
 
     type InnerConfig<'a> =
         {
@@ -40,7 +41,7 @@ module ReferenceSystemApp =
             getNearDistance   : 'ma -> IMod<float>
         }
     
-    let upVector (point:V3d) = CooTransformation.getUpVector point //point.Normalized
+    let upVector (point:V3d) (planet:string) = CooTransformation.getUpVector point planet //point.Normalized
     
     let northVector (up:V3d) =
         let east = V3d.OOI.Cross(up)
@@ -49,8 +50,8 @@ module ReferenceSystemApp =
     let update<'a> (bigConfig : 'a) (config : ReferenceSystemConfig<'a>) (model : ReferenceSystem) (act : Action) =
         match act with
             | InferCoordSystem p ->
-                let up = upVector p
-                let n = northVector up
+                let up = upVector p (model.planet.ToString())
+                let n = northVector up 
                 { model with origin = p; north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up }, bigConfig
             | SetOrigin p -> 
                 { model with origin = p }, bigConfig
@@ -70,6 +71,8 @@ module ReferenceSystemApp =
                 model, big'          
             | SetScale s ->
                 { model with selectedScale = s }, bigConfig
+            | SetPlanet p ->
+                { model with planet = p }, bigConfig
 
     module Sg =
 
@@ -333,6 +336,13 @@ module ReferenceSystemApp =
                     return DipAndStrike.pitch up view.Forward
                     }
 
+            let height = 
+                adaptive {
+                        let! pos = model.origin
+                        let! planet = model.planet
+                        return CooTransformation.getHeight pos (planet.ToString())
+                    }
+
             require Html.semui (
                 Html.table [                                                
                     Html.row "Pos:"     [Incremental.text (model.origin     |> Mod.map (fun x -> x.ToString("0.00")))]
@@ -340,7 +350,7 @@ module ReferenceSystemApp =
                     Html.row "North:"   [Vector3d.view model.north |> UI.map SetNorth ]
                     Html.row "Bearing:" [Incremental.text (bearing |> Mod.map (fun x -> x.ToString("0.00")))] // compute azimuth with view dir, north vector and up vector
                     Html.row "Pitch:"   [Incremental.text (pitch |> Mod.map (fun x -> x.ToString("0.00")))]  // same for pitch which relates to dip angle
-                    Html.row "Height:"  [Incremental.text (model.origin |> Mod.map (fun x -> (CooTransformation.getHeight x).ToString("0.00")))]
+                    Html.row "Height:"  [Incremental.text (height |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Visible:" [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
                     
                 ]

@@ -24,7 +24,8 @@ module ConfigProperties =
         | SetDnSPlaneSize           of Numeric.Action
         | SetMinDipAngle            of Numeric.Action
         | SetMaxDipAngle            of Numeric.Action
-        | ToggleLodColors           
+        | ToggleLodColors
+        
 
     let update (model : ViewConfigModel) (act : Action) =
         match act with
@@ -46,6 +47,7 @@ module ConfigProperties =
                 { model with maxDipAngle = Numeric.update model.maxDipAngle s }
             | ToggleLodColors ->
                 { model with lodColoring = not model.lodColoring}
+           
 
     let view (model : MViewConfigModel) =    
         require Html.semui (

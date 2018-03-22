@@ -11,6 +11,7 @@ open Aardvark.Opc
 open Aardvark.SceneGraph
 open Aardvark.VRVis
 open Aardvark.Base.Rendering
+open Aardvark.Base.CameraView
 
 //open Aardvark.Data.PhotoNetwork
 
@@ -380,7 +381,6 @@ type SurfaceShift = {
 type SurfaceTrafoImporterModel = {
     trafos : plist<SurfaceTrafo>
 }
-   
 
 [<DomainType>]
 type ViewConfigModel = {
@@ -463,6 +463,7 @@ module ViewConfigModel =
         minDipAngle = initMinAngle
         maxDipAngle = initMaxAngle
         lodColoring = false
+        //planet = Planet.Mars
     }
 
 

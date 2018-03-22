@@ -908,6 +908,14 @@ module ViewerApp =
                         onClick (fun _ -> SwitchViewerMode)
                         ] 
                 }
+
+        let choosePlanet = 
+            adaptive {
+                 return Html.Layout.horizontal [
+                    Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
+                    Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ]
+                ] |> UI.map ReferenceSystemMessage
+                }
                
         let topMenu = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
@@ -918,6 +926,7 @@ module ViewerApp =
              ]                        
              Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
              Incremental.div AttributeMap.empty (AList.ofModSingle switchViewerMode)
+             Incremental.div AttributeMap.empty (AList.ofModSingle choosePlanet)
              //Incremental.div AttributeMap.empty (scenePath2 m)
              
 
@@ -977,15 +986,18 @@ module ViewerApp =
         let textOverlays = 
             Incremental.div (AttributeMap.Empty) (   
                 alist {
+                    let! planet = m.scene.referenceSystem.planet
+                    let planet  = sprintf "%s" (planet.ToString())
+
                     let! view  = m.scene.navigation.camera.view
                     let! up    = m.scene.referenceSystem.up.value
                     let! north = m.scene.referenceSystem.north.value                                        
-
+                     
                     let bearing  = sprintf "%s°" ((DipAndStrike.bearing up north view.Forward).ToString("0.00"))
                     let pitch    = sprintf "%s°" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
                     let position = view.Location.ToString("0.00")
 
-                    let spericalc = CooTransformation.getLatLonAlt(view.Location)
+                    let spericalc = CooTransformation.getLatLonAlt(view.Location) planet
                     let lon = sprintf "%s°" ((spericalc.longitude).ToString("0.00"))
                     let lat = sprintf "%s°" ((spericalc.latitude).ToString("0.00"))
                     let alt = sprintf "%s" ((spericalc.altitude).ToString("0.00"))
@@ -995,6 +1007,9 @@ module ViewerApp =
                     yield div [clazz "ui"; style "position: absolute; top: 50px; float:left" ] [
                         //arrowOverlay
                         table [] [
+                            tr[][
+                                td[style style'][text planet]
+                            ]
                             tr[][
                                 td[style style'][text "Bearing: "]
                                 td[style style'][text bearing]
@@ -1030,7 +1045,7 @@ module ViewerApp =
             [   
                 control
                 //orientationSystem model
-               // arrowOverlay
+                //arrowOverlay
                 textOverlays
                 
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
@@ -1086,6 +1101,15 @@ module ViewerApp =
 
             br[]
             br[]
+
+            //Incremental.div (AttributeMap.Empty) (   
+            //    alist {
+            //            yield div [] [
+            //                        Incremental.text (Mod.constant("Planet:"))
+            //                        Html.Layout.boxH [ Html.SemUi.dropDown model.scene.config.planet ConfigProperties.Action.SetPlanet ]
+            //                        ] |> UI.map ConfigPropertiesMessage
+            //            } )
+            // br[]
 
             Incremental.div (AttributeMap.Empty) (   
                 alist {
