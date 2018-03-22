@@ -72,7 +72,7 @@
     <Compile Include="Staging\Proc.fs" />
     <Compile Include="Staging\LoadProc.fs" />
     <Compile Include="Staging\HiearchicalLoD.fs" />
-    <Compile Include="C:\_work\PRo3D\src\Aardvark.Opc\PatchFileInfo.fs" />
+    <Compile Include="PatchFileInfo.fs" />
     <Compile Include="Aara.fs" />
     <Compile Include="RenderUtilities.fs" />
     <Compile Include="RenderingV2.fs" />
