@@ -1,5 +1,7 @@
 namespace Aardvark.Opc
 
+#nowarn "8989"
+
 [<AutoOpen>]
 module Serialization =
     open MBrace.FsPickler

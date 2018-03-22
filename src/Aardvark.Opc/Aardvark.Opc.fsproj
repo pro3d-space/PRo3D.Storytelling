@@ -24,7 +24,7 @@
     <OutputPath>..\..\bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DocumentationFile>
     </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
@@ -37,7 +37,7 @@
     <OutputPath>..\..\bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DocumentationFile>
     </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
@@ -72,7 +72,7 @@
     <Compile Include="Staging\Proc.fs" />
     <Compile Include="Staging\LoadProc.fs" />
     <Compile Include="Staging\HiearchicalLoD.fs" />
-    <Compile Include="C:\_work\PRo3D\src\Aardvark.Opc\PatchFileInfo.fs" />
+    <Compile Include="PatchFileInfo.fs" />
     <Compile Include="Aara.fs" />
     <Compile Include="RenderUtilities.fs" />
     <Compile Include="RenderingV2.fs" />
