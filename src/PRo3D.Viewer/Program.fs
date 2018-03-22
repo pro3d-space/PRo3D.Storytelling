@@ -95,8 +95,8 @@ let main argv =
         Log.error "%A" e
         MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |>ignore
         ()
-
-    AppDomain.CurrentDomain.UnhandledException.AddHandler(UnhandledExceptionEventHandler(domainError))
+    
+    //AppDomain.CurrentDomain.UnhandledException.AddHandler(UnhandledExceptionEventHandler(domainError))
 
     WebPart.startServer 4321 [
         MutableApp.toWebPart' runtime false mainApp

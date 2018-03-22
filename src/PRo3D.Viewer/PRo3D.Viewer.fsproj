@@ -123,6 +123,9 @@
     <Content Include="spectrum.js">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Include="C:\_work\PRo3D\src\PRo3D.Viewer\HueColorMap.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="CSharpUtils">
