@@ -1102,17 +1102,13 @@ module ViewerApp =
             br[]
             br[]
 
-            //Incremental.div (AttributeMap.Empty) (   
-            //    alist {
-            //            yield div [] [
-            //                        Incremental.text (Mod.constant("Planet:"))
-            //                        Html.Layout.boxH [ Html.SemUi.dropDown model.scene.config.planet ConfigProperties.Action.SetPlanet ]
-            //                        ] |> UI.map ConfigPropertiesMessage
-            //            } )
-            // br[]
-
             Incremental.div (AttributeMap.Empty) (   
                 alist {
+                    yield div [] [
+                            Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
+                            Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ]
+                        ] |> UI.map ReferenceSystemMessage
+                    yield br[]
                     let! scenePath = model.scene.scenePath 
                     let icon = 
                       match scenePath with
