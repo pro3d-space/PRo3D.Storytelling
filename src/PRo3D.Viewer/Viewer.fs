@@ -774,7 +774,7 @@ module ViewerApp =
                
                 GuiEx.accordion "Annotations" "Write" true [
                     //Groups.viewSelectionButtons |> UI.map AnnotationGroupsMessageViewer
-                    DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
+                    //DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
                 GuiEx.accordion "Properties" "Content" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle prop)                                        

@@ -75,27 +75,28 @@ module ViewPlan =
     //    sc
       
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =
-        //match path with
-        //    | Some p ->
-                let directory = @".\InstrumentStuff"
-                let errorCode = IPWrapper.Init(directory, directory)
-                printfn "%A" errorCode
+      model
+        ////match path with
+        ////    | Some p ->
+        //        let directory = @".\InstrumentStuff"
+        //        let errorCode = IPWrapper.Init(directory, directory)
+        //        printfn "%A" errorCode
 
-                let names = RoverProvider.platformNames()    
-                printfn "%A" names
+        //        let names = RoverProvider.platformNames()    
+        //        printfn "%A" names
 
-                let roverData =
-                    names 
-                      |> Array.map RoverProvider.initRover 
-                      |> List.ofArray 
+        //        let roverData =
+        //            names 
+        //              |> Array.map RoverProvider.initRover 
+        //              |> List.ofArray 
 
-                let rovs = roverData|> List.map(fun (r,_) -> r.id, r) |> HMap.ofList
-                let plats = roverData|> List.map(fun (r,p) -> r.id, p) |> HMap.ofList
+        //        let rovs = roverData|> List.map(fun (r,_) -> r.id, r) |> HMap.ofList
+        //        let plats = roverData|> List.map(fun (r,p) -> r.id, p) |> HMap.ofList
 
-                printfn "found rover(s): %d" (rovs |> HMap.count)
+        //        printfn "found rover(s): %d" (rovs |> HMap.count)
         
-                { model with roverModel = { model.roverModel with rovers = rovs; platforms = plats } }
-            //| _ -> model
+        //        { model with roverModel = { model.roverModel with rovers = rovs; platforms = plats } }
+        //    //| _ -> model
 
     let updateViewPlans (vp:ViewPlan) (vps:hset<ViewPlan>) =
         vps
