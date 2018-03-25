@@ -90,5 +90,5 @@ module AlignmentApp =
             //    yield Sg.dots a.bluePoints (Mod.constant C4b.Blue) view
             //  | None ->
             let points = m.pickedPoints |> AList.map(fun x -> x.point)
-            yield Sg.dots points (Mod.constant C4b.VRVisGreen) view            
+            yield Sg.dots points (Mod.constant C4b.VRVisGreen)            
         } |> Sg.set                                 

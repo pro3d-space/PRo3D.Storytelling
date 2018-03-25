@@ -522,13 +522,13 @@ module DrawingApp =
                      Incremental.i itemAttributes AList.empty
                      div [ clazz "content" ] [
                          div [ clazz "description noselect"] [desc]
-                         Incremental.div (AttributeMap.ofAMap childrenAttribs) (                          
+                         Incremental.div (AttributeMap.ofAMap childrenAttribs) (
                             alist { 
-                                let! isExpanded = group.expanded
-                                if isExpanded then 
+                                //let! isExpanded = group.expanded
+                                //if isExpanded then 
                                     yield! subNodes
 
-                                if isExpanded then 
+                                //if isExpanded then 
                                     yield! viewAnnotationsInGroup path model singleSelect multiSelect lift group.leaves
                             }
                          )  
@@ -592,7 +592,7 @@ module DrawingApp =
                 dnsPlaneSize    : IMod<float>
             }
 
-        let drawDns (anno : MAnnotation)  (view : IMod<CameraView>) (conf:innerViewConfig)=                         
+        let drawDns (anno : MAnnotation) (conf:innerViewConfig)=                         
             aset {
                             
                 let! dns = anno.dnsResults 
@@ -705,7 +705,7 @@ module DrawingApp =
                                    
             Sg.ofList [
                 Sg.lines polyPoints color thickness trafo key //polyline
-                Sg.dots points color view                     //support points
+                Sg.dots points color                     //support points
             ]         
         
         let drawText (view : IMod<CameraView>) conf (anno : MAnnotation) = 
@@ -715,7 +715,7 @@ module DrawingApp =
 
             Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo anno.text anno.textsize.value
 
-        let finishedAnnotation (anno : MAnnotation)(view : IMod<CameraView>)(c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
+        let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
             let points = getPolylinePoints anno
 
             let optional (sg : ISg<_>) (m : IMod<bool>) : aset<ISg<_>> =
@@ -725,15 +725,20 @@ module DrawingApp =
                     else return Sg.empty
                 } |> ASet.ofModSingle
 
-            let dots  = dots |> optional (Sg.dots anno.points c view)
-            let dns   = anno.showDns  |> optional (drawDns anno view conf)
-            let texts = anno.text |> Mod.map (String.isEmpty >> not) |> optional (drawText view conf anno)
-            let sgs = ASet.unionMany' [dots; dns; texts]
+            let dots  = dots          |> optional (Sg.dots anno.points c)
+            let dns   = anno.showDns  |> optional (drawDns anno conf)
+            //let texts = 
+            //  anno.text 
+            //    |> Mod.map (String.isEmpty >> not) 
+            //    |> optional (drawText conf anno)
+
+            let sgs = ASet.unionMany' [dots; dns]
 
             Sg.ofList [
                 Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
-                Sg.set sgs 
-            ] |> Sg.onOff anno.visible
+                  
+                //Sg.set sgs 
+            ] //|> Sg.onOff anno.visible
         
         let toAnnotationOpt = 
             fun y -> 
@@ -741,7 +746,7 @@ module DrawingApp =
                     | MAnnotations ann -> Some ann
                     | _ -> None
 
-        let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) (cam:IMod<CameraView>) : ISg<Drawing.Action> =
+        let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) : ISg<Drawing.Action> =
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler           
             let annoSet = 
@@ -760,28 +765,36 @@ module DrawingApp =
                     dnsPlaneSize   = msmallConfig.getDnsPlaneSize   mbigConfig
                 }
            
-            let annotations =
-                aset {
-                    for (_,a) in annoSet do
-                       let! selected = UI.isSingleSelect model.annotations a
-                       let c = UI.mkColor model.annotations a
-                       let dots = 
-                        a.geometry |> Mod.map(fun geo -> 
-                            match geo, selected with 
-                            | Geometry.Line,false | Geometry.Point, false -> true 
-                            | _ -> false)
+            let annotations =              
+              annoSet 
+                |> ASet.map(fun (_,a) -> 
+                  let c = UI.mkColor model.annotations a              
+                  finishedAnnotation a c config (Mod.constant false)) 
+                |> Sg.set
 
-                       yield finishedAnnotation a cam c config dots
+               
 
-                       if selected then
-                          yield Sg.dots a.points (Mod.constant C4b.VRVisGreen) cam
-                       else
-                          yield Sg.empty
-                } |> Sg.set
+                //aset {
+                //    for (_,a) in annoSet do
+                //       let! selected = UI.isSingleSelect model.annotations a
+                //       let dots = 
+                //        a.geometry |> Mod.map(fun geo -> 
+                //            match geo, selected with 
+                //            | Geometry.Line,false | Geometry.Point, false -> true 
+                //            | _ -> false)
+
+                //       let c = UI.mkColor model.annotations a
+                //       yield finishedAnnotation a cam c config dots
+
+                //       if selected then
+                //          yield Sg.dots a.points (Mod.constant C4b.VRVisGreen) cam
+                //       else
+                //          yield Sg.empty
+                //} |> Sg.set
                                 
             Sg.ofList [
-                brush model.hoverPosition; 
+               // brush model.hoverPosition; 
                 annotations
-                drawWorkingAnnotation model.working cam
+               // drawWorkingAnnotation model.working cam
             ]
             

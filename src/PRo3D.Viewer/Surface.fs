@@ -280,7 +280,7 @@ module Surface =
             surfaces
                 |> PList.toList
                 |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.preTransform })
-                |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
+                |> List.map (fun d -> Aardvark.Opc.Viewer.Viewer.createPlainSceneGraph runtime signature d true)
                 |> List.zip (surfaces |> PList.toList)
                 |> List.map(fun (surf, (sg, hierarchies, kdtree)) -> 
                     let bb = hierarchies |> combineLeafBBs |> transformBox surf.preTransform

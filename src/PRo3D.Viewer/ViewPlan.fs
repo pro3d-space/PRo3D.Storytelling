@@ -367,12 +367,12 @@ module ViewPlan =
 
     module Sg =
                         
-        let drawWorking (model:MViewPlanModel) (cam:IMod<CameraView>) =
+        let drawWorking (model:MViewPlanModel) =
             let point0 =
                 aset{
                 let! w = model.working
                 match w.IsEmpty with
-                    | false -> yield PRo3D.Sg.dots (AList.single w.[0]) (Mod.constant C4b.Green) cam
+                    | false -> yield PRo3D.Sg.dots (AList.single w.[0]) (Mod.constant C4b.Green)
                     | true -> ()
                 } |> Sg.set
 
@@ -381,7 +381,7 @@ module ViewPlan =
                 let! w = model.working
                 match w.IsEmpty with
                     | false -> match w.Length > 1 with
-                                | true -> yield PRo3D.Sg.dots (AList.single w.[1]) (Mod.constant C4b.Yellow) cam
+                                | true -> yield PRo3D.Sg.dots (AList.single w.[1]) (Mod.constant C4b.Yellow)
                                 | false -> ()
                     | true -> ()
                 } |> Sg.set
@@ -458,8 +458,8 @@ module ViewPlan =
                 } 
             let color = Mod.constant C4b.Red
             Sg.ofList [
-                    Sg.dots start color cam 
-                    Sg.dots endp color cam 
+                    Sg.dots start color  
+                    Sg.dots endp color  
                     PRo3D.Sg.lines axisLine color thickness trafo (Mod.constant Guid.Empty)
                 ] 
         
@@ -580,7 +580,7 @@ module ViewPlan =
                 
             Sg.ofList [
                 viewPlans
-                drawWorking model cam
+                drawWorking model
             ]
 
     

@@ -613,7 +613,7 @@ module ViewerApp =
             
         let overlayed =
             let annotations =
-                DrawingApp.Sg.view m.scene.config mdrawingConfig m.drawing m.scene.navigation.camera.view
+                DrawingApp.Sg.view m.scene.config mdrawingConfig m.drawing
                     |> Sg.map DrawingMessage
                     |> Sg.fillMode (Mod.constant FillMode.Fill)
                     |> Sg.cullMode (Mod.constant CullMode.None)
@@ -773,8 +773,8 @@ module ViewerApp =
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
                
                 GuiEx.accordion "Annotations" "Write" true [
-                    //Groups.viewSelectionButtons |> UI.map AnnotationGroupsMessageViewer
-                    //DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
+                    Groups.viewSelectionButtons |> UI.map AnnotationGroupsMessageViewer
+                    DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
                 GuiEx.accordion "Properties" "Content" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle prop)                                        
