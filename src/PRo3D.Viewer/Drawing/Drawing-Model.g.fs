@@ -136,7 +136,7 @@ module Mutable =
                     override x.Update(r,f) = { r with exportPath = f r.exportPath }
                 }
             let pendingIntersections =
-                { new Lens<PRo3D.Drawing.DrawingModel, Aardvark.Base.ThreadPool<PRo3D.Drawing.Action>>() with
+                { new Lens<PRo3D.Drawing.DrawingModel, Aardvark.Base.Incremental.ThreadPool<PRo3D.Drawing.Action>>() with
                     override x.Get(r) = r.pendingIntersections
                     override x.Set(r,v) = { r with pendingIntersections = v }
                     override x.Update(r,f) = { r with pendingIntersections = f r.pendingIntersections }
