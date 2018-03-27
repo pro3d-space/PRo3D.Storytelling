@@ -525,21 +525,21 @@ module SurfaceModel =
 
     let initial = initSurfaceModel Group.initRoot hmap.Empty None   
     
-    registry.RegisterFactory (fun _ -> surfaceModelPickler)
+    Serialization.registry.RegisterFactory (fun _ -> surfaceModelPickler)
 
     let getSurface model guid =
         model.surfaces.flat |> HMap.tryFind guid        
 
     let groupSurfaces (sgSurfaces : hmap<Guid, SgSurface>) (surfaces : hmap<Guid, Surface>) =
-        sgSurfaces
-            |> HMap.toList
-            |> List.groupBy(fun (_,x) -> 
-                let surf = HMap.find x.surface surfaces 
-                surf.priority.value)
-            |> List.map( fun (p,k) -> (p, k |> HMap.ofList))
-            |> List.sortBy fst
-            |> List.map snd
-            |> PList.ofList
+      sgSurfaces
+        |> HMap.toList
+        |> List.groupBy(fun (_,x) -> 
+            let surf = HMap.find x.surface surfaces 
+            surf.priority.value)
+        |> List.map( fun (p,k) -> (p, k |> HMap.ofList))
+        |> List.sortBy fst
+        |> List.map snd
+        |> PList.ofList
     
     let triggerSgGrouping (model:SurfaceModel) =
         { model with sgGrouped = (groupSurfaces model.sgSurfaces (model.surfaces.flat |> Leaf.toSurfaces)) }
