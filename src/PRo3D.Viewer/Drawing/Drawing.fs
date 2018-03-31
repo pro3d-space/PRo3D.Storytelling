@@ -385,6 +385,18 @@ module DrawingApp =
                 //    i [clazz "arrow right icon"] [] ] |> UI.wrapToolTipBottom "Redo"
                 
             ] 
+
+        let viewAnnotations (annotations : alist<MAnnotation>) : alist<DomNode<Action>> =
+          alist {
+            for a in annotations do 
+              yield div [clazz "item"] [
+                i [clazz "large Sticky Note middle aligned icon"][]
+                div [clazz "content"] [
+                  div [clazz "header"][Incremental.text (a.geometry |> Mod.map(string))]
+                  div [clazz "description"][Incremental.text (a.points |> AList.count |> Mod.map(string))]
+                ]
+              ]
+          }
                
         let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(singleSelect : MAnnotation*list<Index> -> 'outer)(multiSelect : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<Guid>) : alist<DomNode<'outer>> =                         
           alist { 
@@ -448,13 +460,11 @@ module DrawingApp =
               ]
           }     
               
-        let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<Action>> =
+        let rec viewTree path (group : MNode) (model : MGroupsModel) (lookup : amap<Guid, MAnnotation>) : alist<DomNode<Action>> =
 
             alist {
 
-                let! s = model.activeGroup
-                
-                let subNodes = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
+                let! s = model.activeGroup                                
 
                 let icon =
                     adaptive {
@@ -502,10 +512,8 @@ module DrawingApp =
                     amap {
                         yield clazz "list"
                         let! isExpanded = group.expanded
-                        if isExpanded then 
-                            yield style "visible"
-                        else 
-                            yield style "hidden"
+                        if (not isExpanded) then 
+                          yield style "display:none"                             
                     }         
 
                 let singleSelect = 
@@ -518,28 +526,40 @@ module DrawingApp =
 
                 let lift = fun (a:Groups.Action) -> (GroupsMessage a)
 
-                yield div [ clazz "item"] [
-                     Incremental.i itemAttributes AList.empty
-                     div [ clazz "content" ] [
-                         div [ clazz "description noselect"] [desc]
-                         Incremental.div (AttributeMap.ofAMap childrenAttribs) (
-                            alist { 
-                                //let! isExpanded = group.expanded
-                                //if isExpanded then 
-                                    yield! subNodes
+                let subNodes = AList.collecti (fun i v -> viewTree (i::path) v model lookup) group.subNodes
+                let annos = group.leaves |> AList.map(fun x -> lookup |> AMap.find x |> Mod.force) |> viewAnnotations
 
-                                //if isExpanded then 
-                                    yield! viewAnnotationsInGroup path model singleSelect multiSelect lift group.leaves
-                            }
-                         )  
-                     ]
+                let nodes = annos |> AList.append subNodes 
+
+                yield div [ clazz "item"] [
+                  Incremental.i itemAttributes AList.empty
+                  div [ clazz "content" ] [
+                    div [ clazz "description noselect"] [desc]
+                    Incremental.div (AttributeMap.ofAMap childrenAttribs) (nodes)
+                       //alist {                                                           
+                       //    yield! subNodes                           
+                       //    //yield Incremental.text (group.leaves |> AList.count |> Mod.map(fun x -> sprintf "contains %d leaves" x))
+                       //    //yield! viewAnnotationsInGroup path model singleSelect multiSelect lift group.leaves                           
+                       //    yield! annos
+                       //}
+                    //)  
+                  ]
                 ]                
             }
 
+        let toMAnnotation (leaf : MLeaf) =
+          match leaf with 
+          | MAnnotations a -> a
+          | _ -> failwith "wrong type"
+
         let viewAnnotationGroups (model:MDrawingModel) = 
-             require Html.semui (
-                TreeView.view [] (viewTree [] model.annotations.rootGroup model.annotations)
-            )  
+          let a = 
+            model.annotations.flat 
+              |> AMap.map(fun _ v -> (v |> Mod.force) |> toMAnnotation)              
+           
+          require Html.semui (
+              Incremental.div (AttributeMap.ofList [clazz "ui list"]) (viewTree [] model.annotations.rootGroup model.annotations a)
+          )  
                                
  
     let threads (m : DrawingModel) = m.pendingIntersections
@@ -794,7 +814,7 @@ module DrawingApp =
                                 
             Sg.ofList [
                // brush model.hoverPosition; 
-                annotations
+               // annotations
                // drawWorkingAnnotation model.working cam
             ]
             

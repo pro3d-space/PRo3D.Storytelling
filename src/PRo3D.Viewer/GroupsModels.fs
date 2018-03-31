@@ -8,26 +8,11 @@ open PRo3D
 open PRo3D.Surfaces
 open PRo3D.BookmarksX
 open PRo3D.Navigation2
-//open PRo3D.Groups
 
 open Aardvark.VRVis
 open Aardvark.Opc 
 open Aardvark.Geometry
 
-
-//type Groupable =
-//    | Annotations of plist<Annotation>
-//    | Surfaces    of plist<Surface>
-
-//[<DomainType>]
-//type Group<'a> = {
-//    key         : Guid
-//    name        : string
-//    content     : plist<'a> 
-//    subGroups   : plist<Group<'a>>
-//    visible     : bool
-//    expanded    : bool
-//    }
 [<DomainType>]
 type Leaf = 
     | Annotations of value : Annotation
@@ -51,12 +36,7 @@ type Leaf =
           | Annotations a -> Leaf.Annotations { a with visible = v }
           | Surfaces    s -> Leaf.Surfaces    { s with isVisible = v }
           | Bookmarks   _ -> x
-
-            
-
-
-    
-
+                
 [<DomainType>]
 type Node = {
     key         : Guid

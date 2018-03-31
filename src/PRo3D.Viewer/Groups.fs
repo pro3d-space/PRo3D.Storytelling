@@ -74,7 +74,6 @@ module Groups =
                   | None   -> None )
           
         HMap.alter id update model.flat    
-
         
     let updateLeaf id f model =
         let flat' = updateLeaf' id f model
@@ -97,7 +96,6 @@ module Groups =
             |> List.fold (fun a b -> HMap.union a b) model.flat
 
         { model with flat = flat }
-
     
     let tryLoadGroups (path:string) =
       try
