@@ -156,9 +156,9 @@ let main argv =
     ctrl.StartUrl <- "http://localhost:4321/"        
     ctrl.ShowDevTools()
 
-    Config.shouldTimeUIUpdate <- true
-    Config.shouldTimeJsCodeGeneration <- true
-    Config.shouldTimeUnpersistCalls <- true
+    //Config.shouldTimeUIUpdate <- true
+    //Config.shouldTimeJsCodeGeneration <- true
+    //Config.shouldTimeUnpersistCalls <- true
 
     Application.Run form
 

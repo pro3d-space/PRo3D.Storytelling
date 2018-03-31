@@ -983,61 +983,71 @@ module ViewerApp =
             )
 
         
+        let pitchAndBearing (r:MReferenceSystem) (view:IMod<CameraView>) =
+          adaptive {
+            let! up    = r.up.value
+            let! north = r.north.value   
+            let! v     = view
+
+            return (DipAndStrike.pitch up v.Forward, DipAndStrike.bearing up north v.Forward)
+          }
+
         let textOverlays = 
-            Incremental.div (AttributeMap.Empty) (   
-                alist {
-                    let! planet = m.scene.referenceSystem.planet
-                    let planet  = sprintf "%s" (planet.ToString())
+            div [] [ 
+              
+              let planet = m.scene.referenceSystem.planet |> Mod.map(fun x -> sprintf "%s" (x.ToString()))  
 
-                    let! view  = m.scene.navigation.camera.view
-                    let! up    = m.scene.referenceSystem.up.value
-                    let! north = m.scene.referenceSystem.north.value                                        
-                     
-                    let bearing  = sprintf "%s°" ((DipAndStrike.bearing up north view.Forward).ToString("0.00"))
-                    let pitch    = sprintf "%s°" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
-                    let position = view.Location.ToString("0.00")
+              let view  = m.scene.navigation.camera.view 
+              let pnb = pitchAndBearing m.scene.referenceSystem view
 
-                    let spericalc = CooTransformation.getLatLonAlt(view.Location) planet
-                    let lon = sprintf "%s°" ((spericalc.longitude).ToString("0.00"))
-                    let lat = sprintf "%s°" ((spericalc.latitude).ToString("0.00"))
-                    let alt = sprintf "%s" ((spericalc.altitude).ToString("0.00"))
-                    
-                    let style' = "color: white; font-family:Consolas;"
+              let pitch    = pnb |> Mod.map(fun (p,_) -> sprintf "%s°" (p.ToString("0.00")))
+              let bearing  = pnb |> Mod.map(fun (_,b) -> sprintf "%s°" (b.ToString("0.00")))
+              
+              let position = view |> Mod.map(fun x -> x.Location.ToString("0.00"))
 
-                    yield div [clazz "ui"; style "position: absolute; top: 50px; float:left" ] [
-                        //arrowOverlay
-                        table [] [
-                            tr[][
-                                td[style style'][text planet]
-                            ]
-                            tr[][
-                                td[style style'][text "Bearing: "]
-                                td[style style'][text bearing]
-                            ]
-                            tr[][
-                                td[style style'][text "Pitch: "]
-                                td[style style'][text pitch]
-                            ]
-                            tr[][
-                                td[style style'][text "Position: "]
-                                td[style style'][text position]
-                            ]
-                            tr[][
-                                td[style style'][text "Longitude: "]
-                                td[style style'][text lon]
-                            ]
-                            tr[][
-                                td[style style'][text "Latitude: "]
-                                td[style style'][text lat]
-                            ]
-                            tr[][
-                                td[style style'][text "Altitude: "]
-                                td[style style'][text alt]
-                            ]
-                        ]
-                    ]              
-                }
-            )
+              let spericalc = 
+                Mod.map2 (fun (a : CameraView) b -> 
+                  CooTransformation.getLatLonAlt(a.Location) b ) view planet
+              
+              let lon = spericalc |> Mod.map(fun x -> sprintf "%s°" ((x.longitude).ToString("0.00")))
+              let lat = spericalc |> Mod.map(fun x -> sprintf "%s°" ((x.latitude).ToString("0.00")))
+              let alt = spericalc |> Mod.map(fun x -> sprintf "%s°" ((x.altitude).ToString("0.00")))             
+              
+              let style' = "color: white; font-family:Consolas;"
+
+              yield div [clazz "ui"; style "position: absolute; top: 50px; float:left" ] [
+                  //arrowOverlay
+                  yield table [] [
+                      tr[][
+                          td[style style'][Incremental.text planet]
+                      ]
+                      tr[][
+                          td[style style'][text "Bearing: "]
+                          td[style style'][Incremental.text bearing]
+                      ]
+                      tr[][
+                          td[style style'][text "Pitch: "]
+                          td[style style'][Incremental.text pitch]
+                      ]
+                      tr[][
+                          td[style style'][text "Position: "]
+                          td[style style'][Incremental.text position]
+                      ]
+                      tr[][
+                          td[style style'][text "Longitude: "]
+                          td[style style'][Incremental.text lon]
+                      ]
+                      tr[][
+                          td[style style'][text "Latitude: "]
+                          td[style style'][Incremental.text lat]
+                      ]
+                      tr[][
+                          td[style style'][text "Altitude: "]
+                          td[style style'][Incremental.text alt]
+                      ]
+                  ]
+              ]                              
+        ]
 
         
         
