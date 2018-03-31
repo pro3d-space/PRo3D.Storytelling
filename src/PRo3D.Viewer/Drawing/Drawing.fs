@@ -454,7 +454,7 @@ module DrawingApp =
 
                 let! s = model.activeGroup
                 
-                let subNodes = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
+                    
 
                 let icon =
                     adaptive {
@@ -499,14 +499,12 @@ module DrawingApp =
                     } |> AttributeMap.ofAMap
             
                 let childrenAttribs =
-                    amap {
+                   amap {
                         yield clazz "list"
                         let! isExpanded = group.expanded
-                        if isExpanded then 
-                            yield style "visible"
-                        else 
-                            yield style "hidden"
-                    }         
+                        if (not isExpanded) then 
+                          yield style "display:none"                             
+                   }           
 
                 let singleSelect = 
                     fun (a:MAnnotation,path:list<Index>) -> 
@@ -518,20 +516,15 @@ module DrawingApp =
 
                 let lift = fun (a:Groups.Action) -> (GroupsMessage a)
 
+                let subNodes = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes
+                let annos = group.leaves |> viewAnnotationsInGroup path model singleSelect multiSelect lift
+                let nodes = annos |> AList.append subNodes
+
                 yield div [ clazz "item"] [
                      Incremental.i itemAttributes AList.empty
                      div [ clazz "content" ] [
                          div [ clazz "description noselect"] [desc]
-                         Incremental.div (AttributeMap.ofAMap childrenAttribs) (                          
-                            alist { 
-                                let! isExpanded = group.expanded
-                                if isExpanded then 
-                                    yield! subNodes
-
-                                if isExpanded then 
-                                    yield! viewAnnotationsInGroup path model singleSelect multiSelect lift group.leaves
-                            }
-                         )  
+                         Incremental.div (AttributeMap.ofAMap childrenAttribs) (nodes)                        
                      ]
                 ]                
             }
@@ -733,8 +726,8 @@ module DrawingApp =
             Sg.ofList [
                 Sg.lines points c anno.thickness.value anno.modelTrafo anno.key
                 Sg.set sgs 
-            ] |> Sg.onOff anno.visible
-        
+            ] |> Sg.onOff anno.visible                    
+
         let toAnnotationOpt = 
             fun y -> 
                 match y with
