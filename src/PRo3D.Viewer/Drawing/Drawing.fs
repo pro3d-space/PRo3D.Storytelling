@@ -740,7 +740,7 @@ module DrawingApp =
                 |> Mod.map (String.isEmpty >> not) 
                 |> optional (drawText view conf anno)
 
-            let sgs = ASet.unionMany' [dots; dns]
+            let sgs = ASet.unionMany' [dots; dns; texts]
 
             Sg.ofList [
                 Sg.lines points c anno.thickness.value anno.modelTrafo anno.key                  
