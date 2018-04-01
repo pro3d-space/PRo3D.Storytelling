@@ -723,7 +723,7 @@ module DrawingApp =
 
             Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo anno.text anno.textsize.value
 
-        let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (dots : IMod<bool>) =
+        let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (view : IMod<CameraView>) (dots : IMod<bool>) =
             let points = getPolylinePoints anno
 
             let optional (sg : ISg<_>) (m : IMod<bool>) : aset<ISg<_>> =
@@ -735,10 +735,10 @@ module DrawingApp =
 
             let dots  = dots          |> optional (Sg.dots anno.points c)
             let dns   = anno.showDns  |> optional (drawDns anno conf)
-            //let texts = 
-            //  anno.text 
-            //    |> Mod.map (String.isEmpty >> not) 
-            //    |> optional (drawText conf anno)
+            let texts = 
+              anno.text 
+                |> Mod.map (String.isEmpty >> not) 
+                |> optional (drawText view conf anno)
 
             let sgs = ASet.unionMany' [dots; dns]
 
@@ -753,7 +753,7 @@ module DrawingApp =
                     | MAnnotations ann -> Some ann
                     | _ -> None
 
-        let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (model:MDrawingModel) : ISg<Drawing.Action> =
+        let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> =
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler           
             let annoSet = 
@@ -775,29 +775,9 @@ module DrawingApp =
             let annotations =              
               annoSet 
                 |> ASet.map(fun (_,a) -> 
-                  let c = UI.mkColor model.annotations a              
-                  finishedAnnotation a c config (Mod.constant false)) 
-                |> Sg.set
-
-               
-
-                //aset {
-                //    for (_,a) in annoSet do
-                //       let! selected = UI.isSingleSelect model.annotations a
-                //       let dots = 
-                //        a.geometry |> Mod.map(fun geo -> 
-                //            match geo, selected with 
-                //            | Geometry.Line,false | Geometry.Point, false -> true 
-                //            | _ -> false)
-
-                //       let c = UI.mkColor model.annotations a
-                //       yield finishedAnnotation a cam c config dots
-
-                //       if selected then
-                //          yield Sg.dots a.points (Mod.constant C4b.VRVisGreen) cam
-                //       else
-                //          yield Sg.empty
-                //} |> Sg.set
+                  let c = UI.mkColor model.annotations a
+                  finishedAnnotation a c config view (a.geometry |> Mod.map(function | Geometry.Point -> true | _ -> false)))
+                |> Sg.set               
                                 
             Sg.ofList [
                // brush model.hoverPosition; 

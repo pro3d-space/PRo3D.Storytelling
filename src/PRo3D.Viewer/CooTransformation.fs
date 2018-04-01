@@ -21,9 +21,7 @@ module CooTransformation =
         let lat = ref init
         let lon = ref init
         let alt = ref init
-        let pX = double p.X
-        let pY = double p.Y
-        let pZ = double p.Z
+      
         let bla = CooTrafo.Xyz2LatLonAlt(planet, p.X, p.Y, p.Z, lat, lon, alt)
         
         if bla <> 0 then
@@ -40,10 +38,8 @@ module CooTransformation =
         let lat = ref init
         let lon = ref init
         let rad = ref init
-        let pX = double p.X
-        let pY = double p.Y
-        let pZ = double p.Z
-        let bla = CooTrafo.Xyz2LatLonRad( pX, pY, pZ, lat, lon, rad)
+      
+        let bla = CooTrafo.Xyz2LatLonRad( p.X, p.Y, p.Z, lat, lon, rad)
         
         if bla <> 0 then
             Log.line "cootrafo errorcode %A" bla

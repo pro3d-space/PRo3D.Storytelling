@@ -613,7 +613,7 @@ module ViewerApp =
             
         let overlayed =
             let annotations =
-                DrawingApp.Sg.view m.scene.config mdrawingConfig m.drawing
+                DrawingApp.Sg.view m.scene.config mdrawingConfig m.scene.navigation.camera.view m.drawing
                     |> Sg.map DrawingMessage
                     |> Sg.fillMode (Mod.constant FillMode.Fill)
                     |> Sg.cullMode (Mod.constant CullMode.None)

@@ -89,27 +89,25 @@ module RemoteControlApp =
           | None ->
             m   
 
-    let loadRoverData (m : RemoteModel) =
-      m
+    let loadRoverData (m : RemoteModel) =      
+      let directory = @".\InstrumentStuff"
+      let errorCode = IPWrapper.Init(directory, directory)
+      printfn "%A" errorCode
 
-        //let directory = @".\InstrumentStuff"
-        //let errorCode = IPWrapper.Init(directory, directory)
-        //printfn "%A" errorCode
+      let names = RoverProvider.platformNames()    
+      printfn "%A" names
 
-        //let names = RoverProvider.platformNames()    
-        //printfn "%A" names
+      let roverData =
+          names 
+            |> Array.map RoverProvider.initRover 
+            |> List.ofArray 
 
-        //let roverData =
-        //    names 
-        //      |> Array.map RoverProvider.initRover 
-        //      |> List.ofArray 
+      let rovs = roverData|> List.map(fun (r,_) -> r.id, r) |> HMap.ofList
+      let plats = roverData|> List.map(fun (r,p) -> r.id, p) |> HMap.ofList
 
-        //let rovs = roverData|> List.map(fun (r,_) -> r.id, r) |> HMap.ofList
-        //let plats = roverData|> List.map(fun (r,p) -> r.id, p) |> HMap.ofList
-
-        //printfn "found rover(s): %d" (rovs |> HMap.count)
-        
-        //{ m with Rover = { m.Rover with rovers = rovs; platforms = plats } }
+      printfn "found rover(s): %d" (rovs |> HMap.count)
+      
+      { m with Rover = { m.Rover with rovers = rovs; platforms = plats } }
            
     let update (baseAddress : string) (send : RemoteAction -> unit) (m : RemoteModel) (a : RemoteControlModel.Action) =
         match a with

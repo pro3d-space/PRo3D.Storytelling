@@ -38,65 +38,29 @@ module ViewPlan =
         | ChangeAngle      of string * Numeric.Action
         | ChangeFocal      of string * Numeric.Action
         | SetVPName        of string
-    
+             
+    let loadRoverData (model : ViewPlanModel) (path : Option<string>) =      
+      match path with
+        | Some _ ->
+            let directory = @".\InstrumentStuff"
+            let errorCode = IPWrapper.Init(directory, directory)
+            printfn "%A" errorCode
 
-    //let initCooTrafo = 
-    //    let directory = @".\InstrumentStuff" 
-    //    let test = @".\bin" 
-    //    let errorCode = CooTrafo.Init(test, directory)
-    //    printfn "%A" errorCode
+            let names = RoverProvider.platformNames()    
+            printfn "%A" names
+
+            let roverData =
+                names 
+                  |> Array.map RoverProvider.initRover 
+                  |> List.ofArray 
+
+            let rovs = roverData|> List.map(fun (r,_) -> r.id, r) |> HMap.ofList
+            let plats = roverData|> List.map(fun (r,p) -> r.id, p) |> HMap.ofList
+
+            printfn "found rover(s): %d" (rovs |> HMap.count)
       
-    //let getLatLonAlt (p:V3d) : SphericalCoo = 
-    //    //let directory = @".\InstrumentStuff" 
-    //    //let test = @".\bin" 
-    //    //let errorCode = CooTrafo.Init(test, directory)
-    //    //printfn "%A" errorCode
-
-    //    let init = double(0.0)
-      
-    //    let lat = ref init
-    //    let lon = ref init
-    //    let alt = ref init
-    //    let pX = double p.X
-    //    let pY = double p.Y
-    //    let pZ = double p.Z
-    //    let bla = CooTrafo.Xyz2LatLonAlt("Mars", pX, pY, pZ, lat, lon, alt)
-      
-    //    if bla <> 0 then
-    //        Log.line "cootrafo errorcode %A" bla
-
-    //    let sc = {
-    //                latitude = !lat
-    //                longitude = !lon
-    //                altitude = !alt
-    //                radian = 0.0;
-    //                }
-    //    //CooTrafo.DeInit()
-    //    sc
-      
-    let loadRoverData (model : ViewPlanModel) (path : Option<string>) =
-      model
-        ////match path with
-        ////    | Some p ->
-        //        let directory = @".\InstrumentStuff"
-        //        let errorCode = IPWrapper.Init(directory, directory)
-        //        printfn "%A" errorCode
-
-        //        let names = RoverProvider.platformNames()    
-        //        printfn "%A" names
-
-        //        let roverData =
-        //            names 
-        //              |> Array.map RoverProvider.initRover 
-        //              |> List.ofArray 
-
-        //        let rovs = roverData|> List.map(fun (r,_) -> r.id, r) |> HMap.ofList
-        //        let plats = roverData|> List.map(fun (r,p) -> r.id, p) |> HMap.ofList
-
-        //        printfn "found rover(s): %d" (rovs |> HMap.count)
-        
-        //        { model with roverModel = { model.roverModel with rovers = rovs; platforms = plats } }
-        //    //| _ -> model
+            { model with roverModel = { model.roverModel with rovers = rovs; platforms = plats } }
+        | _ -> model
 
     let updateViewPlans (vp:ViewPlan) (vps:hset<ViewPlan>) =
         vps
