@@ -73,6 +73,7 @@
     <Compile Include="Model.fs" />
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
+    <Compile Include="KdTrees.fs" />
     <Compile Include="ReferenceSystem-Model.fs" />
     <Compile Include="CooTransformation.fs" />
     <Compile Include="DipAndStrike.fs" />
@@ -274,24 +275,13 @@
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
       <ItemGroup>
-        <Reference Include="Aardvark.Cef">
-          <HintPath>..\..\packages\Aardvark.Cef\lib\net45\Aardvark.Cef.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-        <Reference Include="Aardvark.Cef.Process">
-          <HintPath>..\..\packages\Aardvark.Cef\lib\net45\Aardvark.Cef.Process.exe</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
-      <ItemGroup>
         <Reference Include="Aardvark.Cef.WinForms">
           <HintPath>..\..\packages\Aardvark.Cef.WinForms\lib\net45\Aardvark.Cef.WinForms.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="Aardvark.Cef.WinForms.Process">
+          <HintPath>..\..\packages\Aardvark.Cef.WinForms\lib\net45\Aardvark.Cef.WinForms.Process.exe</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>

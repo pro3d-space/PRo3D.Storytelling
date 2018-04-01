@@ -1,5 +1,7 @@
 ﻿namespace PRo3D
 
+#nowarn "8989"
+
 open System
 open System.IO
 open System.Windows.Forms
@@ -13,7 +15,8 @@ open Aardvark.Opc
 module Serialization =
     open Aardvark.UI.Incremental
     
-    let cache = Serialization.cache
+    let registry = new CustomPicklerRegistry()    
+    let cache = PicklerCache.FromCustomPicklerRegistry registry    
 
     let binarySerializer = FsPickler.CreateBinarySerializer(picklerResolver = cache)
     let jsonSerializer = FsPickler.CreateJsonSerializer(indent=true)
@@ -41,8 +44,8 @@ module Serialization =
 
     let fileExists filePath =
         match System.IO.File.Exists filePath with
-            | true -> Some filePath
-            | false -> None       
+          | true  -> Some filePath
+          | false -> None
 
 module Dialogs =
     open Microsoft.WindowsAPICodePack.Dialogs    
