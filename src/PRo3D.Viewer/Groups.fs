@@ -523,7 +523,7 @@ module SurfaceModel =
 
     let initial = initSurfaceModel Group.initRoot hmap.Empty None   
     
-    Serialization.registry.RegisterFactory (fun _ -> surfaceModelPickler)
+    //Serialization.registry.RegisterFactory (fun _ -> surfaceModelPickler)
 
     let getSurface model guid =
         model.surfaces.flat |> HMap.tryFind guid        
