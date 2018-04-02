@@ -119,7 +119,7 @@ let main argv =
     let signature =
         runtime.CreateFramebufferSignature [
             DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba8; samples = 1 }
-            DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
+            DefaultSemantic.Depth,  { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
         ]
 
     use bc = new BlockingCollection<string>()    

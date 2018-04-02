@@ -16,8 +16,7 @@ open PRo3D.Groups
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg
-    open Aardvark.UI.Trafos    
-    open Aardvark.Opc.Viewer
+    open Aardvark.UI.Trafos        
 
     module Sg =
       let mutable hackRunner = None

@@ -21,6 +21,7 @@ open PRo3D.ReferenceSystem
 open Aardvark.Base.Frustum
 open Aardvark.UI.Trafos
 open PRo3d.Align
+open Aardvark.UI.Animation
 
   
 [<DomainType>] 
@@ -100,6 +101,8 @@ type Model = {
 
     viewerMode      : ViewerMode
 
+    animations      : AnimationModel
+
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
 
@@ -154,6 +157,13 @@ module Viewer =
         future          = None
 
         tabMenu = TabMenu.Surfaces
+
+        animations = 
+         { 
+           animations = PList.empty
+           animation  = Animate.On
+           cam        = CameraController.initial.view
+         }
         
         //instrumentCamera = { CameraController.initial with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }        
         //instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
