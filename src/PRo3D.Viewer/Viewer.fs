@@ -154,8 +154,8 @@ module ViewerApp =
         (CameraAnimations.initial name) with 
           sample = fun (localTime, globalTime) (state : CameraView) -> // given the state and t since start of the animation, compute a state and the cameraview
             if localTime < duration then                  
-              let rot = Rot3d(state.Forward, dir) * localTime / duration
-              let forward' = rot.TransformDir(state.Forward)       
+              let rot      = Rot3d(state.Forward, dir) * localTime / duration
+              let forward' = rot.TransformDir(state.Forward)
               
               let vec       = pos - state.Location
               let velocity  = vec.Length / duration                  

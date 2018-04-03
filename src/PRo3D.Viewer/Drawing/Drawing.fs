@@ -68,122 +68,122 @@ module DrawingApp =
             | None -> None
 
     let finishAndAppendAndSend up north (model : DrawingModel) (bc : BlockingCollection<string>) = 
-        //if there are at least 3 points do dns calculation (debug, dev). 
-        //might take long for large number of points so created on demand?
+      //if there are at least 3 points do dns calculation (debug, dev). 
+      //might take long for large number of points so created on demand?
 
-        //let anns = 
-        //    match getFinishedAnnotation up north model with
-        //        | Some a -> 
-        //            model.annotations.annotationsFlat |> PList.prepend a
-        //        | None -> model.annotations.annotationsFlat
+      //let anns = 
+      //    match getFinishedAnnotation up north model with
+      //        | Some a -> 
+      //            model.annotations.annotationsFlat |> PList.prepend a
+      //        | None -> model.annotations.annotationsFlat
 
-        let groups = 
-            match getFinishedAnnotation up north model with
-              | Some a -> 
-                let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
-                bc.Add json                    
-                                                  
-                model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true
-                                
-              | None -> model.annotations             
+      let groups = 
+        match getFinishedAnnotation up north model with
+          | Some a -> 
+            let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
+            bc.Add json                    
+                                              
+            model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true
+                            
+          | None -> model.annotations             
 
-        { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
+      { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
     
     
 
     let addPoint up north samplePoint p model surfaceName bc =
-        let working, newSegment = 
-            match model.working with
-                | Some w ->     
-                    let annotation = { w with points = w.points |> PList.append p }
-                    Log.line "working contains %d points" annotation.points.Count
+      let working, newSegment = 
+        match model.working with
+          | Some w ->     
+            let annotation = { w with points = w.points |> PList.append p }
+            Log.line "working contains %d points" annotation.points.Count
 
-                    //fetch current drawing segment (projected, polyline or polygon)
-                    let result = 
-                        match w.projection with
-                            | Projection.Viewpoint | Projection.Sky ->                     
-                                match PList.tryAt (PList.count w.points-1) w.points with
-                                    | None -> 
-                                        annotation, None
-                                    | Some a -> 
-                                        let segmentIndex = PList.count annotation.segments
-                                        let newSegment = { startPoint = a; endPoint = p; points = PList.ofList [a;p] }
+            //fetch current drawing segment (projected, polyline or polygon)
+            let result = 
+              match w.projection with
+                | Projection.Viewpoint | Projection.Sky ->                     
+                  match PList.tryAt (PList.count w.points-1) w.points with
+                    | None -> 
+                      annotation, None
+                    | Some a -> 
+                      let segmentIndex = PList.count annotation.segments
+                      let newSegment = { startPoint = a; endPoint = p; points = PList.ofList [a;p] }
 
-                                        if PRo3D.Config.useAsyncIntersections then
-                                            { annotation with segments = PList.append newSegment annotation.segments }, Some (newSegment,segmentIndex)
-                                        else
-                                            let dir = newSegment.endPoint - newSegment.startPoint
-                                            let points = [ 
-                                                    for s in 0 .. PRo3D.Config.sampleCount do
-                                                        let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
-                                                        match samplePoint p with
-                                                            | None -> ()
-                                                            | Some projectedPoint -> yield projectedPoint
-                                                ]
-                                            let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
-                                            { annotation with segments = PList.append newSegment annotation.segments }, None
-                            | Projection.Linear ->
-                                annotation, None
-                            | _ -> failwith "case does not exist"
-                    
-                    result
-                | None ->  //no working state, start new working annotation
-                    { 
-                        //annotation states should be immutable after creation
-                        //(Annotation.make model.projection model.geometry model.semantic surfaceName)  
-                        //    with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
-                        (Annotation.make2 model.projection model.geometry model.color model.thickness surfaceName)
-                            with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
-                    }, None
+                      if PRo3D.Config.useAsyncIntersections then
+                        { annotation with segments = PList.append newSegment annotation.segments }, Some (newSegment,segmentIndex)
+                      else
+                        let dir = newSegment.endPoint - newSegment.startPoint
+                        let points = [ 
+                          for s in 0 .. PRo3D.Config.sampleCount do
+                            let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                            match samplePoint p with
+                              | None -> ()
+                              | Some projectedPoint -> yield projectedPoint
+                        ]
+                        let newSegment = { startPoint = a; endPoint = p; points = PList.ofList points }
+                        { annotation with segments = PList.append newSegment annotation.segments }, None
+                | Projection.Linear ->
+                    annotation, None
+                | _ -> failwith "case does not exist"
+            
+            result
+          | None ->  //no working state, start new working annotation
+            { 
+                //annotation states should be immutable after creation
+                //(Annotation.make model.projection model.geometry model.semantic surfaceName)  
+                //    with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
+                (Annotation.make2 model.projection model.geometry model.color model.thickness surfaceName)
+                    with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
+            }, None
 
-        let model = { model with working = Some working }
+      let model = { model with working = Some working }
 
-        match (working.geometry, (working.points |> PList.count)) with
-            | Geometry.Point, 1 -> 
-                finishAndAppendAndSend up north model bc, None
-            | Geometry.Line, 2 -> 
-                finishAndAppendAndSend up north model bc, None
-            | _ -> 
-                model, newSegment // returns current segment for async computations outside
+      match (working.geometry, (working.points |> PList.count)) with
+          | Geometry.Point, 1 -> 
+              finishAndAppendAndSend up north model bc, None
+          | Geometry.Line, 2 -> 
+              finishAndAppendAndSend up north model bc, None
+          | _ -> 
+              model, newSegment // returns current segment for async computations outside
 
     let addNewSegment samplePoint model (newSegment : Segment, segmentIndex : int) =
         let dir = newSegment.endPoint - newSegment.startPoint
         let id = Guid.NewGuid() |> string
 
         let computation = 
-            proclist {
-                let mutable r = []
-                let result = MVar.empty()
-                let task = 
-                    async {
-                        do! Async.SwitchToNewThread()
-                        let r = 
-                            [ for s in 0 .. PRo3D.Config.sampleCount do
-                                let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
-                                match samplePoint p with
-                                    | None -> ()
-                                    | Some projectedPoint -> // projected point in world space
-                                        r <- r @ [projectedPoint]
-                                        MVar.put result (Choice1Of2 r)
-                                        yield projectedPoint
-                            ]
-                        MVar.put result (Choice2Of2 ())
-                    } |> Async.Start
+          proclist {
+            let mutable r = []
+            let result = MVar.empty()
+            let task = 
+                async {
+                    do! Async.SwitchToNewThread()
+                    let r = 
+                        [ for s in 0 .. PRo3D.Config.sampleCount do
+                            let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                            match samplePoint p with
+                                | None -> ()
+                                | Some projectedPoint -> // projected point in world space
+                                    r <- r @ [projectedPoint]
+                                    MVar.put result (Choice1Of2 r)
+                                    yield projectedPoint
+                        ]
+                    MVar.put result (Choice2Of2 ())
+                } |> Async.Start
 
-                let rec doIt () =
-                    proclist {
-                         let! r = Proc.Await (MVar.takeAsync result)
-                         match r with
-                            | Choice1Of2 r -> 
-                                printfn "mked it: %A" r
-                                let segment = { newSegment with points = PList.ofList r}
-                                yield SetSegment(segmentIndex,segment)
-                                yield! doIt()
-                            | Choice2Of2 _ -> ()
-                    }
+            let rec doIt () =
+                proclist {
+                     let! r = Proc.Await (MVar.takeAsync result)
+                     match r with
+                        | Choice1Of2 r -> 
+                            printfn "mked it: %A" r
+                            let segment = { newSegment with points = PList.ofList r}
+                            yield SetSegment(segmentIndex,segment)
+                            yield! doIt()
+                        | Choice2Of2 _ -> ()
+                }
 
-                yield! doIt()
-            } 
+            yield! doIt()
+          } 
         
         let pool = 
             if model.pendingIntersections.store.ContainsKey id then 

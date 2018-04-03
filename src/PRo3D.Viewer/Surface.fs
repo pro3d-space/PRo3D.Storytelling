@@ -644,12 +644,12 @@ module Surface =
                 let groups = Groups.update model.surfaces msg
 
                 match msg with
-                  | Groups.Action.RemoveGroup _ ->
+                  | Groups.Action.RemoveGroup _ | Groups.Action.RemoveChild _ ->
                     let sgs = 
                         model.sgSurfaces 
                             |> HMap.filter(fun k _ -> groups.flat |> HMap.containsKey k)
 
-                    { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping
+                    { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping                  
                   | _ -> { model with surfaces = groups }
                 
             | _ -> model

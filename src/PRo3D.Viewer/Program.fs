@@ -53,10 +53,10 @@ type License = {
   institution : string
 }
 
-let viewerVersion       = "2.6.2*"
+let viewerVersion       = "2.6.3*"
 let mutable licenseText = ""
 let catchDomainErrors   = false
-let licenseCheck        = true
+let licenseCheck        = false
 let licPath             = @".\pro3d.lic"
 
 let buildLicense(time) = 
@@ -112,8 +112,10 @@ let main argv =
     //buildLicense(365)
 
     Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.surfaceModelPickler)
+    Serialization.registry.RegisterFactory (fun _ -> level0KdTreePickler)
 
-    checkLicense()
+    if licenseCheck then
+      checkLicense()
 
    // use form = new Form(Width = 0, Height = 0)
     let signature =

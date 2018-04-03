@@ -110,7 +110,7 @@ module Groups =
               | [] -> f t
               | x::rest ->
                     match PList.tryGet x t.subNodes with
-                      | Some c -> { t with subNodes = PList.set x (go rest c) t.subNodes }                                                  
+                      | Some c -> { t with subNodes = PList.set x (go rest c) t.subNodes }                    //potentially slow                              
                       | None   -> t
         go (List.rev p) t 
     
@@ -289,7 +289,7 @@ module Groups =
             | RemoveChild (k,p) ->
                 removeLeaf model k p true
             | ToggleChildVisibility (c,p) -> 
-                model |> updateLeaf c (fun x -> Leaf.toggleVisibility x)   
+                model |> updateLeaf c (fun x -> Leaf.toggleVisibility x)
             | UpdateChildProperties a ->
                 replaceLeaf a model
             | SetGroupName t -> 
@@ -446,8 +446,8 @@ module Groups =
         Html.table [                            
                 div [clazz "ui buttons inverted"] [
                     onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                        button [clazz "ui icon button"; attribute "data-content" "Remove"; onMouseClick (fun _ -> RemoveChild (ts.id,ts.path))] [ //
-                                i [clazz "remove icon red"] [] ] 
+                        button [clazz "ui icon button"; onMouseClick (fun _ -> RemoveChild (ts.id,ts.path))] [
+                                i [clazz "remove icon red"] [] ] |> UI.wrapToolTip "Remove"
                     )
                 ] 
             ]

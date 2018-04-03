@@ -63,7 +63,7 @@ module KdTrees =
         ^. Pickler.case LazyKdTree lazyPickler
     
     //FsPickler.RegisterPicklerFactory (fun _ -> level0KdTreePickler )
-    Serialization.registry.RegisterFactory (fun _ -> level0KdTreePickler)
+//    Serialization.registry.RegisterFactory (fun _ -> level0KdTreePickler)
 
     let loadKdtree p =
         //Log.startTimed "loading tree"
