@@ -556,13 +556,13 @@ module DrawingApp =
              
         let discISg color size height trafo =
             Sg.cylinder 30 color size height
-                        |> Sg.noEvents
-                        |> Sg.shader {
-                            do! Aardvark.Opc.Shader.stableTrafo
-                            do! DefaultSurfaces.vertexColor
-                            do! Aardvark.Opc.Shader.stableLight
-                        }
-                        |> Sg.trafo(trafo) 
+              |> Sg.noEvents
+              |> Sg.shader {
+                  do! Aardvark.Opc.Shader.stableTrafo
+                  do! DefaultSurfaces.vertexColor
+                  do! Aardvark.Opc.Shader.stableLight
+              }
+              |> Sg.trafo(trafo)
 
         let coneISg color radius height trafo =  
             Sg.cone 30 color radius height
@@ -574,20 +574,20 @@ module DrawingApp =
                         }                       
                         |> Sg.trafo(trafo) 
 
-        let brush (hovered : IMod<Trafo3d option>) = 
-            let trafo =
-                hovered |> Mod.map (fun o -> 
-                    match o with 
-                        | Some t-> t
-                        | None -> Trafo3d.Scale(V3d.Zero)
-                )
+        //let brush (hovered : IMod<Trafo3d option>) = 
+        //    let trafo =
+        //        hovered |> Mod.map (fun o -> 
+        //            match o with 
+        //                | Some t-> t
+        //                | None -> Trafo3d.Scale(V3d.Zero)
+        //        )
 
-            Sg.mkDotISg (Mod.constant C4b.Red) (Mod.constant 0.05) trafo
-            |> Sg.effect [
-                toEffect <| Aardvark.Opc.Shader.stableTrafo
-                toEffect <| DefaultSurfaces.vertexColor
-                toEffect <| DefaultSurfaces.simpleLighting
-            ]                                                       
+        //    Sg.mkDotISg (Mod.constant C4b.Red) (Mod.constant 0.05) trafo
+        //    |> Sg.effect [
+        //        toEffect <| Aardvark.Opc.Shader.stableTrafo
+        //        toEffect <| DefaultSurfaces.vertexColor
+        //        toEffect <| DefaultSurfaces.simpleLighting
+        //    ]                                                       
         
         type innerViewConfig =
             {
@@ -601,78 +601,75 @@ module DrawingApp =
             }
 
         let drawDns (anno : MAnnotation) (conf:innerViewConfig)=                         
-            aset {
-                            
-                let! dns = anno.dnsResults 
-                match dns with
-                    | Some x -> 
-                        let center = anno.points |> AList.toMod |> Mod.map (fun list -> list.[PList.count list / 2])
+          aset {                            
+            let! dns = anno.dnsResults 
+            match dns with
+              | Some x -> 
+                let center = anno.points |> AList.toMod |> Mod.map (fun list -> list.[PList.count list / 2])
 
-                        let color = 
-                            DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
-                                                                                            
-                        let scale = 
-                            adaptive{
-                                //let! ps = planeScale
-                                let! ps = conf.dnsPlaneSize
-                                let! results = anno.results
-                                match results with
-                                  | Some r ->
-                                      let! l = r.length 
-                                      return ps * (l / 4.0)
-                                  | None -> 
-                                      return 1.0
-                            }
-                        
-                        //let screenSpaceScale = Sg.computeInvariantScale view conf.nearPlane center scale conf.hfov
+                let color = 
+                  DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
+                                                                                    
+                let scale = 
+                  adaptive{
+                      //let! ps = planeScale
+                      let! ps = conf.dnsPlaneSize
+                      let! results = anno.results
+                      match results with
+                        | Some r ->
+                            let! l = r.length 
+                            return ps * (l / 4.0)
+                        | None -> 
+                            return 1.0
+                  }
+                
+                //let screenSpaceScale = Sg.computeInvariantScale view conf.nearPlane center scale conf.hfov
 
-                        let discRadius = scale //Mod.map2 (*) scale screenSpaceScale                        
-                        let posTrafo = center |> Mod.map Trafo3d.Translation
+                let discRadius = scale //Mod.map2 (*) scale screenSpaceScale
+                let posTrafo = center |> Mod.map Trafo3d.Translation
 
-                        // disc
-                        let discTrafo =
-                            Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
+                // disc
+                let discTrafo =
+                    Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
 
-                        yield discISg color discRadius (discRadius |> Mod.map(fun d -> d * 0.01)) discTrafo 
+                yield discISg color discRadius (discRadius |> Mod.map(fun d -> d * 0.01)) discTrafo
 
-                        let lineLength = discRadius |> Mod.map ((*) 1.5)
-                        
-                        let coneHeight = lineLength |> Mod.map((*) 0.2)
-                        let coneRadius = coneHeight |> Mod.map((*) 0.3)
+                let lineLength = discRadius |> Mod.map((*) 1.5)
+                
+                let coneHeight = lineLength |> Mod.map((*) 0.2)
+                let coneRadius = coneHeight |> Mod.map((*) 0.3)
 
-                        // dip arrow       
+                // dip arrow       
 
-                        let! lineLength' = lineLength
-                        let! center' = center
+                let! lineLength' = lineLength
+                let! center'     = center
 
-                        let! dip = x.dipDirection
-                        let dipLine = 
-                            alist {
-                                yield center'
-                                yield center' + dip.Normalized * lineLength'
-                            }
+                let! dip = x.dipDirection
+                let dipLine = 
+                  alist {
+                      yield center'
+                      yield center' + dip.Normalized * lineLength'
+                  }
 
-                        yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key  
+                yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key  
 
-                        let coneTrafo = 
-                            lineLength |>
-                                Mod.map(fun s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(center' + dip.Normalized * s))
+                let coneTrafo = 
+                  lineLength |>
+                    Mod.map(fun s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(center' + dip.Normalized * s))
 
-                        yield coneISg color coneRadius coneHeight coneTrafo
+                yield coneISg color coneRadius coneHeight coneTrafo
 
-                        //strikes lines
-                        let! strike = x.strikeDirection
-                        let strikeLine1 =
-                            alist {                                                                
-                                yield center' - strike.Normalized * lineLength'
-                                yield center' + strike.Normalized * lineLength'
-                            }                                            
+                //strikes lines
+                let! strike = x.strikeDirection
+                let strikeLine1 =
+                  alist {                                                                
+                      yield center' - strike.Normalized * lineLength'
+                      yield center' + strike.Normalized * lineLength'
+                  }                                            
 
-                        yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key
-                        
-                    | None -> () 
-                               
-            } |> Sg.set
+                yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key
+              | None -> ()            
+          } |> Sg.set
             
         let getPolylinePoints (a : MAnnotation) =
             alist {                
