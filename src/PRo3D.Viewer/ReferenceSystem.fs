@@ -308,8 +308,7 @@ module ReferenceSystemApp =
 
             //        return PRo3D.Sg.fixPosition v.ViewTrafo v.Location v.Forward v.Up modelt
             //        //return PRo3D.Sg.screenAligned v.Forward v.Up modelt
-            //    }        
-
+            //    }     
         
             Sg.ofList [
                 directionMarkerFix styleUp 

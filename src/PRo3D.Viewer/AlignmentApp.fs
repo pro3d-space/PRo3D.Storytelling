@@ -7,7 +7,6 @@ open Aardvark.Base.Incremental
 open Aardvark.Application
 open Aardvark.UI
 open Aardvark.UI.Primitives
-open Aardvark.VRVis.Approx
 
 type AlignmentActions =
     | AddPoint of PickSurfacePair

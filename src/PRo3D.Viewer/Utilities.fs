@@ -329,7 +329,7 @@ module Sg =
         aset {
             for p in points |> ASet.ofAList do
                 let scale = computeScale view (Mod.constant p) 5.0                               
-                yield mkDotISg color (Mod.constant 0.1) (Mod.constant (Trafo3d.Translation(p)))
+                yield mkDotISg color scale (Mod.constant (Trafo3d.Translation(p))) //(Mod.constant 0.1)
         } 
         |> Sg.set
         |> Sg.effect [
