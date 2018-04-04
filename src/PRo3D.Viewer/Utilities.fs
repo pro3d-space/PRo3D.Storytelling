@@ -272,10 +272,11 @@ module Sg =
             |> Sg.shader {
                  do! Aardvark.Opc.Shader.stableTrafo
                  do! DefaultSurfaces.vertexColor
-                 do! DefaultSurfaces.thickLine    
+                 do! Aardvark.Opc.Shader.thickLine    
              }                               
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
+             |> Sg.uniform "DepthOffset" (Mod.constant 0.5)
             
             //|> Sg.pass linePass
             //|> Sg.depthTest (Mod.constant DepthTestMode.None)

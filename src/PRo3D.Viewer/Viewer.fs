@@ -555,7 +555,7 @@ module ViewerApp =
                 let m = (Model.Lens.scene |. Scene.Lens.orientationSystem).Set(m, refsystem')
                
                 match a with 
-                  | ReferenceSystemApp.Action.SetUp _-> updateCameraUp m
+                  | ReferenceSystemApp.Action.SetUp _ | ReferenceSystemApp.Action.SetPlanet _ -> updateCameraUp m
                   | _ -> m                
             | ConfigPropertiesMessage a,_,_ -> 
                 //Log.line "config message %A" a
@@ -650,10 +650,19 @@ module ViewerApp =
                     onKeyUp (KeyUp)
                     attribute "style" "width:70%; height: 100%; float:left"; ] 
             ]
-            
-        let overlayed =
-            let annotations =
+
+        let annotations, discs =
                 DrawingApp.Sg.view m.scene.config mdrawingConfig m.scene.navigation.camera.view m.drawing
+            
+        let discs = 
+           discs
+             |> Sg.map DrawingMessage
+             |> Sg.fillMode (Mod.constant FillMode.Fill)
+             |> Sg.cullMode (Mod.constant CullMode.None)
+
+        let overlayed =
+            let annos = 
+              annotations
                     |> Sg.map DrawingMessage
                     |> Sg.fillMode (Mod.constant FillMode.Fill)
                     |> Sg.cullMode (Mod.constant CullMode.None)
@@ -716,14 +725,14 @@ module ViewerApp =
                 |> Sg.map ViewPlanMessage
 
             //controller, exploreCenter
-            [annotations; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList // orSystem;
+            [annos; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList // orSystem;
         
-        let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed m
+        let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
         let control = DomNode.RenderControl(att, cam, cmds, None)
 
         // instrument view control
-        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped ([]|> Sg.ofList) m
+        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped Sg.empty Sg.empty m
         let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.frustum        
         let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
 
@@ -990,7 +999,7 @@ module ViewerApp =
                         //onKeyUp (KeyUp)
                         attribute "style" "width:10%; height: 20%; position: absolute; bottom: 10px; left: 10px; float:left"; ] // right: 400px
                 ]
-            let cmds    = ViewerUtils.renderCommands AList.empty ([orSystem]|> Sg.ofList) m
+            let cmds    = ViewerUtils.renderCommands AList.empty orSystem Sg.empty m
             let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.overlayFrustum//(Mod.constant(Frustum.perspective 20.0 0.1 10000.0 1.0))//m.frustum          
             let control = (DomNode.RenderControl(att2, cam, cmds, None))
             Incremental.div (AttributeMap.ofList[attribute "style" "color: #1B1C1E; border:5px"]) (   
@@ -1009,7 +1018,7 @@ module ViewerApp =
           }
 
         let textOverlays = 
-            div [] [ 
+            div [js "oncontextmenu" "event.preventDefault();"] [ 
               let planet = m.scene.referenceSystem.planet |> Mod.map(fun x -> sprintf "%s" (x.ToString()))  
 
               let view  = m.scene.navigation.camera.view 
@@ -1022,7 +1031,7 @@ module ViewerApp =
 
               let spericalc = 
                 Mod.map2 (fun (a : CameraView) b -> 
-                  CooTransformation.getLatLonAlt(a.Location) b ) view planet
+                  CooTransformation.getLatLonAlt(a.Location) b ) view m.scene.referenceSystem.planet
               
               let lon = spericalc |> Mod.map(fun x -> sprintf "%s°" ((x.longitude).ToString("0.00")))
               let lat = spericalc |> Mod.map(fun x -> sprintf "%s°" ((x.latitude).ToString("0.00")))
@@ -1231,7 +1240,7 @@ module ViewerApp =
             Incremental.div AttributeMap.empty stuff    
             
         require (Html.semui @ [myCss]) (                             
-                onBoot usingContext (                            
+                onBoot usingContext (                             
                     body [clazz "context example"; style "overflow-y:hidden"] [chooseView] //ViewerMode.Standard
                 )
         )

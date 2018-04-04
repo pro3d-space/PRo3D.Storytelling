@@ -3,11 +3,7 @@ namespace PRo3D.ReferenceSystem
 open Aardvark.Base.Incremental
 open Aardvark.Base
 open Aardvark.UI
-
-
-type Planet = 
-    | Earth = 0
-    | Mars = 1
+open PRo3D
 
 [<DomainType>]
 type ReferenceSystem = {    

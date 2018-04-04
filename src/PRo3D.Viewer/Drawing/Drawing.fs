@@ -563,7 +563,7 @@ module DrawingApp =
                   do! Aardvark.Opc.Shader.screenSpaceScale
                   do! Aardvark.Opc.Shader.stableTrafo
                   do! DefaultSurfaces.vertexColor
-                  do! Aardvark.Opc.Shader.stableLight
+                  //do! Aardvark.Opc.Shader.stableLight
               }
               |> Sg.trafo(trafo)
 
@@ -722,29 +722,31 @@ module DrawingApp =
 
             Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo anno.text anno.textsize.value
 
+        let optional (sg : ISg<_>) (m : IMod<bool>) : aset<ISg<_>> =
+          adaptive {
+              let! m = m 
+              if m then return sg
+              else return Sg.empty
+          } |> ASet.ofModSingle
+
         let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (view : IMod<CameraView>) (dots : IMod<bool>) =
-            let points = getPolylinePoints anno
-
-            let optional (sg : ISg<_>) (m : IMod<bool>) : aset<ISg<_>> =
-                adaptive {
-                    let! m = m 
-                    if m then return sg
-                    else return Sg.empty
-                } |> ASet.ofModSingle
-
-            let dots  = dots          |> optional (Sg.dots anno.points c)
-            let dns   = anno.showDns  |> optional (drawDns anno conf)
+            let points = getPolylinePoints anno            
+            let dots  = dots |> optional (Sg.dots anno.points c)
+           
             let texts = 
               anno.text 
                 |> Mod.map (String.isEmpty >> not) 
                 |> optional (drawText view conf anno)
 
-            let sgs = ASet.unionMany' [dots; dns; texts]
+            let sgs = ASet.unionMany' [dots; texts]
 
             Sg.ofList [
                 Sg.lines points c anno.thickness.value anno.modelTrafo anno.key                  
                 Sg.set sgs 
             ] |> Sg.onOff anno.visible
+
+        let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) =
+           anno.showDns |> optional (drawDns anno conf) |> Sg.set
         
         let toAnnotationOpt = 
             fun y -> 
@@ -752,7 +754,7 @@ module DrawingApp =
                     | MAnnotations ann -> Some ann
                     | _ -> None
 
-        let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> =
+        let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> * ISg<Drawing.Action>=
             // order is irrelevant for rendering. change list to set,
             // since set provides more degrees of freedom for the compiler           
             let annoSet = 
@@ -778,9 +780,14 @@ module DrawingApp =
                   finishedAnnotation a c config view (a.geometry |> Mod.map(function | Geometry.Point -> true | _ -> false)))
                 |> Sg.set               
                                 
-            Sg.ofList [
+            let overlay = 
+              Sg.ofList [
                // brush model.hoverPosition; 
                 annotations
                 drawWorkingAnnotation model.working
-            ]
+              ]
+
+            let depthTest = annoSet |> ASet.map(fun (_,a) -> finishedAnnotationDiscs a config) |> Sg.set
+
+            (overlay, depthTest)
             

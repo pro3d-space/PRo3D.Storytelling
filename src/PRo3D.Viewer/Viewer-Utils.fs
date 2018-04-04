@@ -216,7 +216,7 @@ module ViewerUtils =
         let far = m.scene.config.farPlane.value
         (Navigation.UI.frustum near far)
 
-    let renderCommands sgGrouped overlayed (m:MModel) =
+    let renderCommands sgGrouped overlayed discs (m:MModel) =
         let selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
 
         let grouped = 
@@ -252,7 +252,9 @@ module ViewerUtils =
                 yield RenderCommand.SceneGraph sg                    
 
                 if i = c then
-                  yield RenderCommand.SceneGraph overlayed
+                  yield RenderCommand.SceneGraph discs
 
                 yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
+            
+            yield RenderCommand.SceneGraph overlayed
         }  
