@@ -555,9 +555,12 @@ module DrawingApp =
     module Sg =                
              
         let discISg color size height trafo =
-            Sg.cylinder 30 color size height
+            Sg.cylinder 30 color size height              
               |> Sg.noEvents
+              |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
+              |> Sg.uniform "Size" size
               |> Sg.shader {
+                  do! Aardvark.Opc.Shader.screenSpaceScale
                   do! Aardvark.Opc.Shader.stableTrafo
                   do! DefaultSurfaces.vertexColor
                   do! Aardvark.Opc.Shader.stableLight
@@ -566,13 +569,16 @@ module DrawingApp =
 
         let coneISg color radius height trafo =  
             Sg.cone 30 color radius height
-                        |> Sg.noEvents
-                        |> Sg.shader {
-                            do! Aardvark.Opc.Shader.stableTrafo
-                            do! DefaultSurfaces.vertexColor
-                            do! DefaultSurfaces.simpleLighting
-                        }                       
-                        |> Sg.trafo(trafo) 
+               |> Sg.noEvents
+               //|> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
+               //|> Sg.uniform "Size" radius
+               |> Sg.shader {
+                   //do! Aardvark.Opc.Shader.screenSpaceScale
+                   do! Aardvark.Opc.Shader.stableTrafo
+                   do! DefaultSurfaces.vertexColor
+                   do! DefaultSurfaces.simpleLighting
+               }
+               |> Sg.trafo(trafo) 
 
         //let brush (hovered : IMod<Trafo3d option>) = 
         //    let trafo =
@@ -609,20 +615,16 @@ module DrawingApp =
 
                 let color = 
                   DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
-                                                                                    
+                                                                                                                    
                 let scale = 
-                  adaptive{
-                      //let! ps = planeScale
-                      let! ps = conf.dnsPlaneSize
-                      let! results = anno.results
-                      match results with
-                        | Some r ->
-                            let! l = r.length 
-                            return ps * (l / 4.0)
-                        | None -> 
-                            return 1.0
-                  }
-                
+                  conf.dnsPlaneSize 
+                    |> Mod.bind(fun size -> 
+                      anno.results 
+                        |> Mod.bind(fun y ->
+                          match y with
+                          | Some k -> k.length |> Mod.map(fun y -> (Math.Pow(y,1.0/3.0)) * size)
+                          | None -> Mod.constant 1.0))
+                          
                 //let screenSpaceScale = Sg.computeInvariantScale view conf.nearPlane center scale conf.hfov
 
                 let discRadius = scale //Mod.map2 (*) scale screenSpaceScale
@@ -634,7 +636,7 @@ module DrawingApp =
 
                 yield discISg color discRadius (discRadius |> Mod.map(fun d -> d * 0.01)) discTrafo
 
-                let lineLength = discRadius |> Mod.map((*) 1.5)
+                let lineLength = conf.arrowLength //discRadius |> Mod.map((*) 1.5)
                 
                 let coneHeight = lineLength |> Mod.map((*) 0.2)
                 let coneRadius = coneHeight |> Mod.map((*) 0.3)

@@ -230,8 +230,11 @@ module ViewerUtils =
                 )
             )
             
-        alist {                
+        alist {        
+            let! c = grouped |> AList.count
+            let mutable i = 0
             for set in grouped do
+                i <- i + 1
                 let sg = 
                     set 
                         |> Sg.set
@@ -247,7 +250,9 @@ module ViewerUtils =
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
 
                 yield RenderCommand.SceneGraph sg                    
-                yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
 
-            yield RenderCommand.SceneGraph overlayed
+                if i = c then
+                  yield RenderCommand.SceneGraph overlayed
+
+                yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
         }  
