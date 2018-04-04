@@ -28,6 +28,7 @@ open Suave.Json
 open System.Runtime.Serialization
 open Aardvark.VRVis
 open PRo3D.Viewer
+open PRo3D.Groups
 
 [<DataContract>]
 type Calc =
@@ -46,6 +47,58 @@ type Result =
       result : string;
    }
 
+type License = {
+  key         : string
+  userName    : string
+  institution : string
+}
+
+let viewerVersion       = "2.6.3*"
+let mutable licenseText = ""
+let catchDomainErrors   = false
+let licenseCheck        = false
+let licPath             = @".\pro3d.lic"
+
+let buildLicense(time) = 
+  
+  let userName    = "Laura Fritz" //"Thomas Ortner"
+  let institution = "VRVis"
+
+  let mutable createAKey = new SKGL.Generate()
+  createAKey.secretPhase <- (userName + institution + viewerVersion).GetHashCode().ToString()
+
+  let lic = {
+     key         = createAKey.doKey(time)
+     userName    = userName
+     institution = institution
+  }
+  
+  lic |> Serialization.save licPath |> ignore
+  Log.warn "Built license %A for time %d" lic time
+  Environment.Exit(0)
+
+let checkLicense () =
+  let contact = "Please contact hesina@vrvis.at, VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH, Vienna, Austria, www.vrvis.at"  
+
+  if (not (System.IO.File.Exists(licPath))) then            
+    MessageBox.Show("No licencefile found at " + licPath + ". \n" + contact) |> ignore
+    Environment.Exit(0);
+  else
+    Report.Line("Found License File");
+
+  let lic = Serialization.loadAs<License>(licPath)
+
+  let mutable validateAKey = SKGL.Validate()
+  validateAKey.secretPhase <- (lic.userName + lic.institution + viewerVersion).GetHashCode().ToString()
+  validateAKey.Key         <- lic.key
+
+  match (not validateAKey.IsValid || validateAKey.IsExpired) with
+  | true ->
+    MessageBox.Show("License file is invalid or expired. \n" + contact) |> ignore
+    Environment.Exit(0)
+  | false -> 
+    licenseText <- " - " + lic.userName + ", " + lic.institution + ", " + validateAKey.DaysLeft.ToString() + " days left"
+
 [<EntryPoint;STAThread>]
 let main argv = 
     Xilium.CefGlue.ChromiumUtilities.unpackCef()
@@ -56,11 +109,19 @@ let main argv =
     use app = new OpenGlApplication()
     let runtime = app.Runtime    
 
+    buildLicense(365)
+
+    Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.surfaceModelPickler)
+    Serialization.registry.RegisterFactory (fun _ -> level0KdTreePickler)
+
+    if licenseCheck then
+      checkLicense()
+
    // use form = new Form(Width = 0, Height = 0)
     let signature =
         runtime.CreateFramebufferSignature [
             DefaultSemantic.Colors, { format = RenderbufferFormat.Rgba8; samples = 1 }
-            DefaultSemantic.Depth, { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
+            DefaultSemantic.Depth,  { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
         ]
 
     use bc = new BlockingCollection<string>()    
@@ -76,9 +137,6 @@ let main argv =
                 
                 do! webSocket.send Text s true
         }        
-
-    //let attr = Surface.SurfaceAttributes.read "E:\Aardwork\Exomars\_SCENES\WP4200_4300_3400_DemoData\VictoriaCrater_HiRISE_MER-B_PRoViDEData_MultiLayer\Surface\MER-B_PanCam_Sol1103-P2582_multilayer\MER-B_PanCam_Sol1103-P2582_multilayer.opcx"
-    //printf "%A" attr
 
     Aardvark.Opc.PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
         
@@ -96,7 +154,8 @@ let main argv =
         MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |>ignore
         ()
     
-    //AppDomain.CurrentDomain.UnhandledException.AddHandler(UnhandledExceptionEventHandler(domainError))
+    if catchDomainErrors then
+      AppDomain.CurrentDomain.UnhandledException.AddHandler(UnhandledExceptionEventHandler(domainError))
 
     WebPart.startServer 4321 [
         MutableApp.toWebPart' runtime false mainApp
@@ -150,12 +209,15 @@ let main argv =
     use ctrl = new AardvarkCefBrowser()
     ctrl.Dock <- DockStyle.Fill
     form.Controls.Add ctrl    
-    form.Text <- "PRo3D Viewer - 2.6.2* - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH"
+    form.Text <- "PRo3D Viewer - " + viewerVersion + " - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH" + licenseText
     //form.WindowState <- FormWindowState.Minimized
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"        
-    //ctrl.ShowDevTools()
+    ctrl.ShowDevTools()
 
+    //Config.shouldTimeUIUpdate <- true
+    //Config.shouldTimeJsCodeGeneration <- true
+    //Config.shouldTimeUnpersistCalls <- true
 
     Application.Run form
 

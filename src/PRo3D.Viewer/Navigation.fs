@@ -26,36 +26,36 @@ module Navigation =
         }
 
     let update<'a,'b> (bigConfigA : 'a) (bigConfigB : 'b) (smallConfig : smallConfig<'a,'b>) (model : NavigationModel) (act : Action) =
-        match act with            
-            | ArcBallAction a -> 
-                let model = 
-                    match a with 
-                        | ArcBallController.Message.Pick a ->
-                            { model with navigationMode =  NavigationMode.ArcBall; exploreCenter = a }
-                        | _ -> model
+      match act with            
+        | ArcBallAction a -> 
+          let model = 
+              match a with 
+                  | ArcBallController.Message.Pick a ->
+                      { model with navigationMode =  NavigationMode.ArcBall; exploreCenter = a }
+                  | _ -> model
+          
+          let cam = ArcBallController.update model.camera a
+          let cam = { cam with sensitivity = smallConfig.navigationSensitivity.Get(bigConfigA) } 
+          match cam.orbitCenter with
+              | Some oc -> { model with camera = cam; exploreCenter = oc}
+              | None -> { model with camera = cam }
                 
-                let cam = ArcBallController.update model.camera a
-                let cam = { cam with sensitivity = smallConfig.navigationSensitivity.Get(bigConfigA) } 
-                match cam.orbitCenter with
-                    | Some oc -> { model with camera = cam; exploreCenter = oc}
-                    | None -> { model with camera = cam }
-                    
-            | FreeFlyAction a ->
-                let cam' = CameraController.update model.camera a                
-                { model with camera = { cam' with sensitivity = smallConfig.navigationSensitivity.Get(bigConfigA) } }
-            | SetNavigationMode mode ->
-                match mode with
-                    | NavigationMode.FreeFly ->
-                        let center = 
-                            match model.camera.orbitCenter with
-                                | Some x ->  x
-                                | None   -> V3d.OOO
+        | FreeFlyAction a ->
+          let cam' = CameraController.update model.camera a                
+          { model with camera = { cam' with sensitivity = smallConfig.navigationSensitivity.Get(bigConfigA) } }
+        | SetNavigationMode mode ->
+          match mode with
+            | NavigationMode.FreeFly ->
+              let center = 
+                  match model.camera.orbitCenter with
+                      | Some x ->  x
+                      | None   -> V3d.OOO
 
-                        let view' =
-                            CameraView.lookAt model.camera.view.Location center (smallConfig.up.Get(bigConfigB))
-                        
-                        { model with camera = { model.camera with view = view'}; navigationMode = mode} 
-                    | _ ->  { model with navigationMode = mode }
+              let view' =
+                  CameraView.lookAt model.camera.view.Location center (smallConfig.up.Get(bigConfigB))
+              
+              { model with camera = { model.camera with view = view'}; navigationMode = mode} 
+            | _ ->  { model with navigationMode = mode }
                
     module UI =
         open Aardvark.Base.Camera
@@ -93,7 +93,7 @@ module Navigation =
             let point =
                 aset{
                 let! pos = model.exploreCenter
-                yield PRo3D.Sg.dots (AList.single pos) (Mod.constant C4b.Magenta) model.camera.view
+                yield PRo3D.Sg.dots (AList.single pos) (Mod.constant C4b.Magenta)
                 } |> Sg.set
             Sg.ofList [point]
            

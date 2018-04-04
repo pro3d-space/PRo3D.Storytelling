@@ -1,28 +1,6 @@
-namespace Aardvark.Opc
+namespace PRo3D
 
-#nowarn "8989"
 
-[<AutoOpen>]
-module Serialization =
-    open MBrace.FsPickler
-    open System.IO
-        
-    let registry = new CustomPicklerRegistry()    
-    let cache = PicklerCache.FromCustomPicklerRegistry registry
-
-    let binarySerializer = FsPickler.CreateBinarySerializer(picklerResolver = cache)    
-
-    let save path (d : 'a) =    
-        let arr = binarySerializer.Pickle d    
-        File.WriteAllBytes(path, arr);
-        d
-
-    let loadAs<'a> path : 'a =
-        let arr = File.ReadAllBytes(path)
-        binarySerializer.UnPickle arr
-
-    let writeToFile path (contents : string) =
-        System.IO.File.WriteAllText(path, contents)
 
 [<AutoOpen>]
 module KdTrees =
@@ -85,7 +63,7 @@ module KdTrees =
         ^. Pickler.case LazyKdTree lazyPickler
     
     //FsPickler.RegisterPicklerFactory (fun _ -> level0KdTreePickler )
-    registry.RegisterFactory (fun _ -> level0KdTreePickler)
+//    Serialization.registry.RegisterFactory (fun _ -> level0KdTreePickler)
 
     let loadKdtree p =
         //Log.startTimed "loading tree"

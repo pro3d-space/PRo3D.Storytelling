@@ -26,6 +26,7 @@ open PRo3D.Surfaces
 open PRo3D.Viewer
 open PRo3D.Groups
 open Aardvark.UI.Trafos
+open Aardvark.UI.Animation
 
 type PropertyActions =
     | DrawingMessage    of Drawing.Action
@@ -35,6 +36,7 @@ type ViewerAction =
     | DrawingMessage            of Drawing.Action
     | AnnotationGroupsMessageViewer   of Groups.Action
     | NavigationMessage         of Navigation.Action
+    | AnimationMessage          of AnimationAction
     | ReferenceSystemMessage    of ReferenceSystemApp.Action
     | AnnotationMessage         of AnnotationProperties.Action
     | BookmarkMessage           of Bookmarks.Action
@@ -44,8 +46,7 @@ type ViewerAction =
     | SetCamera                 of CameraView        
     | SetCameraAndFrustum       of CameraView * double * double        
     | SetCameraAndFrustum2      of CameraView * Frustum
-    | ImportSurface 
-    //| ImportMeasurements 
+    | ImportSurface     
     | ImportAnnotationGroups
     | ImportSurfaceTrafo
     | SwitchViewerMode

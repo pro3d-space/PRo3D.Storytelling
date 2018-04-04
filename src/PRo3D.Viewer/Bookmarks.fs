@@ -30,8 +30,7 @@ module Bookmarks =
             name = name
             navigationState = navigation
         }
-        
-    
+            
     let update (model : BookmarksModel) (act : Action) (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*BookmarksModel) = 
         match act with
             | AddBookmark -> 
@@ -43,23 +42,20 @@ module Bookmarks =
                 
                 outerModel, { model with bookmarks = groups}
             | GroupsMessage msg -> 
-                match msg with
-                    | Groups.Action.UpdateCam id -> 
-                        let bm = model.bookmarks.flat |> HMap.tryFind id
-                        match bm with
-                            | Some b ->
-                                match b with
-                                    | Leaf.Bookmarks bkm ->
-
-                                        let navigation' = bkm.navigationState 
-                                        let newOuterModel = navigation.Set(outerModel,navigation')
-                                        (newOuterModel,model)
-                                    | _ -> (outerModel,model) 
-                            | None -> (outerModel,model) 
-                     | _ -> (outerModel, { model with bookmarks = Groups.update model.bookmarks msg})
+              match msg with
+                | Groups.Action.UpdateCam id -> 
+                  let bm = model.bookmarks.flat |> HMap.tryFind id
+                  match bm with
+                    | Some b ->
+                      match b with
+                       | Leaf.Bookmarks bkm ->
+                         let navigation' = bkm.navigationState 
+                         let newOuterModel = navigation.Set(outerModel, navigation')
+                         (newOuterModel,model)
+                       | _ -> (outerModel,model) 
+                    | None -> (outerModel,model) 
+                 | _ -> (outerModel, { model with bookmarks = Groups.update model.bookmarks msg})
                 
-
-
     let mkColor (model : MGroupsModel) (b : MBookmark) =
             let id = b.key |> Mod.force
 
@@ -84,50 +80,44 @@ module Bookmarks =
                   | Some selected -> selected = (b.key |> Mod.force)
                   | None -> false )
 
-    let viewBookmarks (path:list<Index>) (model:MGroupsModel) (singleSelect : MBookmark*list<Index> -> 'outer) (multiSelect : MBookmark*list<Index> -> 'outer) (lift : Groups.Action -> 'outer) (bookmarks: alist<Guid>) : alist<DomNode<'outer>> = 
-                     
+    let viewBookmarks (path:list<Index>) (model:MGroupsModel) (singleSelect : MBookmark*list<Index> -> 'outer) (multiSelect : MBookmark*list<Index> -> 'outer) (lift : Groups.Action -> 'outer) (bookmarks: alist<Guid>) : alist<DomNode<'outer>> =       
         alist {
+          let bookmarks = 
+            bookmarks
+              |> AList.map (fun x -> model.flat |> AMap.find x |> Mod.bind(id) |> Mod.force)
+              |> AList.choose( fun x -> 
+                 match x with
+                   | MBookmarks a -> Some a
+                   | _-> None )
 
-            let bookmarks = 
-                bookmarks
-                  |> AList.map (fun x -> model.flat |> AMap.find x |> Mod.bind(id) |> Mod.force)
-                  |> AList.choose( fun x -> 
-                     match x with
-                       | MBookmarks a -> Some a
-                       | _-> None )
+          for b in bookmarks do
+                            
+            let! c = mkColor model b
+            let bgc = sprintf "color: %s" (Html.ofC4b c)
+            let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
 
-            for b in bookmarks do
-                                
-                let! c = mkColor model b
-                let bgc = sprintf "color: %s" (Html.ofC4b c)
-                let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
+            let singleSelect = fun _ -> singleSelect(b,path)
+            let multiSelect  = fun _ -> multiSelect(b,path)
+            let! selected = b |> isSingleSelect model
+            let! key = b.key
 
-                let singleSelect = fun _ -> singleSelect(b,path)
-                let multiSelect  = fun _ -> multiSelect(b,path)
-                let! selected = b |> isSingleSelect model
-
-                let! key = b.key
-
-                yield div [clazz "item"; style bgc] [
-                    i [clazz "large Sticky Note middle aligned icon"; onClick multiSelect;style bgc][] 
-                    div [clazz "content"; style infoc] [
-                        //let desc = b.name
-                        yield Incremental.div (AttributeMap.ofList [clazz "header"; style infoc])(
-                            alist {
-                                    yield i [clazz "home icon"; 
-                                             onClick (fun _ -> lift <| Groups.UpdateCam key)][] |> UI.wrapToolTipRight "FlyTo"
-                    
-                                    //yield i [clazz "Remove icon"; 
-                                    //         onClick (fun _ -> lift <| Groups.RemoveChild (key,path))] [] |> UI.wrapToolTip "Remove"
-                                } 
-                        ) 
-                        if selected then
-                            yield div[onClick singleSelect][ u[][Incremental.text b.name]]
-                        else
-                            yield div[onClick singleSelect][Incremental.text b.name]
-                        //yield div [clazz "description"; style bgc] [Incremental.text desc]      
-                    ]
-                ]
+            yield div [clazz "item"; style bgc] [
+              i [clazz "large Sticky Note middle aligned icon"; onClick multiSelect;style bgc][] 
+              div [clazz "content"; style infoc] [
+                  //let desc = b.name
+                  yield Incremental.div (AttributeMap.ofList [clazz "header"; style infoc])(
+                    alist {
+                      yield i [clazz "home icon"; 
+                        onClick (fun _ -> lift <| Groups.UpdateCam key)][] |> UI.wrapToolTipRight "FlyTo"                                            
+                      } 
+                  ) 
+                  if selected then
+                      yield div[onClick singleSelect][u[][Incremental.text b.name]]
+                  else
+                      yield div[onClick singleSelect][Incremental.text b.name]
+                  //yield div [clazz "description"; style bgc] [Incremental.text desc]      
+              ]
+            ]
         }     
                
 

@@ -21,6 +21,7 @@ module CooTransformation =
         let lat = ref init
         let lon = ref init
         let alt = ref init
+      
         let bla = CooTrafo.Xyz2LatLonAlt(planet, p.X, p.Y, p.Z, lat, lon, alt)
         
         if bla <> 0 then

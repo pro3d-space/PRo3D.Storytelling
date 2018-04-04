@@ -12,10 +12,10 @@ module DefaultMetrics =
     let mars (self : AdaptiveToken) (v : IMod<Trafo3d>) (pr : IMod<Trafo3d>) (p : RenderPatch) (c : IMod<LodParameters>) =
         let lodParams = c.GetValue self
        
-        let pos = (v.GetValue self).Backward.C3.XYZ
-        let bb = p.info.GlobalBoundingBox.Transformed(lodParams.trafo)
+        let pos     = (v.GetValue self).Backward.C3.XYZ
+        let bb      = p.info.GlobalBoundingBox.Transformed(lodParams.trafo)
         let closest = bb.GetClosestPointOn(pos)
-        let dist = (closest - pos).Length
+        let dist    = (closest - pos).Length
 
         let unitPxSize = lodParams.frustum.right / (float lodParams.size.X / 2.0)
         let px = (lodParams.frustum.near * p.triangleSize) / dist

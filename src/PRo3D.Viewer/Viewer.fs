@@ -50,6 +50,7 @@ module ViewerApp =
     open Aardvark.SceneGraph.SgFSharp.Sg
     open PRo3d.Align
     open Aardvark.Rendering.GL.OpenGl.Pointers
+    open Aardvark.UI.Animation
                  
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
@@ -67,6 +68,10 @@ module ViewerApp =
     let _flat            = _annotations  |. GroupsModel.Lens.flat    
     let _lookUp          = _annotations  |. GroupsModel.Lens.groupsLookup
     let _groups          = _annotations  |. GroupsModel.Lens.rootGroup |. Node.Lens.subNodes
+
+    // animation  
+    let _animation = Model.Lens.animations
+    let _animationView = _animation |. AnimationModel.Lens.cam
        
     let lookAtData (m : Model) =         
         let bb = m |> Lenses.get _sgSurfaces |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -144,14 +149,41 @@ module ViewerApp =
         let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
         { m with scene = { m.scene with viewPlans = vps } }
 
+    let animateFowardAndLocation (pos : V3d) (dir : V3d) (duration : RelativeTime) (name : string) = 
+      {
+        (CameraAnimations.initial name) with 
+          sample = fun (localTime, globalTime) (state : CameraView) -> // given the state and t since start of the animation, compute a state and the cameraview
+            if localTime < duration then                  
+              let rot      = Rot3d(state.Forward, dir) * localTime / duration
+              let forward' = rot.TransformDir(state.Forward)
+              
+              let vec       = pos - state.Location
+              let velocity  = vec.Length / duration                  
+              let dir       = vec.Normalized
+              let location' = state.Location + dir * velocity * localTime
+
+              let view = 
+                state 
+                  |> CameraView.withForward forward'
+                  |> CameraView.withLocation location'
+      
+              Some (state,view)
+            else None
+      }
+
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
-            | NavigationMessage  msg,_,false when (isGrabbed m |> not) ->
-               
+            | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
                let ref = m.scene.referenceSystem
+               let nav = Navigation.update c ref navConf m.scene.navigation msg               
 
-               { m with scene = { m.scene with navigation = Navigation.update c ref navConf m.scene.navigation msg }}
+               m 
+                 |> Lenses.set _navigation nav
+                 |> Lenses.set _animationView nav.camera.view
+            | AnimationMessage msg,_,_ ->
+              let a = AnimationApp.update m.animations msg
+              { m with animations = a } |> Lenses.set _view a.cam
             | SetCamera cv,_,false -> 
                 _view.Set(m, cv)
             | SetCameraAndFrustum (cv, hfov, _),_,false ->                
@@ -193,8 +225,28 @@ module ViewerApp =
                         |> Lenses.set' _annotations m
                   | None -> m       
             | BookmarkMessage msg,_,_ ->  
-                let model, bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
-                { m with scene = { m.scene with bookmarksModel = bm; navigation = model.scene.navigation }} 
+                let m', bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
+
+                let animation = 
+                  match msg with
+                  | Bookmarks.Action.GroupsMessage k ->
+                    match k with 
+                    | Groups.Action.UpdateCam _->
+                      let location = m'.scene.navigation.camera.view.Location
+                      let forward = m'.scene.navigation.camera.view.Forward
+
+                      //let locationMsg = CameraAnimations.animateLocation location 2.0 "flyto 2s"
+                      let animationMessage = 
+                        animateFowardAndLocation location forward 2.0 "ForwardAndLocation2s"
+                      let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                      //let fowardMsg = CameraAnimations.animateFoward foward 2.0 "turnAround 2s"
+                      //let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(fowardMsg))
+
+                      a'
+                    | _ -> m.animations
+                  | _ -> m.animations
+                
+                { m with scene = { m.scene with bookmarksModel = bm }; animations = animation} //; navigation = m'.scene.navigation }} 
             | BookmarkUIMessage msg,_,_ ->    
                 let bm = Groups.update m.scene.bookmarksModel.bookmarks msg
                 { m with scene = { m.scene with bookmarksModel = {m.scene.bookmarksModel with bookmarks = bm }}} 
@@ -239,77 +291,75 @@ module ViewerApp =
                           | None -> m
                                                                        
             | ImportAnnotationGroups,_,_ ->
-                match Dialogs.openDialog w with
-                    | Some x -> 
-                        //update groups
-                        let imported, flat, lookup = AnnotationGroupsImporter.startImporter x m.scene.referenceSystem
+              match Dialogs.openDialog w with
+                | Some x -> 
+                  //update groups
+                  let imported, flat, lookup = AnnotationGroupsImporter.startImporter x m.scene.referenceSystem
 
-                        let newGroups = 
-                            m.drawing.annotations.rootGroup.subNodes
-                              |> PList.append' imported
+                  let newGroups = 
+                      m.drawing.annotations.rootGroup.subNodes
+                        |> PList.append' imported
 
-                        let flat = 
-                          flat 
-                            |> HMap.map(fun k v -> 
-                              let a = v |> Leaf.toAnnotation
-                              let a' = if a.geometry = Geometry.DnS then { a with showDns = true } else a                                                             
-                              a'|> Leaf.Annotations)                                  
+                  let flat = 
+                    flat 
+                      |> HMap.map(fun k v -> 
+                        let a = v |> Leaf.toAnnotation
+                        let a' = if a.geometry = Geometry.DnS then { a with showDns = true } else a                                                             
+                        a'|> Leaf.Annotations)                                  
 
-                        //let inline median input = 
-                        //  let sorted = input |> Seq.toArray |> Array.sort
-                        //  let m1,m2 = 
-                        //      let len = sorted.Length-1 |> float
-                        //      len/2. |> floor |> int, len/2. |> ceil |> int 
-                        //  (sorted.[m1] + sorted.[m2] |> float)/2.
+                  //let inline median input = 
+                  //  let sorted = input |> Seq.toArray |> Array.sort
+                  //  let m1,m2 = 
+                  //      let len = sorted.Length-1 |> float
+                  //      len/2. |> floor |> int, len/2. |> ceil |> int 
+                  //  (sorted.[m1] + sorted.[m2] |> float)/2.
 
-                        //let stuff = 
-                        //  flat 
-                        //    |> HMap.toList 
-                        //    |> List.map snd 
-                        //    |> List.map Leaf.toAnnotation
-                        //    |> List.filter(fun x -> x.geometry = Geometry.DnS)
-                        //    |> List.map(fun x -> x.points |> DipAndStrike.calculateDnsErrors)
-                        //    |> List.concat
-                            
-                        //let avg = stuff |> List.average
-                        //let med = stuff |> List.toArray |> median
-                        //let std = DipAndStrike.computeStandardDeviation avg stuff
-                        //Log.line "%f %f %f" std avg med
-                            
-                        //let result = stuff |> List.map(fun x -> { error = x } )
+                  //let stuff = 
+                  //  flat 
+                  //    |> HMap.toList 
+                  //    |> List.map snd 
+                  //    |> List.map Leaf.toAnnotation
+                  //    |> List.filter(fun x -> x.geometry = Geometry.DnS)
+                  //    |> List.map(fun x -> x.points |> DipAndStrike.calculateDnsErrors)
+                  //    |> List.concat
+                      
+                  //let avg = stuff |> List.average
+                  //let med = stuff |> List.toArray |> median
+                  //let std = DipAndStrike.computeStandardDeviation avg stuff
+                  //Log.line "%f %f %f" std avg med
+                      
+                  //let result = stuff |> List.map(fun x -> { error = x } )
 
-                        //let csvTable = Csv.Seq.csv ";" true id result
-                        //Csv.Seq.write ("./error.csv") csvTable |> ignore
+                  //let csvTable = Csv.Seq.csv ";" true id result
+                  //Csv.Seq.write ("./error.csv") csvTable |> ignore
 
-                        m 
-                          |> Lenses.set _groups newGroups
-                          |> Lenses.set _lookUp lookup
-                          |> Lenses.set _flat flat
-                    | None -> m   
+                  m 
+                    |> Lenses.set _groups newGroups
+                    |> Lenses.set _lookUp lookup
+                    |> Lenses.set _flat flat
+                | None -> m   
             | ImportSurfaceTrafo,_,_ ->
-                match Dialogs.openDialog w with
-                    | Some path ->
-                        let imported = SurfaceTrafoImporter.startImporter path
+              match Dialogs.openDialog w with
+                | Some path ->
+                  let imported = SurfaceTrafoImporter.startImporter path
+                  let filterIds = File.ReadLines (Path.ChangeExtension(path,".filter")) |> Seq.toList
 
-                        let filterIds = File.ReadLines (Path.ChangeExtension(path,".filter")) |> Seq.toList
+                  let k = 
+                    imported 
+                      |> PList.toList 
+                      |> List.filter(fun x -> List.contains x.id filterIds) 
+                      |> List.map (fun x ->
+                        {
+                          id = x.id
+                          shift = x.trafo.Forward.C3.XYZ.Length
+                        })
 
-                        let k = 
-                          imported 
-                            |> PList.toList 
-                            |> List.filter(fun x -> List.contains x.id filterIds) 
-                            |> List.map (fun x ->
-                              {
-                                id = x.id
-                                shift = x.trafo.Forward.C3.XYZ.Length
-                              })
+                  let csvTable = Csv.Seq.csv "," true id k
+                  Csv.Seq.write (@"./shift.csv") csvTable |> ignore
 
-                        let csvTable = Csv.Seq.csv "," true id k
-                        Csv.Seq.write (@"./shift.csv") csvTable |> ignore
-
-                        let s = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel
-                        m |> Lenses.set _surfaceModelLens s
-                        
-                    | None -> m   
+                  let s = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel
+                  m |> Lenses.set _surfaceModelLens s                  
+                | None -> m   
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
             | QuickLoad2,_,_ ->                                
@@ -318,74 +368,73 @@ module ViewerApp =
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
                 m
-            | PickSurface (p,name), _ ,true ->  
-               // Log.line "hit surface %s" name
-                let fray = p.globalRay.Ray
-                let r = fray.Ray
-                Log.startTimed "kdtree intersect %s" name
-                let cameraLocation = m.scene.navigation.camera.view.Location 
+            | PickSurface (p,name), _ ,true ->                 
+              let fray = p.globalRay.Ray
+              let r = fray.Ray
+              Log.startTimed "kdtree intersect %s" name
+              let cameraLocation = m.scene.navigation.camera.view.Location 
+              
+              let hitF (p : V3d) = 
                 
-                let hitF (p : V3d) = 
-
-                    let ray =
-                        match m.drawing.projection with
-                            | Projection.Viewpoint -> 
-                                let dir = (p-cameraLocation).Normalized
-                                FastRay3d(cameraLocation, dir)  
-                            | Projection.Sky -> 
-                                let up = m.scene.referenceSystem.up.value
-                                FastRay3d(p + (up * 5000.0), -up)  
-                            | _ -> Log.error "projection started without proj mode"; FastRay3d()
-                    
-                    match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray cache with
-                        | Some (t,surf), c ->                             
-                            cache <- c; ray.Ray.GetPointOnRay t |> Some
-                        | None, c ->
-                            cache <- c; None
-                                    
-                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray cache with
-                    | Some (t,surf), c ->                         
-                        cache <- c
-                        let hit = r.GetPointOnRay(t)
-                        
-                        match m.interaction with
-                            | Interactions.DrawAnnotation ->               
-                                Log.error "closest intersection on %A" surf.name
-                                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
-                                Log.stop()
-                                { m with drawing = drawing } |> stash
-                            | Interactions.PlaceCoordinateSystem -> 
-                                
-                                let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
-                                let (refSystem',_)= 
-                                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
-                                
-                                let origin = new V3d(m.overlayFrustum.right * 0.5, m.overlayFrustum.bottom * 0.5, 1.0)
-                                let os = { refSystem' with origin = origin }
-                                let m = { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = os }}
-                                
-                                //update camera upvector
-                                updateCameraUp m
-                            | Interactions.PickExploreCenter ->
-                                let c   = m.scene.config
-                                let ref = m.scene.referenceSystem
-                                let navigation' = 
-                                    Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
-                                { m with scene = {m.scene with navigation = navigation'; } }
-                            | Interactions.PlaceRover ->
-                                let camState = m.scene.navigation.camera
-                                let ref = m.scene.referenceSystem 
-                                let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
-                                let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
-                                match m.scene.viewPlans.working.IsEmpty with
-                                    | true -> m' 
-                                    | false -> { m' with tabMenu = TabMenu.Viewplanner }
-                            | Interactions.AlignPick -> 
-                                { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = hit; surfaceName = surf.guid}))}
-                            | _ -> m
-                    | None, _ -> 
-                        Log.error ("no hit")
-                        m
+                let ray =
+                    match m.drawing.projection with
+                        | Projection.Viewpoint -> 
+                            let dir = (p-cameraLocation).Normalized
+                            FastRay3d(cameraLocation, dir)  
+                        | Projection.Sky -> 
+                            let up = m.scene.referenceSystem.up.value
+                            FastRay3d(p + (up * 5000.0), -up)  
+                        | _ -> Log.error "projection started without proj mode"; FastRay3d()
+                
+                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray cache with
+                    | Some (t,surf), c ->                             
+                        cache <- c; ray.Ray.GetPointOnRay t |> Some
+                    | None, c ->
+                        cache <- c; None
+                                  
+              match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray cache with
+                | Some (t,surf), c ->                         
+                  cache <- c
+                  let hit = r.GetPointOnRay(t)
+                  
+                  match m.interaction with
+                      | Interactions.DrawAnnotation ->               
+                          Log.error "closest intersection on %A" surf.name
+                          let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
+                          Log.stop()
+                          { m with drawing = drawing } |> stash
+                      | Interactions.PlaceCoordinateSystem -> 
+                          
+                          let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
+                          let (refSystem',_)= 
+                              ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
+                          
+                          let origin = new V3d(m.overlayFrustum.right * 0.5, m.overlayFrustum.bottom * 0.5, 1.0)
+                          let os = { refSystem' with origin = origin }
+                          let m = { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = os }}
+                          
+                          //update camera upvector
+                          updateCameraUp m
+                      | Interactions.PickExploreCenter ->
+                          let c   = m.scene.config
+                          let ref = m.scene.referenceSystem
+                          let navigation' = 
+                              Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
+                          { m with scene = {m.scene with navigation = navigation'; } }
+                      | Interactions.PlaceRover ->
+                          let camState = m.scene.navigation.camera
+                          let ref = m.scene.referenceSystem 
+                          let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
+                          let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
+                          match m.scene.viewPlans.working.IsEmpty with
+                              | true -> m' 
+                              | false -> { m' with tabMenu = TabMenu.Viewplanner }
+                      | Interactions.AlignPick -> 
+                          { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = hit; surfaceName = surf.guid}))}
+                      | _ -> m
+                | None, _ -> 
+                    Log.error ("no hit")
+                    m
             | SaveScene, _,_ -> 
                 match m.scene.scenePath with
                     | None ->                        
@@ -415,105 +464,99 @@ module ViewerApp =
                 //m'
                 loadRoverData m'
             | KeyDown k, _, _ ->
-                    let drawingAction =
-                        match k with
-                            | Aardvark.Application.Keys.Enter       -> Drawing.Action.Finish                                                               
-                            | Aardvark.Application.Keys.LeftCtrl    -> Drawing.Action.StartDrawing
-                            | Aardvark.Application.Keys.D0          -> Drawing.Action.SetSemantic Semantic.Horizon0
-                            | Aardvark.Application.Keys.D1          -> Drawing.Action.SetSemantic Semantic.Horizon1
-                            | Aardvark.Application.Keys.D2          -> Drawing.Action.SetSemantic Semantic.Horizon2
-                            | Aardvark.Application.Keys.D3          -> Drawing.Action.SetSemantic Semantic.Horizon3       
-                            | _                                     -> Drawing.Action.Nop
+              let drawingAction =
+                match k with
+                  | Aardvark.Application.Keys.Enter       -> Drawing.Action.Finish                                                               
+                  | Aardvark.Application.Keys.LeftCtrl    -> Drawing.Action.StartDrawing
+                  | Aardvark.Application.Keys.D0          -> Drawing.Action.SetSemantic Semantic.Horizon0
+                  | Aardvark.Application.Keys.D1          -> Drawing.Action.SetSemantic Semantic.Horizon1
+                  | Aardvark.Application.Keys.D2          -> Drawing.Action.SetSemantic Semantic.Horizon2
+                  | Aardvark.Application.Keys.D3          -> Drawing.Action.SetSemantic Semantic.Horizon3       
+                  | _                                     -> Drawing.Action.Nop
 
-                    let m =
-                        match k with 
-                            | Aardvark.Application.Keys.LeftCtrl -> { m with picking = true }
-                            |_                                   -> { m with picking = false }
+              let m =
+                match k with 
+                  | Aardvark.Application.Keys.LeftCtrl -> { m with picking = true }
+                  |_                                   -> { m with picking = false }
          
-                    let m =
-                        match m.interaction with
-                            | Interactions.DrawAnnotation -> 
-                                let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing drawingAction } |> stash
-                                match drawingAction with
-                                  | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
-                                  | _ -> m                                
-                            | Interactions.AlignPick -> 
-                                match k with
-                                 | Aardvark.Application.Keys.Enter -> 
-                                    let m = { m with alignment = AlignmentApp.update m.alignment PRo3d.Align.AlignmentActions.Finish }
+              let m =
+                match m.interaction with
+                | Interactions.DrawAnnotation -> 
+                    let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing drawingAction } |> stash
+                    match drawingAction with
+                      | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
+                      | _ -> m                                
+                | Interactions.AlignPick -> 
+                    match k with
+                     | Aardvark.Application.Keys.Enter -> 
+                        let m = { m with alignment = AlignmentApp.update m.alignment PRo3d.Align.AlignmentActions.Finish }
 
-                                    match (m.alignment.resultTrafo, m.alignment.alignment)with
-                                      | Some t, Some al -> 
-                                        
-                                        let f = (fun x -> 
-                                            let s = x |> Leaf.toSurface
-                                            { s with preTransform = t} |> Leaf.Surfaces)
+                        match (m.alignment.resultTrafo, m.alignment.alignment)with
+                          | Some t, Some al ->                             
+                            let f = (fun x -> 
+                                let s = x |> Leaf.toSurface
+                                { s with preTransform = t} |> Leaf.Surfaces)
 
-                                        let g = Groups.updateLeaf al.blue f m.scene.surfacesModel.surfaces                                          
-                                        
-                                        { m.scene.surfacesModel with surfaces = g }
-                                          |> SurfaceModel.triggerSgGrouping
-                                          |> Lenses.set' _surfacesModel m                                                                                
-                                      | _ -> m
-                                 | _ -> m
-                            | _ -> m
-                                                        
-
-                    let sensitivity = 
-                        m.scene.config.navigationSensitivity.value
-                    
-                    let configAction = 
-                        match k with 
-                            | Aardvark.Application.Keys.PageUp   -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity + 0.5))
-                            | Aardvark.Application.Keys.PageDown -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity - 0.5))
-                            | _ -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity))
-
-                    let c' = ConfigProperties.update m.scene.config configAction
-
-                    let kind = 
-                        match k with
-                          | Aardvark.Application.Keys.F1 -> TrafoKind.Translate
-                          | Aardvark.Application.Keys.F2 -> TrafoKind.Rotate
-                          | _ -> m.trafoKind
-
-                    let m = { m with trafoKind = kind }
-
-                    let m = 
-                        match k with 
-                          | Aardvark.Application.Keys.Space -> 
-                                                        
-                            let wp = {
-                                name = sprintf "wp %d" m.waypoints.Count
-                                cv = (_camera.Get m).view
-                            }
-
-                            let waypoints = PList.append wp m.waypoints
-                            Log.line "saving waypoints %A" waypoints
-                            Serialization.save "./waypoints.wps" waypoints |> ignore
-                            { m with waypoints = waypoints }                                                                                  
+                            let g = Groups.updateLeaf al.blue f m.scene.surfacesModel.surfaces
+                            { m.scene.surfacesModel with surfaces = g }
+                              |> SurfaceModel.triggerSgGrouping
+                              |> Lenses.set' _surfacesModel m
                           | _ -> m
+                     | _ -> m
+                | _ -> m
+                                                  
 
-                    { m with scene = { m.scene with config = c' }}                                       
+              let sensitivity = 
+                  m.scene.config.navigationSensitivity.value
+              
+              let configAction = 
+                  match k with 
+                      | Aardvark.Application.Keys.PageUp   -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity + 0.5))
+                      | Aardvark.Application.Keys.PageDown -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity - 0.5))
+                      | _ -> ConfigProperties.Action.SetNavigationSensitivity (Numeric.Action.SetValue (sensitivity))
+
+              let c' = ConfigProperties.update m.scene.config configAction
+
+              let kind = 
+                  match k with
+                    | Aardvark.Application.Keys.F1 -> TrafoKind.Translate
+                    | Aardvark.Application.Keys.F2 -> TrafoKind.Rotate
+                    | _ -> m.trafoKind
+
+              let m = { m with trafoKind = kind }
+
+              let m = 
+                  match k with 
+                    | Aardvark.Application.Keys.Space -> 
+                                                  
+                      let wp = {
+                          name = sprintf "wp %d" m.waypoints.Count
+                          cv = (_camera.Get m).view
+                      }
+
+                      let waypoints = PList.append wp m.waypoints
+                      Log.line "saving waypoints %A" waypoints
+                      Serialization.save "./waypoints.wps" waypoints |> ignore
+                      { m with waypoints = waypoints }                                                                                  
+                    | _ -> m
+
+              { m with scene = { m.scene with config = c' }}                                       
             | KeyUp k, _,_ ->
-                    let d =
-                        match k with
-                            | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing Drawing.Action.StopDrawing
-                            | _ -> m.drawing
-                    
-                    { m with drawing = d; picking = false } |> stash
+                let d =
+                  match k with
+                  | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing Drawing.Action.StopDrawing
+                  | _ -> m.drawing
+                
+                { m with drawing = d; picking = false } |> stash
             | SetInteraction t,_,_ -> { m with interaction = t }
-            | ReferenceSystemMessage a,_,_ ->
-                                
+            | ReferenceSystemMessage a,_,_ ->                                
                 let refsystem',_ = ReferenceSystemApp.update m.scene.config refConfig m.scene.referenceSystem a
                 let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
-                let m = { m with scene = { m.scene with orientationSystem = {m.scene.orientationSystem with up = refsystem'.up; north = refsystem'.north} }}
-
-                let m =
-                    match a with 
-                        | ReferenceSystemApp.Action.SetUp _-> updateCameraUp m
-                        | _ -> m
-
-                m
+                let m = (Model.Lens.scene |. Scene.Lens.orientationSystem).Set(m, refsystem')
+               
+                match a with 
+                  | ReferenceSystemApp.Action.SetUp _-> updateCameraUp m
+                  | _ -> m                
             | ConfigPropertiesMessage a,_,_ -> 
                 //Log.line "config message %A" a
                 let c' = ConfigProperties.update m.scene.config a
@@ -576,22 +619,20 @@ module ViewerApp =
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
-        Sg.sphere 5 color size 
-                |> Sg.shader {
-                    do! Shader.stableTrafo
-                    do! DefaultSurfaces.vertexColor
-                    do! DefaultSurfaces.simpleLighting
-                }
-                |> Sg.noEvents
-                |> Sg.trafo(trafo)
+      Sg.sphere 5 color size 
+        |> Sg.shader {
+            do! Shader.stableTrafo
+            do! DefaultSurfaces.vertexColor
+            do! DefaultSurfaces.simpleLighting
+        }
+        |> Sg.noEvents
+        |> Sg.trafo(trafo)
    
-    let view (m : MModel) =        
+    let view (m : MModel) =
 
         let renderControlAttributes (model : MNavigationModel)  =            
-
             amap {
                 let! state = model.navigationMode
-              
                 match state with
                     | NavigationMode.FreeFly -> 
                         yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction m.frustum
@@ -599,7 +640,6 @@ module ViewerApp =
                         yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction m.frustum
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
-
 
         let att = 
             AttributeMap.unionMany [
@@ -613,7 +653,7 @@ module ViewerApp =
             
         let overlayed =
             let annotations =
-                DrawingApp.Sg.view m.scene.config mdrawingConfig m.drawing m.scene.navigation.camera.view
+                DrawingApp.Sg.view m.scene.config mdrawingConfig m.scene.navigation.camera.view m.drawing
                     |> Sg.map DrawingMessage
                     |> Sg.fillMode (Mod.constant FillMode.Fill)
                     |> Sg.cullMode (Mod.constant CullMode.None)
@@ -630,16 +670,7 @@ module ViewerApp =
                     mrefConfig
                     m.scene.referenceSystem
                     m.scene.navigation.camera.view
-                |> Sg.map ReferenceSystemMessage
-
-            //let orSystem =
-            //    ReferenceSystemApp.Sg.cview
-            //        m.scene.config
-            //        mrefConfig
-            //        m.scene.orientationSystem
-            //        m.scene.navigation.camera.view
-            //        m.scene.navigation.exploreCenter
-            //    |> Sg.map ReferenceSystemMessage
+                |> Sg.map ReferenceSystemMessage  
 
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation
@@ -773,7 +804,7 @@ module ViewerApp =
                 DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
                
                 GuiEx.accordion "Annotations" "Write" true [
-                    //Groups.viewSelectionButtons |> UI.map AnnotationGroupsMessageViewer
+                    Groups.viewSelectionButtons |> UI.map AnnotationGroupsMessageViewer
                     DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
                 ]
                 GuiEx.accordion "Properties" "Content" true [
@@ -871,16 +902,7 @@ module ViewerApp =
                 GuiEx.accordion "Properties" "Content" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle (viewPlanProperties m))
                 ] 
-            ]
-          
-        let tabs = 
-            GuiEx.tabbed [clazz "ui inverted segment"] [
-                ("Data", SurfaceApp.surfaceUI m.scene.surfacesModel |> UI.map SurfaceActions) 
-                ("Annotations", annotationUI) 
-                ("Config", configUI)            
-                ("Bookmarks", bookmarkUI) 
-                ("ViewPlanner", viewPlannerUI)
-            ] "Data" 
+            ]                
       
         let dynamicTop =
             adaptive {
@@ -926,12 +948,7 @@ module ViewerApp =
              ]                        
              Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
              Incremental.div AttributeMap.empty (AList.ofModSingle switchViewerMode)
-             //Incremental.div AttributeMap.empty (AList.ofModSingle choosePlanet)
-             //Incremental.div AttributeMap.empty (scenePath2 m)
-             
-
-             //button [onClick(fun _ -> QuickLoad1)] [text "quickload"]
-             //button [onClick (fun _ -> DeleteLast)][text "Delete Last"]
+             Incremental.div AttributeMap.empty (AList.ofModSingle choosePlanet)          
         ] 
 
         let viewTabs (tab:IMod<TabMenu>) = 
@@ -982,64 +999,70 @@ module ViewerApp =
                 }
             )
 
-        
+        let pitchAndBearing (r:MReferenceSystem) (view:IMod<CameraView>) =
+          adaptive {
+            let! up    = r.up.value
+            let! north = r.north.value   
+            let! v     = view
+
+            return (DipAndStrike.pitch up v.Forward, DipAndStrike.bearing up north v.Forward)
+          }
+
         let textOverlays = 
-            Incremental.div (AttributeMap.Empty) (   
-                alist {
-                    let! planet = m.scene.referenceSystem.planet
-                    let planet  = sprintf "%s" (planet.ToString())
+            div [] [ 
+              let planet = m.scene.referenceSystem.planet |> Mod.map(fun x -> sprintf "%s" (x.ToString()))  
 
-                    let! view  = m.scene.navigation.camera.view
-                    let! up    = m.scene.referenceSystem.up.value
-                    let! north = m.scene.referenceSystem.north.value                                        
-                     
-                    let bearing  = sprintf "%s°" ((DipAndStrike.bearing up north view.Forward).ToString("0.00"))
-                    let pitch    = sprintf "%s°" ((DipAndStrike.pitch up view.Forward).ToString("0.00"))
-                    let position = view.Location.ToString("0.00")
+              let view  = m.scene.navigation.camera.view 
+              let pnb = pitchAndBearing m.scene.referenceSystem view
 
-                    let spericalc = CooTransformation.getLatLonAlt(view.Location) planet
-                    let lon = sprintf "%s°" ((spericalc.longitude).ToString("0.00"))
-                    let lat = sprintf "%s°" ((spericalc.latitude).ToString("0.00"))
-                    let alt = sprintf "%s" ((spericalc.altitude).ToString("0.00"))
-                    
-                    let style' = "color: white; font-family:Consolas;"
+              let pitch    = pnb |> Mod.map(fun (p,_) -> sprintf "%s°" (p.ToString("0.00")))
+              let bearing  = pnb |> Mod.map(fun (_,b) -> sprintf "%s°" (b.ToString("0.00")))
+              
+              let position = view |> Mod.map(fun x -> x.Location.ToString("0.00"))
 
-                    yield div [clazz "ui"; style "position: absolute; top: 50px; float:left" ] [
-                        //arrowOverlay
-                        table [] [
-                            tr[][
-                                td[style style'][text planet]
-                            ]
-                            tr[][
-                                td[style style'][text "Bearing: "]
-                                td[style style'][text bearing]
-                            ]
-                            tr[][
-                                td[style style'][text "Pitch: "]
-                                td[style style'][text pitch]
-                            ]
-                            tr[][
-                                td[style style'][text "Position: "]
-                                td[style style'][text position]
-                            ]
-                            tr[][
-                                td[style style'][text "Longitude: "]
-                                td[style style'][text lon]
-                            ]
-                            tr[][
-                                td[style style'][text "Latitude: "]
-                                td[style style'][text lat]
-                            ]
-                            tr[][
-                                td[style style'][text "Altitude: "]
-                                td[style style'][text alt]
-                            ]
-                        ]
-                    ]              
-                }
-            )
+              let spericalc = 
+                Mod.map2 (fun (a : CameraView) b -> 
+                  CooTransformation.getLatLonAlt(a.Location) b ) view planet
+              
+              let lon = spericalc |> Mod.map(fun x -> sprintf "%s°" ((x.longitude).ToString("0.00")))
+              let lat = spericalc |> Mod.map(fun x -> sprintf "%s°" ((x.latitude).ToString("0.00")))
+              let alt = spericalc |> Mod.map(fun x -> sprintf "%s°" ((x.altitude).ToString("0.00")))             
+              
+              let style' = "color: white; font-family:Consolas;"
 
-        
+              yield div [clazz "ui"; style "position: absolute; top: 50px; float:left" ] [
+                  //arrowOverlay
+                  yield table [] [
+                      tr[][
+                          td[style style'][Incremental.text planet]
+                      ]
+                      tr[][
+                          td[style style'][text "Bearing: "]
+                          td[style style'][Incremental.text bearing]
+                      ]
+                      tr[][
+                          td[style style'][text "Pitch: "]
+                          td[style style'][Incremental.text pitch]
+                      ]
+                      tr[][
+                          td[style style'][text "Position: "]
+                          td[style style'][Incremental.text position]
+                      ]
+                      tr[][
+                          td[style style'][text "Longitude: "]
+                          td[style style'][Incremental.text lon]
+                      ]
+                      tr[][
+                          td[style style'][text "Latitude: "]
+                          td[style style'][Incremental.text lat]
+                      ]
+                      tr[][
+                          td[style style'][text "Altitude: "]
+                          td[style style'][Incremental.text alt]
+                      ]
+                  ]
+              ]                              
+        ]
         
         let rest (model : MModel) = 
             [   
@@ -1259,13 +1282,16 @@ module ViewerApp =
         //            //    ]
             
         
-               
-    /// Thread Pool stuff
+                   
     let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =        
-             
+        let unionMany xs = List.fold ThreadPool.union ThreadPool.empty xs
+
         let drawing =
             DrawingApp.threads m.drawing |> ThreadPool.map DrawingMessage
        
+        let animation = 
+          AnimationApp.ThreadPool.threads m.animations |> ThreadPool.map AnimationMessage
+
         let nav =
             match m.scene.navigation.navigationMode with
                 | NavigationMode.FreeFly -> 
@@ -1275,9 +1301,9 @@ module ViewerApp =
                     ArcBallController.threads m.scene.navigation.camera
                         |> ThreadPool.map Navigation.ArcBallAction |> ThreadPool.map NavigationMessage
                 | _ -> failwith "invalid nav mode"
-                    
-        ThreadPool.union drawing nav
-
+         
+        unionMany [drawing; animation; nav]
+        
     let loadWaypoints m = 
         match Serialization.fileExists "./waypoints.wps" with
           | Some path -> 

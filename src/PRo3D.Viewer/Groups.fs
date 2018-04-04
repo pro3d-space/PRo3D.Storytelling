@@ -74,7 +74,6 @@ module Groups =
                   | None   -> None )
           
         HMap.alter id update model.flat    
-
         
     let updateLeaf id f model =
         let flat' = updateLeaf' id f model
@@ -97,7 +96,6 @@ module Groups =
             |> List.fold (fun a b -> HMap.union a b) model.flat
 
         { model with flat = flat }
-
     
     let tryLoadGroups (path:string) =
       try
@@ -112,7 +110,7 @@ module Groups =
               | [] -> f t
               | x::rest ->
                     match PList.tryGet x t.subNodes with
-                      | Some c -> { t with subNodes = PList.set x (go rest c) t.subNodes }                                                  
+                      | Some c -> { t with subNodes = PList.set x (go rest c) t.subNodes }                    //potentially slow                              
                       | None   -> t
         go (List.rev p) t 
     
@@ -291,7 +289,7 @@ module Groups =
             | RemoveChild (k,p) ->
                 removeLeaf model k p true
             | ToggleChildVisibility (c,p) -> 
-                model |> updateLeaf c (fun x -> Leaf.toggleVisibility x)   
+                model |> updateLeaf c (fun x -> Leaf.toggleVisibility x)
             | UpdateChildProperties a ->
                 replaceLeaf a model
             | SetGroupName t -> 
@@ -448,8 +446,8 @@ module Groups =
         Html.table [                            
                 div [clazz "ui buttons inverted"] [
                     onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                        button [clazz "ui icon button"; attribute "data-content" "Remove"; onMouseClick (fun _ -> RemoveChild (ts.id,ts.path))] [ //
-                                i [clazz "remove icon red"] [] ] 
+                        button [clazz "ui icon button"; onMouseClick (fun _ -> RemoveChild (ts.id,ts.path))] [
+                                i [clazz "remove icon red"] [] ] |> UI.wrapToolTip "Remove"
                     )
                 ] 
             ]
@@ -525,21 +523,21 @@ module SurfaceModel =
 
     let initial = initSurfaceModel Group.initRoot hmap.Empty None   
     
-    registry.RegisterFactory (fun _ -> surfaceModelPickler)
+    //Serialization.registry.RegisterFactory (fun _ -> surfaceModelPickler)
 
     let getSurface model guid =
         model.surfaces.flat |> HMap.tryFind guid        
 
     let groupSurfaces (sgSurfaces : hmap<Guid, SgSurface>) (surfaces : hmap<Guid, Surface>) =
-        sgSurfaces
-            |> HMap.toList
-            |> List.groupBy(fun (_,x) -> 
-                let surf = HMap.find x.surface surfaces 
-                surf.priority.value)
-            |> List.map( fun (p,k) -> (p, k |> HMap.ofList))
-            |> List.sortBy fst
-            |> List.map snd
-            |> PList.ofList
+      sgSurfaces
+        |> HMap.toList
+        |> List.groupBy(fun (_,x) -> 
+            let surf = HMap.find x.surface surfaces 
+            surf.priority.value)
+        |> List.map( fun (p,k) -> (p, k |> HMap.ofList))
+        |> List.sortBy fst
+        |> List.map snd
+        |> PList.ofList
     
     let triggerSgGrouping (model:SurfaceModel) =
         { model with sgGrouped = (groupSurfaces model.sgSurfaces (model.surfaces.flat |> Leaf.toSurfaces)) }

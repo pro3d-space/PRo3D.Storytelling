@@ -1,5 +1,7 @@
 ﻿namespace PRo3D
 
+#nowarn "8989"
+
 open System
 open System.IO
 open System.Windows.Forms
@@ -13,7 +15,8 @@ open Aardvark.Opc
 module Serialization =
     open Aardvark.UI.Incremental
     
-    let cache = Serialization.cache
+    let registry = new CustomPicklerRegistry()    
+    let cache = PicklerCache.FromCustomPicklerRegistry registry    
 
     let binarySerializer = FsPickler.CreateBinarySerializer(picklerResolver = cache)
     let jsonSerializer = FsPickler.CreateJsonSerializer(indent=true)
@@ -41,8 +44,8 @@ module Serialization =
 
     let fileExists filePath =
         match System.IO.File.Exists filePath with
-            | true -> Some filePath
-            | false -> None       
+          | true  -> Some filePath
+          | false -> None
 
 module Dialogs =
     open Microsoft.WindowsAPICodePack.Dialogs    
@@ -261,36 +264,19 @@ module Sg =
     let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
         let box = points |> AList.toMod |> Mod.map (fun d -> if d.Count > 2 then Box3d d else Box3d.Unit)
 
-        let edges = edgeLines false points trafo
-
-        //invisible cylinders for polyline picking
-        let cylinders = 
-            edges 
-                |> Mod.map (fun e ->
-                        [
-                            for edge in e do                                    
-                                let v = edge.P1 - edge.P0
-                                let c = Cylinder3d(edge.P0,v.Normalized, v.Length, 0.25)
-                                yield 
-                                    Sg.ofList[]
-                                        |> Sg.noEvents                                                                                          
-                                        |> Sg.pickable (PickShape.Cylinder c)
-                                        |> Sg.trafo trafo
-                                        |> Sg.withEvents []
-                                            //Sg.onMouseDownEvt (fun sceneHit -> Select (id |> Mod.force))]
-                        ] |> Sg.ofList)
-                |> Sg.dynamic
+        let edges = edgeLines false points trafo       
                                                             
         edges
             |> Sg.lines color
             |> Sg.noEvents
             |> Sg.shader {
-                do! Aardvark.Opc.Shader.stableTrafo
-                do! DefaultSurfaces.vertexColor
-                do! DefaultSurfaces.thickLine    
-            }                               
-            |> Sg.trafo trafo
-            |> Sg.uniform "LineWidth" width
+                 do! Aardvark.Opc.Shader.stableTrafo
+                 do! DefaultSurfaces.vertexColor
+                 do! DefaultSurfaces.thickLine    
+             }                               
+             |> Sg.trafo trafo
+             |> Sg.uniform "LineWidth" width
+            
             //|> Sg.pass linePass
             //|> Sg.depthTest (Mod.constant DepthTestMode.None)
 
@@ -325,11 +311,11 @@ module Sg =
             |> Sg.noEvents
             |> Sg.trafo(trafo) 
         
-    let dots (points : alist<V3d>) (color : IMod<C4b>) (view : IMod<CameraView>) =
+    let dots (points : alist<V3d>) (color : IMod<C4b>) =
         aset {
             for p in points |> ASet.ofAList do
-                let scale = computeScale view (Mod.constant p) 5.0                               
-                yield mkDotISg color scale (Mod.constant (Trafo3d.Translation(p))) //(Mod.constant 0.1)
+               // let scale = computeScale view (Mod.constant p) 5.0                               
+                yield mkDotISg color (Mod.constant 0.1) (Mod.constant (Trafo3d.Translation(p))) 
         } 
         |> Sg.set
         |> Sg.effect [

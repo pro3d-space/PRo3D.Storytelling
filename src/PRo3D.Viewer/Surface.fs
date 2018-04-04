@@ -16,8 +16,156 @@ open PRo3D.Groups
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg
-    open Aardvark.UI.Trafos    
-    open Aardvark.Opc.Viewer
+    open Aardvark.UI.Trafos        
+
+    module Sg =
+      let mutable hackRunner = None
+
+      let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene) (createKdTrees) 
+          : (ISg * list<PatchHierarchy> * hmap<Box3d,Level0KdTree>) =
+
+          let runner = 
+              match hackRunner with
+                  | None -> 
+                      printfn "create runner"
+                      let  r = runtime.CreateLoadRunner 2
+                      hackRunner <- Some (r)
+                      r
+                  | Some h -> h
+
+
+          let bb = scene.boundingBox      
+          let preTransform = scene.preTransform
+      
+          let patchHierarchies =
+              [ for h in scene.patchHierarchies do
+                  let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
+                  yield PatchHierarchy.load p
+              ] 
+          
+          let getPatchKdTreePath (h:PatchHierarchy) patchName = 
+              let rootpatch = h.tree |> QTree.getRoot 
+
+              let fileName = sprintf "%s-0.aakd" patchName            
+              Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]
+
+          let getPatchPositionPath (h:PatchHierarchy) patchName =
+              let fileName = "positions.aara"
+              Path.combine [h.baseDir; "patches"; patchName; fileName]
+
+          let getMasterKdTreePath (h:PatchHierarchy) =
+              let rootpatch = h.tree |> QTree.getRoot 
+                                      
+              let fileName = sprintf "%s-0.aakd" rootpatch.info.Name            
+              Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]      
+
+          Log.startTimed "Creating KdTree"
+          let loadKdTrees (h : PatchHierarchy) : hmap<Box3d,Level0KdTree> =
+                          
+              let masterKdPath = 
+                  h |> getMasterKdTreePath
+
+              let cacheFile = System.IO.Path.ChangeExtension(masterKdPath, ".cache")
+
+              if System.IO.File.Exists(cacheFile) then
+                  Log.line "Found lazy kdtree cache"
+                  try
+                      (Serialization.loadAs<array<Box3d*Level0KdTree>> cacheFile) |> HMap.ofArray
+                  with
+                    | _ -> 
+                      Log.error "could not load kdtree cache file. please delete %A" cacheFile
+                      HMap.empty
+              else
+                  
+                  Log.line "did not find lazy kdtree cache"
+                  let patchInfos =
+                      h.tree |> QTree.getLeaves |> Seq.map(fun x -> x.info)
+
+                  let kd0Paths = 
+                      patchInfos |> Seq.map(fun x -> x.Name |> getPatchKdTreePath h)
+
+                  let kd0PathsExist = 
+                      kd0Paths |> Seq.forall(System.IO.File.Exists)
+              
+                  match (System.IO.File.Exists(masterKdPath), kd0PathsExist) with
+                      | (true, false) -> 
+                           Log.line "Found master kdtree - loading incore"
+                           let tree = loadKdtree masterKdPath                     
+                           let kd = {
+                              kdTree = tree;
+                              boundingBox = tree.KdIntersectionTree.BoundingBox3d.Transformed(scene.preTransform)
+                           }
+                           HMap.add kd.boundingBox (InCoreKdTree kd) HMap.empty
+                      | (true, true) ->                                                        
+                           Log.line "Found master kdtree and patch trees"
+                                                    
+                           let bla = 
+                              kd0Paths
+                                  |> Seq.zip patchInfos
+                                  |> Seq.map(
+                                      fun (info, kdPath) ->                                
+                                          let t = loadKdtree kdPath
+                                          let lazyTree : LazyKdTree = {
+                                              kdTree        = None
+                                              objectSetPath = info.Name |> getPatchPositionPath h
+                                              kdtreePath    = kdPath
+                                              affine        = info.Local2Global
+                                              boundingBox   = t.KdIntersectionTree.BoundingBox3d.Transformed(scene.preTransform)
+                                          }
+                                          (lazyTree.boundingBox, (LazyKdTree lazyTree))
+                                  )
+                                  |> Seq.toArray 
+
+                           bla |> Serialization.save cacheFile |> ignore 
+                              
+                           bla |> HMap.ofArray
+                      | _ ->
+                          Log.warn "Could not find level 0 kdtrees"
+                          HMap.empty
+          
+          let kdTreesPerHierarchy =
+              [| for h in patchHierarchies do
+                  if createKdTrees then   
+                      let kdMap = loadKdTrees h 
+
+                      yield kdMap
+                  else 
+                      yield HMap.empty
+              |]
+
+          let totalKdTrees = kdTreesPerHierarchy.Length
+          Log.line "creating %d kdTrees" totalKdTrees
+
+          let kdTrees = 
+              kdTreesPerHierarchy                     
+                  |> Array.Parallel.mapi (fun i e ->
+                      Log.start "creating kdtree #%d of %d" i totalKdTrees
+                      let r = e
+                      Log.stop()
+                      r
+                  )
+                  |> Array.fold (fun a b -> HMap.union a b) HMap.empty
+
+          Log.stop()
+
+
+          // create level of detail hierarchy (Sg)
+          let g = 
+            patchHierarchies 
+            |> List.map (fun h ->                     
+              let sg = 
+                Sg.patchLod signature runner h.baseDir 
+                  scene.lodDecider scene.useCompressedTextures                                 
+                  (PatchLod.toRoseTree h.tree)
+              sg) 
+            |> Sg.ofList
+          
+
+          let lodVisEnabled = Mod.init false
+          
+          let sg = g |> Sg.transform preTransform
+                                  
+          sg, patchHierarchies, kdTrees
     
     module SurfaceAttributes = 
         open System.Xml
@@ -280,7 +428,7 @@ module Surface =
             surfaces
                 |> PList.toList
                 |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.preTransform })
-                |> List.map (fun d -> Viewer.createPlainSceneGraph runtime signature d true)
+                |> List.map (fun d -> Sg.createPlainSceneGraph runtime signature d true)
                 |> List.zip (surfaces |> PList.toList)
                 |> List.map(fun (surf, (sg, hierarchies, kdtree)) -> 
                     let bb = hierarchies |> combineLeafBBs |> transformBox surf.preTransform
@@ -496,12 +644,12 @@ module Surface =
                 let groups = Groups.update model.surfaces msg
 
                 match msg with
-                  | Groups.Action.RemoveGroup _ ->
+                  | Groups.Action.RemoveGroup _ | Groups.Action.RemoveChild _ ->
                     let sgs = 
                         model.sgSurfaces 
                             |> HMap.filter(fun k _ -> groups.flat |> HMap.containsKey k)
 
-                    { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping
+                    { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping                  
                   | _ -> { model with surfaces = groups }
                 
             | _ -> model

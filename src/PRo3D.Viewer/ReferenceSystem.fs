@@ -193,7 +193,7 @@ module ReferenceSystemApp =
         let point (pos:IMod<V3d>) (color:IMod<C4b>) (cam:IMod<CameraView>) =
             aset{
                 let! pos = pos
-                yield Sg.dots (AList.single pos) color cam //there is also a method for drawing a single dot.
+                yield Sg.dots (AList.single pos) color //there is also a method for drawing a single dot.
             } |> Sg.set
 
         let pointFix (pos:IMod<V3d>) (style:MarkerStyle) (cam:IMod<CameraView>) =
