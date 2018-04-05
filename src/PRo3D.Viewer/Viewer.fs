@@ -207,12 +207,42 @@ module ViewerApp =
                         DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
-                match msg with
-                    | SurfaceApp.Action.FlyToSurface id -> 
-                        lookAtSurface m id
-                    | _ ->
-                        let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
-                        { m with scene = { m.scene with surfacesModel = s}}
+                //match msg with
+                //    | SurfaceApp.Action.FlyToSurface id -> 
+                //        //lookAtSurface m id
+                //          let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
+                //          match surf with
+                //                | Some s ->
+                //                        let bb = s.globalBB
+                //                        let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
+                //                        //let location = m.scene.navigation.camera.view.Location
+                //                        //let forward = m.scene.navigation.camera.view.Forward
+
+                //                        let animationMessage = 
+                //                            animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                //                        let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                //                        { m with animations = a' }
+                //                |_-> m
+                //    | _ ->
+                //        let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
+                    let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
+                    let animation = 
+                          match msg with
+                            | SurfaceApp.Action.FlyToSurface id -> 
+                                let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
+                                match surf with
+                                    | Some s ->
+                                            let bb = s.globalBB
+                                            let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
+                                            
+                                            let animationMessage = 
+                                                animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                                            let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                                            a'
+                                    | None -> m.animations
+                            | _-> m.animations
+                           
+                    { m with scene = { m.scene with surfacesModel = s}; animations = animation}
             | AnnotationMessage msg,_,_ ->                
                 match m.drawing.annotations.singleSelectLeaf with
                   | Some selected ->                             
