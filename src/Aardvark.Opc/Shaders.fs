@@ -256,7 +256,10 @@ module Shader =
             
 
             let pp0 = if pp0.Z < 0.0 then (Lerp pp1 pp0 (pp1.Z / (pp1.Z - pp0.Z))) else pp0
-            let pp1 = if pp1.Z < 0.0 then (Lerp pp0 pp1 (pp0.Z / (pp0.Z - pp1.Z))) else pp1
+            let pp1 = if pp1.Z < 0.0 then (Lerp pp0 pp1 (pp0.Z / (pp0.Z - pp1.Z))) else pp1            
+
+            //let pp0 = V4d(pp0.X, pp0.Y, pp0.Z - depthOff, pp0.W)
+            //let pp1 = V4d(pp1.X, pp1.Y, pp1.Z - depthOff, pp1.W)
 
             let p0 = pp0.XYZ / pp0.W
             let p1 = pp1.XYZ / pp1.W

@@ -252,9 +252,9 @@ module ViewerUtils =
                 yield RenderCommand.SceneGraph sg                    
 
                 if i = c then
-                  yield RenderCommand.SceneGraph discs
+                  yield RenderCommand.SceneGraph discs                  
 
                 yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
-            
+
             yield RenderCommand.SceneGraph overlayed
         }  

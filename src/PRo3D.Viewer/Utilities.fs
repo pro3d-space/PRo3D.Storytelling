@@ -276,7 +276,7 @@ module Sg =
              }                               
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" (Mod.constant 0.5)
+             |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
             
             //|> Sg.pass linePass
             //|> Sg.depthTest (Mod.constant DepthTestMode.None)
