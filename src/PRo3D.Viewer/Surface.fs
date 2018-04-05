@@ -21,7 +21,7 @@ module Surface =
     module Sg =
       let mutable hackRunner = None
 
-      let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene) (createKdTrees) 
+      let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene) (createKdTrees)
           : (ISg * list<PatchHierarchy> * hmap<Box3d,Level0KdTree>) =
 
           let runner = 

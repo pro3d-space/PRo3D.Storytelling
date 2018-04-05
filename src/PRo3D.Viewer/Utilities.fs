@@ -306,19 +306,22 @@ module Sg =
             return distF * size / 800.0 //needs hfov at this point
         }    
 
-    let mkDotISg color size trafo = 
-        Sg.sphere 2 color size
+    let mkDotISg color size (pos : IMod<V3d>) = 
+        Sg.sphere 2 color (Mod.constant 1.0)
             |> Sg.noEvents
-            |> Sg.trafo(trafo) 
+            |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
+            |> Sg.uniform "Size" size
+            |> Sg.uniform "WorldPos" pos
         
     let dots (points : alist<V3d>) (color : IMod<C4b>) =
         aset {
             for p in points |> ASet.ofAList do
                // let scale = computeScale view (Mod.constant p) 5.0                               
-                yield mkDotISg color (Mod.constant 0.1) (Mod.constant (Trafo3d.Translation(p))) 
+                yield mkDotISg color (Mod.constant 5.0) (Mod.constant p)
         } 
         |> Sg.set
         |> Sg.effect [
+            toEffect <| Aardvark.Opc.Shader.screenSpaceScale
             toEffect <| Aardvark.Opc.Shader.stableTrafo
             toEffect <| DefaultSurfaces.vertexColor
           //  toEffect <| Aardvark.Opc.Shader.stableLight
@@ -328,7 +331,7 @@ module Sg =
         aset {
             for p in points |> ASet.ofAList do
                 let scale = computeScale view (Mod.constant p) 5.0                               
-                yield mkDotISg color (Mod.constant 0.1) (Mod.constant (Trafo3d.Translation(p)))
+                yield mkDotISg color (Mod.constant 0.1) (Mod.constant p)
         } 
         |> Sg.set
         |> Sg.effect [

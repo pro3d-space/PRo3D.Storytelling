@@ -125,34 +125,21 @@ module Shader =
                     ldir = V3d.Zero - vp.XYZ |> Vec.normalize
             } 
         } 
-
-    //let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =
-    //    adaptive {
-    //        let! p = p
-    //        let! v = view
-    //        let distV = p - v.Location
-    //        let distF = V3d.Dot(v.Forward, distV)
-    //        return distF * size / 800.0 //needs hfov at this point
-    //    }
-
+   
     let screenSpaceScale (v : Vertex) =
-      vertex {
-        //let cam = uniform.ViewTrafo
-        let loc     = uniform.CameraLocation
-        let forward = uniform.ViewTrafoInv.C3.XYZ
-        let hfov    = float uniform.ViewportSize.X
+      vertex {        
+        let loc     = uniform.CameraLocation       
+        let hvp    = float uniform.ViewportSize.X
 
         let p    : V3d   = uniform?WorldPos
         let size : float = uniform?Size
 
-        let distV = p - loc
-        let distF = V3d.Dot(forward, distV)
-        
-        let t = (Trafo3d.Scale (distF * size / hfov)).Forward
+        let dist = (p - loc).Length      
+        let scale = dist * size / hvp 
 
         return { 
           v with
-            pos = t * v.pos
+            pos = V4d(v.pos.X * scale, v.pos.Y * scale, v.pos.Z * scale, v.pos.W)
         }
       }
 
