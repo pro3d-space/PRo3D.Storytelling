@@ -61,7 +61,7 @@ let licPath             = @".\pro3d.lic"
 
 let buildLicense(time) = 
   
-  let userName    = "Thomas Ortner"
+  let userName    = "Laura Fritz" //"Thomas Ortner"
   let institution = "VRVis"
 
   let mutable createAKey = new SKGL.Generate()

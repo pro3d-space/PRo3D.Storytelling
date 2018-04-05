@@ -43,7 +43,6 @@ module CooTransformation =
         let lat = ref init
         let lon = ref init
         let rad = ref init
-      
         let bla = CooTrafo.Xyz2LatLonRad( p.X, p.Y, p.Z, lat, lon, rad)
         
         if bla <> 0 then

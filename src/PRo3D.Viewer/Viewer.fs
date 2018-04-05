@@ -733,7 +733,7 @@ module ViewerApp =
 
         // instrument view control
         let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped Sg.empty Sg.empty m
-        let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.frustum        
+        let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
         let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
 
         let annotationGroupProperties (model:MModel) =
@@ -1238,12 +1238,59 @@ module ViewerApp =
                     }
             
             Incremental.div AttributeMap.empty stuff    
+
+        let control1 = 
+            alist {
+                let! mode = m.viewerMode
+                let sections = [
+                    "blank", [div[style "height:15px"][]]
+                    "Scene", [sceneTools m]
+                    // "Scene Path", [scenePath2 m]
+                    "Recent", [recentScenes]
+                    "Add Surface", [openSurface]                
+                    "Import AnnotationGroups", [importAnnotationGroups]  
+                    "Import SurfaceTrafos", [importSurfaceTrafos]]
+                    //"Switch View", [switchViewerMode] 
+                            
+                yield div[](GuiEx.adornerMenu sections topMenu (rest m))
+                }
+
+        let control2 = 
+            alist {
+                let! mode = m.viewerMode
+                yield div[](GuiEx.adornerMenu [] topMenu (instrumentView m)) 
+                }
+                    
             
         require (Html.semui @ [myCss]) (                             
                 onBoot usingContext (                             
                     body [clazz "context example"; style "overflow-y:hidden"] [chooseView] //ViewerMode.Standard
                 )
-        )
+            )
+
+        //page (fun request -> 
+        //        match Map.tryFind "page" request.queryParams with
+                    
+        //            | Some "render" -> 
+        //                body [] [
+        //                    Incremental.div AttributeMap.empty control1 
+        //                ]
+
+        //            //| Some "meta" ->
+        //            //    body [] [
+        //            //        button [onClick (fun _ -> Undo)] [text "Undo"]
+        //            //    ]
+
+        //            | Some other ->
+        //                Incremental.div AttributeMap.empty control2
+
+        //            //| None -> 
+        //            //    model.dockConfig |> Mod.force |> Mod.constant |> docking [
+        //            //        style "width:100%;height:100%;"
+        //            //        onLayoutChanged UpdateConfig
+        //            //    ]
+            
+        
                    
     let pool (runtime : IRuntime) (signature: IFramebufferSignature) (m : Model) =        
         let unionMany xs = List.fold ThreadPool.union ThreadPool.empty xs
