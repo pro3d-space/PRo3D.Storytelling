@@ -81,13 +81,12 @@ module Scene =
         surfaces 
             |> PList.map(fun s -> s,Path.ChangeExtension(s.importPath, ".trafo"))
             |> PList.map(fun(s,p) ->                     
-                    match (Serialization.fileExists p) with
-                        | Some path->
-                            let t = readLine path
-                            { s with preTransform = Trafo3d.Parse(t) }
-                        | None ->
-                            s
-                        )
+               match (Serialization.fileExists p) with
+                 | Some path->
+                     let t = readLine path
+                     { s with preTransform = Trafo3d.Parse(t) }
+                 | None -> s
+               )
 
     let getOPCxPath (surfacePath : string) = 
         let name = Path.GetFileName surfacePath

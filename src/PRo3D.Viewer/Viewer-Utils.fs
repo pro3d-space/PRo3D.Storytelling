@@ -207,7 +207,7 @@ module ViewerUtils =
                 //                    let t = Trafo3d.Translation(-x.Center)
                 //                    printfn "%A" t.Forward.C3.XYZ
                 //                    t))
-                |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))                
+                //|> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))                
                 //|> Sg.trafo (surface.trafo.previewTrafo |> Mod.map(fun x -> printfn "%A" x.Forward.C3.XYZ; x))
         sg
 

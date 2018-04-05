@@ -693,56 +693,66 @@ module Surface =
                   | None -> false )
 
     let viewSurfacesInGroups (path:list<Index>) (model:MGroupsModel) (singleSelect : MSurface*list<Index> -> 'outer) (multiSelect : MSurface*list<Index> -> 'outer) (lift : Groups.Action -> 'outer) (surfaceIds: alist<Guid>) : alist<DomNode<'outer>> = 
-            alist {
+       alist {
 
-                let surfaces = 
-                   surfaceIds 
-                      |> AList.chooseM (fun x -> model.flat |> AMap.tryFind x)
+         let surfaces = 
+            surfaceIds 
+               |> AList.chooseM (fun x -> model.flat |> AMap.tryFind x)
 
-                let surfaces = 
-                   surfaces
-                      |> AList.map (fun x -> Mod.force x)
-                      |> AList.choose( fun x -> match x with
-                                                  | MSurfaces s -> Some s
-                                                  | _-> None )
-                for s in surfaces do
+         let surfaces = 
+            surfaces
+               |> AList.map (fun x -> Mod.force x)
+               |> AList.choose( fun x -> match x with
+                                           | MSurfaces s -> Some s
+                                           | _-> None )
+         for s in surfaces do
 
-                    let singleSelect = fun _ -> singleSelect(s,path)
-                    let multiSelect  = fun _ -> multiSelect(s,path)
-                    let! selected = s |> isSingleSelect model
+             let singleSelect = fun _ -> singleSelect(s,path)
+             let multiSelect  = fun _ -> multiSelect(s,path)
+             let! selected = s |> isSingleSelect model
 
-                    let! c = mkColor model s
-                    let bgc = sprintf "color: %s" (Html.ofC4b c)
-                    let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
-                    let! key = s.guid
-                                                                                    
-                    let! absRelIcons = absRelIcons s
+             let! c = mkColor model s
+             let bgc = sprintf "color: %s" (Html.ofC4b c)
+             let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
+             let! key = s.guid
+                                                                             
+             let! absRelIcons = absRelIcons s
 
-                    yield div [clazz "item"; style infoc] [
-                        i [clazz "large cube middle aligned icon"; onClick multiSelect;style bgc][] 
-                        div [clazz "content"; style infoc] [
-                            let desc = s.name
-                            yield Incremental.div (AttributeMap.ofList [style infoc])(
-                                alist {
-                                    if selected then
-                                        yield div[onClick singleSelect][ u[][Incremental.text desc]]
-                                    else
-                                        yield div[onClick singleSelect][Incremental.text desc]
+             let visibleIcon = 
+                amap {
+                  yield onMouseClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))
+                  let! visible = s.isVisible
+                  if visible then 
+                    yield clazz "unhide icon" 
+                  else 
+                    yield clazz "hide icon"
+                } |> AttributeMap.ofAMap
+
+             yield div [clazz "item"; style infoc] [
+                 i [clazz "large cube middle aligned icon"; onClick multiSelect;style bgc][] 
+                 div [clazz "content"; style infoc] [
+                     let desc = s.name
+                     yield Incremental.div (AttributeMap.ofList [style infoc])(
+                         alist {
+                             if selected then
+                                 yield div[onClick singleSelect][ u[][Incremental.text desc]]
+                             else
+                                 yield div[onClick singleSelect][Incremental.text desc]
  
-                                    yield i [clazz "home icon"                                                
-                                             onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                             
+                             yield i [clazz "home icon"                                                
+                                      onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                     
 
-                                    yield i [clazz "folder icon"                                                
-                                             onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"
+                             yield i [clazz "folder icon"                                                
+                                      onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"
 
-                                    yield Incremental.i (absRelIcons) (AList.empty)
-
-                                } 
-                            ) 
-                                           
-                        ]
-                    ]
-            }
+                             yield Incremental.i (absRelIcons) (AList.empty)
+                             yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
+                         } 
+                     ) 
+                                    
+                 ]
+             ]
+       }
            
     let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<Action>> =
 
