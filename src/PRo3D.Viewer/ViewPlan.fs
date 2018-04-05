@@ -233,7 +233,11 @@ module ViewPlan =
     let updateInstrumentCam (vp:ViewPlan) (model:ViewPlanModel) =
         match vp.selectedInstrument with
             | Some i -> let ex = transformExtrinsics vp i.extrinsics
-                        {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt ex.position ex.camLookAt ex.camUp }} //CameraController.initial
+                        let frust = model.instrumentFrustum
+                        let hfov = i.intrinsics.horizontalFieldOfView
+                        let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far 1.0
+                        {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt ex.position (ex.position + ex.camLookAt) ex.camUp };
+                                    instrumentFrustum = ifrustum} //CameraController.initial
                         //{ model with instrumentCam = cam } 
             | _-> model
         
@@ -297,8 +301,9 @@ module ViewPlan =
             | ChangeAngle (id,a) ->  match model.selectedViewPlan with
                                         | Some vp -> match vp.rover.axes.TryFind id with
                                                         | Some ax -> 
-                                                            let ax' = { ax with angle = Numeric.update ax.angle a } 
-                                                            let vp' = { vp with rover = {vp.rover with axes = (vp.rover.axes |> HMap.update id (fun _ -> ax')) } }
+                                                            let angle = Numeric.update ax.angle a
+                                                            let ax' = { ax with angle = angle } 
+                                                            let vp' = { vp with rover = {vp.rover with axes = (vp.rover.axes |> HMap.update id (fun _ -> ax')) }; currentAngle = angle }
                                                             let roverModel' = RoverApp.updateAnglePlatform { roverId = vp'.rover.id ;axisId = ax'.id ; angle = ax'.angle.value } model.roverModel
                                                             let m' = updateRovers model roverModel' vp'
                                                             
@@ -310,8 +315,9 @@ module ViewPlan =
                 match model.selectedViewPlan with
                     | Some vp -> 
                         match vp.selectedInstrument with
-                        | Some inst ->                                         
-                            let inst' =  { inst with focal = Numeric.update inst.focal f }
+                        | Some inst ->   
+                            let focal = Numeric.update inst.focal f
+                            let inst' =  { inst with focal = focal }
                             let instruments' = 
                                 vp.rover.instruments |> HMap.update id (fun x -> 
                                     match x with
@@ -536,7 +542,7 @@ module ViewPlan =
                                   let id = vp.id
                                   yield match selected with
                                                 | Some s -> if ((s.id |> Mod.force) = (id |> Mod.force)) then 
-                                                                drawSelectionGeometry s near length thickness cam model.roverModel
+                                                                drawSelectionGeometry vp near length thickness cam model.roverModel
                                                             else Sg.ofList []
                                                 | None -> Sg.ofList []
                         | false -> yield Sg.ofList []
@@ -649,6 +655,8 @@ module ViewPlan =
 
         let instrumentsDd (r:MRover) (m : MViewPlan) = 
             UI.dropDown'' (r.instruments |> RoverApp.mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )   
+        
+        
 
         let viewAxesList (r : MRover) =
             alist {
@@ -656,7 +664,15 @@ module ViewPlan =
                     yield div[][Incremental.text axis.id; text "(deg)"]
                     //yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (axis.id |> Mod.force,x))
                     let! id = axis.id
-                    yield Numeric.view' [InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
+                    let! value = axis.angle.value
+                    let! max = axis.angle.max
+                    let! min = axis.angle.min
+                    //yield Numeric.view' [InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
+                    yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
+                    //if (value <= max) && (value >= min) then                    
+                    //    yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
+                    //else
+                    //    yield Incremental.text (axis.angle.value |> Mod.map string)
                     yield br[]
                     yield Incremental.text (axis.startPoint |> Mod.map (sprintf "%A"))
             }

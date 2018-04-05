@@ -109,7 +109,7 @@ let main argv =
     use app = new OpenGlApplication()
     let runtime = app.Runtime    
 
-    buildLicense(365)
+    //buildLicense(365)
 
     Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.surfaceModelPickler)
     Serialization.registry.RegisterFactory (fun _ -> level0KdTreePickler)

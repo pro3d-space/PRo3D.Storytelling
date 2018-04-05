@@ -733,7 +733,7 @@ module ViewerApp =
 
         // instrument view control
         let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped Sg.empty Sg.empty m
-        let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.frustum        
+        let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
         let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
 
         let annotationGroupProperties (model:MModel) =
