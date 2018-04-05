@@ -216,7 +216,7 @@ module ViewerUtils =
         let far = m.scene.config.farPlane.value
         (Navigation.UI.frustum near far)
 
-    let renderCommands sgGrouped overlayed (m:MModel) =
+    let renderCommands sgGrouped overlayed discs (m:MModel) =
         let selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
 
         let grouped = 
@@ -230,8 +230,11 @@ module ViewerUtils =
                 )
             )
             
-        alist {                
+        alist {        
+            let! c = grouped |> AList.count
+            let mutable i = 0
             for set in grouped do
+                i <- i + 1
                 let sg = 
                     set 
                         |> Sg.set
@@ -247,7 +250,11 @@ module ViewerUtils =
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
 
                 yield RenderCommand.SceneGraph sg                    
-                yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
 
+                if i = c then
+                  yield RenderCommand.SceneGraph discs
+
+                yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
+            
             yield RenderCommand.SceneGraph overlayed
         }  

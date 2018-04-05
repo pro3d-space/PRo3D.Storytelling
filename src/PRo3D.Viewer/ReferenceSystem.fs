@@ -41,7 +41,7 @@ module ReferenceSystemApp =
             getNearDistance   : 'ma -> IMod<float>
         }
     
-    let upVector (point:V3d) (planet:string) = CooTransformation.getUpVector point planet //point.Normalized
+    let upVector (point:V3d) (planet) = CooTransformation.getUpVector point planet //point.Normalized
     
     let northVector (up:V3d) =
         let east = V3d.OOI.Cross(up)
@@ -50,7 +50,7 @@ module ReferenceSystemApp =
     let update<'a> (bigConfig : 'a) (config : ReferenceSystemConfig<'a>) (model : ReferenceSystem) (act : Action) =
         match act with
             | InferCoordSystem p ->
-                let up = upVector p (model.planet.ToString())
+                let up = upVector p (model.planet)
                 let n = northVector up 
                 { model with origin = p; north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up }, bigConfig
             | SetOrigin p -> 
@@ -71,8 +71,10 @@ module ReferenceSystemApp =
                 model, big'          
             | SetScale s ->
                 { model with selectedScale = s }, bigConfig
-            | SetPlanet p ->
-                { model with planet = p }, bigConfig
+            | SetPlanet p ->                              
+              let up = upVector model.origin p                                                
+              let n = northVector up               
+              { model with  north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up; planet = p }, bigConfig
 
     module Sg =
 
@@ -339,7 +341,7 @@ module ReferenceSystemApp =
                 adaptive {
                         let! pos = model.origin
                         let! planet = model.planet
-                        return CooTransformation.getHeight pos (planet.ToString())
+                        return CooTransformation.getHeight pos planet
                     }
 
             require Html.semui (

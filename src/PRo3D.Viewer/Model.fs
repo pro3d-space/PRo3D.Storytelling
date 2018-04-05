@@ -18,6 +18,11 @@ open Aardvark.Base.CameraView
 type NavigationMode = FreeFly = 0 | ArcBall = 1
 type InteractionMode = PickOrbitCenter = 0 | Draw = 1 | PlaceObject = 2
 
+type Planet = 
+    | Earth = 0
+    | Mars  = 1
+    | None  = 2
+
 module List =
     let rec updateIf (p : 'a -> bool) (f : 'a -> 'a) (xs : list<'a>) = 
         match xs with
