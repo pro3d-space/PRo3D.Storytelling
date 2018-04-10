@@ -103,6 +103,8 @@ type Model = {
 
     animations      : AnimationModel
 
+    //dockConfig      : DockConfig
+
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
 
@@ -169,4 +171,16 @@ module Viewer =
         //instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
 
         viewerMode = ViewerMode.Standard
+
+        //dockConfig =
+        //    config {
+        //        content (
+        //            horizontal 20.0 [
+        //                element { id "main"; title "PRo3D View"; weight 20 }
+        //                element { id "instrumentview"; title "Instrument View"; weight 20 }
+        //            ]
+        //        )
+        //        appName "PRo3D"
+        //        useCachedConfig true
+        //    }
     }

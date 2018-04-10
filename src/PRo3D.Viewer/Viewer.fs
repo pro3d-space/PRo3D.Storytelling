@@ -207,24 +207,6 @@ module ViewerApp =
                         DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
-                //match msg with
-                //    | SurfaceApp.Action.FlyToSurface id -> 
-                //        //lookAtSurface m id
-                //          let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
-                //          match surf with
-                //                | Some s ->
-                //                        let bb = s.globalBB
-                //                        let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
-                //                        //let location = m.scene.navigation.camera.view.Location
-                //                        //let forward = m.scene.navigation.camera.view.Forward
-
-                //                        let animationMessage = 
-                //                            animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
-                //                        let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                //                        { m with animations = a' }
-                //                |_-> m
-                //    | _ ->
-                //        let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
                     let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
                     let animation = 
                           match msg with
@@ -646,6 +628,8 @@ module ViewerApp =
                 Process.Start("explorer.exe", argument) |> ignore
                 m
             | NoAction s,_,_ -> m
+            //| UpdateDockConfig dcf,_,_ ->
+            //     { m with dockConfig = dcf }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -658,7 +642,7 @@ module ViewerApp =
         |> Sg.noEvents
         |> Sg.trafo(trafo)
    
-    let view (m : MModel) =
+    let view (m : MModel) = //(localhost: string)
 
         let renderControlAttributes (model : MNavigationModel)  =            
             amap {
@@ -760,11 +744,6 @@ module ViewerApp =
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
         let control = DomNode.RenderControl(att, cam, cmds, None)
-
-        // instrument view control
-        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped Sg.empty Sg.empty m
-        let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
-        let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
 
         let annotationGroupProperties (model:MModel) =
             adaptive {                                
@@ -1119,17 +1098,6 @@ module ViewerApp =
                 ]            
             ]
 
-        let instrumentView (model : MModel) = 
-            [             
-                icontrol
-                div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
-                    div[style "height:41px"][text "spacer"]
-                    div [clazz "ui large black horizontal label"][text "Show Tab:"]
-                    Html.SemUi.dropDown model.tabMenu SetTabMenu
-                    viewTabs model.tabMenu 
-                    ]
-            ]
-        
         //Sidebar adorner                
         let sceneTools (model : MModel) =
           div[][
@@ -1241,6 +1209,10 @@ module ViewerApp =
                                 )
                     ]
                 ]
+        // instrument view control
+        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped Sg.empty Sg.empty m
+        let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
+        let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
 
         let chooseView = //(mode : ViewerMode)
 
@@ -1264,7 +1236,7 @@ module ViewerApp =
                         //let isections = [
                         //    "blank", [div[style "height:15px"][]]
                         //    "Switch View", [switchViewerMode]]     
-                        yield div[](GuiEx.adornerMenu [] topMenu (instrumentView m)) 
+                        yield div[](GuiEx.adornerMenu [] topMenu [icontrol]) 
                     }
             
             Incremental.div AttributeMap.empty stuff    
@@ -1287,38 +1259,45 @@ module ViewerApp =
 
         let control2 = 
             alist {
-                let! mode = m.viewerMode
-                yield div[](GuiEx.adornerMenu [] topMenu (instrumentView m)) 
+                yield div[](GuiEx.adornerMenu [] [] [icontrol])
                 }
-                    
-            
-        require (Html.semui @ [myCss]) (                             
+         
+        let mainview = 
+            require (Html.semui @ [myCss]) (                             
                 onBoot usingContext (                             
-                    body [clazz "context example"; style "overflow-y:hidden"] [chooseView] //ViewerMode.Standard
+                    body [clazz "context example"; style "overflow-y:hidden"] [Incremental.div AttributeMap.empty control1] 
                 )
             )
 
-        //page (fun request -> 
-        //        match Map.tryFind "page" request.queryParams with
+        let instrumentview = 
+            require (Html.semui @ [myCss]) (                             
+                onBoot usingContext (                             
+                    body [clazz "context example"; style "overflow-y:hidden"] [Incremental.div AttributeMap.empty control2] 
+                )
+            )
+            
+        //require (Html.semui @ [myCss]) (                             
+        //        onBoot usingContext (                             
+        //            body [clazz "context example"; style "overflow-y:hidden"] [chooseView] //ViewerMode.Standard
+        //        )
+        //    )
+
+        
+
+        page (fun request -> 
+                match Map.tryFind "page" request.queryParams with
                     
-        //            | Some "render" -> 
-        //                body [] [
-        //                    Incremental.div AttributeMap.empty control1 
-        //                ]
+                    | Some "main" -> 
+                        body [] [ mainview ]
 
-        //            //| Some "meta" ->
-        //            //    body [] [
-        //            //        button [onClick (fun _ -> Undo)] [text "Undo"]
-        //            //    ]
+                    | Some "instrumentview" ->
+                        body [] [ instrumentview ]
 
-        //            | Some other ->
-        //                Incremental.div AttributeMap.empty control2
+                    | None -> 
+                        body [] []
 
-        //            //| None -> 
-        //            //    model.dockConfig |> Mod.force |> Mod.constant |> docking [
-        //            //        style "width:100%;height:100%;"
-        //            //        onLayoutChanged UpdateConfig
-        //            //    ]
+                    | _ -> body [] []
+                    )
             
         
                    
@@ -1369,7 +1348,7 @@ module ViewerApp =
         App.start {
             unpersist = Unpersist.instance
             threads = pool runtime signature
-            view = view
+            view = view //localhost
             update = update w runtime signature bc
             initial = m
         }
