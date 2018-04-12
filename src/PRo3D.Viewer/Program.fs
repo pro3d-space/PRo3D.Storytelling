@@ -208,14 +208,15 @@ let main argv =
         POST >=> path "/platformshots" >=> mapJson takePlatformShot
         Suave.Files.browseHome
     ] 
-       
+
+   
     use ctrl = new AardvarkCefBrowser()
     ctrl.Dock <- DockStyle.Fill
     form.Controls.Add ctrl    
     form.Text <- "PRo3D Viewer - " + viewerVersion + " - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH" + licenseText
     //form.WindowState <- FormWindowState.Minimized
     //form.Controls.Add (new Label()) |> ignore
-    ctrl.StartUrl <- "http://localhost:4321/"        
+    ctrl.StartUrl <- "http://localhost:4321/?page=main" //"http://localhost:4321/?page=instrumentview"       
     ctrl.ShowDevTools()
 
     //Config.shouldTimeUIUpdate <- true
