@@ -106,8 +106,11 @@ let main argv =
 
     Ag.initialize()
     Aardvark.Init()
-    use app = new OpenGlApplication()
+    use app = new VulkanApplication()
+    //use app = new OpenGlApplication()
     let runtime = app.Runtime    
+
+    Aardvark.Rendering.GL.RuntimeConfig.SupressSparseBuffers <- true
 
     //buildLicense(365)
 
@@ -146,7 +149,7 @@ let main argv =
     let mainApp = 
         PRo3D.ViewerApp.start form runtime signature bc
 
-    CooTransformation.initCooTrafo
+    CooTransformation.initCooTrafo () // should be a function not a value
     
     let domainError (sender:obj) (args:UnhandledExceptionEventArgs) =
         let e = args.ExceptionObject :?> Exception;
@@ -219,6 +222,7 @@ let main argv =
     //Config.shouldTimeJsCodeGeneration <- true
     //Config.shouldTimeUnpersistCalls <- true
 
+
     Application.Run form
 
     //let p = Process.Start("chrome.exe", "--app=http://localhost:4321/")
@@ -231,6 +235,6 @@ let main argv =
     //if p.HasExited |> not then p.Kill()
     ////sem.Wait()
 
-    CooTransformation.deInitCooTrafo
+    CooTransformation.deInitCooTrafo ()
 
     0

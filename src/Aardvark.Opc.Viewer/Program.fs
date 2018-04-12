@@ -154,8 +154,8 @@ module Viewer =
         let win = app.CreateSimpleRenderWindow()
         win.Text <- "Aardvark rocks OPCs \\o/"
 
-        //let sg = createSceneGraph win.Runtime win.Sizes win.Mouse win.Keyboard win.FramebufferSignature win.Time scene
-        let sg = createSceneGraph2 win.Sizes win.Mouse win.Keyboard win.Time scene
+        let sg = createSceneGraph win.Runtime win.Sizes win.Mouse win.Keyboard win.FramebufferSignature win.Time scene
+        //let sg = createSceneGraph2 win.Sizes win.Mouse win.Keyboard win.Time scene
     
         let cfg =  { BackendConfiguration.Default  with useDebugOutput = false }
         let task =
@@ -169,14 +169,14 @@ module Viewer =
         0
 
 
-    open Configurations.OrtiPc
+    open Configurations.HarriPc
 
     [<EntryPoint>]
     let main argv =
         //run ( Configurations.Network.testSurf () )
         match argv.ToLower() with
-            //| [| "perjen" |] -> run ( perjen () )
-            //| [| "mola" |] -> run ( mola () )
+            | [| "perjen" |] -> run ( perjen () )
+            | [| "mola" |] -> run ( mola () )
             | [| "mars" |] -> run ( mars () )
             | _ -> 
                 printfn "wrong arguments: %A, synopsis: Aardvark.OpenViewer [perjen|mola|mars]" argv
