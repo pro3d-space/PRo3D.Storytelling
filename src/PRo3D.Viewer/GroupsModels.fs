@@ -175,11 +175,18 @@ module BookmarksModel =
         bookmarks        = GroupsModel.initial
         }
 
+//[<DomainType>]
+//type SgGrouped = 
+//    | SgSurfaceOPC    of value : SgSurface
+//    | SgSurfaceOBJ    of value : SgSurfaceObj
+
+
 [<DomainType>]
 type SurfaceModel = {
     surfaces        : GroupsModel
-    sgSurfaces      : hmap<Guid,SgSurface>
-    sgGrouped       : plist<hmap<Guid,SgSurface>>
+    sgSurfaces      : hmap<Guid,SgSurfaces>
+    //sgSurfaceObjs   : hmap<Guid,SgSurfaceObj>
+    sgGrouped       : plist<hmap<Guid,SgSurfaces>>
     kdTreeCache     : hmap<string, ConcreteKdIntersectionTree>
 }
 

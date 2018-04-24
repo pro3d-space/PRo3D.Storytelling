@@ -129,6 +129,12 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Aardvark.SceneGraph.IO">
+      <HintPath>..\..\bin\Debug\Aardvark.SceneGraph.IO.dll</HintPath>
+    </Reference>
+    <Reference Include="AssimpNet">
+      <HintPath>..\..\packages\Unofficial.AssimpNet\lib\net45\AssimpNet.dll</HintPath>
+    </Reference>
     <Reference Include="CSharpUtils">
       <HintPath>..\..\bin\Debug\CSharpUtils.dll</HintPath>
     </Reference>

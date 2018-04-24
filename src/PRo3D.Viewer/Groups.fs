@@ -502,6 +502,12 @@ module SurfaceModel =
     let withSgSurfaces sgSurfaces m =
         { m with sgSurfaces = sgSurfaces }
 
+    //let withSgSurfaceObjs sgSurfaceObjs m =
+    //    { m with sgSurfaceObjs = sgSurfaceObjs }
+
+    //let withSgSurfacesAndSgSurfaceObjs sgSurfaces sgSurfaceObjs m =
+    //    { m with sgSurfaces = sgSurfaces; sgSurfaceObjs = sgSurfaceObjs }
+
     let initSurfaceGroups group flat selected = 
         let surfaces = GroupsModel.initial
         { surfaces with rootGroup = group; singleSelectLeaf = selected; flat = flat }
@@ -511,6 +517,7 @@ module SurfaceModel =
         {
             surfaces    = surfaces
             sgSurfaces  = hmap.Empty
+            //sgSurfaceObjs = hmap.Empty
             sgGrouped   = plist.Empty
             kdTreeCache = hmap.Empty
         }
@@ -528,7 +535,7 @@ module SurfaceModel =
     let getSurface model guid =
         model.surfaces.flat |> HMap.tryFind guid        
 
-    let groupSurfaces (sgSurfaces : hmap<Guid, SgSurface>) (surfaces : hmap<Guid, Surface>) =
+    let groupSurfaces (sgSurfaces : hmap<Guid, SgSurfaces>) (surfaces : hmap<Guid, Surface>) =
       sgSurfaces
         |> HMap.toList
         |> List.groupBy(fun (_,x) -> 
@@ -538,9 +545,9 @@ module SurfaceModel =
         |> List.sortBy fst
         |> List.map snd
         |> PList.ofList
-    
+
     let triggerSgGrouping (model:SurfaceModel) =
-        { model with sgGrouped = (groupSurfaces model.sgSurfaces (model.surfaces.flat |> Leaf.toSurfaces)) }
+        { model with sgGrouped = (groupSurfaces model.sgSurfaces (model.surfaces.flat |> Leaf.toSurfaces))}
    
     let updateSingleSurface (s':PRo3D.Surfaces.Surface) (model:SurfaceModel) =
         let surfaces' = 

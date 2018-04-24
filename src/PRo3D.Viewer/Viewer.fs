@@ -278,7 +278,7 @@ module ViewerApp =
                         let surfaces = 
                             paths 
                                 |> List.filter Files.isSurfaceFolder
-                                |> List.map Surface.mk
+                                |> List.map (Surface.mk SurfaceType.SurfaceOPC)
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m
@@ -301,7 +301,33 @@ module ViewerApp =
                                                                 
                             { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = orSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB
                           | None -> m
-                                                                       
+            | ImportObject,_,_ -> 
+                match Dialogs.openDialog w with
+                    | None -> m
+                    | Some paths ->
+                        let objects = 
+                            [paths] 
+                                |> List.map (Surface.mk SurfaceType.SurfaceOBJ)
+                                |> PList.ofList
+
+                        let m = Scene.importObj runtime signature objects m
+
+                        let sgSurfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
+                        let head = sgSurfaces |> List.tryHead
+                        match head with
+                          | Some v ->
+
+                            let fullBb = 
+                               sgSurfaces 
+                                  |> List.map(fun x -> x.globalBB) 
+                                  |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
+
+                            let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
+                            let (refSystem',_)= 
+                                ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
+                                                                
+                            { m with scene = { m.scene with referenceSystem = refSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB
+                          | None -> m                                                          
             | ImportAnnotationGroups,_,_ ->
               match Dialogs.openDialog w with
                 | Some x -> 
@@ -447,6 +473,42 @@ module ViewerApp =
                 | None, _ -> 
                     Log.error ("no hit")
                     m
+            | PickObject p,_,_ -> m
+                //match m.interaction with
+                //      | Interactions.DrawAnnotation ->               
+                //          Log.error "closest intersection on object" 
+                //          let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
+                //          Log.stop()
+                //          { m with drawing = drawing } |> stash
+                //      | Interactions.PlaceCoordinateSystem -> 
+                          
+                //          let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
+                //          let (refSystem',_)= 
+                //              ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
+                          
+                //          let origin = new V3d(m.overlayFrustum.right * 0.5, m.overlayFrustum.bottom * 0.5, 1.0)
+                //          let os = { refSystem' with origin = origin }
+                //          let m = { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = os }}
+                          
+                //          //update camera upvector
+                //          updateCameraUp m
+                //      | Interactions.PickExploreCenter ->
+                //          let c   = m.scene.config
+                //          let ref = m.scene.referenceSystem
+                //          let navigation' = 
+                //              Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
+                //          { m with scene = {m.scene with navigation = navigation'; } }
+                //      | Interactions.PlaceRover ->
+                //          let camState = m.scene.navigation.camera
+                //          let ref = m.scene.referenceSystem 
+                //          let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
+                //          let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
+                //          match m.scene.viewPlans.working.IsEmpty with
+                //              | true -> m' 
+                //              | false -> { m' with tabMenu = TabMenu.Viewplanner }
+                //      | Interactions.AlignPick -> 
+                //          { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = hit; surfaceName = surf.guid}))}
+                //      | _ -> m
             | SaveScene, _,_ -> 
                 match m.scene.scenePath with
                     | None ->                        
@@ -642,8 +704,14 @@ module ViewerApp =
         |> Sg.noEvents
         |> Sg.trafo(trafo)
    
-    let view (m : MModel) = //(localhost: string)
+    type MSgSurfaces with
+                member x.trafo =
+                    match x with
+                        | MSgSurfaceOPC opc -> opc.trafo
+                        | MSgSurfaceOBJ obj -> obj.trafo
 
+    let view (m : MModel) = //(localhost: string)
+        
         let renderControlAttributes (model : MNavigationModel)  =            
             amap {
                 let! state = model.navigationMode
@@ -706,29 +774,31 @@ module ViewerApp =
                       | _ -> return failwith ""
                 }
 
-            let controller = 
-                adaptive {
-                    let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
-                    let! kind = m.trafoKind
-                    match selected with
-                      | Some c ->                           
+            
+            //let controller = 
+            //    adaptive {
+            //        let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
+            //        let! kind = m.trafoKind
+            //        match selected with
+            //          | Some c ->                           
 
-                          let! sgo = m.scene.surfacesModel.sgSurfaces |> AMap.tryFind c
+            //              let! sgo = m.scene.surfacesModel.sgSurfaces |> AMap.tryFind c
                           
-                          match sgo with 
-                              | Some sg ->                                  
-                                    match kind with
-                                    | TrafoKind.Translate ->                                               
-                                        return TranslateController.viewController (fun t -> Translate("", t)) m.scene.navigation.camera.view sg.trafo
-                                    | TrafoKind.Rotate ->
-                                        return RotationController.viewController (fun t -> Rotate("", t)) m.scene.navigation.camera.view sg.trafo
-                                    | _ -> return Sg.empty
-                              | None -> 
-                                Log.warn "selected surface does not exist"
-                                return Sg.empty                                 
-                      | None -> return Sg.empty
+            //              match sgo with 
+            //                  | Some sg ->
+            //                        let! trafo = sg.trafo
+            //                        match kind with
+            //                        | TrafoKind.Translate ->                                               
+            //                            return TranslateController.viewController (fun t -> Translate("", t)) m.scene.navigation.camera.view sg.trafo
+            //                        | TrafoKind.Rotate ->
+            //                            return RotationController.viewController (fun t -> Rotate("", t)) m.scene.navigation.camera.view sg.trafo
+            //                        | _ -> return Sg.empty
+            //                  | None -> 
+            //                    Log.warn "selected surface does not exist"
+            //                    return Sg.empty                                 
+            //          | None -> return Sg.empty
                     
-                } |> Sg.dynamic
+            //    } |> Sg.dynamic
             
             let viewPlans =
                 ViewPlan.Sg.view 
@@ -738,9 +808,11 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
+            let objects = ViewerUtils.renderOBJ m.scene.surfacesModel.sgSurfaces |> Sg.map PickObject
+
             //controller, exploreCenter
-            [annos; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList // orSystem;
-        
+            [annos; exploreCenter; refSystem; alignment; viewPlans; objects] |> Sg.ofList // orSystem; 
+
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
         let control = DomNode.RenderControl(att, cam, cmds, None)
@@ -1166,6 +1238,13 @@ module ViewerApp =
                 onClick (fun _ -> ImportSurface)
             ]         
 
+        let openObject =
+            [ text "browse"] |> button [
+                clazz "ui button"
+                attribute "data-content" "text text text"
+                onClick (fun _ -> ImportObject)
+            ]         
+
         let importAnnotationGroups =
             [ text "browse"] |> button [ 
                 clazz "ui button"
@@ -1210,7 +1289,7 @@ module ViewerApp =
                     ]
                 ]
         // instrument view control
-        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped Sg.empty Sg.empty m
+        let icmds    = ViewerUtils.renderCommands AList.empty Sg.empty Sg.empty m //m.scene.surfacesModel.sgGrouped
         let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
         let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
 
@@ -1249,7 +1328,8 @@ module ViewerApp =
                     "Scene", [sceneTools m]
                     // "Scene Path", [scenePath2 m]
                     "Recent", [recentScenes]
-                    "Add Surface", [openSurface]                
+                    "Add Surface", [openSurface]      
+                    "Add Object", [openObject]      
                     "Import AnnotationGroups", [importAnnotationGroups]  
                     "Import SurfaceTrafos", [importSurfaceTrafos]]
                     //"Switch View", [switchViewerMode] 

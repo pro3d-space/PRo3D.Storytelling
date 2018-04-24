@@ -276,6 +276,10 @@ module Surface =
                         if Directory.Exists relPath then Some relPath else None
                     | None -> None
             else
+                //match surface.surfaceType with
+                //    | SurfaceOBJ s -> p = System.IO.Path.GetDirectoryName surface.importPath
+                //                        if Directory.Exists p then Some p else None
+                //    |_-> 
                 let p = surface.importPath
                 if Directory.Exists p then Some p else None
 
@@ -295,9 +299,11 @@ module Surface =
         let surfaceRelativePath (path : string) =
             relativePath path 4
 
-        let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, PRo3D.Surfaces.Surface>) (sgSurfaces : hmap<Guid, SgSurface>) =            
-           sgSurfaces 
+        let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, PRo3D.Surfaces.Surface>) (sgSurfaces : hmap<Guid, SgSurfaces>) =
+           let sgS = sgSurfaces |> HMap.filter (fun id sg -> (sgSurface.isSgOPC sg))
+           sgS 
               |> HMap.map (fun _ s -> 
+                  let s = (sgSurface.toSgOPC s)
                   let surf = surfaces |> HMap.find s.surface
                   let kd =
                       s.kdTree |> HMap.map (fun _ k -> 
@@ -324,7 +330,7 @@ module Surface =
                                   }
                               | Level0KdTree.InCoreKdTree ik -> InCoreKdTree ik // kdtrees can be loaded as is
                       )
-                  { s with kdTree = kd }
+                  (SgSurfaces.SgSurfaceOPC { s with kdTree = kd })
             )                
 
         let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
@@ -383,7 +389,7 @@ module Surface =
             |> Box3d.ofSeq
 
     /// creates a surface from opc folder path
-    let mk path =                 
+    let mk (stype:SurfaceType) path =                 
 
         let names = Files.getOPCNames path                
         {
@@ -405,6 +411,8 @@ module Surface =
             selectedTexture = None            
 
             triangleSize = Init.triangleSize
+            surfaceType = stype
+
         }       
 
     let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = 
@@ -412,13 +420,14 @@ module Surface =
         let pose = Pose.translate V3d.Zero // bb.Center
         let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
 
-        {
-            surface    = s.guid
-            sceneGraph = sg
-            globalBB   = bb
-            kdTree     = kd
-            trafo      = trafo
-        }
+        let sgSurfaceOpc = {
+                surface    = s.guid
+                sceneGraph = sg
+                globalBB   = bb
+                kdTree     = kd
+                trafo      = trafo
+            }
+        (SgSurfaces.SgSurfaceOPC sgSurfaceOpc)
 
     let transformBox (trafo:Trafo3d) (bb:Box3d) =
         bb.Transformed(trafo)
@@ -441,6 +450,67 @@ module Surface =
               |> HMap.ofList       
 
         sgSurfaces
+
+    module ObjectFiles =
+
+        open Aardvark.SceneGraph.IO
+
+        let loadObject (s:PRo3D.Surfaces.Surface) : SgSurfaceObj =
+            //Ag.initialize()
+            let test = s.importPath
+            let obj = Loader.Assimp.load (s.importPath)
+            //let obj = Aardvark.SceneGraph.IO.Loader.Assimp.load @"C:\Users\laura\VRVis\Data\OBJ\WusonOBJ.obj"
+            let meshes = 
+                [
+                    for mesh in obj.meshes do
+                        yield mesh.geometry.Sg |> Sg.noEvents
+                ] |> Sg.ofList
+
+            let bb = obj.bounds
+            let sg = 
+                obj
+                |> Sg.adapter
+                |> Sg.requirePicking
+                |> Sg.noEvents
+                //|> Sg.trafo scaleTrafo
+                // flip the z coordinates (since the model is upside down)
+                //|> Sg.transform (Trafo3d.Scale(1.0, 1.0, -1.0))
+                |> Sg.scale 3.0
+
+                |> Sg.shader {
+                    do! DefaultSurfaces.trafo
+                    do! DefaultSurfaces.diffuseTexture
+                    do! DefaultSurfaces.normalMap
+                    do! DefaultSurfaces.simpleLighting
+                }
+            let pose = Pose.translate V3d.Zero // bb.Center
+            let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
+            {
+                surface     = s.guid    
+                trafo       = trafo
+                globalBB    = bb
+                sceneGraph  = sg
+                pickMesh    = meshes
+            }
+          
+       
+        let createSgObjects runtime signature surfaces =        
+            let sghs =
+                surfaces
+                    |> PList.toList
+                    |> List.map (fun d -> (loadObject d))
+
+            let sgObjects =
+                sghs 
+                  |> List.map (fun d -> (d.surface, SgSurfaces.SgSurfaceOBJ d))
+                  |> HMap.ofList       
+
+            sgObjects
+
+
+
+
+       
                   
  module SurfaceApp =
     open System.Diagnostics
@@ -534,8 +604,10 @@ module Surface =
 
     let doKdTreeIntersection (m : SurfaceModel) (t : Trafo3d) (r : FastRay3d) cache = 
         let mutable cache = cache
-
-        m.sgSurfaces
+        let sgSurfaces = m.sgSurfaces 
+                            |> HMap.filter( fun id sg -> sgSurface.isSgOPC sg )
+                            |> HMap.map( fun id sg -> sgSurface.toSgOPC sg )
+        sgSurfaces
             |> HMap.toSeq
             |> Seq.map (fun (_,d) -> d.kdTree, (m.surfaces.flat |> HMap.find d.surface) |> Leaf.toSurface)            
             |> Seq.sortByDescending(fun (_,surf) -> surf.priority.value)
