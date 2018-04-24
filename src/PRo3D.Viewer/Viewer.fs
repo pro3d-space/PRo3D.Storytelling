@@ -726,7 +726,7 @@ module ViewerApp =
         let att = 
             AttributeMap.unionMany [
                 renderControlAttributes m.scene.navigation
-                [attribute "style" "width:70%; height: 100%; float:left"; attribute "data-samples" "8" ] |> AttributeMap.ofList
+                [attribute "style" "width:70%; height: 100%; float:left"; attribute "data-samples" "1" ] |> AttributeMap.ofList
                 AttributeMap.ofList [
                     onKeyDown (KeyDown)
                     onKeyUp (KeyUp)
@@ -1074,7 +1074,7 @@ module ViewerApp =
             let att2 = 
                 AttributeMap.unionMany [
                     //renderControlAttributes m.scene.navigation
-                    [attribute "style" "width:10%; height: 20%; position: absolute; bottom: 10px; left: 10px; float:left"; attribute "data-samples" "8" ] |> AttributeMap.ofList //"width:10%; height: 20%; position: absolute; top: 100px; float:left"
+                    [attribute "style" "width:10%; height: 20%; position: absolute; bottom: 10px; left: 10px; float:left"; attribute "data-samples" "1" ] |> AttributeMap.ofList //"width:10%; height: 20%; position: absolute; top: 100px; float:left"
                     AttributeMap.ofList [
                         //onKeyDown (KeyDown)
                         //onKeyUp (KeyUp)
