@@ -213,7 +213,7 @@ let main argv =
     //form.WindowState <- FormWindowState.Minimized
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/"        
-    ctrl.ShowDevTools()
+    //ctrl.ShowDevTools()
 
     //Config.shouldTimeUIUpdate <- true
     //Config.shouldTimeJsCodeGeneration <- true

@@ -150,14 +150,14 @@ module Viewer =
         Aardvark.Base.Ag.initialize()
         Aardvark.Init()
 
-        use app = new OpenGlApplication()
+        use app = new OpenGlApplication(true)
         let win = app.CreateSimpleRenderWindow()
         win.Text <- "Aardvark rocks OPCs \\o/"
 
-        //let sg = createSceneGraph win.Runtime win.Sizes win.Mouse win.Keyboard win.FramebufferSignature win.Time scene
-        let sg = createSceneGraph2 win.Sizes win.Mouse win.Keyboard win.Time scene
+        let sg = createSceneGraph win.Runtime win.Sizes win.Mouse win.Keyboard win.FramebufferSignature win.Time scene
+        //let sg = createSceneGraph2 win.Sizes win.Mouse win.Keyboard win.Time scene
     
-        let cfg =  { BackendConfiguration.Default  with useDebugOutput = false }
+        let cfg =  { BackendConfiguration.Default  with useDebugOutput = true }
         let task =
             RenderTask.ofList [
                 app.Runtime.CompileClear(win.FramebufferSignature, (Mod.constant(C4b(30,30,30, 255).ToC4f())))
@@ -175,7 +175,7 @@ module Viewer =
     let main argv =
         //run ( Configurations.Network.testSurf () )
         match argv.ToLower() with
-            //| [| "perjen" |] -> run ( perjen () )
+            | [| "perjen" |] -> run ( perjen () )
             //| [| "mola" |] -> run ( mola () )
             | [| "mars" |] -> run ( mars () )
             | _ -> 

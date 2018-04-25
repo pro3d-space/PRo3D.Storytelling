@@ -69,6 +69,18 @@ module Configurations =
                 lodDecider       = DefaultMetrics.mars
             }        
 
+        let perjen () =
+            { 
+                useCompressedTextures = true
+                preTransform     = Trafo3d.FromOrthoNormalBasis(V3d.IOO, -V3d.OOI, V3d.OIO)
+                patchHierarchies = System.IO.Directory.GetDirectories(@"I:\demo\perjen\08b_Dibit-Projekt_OPC-Export_2.5mm\2011_Bestandsaufnahme\OPC")
+                boundingBox      = Box3d.Parse("[[16034.950038118, 222765.173562629, 802.291122034], [16037.049953225, 222767.420825919, 802.333067577]]")
+                near             = 0.1
+                far              = 10000.0
+                speed            = 5.0
+                lodDecider       = DefaultMetrics.tunnel
+            }
+
     module HarriPc =
 
         let mars () = 

@@ -267,7 +267,7 @@ module ViewerApp =
 
                       //let locationMsg = CameraAnimations.animateLocation location 2.0 "flyto 2s"
                       let animationMessage = 
-                        animateFowardAndLocation location forward 2.0 "ForwardAndLocation2s"
+                        animateFowardAndLocation location forward 3.5 "ForwardAndLocation2s"
                       let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                       //let fowardMsg = CameraAnimations.animateFoward foward 2.0 "turnAround 2s"
                       //let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(fowardMsg))
