@@ -58,7 +58,7 @@ type ViewerAction =
     | DeleteLast
     | AddSg                     of ISg
     | PickSurface               of SceneHit*string
-    | PickObject                of V3d
+    //| ObjectMessage             of SurfaceApp.Action
     | SaveScene
     | SaveAs                    
     | OpenScene
@@ -285,19 +285,22 @@ module ViewerUtils =
         sg
     
     let renderOBJ (surfaces : amap<Guid,IMod<MSgSurfaces>>)  =
+        Ag.initialize()
         let sg = 
             let scaleTrafo = Mod.constant (Trafo3d.Scale(10.0))
             let obj = Aardvark.SceneGraph.IO.Loader.Assimp.load @"C:\Users\laura\VRVis\Data\OBJ\aardvark.obj" 
             
-            //aset {
-            //    let! obj = surface.sceneGraph
-            obj //surface.sceneGraph
+            obj
                 |> Sg.adapter
-
+                
                 // flip the z coordinates (since the model is upside down)
                 |> Sg.transform (Trafo3d.Scale(1.0, 1.0, -1.0))
                 |> Sg.scale 3.0
-
+                |> Sg.noEvents
+                //|> Sg.trafo scaleTrafo
+                |> Sg.withEvents [
+                    Sg.onMouseDown ( fun b v -> SurfaceApp.Action.PickObject v )
+                ]
                 |> Sg.shader {
                     do! DefaultSurfaces.trafo
                     do! DefaultSurfaces.diffuseTexture

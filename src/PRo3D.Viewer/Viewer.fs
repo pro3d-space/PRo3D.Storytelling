@@ -473,42 +473,6 @@ module ViewerApp =
                 | None, _ -> 
                     Log.error ("no hit")
                     m
-            | PickObject p,_,_ -> m
-                //match m.interaction with
-                //      | Interactions.DrawAnnotation ->               
-                //          Log.error "closest intersection on object" 
-                //          let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
-                //          Log.stop()
-                //          { m with drawing = drawing } |> stash
-                //      | Interactions.PlaceCoordinateSystem -> 
-                          
-                //          let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
-                //          let (refSystem',_)= 
-                //              ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
-                          
-                //          let origin = new V3d(m.overlayFrustum.right * 0.5, m.overlayFrustum.bottom * 0.5, 1.0)
-                //          let os = { refSystem' with origin = origin }
-                //          let m = { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = os }}
-                          
-                //          //update camera upvector
-                //          updateCameraUp m
-                //      | Interactions.PickExploreCenter ->
-                //          let c   = m.scene.config
-                //          let ref = m.scene.referenceSystem
-                //          let navigation' = 
-                //              Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
-                //          { m with scene = {m.scene with navigation = navigation'; } }
-                //      | Interactions.PlaceRover ->
-                //          let camState = m.scene.navigation.camera
-                //          let ref = m.scene.referenceSystem 
-                //          let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
-                //          let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
-                //          match m.scene.viewPlans.working.IsEmpty with
-                //              | true -> m' 
-                //              | false -> { m' with tabMenu = TabMenu.Viewplanner }
-                //      | Interactions.AlignPick -> 
-                //          { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = hit; surfaceName = surf.guid}))}
-                //      | _ -> m
             | SaveScene, _,_ -> 
                 match m.scene.scenePath with
                     | None ->                        
@@ -808,10 +772,13 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
-            let objects = ViewerUtils.renderOBJ m.scene.surfacesModel.sgSurfaces |> Sg.map PickObject
+            //let objects = 
+            //    ViewerUtils.renderOBJ 
+            //        m.scene.surfacesModel.sgSurfaces 
+            //    |> Sg.map SurfaceActions
 
             //controller, exploreCenter
-            [annos; exploreCenter; refSystem; alignment; viewPlans; objects] |> Sg.ofList // orSystem; 
+            [annos; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList // orSystem; ; objects
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          

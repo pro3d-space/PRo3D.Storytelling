@@ -276,12 +276,11 @@ module Surface =
                         if Directory.Exists relPath then Some relPath else None
                     | None -> None
             else
-                //match surface.surfaceType with
-                //    | SurfaceOBJ s -> p = System.IO.Path.GetDirectoryName surface.importPath
-                //                        if Directory.Exists p then Some p else None
-                //    |_-> 
-                let p = surface.importPath
-                if Directory.Exists p then Some p else None
+                match surface.surfaceType with
+                    | SurfaceType.SurfaceOBJ -> let p = System.IO.Path.GetDirectoryName surface.importPath
+                                                if Directory.Exists p then Some p else None
+                    |_-> let p = surface.importPath
+                         if Directory.Exists p then Some p else None
 
 
         /// strips away parts of a file path until the remaining depth is reached
@@ -527,7 +526,8 @@ module Surface =
         | RemoveSurface             of Guid*list<Index>
         | PickSurface               of SceneHit*string
         | OpenFolder                of Guid
-        | GroupsMessage             of Groups.Action    
+        | GroupsMessage             of Groups.Action  
+        | PickObject                of V3d
 
     let triangleIsNan (t:Triangle3d) =
         t.P0.AnyNaN || t.P1.AnyNaN || t.P2.AnyNaN
@@ -723,7 +723,7 @@ module Surface =
 
                     { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping                  
                   | _ -> { model with surfaces = groups }
-                
+            | PickObject p -> model   
             | _ -> model
 
     let absRelIcons (m : MSurface)=
