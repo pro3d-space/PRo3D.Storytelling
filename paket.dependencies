@@ -4,19 +4,20 @@ source https://api.nuget.org/v3/index.json
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://vrvis.myget.org/F/aardvark/auth/11394d4d-4fe9-44ec-87c8-f3e98909f975/api/v3/index.json
 
-nuget Aardvark.Base.Rendering              ~> 3.6.26
-nuget Aardvark.Application.WinForms.GL     ~> 3.6.26
-nuget Aardvark.SceneGraph                  ~> 3.6.26
-nuget Aardvark.SceneGraph.IO               ~> 3.6.26
-nuget Aardvark.Rendering.NanoVg            ~> 3.6.26
-nuget Aardvark.Rendering.Text              ~> 3.6.26
-nuget Aardvark.Rendering.Vulkan            ~> 3.6.26
+nuget Aardvark.Base.Rendering              ~> 3.6.30
+nuget Aardvark.Application.WinForms.GL     ~> 3.6.30
+nuget Aardvark.Application.WinForms.Vulkan ~> 3.6.30
+nuget Aardvark.SceneGraph                  ~> 3.6.30
+nuget Aardvark.SceneGraph.IO               ~> 3.6.30
+nuget Aardvark.Rendering.NanoVg            ~> 3.6.30
+nuget Aardvark.Rendering.Text              ~> 3.6.30
+nuget Aardvark.Rendering.Vulkan            ~> 3.6.30
 
-nuget Aardvark.Base                         ~> 3.0.58 
-nuget Aardvark.Base.IO                      ~> 3.0.58
-nuget Aardvark.Base.Incremental             ~> 3.0.58
-nuget Aardvark.Base.FSharp                  ~> 3.0.58
-nuget Aardvark.Base.Essentials              ~> 3.0.58
+nuget Aardvark.Base                         ~> 3.0.61 
+nuget Aardvark.Base.IO                      ~> 3.0.61
+nuget Aardvark.Base.Incremental             ~> 3.0.61
+nuget Aardvark.Base.FSharp                  ~> 3.0.61
+nuget Aardvark.Base.Essentials              ~> 3.0.61
                                              
 nuget Aardvark.Compiler.DomainTypes         ~> 0.3.0
 nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 0.3.0
@@ -32,16 +33,16 @@ nuget FParsec                               ~> 1.0.2
 nuget FsPickler                             ~> 4.0.0
 nuget FsPickler.Json                        ~> 4.0.0
 
-nuget Aardvark.UI                           ~> 3.4.7
-nuget Aardvark.UI.Primitives                ~> 3.4.7
-nuget Aardvark.Service                      ~> 3.4.7
-nuget Aardvark.Cef.WinForms                 ~> 3.4.7
+nuget Aardvark.UI                           ~> 3.4.9
+nuget Aardvark.UI.Primitives                ~> 3.4.9
+nuget Aardvark.Service                      ~> 3.4.9
+nuget Aardvark.Cef.WinForms                 ~> 3.4.9
 
 nuget Aardvark.Cef                          ~> 3.3.58
 nuget SKGL                                  ~> 2.0.5.3
 
-nuget FShade ~> 3.3.17
-nuget FShade.Debug ~> 3.3.17
+nuget FShade        ~> 3.4.2
+nuget FShade.Debug  ~> 3.4.2
 
 nuget WindowsAPICodePack-Core
 nuget WindowsAPICodePack-ShellExtensions

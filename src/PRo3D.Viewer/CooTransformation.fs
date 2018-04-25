@@ -7,15 +7,15 @@ open ViewPlanner
 
 module CooTransformation = 
 
-    let init = double(0.0)
+    let init = 0.0
 
-    let initCooTrafo = 
+    let initCooTrafo () = 
         let directory = @".\InstrumentStuff" 
         let test = @".\bin" 
         let errorCode = CooTrafo.Init(test, directory)
         printfn "%A" errorCode
 
-    let deInitCooTrafo = 
+    let deInitCooTrafo () = 
         CooTrafo.DeInit()
 
     let getLatLonAlt (p:V3d) (planet:Planet): SphericalCoo = 

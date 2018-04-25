@@ -169,14 +169,14 @@ module Viewer =
         0
 
 
-    open Configurations.OrtiPc
+    open Configurations.HarriPc
 
     [<EntryPoint>]
     let main argv =
         //run ( Configurations.Network.testSurf () )
         match argv.ToLower() with
             | [| "perjen" |] -> run ( perjen () )
-            //| [| "mola" |] -> run ( mola () )
+            | [| "mola" |] -> run ( mola () )
             | [| "mars" |] -> run ( mars () )
             | _ -> 
                 printfn "wrong arguments: %A, synopsis: Aardvark.OpenViewer [perjen|mola|mars]" argv

@@ -106,8 +106,11 @@ let main argv =
 
     Ag.initialize()
     Aardvark.Init()
-    use app = new OpenGlApplication()
+    use app = new VulkanApplication()
+    //use app = new OpenGlApplication()
     let runtime = app.Runtime    
+
+    Aardvark.Rendering.GL.RuntimeConfig.SupressSparseBuffers <- true
 
     //buildLicense(365)
 
@@ -146,7 +149,7 @@ let main argv =
     let mainApp = 
         PRo3D.ViewerApp.start form runtime signature bc
 
-    CooTransformation.initCooTrafo
+    CooTransformation.initCooTrafo () // should be a function not a value
     
     let domainError (sender:obj) (args:UnhandledExceptionEventArgs) =
         let e = args.ExceptionObject :?> Exception;
@@ -205,6 +208,7 @@ let main argv =
         POST >=> path "/platformshots" >=> mapJson takePlatformShot
         Suave.Files.browseHome
     ] 
+
        
     use ctrl = new AardvarkCefBrowser()
     ctrl.Dock <- DockStyle.Fill
@@ -212,12 +216,13 @@ let main argv =
     form.Text <- "PRo3D Viewer - " + viewerVersion + " - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH" + licenseText
     //form.WindowState <- FormWindowState.Minimized
     //form.Controls.Add (new Label()) |> ignore
-    ctrl.StartUrl <- "http://localhost:4321/"        
+    ctrl.StartUrl <- "http://localhost:4321/?page=main" //"http://localhost:4321/?page=instrumentview"       
     //ctrl.ShowDevTools()
 
     //Config.shouldTimeUIUpdate <- true
     //Config.shouldTimeJsCodeGeneration <- true
     //Config.shouldTimeUnpersistCalls <- true
+
 
     Application.Run form
 
@@ -231,6 +236,6 @@ let main argv =
     //if p.HasExited |> not then p.Kill()
     ////sem.Wait()
 
-    CooTransformation.deInitCooTrafo
+    CooTransformation.deInitCooTrafo ()
 
     0

@@ -25,8 +25,9 @@ module DefaultMetrics =
 
     let tunnel (self : AdaptiveToken) (v : IMod<Trafo3d>) (pr : IMod<Trafo3d>) (p : RenderPatch) (c : IMod<LodParameters>)=
         let m = p.trafo.GetValue self
-        let vp   = Mod.map2 (*) v pr
-        let vp = vp.GetValue self
+        let view = v.GetValue self
+        let proj = pr.GetValue self
+        let vp   = view * proj
         let mvp = m * vp
         let area = computeScreenSpaceArea p.info.LocalBoundingBox mvp
                     
@@ -113,7 +114,7 @@ module Configurations =
             { 
                 useCompressedTextures = true
                 preTransform     = Trafo3d.FromOrthoNormalBasis(V3d.IOO, -V3d.OOI, V3d.OIO)
-                patchHierarchies = System.IO.Directory.GetDirectories(@"D:\perjen\2011_Bestandsaufnahme\OPC")
+                patchHierarchies = System.IO.Directory.GetDirectories(@"D:\opc\perjen\2011_Bestandsaufnahme\OPC")
                 boundingBox      = Box3d.Parse("[[16034.950038118, 222765.173562629, 802.291122034], [16037.049953225, 222767.420825919, 802.333067577]]")
                 near             = 0.1
                 far              = 10000.0

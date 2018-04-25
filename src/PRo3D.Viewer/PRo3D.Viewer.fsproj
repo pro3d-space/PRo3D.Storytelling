@@ -184,6 +184,17 @@
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
       <ItemGroup>
+        <Reference Include="Aardvark.Application.WinForms.Vulkan">
+          <HintPath>..\..\packages\Aardvark.Application.WinForms.Vulkan\lib\net45\Aardvark.Application.WinForms.Vulkan.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
         <Reference Include="System.Runtime.Serialization">
           <Paket>True</Paket>
         </Reference>
