@@ -9,6 +9,8 @@ open Aardvark.UI.Primitives
 open Aardvark.Base.Rendering
 open Aardvark.Opc    
 open Aardvark.SceneGraph
+open Aardvark.SceneGraph.IO
+
 
 open PRo3D
 open PRo3D.Groups
@@ -450,9 +452,7 @@ module Surface =
 
         sgSurfaces
 
-    module ObjectFiles =
-
-        open Aardvark.SceneGraph.IO
+    module ObjectFiles =        
 
         let loadObject (s:PRo3D.Surfaces.Surface) : SgSurfaceObj =
             //Ag.initialize()
