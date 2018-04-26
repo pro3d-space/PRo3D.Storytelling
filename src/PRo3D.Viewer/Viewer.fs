@@ -772,13 +772,13 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
-            //let objects = 
-            //    ViewerUtils.renderOBJ 
-            //        m.scene.surfacesModel.sgSurfaces 
-            //    |> Sg.map SurfaceActions
+            let objects = 
+                ViewerUtils.renderOBJ 
+                    m.scene.surfacesModel.sgSurfaces 
+                |> Sg.map SurfaceActions
 
             //controller, exploreCenter
-            [annos; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList // orSystem; ; objects
+            [annos; exploreCenter; refSystem; alignment; viewPlans; objects] |> Sg.ofList // orSystem; ; objects
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          

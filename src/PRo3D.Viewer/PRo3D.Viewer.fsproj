@@ -411,6 +411,11 @@
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
+        <Reference Include="OpenCvSharpExtern">
+          <HintPath>..\..\packages\Aardvark.OpenCvSharp\lib\net40\OpenCvSharpExtern.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
       </ItemGroup>
     </When>
   </Choose>

@@ -106,8 +106,8 @@ let main argv =
 
     Ag.initialize()
     Aardvark.Init()
-    use app = new VulkanApplication()
-    //use app = new OpenGlApplication()
+    //use app = new VulkanApplication()
+    use app = new OpenGlApplication()
     let runtime = app.Runtime    
 
     Aardvark.Rendering.GL.RuntimeConfig.SupressSparseBuffers <- true
