@@ -6,7 +6,6 @@ open Aardvark.Base
 open Aardvark.Base.IO
 open Aardvark.Base.Rendering
 open Aardvark.Base.Incremental
-open Aardvark.Rendering.NanoVg
 open Aardvark.SceneGraph
 open Aardvark.Base.Geometry
 open Aardvark.Base.Coder
