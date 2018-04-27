@@ -38,7 +38,7 @@ module Surface =
           let preTransform = scene.preTransform
       
           let patchHierarchies =
-              [ for h in scene.patchHierarchies do                  
+              [ for h in scene.patchHierarchies do
                   yield PatchHierarchy.load h
               ] 
           

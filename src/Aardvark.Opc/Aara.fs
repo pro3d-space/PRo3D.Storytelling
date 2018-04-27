@@ -313,6 +313,8 @@ module PatchHierarchy =
         let xmlPath   = Path.combine [folder; @"Patches\patchhierarchy.xml"]
         let cachefile = Path.combine [folder; "hierarchy.cache"]
         
+        
+
         if File.Exists cachefile then
             try
                 Log.startTimed "loading from cache file"
