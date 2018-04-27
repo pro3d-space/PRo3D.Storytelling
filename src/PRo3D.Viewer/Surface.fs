@@ -38,9 +38,8 @@ module Surface =
           let preTransform = scene.preTransform
       
           let patchHierarchies =
-              [ for h in scene.patchHierarchies do
-                  let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
-                  yield PatchHierarchy.load p
+              [ for h in scene.patchHierarchies do                  
+                  yield PatchHierarchy.load h
               ] 
           
           let getPatchKdTreePath (h:PatchHierarchy) patchName = 

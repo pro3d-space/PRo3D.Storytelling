@@ -295,43 +295,36 @@ module PatchHierarchy =
 
         let tree = mkTree rootPatch
         tree, avgSizes |> Array.rev
+    
+    let loadAndCache dir (xml:string) cache =
+       Log.startTimed "loading from hierarchy"
+       let tree, sizes = 
+           XDocument.Load(xml) |> ofDoc
+       let hierarchy = 
+           tree
+               |> QTree.mapLevel 0 (fun level p -> 
+                       p |> PatchFileInfo.load dir |> Patch.ofInfo level sizes.[level]
+                   )
+       binarySerializer.Pickle hierarchy |> File.writeAllBytes cache
+       Log.stop()
+       { baseDir = dir; tree = hierarchy }
 
-    let load (fileName : string) =
-        let dir = Path.GetDirectoryName(Path.GetDirectoryName fileName)
-        let cachefile = Path.combine [dir; "hierarchy.cache" ]
-        let loadAndCache () =
-            Log.startTimed "loading from hierarchy"
-            let tree, sizes = 
-                XDocument.Load(fileName) |> ofDoc
-            let hierarchy = 
-                tree
-                    |> QTree.mapLevel 0 (fun level p -> 
-                            p |> PatchFileInfo.load dir |> Patch.ofInfo level sizes.[level]
-                        )
-            binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
-            Log.stop()
-            { baseDir = dir; tree = hierarchy }
-
+    let load (folder : string) =
+        let xmlPath   = Path.combine [folder; @"Patches\patchhierarchy.xml"]
+        let cachefile = Path.combine [folder; "hierarchy.cache"]
+        
         if File.Exists cachefile then
             try
                 Log.startTimed "loading from cache file"
-                let r = { baseDir = dir; tree = File.readAllBytes cachefile |> binarySerializer.UnPickle }
+
+                let readFile = File.readAllBytes cachefile
+
+                let r = { baseDir = folder; tree = readFile  |> binarySerializer.UnPickle }
                 Log.stop()
                 r
             with e -> 
                 Log.warn "could not parse cache file. recomputing."
-                loadAndCache ()
+                loadAndCache folder xmlPath cachefile
         else
-            Log.startTimed "loading from hierarchy"
-            let tree, sizes = 
-                XDocument.Load(fileName) |> ofDoc
-            let hierarchy = 
-                tree                    
-                    |> QTree.mapLevel 0 (fun level p -> 
-                            p |> PatchFileInfo.load dir |> Patch.ofInfo level sizes.[level]
-                        )
-            binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
-            Log.stop()
-            { baseDir = dir; tree = hierarchy }
-
+            loadAndCache folder xmlPath cachefile
 

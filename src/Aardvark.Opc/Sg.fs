@@ -21,9 +21,8 @@ module Sg2 =
         
     let patchHierarchies =
       [ 
-        for h in scene.patchHierarchies do
-          let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
-          yield PatchHierarchy.load p
+        for h in scene.patchHierarchies do          
+          yield PatchHierarchy.load h
       ] 
 
     let leaves = 
