@@ -86,7 +86,7 @@ module Aara =
         Volume<'a>(result, dim)
 
     let fromFile<'a when 'a : unmanaged and 'a : (new : unit -> 'a) and 'a : struct and 'a :> ValueType> (s : string) =
-        use fs = Prinziple.getStream s//File.OpenRead(s) :> Stream
+        use fs = Prinziple.openRead s
         loadFromStream<'a> fs
 
     let inline isNan (v : V3f) = 

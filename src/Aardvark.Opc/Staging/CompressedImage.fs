@@ -29,12 +29,17 @@ module private NativeSupport =
         ptr
 
 module CompressedImage =
+    open Aardvark.Prinziple
 
     let loadAndCache (runtime : IRuntime) (fullPath : string) = 
 
         let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = true }
         
-        let sourceTex = FileTexture(fullPath, config) :> ITexture        
+        //let sourceTex = FileTexture(fullPath, config) :> ITexture    
+        
+        use s = Prinziple.openRead fullPath
+        let p = (PixImage.Create s)
+        let sourceTex = PixTexture2d(PixImageMipMap [| p |], true) :> ITexture
         
         let prepared = runtime.PrepareTexture(sourceTex)
         let handle = prepared.Handle |> unbox<int>
@@ -48,15 +53,7 @@ module CompressedImage =
         let mipLevels = 
             if config.wantMipMaps then 
                 int ( 1.0 + floor (log2 ( max (float prepared.Size.X) (float prepared.Size.Y))) ) 
-             else 1
-//            let mutable autoGen = 0
-//            GL.GetTexParameterI(TextureTarget.Texture2D, GetTextureParameter.GenerateMipmap, &autoGen)
-//            if autoGen = 1 then
-//                int ( 1.0 + floor (log ( max (float prepared.Size.X) (float prepared.Size.Y))) )
-//            else
-//                let mutable mipLevels = 0
-//                GL.GetTexParameterI(TextureTarget.Texture2D, OpenTK.Graphics.OpenGL4.All.TextureImmutableLevels |> unbox, &mipLevels)
-//                max 1 mipLevels
+            else 1
 
         let mipSizes = 
             [ 0 .. mipLevels - 1 ] 
@@ -65,7 +62,6 @@ module CompressedImage =
                     GL.GetTexLevelParameter(TextureTarget.Texture2D,l,GetTextureParameter.TextureCompressedImageSize,&size)
                     size
                 )
-
 
         let totalSize = List.sum mipSizes
         let originalName = Path.GetFileName(fullPath)
@@ -113,9 +109,10 @@ module CompressedImage =
         prepared :> ITexture, { new IDisposable with member x.Dispose() = GL.DeleteTexture(handle) }
 
     let loadFromCache (runtime : IRuntime) (cacheFileName : string) (infoFileName : string) (config : TextureParams) =
-
-        if File.Exists infoFileName then
-            use infoFile = new BinaryReader(File.OpenRead infoFileName)
+        
+        if Prinziple.exists infoFileName then
+            
+            use infoFile = new BinaryReader(Prinziple.openRead infoFileName)
 
             let version = infoFile.ReadInt32()
             if version = 11 then
@@ -126,9 +123,8 @@ module CompressedImage =
                 let mips = infoFile.ReadInt32() 
                 let offsets = [ for i in 0 .. mips - 1 do yield infoFile.ReadInt32(), infoFile.ReadInt32(), infoFile.ReadInt32(), infoFile.ReadInt32() ]
                 infoFile.Close()
-
-
-                use cacheStream = File.OpenRead(cacheFileName)
+                
+                use cacheStream = File.OpenRead cacheFileName
                 let sourcePtr = Marshal.AllocHGlobal totalSize
                 let mutable bytesRead = NativePtr.alloc 4 
                 let ok = NativeSupport.ReadFile(cacheStream.SafeFileHandle,sourcePtr,uint32 totalSize,bytesRead,IntPtr.Zero)
@@ -156,14 +152,7 @@ module CompressedImage =
                     GL.UnmapBuffer(BufferTarget.PixelUnpackBuffer) |> ignore
 
                     GL.Check "copied to buffer"
-
-//                    if level = 0 then 
                     GL.CompressedTexImage2D(TextureTarget.Texture2D, level, format, w, h, 0, size, 0n)
-//                    else
-//                    let te = unbox<TextureFormat> (int format)
-//                    let imageFormat = TextureExtensions.toUntypedPixelFormat te
-////                        let blubber = unbox<_> (int format)
-//                    GL.CompressedTexSubImage2D(TextureTarget.Texture2D, level, 0, 0, width, height, imageFormat.Value, size, 0n)
                     GL.Check (sprintf "compressedTexImage: %s, level: %d" cacheFileName level)
                     GL.BindBuffer(BufferTarget.PixelUnpackBuffer, 0)
                     GL.DeleteBuffer(pbo)

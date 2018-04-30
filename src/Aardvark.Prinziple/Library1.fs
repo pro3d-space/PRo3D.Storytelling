@@ -48,8 +48,8 @@ module Prinziple =
     if File.Exists zPath then
       zipTable <- HMap.add dir dir zipTable    
     dir
-
-  let getStream path =
+ 
+  let openRead path =
     let split = path |> Path.GetFullPath |> splitPath
     match split with
     | Some(zip,entry) ->
@@ -58,7 +58,7 @@ module Prinziple =
       let e = file.GetEntry(entryPath)
       file.GetInputStream(e)
     | None ->
-      File.OpenRead(path) :> Stream      
+      File.OpenRead(path) :> Stream
 
   let loadBytesFromZip zipPath (entryPath:string) =
     let entryPath = entryPath.Replace("\\","/")
