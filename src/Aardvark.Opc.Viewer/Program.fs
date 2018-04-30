@@ -112,36 +112,7 @@ module Viewer =
                 |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
                 |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)                
         sg
-
-    let createSceneGraph2 (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (time : IMod<_>) scene = 
-
-      let bb = scene.boundingBox    
-      
-      let speed = Mod.init scene.speed
-
-      let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
-
-      let initialView = 
-        CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
-
-      let view = 
-        initialView |> DefaultCameraController.controlWithSpeed speed mouse keyboard time
-      
-      let proj = 
-        sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))      
-
-      let sg = Aardvark.Opc.Sg2.createFlatISg scene
-
-      sg
-       |> Sg.transform preTransform
-       |> Sg.effect [
-          DefaultSurfaces.trafo |> toEffect
-          DefaultSurfaces.constantColor C4f.White |> toEffect
-          DefaultSurfaces.diffuseTexture |> toEffect
-       ]
-       |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
-       |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)
-
+    
     let run (scene : OpcScene) =
 
         Aardvark.Base.Ag.initialize()

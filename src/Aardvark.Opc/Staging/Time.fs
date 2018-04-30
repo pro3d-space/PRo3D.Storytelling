@@ -1,6 +1,7 @@
 ﻿namespace Aardvark.Base
 
 open System
+open Aardvark.Base
 
 [<Struct; CustomEquality; CustomComparison; StructuredFormatDisplay("{AsString}")>]
 type Time(ticks : int64) =

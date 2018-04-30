@@ -13,7 +13,6 @@ module Sg2 =
   
   open Aardvark.Base  
   open Aardvark.SceneGraph
-  open PatchLod
   open Aardvark.Base.Rendering
   open Aardvark.Base.Incremental
 
