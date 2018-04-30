@@ -4,6 +4,7 @@ open System
 open System.IO
 open Aardvark.Base
 open Aardvark.Base.IO
+open Aardvark.Prinziple
 open Aardvark.Opc
 
 type Patch =
@@ -57,7 +58,7 @@ module Patch =
             match exts with
                 | x::xs -> 
                     let current = System.IO.Path.ChangeExtension(path,x)
-                    if File.Exists current then current else tryFindTex xs path
+                    if Prinziple.exists current then current else tryFindTex xs path
                 | [] -> failwithf "texture not found: %s" path
 
         tryFindTex extensions sourcePath

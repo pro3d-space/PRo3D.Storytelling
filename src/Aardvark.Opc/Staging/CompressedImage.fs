@@ -7,7 +7,6 @@ open System.IO
 open System.Runtime.InteropServices
 open Aardvark.Base
 open Aardvark.Base.IO
-open Aardvark.Rendering.GL
 open OpenTK.Graphics.OpenGL4
 open FSharp.NativeInterop
 
@@ -34,7 +33,9 @@ module CompressedImage =
     let loadAndCache (runtime : IRuntime) (fullPath : string) = 
 
         let config = { wantMipMaps = true; wantSrgb = false; wantCompressed = true }
-        let sourceTex = FileTexture(fullPath, config) :> ITexture
+        
+        let sourceTex = FileTexture(fullPath, config) :> ITexture        
+        
         let prepared = runtime.PrepareTexture(sourceTex)
         let handle = prepared.Handle |> unbox<int>
 

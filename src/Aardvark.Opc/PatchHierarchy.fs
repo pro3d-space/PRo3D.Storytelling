@@ -5,6 +5,7 @@ open System.IO
 open Aardvark.Base
 open Aardvark.Base.IO
 open Aardvark.Opc
+open Aardvark.Prinziple
 
 type PatchHierarchy =
     { 
@@ -62,7 +63,7 @@ module PatchHierarchy =
     
     let loadAndCache dir (xml:string) cache =
        Log.startTimed "loading from hierarchy"
-       let tree, sizes = 
+       let tree, sizes =
            XDocument.Load(xml) |> ofDoc
        let hierarchy = 
            tree
@@ -77,11 +78,11 @@ module PatchHierarchy =
         let xmlPath   = Path.combine [folder; @"Patches\patchhierarchy.xml"]
         let cachefile = Path.combine [folder; "hierarchy.cache"]
                 
-        if File.Exists cachefile then
+        if Prinziple.exists cachefile then
             try
                 Log.startTimed "loading from cache file"
 
-                let readFile = File.readAllBytes cachefile
+                let readFile = Prinziple.readAllBytes cachefile
 
                 let r = { baseDir = folder; tree = readFile  |> binarySerializer.UnPickle }
                 Log.stop()

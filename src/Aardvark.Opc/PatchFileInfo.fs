@@ -181,7 +181,7 @@ module PatchFileInfo =
 
     let load (dir : string) (f : string) =
         let path = Path.combine [dir; "Patches"; f; "Patch.xml"]
-        let doc = Prinziple.readXml2 path                
+        let doc = Prinziple.readXmlDoc path
         ofXDoc doc f
 
 type QTree<'a> = Node of 'a * array<QTree<'a>>

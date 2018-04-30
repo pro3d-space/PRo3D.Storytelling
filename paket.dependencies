@@ -46,8 +46,6 @@ nuget SharpZipLib  ~> 0.86.0
 nuget FShade        ~> 3.4.2
 nuget FShade.Debug  ~> 3.4.2
 
-nuget SharpZipLib                           ~> 0.86.0
-
 nuget WindowsAPICodePack-Core
 nuget WindowsAPICodePack-ShellExtensions
 
