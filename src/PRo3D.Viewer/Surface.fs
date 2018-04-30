@@ -19,6 +19,8 @@ module Surface =
     open Aardvark.UI.Trafos        
 
     module Sg =
+      open Aardvark.Prinziple
+
       let mutable hackRunner = None
 
       let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene) (createKdTrees)
@@ -37,11 +39,8 @@ module Surface =
           let bb = scene.boundingBox      
           let preTransform = scene.preTransform
       
-          let patchHierarchies =
-              [ for h in scene.patchHierarchies do
-                  let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
-                  yield PatchHierarchy.load p
-              ] 
+          let patchHierarchies = 
+            scene.patchHierarchies |> Seq.map Prinziple.registerIfZipped |> Seq.map PatchHierarchy.load |> Seq.toList
           
           let getPatchKdTreePath (h:PatchHierarchy) patchName = 
               let rootpatch = h.tree |> QTree.getRoot 

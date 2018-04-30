@@ -15,6 +15,7 @@ open System.Runtime.InteropServices
 open Aardvark.Base
 open Aardvark.Base.IO
 open Aardvark.Opc
+open Aardvark.Prinziple
 
 [<AutoOpen>]
 module Aara =
@@ -296,26 +297,32 @@ module PatchHierarchy =
         let tree = mkTree rootPatch
         tree, avgSizes |> Array.rev
 
-    let load (fileName : string) =
-        let dir = Path.GetDirectoryName(Path.GetDirectoryName fileName)
-        let cachefile = Path.combine [dir; "hierarchy.cache" ]
+    
+
+    let load (opcFolder : string) =
+    
+        let hierPath = Path.combine [opcFolder; @"Patches\patchhierarchy.xml" ]
+
+        let cachefile = Path.combine [opcFolder; "hierarchy.cache" ]
         let loadAndCache () =
             Log.startTimed "loading from hierarchy"
             let tree, sizes = 
-                XDocument.Load(fileName) |> ofDoc
+                XDocument.Load(hierPath) |> ofDoc
             let hierarchy = 
                 tree
                     |> QTree.mapLevel 0 (fun level p -> 
-                            p |> PatchFileInfo.load dir |> Patch.ofInfo level sizes.[level]
+                            p |> PatchFileInfo.load opcFolder |> Patch.ofInfo level sizes.[level]
                         )
             binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
             Log.stop()
-            { baseDir = dir; tree = hierarchy }
+            { baseDir = opcFolder; tree = hierarchy }
 
         if File.Exists cachefile then
             try
                 Log.startTimed "loading from cache file"
-                let r = { baseDir = dir; tree = File.readAllBytes cachefile |> binarySerializer.UnPickle }
+                                
+                let tree = Prinziple.readAllBytes cachefile |> binarySerializer.UnPickle
+                let r = { baseDir = opcFolder; tree = tree }
                 Log.stop()
                 r
             with e -> 
@@ -324,14 +331,15 @@ module PatchHierarchy =
         else
             Log.startTimed "loading from hierarchy"
             let tree, sizes = 
-                XDocument.Load(fileName) |> ofDoc
+                hierPath |> Prinziple.readXml |> ofDoc
+                //XDocument.Load(hierPath) |> ofDoc
             let hierarchy = 
                 tree                    
                     |> QTree.mapLevel 0 (fun level p -> 
-                            p |> PatchFileInfo.load dir |> Patch.ofInfo level sizes.[level]
+                            p |> PatchFileInfo.load opcFolder |> Patch.ofInfo level sizes.[level]
                         )
             binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
             Log.stop()
-            { baseDir = dir; tree = hierarchy }
+            { baseDir = opcFolder; tree = hierarchy }
 
 

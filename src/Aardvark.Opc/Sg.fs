@@ -19,13 +19,9 @@ module Sg2 =
 
   let createFlatISg (scene : OpcScene) : ISg =
         
-    let patchHierarchies =
-      [ 
-        for h in scene.patchHierarchies do
-          let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
-          yield PatchHierarchy.load p
-      ] 
-
+    let patchHierarchies = 
+      scene.patchHierarchies |> Seq.map PatchHierarchy.load |> Seq.toList
+    
     let leaves = 
       patchHierarchies 
         |> List.collect(fun x ->  

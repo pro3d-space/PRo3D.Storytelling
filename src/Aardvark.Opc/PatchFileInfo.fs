@@ -72,6 +72,7 @@ type PatchFileInfo =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module PatchFileInfo =
     open XmlHelpers
+    open Aardvark.Prinziple
 
     [<AutoOpen>]
     module Parsers =
@@ -179,7 +180,8 @@ module PatchFileInfo =
         }    
 
     let load (dir : string) (f : string) =
-        let doc   = new XmlDocument() in doc.Load (Path.combine [dir; "Patches"; f; "Patch.xml"])
+        let path = Path.combine [dir; "Patches"; f; "Patch.xml"]
+        let doc = Prinziple.readXml2 path                
         ofXDoc doc f
 
 type QTree<'a> = Node of 'a * array<QTree<'a>>

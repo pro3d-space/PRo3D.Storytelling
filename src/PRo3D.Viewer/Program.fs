@@ -29,6 +29,7 @@ open System.Runtime.Serialization
 open Aardvark.VRVis
 open PRo3D.Viewer
 open PRo3D.Groups
+open System.Text
 
 [<DataContract>]
 type Calc =
@@ -119,7 +120,7 @@ let main argv =
 
     if licenseCheck then
       checkLicense()
-
+    
    // use form = new Form(Width = 0, Height = 0)
     let signature =
         runtime.CreateFramebufferSignature [

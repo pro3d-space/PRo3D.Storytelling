@@ -147,6 +147,11 @@
       <Project>{3b784ce7-f853-449a-a860-8d735c2a3f74}</Project>
       <Private>True</Private>
     </ProjectReference>
+    <ProjectReference Include="..\Aardvark.Prinziple\Aardvark.Prinziple.fsproj">
+      <Name>Aardvark.Prinziple</Name>
+      <Project>{e56fc320-109b-40ca-9080-1725cc2908d8}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">

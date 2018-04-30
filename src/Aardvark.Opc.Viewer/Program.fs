@@ -37,11 +37,8 @@ module Viewer =
         let fillMode = Mod.init FillMode.Fill
         let lodVisEnabled = Mod.init false
             
-        let patchHierarchies =
-            [ for h in scene.patchHierarchies do
-                let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
-                yield PatchHierarchy.load p
-            ] 
+        let patchHierarchies = 
+          scene.patchHierarchies |> Seq.map PatchHierarchy.load |> Seq.toList
    
         let g = 
             patchHierarchies 
