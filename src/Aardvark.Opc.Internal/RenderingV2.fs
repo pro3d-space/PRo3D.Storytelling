@@ -1,4 +1,4 @@
-﻿namespace Aardvark.Opc
+﻿namespace Aardvark.Opc.Internal
 
 open System
 open System.IO
@@ -11,6 +11,7 @@ open Aardvark.Base.Ag
 open Aardvark.SceneGraph
 open Aardvark.Rendering.GL
 open Aardvark.Rendering.SceneGraph.HierarchicalLoD
+open Aardvark.Opc
 
 open OpenTK.Graphics.OpenGL4
 
@@ -84,14 +85,15 @@ module PatchLod =
   open Aardvark.Base.Ag
   open Aardvark.SceneGraph.Semantics
   open Aardvark.SceneGraph.Semantics.TrafoSemantics
+  open Aardvark.Opc
   open Aardvark.Base.MultimethodTest
 
   let mutable useAsyncLoading = true
 
   let rec toRoseTree (p : QTree<'a>) =
       match p with
-          | QTree.Leaf v -> Leaf v
-          | QTree.Node(v,children) -> Node(v,children |> Array.toList |> List.map toRoseTree)
+          | QTree.Leaf v -> RoseTree.Leaf v
+          | QTree.Node(v,children) -> RoseTree.Node(v,children |> Array.toList |> List.map toRoseTree)
 
   type RenderPatch =
       {
@@ -282,10 +284,10 @@ module PatchLod =
 
       let rec flattenHorizon (t : RoseTree<RenderPatch>) =
         match t with
-          | Empty -> []
-          | Leaf v -> [v]
-          | Node(c,[]) -> [c]
-          | Node(c,xs) ->
+          | RoseTree.Empty -> []
+          | RoseTree.Leaf v -> [v]
+          | RoseTree.Node(c,[]) -> [c]
+          | RoseTree.Node(c,xs) ->
               xs |> List.collect flattenHorizon
 
       let syncRenderObjects =

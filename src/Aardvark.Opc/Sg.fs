@@ -16,10 +16,10 @@ module Sg2 =
   open Aardvark.Base.Rendering
   open Aardvark.Base.Incremental
 
-  let createFlatISg (scene : OpcScene) : ISg =
+  let createFlatISg (patchHierarchies) : ISg =
         
     let patchHierarchies = 
-      scene.patchHierarchies |> Seq.map PatchHierarchy.load |> Seq.toList
+      patchHierarchies |> Seq.map PatchHierarchy.load |> Seq.toList
     
     let leaves = 
       patchHierarchies 

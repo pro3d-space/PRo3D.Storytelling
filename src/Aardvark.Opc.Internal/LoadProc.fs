@@ -39,7 +39,7 @@ module Load =
     let onCancel (f : unit -> unit) : Load<unit> =
         { run =
             proc {
-                do! State.modify (fun s -> { s with undo = f :: s.undo})    
+                do! State.modify (fun s -> { s with undo = f :: s.undo})
             }
         }
 

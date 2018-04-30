@@ -8,6 +8,7 @@ open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Base.Rendering
 open Aardvark.Opc    
+open Aardvark.Opc.Internal
 open Aardvark.SceneGraph
 
 open PRo3D

@@ -1,13 +1,13 @@
-﻿namespace Aardvark.Opc
+﻿namespace Aardvark.Opc.Internal
 
 open System
 open Aardvark.Base
 open Aardvark.Base.IO
 open Aardvark.Base.Incremental
-
-open PatchLod
+open Aardvark.Opc
 
 module DefaultMetrics =
+    open PatchLod
     
     let mars (self : AdaptiveToken) (v : IMod<Trafo3d>) (pr : IMod<Trafo3d>) (p : RenderPatch) (c : IMod<LodParameters>) =
         let lodParams = c.GetValue self
@@ -37,7 +37,7 @@ module DefaultMetrics =
 
 [<AutoOpen>]
 module Configurations =
-
+    
     type FileName = string
     type OpcScene = { 
         patchHierarchies : seq<FileName> 

@@ -11,14 +11,16 @@ open Aardvark.SceneGraph
 open Aardvark.Base.Geometry
 open Aardvark.Base.Coder
 
-open Aardvark.Opc
-
 open Aardvark.Application
 open Aardvark.Application.WinForms
-    
+
+open Aardvark.Base.Rendering.Effects
+open FShade    
+
+open Aardvark.Opc
+open Aardvark.Opc.Internal
+
 module Viewer = 
-    open Aardvark.Base.Rendering.Effects
-    open FShade    
     
     let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcScene)  = 
     
