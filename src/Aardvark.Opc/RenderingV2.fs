@@ -235,12 +235,7 @@ module PatchLod =
                       let factor = float p.level / (float height - 1.0)
                       let c = hsv2rgb 0.0 factor 1.0                      
                       Mod.constant c :> IMod |> Some
-                    | "ModelTrafo" -> p.trafo :> IMod |> Some
-                    //| "ModelViewTrafo" -> p.trafo <*> v :> IMod |> Some
-                    //| "ModelViewProjTrafo" -> p.trafo <*> vp :> IMod |> Some
-                    //| "ModelTrafoInv" -> p.trafo |> inverse :> IMod |> Some
-                    //| "ModelViewTrafoInv" -> p.trafo <*> v |> inverse :> IMod |> Some
-                    //| "ModelViewProjTrafoInv" -> p.trafo <*> vp |> inverse :> IMod |> Some
+                    | "ModelTrafo" -> p.trafo :> IMod |> Some                    
                     | _ -> 
                       lock old (fun () -> old.TryGetUniform(scope, sem))
 

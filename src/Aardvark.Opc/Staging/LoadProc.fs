@@ -9,6 +9,7 @@ open System.Reactive.Subjects
 open Aardvark.Base
 open Aardvark.Base.IO
 open Aardvark.Base.Monads.State
+open Aardvark.Base.Incremental
 
 type ILoadTask<'a> =
     inherit IMod<Option<'a>>

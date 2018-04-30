@@ -72,8 +72,10 @@
     <Compile Include="Staging\Proc.fs" />
     <Compile Include="Staging\LoadProc.fs" />
     <Compile Include="Staging\HiearchicalLoD.fs" />
-    <Compile Include="PatchFileInfo.fs" />
     <Compile Include="Aara.fs" />
+    <Compile Include="PatchFileInfo.fs" />
+    <Compile Include="Patch.fs" />
+    <Compile Include="PatchHierarchy.fs" />
     <Compile Include="RenderUtilities.fs" />
     <Compile Include="RenderingV2.fs" />
     <Compile Include="Shaders.fs" />
