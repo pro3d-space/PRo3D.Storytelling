@@ -250,7 +250,7 @@ module ViewerUtils =
         Ag.initialize()
         let sg = 
             let scaleTrafo = Mod.constant (Trafo3d.Scale(10.0))
-            let obj = Aardvark.SceneGraph.IO.Loader.Assimp.load @"C:\Users\laura\VRVis\Data\OBJ\aardvark.obj" 
+            let obj = Aardvark.SceneGraph.IO.Loader.Assimp.load @"C:\Users\ortner\Desktop\aardvark.obj"
             
             obj
                 |> Sg.adapter
