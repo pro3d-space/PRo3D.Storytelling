@@ -10,8 +10,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpUtils", "CSharpUtils\
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PRo3D.DomainModel", "PRo3D.DomainModel\PRo3D.DomainModel.fsproj", "{8D290ADB-6593-4281-80CE-E36AB42C6C41}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "GuiExperiments", "GuiExperiments\GuiExperiments.fsproj", "{235D4180-085D-4BBC-8DF0-D0C8B75AF573}"
-EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PRo3D.Viewer", "PRo3D.Viewer\PRo3D.Viewer.fsproj", "{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Aardvark.Opc.Viewer", "Aardvark.Opc.Viewer\Aardvark.Opc.Viewer.fsproj", "{25CD84C6-6892-49DE-8210-7C48B8B7FFB6}"
@@ -42,10 +40,6 @@ Global
 		{8D290ADB-6593-4281-80CE-E36AB42C6C41}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D290ADB-6593-4281-80CE-E36AB42C6C41}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8D290ADB-6593-4281-80CE-E36AB42C6C41}.Release|Any CPU.Build.0 = Release|Any CPU
-		{235D4180-085D-4BBC-8DF0-D0C8B75AF573}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{235D4180-085D-4BBC-8DF0-D0C8B75AF573}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{235D4180-085D-4BBC-8DF0-D0C8B75AF573}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{235D4180-085D-4BBC-8DF0-D0C8B75AF573}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}.Release|Any CPU.ActiveCfg = Release|Any CPU

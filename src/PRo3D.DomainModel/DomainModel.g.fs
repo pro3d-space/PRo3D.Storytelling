@@ -40,7 +40,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let urdar =
-                { new Lens<Aardvark.PRo3d.Urdar, Microsoft.FSharp.Core.int>() with
+                { new Lens<Aardvark.PRo3d.Urdar, System.Int32>() with
                     override x.Get(r) = r.urdar
                     override x.Set(r,v) = { r with urdar = v }
                     override x.Update(r,f) = { r with urdar = f r.urdar }
@@ -95,43 +95,43 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let boxHovered =
-                { new Lens<Aardvark.PRo3d.Model, Microsoft.FSharp.Core.bool>() with
+                { new Lens<Aardvark.PRo3d.Model, System.Boolean>() with
                     override x.Get(r) = r.boxHovered
                     override x.Set(r,v) = { r with boxHovered = v }
                     override x.Update(r,f) = { r with boxHovered = f r.boxHovered }
                 }
             let dragging =
-                { new Lens<Aardvark.PRo3d.Model, Microsoft.FSharp.Core.bool>() with
+                { new Lens<Aardvark.PRo3d.Model, System.Boolean>() with
                     override x.Get(r) = r.dragging
                     override x.Set(r,v) = { r with dragging = v }
                     override x.Update(r,f) = { r with dragging = f r.dragging }
                 }
             let lastName =
-                { new Lens<Aardvark.PRo3d.Model, Microsoft.FSharp.Core.Option<Microsoft.FSharp.Core.string>>() with
+                { new Lens<Aardvark.PRo3d.Model, Microsoft.FSharp.Core.Option<System.String>>() with
                     override x.Get(r) = r.lastName
                     override x.Set(r,v) = { r with lastName = v }
                     override x.Update(r,f) = { r with lastName = f r.lastName }
                 }
             let elements =
-                { new Lens<Aardvark.PRo3d.Model, Aardvark.Base.plist<Microsoft.FSharp.Core.string>>() with
+                { new Lens<Aardvark.PRo3d.Model, Aardvark.Base.plist<System.String>>() with
                     override x.Get(r) = r.elements
                     override x.Set(r,v) = { r with elements = v }
                     override x.Update(r,f) = { r with elements = f r.elements }
                 }
             let hasD3Hate =
-                { new Lens<Aardvark.PRo3d.Model, Microsoft.FSharp.Core.bool>() with
+                { new Lens<Aardvark.PRo3d.Model, System.Boolean>() with
                     override x.Get(r) = r.hasD3Hate
                     override x.Set(r,v) = { r with hasD3Hate = v }
                     override x.Update(r,f) = { r with hasD3Hate = f r.hasD3Hate }
                 }
             let boxScale =
-                { new Lens<Aardvark.PRo3d.Model, Microsoft.FSharp.Core.float>() with
+                { new Lens<Aardvark.PRo3d.Model, System.Double>() with
                     override x.Get(r) = r.boxScale
                     override x.Set(r,v) = { r with boxScale = v }
                     override x.Update(r,f) = { r with boxScale = f r.boxScale }
                 }
             let objects =
-                { new Lens<Aardvark.PRo3d.Model, Aardvark.Base.hmap<Microsoft.FSharp.Core.string,Aardvark.PRo3d.Urdar>>() with
+                { new Lens<Aardvark.PRo3d.Model, Aardvark.Base.hmap<System.String,Aardvark.PRo3d.Urdar>>() with
                     override x.Get(r) = r.objects
                     override x.Set(r,v) = { r with objects = v }
                     override x.Update(r,f) = { r with objects = f r.objects }
@@ -213,43 +213,43 @@ module Mutable =
                     override x.Update(r,f) = { r with dragStart = f r.dragStart }
                 }
             let look =
-                { new Lens<Aardvark.PRo3d.CameraControllerState, Microsoft.FSharp.Core.bool>() with
+                { new Lens<Aardvark.PRo3d.CameraControllerState, System.Boolean>() with
                     override x.Get(r) = r.look
                     override x.Set(r,v) = { r with look = v }
                     override x.Update(r,f) = { r with look = f r.look }
                 }
             let zoom =
-                { new Lens<Aardvark.PRo3d.CameraControllerState, Microsoft.FSharp.Core.bool>() with
+                { new Lens<Aardvark.PRo3d.CameraControllerState, System.Boolean>() with
                     override x.Get(r) = r.zoom
                     override x.Set(r,v) = { r with zoom = v }
                     override x.Update(r,f) = { r with zoom = f r.zoom }
                 }
             let pan =
-                { new Lens<Aardvark.PRo3d.CameraControllerState, Microsoft.FSharp.Core.bool>() with
+                { new Lens<Aardvark.PRo3d.CameraControllerState, System.Boolean>() with
                     override x.Get(r) = r.pan
                     override x.Set(r,v) = { r with pan = v }
                     override x.Update(r,f) = { r with pan = f r.pan }
                 }
             let forward =
-                { new Lens<Aardvark.PRo3d.CameraControllerState, Microsoft.FSharp.Core.bool>() with
+                { new Lens<Aardvark.PRo3d.CameraControllerState, System.Boolean>() with
                     override x.Get(r) = r.forward
                     override x.Set(r,v) = { r with forward = v }
                     override x.Update(r,f) = { r with forward = f r.forward }
                 }
             let backward =
-                { new Lens<Aardvark.PRo3d.CameraControllerState, Microsoft.FSharp.Core.bool>() with
+                { new Lens<Aardvark.PRo3d.CameraControllerState, System.Boolean>() with
                     override x.Get(r) = r.backward
                     override x.Set(r,v) = { r with backward = v }
                     override x.Update(r,f) = { r with backward = f r.backward }
                 }
             let left =
-                { new Lens<Aardvark.PRo3d.CameraControllerState, Microsoft.FSharp.Core.bool>() with
+                { new Lens<Aardvark.PRo3d.CameraControllerState, System.Boolean>() with
                     override x.Get(r) = r.left
                     override x.Set(r,v) = { r with left = v }
                     override x.Update(r,f) = { r with left = f r.left }
                 }
             let right =
-                { new Lens<Aardvark.PRo3d.CameraControllerState, Microsoft.FSharp.Core.bool>() with
+                { new Lens<Aardvark.PRo3d.CameraControllerState, System.Boolean>() with
                     override x.Get(r) = r.right
                     override x.Set(r,v) = { r with right = v }
                     override x.Update(r,f) = { r with right = f r.right }
@@ -261,7 +261,7 @@ module Mutable =
                     override x.Update(r,f) = { r with moveVec = f r.moveVec }
                 }
             let lastTime =
-                { new Lens<Aardvark.PRo3d.CameraControllerState, Microsoft.FSharp.Core.Option<Microsoft.FSharp.Core.float>>() with
+                { new Lens<Aardvark.PRo3d.CameraControllerState, Microsoft.FSharp.Core.Option<System.Double>>() with
                     override x.Get(r) = r.lastTime
                     override x.Set(r,v) = { r with lastTime = v }
                     override x.Update(r,f) = { r with lastTime = f r.lastTime }

@@ -152,7 +152,8 @@ module CompressedImage =
                     GL.UnmapBuffer(BufferTarget.PixelUnpackBuffer) |> ignore
 
                     GL.Check "copied to buffer"
-                    GL.CompressedTexImage2D(TextureTarget.Texture2D, level, format, w, h, 0, size, 0n)
+                    // check me
+                    GL.CompressedTexImage2D(TextureTarget.Texture2D, level, format |> int |> unbox, w, h, 0, size, 0n)
                     GL.Check (sprintf "compressedTexImage: %s, level: %d" cacheFileName level)
                     GL.BindBuffer(BufferTarget.PixelUnpackBuffer, 0)
                     GL.DeleteBuffer(pbo)
@@ -167,7 +168,8 @@ module CompressedImage =
                     { new IDisposable with
                         member x.Dispose() =
                             use ctx = (runtime :> IRuntime).ContextLock
-                            Aardvark.Rendering.GL.TextureExtensions.removeTexture runtime.Context (int64 totalSize)
+                            // check
+                            //Aardvark.Rendering.GL.TextureExtensions.removeTexture runtime.Context (int64 totalSize)
                             GL.DeleteTexture(handle)
                     }
 
@@ -178,7 +180,7 @@ module CompressedImage =
                             1, V3i(width,height,1), None, format |> unbox<TextureFormat>,
                             int64 totalSize, false)
 
-                Aardvark.Rendering.GL.TextureExtensions.addTexture runtime.Context (int64 totalSize)
+                //Aardvark.Rendering.GL.TextureExtensions.addTexture runtime.Context (int64 totalSize)
 
                 Some ( t :> ITexture, dispose )
             else

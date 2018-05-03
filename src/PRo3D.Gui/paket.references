@@ -5,11 +5,8 @@ Aardvark.Base.FSharp
 Aardvark.Base.Rendering
 Aardvark.Application.WinForms.GL
 Aardvark.SceneGraph
-Aardvark.Rendering.NanoVg
 
 FSharp.Core
-Fsunit
-FParsec
 FsPickler
 WindowsAPICodePack-Core
 WindowsAPICodePack-ShellExtensions

@@ -6,7 +6,6 @@ Aardvark.Base.Rendering
 Aardvark.Application.WinForms.GL
 Aardvark.Application.WinForms.Vulkan
 Aardvark.SceneGraph
-Aardvark.Rendering.NanoVg
 
 Aardvark.Rendering.Text
 
@@ -27,3 +26,5 @@ WindowsAPICodePack-ShellExtensions
 
 Newtonsoft.Json
 SKGL
+
+Aardium

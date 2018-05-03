@@ -9,7 +9,6 @@ open Aardvark.SceneGraph.Semantics
 
 open Aardvark.Application
 open Aardvark.Application.WinForms
-open Aardvark.Rendering.NanoVg
 open Aardvark.Rendering.GL
 
 module DGM = 
@@ -309,7 +308,7 @@ module Viewer =
         win.Keyboard.KeyDown(Keys.PageDown).Values.Subscribe(fun _ ->   
             transact (fun () -> speed.Value <- speed.Value / 2.0) 
         ) |> ignore
-        win.RenderTask <- task |> DefaultOverlays.withStatistics
+        win.RenderTask <- task 
         win.Run()
         0
 
