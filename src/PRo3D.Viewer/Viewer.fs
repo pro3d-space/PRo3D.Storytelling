@@ -472,6 +472,69 @@ module ViewerApp =
                 | None, _ -> 
                     Log.error ("no hit")
                     m
+            | PickObject (p,id), _ ,_ ->  
+                match m.picking with
+                    |true ->
+                          let cameraLocation = m.scene.navigation.camera.view.Location 
+                          //let fray = p.globalRay.Ray
+                          //let r = fray.Ray
+                          //let p = r.GetPointOnRay
+                          //let hitF (p : V3d) = 
+                
+                          //  let ray =
+                          //      match m.drawing.projection with
+                          //          | Projection.Viewpoint -> 
+                          //              let dir = (p-cameraLocation).Normalized
+                          //              FastRay3d(cameraLocation, dir)  
+                          //          | Projection.Sky -> 
+                          //              let up = m.scene.referenceSystem.up.value
+                          //              FastRay3d(p + (up * 5000.0), -up)  
+                          //          | _ -> Log.error "projection started without proj mode"; FastRay3d()
+                
+                          //  match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray cache with
+                          //      | Some (t,surf), c ->                             
+                          //          cache <- c; ray.Ray.GetPointOnRay t |> Some
+                          //      | None, c ->
+                          //          cache <- c; None
+                                  
+              
+                          match m.interaction with
+                            | Interactions.DrawAnnotation ->   m            
+                                //Log.error "closest intersection on %A" surf.name
+                                //let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
+                                //Log.stop()
+                                //{ m with drawing = drawing } |> stash
+                            | Interactions.PlaceCoordinateSystem -> 
+                          
+                                let refAction = ReferenceSystemApp.Action.InferCoordSystem(p)
+                                let (refSystem',_)= 
+                                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
+                          
+                                let origin = new V3d(m.overlayFrustum.right * 0.5, m.overlayFrustum.bottom * 0.5, 1.0)
+                                let os = { refSystem' with origin = origin }
+                                let m = { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = os }; picking = false}
+                          
+                                //update camera upvector
+                                updateCameraUp m
+                            | Interactions.PickExploreCenter ->
+                                let c   = m.scene.config
+                                let ref = m.scene.referenceSystem
+                                let navigation' = 
+                                    Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick p))
+                                { m with scene = {m.scene with navigation = navigation' }; picking = false }
+                            | Interactions.PlaceRover ->
+                                let camState = m.scene.navigation.camera
+                                let ref = m.scene.referenceSystem 
+                                let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
+                                let m' = { m with scene = {m.scene with viewPlans = viewPlans' }; picking = false }
+                                match m.scene.viewPlans.working.IsEmpty with
+                                    | true -> m' 
+                                    | false -> { m' with tabMenu = TabMenu.Viewplanner }
+                            | Interactions.AlignPick -> 
+                                { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = id})); picking = false}
+                            | _ -> m
+                    | false -> m
+                
             | SaveScene, _,_ -> 
                 match m.scene.scenePath with
                     | None ->                        
@@ -771,13 +834,13 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
-            let objects = 
-                ViewerUtils.renderOBJ 
-                    m.scene.surfacesModel.sgSurfaces 
-                |> Sg.map SurfaceActions
+            //let objects = 
+            //    ViewerUtils.renderOBJ 
+            //        m.scene.surfacesModel.sgSurfaces 
+            //    |> Sg.map SurfaceActions
 
             //controller, exploreCenter
-            [annos; exploreCenter; refSystem; alignment; viewPlans; objects] |> Sg.ofList // orSystem; ; objects
+            [annos; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList // orSystem; ; objects
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
