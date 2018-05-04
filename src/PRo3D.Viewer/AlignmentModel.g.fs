@@ -116,13 +116,13 @@ module Mutable =
                     override x.Update(r,f) = { r with pickedPoints = f r.pickedPoints }
                 }
             let alignment =
-                { new Lens<PRo3d.Align.AlignmentModel, Microsoft.FSharp.Core.option<PRo3d.Align.Alignment>>() with
+                { new Lens<PRo3d.Align.AlignmentModel, Microsoft.FSharp.Core.Option<PRo3d.Align.Alignment>>() with
                     override x.Get(r) = r.alignment
                     override x.Set(r,v) = { r with alignment = v }
                     override x.Update(r,f) = { r with alignment = f r.alignment }
                 }
             let resultTrafo =
-                { new Lens<PRo3d.Align.AlignmentModel, Microsoft.FSharp.Core.option<Aardvark.Base.Trafo3d>>() with
+                { new Lens<PRo3d.Align.AlignmentModel, Microsoft.FSharp.Core.Option<Aardvark.Base.Trafo3d>>() with
                     override x.Get(r) = r.resultTrafo
                     override x.Set(r,v) = { r with resultTrafo = v }
                     override x.Update(r,f) = { r with resultTrafo = f r.resultTrafo }

@@ -94,31 +94,31 @@ module Mutable =
                     override x.Update(r,f) = { r with guid = f r.guid }
                 }
             let name =
-                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.Surfaces.Surface, System.String>() with
                     override x.Get(r) = r.name
                     override x.Set(r,v) = { r with name = v }
                     override x.Update(r,f) = { r with name = f r.name }
                 }
             let importPath =
-                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.Surfaces.Surface, System.String>() with
                     override x.Get(r) = r.importPath
                     override x.Set(r,v) = { r with importPath = v }
                     override x.Update(r,f) = { r with importPath = f r.importPath }
                 }
             let opcNames =
-                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Collections.list<Microsoft.FSharp.Core.string>>() with
+                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Collections.List<System.String>>() with
                     override x.Get(r) = r.opcNames
                     override x.Set(r,v) = { r with opcNames = v }
                     override x.Update(r,f) = { r with opcNames = f r.opcNames }
                 }
             let opcPaths =
-                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Collections.list<Microsoft.FSharp.Core.string>>() with
+                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Collections.List<System.String>>() with
                     override x.Get(r) = r.opcPaths
                     override x.Set(r,v) = { r with opcPaths = v }
                     override x.Update(r,f) = { r with opcPaths = f r.opcPaths }
                 }
             let relativePaths =
-                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Surfaces.Surface, System.Boolean>() with
                     override x.Get(r) = r.relativePaths
                     override x.Set(r,v) = { r with relativePaths = v }
                     override x.Update(r,f) = { r with relativePaths = f r.relativePaths }
@@ -136,7 +136,7 @@ module Mutable =
                     override x.Update(r,f) = { r with cullMode = f r.cullMode }
                 }
             let isVisible =
-                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Surfaces.Surface, System.Boolean>() with
                     override x.Get(r) = r.isVisible
                     override x.Set(r,v) = { r with isVisible = v }
                     override x.Update(r,f) = { r with isVisible = f r.isVisible }
@@ -172,7 +172,7 @@ module Mutable =
                     override x.Update(r,f) = { r with scalarLayers = f r.scalarLayers }
                 }
             let selectedScalar =
-                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Core.option<PRo3D.Surfaces.ScalarLayer>>() with
+                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Core.Option<PRo3D.Surfaces.ScalarLayer>>() with
                     override x.Get(r) = r.selectedScalar
                     override x.Set(r,v) = { r with selectedScalar = v }
                     override x.Update(r,f) = { r with selectedScalar = f r.selectedScalar }
@@ -184,7 +184,7 @@ module Mutable =
                     override x.Update(r,f) = { r with textureLayers = f r.textureLayers }
                 }
             let selectedTexture =
-                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Core.option<PRo3D.Surfaces.TextureLayer>>() with
+                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Core.Option<PRo3D.Surfaces.TextureLayer>>() with
                     override x.Get(r) = r.selectedTexture
                     override x.Set(r,v) = { r with selectedTexture = v }
                     override x.Update(r,f) = { r with selectedTexture = f r.selectedTexture }

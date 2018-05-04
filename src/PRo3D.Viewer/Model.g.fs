@@ -52,31 +52,31 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let average =
-                { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.Statistics, System.Double>() with
                     override x.Get(r) = r.average
                     override x.Set(r,v) = { r with average = v }
                     override x.Update(r,f) = { r with average = f r.average }
                 }
             let min =
-                { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.Statistics, System.Double>() with
                     override x.Get(r) = r.min
                     override x.Set(r,v) = { r with min = v }
                     override x.Update(r,f) = { r with min = f r.min }
                 }
             let max =
-                { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.Statistics, System.Double>() with
                     override x.Get(r) = r.max
                     override x.Set(r,v) = { r with max = v }
                     override x.Update(r,f) = { r with max = f r.max }
                 }
             let stdev =
-                { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.Statistics, System.Double>() with
                     override x.Get(r) = r.stdev
                     override x.Set(r,v) = { r with stdev = v }
                     override x.Update(r,f) = { r with stdev = f r.stdev }
                 }
             let sumOfSquares =
-                { new Lens<PRo3D.Statistics, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.Statistics, System.Double>() with
                     override x.Get(r) = r.sumOfSquares
                     override x.Set(r,v) = { r with sumOfSquares = v }
                     override x.Update(r,f) = { r with sumOfSquares = f r.sumOfSquares }
@@ -140,7 +140,7 @@ module Mutable =
                     override x.Update(r,f) = { r with plane = f r.plane }
                 }
             let dipAngle =
-                { new Lens<PRo3D.DipAndStrikeResults, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.DipAndStrikeResults, System.Double>() with
                     override x.Get(r) = r.dipAngle
                     override x.Set(r,v) = { r with dipAngle = v }
                     override x.Update(r,f) = { r with dipAngle = f r.dipAngle }
@@ -158,13 +158,13 @@ module Mutable =
                     override x.Update(r,f) = { r with strikeDirection = f r.strikeDirection }
                 }
             let dipAzimuth =
-                { new Lens<PRo3D.DipAndStrikeResults, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.DipAndStrikeResults, System.Double>() with
                     override x.Get(r) = r.dipAzimuth
                     override x.Set(r,v) = { r with dipAzimuth = v }
                     override x.Update(r,f) = { r with dipAzimuth = f r.dipAzimuth }
                 }
             let strikeAzimuth =
-                { new Lens<PRo3D.DipAndStrikeResults, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.DipAndStrikeResults, System.Double>() with
                     override x.Get(r) = r.strikeAzimuth
                     override x.Set(r,v) = { r with strikeAzimuth = v }
                     override x.Update(r,f) = { r with strikeAzimuth = f r.strikeAzimuth }
@@ -222,25 +222,25 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let height =
-                { new Lens<PRo3D.AnnotationResults, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.AnnotationResults, System.Double>() with
                     override x.Get(r) = r.height
                     override x.Set(r,v) = { r with height = v }
                     override x.Update(r,f) = { r with height = f r.height }
                 }
             let heightDelta =
-                { new Lens<PRo3D.AnnotationResults, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.AnnotationResults, System.Double>() with
                     override x.Get(r) = r.heightDelta
                     override x.Set(r,v) = { r with heightDelta = v }
                     override x.Update(r,f) = { r with heightDelta = f r.heightDelta }
                 }
             let length =
-                { new Lens<PRo3D.AnnotationResults, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.AnnotationResults, System.Double>() with
                     override x.Get(r) = r.length
                     override x.Set(r,v) = { r with length = v }
                     override x.Update(r,f) = { r with length = f r.length }
                 }
             let wayLength =
-                { new Lens<PRo3D.AnnotationResults, Microsoft.FSharp.Core.float>() with
+                { new Lens<PRo3D.AnnotationResults, System.Double>() with
                     override x.Get(r) = r.wayLength
                     override x.Set(r,v) = { r with wayLength = v }
                     override x.Update(r,f) = { r with wayLength = f r.wayLength }
@@ -443,19 +443,19 @@ module Mutable =
                     override x.Update(r,f) = { r with dnsResults = f r.dnsResults }
                 }
             let visible =
-                { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Annotation, System.Boolean>() with
                     override x.Get(r) = r.visible
                     override x.Set(r,v) = { r with visible = v }
                     override x.Update(r,f) = { r with visible = f r.visible }
                 }
             let showDns =
-                { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Annotation, System.Boolean>() with
                     override x.Get(r) = r.showDns
                     override x.Set(r,v) = { r with showDns = v }
                     override x.Update(r,f) = { r with showDns = f r.showDns }
                 }
             let text =
-                { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.Annotation, System.String>() with
                     override x.Get(r) = r.text
                     override x.Set(r,v) = { r with text = v }
                     override x.Update(r,f) = { r with text = f r.text }
@@ -467,7 +467,7 @@ module Mutable =
                     override x.Update(r,f) = { r with textsize = f r.textsize }
                 }
             let surfaceName =
-                { new Lens<PRo3D.Annotation, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.Annotation, System.String>() with
                     override x.Get(r) = r.surfaceName
                     override x.Set(r,v) = { r with surfaceName = v }
                     override x.Update(r,f) = { r with surfaceName = f r.surfaceName }
@@ -507,13 +507,13 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let absolutePath =
-                { new Lens<PRo3D.PathProxy, Microsoft.FSharp.Core.option<Microsoft.FSharp.Core.string>>() with
+                { new Lens<PRo3D.PathProxy, Microsoft.FSharp.Core.Option<System.String>>() with
                     override x.Get(r) = r.absolutePath
                     override x.Set(r,v) = { r with absolutePath = v }
                     override x.Update(r,f) = { r with absolutePath = f r.absolutePath }
                 }
             let relativePath =
-                { new Lens<PRo3D.PathProxy, Microsoft.FSharp.Core.option<Microsoft.FSharp.Core.string>>() with
+                { new Lens<PRo3D.PathProxy, Microsoft.FSharp.Core.Option<System.String>>() with
                     override x.Get(r) = r.relativePath
                     override x.Set(r,v) = { r with relativePath = v }
                     override x.Update(r,f) = { r with relativePath = f r.relativePath }
@@ -696,7 +696,7 @@ module Mutable =
                     override x.Update(r,f) = { r with maxDipAngle = f r.maxDipAngle }
                 }
             let lodColoring =
-                { new Lens<PRo3D.ViewConfigModel, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.ViewConfigModel, System.Boolean>() with
                     override x.Get(r) = r.lodColoring
                     override x.Set(r,v) = { r with lodColoring = v }
                     override x.Update(r,f) = { r with lodColoring = f r.lodColoring }

@@ -102,10 +102,11 @@ let checkLicense () =
 
 [<EntryPoint;STAThread>]
 let main argv = 
+    Xilium.CefGlue.ChromiumUtilities.unpackCef()
+    Chromium.init argv
+
     Ag.initialize()
     Aardvark.Init()
-
-    Aardium.Init()
 
     //use app = new VulkanApplication()
     use app = new OpenGlApplication()

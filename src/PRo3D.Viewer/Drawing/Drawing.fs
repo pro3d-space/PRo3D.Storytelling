@@ -735,7 +735,7 @@ module DrawingApp =
            
             let texts = 
               anno.text 
-                |> Mod.map (String.isEmpty >> not) 
+                |> Mod.map (String.IsNullOrEmpty >> not) 
                 |> optional (drawText view conf anno)
 
             let sgs = ASet.unionMany' [dots; texts]

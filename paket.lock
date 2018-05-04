@@ -778,11 +778,11 @@ NUGET
     WindowsAPICodePack-ShellExtensions (1.1.1)
       WindowsAPICodePack-Shell (>= 1.1.1)
   remote: https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
-    Aardvark.Compiler.DomainTypes (4.0.4)
+    Aardvark.Compiler.DomainTypes (4.0.5)
       Aardvark.Base.Incremental (>= 4.0 < 4.1)
       FSharp.Core (>= 4.3 < 4.4)
-    Aardvark.Compiler.DomainTypes.MSBuild (4.0.4)
-      Aardvark.Compiler.DomainTypes (4.0.4)
+    Aardvark.Compiler.DomainTypes.MSBuild (4.0.5)
+      Aardvark.Compiler.DomainTypes (4.0.5)
     Another.Unofficial.Xilium.CefGlue (0.1.1)
     Another.Unofficial.Xilium.CefGlue.UnpackNativeDependencies (0.1.1)
       SharpZipLib (>= 0.86 < 0.87)
@@ -873,7 +873,7 @@ NUGET
     SourceLink.Fake (1.1) - content: none
 GITHUB
   remote: aardvark-platform/aardvark.fake
-    FULLPROJECT (bfae10520868567c41bfa9196a7ac7ef79bb50f6)
+    FULLPROJECT (9d14226e198e89271a78d82ed981469f3d12bbaf)
       FAKE (>= 4.63 < 4.64)
       Mono.Cecil (>= 0.10.0-beta6 < 0.11)
       SourceLink.Fake (>= 1.1 < 1.2)

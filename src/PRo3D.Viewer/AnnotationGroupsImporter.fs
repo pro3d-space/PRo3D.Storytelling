@@ -9,7 +9,6 @@ module AnnotationGroupsImporter =
     open Aardvark.UI
     open PRo3D.Groups
     open PRo3D.ReferenceSystem
-    open YoLo.Async
 
     let xname s = XName.Get(s)
 

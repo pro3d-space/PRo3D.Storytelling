@@ -12,7 +12,6 @@ open Aardvark.Base.Incremental
 open Aardvark.Base.Incremental.Operators
 open Aardvark.Base.Rendering
 open Aardvark.SceneGraph
-open Aardvark.Rendering.NanoVg
 open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Rendering.Text

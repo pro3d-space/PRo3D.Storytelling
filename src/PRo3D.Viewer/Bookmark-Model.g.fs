@@ -52,7 +52,7 @@ module Mutable =
                     override x.Update(r,f) = { r with key = f r.key }
                 }
             let name =
-                { new Lens<PRo3D.BookmarksX.Bookmark, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.BookmarksX.Bookmark, System.String>() with
                     override x.Get(r) = r.name
                     override x.Set(r,v) = { r with name = v }
                     override x.Update(r,f) = { r with name = f r.name }

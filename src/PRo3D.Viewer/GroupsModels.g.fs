@@ -157,7 +157,7 @@ module Mutable =
                     override x.Update(r,f) = { r with key = f r.key }
                 }
             let name =
-                { new Lens<PRo3D.Groups.Node, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.Groups.Node, System.String>() with
                     override x.Get(r) = r.name
                     override x.Set(r,v) = { r with name = v }
                     override x.Update(r,f) = { r with name = f r.name }
@@ -175,13 +175,13 @@ module Mutable =
                     override x.Update(r,f) = { r with subNodes = f r.subNodes }
                 }
             let visible =
-                { new Lens<PRo3D.Groups.Node, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Groups.Node, System.Boolean>() with
                     override x.Get(r) = r.visible
                     override x.Set(r,v) = { r with visible = v }
                     override x.Update(r,f) = { r with visible = f r.visible }
                 }
             let expanded =
-                { new Lens<PRo3D.Groups.Node, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Groups.Node, System.Boolean>() with
                     override x.Get(r) = r.expanded
                     override x.Set(r,v) = { r with expanded = v }
                     override x.Update(r,f) = { r with expanded = f r.expanded }
@@ -263,7 +263,7 @@ module Mutable =
                     override x.Update(r,f) = { r with flat = f r.flat }
                 }
             let groupsLookup =
-                { new Lens<PRo3D.Groups.GroupsModel, Aardvark.Base.hmap<System.Guid,Microsoft.FSharp.Core.string>>() with
+                { new Lens<PRo3D.Groups.GroupsModel, Aardvark.Base.hmap<System.Guid,System.String>>() with
                     override x.Get(r) = r.groupsLookup
                     override x.Set(r,v) = { r with groupsLookup = v }
                     override x.Update(r,f) = { r with groupsLookup = f r.groupsLookup }
@@ -281,7 +281,7 @@ module Mutable =
                     override x.Update(r,f) = { r with selectedLeaves = f r.selectedLeaves }
                 }
             let singleSelectLeaf =
-                { new Lens<PRo3D.Groups.GroupsModel, Microsoft.FSharp.Core.option<System.Guid>>() with
+                { new Lens<PRo3D.Groups.GroupsModel, Microsoft.FSharp.Core.Option<System.Guid>>() with
                     override x.Get(r) = r.singleSelectLeaf
                     override x.Set(r,v) = { r with singleSelectLeaf = v }
                     override x.Update(r,f) = { r with singleSelectLeaf = f r.singleSelectLeaf }
@@ -428,7 +428,7 @@ module Mutable =
                     override x.Update(r,f) = { r with sgGrouped = f r.sgGrouped }
                 }
             let kdTreeCache =
-                { new Lens<PRo3D.Groups.SurfaceModel, Aardvark.Base.hmap<Microsoft.FSharp.Core.string,Aardvark.Geometry.ConcreteKdIntersectionTree>>() with
+                { new Lens<PRo3D.Groups.SurfaceModel, Aardvark.Base.hmap<System.String,Aardvark.Geometry.ConcreteKdIntersectionTree>>() with
                     override x.Get(r) = r.kdTreeCache
                     override x.Set(r,v) = { r with kdTreeCache = v }
                     override x.Update(r,f) = { r with kdTreeCache = f r.kdTreeCache }

@@ -88,7 +88,7 @@ module Mutable =
                     override x.Update(r,f) = { r with config = f r.config }
                 }
             let scenePath =
-                { new Lens<PRo3D.Viewer.Scene, Microsoft.FSharp.Core.option<Microsoft.FSharp.Core.string>>() with
+                { new Lens<PRo3D.Viewer.Scene, Microsoft.FSharp.Core.Option<System.String>>() with
                     override x.Get(r) = r.scenePath
                     override x.Set(r,v) = { r with scenePath = v }
                     override x.Update(r,f) = { r with scenePath = f r.scenePath }
@@ -155,13 +155,13 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let path =
-                { new Lens<PRo3D.Viewer.SceneHandle, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.Viewer.SceneHandle, System.String>() with
                     override x.Get(r) = r.path
                     override x.Set(r,v) = { r with path = v }
                     override x.Update(r,f) = { r with path = f r.path }
                 }
             let name =
-                { new Lens<PRo3D.Viewer.SceneHandle, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.Viewer.SceneHandle, System.String>() with
                     override x.Get(r) = r.name
                     override x.Set(r,v) = { r with name = v }
                     override x.Update(r,f) = { r with name = f r.name }
@@ -204,7 +204,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let recentScenes =
-                { new Lens<PRo3D.Viewer.Recent, Aardvark.Base.hmap<Microsoft.FSharp.Core.string,PRo3D.Viewer.SceneHandle>>() with
+                { new Lens<PRo3D.Viewer.Recent, Aardvark.Base.hmap<System.String,PRo3D.Viewer.SceneHandle>>() with
                     override x.Get(r) = r.recentScenes
                     override x.Set(r,v) = { r with recentScenes = v }
                     override x.Update(r,f) = { r with recentScenes = f r.recentScenes }
@@ -316,7 +316,7 @@ module Mutable =
                     override x.Update(r,f) = { r with interaction = f r.interaction }
                 }
             let picking =
-                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Viewer.Model, System.Boolean>() with
                     override x.Get(r) = r.picking
                     override x.Set(r,v) = { r with picking = v }
                     override x.Update(r,f) = { r with picking = f r.picking }
@@ -346,7 +346,7 @@ module Mutable =
                     override x.Update(r,f) = { r with overlayFrustum = f r.overlayFrustum }
                 }
             let aspect =
-                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.double>() with
+                { new Lens<PRo3D.Viewer.Model, System.Double>() with
                     override x.Get(r) = r.aspect
                     override x.Set(r,v) = { r with aspect = v }
                     override x.Update(r,f) = { r with aspect = f r.aspect }

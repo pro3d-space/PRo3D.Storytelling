@@ -40,7 +40,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let arrowSize =
-                { new Lens<ConfigLensTest.BigConfig, Microsoft.FSharp.Core.double>() with
+                { new Lens<ConfigLensTest.BigConfig, System.Double>() with
                     override x.Get(r) = r.arrowSize
                     override x.Set(r,v) = { r with arrowSize = v }
                     override x.Update(r,f) = { r with arrowSize = f r.arrowSize }

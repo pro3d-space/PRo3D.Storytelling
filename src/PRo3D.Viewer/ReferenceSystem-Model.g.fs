@@ -79,7 +79,7 @@ module Mutable =
                     override x.Update(r,f) = { r with up = f r.up }
                 }
             let isVisible =
-                { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, System.Boolean>() with
                     override x.Get(r) = r.isVisible
                     override x.Set(r,v) = { r with isVisible = v }
                     override x.Update(r,f) = { r with isVisible = f r.isVisible }
@@ -91,13 +91,13 @@ module Mutable =
                     override x.Update(r,f) = { r with size = f r.size }
                 }
             let scaleChart =
-                { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, Aardvark.Base.plist<Microsoft.FSharp.Core.string>>() with
+                { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, Aardvark.Base.plist<System.String>>() with
                     override x.Get(r) = r.scaleChart
                     override x.Set(r,v) = { r with scaleChart = v }
                     override x.Update(r,f) = { r with scaleChart = f r.scaleChart }
                 }
             let selectedScale =
-                { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, System.String>() with
                     override x.Get(r) = r.selectedScale
                     override x.Set(r,v) = { r with selectedScale = v }
                     override x.Update(r,f) = { r with selectedScale = f r.selectedScale }

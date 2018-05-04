@@ -76,13 +76,13 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let draw =
-                { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.bool>() with
+                { new Lens<PRo3D.Drawing.DrawingModel, System.Boolean>() with
                     override x.Get(r) = r.draw
                     override x.Set(r,v) = { r with draw = v }
                     override x.Update(r,f) = { r with draw = f r.draw }
                 }
             let hoverPosition =
-                { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.option<Aardvark.Base.Trafo3d>>() with
+                { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.Option<Aardvark.Base.Trafo3d>>() with
                     override x.Get(r) = r.hoverPosition
                     override x.Set(r,v) = { r with hoverPosition = v }
                     override x.Update(r,f) = { r with hoverPosition = f r.hoverPosition }
@@ -130,7 +130,7 @@ module Mutable =
                     override x.Update(r,f) = { r with annotations = f r.annotations }
                 }
             let exportPath =
-                { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.string>() with
+                { new Lens<PRo3D.Drawing.DrawingModel, System.String>() with
                     override x.Get(r) = r.exportPath
                     override x.Set(r,v) = { r with exportPath = v }
                     override x.Update(r,f) = { r with exportPath = f r.exportPath }
