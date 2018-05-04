@@ -170,6 +170,45 @@ module ViewerApp =
             else None
       }
 
+    let matchPickingInteraction (w : Form) (bc : BlockingCollection<string>) (p:V3d) (hit:(V3d-> V3d option)) (surf:Surface) (m:Model) = 
+         match m.interaction with
+            | Interactions.DrawAnnotation -> 
+                let m = match surf.surfaceType with
+                        | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = Projection.Linear } }   
+                        | _ -> m
+                Log.error "closest intersection on %A" surf.name
+                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(p,hit,surf.name))
+                //Log.stop()
+                { m with drawing = drawing } |> stash
+            | Interactions.PlaceCoordinateSystem -> 
+                          
+                let refAction = ReferenceSystemApp.Action.InferCoordSystem(p)
+                let (refSystem',_)= 
+                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
+                          
+                let origin = new V3d(m.overlayFrustum.right * 0.5, m.overlayFrustum.bottom * 0.5, 1.0)
+                let os = { refSystem' with origin = origin }
+                let m = { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = os }}
+                          
+                //update camera upvector
+                updateCameraUp m
+            | Interactions.PickExploreCenter ->
+                let c   = m.scene.config
+                let ref = m.scene.referenceSystem
+                let navigation' = 
+                    Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick p))
+                { m with scene = {m.scene with navigation = navigation'; } }
+            | Interactions.PlaceRover ->
+                let ref = m.scene.referenceSystem 
+                let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
+                let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
+                match m.scene.viewPlans.working.IsEmpty with
+                    | true -> m' 
+                    | false -> { m' with tabMenu = TabMenu.Viewplanner }
+            | Interactions.AlignPick -> 
+                { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
+            | _ -> m
+
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
@@ -433,106 +472,17 @@ module ViewerApp =
                 | Some (t,surf), c ->                         
                   cache <- c
                   let hit = r.GetPointOnRay(t)
-                  
-                  match m.interaction with
-                      | Interactions.DrawAnnotation ->               
-                          Log.error "closest intersection on %A" surf.name
-                          let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
-                          Log.stop()
-                          { m with drawing = drawing } |> stash
-                      | Interactions.PlaceCoordinateSystem -> 
-                          
-                          let refAction = ReferenceSystemApp.Action.InferCoordSystem(hit)
-                          let (refSystem',_)= 
-                              ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
-                          
-                          let origin = new V3d(m.overlayFrustum.right * 0.5, m.overlayFrustum.bottom * 0.5, 1.0)
-                          let os = { refSystem' with origin = origin }
-                          let m = { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = os }}
-                          
-                          //update camera upvector
-                          updateCameraUp m
-                      | Interactions.PickExploreCenter ->
-                          let c   = m.scene.config
-                          let ref = m.scene.referenceSystem
-                          let navigation' = 
-                              Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick hit))
-                          { m with scene = {m.scene with navigation = navigation'; } }
-                      | Interactions.PlaceRover ->
-                          let camState = m.scene.navigation.camera
-                          let ref = m.scene.referenceSystem 
-                          let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(hit,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
-                          let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
-                          match m.scene.viewPlans.working.IsEmpty with
-                              | true -> m' 
-                              | false -> { m' with tabMenu = TabMenu.Viewplanner }
-                      | Interactions.AlignPick -> 
-                          { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = hit; surfaceName = surf.guid}))}
-                      | _ -> m
+                  matchPickingInteraction w bc hit hitF surf m
                 | None, _ -> 
                     Log.error ("no hit")
                     m
             | PickObject (p,id), _ ,_ ->  
                 match m.picking with
                     |true ->
-                          let cameraLocation = m.scene.navigation.camera.view.Location 
-                          //let fray = p.globalRay.Ray
-                          //let r = fray.Ray
-                          //let p = r.GetPointOnRay
-                          //let hitF (p : V3d) = 
-                
-                          //  let ray =
-                          //      match m.drawing.projection with
-                          //          | Projection.Viewpoint -> 
-                          //              let dir = (p-cameraLocation).Normalized
-                          //              FastRay3d(cameraLocation, dir)  
-                          //          | Projection.Sky -> 
-                          //              let up = m.scene.referenceSystem.up.value
-                          //              FastRay3d(p + (up * 5000.0), -up)  
-                          //          | _ -> Log.error "projection started without proj mode"; FastRay3d()
-                
-                          //  match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray cache with
-                          //      | Some (t,surf), c ->                             
-                          //          cache <- c; ray.Ray.GetPointOnRay t |> Some
-                          //      | None, c ->
-                          //          cache <- c; None
-                                  
-              
-                          match m.interaction with
-                            | Interactions.DrawAnnotation ->   m            
-                                //Log.error "closest intersection on %A" surf.name
-                                //let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(hit,hitF,surf.name))
-                                //Log.stop()
-                                //{ m with drawing = drawing } |> stash
-                            | Interactions.PlaceCoordinateSystem -> 
-                          
-                                let refAction = ReferenceSystemApp.Action.InferCoordSystem(p)
-                                let (refSystem',_)= 
-                                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
-                          
-                                let origin = new V3d(m.overlayFrustum.right * 0.5, m.overlayFrustum.bottom * 0.5, 1.0)
-                                let os = { refSystem' with origin = origin }
-                                let m = { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = os }; picking = false}
-                          
-                                //update camera upvector
-                                updateCameraUp m
-                            | Interactions.PickExploreCenter ->
-                                let c   = m.scene.config
-                                let ref = m.scene.referenceSystem
-                                let navigation' = 
-                                    Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick p))
-                                { m with scene = {m.scene with navigation = navigation' }; picking = false }
-                            | Interactions.PlaceRover ->
-                                let camState = m.scene.navigation.camera
-                                let ref = m.scene.referenceSystem 
-                                let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
-                                let m' = { m with scene = {m.scene with viewPlans = viewPlans' }; picking = false }
-                                match m.scene.viewPlans.working.IsEmpty with
-                                    | true -> m' 
-                                    | false -> { m' with tabMenu = TabMenu.Viewplanner }
-                            | Interactions.AlignPick -> 
-                                { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = id})); picking = false}
-                            | _ -> m
+                          let hitF (p : V3d) = None
+                          match (m.scene.surfacesModel.surfaces.flat.TryFind id) with
+                            | Some x -> matchPickingInteraction w bc p hitF (x |> Leaf.toSurface) m 
+                            | None -> m
                     | false -> m
                 
             | SaveScene, _,_ -> 
@@ -1067,7 +1017,7 @@ module ViewerApp =
              ]                        
              Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
              Incremental.div AttributeMap.empty (AList.ofModSingle switchViewerMode)
-             Incremental.div AttributeMap.empty (AList.ofModSingle choosePlanet)          
+             //Incremental.div AttributeMap.empty (AList.ofModSingle choosePlanet)          
         ] 
 
         let viewTabs (tab:IMod<TabMenu>) = 

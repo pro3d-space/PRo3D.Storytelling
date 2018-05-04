@@ -324,7 +324,7 @@ module ViewerUtils =
                     |> Sg.requirePicking
                     |> pickable' pickable
                     |> Sg.noEvents
-                    //|> Sg.trafo scaleTrafo
+                    //|> Sg.trafo globalToLocal
                     |> Sg.withEvents [
                         Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
                     ]
