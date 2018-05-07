@@ -47,7 +47,8 @@ type ViewerAction =
     | SetCamera                 of CameraView        
     | SetCameraAndFrustum       of CameraView * double * double        
     | SetCameraAndFrustum2      of CameraView * Frustum
-    | ImportSurface     
+    | ImportSurface   
+    | ImportObject   
     | ImportAnnotationGroups
     | ImportSurfaceTrafo
     | SwitchViewerMode
@@ -58,6 +59,7 @@ type ViewerAction =
     | DeleteLast
     | AddSg                     of ISg
     | PickSurface               of SceneHit*string
+    | PickObject                of V3d*Guid
     | SaveScene
     | SaveAs                    
     | OpenScene
@@ -113,9 +115,39 @@ module ViewerUtils =
 
         entry |> Mod.bind(fun x -> x |> toModSurface)
 
-    let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (globalBB : IMod<Box3d>) =
+    type MSgSurfaces with
+        member x.surface =
+            match x with
+                | MSgSurfaceOPC opc -> opc.surface
+                | MSgSurfaceOBJ obj -> obj.surface
+
+        member x.globalBB =
+            match x with
+                | MSgSurfaceOPC opc -> opc.globalBB
+                | MSgSurfaceOBJ obj -> obj.globalBB
+
+        member x.trafo =
+            match x with
+                | MSgSurfaceOPC opc -> opc.trafo
+                | MSgSurfaceOBJ obj -> obj.trafo
+
+        member x.sceneGraph =
+            match x with
+                | MSgSurfaceOPC opc -> opc.sceneGraph
+                | MSgSurfaceOBJ obj -> obj.sceneGraph
+
+        //member x.picking =
+        //    match x with
+        //        | MSgSurfaceOPC opc -> opc.sceneGraph
+        //        | MSgSurfaceOBJ obj -> obj.pickMesh
+                                      
+       
+           
+
+    let viewSingleSurfaceSgOPC (surface : MSgSurfaces) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (globalBB : IMod<Box3d>) =
         
         let surf = lookUp (surface.surface) blarg
+            //Mod.bind(fun x -> lookUp (x.surface) blarg )
 
         let isSelected = Mod.map(fun x ->
           match x with
@@ -134,7 +166,7 @@ module ViewerUtils =
                 return { shape = PickShape.Box bb; trafo = Trafo3d.Identity }
             }        
 
-        let rangeToMinMax (s:MSgSurface) =
+        let rangeToMinMax (s:MSgSurfaces) =
             adaptive {
                 let! s = surf
                 let! scalar = s.selectedScalar
@@ -154,7 +186,7 @@ module ViewerUtils =
             }
        
         let sg = 
-            surface.sceneGraph 
+            surface.sceneGraph
                 |> Mod.map createSg
                 |> Sg.dynamic
                 |> Sg.uniform "selected"       isSelected
@@ -211,27 +243,152 @@ module ViewerUtils =
                 //                    t))
                 //|> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))                
                 //|> Sg.trafo (surface.trafo.previewTrafo |> Mod.map(fun x -> printfn "%A" x.Forward.C3.XYZ; x))
+
+               
         sg
+    
+    let renderOBJ (surfaces : amap<Guid,IMod<MSgSurfaces>>)  =
+        Ag.initialize()
+        let sg = 
+            let scaleTrafo = Mod.constant (Trafo3d.Scale(10.0))
+            let obj = Aardvark.SceneGraph.IO.Loader.Assimp.load @"C:\Users\ortner\Desktop\aardvark.obj"
+            
+            obj
+                |> Sg.adapter
+                
+                // flip the z coordinates (since the model is upside down)
+                |> Sg.transform (Trafo3d.Scale(1.0, 1.0, -1.0))
+                |> Sg.scale 3.0
+                |> Sg.noEvents
+                //|> Sg.trafo scaleTrafo
+                |> Sg.withEvents [
+                    Sg.onMouseDown ( fun b v -> SurfaceApp.Action.PickObject v )
+                ]
+                |> Sg.shader {
+                    do! DefaultSurfaces.trafo
+                    do! DefaultSurfaces.diffuseTexture
+                    do! DefaultSurfaces.normalMap
+                    do! DefaultSurfaces.simpleLighting
+                }
+                        
+        sg
+
+    let viewSingleSurfaceSgOBJ (surface : MSgSurfaces) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (globalBB : IMod<Box3d>) =
+        
+        let surf = lookUp (surface.surface) blarg
+
+        let isSelected = Mod.map(fun x ->
+          match x with
+            | Some id -> id = surface.surface
+            | None -> false) selectedId 
+
+        let createSg (sg : ISg) =
+            sg 
+            |> Sg.noEvents 
+            |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
+            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))         
+                
+        let pickable = 
+            adaptive {
+                let! bb = globalBB
+                return { shape = PickShape.Box bb; trafo = Trafo3d.Identity }
+            }        
+
+        let rangeToMinMax (s:MSgSurfaces) =
+            adaptive {
+                let! s = surf
+                let! scalar = s.selectedScalar
+                return match scalar with 
+                          | Some s -> V2d(s.definedRange.Min, s.definedRange.Max)
+                          | None   -> V2d(0.0,1.0)
+            }
+
+        let globalToLocal = 
+            surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation -x.Center)
+            
+        let selectedScalar =
+            adaptive {
+                let! s = surf
+                let! scalar = s.selectedScalar
+                return scalar.IsSome
+            }
+       
+        let sg = 
+            let scaleTrafo = Mod.constant (Trafo3d.Scale(10.0))
+            //let obj = Aardvark.SceneGraph.IO.Loader.Assimp.load @"C:\Users\laura\VRVis\Data\OBJ\aardvark.obj" 
+            
+            aset {
+                let! obj = surface.sceneGraph
+                yield obj 
+                    |> Sg.adapter
+                    |> Sg.transform (Trafo3d.Scale(1.0, 1.0, -1.0))
+                    |> Sg.requirePicking
+                    |> pickable' pickable
+                    |> Sg.noEvents
+                    //|> Sg.trafo globalToLocal
+                    |> Sg.withEvents [
+                        Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
+                    ]
+                    |> Sg.shader {
+                        do! DefaultSurfaces.trafo
+                        do! DefaultSurfaces.diffuseTexture
+                        do! DefaultSurfaces.normalMap
+                        do! DefaultSurfaces.simpleLighting
+                    }
+                 }       |> Sg.set
+
+        //let sgPicking = 
+        //    aset {
+        //        let! mesh = surface.picking
+        //        yield mesh
+        //        |> Sg.requirePicking
+        //        |> pickable' pickable
+        //        |> Sg.noEvents
+        //        |> Sg.withEvents [
+        //            // Sg.onEnter ( fun v -> Enter v )
+        //            Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
+        //        ]
+        //        |> Sg.shader {
+        //            do! DefaultSurfaces.trafo
+        //            do! DefaultSurfaces.constantColor C4f.White
+        //        }
+        //        |> Sg.depthTest (Mod.constant DepthTestMode.Never)
+                         
+        //        } |> Sg.set
+        //[sg ;sgPicking ] |> Sg.ofList
+        sg
+
+        
 
     let frustum (m:MModel) =
         let near = m.scene.config.nearPlane.value
         let far = m.scene.config.farPlane.value
         (Navigation.UI.frustum near far)
 
-    let renderCommands sgGrouped overlayed discs (m:MModel) =
+    let renderCommands (sgGrouped:alist<amap<Guid,IMod<MSgSurfaces>>>) overlayed discs (m:MModel) =
         let selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
-
+        
         let grouped = 
             sgGrouped |> AList.map(
                 fun x -> ( x 
                     |> AMap.map(fun _ sf -> 
                         let bla = m.scene.surfacesModel.surfaces.flat
-                        viewSingleSurfaceSg sf bla m.frustum selected sf.globalBB)
+                        let sf = Mod.force sf
+                        let test = match sf with
+                                    | MSgSurfaceOPC surf ->
+                                         (viewSingleSurfaceSgOPC sf bla m.frustum selected sf.globalBB)
+                                    | MSgSurfaceOBJ surf -> 
+                                        (viewSingleSurfaceSgOBJ sf bla m.frustum selected sf.globalBB)
+                        test
+                                )
+                    //|> AMap.choose(fun _ y -> y ) 
                     |> AMap.toASet 
                     |> ASet.map snd 
+                    
                 )
+                
             )
-            
+        //grouped   
         alist {        
             let! c = grouped |> AList.count
             let mutable i = 0
@@ -254,9 +411,9 @@ module ViewerUtils =
                 yield RenderCommand.SceneGraph sg                    
 
                 if i = c then
-                  yield RenderCommand.SceneGraph discs                  
+                  yield RenderCommand.SceneGraph discs
 
                 yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
-
+            
             yield RenderCommand.SceneGraph overlayed
         }  

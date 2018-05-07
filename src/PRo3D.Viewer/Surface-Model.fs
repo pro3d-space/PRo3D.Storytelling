@@ -12,6 +12,7 @@ open DevILSharp.ILU
 open Aardvark.VRVis
 open PRo3D
 open Aardvark.UI.Trafos
+open Aardvark.SceneGraph.IO.Loader
 
 
 //[<DomainType>]
@@ -37,6 +38,10 @@ type AttributeLayer =
 //type SurfaceAttributes = {
 //    attributeLayers : list<AttributeLayer>
 //}
+
+type SurfaceType = 
+    | SurfaceOPC = 0
+    | SurfaceOBJ = 1
 
 [<DomainType>]
 type Surface = {    
@@ -66,10 +71,12 @@ type Surface = {
 
     textureLayers   : plist<TextureLayer>
     selectedTexture : option<TextureLayer>
+
+    surfaceType     : SurfaceType     
 }
 
 [<DomainType>]
-type SgSurface = {    
+type SgSurfaceOpc = {    
     [<NonIncremental>]
     surface     : Guid    
     trafo       : Transformation
@@ -77,6 +84,73 @@ type SgSurface = {
     sceneGraph  : ISg
     kdTree      : hmap<Box3d,Level0KdTree>
 }
+
+[<DomainType>]
+type SgSurfaceObj = {    
+    [<NonIncremental>]
+    surface     : Guid    
+    trafo       : Transformation
+    globalBB    : Box3d
+    sceneGraph  : ISg
+    pickMesh    : ISg
+}
+
+[<DomainType>]
+type SgSurfaces = 
+    | SgSurfaceOPC    of value : SgSurfaceOpc
+    | SgSurfaceOBJ    of value : SgSurfaceObj
+
+    with     
+      member x.surface =
+        match x with
+          | SgSurfaceOPC opc -> opc.surface
+          | SgSurfaceOBJ obj -> obj.surface
+
+      member x.trafo =
+        match x with
+          | SgSurfaceOPC opc -> opc.trafo
+          | SgSurfaceOBJ obj -> obj.trafo
+
+      member x.globalBB =
+        match x with
+          | SgSurfaceOPC opc -> opc.globalBB
+          | SgSurfaceOBJ obj -> obj.globalBB
+
+module sgSurface = 
+    let isSgOPC (sgSurf:SgSurfaces) =
+        match sgSurf with 
+            | SgSurfaceOPC opc -> true
+            |_-> false
+
+    let toSgOPC (sgSurf:SgSurfaces) =
+        match sgSurf with 
+            | SgSurfaceOPC opc -> opc
+            |_-> failwith "wrong type"
+
+    let toSgSurfacesOPC surfs =
+        surfs
+            |> HMap.choose(fun _ x -> 
+                match x with
+                | SgSurfaceOPC s -> Some s
+                | _ -> None )
+
+    let isSgOBJ (sgSurf:SgSurfaces) =
+        match sgSurf with 
+            | SgSurfaceOBJ obj -> true
+            |_-> false
+
+    let toSgOBJ (sgSurf:SgSurfaces) =
+        match sgSurf with 
+            | SgSurfaceOBJ obj -> obj
+            |_-> failwith "wrong type"
+
+    let toSgSurfacesOBJ surfs =
+        surfs
+            |> HMap.choose(fun _ x -> 
+                match x with
+                | SgSurfaceOBJ s -> Some s
+                | _ -> None )
+
 
 module Init =
     let quality = 

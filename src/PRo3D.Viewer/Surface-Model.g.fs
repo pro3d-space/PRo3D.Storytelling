@@ -30,6 +30,7 @@ module Mutable =
         let _selectedScalar = MOption.Create(__initial.selectedScalar)
         let _textureLayers = MList.Create(__initial.textureLayers)
         let _selectedTexture = MOption.Create(__initial.selectedTexture)
+        let _surfaceType = ResetMod.Create(__initial.surfaceType)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
@@ -48,6 +49,7 @@ module Mutable =
         member x.selectedScalar = _selectedScalar :> IMod<_>
         member x.textureLayers = _textureLayers :> alist<_>
         member x.selectedTexture = _selectedTexture :> IMod<_>
+        member x.surfaceType = _surfaceType :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.Surface) =
@@ -71,6 +73,7 @@ module Mutable =
                 MOption.Update(_selectedScalar, v.selectedScalar)
                 MList.Update(_textureLayers, v.textureLayers)
                 MOption.Update(_selectedTexture, v.selectedTexture)
+                ResetMod.Update(_surfaceType,v.surfaceType)
                 
         
         static member Create(__initial : PRo3D.Surfaces.Surface) : MSurface = MSurface(__initial)
@@ -189,11 +192,17 @@ module Mutable =
                     override x.Set(r,v) = { r with selectedTexture = v }
                     override x.Update(r,f) = { r with selectedTexture = f r.selectedTexture }
                 }
+            let surfaceType =
+                { new Lens<PRo3D.Surfaces.Surface, PRo3D.Surfaces.SurfaceType>() with
+                    override x.Get(r) = r.surfaceType
+                    override x.Set(r,v) = { r with surfaceType = v }
+                    override x.Update(r,f) = { r with surfaceType = f r.surfaceType }
+                }
     
     
-    type MSgSurface(__initial : PRo3D.Surfaces.SgSurface) =
+    type MSgSurfaceOpc(__initial : PRo3D.Surfaces.SgSurfaceOpc) =
         inherit obj()
-        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurface> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.SgSurface>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurface>
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurfaceOpc> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.SgSurfaceOpc>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurfaceOpc>
         let _trafo = Aardvark.UI.Trafos.Mutable.MTransformation.Create(__initial.trafo)
         let _globalBB = ResetMod.Create(__initial.globalBB)
         let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
@@ -206,7 +215,7 @@ module Mutable =
         member x.kdTree = _kdTree :> amap<_,_>
         
         member x.Current = __current :> IMod<_>
-        member x.Update(v : PRo3D.Surfaces.SgSurface) =
+        member x.Update(v : PRo3D.Surfaces.SgSurfaceOpc) =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
@@ -216,47 +225,191 @@ module Mutable =
                 MMap.Update(_kdTree, v.kdTree)
                 
         
-        static member Create(__initial : PRo3D.Surfaces.SgSurface) : MSgSurface = MSgSurface(__initial)
-        static member Update(m : MSgSurface, v : PRo3D.Surfaces.SgSurface) = m.Update(v)
+        static member Create(__initial : PRo3D.Surfaces.SgSurfaceOpc) : MSgSurfaceOpc = MSgSurfaceOpc(__initial)
+        static member Update(m : MSgSurfaceOpc, v : PRo3D.Surfaces.SgSurfaceOpc) = m.Update(v)
         
         override x.ToString() = __current.Value.ToString()
         member x.AsString = sprintf "%A" __current.Value
-        interface IUpdatable<PRo3D.Surfaces.SgSurface> with
+        interface IUpdatable<PRo3D.Surfaces.SgSurfaceOpc> with
             member x.Update v = x.Update v
     
     
     
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-    module SgSurface =
+    module SgSurfaceOpc =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let surface =
-                { new Lens<PRo3D.Surfaces.SgSurface, System.Guid>() with
+                { new Lens<PRo3D.Surfaces.SgSurfaceOpc, System.Guid>() with
                     override x.Get(r) = r.surface
                     override x.Set(r,v) = { r with surface = v }
                     override x.Update(r,f) = { r with surface = f r.surface }
                 }
             let trafo =
-                { new Lens<PRo3D.Surfaces.SgSurface, Aardvark.UI.Trafos.Transformation>() with
+                { new Lens<PRo3D.Surfaces.SgSurfaceOpc, Aardvark.UI.Trafos.Transformation>() with
                     override x.Get(r) = r.trafo
                     override x.Set(r,v) = { r with trafo = v }
                     override x.Update(r,f) = { r with trafo = f r.trafo }
                 }
             let globalBB =
-                { new Lens<PRo3D.Surfaces.SgSurface, Aardvark.Base.Box3d>() with
+                { new Lens<PRo3D.Surfaces.SgSurfaceOpc, Aardvark.Base.Box3d>() with
                     override x.Get(r) = r.globalBB
                     override x.Set(r,v) = { r with globalBB = v }
                     override x.Update(r,f) = { r with globalBB = f r.globalBB }
                 }
             let sceneGraph =
-                { new Lens<PRo3D.Surfaces.SgSurface, Aardvark.SceneGraph.ISg>() with
+                { new Lens<PRo3D.Surfaces.SgSurfaceOpc, Aardvark.SceneGraph.ISg>() with
                     override x.Get(r) = r.sceneGraph
                     override x.Set(r,v) = { r with sceneGraph = v }
                     override x.Update(r,f) = { r with sceneGraph = f r.sceneGraph }
                 }
             let kdTree =
-                { new Lens<PRo3D.Surfaces.SgSurface, Aardvark.Base.hmap<Aardvark.Base.Box3d,PRo3D.KdTrees.Level0KdTree>>() with
+                { new Lens<PRo3D.Surfaces.SgSurfaceOpc, Aardvark.Base.hmap<Aardvark.Base.Box3d,PRo3D.KdTrees.Level0KdTree>>() with
                     override x.Get(r) = r.kdTree
                     override x.Set(r,v) = { r with kdTree = v }
                     override x.Update(r,f) = { r with kdTree = f r.kdTree }
                 }
+    
+    
+    type MSgSurfaceObj(__initial : PRo3D.Surfaces.SgSurfaceObj) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurfaceObj> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.SgSurfaceObj>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.SgSurfaceObj>
+        let _trafo = Aardvark.UI.Trafos.Mutable.MTransformation.Create(__initial.trafo)
+        let _globalBB = ResetMod.Create(__initial.globalBB)
+        let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
+        let _pickMesh = ResetMod.Create(__initial.pickMesh)
+        
+        member x.surface = __current.Value.surface
+        member x.trafo = _trafo
+        member x.globalBB = _globalBB :> IMod<_>
+        member x.sceneGraph = _sceneGraph :> IMod<_>
+        member x.pickMesh = _pickMesh :> IMod<_>
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3D.Surfaces.SgSurfaceObj) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                Aardvark.UI.Trafos.Mutable.MTransformation.Update(_trafo, v.trafo)
+                ResetMod.Update(_globalBB,v.globalBB)
+                ResetMod.Update(_sceneGraph,v.sceneGraph)
+                ResetMod.Update(_pickMesh,v.pickMesh)
+                
+        
+        static member Create(__initial : PRo3D.Surfaces.SgSurfaceObj) : MSgSurfaceObj = MSgSurfaceObj(__initial)
+        static member Update(m : MSgSurfaceObj, v : PRo3D.Surfaces.SgSurfaceObj) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3D.Surfaces.SgSurfaceObj> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module SgSurfaceObj =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let surface =
+                { new Lens<PRo3D.Surfaces.SgSurfaceObj, System.Guid>() with
+                    override x.Get(r) = r.surface
+                    override x.Set(r,v) = { r with surface = v }
+                    override x.Update(r,f) = { r with surface = f r.surface }
+                }
+            let trafo =
+                { new Lens<PRo3D.Surfaces.SgSurfaceObj, Aardvark.UI.Trafos.Transformation>() with
+                    override x.Get(r) = r.trafo
+                    override x.Set(r,v) = { r with trafo = v }
+                    override x.Update(r,f) = { r with trafo = f r.trafo }
+                }
+            let globalBB =
+                { new Lens<PRo3D.Surfaces.SgSurfaceObj, Aardvark.Base.Box3d>() with
+                    override x.Get(r) = r.globalBB
+                    override x.Set(r,v) = { r with globalBB = v }
+                    override x.Update(r,f) = { r with globalBB = f r.globalBB }
+                }
+            let sceneGraph =
+                { new Lens<PRo3D.Surfaces.SgSurfaceObj, Aardvark.SceneGraph.ISg>() with
+                    override x.Get(r) = r.sceneGraph
+                    override x.Set(r,v) = { r with sceneGraph = v }
+                    override x.Update(r,f) = { r with sceneGraph = f r.sceneGraph }
+                }
+            let pickMesh =
+                { new Lens<PRo3D.Surfaces.SgSurfaceObj, Aardvark.SceneGraph.ISg>() with
+                    override x.Get(r) = r.pickMesh
+                    override x.Set(r,v) = { r with pickMesh = v }
+                    override x.Update(r,f) = { r with pickMesh = f r.pickMesh }
+                }
+    [<AbstractClass; System.Runtime.CompilerServices.Extension; StructuredFormatDisplay("{AsString}")>]
+    type MSgSurfaces() =
+        abstract member TryUpdate : PRo3D.Surfaces.SgSurfaces -> bool
+        abstract member AsString : string
+        
+        static member private CreateValue(__model : PRo3D.Surfaces.SgSurfaces) = 
+            match __model with
+                | SgSurfaceOPC(value) -> MSgSurfaceOPC(__model, value) :> MSgSurfaces
+                | SgSurfaceOBJ(value) -> MSgSurfaceOBJ(__model, value) :> MSgSurfaces
+        
+        static member Create(v : PRo3D.Surfaces.SgSurfaces) =
+            ResetMod.Create(MSgSurfaces.CreateValue v) :> IMod<_>
+        
+        [<System.Runtime.CompilerServices.Extension>]
+        static member Update(m : IMod<MSgSurfaces>, v : PRo3D.Surfaces.SgSurfaces) =
+            let m = unbox<ResetMod<MSgSurfaces>> m
+            if not (m.GetValue().TryUpdate v) then
+                m.Update(MSgSurfaces.CreateValue v)
+    
+    and private MSgSurfaceOPC(__initial : PRo3D.Surfaces.SgSurfaces, value : PRo3D.Surfaces.SgSurfaceOpc) =
+        inherit MSgSurfaces()
+        
+        let mutable __current = __initial
+        let _value = MSgSurfaceOpc.Create(value)
+        member x.value = _value
+        
+        override x.ToString() = __current.ToString()
+        override x.AsString = sprintf "%A" __current
+        
+        override x.TryUpdate(__model : PRo3D.Surfaces.SgSurfaces) = 
+            if System.Object.ReferenceEquals(__current, __model) then
+                true
+            else
+                match __model with
+                    | SgSurfaceOPC(value) -> 
+                        __current <- __model
+                        MSgSurfaceOpc.Update(_value, value)
+                        true
+                    | _ -> false
+    
+    and private MSgSurfaceOBJ(__initial : PRo3D.Surfaces.SgSurfaces, value : PRo3D.Surfaces.SgSurfaceObj) =
+        inherit MSgSurfaces()
+        
+        let mutable __current = __initial
+        let _value = MSgSurfaceObj.Create(value)
+        member x.value = _value
+        
+        override x.ToString() = __current.ToString()
+        override x.AsString = sprintf "%A" __current
+        
+        override x.TryUpdate(__model : PRo3D.Surfaces.SgSurfaces) = 
+            if System.Object.ReferenceEquals(__current, __model) then
+                true
+            else
+                match __model with
+                    | SgSurfaceOBJ(value) -> 
+                        __current <- __model
+                        MSgSurfaceObj.Update(_value, value)
+                        true
+                    | _ -> false
+    
+    
+    [<AutoOpen>]
+    module MSgSurfacesPatterns =
+        let (|MSgSurfaceOPC|MSgSurfaceOBJ|) (m : MSgSurfaces) =
+            match m with
+            | :? MSgSurfaceOPC as v -> MSgSurfaceOPC(v.value)
+            | :? MSgSurfaceOBJ as v -> MSgSurfaceOBJ(v.value)
+            | _ -> failwith "impossible"
+    
+    
+    
+    

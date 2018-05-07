@@ -140,9 +140,39 @@ module Scene =
         //handle sg surfaces
         let m = 
             allSurfaces
+                |> PList.filter (fun s -> s.surfaceType = SurfaceType.SurfaceOPC)
                 |> Surface.createSgSurfaces runtime signature
                 |> HMap.union m.scene.surfacesModel.sgSurfaces
                 |> Files.expandLazyKdTreePaths m.scene.scenePath surfaceMap
+                |> Lenses.set' (_surfaceModelLens |. SurfaceModel.Lens.sgSurfaces) m                                               
+                    
+        m.scene.surfacesModel 
+          |> SurfaceModel.triggerSgGrouping 
+          |> Lenses.set' _surfaceModelLens m
+
+    let importObj (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : plist<Surface>) (m : Model) =
+      
+        let existingSurfaces = 
+            m.scene.surfacesModel.surfaces.flat
+              |> Leaf.toSurfaces
+              |> HMap.toList 
+              |> List.map snd 
+              |> PList.ofList         
+
+        let allSurfaces = existingSurfaces |> PList.append' surfaces //????
+        let sChildren = surfaces |> PList.map Leaf.Surfaces
+
+        let m = 
+            m.scene.surfacesModel.surfaces 
+              |> Groups.addLeaves m.scene.surfacesModel.surfaces.activeGroup.path sChildren 
+              |> Lenses.set' (_surfaceModelLens |. SurfaceModel.Lens.surfaces) m   
+
+        //handle sg surfaces
+        let m = 
+            allSurfaces
+                |> PList.filter (fun s -> s.surfaceType = SurfaceType.SurfaceOBJ)
+                |> Surface.ObjectFiles.createSgObjects runtime signature
+                |> HMap.union m.scene.surfacesModel.sgSurfaces
                 |> Lenses.set' (_surfaceModelLens |. SurfaceModel.Lens.sgSurfaces) m                                               
                     
         m.scene.surfacesModel 
@@ -158,11 +188,23 @@ module Scene =
               |> List.map snd 
               |> PList.ofList
 
+        let opcSurfs = 
+            surfacesList 
+            |> PList.filter ( fun x -> x.surfaceType = SurfaceType.SurfaceOPC)
         let sgSurfaces = 
-            Surface.createSgSurfaces runtime signature surfacesList |> Files.expandLazyKdTreePaths scenePath surfaces        
+            Surface.createSgSurfaces runtime signature opcSurfs |> Files.expandLazyKdTreePaths scenePath surfaces        
+
+        let objSurfs = 
+            surfacesList 
+            |> PList.filter ( fun x -> x.surfaceType = SurfaceType.SurfaceOBJ)
+        let sgSurfaceObj = 
+            Surface.ObjectFiles.createSgObjects runtime signature objSurfs //|> Files.expandLazyKdTreePaths scenePath surfaces      
+            
+        let sgs = sgSurfaces |> HMap.union sgSurfaceObj
 
         model 
-          |> SurfaceModel.withSgSurfaces sgSurfaces 
+          //|> SurfaceModel.withSgSurfaces sgSurfaces 
+          |> SurfaceModel.withSgSurfaces sgs
           |> SurfaceModel.triggerSgGrouping    
           
     let setFrustum (m:Model) =

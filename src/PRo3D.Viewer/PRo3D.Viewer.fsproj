@@ -517,6 +517,17 @@
   <Choose>
     <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1') Or ($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
       <ItemGroup>
+        <Reference Include="Aardvark.SceneGraph.IO">
+          <HintPath>..\..\packages\Aardvark.SceneGraph.IO\lib\netstandard2.0\Aardvark.SceneGraph.IO.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1') Or ($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
+      <ItemGroup>
         <Reference Include="Aardvark.Service">
           <HintPath>..\..\packages\Aardvark.Service\lib\netstandard2.0\Aardvark.Service.dll</HintPath>
           <Private>True</Private>
@@ -1969,6 +1980,17 @@
         <Reference Include="System.Xml.XmlSerializer">
           <HintPath>..\..\packages\System.Xml.XmlSerializer\ref\netstandard1.3\System.Xml.XmlSerializer.dll</HintPath>
           <Private>False</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1') Or ($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
+      <ItemGroup>
+        <Reference Include="AssimpNet">
+          <HintPath>..\..\packages\Unofficial.AssimpNet\lib\netstandard2.0\AssimpNet.dll</HintPath>
+          <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
       </ItemGroup>

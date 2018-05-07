@@ -6,6 +6,7 @@ Aardvark.Base.Rendering
 Aardvark.Application.WinForms.GL
 Aardvark.Application.WinForms.Vulkan
 Aardvark.SceneGraph
+Aardvark.SceneGraph.IO
 
 Aardvark.Rendering.Text
 
