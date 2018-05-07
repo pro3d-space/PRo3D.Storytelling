@@ -129,12 +129,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="Aardvark.SceneGraph.IO">
-      <HintPath>..\..\bin\Debug\Aardvark.SceneGraph.IO.dll</HintPath>
-    </Reference>
-    <Reference Include="AssimpNet">
-      <HintPath>..\..\packages\Unofficial.AssimpNet\lib\net45\AssimpNet.dll</HintPath>
-    </Reference>
     <Reference Include="CSharpUtils">
       <HintPath>..\..\bin\Debug\CSharpUtils.dll</HintPath>
     </Reference>
@@ -453,17 +447,6 @@
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
       <ItemGroup>
-        <Reference Include="Aardvark.Rendering.NanoVg">
-          <HintPath>..\..\packages\Aardvark.Rendering.NanoVg\lib\net45\Aardvark.Rendering.NanoVg.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
-      <ItemGroup>
         <Reference Include="Aardvark.Rendering.Text">
           <HintPath>..\..\packages\Aardvark.Rendering.Text\lib\net45\Aardvark.Rendering.Text.dll</HintPath>
           <Private>True</Private>
@@ -488,6 +471,17 @@
       <ItemGroup>
         <Reference Include="Aardvark.SceneGraph">
           <HintPath>..\..\packages\Aardvark.SceneGraph\lib\net45\Aardvark.SceneGraph.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
+        <Reference Include="Aardvark.SceneGraph.IO">
+          <HintPath>..\..\packages\Aardvark.SceneGraph.IO\lib\net45\Aardvark.SceneGraph.IO.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -709,17 +703,6 @@
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
       <ItemGroup>
-        <Reference Include="NanoVgSharp">
-          <HintPath>..\..\packages\NanoVgSharp\lib\net45\NanoVgSharp.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
-      <ItemGroup>
         <Reference Include="Newtonsoft.Json">
           <HintPath>..\..\packages\Newtonsoft.Json\lib\net45\Newtonsoft.Json.dll</HintPath>
           <Private>True</Private>
@@ -810,6 +793,17 @@
       <ItemGroup>
         <Reference Include="System.Runtime.InteropServices.RuntimeInformation">
           <HintPath>..\..\packages\System.Runtime.InteropServices.RuntimeInformation\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
+        <Reference Include="AssimpNet">
+          <HintPath>..\..\packages\Unofficial.AssimpNet\lib\net45\AssimpNet.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>

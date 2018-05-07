@@ -9,6 +9,8 @@ open Aardvark.Base
 open Aardvark.Base.IO
 open OpenTK.Graphics.OpenGL4
 open FSharp.NativeInterop
+open Aardvark.Base.Rendering
+open Aardvark.Rendering.GL
 
 module private NativeSupport =
     [<DllImport("kernel32.dll", SetLastError=true)>]
@@ -166,7 +168,7 @@ module CompressedImage =
                 let dispose = 
                     { new IDisposable with
                         member x.Dispose() =
-                            use ctx = (runtime :> IRuntime).ContextLock
+                            use ctx = (runtime :> IRuntime).ContextLock                            
                             Aardvark.Rendering.GL.TextureExtensions.removeTexture runtime.Context (int64 totalSize)
                             GL.DeleteTexture(handle)
                     }

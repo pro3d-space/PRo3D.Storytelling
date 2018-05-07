@@ -151,13 +151,7 @@ module Scene =
           |> Lenses.set' _surfaceModelLens m
 
     let importObj (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : plist<Surface>) (m : Model) =
-            
-        //handle semantic surfaces
-        //let surfaces = 
-        //    surfaces 
-        //        |> addLegacyTrafos
-        //        |> addSurfaceAttributes
-
+      
         let existingSurfaces = 
             m.scene.surfacesModel.surfaces.flat
               |> Leaf.toSurfaces
@@ -171,10 +165,7 @@ module Scene =
         let m = 
             m.scene.surfacesModel.surfaces 
               |> Groups.addLeaves m.scene.surfacesModel.surfaces.activeGroup.path sChildren 
-              |> Lenses.set' (_surfaceModelLens |. SurfaceModel.Lens.surfaces) m                        
-        
-        let surfaceMap = 
-            (m.scene.surfacesModel.surfaces.flat |> Leaf.toSurfaces)
+              |> Lenses.set' (_surfaceModelLens |. SurfaceModel.Lens.surfaces) m   
 
         //handle sg surfaces
         let m = 
