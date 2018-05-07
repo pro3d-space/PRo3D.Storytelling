@@ -4,13 +4,13 @@ source https://api.nuget.org/v3/index.json
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://vrvis.myget.org/F/aardvark/auth/11394d4d-4fe9-44ec-87c8-f3e98909f975/api/v3/index.json
 
-nuget Aardvark.Base.Rendering              = 4.0.6
-nuget Aardvark.Application.WinForms.GL     = 4.0.6
-nuget Aardvark.Application.WinForms.Vulkan = 4.0.6
-nuget Aardvark.SceneGraph                  = 4.0.6
-nuget Aardvark.SceneGraph.IO               = 4.0.6
-nuget Aardvark.Rendering.Text              = 4.0.6
-nuget Aardvark.Rendering.Vulkan            = 4.0.6
+nuget Aardvark.Base.Rendering              ~> 4.0.6
+nuget Aardvark.Application.WinForms.GL     ~> 4.0.6
+nuget Aardvark.Application.WinForms.Vulkan ~> 4.0.6
+nuget Aardvark.SceneGraph                  ~> 4.0.6
+nuget Aardvark.SceneGraph.IO               ~> 4.0.6
+nuget Aardvark.Rendering.Text              ~> 4.0.6
+nuget Aardvark.Rendering.Vulkan            ~> 4.0.6
 
 nuget FShade        ~> 4.0.1
 nuget FShade.Debug  ~> 4.0.1
