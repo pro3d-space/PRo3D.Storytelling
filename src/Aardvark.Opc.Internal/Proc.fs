@@ -7,6 +7,7 @@ open Aardvark.Base
 open Aardvark.Base.IO
 open Aardvark.Base.Monads.State
 open Aardvark.Base.Rendering
+open Aardvark.Base.Incremental
 
 //type Time = DateTime
 

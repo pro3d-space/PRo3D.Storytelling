@@ -14,7 +14,7 @@ open System.Runtime.InteropServices
 
 open Aardvark.Base
 open Aardvark.Base.IO
-open Aardvark.Opc
+open Aardvark.Prinziple
 
 [<AutoOpen>]
 module Aara =
@@ -57,8 +57,6 @@ module Aara =
 //        if r <> byteSize then failwith "asdfj2"
 //        buffer.UnsafeCoerce()
 
-
-
     let loadFromStream<'a when 'a : unmanaged> (f : Stream) =
         let binaryReader = new BinaryReader(f,Text.Encoding.ASCII, true)
         let typeName = readerChars2String f
@@ -66,7 +64,6 @@ module Aara =
         let sizes = [| for d in 0 .. dimensions - 1 do yield binaryReader.ReadInt32() |]
 
         let elementCount = sizes |> Array.fold ((*)) 1
-
         
         let result =
             if typeof<'a>.Name = typeName then
@@ -79,8 +76,6 @@ module Aara =
                 //    | "float" -> f |> loadRaw<float32> elementCount |> PrimitiveValueConverter.arrayConverter typeof<float32>
                     | _ -> failwith ""
 
-
-
         let dim =
             match sizes with
                 | [| x |] -> V3i(x,1,1)
@@ -91,7 +86,7 @@ module Aara =
         Volume<'a>(result, dim)
 
     let fromFile<'a when 'a : unmanaged and 'a : (new : unit -> 'a) and 'a : struct and 'a :> ValueType> (s : string) =
-        use fs = File.OpenRead(s)
+        use fs = Prinziple.openRead s
         loadFromStream<'a> fs
 
     let inline isNan (v : V3f) = 
@@ -109,14 +104,7 @@ module Aara =
             let i10 = index + dy
             let i01 = index + dx
             let i11 = index + dxy
-
-            //let p00 = vi.[i00] |> isNan
-            //let p01 = vi.[i10] |> isNan
-            //let p10 = vi.[i01] |> isNan
-            //let p11 = vi.[i11] |> isNan
-
-            //if p00 || p01 || p10 || p11 then ()
-            //else 
+            
             arr.[cnt + 0] <- (int i00)
             arr.[cnt + 1] <- (int i10)
             arr.[cnt + 2] <- (int i11)
@@ -156,14 +144,7 @@ module Aara =
                     let i10 = index + dy
                     let i01 = index + dx
                     let i11 = index + dxy
-
-                    //let p00 = vi.[i00] |> isNan
-                    //let p01 = vi.[i10] |> isNan
-                    //let p10 = vi.[i01] |> isNan
-                    //let p11 = vi.[i11] |> isNan
-
-                    //if p00 || p01 || p10 || p11 then ()
-                    //else 
+                    
                     arr.[cnt + 0] <- (int i00)
                     arr.[cnt + 1] <- (int i10)
                     arr.[cnt + 2] <- (int i11)
@@ -175,163 +156,7 @@ module Aara =
         Array.Resize(&arr, cnt)
         arr
 
-type Patch =
-    {
-        level           : int
-        info            : PatchFileInfo
-        triangleSize    : float
-    }
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module Patch =
-    let ofInfo (level : int) (size: float) (p : PatchFileInfo) = { level = level; info = p; triangleSize = size }
-        
-    let load (baseDir : string) (p : PatchFileInfo)  =
-        let sw = System.Diagnostics.Stopwatch()
-        sw.Start()
-        let positions = Path.combine [baseDir; "Patches"; p.Name; p.Positions] |> fromFile<V3f>
-        let coordinates = Path.combine [baseDir; "Patches"; p.Name; (List.head p.Coordinates)] |> fromFile<V2f>        
-        
-
-        let scalars = 
-            List.tryHead p.Attributes 
-                |> Option.map(fun x -> Path.combine [baseDir; "Patches"; p.Name; x] |> fromFile<double>)       
-
-        sw.Stop()
-
-        let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
-
-        let index = createIndex (positions.AsMatrix())
-
-        let a : float = 0.0
-
-        let indexAttributes =
-            let def = [
-                DefaultSemantic.Positions, positions.Data :> Array
-                DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
-            ]
-
-            //let def = 
-            //    match scalars with
-            //      | Some a -> List.append def [Sym.ofString("Scalar"), (a.Data |> Array.map (fun x -> float32 x) :> Array)]
-            //      | None   -> def
-
-            def |> SymDict.ofList 
-
-        let geometry =
-            IndexedGeometry(
-                Mode              = IndexedGeometryMode.TriangleList,
-                IndexArray        = index,
-                IndexedAttributes = indexAttributes
-            )
-                                        
-        geometry, sw.MicroTime
-
-    let extractTexturePath (baseDir : string) (patchInfo : PatchFileInfo) (texNumber : int) =
-        let t = patchInfo.Textures |> List.item texNumber
-        let sourcePath = Path.combine [ baseDir; "Images"; t.fileName]
-        let extensions = [ ".dds"; ".tif"; ".tiff"]
-
-        let rec tryFindTex exts path =
-            match exts with
-                | x::xs -> 
-                    let current = System.IO.Path.ChangeExtension(path,x)
-                    if File.Exists current then current else tryFindTex xs path
-                | [] -> failwithf "texture not found: %s" path
-
-        tryFindTex extensions sourcePath
-
-type PatchHierarchy =
-    { 
-        baseDir : string
-        tree    : QTree<Patch>
-    }
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module PatchHierarchy =
-    open XmlHelpers
-    open System.Xml
-    open System.Xml.Linq
-    open MBrace.FsPickler
-
-    let private binarySerializer = FsPickler.CreateBinarySerializer()
-
-    let parseDouble d =
-        let mutable r = 0.0
-        if Double.TryParse(d,Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, &r) then r
-        else failwithf "could not parse int double:"
-
-    let private ofDoc (x : XDocument) =
-        let hierarchy = x.Descendants(xname "PatchHierarchy") |> Seq.head
-        let rootPatch = hierarchy |> elem "RootPatch" |> xvalue
-
-        let geometrySizes = hierarchy |> elem "AvgGeometrySizes" |> xvalue 
-        let avgSizes = ((geometrySizes.[1..(geometrySizes.Length-2)]).Replace(" ","").Split [|','|]) |> Array.map parseDouble
-        Log.line "avgSizes %A" avgSizes
-
-        let map = hierarchy |> elem' "SubPatchMap"
-        let items = 
-            match map with
-                | Some subs -> subs.Descendants(xname "item") |> Seq.toList
-                | None -> []
-
-        let children = 
-            items |> List.map (fun e -> 
-                let key = elem "key" e |> xvalue
-                let values = elem "val" e
-                let nw = elem' "nw" values |> Option.map xvalue 
-                let ne = elem' "ne" values |> Option.map xvalue 
-                let sw = elem' "sw" values |> Option.map xvalue 
-                let se = elem' "se" values |> Option.map xvalue 
-                key, Array.choose id [|nw;ne;sw;se |]
-            ) |> Dictionary.ofList
 
 
-        let rec mkTree (name : string) =
-            match children.TryGetValue name with
-                | (true,v) -> 
-                    Node(name, v |> Array.map mkTree)
-                | _ -> Leaf name
-
-        let tree = mkTree rootPatch
-        tree, avgSizes |> Array.rev
-
-    let load (fileName : string) =
-        let dir = Path.GetDirectoryName(Path.GetDirectoryName fileName)
-        let cachefile = Path.combine [dir; "hierarchy.cache" ]
-        let loadAndCache () =
-            Log.startTimed "loading from hierarchy"
-            let tree, sizes = 
-                XDocument.Load(fileName) |> ofDoc
-            let hierarchy = 
-                tree
-                    |> QTree.mapLevel 0 (fun level p -> 
-                            p |> PatchFileInfo.load dir |> Patch.ofInfo level sizes.[level]
-                        )
-            binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
-            Log.stop()
-            { baseDir = dir; tree = hierarchy }
-
-        if File.Exists cachefile then
-            try
-                Log.startTimed "loading from cache file"
-                let r = { baseDir = dir; tree = File.readAllBytes cachefile |> binarySerializer.UnPickle }
-                Log.stop()
-                r
-            with e -> 
-                Log.warn "could not parse cache file. recomputing."
-                loadAndCache ()
-        else
-            Log.startTimed "loading from hierarchy"
-            let tree, sizes = 
-                XDocument.Load(fileName) |> ofDoc
-            let hierarchy = 
-                tree                    
-                    |> QTree.mapLevel 0 (fun level p -> 
-                            p |> PatchFileInfo.load dir |> Patch.ofInfo level sizes.[level]
-                        )
-            binarySerializer.Pickle hierarchy |> File.writeAllBytes cachefile
-            Log.stop()
-            { baseDir = dir; tree = hierarchy }
 
 

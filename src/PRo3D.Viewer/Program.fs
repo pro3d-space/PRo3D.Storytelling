@@ -29,6 +29,7 @@ open System.Runtime.Serialization
 open Aardvark.VRVis
 open PRo3D.Viewer
 open PRo3D.Groups
+open System.Text
 
 [<DataContract>]
 type Calc =
@@ -106,8 +107,8 @@ let main argv =
 
     Ag.initialize()
     Aardvark.Init()
-    use app = new VulkanApplication()
-    //use app = new OpenGlApplication()
+    //use app = new VulkanApplication()
+    use app = new OpenGlApplication()
     let runtime = app.Runtime    
 
     Aardvark.Rendering.GL.RuntimeConfig.SupressSparseBuffers <- true
@@ -119,7 +120,7 @@ let main argv =
 
     if licenseCheck then
       checkLicense()
-
+    
    // use form = new Form(Width = 0, Height = 0)
     let signature =
         runtime.CreateFramebufferSignature [
@@ -141,7 +142,7 @@ let main argv =
                 do! webSocket.send Text s true
         }        
 
-    Aardvark.Opc.PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
+    Aardvark.Opc.Internal.PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
         
     // main app
     use form = new Form(Width = 1280, Height = 800)
@@ -209,7 +210,7 @@ let main argv =
         Suave.Files.browseHome
     ] 
 
-   
+       
     use ctrl = new AardvarkCefBrowser()
     ctrl.Dock <- DockStyle.Fill
     form.Controls.Add ctrl    
@@ -217,7 +218,7 @@ let main argv =
     //form.WindowState <- FormWindowState.Minimized
     //form.Controls.Add (new Label()) |> ignore
     ctrl.StartUrl <- "http://localhost:4321/?page=main" //"http://localhost:4321/?page=instrumentview"       
-    ctrl.ShowDevTools()
+    //ctrl.ShowDevTools()
 
     //Config.shouldTimeUIUpdate <- true
     //Config.shouldTimeJsCodeGeneration <- true

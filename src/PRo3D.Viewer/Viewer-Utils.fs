@@ -14,6 +14,7 @@ open Aardvark.UI.Primitives
 open Aardvark.Rendering.Text
 
 open Aardvark.Opc    
+open Aardvark.Opc.Internal
 open Aardvark.SceneGraph.SgPrimitives.Sg
 open Aardvark.VRVis
 
@@ -215,7 +216,7 @@ module ViewerUtils =
                                             let! texture = s.selectedTexture 
                                             let! scalar = s.selectedScalar
 
-                                            let attr : Aardvark.Opc.AttributeParameters = 
+                                            let attr : Aardvark.Opc.Internal.AttributeParameters = 
                                                 {
                                                     selectedTexture = texture |> Option.map(fun x -> x.index)
                                                     selectedScalar  = scalar  |> Option.map(fun x -> x.index)

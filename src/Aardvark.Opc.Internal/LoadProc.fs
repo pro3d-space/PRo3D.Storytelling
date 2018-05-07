@@ -9,6 +9,7 @@ open System.Reactive.Subjects
 open Aardvark.Base
 open Aardvark.Base.IO
 open Aardvark.Base.Monads.State
+open Aardvark.Base.Incremental
 
 type ILoadTask<'a> =
     inherit IMod<Option<'a>>
@@ -38,7 +39,7 @@ module Load =
     let onCancel (f : unit -> unit) : Load<unit> =
         { run =
             proc {
-                do! State.modify (fun s -> { s with undo = f :: s.undo})    
+                do! State.modify (fun s -> { s with undo = f :: s.undo})
             }
         }
 
@@ -341,11 +342,11 @@ module ``RuntimeLoad Extensions`` =
         member x.CreateLoadRunner(threads : int) =
             match x with
                 | :? Aardvark.Rendering.GL.Runtime as runtime -> 
-                    //let loadContexts = Aardvark.Rendering.GL.ContextHandle.createContexts threads |> Array.ofList
+                    let loadContexts = Aardvark.Rendering.GL.ContextHandle.createContexts false threads |> Array.ofList
                     let getLock i = 
-                        runtime.Context.ResourceLock
-//                        let ctx = loadContexts.[i]
-//                        runtime.Context.RenderingLock(ctx)
+//                        runtime.Context.ResourceLock
+                        let ctx = loadContexts.[i]
+                        runtime.Context.RenderingLock(ctx)
 
                     new Load.Runner(2, getLock)
                 | _ -> failwith "cannot create load runner with non GL runtime."

@@ -41,6 +41,8 @@ nuget Aardvark.Cef.WinForms                 ~> 3.4.9
 nuget Aardvark.Cef                          ~> 3.3.58
 nuget SKGL                                  ~> 2.0.5.3
 
+nuget SharpZipLib  ~> 0.86.0
+
 nuget FShade        ~> 3.4.2
 nuget FShade.Debug  ~> 3.4.2
 

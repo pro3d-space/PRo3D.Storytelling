@@ -77,8 +77,7 @@ module DipAndStrike =
                 //let p = v3dArray.[0]
                // let up = p.Normalized        
 
-                let mutable plane = PlaneFitting.FitPlane3dLeastSquares(v3dArray)
-                let bb = new Box3d(points)
+                let mutable plane = PlaneFitting.FitPlane3dLeastSquares(v3dArray)                
 
                 let distances = 
                   points 
@@ -122,7 +121,7 @@ module DipAndStrike =
                     strikeDirection = strike
                     dipAzimuth      = computeAzimuth v north up
                     strikeAzimuth   = computeAzimuth strike north up
-                    centerOfMass    = bb.Center
+                    centerOfMass    = (new Box3d(points)).Center
                     error           = 
                       { 
                         average = avg

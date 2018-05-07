@@ -112,7 +112,7 @@ module DrawingApp =
                       if PRo3D.Config.useAsyncIntersections then
                         { annotation with segments = PList.append newSegment annotation.segments }, Some (newSegment,segmentIndex)
                       else
-                        let dir = newSegment.endPoint - newSegment.startPoint
+                        let dir = (newSegment.endPoint - newSegment.startPoint).Normalized
                         let points = [ 
                           for s in 0 .. PRo3D.Config.sampleCount do
                             let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
@@ -675,7 +675,7 @@ module DrawingApp =
             
         let getPolylinePoints (a : MAnnotation) =
             alist {                
-                let! hasSegments = a.segments |> AList.toMod |> Mod.map (fun d -> d |> PList.count > 0)
+                let! hasSegments = a.segments |> AList.count |> Mod.map ((>) 0)
                 if hasSegments then
                     for segment in a.segments do
                         let! startPoint = segment.startPoint

@@ -11,14 +11,16 @@ open Aardvark.SceneGraph
 open Aardvark.Base.Geometry
 open Aardvark.Base.Coder
 
-open Aardvark.Opc
-
 open Aardvark.Application
 open Aardvark.Application.WinForms
-    
+
+open Aardvark.Base.Rendering.Effects
+open FShade    
+
+open Aardvark.Opc
+open Aardvark.Opc.Internal
+
 module Viewer = 
-    open Aardvark.Base.Rendering.Effects
-    open FShade    
     
     let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcScene)  = 
     
@@ -37,11 +39,8 @@ module Viewer =
         let fillMode = Mod.init FillMode.Fill
         let lodVisEnabled = Mod.init false
             
-        let patchHierarchies =
-            [ for h in scene.patchHierarchies do
-                let p = Path.combine [h; @"Patches\patchhierarchy.xml" ]
-                yield PatchHierarchy.load p
-            ] 
+        let patchHierarchies = 
+          scene.patchHierarchies |> Seq.map PatchHierarchy.load |> Seq.toList
    
         let g = 
             patchHierarchies 
@@ -115,49 +114,20 @@ module Viewer =
                 |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
                 |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)                
         sg
-
-    let createSceneGraph2 (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (time : IMod<_>) scene = 
-
-      let bb = scene.boundingBox    
-      
-      let speed = Mod.init scene.speed
-
-      let preTransform = Trafo3d.Translation(-bb.Center) * scene.preTransform
-
-      let initialView = 
-        CameraView.lookAt (bb.Max - bb.Center)  V3d.Zero bb.Center.Normalized
-
-      let view = 
-        initialView |> DefaultCameraController.controlWithSpeed speed mouse keyboard time
-      
-      let proj = 
-        sizes |> Mod.map (fun s -> Frustum.perspective 60.0 scene.near scene.far (float s.X / float s.Y))      
-
-      let sg = Aardvark.Opc.Sg2.createFlatISg scene
-
-      sg
-       |> Sg.transform preTransform
-       |> Sg.effect [
-          DefaultSurfaces.trafo |> toEffect
-          DefaultSurfaces.constantColor C4f.White |> toEffect
-          DefaultSurfaces.diffuseTexture |> toEffect
-       ]
-       |> Sg.viewTrafo (view |> Mod.map CameraView.viewTrafo)
-       |> Sg.projTrafo (proj |> Mod.map Frustum.projTrafo)
-
+    
     let run (scene : OpcScene) =
 
         Aardvark.Base.Ag.initialize()
         Aardvark.Init()
 
-        use app = new OpenGlApplication()
+        use app = new OpenGlApplication(true)
         let win = app.CreateSimpleRenderWindow()
         win.Text <- "Aardvark rocks OPCs \\o/"
 
         let sg = createSceneGraph win.Runtime win.Sizes win.Mouse win.Keyboard win.FramebufferSignature win.Time scene
         //let sg = createSceneGraph2 win.Sizes win.Mouse win.Keyboard win.Time scene
     
-        let cfg =  { BackendConfiguration.Default  with useDebugOutput = false }
+        let cfg =  { BackendConfiguration.Default  with useDebugOutput = true }
         let task =
             RenderTask.ofList [
                 app.Runtime.CompileClear(win.FramebufferSignature, (Mod.constant(C4b(30,30,30, 255).ToC4f())))
