@@ -77,7 +77,6 @@
     <Compile Include="PatchFileInfo.fs" />
     <Compile Include="Patch.fs" />
     <Compile Include="PatchHierarchy.fs" />
-    <Compile Include="RenderUtilities.fs" />
     <Compile Include="Shaders.fs" />
     <Compile Include="Sg.fs" />
     <None Include="paket.references" />

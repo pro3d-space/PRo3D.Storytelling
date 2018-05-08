@@ -68,6 +68,7 @@
     <Compile Include="Proc.fs" />
     <Compile Include="LoadProc.fs" />
     <Compile Include="HiearchicalLoD.fs" />
+    <Compile Include="C:\_work\PRo3D\src\Aardvark.Opc.Internal\RenderUtilities.fs" />
     <Compile Include="RenderingV2.fs" />
     <Compile Include="Properties.fs" />
     <Compile Include="Library1.fs" />

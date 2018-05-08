@@ -15,7 +15,7 @@ nuget Aardvark.Rendering.Vulkan            ~> 4.0.6
 nuget FShade        ~> 4.0.1
 nuget FShade.Debug  ~> 4.0.1
 
-nuget Aardvark.Base                         ~> 4.0.11 
+nuget Aardvark.Base                         ~> 4.0.11
 nuget Aardvark.Base.IO                      ~> 4.0.11
 nuget Aardvark.Base.Incremental             ~> 4.0.11
 nuget Aardvark.Base.FSharp                  ~> 4.0.11
@@ -26,7 +26,6 @@ nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 4.0.5
 
 nuget Aardvark.VRVis.Geometry               ~> 4.0.2
 nuget Aardvark.Fitting.Planes               ~> 4.0.2
-
 
 nuget FSharp.Core                           ~> 4.3.0
 

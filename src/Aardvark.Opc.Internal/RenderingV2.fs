@@ -12,6 +12,7 @@ open Aardvark.SceneGraph
 open Aardvark.Rendering.GL
 open Aardvark.Rendering.SceneGraph.HierarchicalLoD
 open Aardvark.Opc
+open Aardvark.Opc.Utilities
 
 open OpenTK.Graphics.OpenGL4
 
