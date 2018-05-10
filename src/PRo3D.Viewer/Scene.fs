@@ -4,7 +4,7 @@ open System
 open System.IO
 open Aardvark.Base
 open Aardvark.Base.Incremental
-open Aardvark.Opc    
+open Aardvark.SceneGraph.Opc
 
 open PRo3D.Surfaces
 open PRo3D.Viewer

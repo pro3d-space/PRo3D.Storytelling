@@ -12,6 +12,7 @@ module ReferenceSystemApp =
 
     open Aardvark.Base.Rendering   
     
+    open Aardvark.SceneGraph.Opc
     open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.SceneGraph.FShadeSceneGraph
     open PRo3D.ReferenceSystem
@@ -93,7 +94,7 @@ module ReferenceSystemApp =
             Sg.cone 30 color radius size
                     |> Sg.noEvents
                     |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
-                        do! Aardvark.Opc.Shader.stableTrafo
+                        do! Shader.stableTrafo
                         do! DefaultSurfaces.vertexColor
                        // do! DefaultSurfaces.simpleLighting
                     }

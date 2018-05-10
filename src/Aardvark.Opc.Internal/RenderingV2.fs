@@ -11,8 +11,8 @@ open Aardvark.Base.Ag
 open Aardvark.SceneGraph
 open Aardvark.Rendering.GL
 open Aardvark.Rendering.SceneGraph.HierarchicalLoD
-open Aardvark.Opc
-open Aardvark.Opc.Utilities
+
+open Aardvark.SceneGraph.Opc
 
 open OpenTK.Graphics.OpenGL4
 
@@ -86,7 +86,7 @@ module PatchLod =
   open Aardvark.Base.Ag
   open Aardvark.SceneGraph.Semantics
   open Aardvark.SceneGraph.Semantics.TrafoSemantics
-  open Aardvark.Opc
+  open Aardvark.SceneGraph.Opc
   open Aardvark.Base.MultimethodTest
 
   let mutable useAsyncLoading = true

@@ -7,7 +7,7 @@ open Aardvark.Base.Incremental
 open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Base.Rendering
-open Aardvark.Opc    
+open Aardvark.SceneGraph.Opc
 open Aardvark.Opc.Internal
 open Aardvark.SceneGraph
 open Aardvark.SceneGraph.IO
@@ -43,7 +43,10 @@ module Surface =
           let preTransform = scene.preTransform
       
           let patchHierarchies = 
-            scene.patchHierarchies |> Seq.map Prinziple.registerIfZipped |> Seq.map PatchHierarchy.load |> Seq.toList
+            scene.patchHierarchies 
+              |> Seq.map Prinziple.registerIfZipped 
+              |> Seq.map (fun x -> PatchHierarchy.load Serialization.binarySerializer.Pickle Serialization.binarySerializer.UnPickle x)
+              |> Seq.toList
           
           let getPatchKdTreePath (h:PatchHierarchy) patchName = 
               let rootpatch = h.tree |> QTree.getRoot 

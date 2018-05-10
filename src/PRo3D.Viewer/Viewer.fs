@@ -16,7 +16,7 @@ open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Rendering.Text
 
-open Aardvark.Opc
+open Aardvark.SceneGraph.Opc
 open Aardvark.SceneGraph.SgPrimitives.Sg
 open Aardvark.VRVis
 

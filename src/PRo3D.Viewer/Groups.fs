@@ -495,7 +495,7 @@ module SurfaceModel =
     open MBrace.FsPickler
     open MBrace.FsPickler.Combinators    
 
-    open Aardvark.Opc
+    open Aardvark.SceneGraph.Opc
     open PRo3D.Groups
     open PRo3D.Surfaces
 

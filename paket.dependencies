@@ -9,6 +9,7 @@ nuget Aardvark.Application.WinForms.GL     ~> 4.1.2
 nuget Aardvark.Application.WinForms.Vulkan ~> 4.1.2
 nuget Aardvark.SceneGraph                  ~> 4.1.2
 nuget Aardvark.SceneGraph.IO               ~> 4.1.2
+nuget Aardvark.SceneGraph.Opc               ~> 4.1.2
 nuget Aardvark.Rendering.Text              ~> 4.1.2
 nuget Aardvark.Rendering.Vulkan            ~> 4.1.2
 

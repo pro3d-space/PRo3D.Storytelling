@@ -16,11 +16,14 @@ open Aardvark.Application.WinForms
 open Aardvark.Base.Rendering.Effects
 open FShade    
 
-open Aardvark.Opc
+open Aardvark.SceneGraph.Opc
 open Aardvark.Opc.Internal
 
 module Viewer = 
+    open MBrace.FsPickler
     
+    let serializer = FsPickler.CreateBinarySerializer()
+
     let createSceneGraph (runtime : IRuntime) (sizes : IMod<V2i>) (mouse : IMouse) (keyboard : IKeyboard) (signature : IFramebufferSignature) (time : IMod<_>) (scene : OpcScene)  = 
     
         let runner = runtime.CreateLoadRunner 2
@@ -38,8 +41,10 @@ module Viewer =
         let fillMode = Mod.init FillMode.Fill
         let lodVisEnabled = Mod.init false
             
+        
+
         let patchHierarchies = 
-          scene.patchHierarchies |> Seq.map PatchHierarchy.load |> Seq.toList
+          scene.patchHierarchies |> Seq.map(fun x -> PatchHierarchy.load serializer.Pickle serializer.UnPickle x) |> Seq.toList
    
         let g = 
             patchHierarchies 
@@ -103,7 +108,7 @@ module Viewer =
                             DefaultSurfaces.trafo |> toEffect
                             DefaultSurfaces.constantColor C4f.White |> toEffect
                             DefaultSurfaces.diffuseTexture |> toEffect
-                            Shader.LoDColor |> toEffect
+                            Aardvark.SceneGraph.Opc.Shader.LoDColor |> toEffect
                             //DefaultSurfaces.simpleLighting |> toEffect
                         ]
                 |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)

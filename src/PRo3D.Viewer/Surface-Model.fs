@@ -6,8 +6,8 @@ open Aardvark.Base.Incremental
 open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Base.Rendering
-open Aardvark.Opc    
 open Aardvark.SceneGraph
+open Aardvark.SceneGraph.Opc
 open DevILSharp.ILU
 open Aardvark.VRVis
 open PRo3D

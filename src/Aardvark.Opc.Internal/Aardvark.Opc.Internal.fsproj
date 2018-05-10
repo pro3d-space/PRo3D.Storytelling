@@ -63,6 +63,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <None Include="paket.references" />
+    <Compile Include="Shaders.fs" />
     <Compile Include="CompressedImage.fs" />
     <Compile Include="Time.fs" />
     <Compile Include="Proc.fs" />
@@ -81,18 +82,6 @@
       <HintPath>..\packages\System.ValueTuple.4.3.1\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
       <Private>True</Private>
     </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Aardvark.Opc\Aardvark.Opc.fsproj">
-      <Name>Aardvark.Opc</Name>
-      <Project>{3b784ce7-f853-449a-a860-8d735c2a3f74}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\Aardvark.Prinziple\Aardvark.Prinziple.fsproj">
-      <Name>Aardvark.Prinziple</Name>
-      <Project>{e56fc320-109b-40ca-9080-1725cc2908d8}</Project>
-      <Private>True</Private>
-    </ProjectReference>
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -266,6 +255,17 @@
   <Choose>
     <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1') Or ($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
       <ItemGroup>
+        <Reference Include="Aardvark.SceneGraph.Opc">
+          <HintPath>..\..\packages\Aardvark.SceneGraph.Opc\lib\netstandard2.0\Aardvark.SceneGraph.Opc.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1') Or ($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
+      <ItemGroup>
         <Reference Include="DevILSharp">
           <HintPath>..\..\packages\DevILSharp\lib\netstandard2.0\DevILSharp.dll</HintPath>
           <Private>True</Private>
@@ -364,6 +364,26 @@
         </Reference>
         <Reference Include="FsPickler">
           <HintPath>..\..\packages\FsPickler\lib\netstandard2.0\FsPickler.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1'">
+      <ItemGroup>
+        <Reference Include="ICSharpCode.SharpZipLib">
+          <HintPath>..\..\packages\SharpZipLib.NETStandard\lib\net45\ICSharpCode.SharpZipLib.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
+      <ItemGroup>
+        <Reference Include="ICSharpCode.SharpZipLib">
+          <HintPath>..\..\packages\SharpZipLib.NETStandard\lib\netstandard1.3\ICSharpCode.SharpZipLib.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>

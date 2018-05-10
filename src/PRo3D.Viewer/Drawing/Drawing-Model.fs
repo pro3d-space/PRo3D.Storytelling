@@ -7,8 +7,8 @@ open Aardvark.UI.Mutable
 open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Application
-open Aardvark.Opc
 open Aardvark.SceneGraph
+open Aardvark.SceneGraph.Opc
 open PRo3D.ReferenceSystem
 
 open PRo3D

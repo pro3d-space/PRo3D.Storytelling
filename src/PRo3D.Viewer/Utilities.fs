@@ -10,7 +10,7 @@ open MBrace.FsPickler
 open MBrace.FsPickler.Json
 open Aardvark.Base
 open PRo3D
-open Aardvark.Opc
+open Aardvark.SceneGraph.Opc
 
 module Serialization =
     open Aardvark.UI.Incremental
@@ -270,9 +270,9 @@ module Sg =
             |> Sg.lines color
             |> Sg.noEvents
             |> Sg.shader {
-                 do! Aardvark.Opc.Shader.stableTrafo
+                 do! Aardvark.SceneGraph.Opc.Shader.stableTrafo
                  do! DefaultSurfaces.vertexColor
-                 do! Aardvark.Opc.Shader.thickLine    
+                 do! Aardvark.SceneGraph.Opc.Shader.thickLine    
              }                               
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
@@ -290,7 +290,7 @@ module Sg =
             |> Sg.noEvents
             |> Sg.trafo trafo
             |> Sg.shader {
-                do! Aardvark.Opc.Shader.fixPositionTrafo 
+                do! Aardvark.SceneGraph.Opc.Shader.fixPositionTrafo 
                 do! DefaultSurfaces.vertexColor
                 do! DefaultSurfaces.thickLine    
             }                               
@@ -322,8 +322,8 @@ module Sg =
         } 
         |> Sg.set
         |> Sg.effect [
-            toEffect <| Aardvark.Opc.Shader.screenSpaceScale
-            toEffect <| Aardvark.Opc.Shader.stableTrafo
+            toEffect <| Aardvark.SceneGraph.Opc.Shader.screenSpaceScale
+            toEffect <| Aardvark.SceneGraph.Opc.Shader.stableTrafo
             toEffect <| DefaultSurfaces.vertexColor
           //  toEffect <| Aardvark.Opc.Shader.stableLight
         ]
@@ -336,7 +336,7 @@ module Sg =
         } 
         |> Sg.set
         |> Sg.effect [
-            toEffect <| Aardvark.Opc.Shader.fixPositionTrafo
+            toEffect <| Aardvark.SceneGraph.Opc.Shader.fixPositionTrafo
             toEffect <| DefaultSurfaces.vertexColor
         ]
 
@@ -378,7 +378,7 @@ module Sg =
         Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
             |> Sg.noEvents
             |> Sg.shader {
-                    do! Aardvark.Opc.Shader.stableTrafo
+                    do! Aardvark.SceneGraph.Opc.Shader.stableTrafo
                 }
             // |> Sg.transform (Trafo3d.FromOrthoNormalBasis(-V3d.IOO, V3d.OOI, V3d.OIO))
             |> Sg.trafo invScaleTrafo

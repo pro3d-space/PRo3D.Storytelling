@@ -1,4 +1,4 @@
-﻿namespace Aardvark.Opc.Utilities
+﻿namespace Aardvark.Opc.Internal
 
 open Aardvark.Base
 open Aardvark.Base.IO

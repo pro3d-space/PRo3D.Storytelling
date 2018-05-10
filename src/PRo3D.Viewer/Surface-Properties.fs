@@ -6,7 +6,7 @@ open Aardvark.Base.Incremental
 open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Base.Rendering
-open Aardvark.Opc    
+open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis
 open Aardvark.SceneGraph
 

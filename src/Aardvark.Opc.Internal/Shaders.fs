@@ -1,4 +1,4 @@
-﻿namespace Aardvark.Opc
+﻿namespace Aardvark.SceneGraph.Opc
 
 module Shader =
 
