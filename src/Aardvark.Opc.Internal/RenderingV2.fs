@@ -256,7 +256,7 @@ module PatchLod =
           )
 
         ro.DrawCallInfos <- Mod.constant [call]
-        ro.Mode <- Mod.constant g.Mode
+        ro.Mode <- g.Mode
 
         ro.Activate <- fun () -> 
           { new IDisposable with

@@ -4,13 +4,13 @@ source https://api.nuget.org/v3/index.json
 source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://vrvis.myget.org/F/aardvark/auth/11394d4d-4fe9-44ec-87c8-f3e98909f975/api/v3/index.json
 
-nuget Aardvark.Base.Rendering              ~> 4.0.6
-nuget Aardvark.Application.WinForms.GL     ~> 4.0.6
-nuget Aardvark.Application.WinForms.Vulkan ~> 4.0.6
-nuget Aardvark.SceneGraph                  ~> 4.0.6
-nuget Aardvark.SceneGraph.IO               ~> 4.0.6
-nuget Aardvark.Rendering.Text              ~> 4.0.6
-nuget Aardvark.Rendering.Vulkan            ~> 4.0.6
+nuget Aardvark.Base.Rendering              ~> 4.1.2
+nuget Aardvark.Application.WinForms.GL     ~> 4.1.2
+nuget Aardvark.Application.WinForms.Vulkan ~> 4.1.2
+nuget Aardvark.SceneGraph                  ~> 4.1.2
+nuget Aardvark.SceneGraph.IO               ~> 4.1.2
+nuget Aardvark.Rendering.Text              ~> 4.1.2
+nuget Aardvark.Rendering.Vulkan            ~> 4.1.2
 
 nuget FShade        ~> 4.0.1
 nuget FShade.Debug  ~> 4.0.1
@@ -32,10 +32,10 @@ nuget FSharp.Core                           ~> 4.3.0
 nuget FsPickler                             ~> 5.2.0
 nuget FsPickler.Json                        ~> 5.2.0
 
-nuget Aardvark.UI                           ~> 4.0.4
-nuget Aardvark.UI.Primitives                ~> 4.0.4
-nuget Aardvark.Service                      ~> 4.0.4
-nuget Aardvark.Cef.WinForms                 ~> 4.0.4
+nuget Aardvark.UI                           ~> 4.0.6
+nuget Aardvark.UI.Primitives                ~> 4.0.6
+nuget Aardvark.Service                      ~> 4.0.6
+nuget Aardvark.Cef.WinForms                 ~> 4.0.6
 
 nuget Aardium  ~> 1.0.2
 
