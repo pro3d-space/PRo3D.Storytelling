@@ -2,15 +2,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27004.2008
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DGMViewer", "DGMViewer\DGMViewer.fsproj", "{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpUtils", "CSharpUtils\CSharpUtils.csproj", "{64CDE4E5-F90A-40C0-93B9-30B1AD02855C}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PRo3D.DomainModel", "PRo3D.DomainModel\PRo3D.DomainModel.fsproj", "{8D290ADB-6593-4281-80CE-E36AB42C6C41}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PRo3D.Viewer", "PRo3D.Viewer\PRo3D.Viewer.fsproj", "{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Aardvark.Opc.Viewer", "Aardvark.Opc.Viewer\Aardvark.Opc.Viewer.fsproj", "{25CD84C6-6892-49DE-8210-7C48B8B7FFB6}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DGMViewer", "DGMViewer\DGMViewer.fsproj", "{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,18 +16,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{64CDE4E5-F90A-40C0-93B9-30B1AD02855C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{64CDE4E5-F90A-40C0-93B9-30B1AD02855C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{64CDE4E5-F90A-40C0-93B9-30B1AD02855C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{64CDE4E5-F90A-40C0-93B9-30B1AD02855C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8D290ADB-6593-4281-80CE-E36AB42C6C41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8D290ADB-6593-4281-80CE-E36AB42C6C41}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8D290ADB-6593-4281-80CE-E36AB42C6C41}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8D290ADB-6593-4281-80CE-E36AB42C6C41}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB616EB9-D27B-4A71-9E60-BDA7CBA59692}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -38,6 +28,10 @@ Global
 		{25CD84C6-6892-49DE-8210-7C48B8B7FFB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{25CD84C6-6892-49DE-8210-7C48B8B7FFB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{25CD84C6-6892-49DE-8210-7C48B8B7FFB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
