@@ -143,7 +143,7 @@ let main argv =
                 do! webSocket.send Text s true
         }        
 
-    Aardvark.Opc.Internal.PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
+    Aardvark.VRVis.Opc.PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
         
     // main app
     use form = new Form(Width = 1280, Height = 800)

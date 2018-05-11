@@ -9,6 +9,7 @@ Aardvark.SceneGraph
 Aardvark.SceneGraph.Opc
 
 Aardvark.VRVis.Geometry
+Aardvark.VRVis.Opc
 
 FSharp.Core
 FsPickler

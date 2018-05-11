@@ -10,7 +10,6 @@ open Aardvark.Base.IO
 open OpenTK.Graphics.OpenGL4
 open FSharp.NativeInterop
 open Aardvark.Base.Rendering
-open Aardvark.Rendering.GL
 
 module private NativeSupport =
     [<DllImport("kernel32.dll", SetLastError=true)>]
@@ -106,7 +105,9 @@ module CompressedImage =
         cacheFileStream.Close()
         infoFile.Close()
         Marshal.FreeHGlobal(basePtr)
-        GL.Sync()
+
+        GL.Flush();
+        GL.Finish();       
         Log.stop()
         prepared :> ITexture, { new IDisposable with member x.Dispose() = GL.DeleteTexture(handle) }
 

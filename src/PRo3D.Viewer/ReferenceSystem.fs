@@ -15,7 +15,10 @@ module ReferenceSystemApp =
     open Aardvark.SceneGraph.Opc
     open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.SceneGraph.FShadeSceneGraph
+    open Aardvark.VRVis.Opc
+
     open PRo3D.ReferenceSystem
+
     //open Aardvark.UI.ChoiceModule
    
     type Action =

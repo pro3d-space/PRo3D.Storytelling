@@ -7,11 +7,11 @@ open Aardvark.Base.Incremental
 open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.Base.Rendering
-open Aardvark.SceneGraph.Opc
-open Aardvark.Opc.Internal
 open Aardvark.SceneGraph
 open Aardvark.SceneGraph.IO
+open Aardvark.SceneGraph.Opc
 
+open Aardvark.VRVis.Opc
 
 open PRo3D
 open PRo3D.Groups
@@ -160,7 +160,7 @@ module Surface =
             |> List.map (fun h ->                     
               let sg = 
                 Sg.patchLod signature runner h.baseDir 
-                  scene.lodDecider scene.useCompressedTextures                                 
+                  scene.lodDecider scene.useCompressedTextures
                   (PatchLod.toRoseTree h.tree)
               sg) 
             |> Sg.ofList

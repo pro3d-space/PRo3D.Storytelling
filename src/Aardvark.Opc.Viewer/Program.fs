@@ -17,7 +17,7 @@ open Aardvark.Base.Rendering.Effects
 open FShade    
 
 open Aardvark.SceneGraph.Opc
-open Aardvark.Opc.Internal
+open Aardvark.VRVis.Opc
 
 module Viewer = 
     open MBrace.FsPickler
@@ -108,7 +108,7 @@ module Viewer =
                             DefaultSurfaces.trafo |> toEffect
                             DefaultSurfaces.constantColor C4f.White |> toEffect
                             DefaultSurfaces.diffuseTexture |> toEffect
-                            Aardvark.SceneGraph.Opc.Shader.LoDColor |> toEffect
+                            Aardvark.VRVis.Opc.Shader.LoDColor |> toEffect
                             //DefaultSurfaces.simpleLighting |> toEffect
                         ]
                 |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)

@@ -12,6 +12,7 @@ Aardvark.SceneGraph.Opc
 Aardvark.Rendering.Text
 
 Aardvark.VRVis.Geometry
+Aardvark.VRVis.Opc
 Aardvark.Fitting.Planes
        
 Aardvark.UI.Primitives
