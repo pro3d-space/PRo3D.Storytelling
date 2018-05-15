@@ -38,8 +38,6 @@ module Surface =
                       r
                   | Some h -> h
 
-
-          let bb = scene.boundingBox      
           let preTransform = scene.preTransform
       
           let patchHierarchies = 
@@ -47,91 +45,11 @@ module Surface =
               |> Seq.map Prinziple.registerIfZipped 
               |> Seq.map (fun x -> PatchHierarchy.load Serialization.binarySerializer.Pickle Serialization.binarySerializer.UnPickle x)
               |> Seq.toList
-          
-          let getPatchKdTreePath (h:PatchHierarchy) patchName = 
-              let rootpatch = h.tree |> QTree.getRoot 
-
-              let fileName = sprintf "%s-0.aakd" patchName            
-              Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]
-
-          let getPatchPositionPath (h:PatchHierarchy) patchName =
-              let fileName = "positions.aara"
-              Path.combine [h.baseDir; "patches"; patchName; fileName]
-
-          let getMasterKdTreePath (h:PatchHierarchy) =
-              let rootpatch = h.tree |> QTree.getRoot 
-                                      
-              let fileName = sprintf "%s-0.aakd" rootpatch.info.Name            
-              Path.combine [h.baseDir; "patches"; rootpatch.info.Name; fileName]      
-
-          Log.startTimed "Creating KdTree"
-          let loadKdTrees (h : PatchHierarchy) : hmap<Box3d,Level0KdTree> =
-                          
-              let masterKdPath = 
-                  h |> getMasterKdTreePath
-
-              let cacheFile = System.IO.Path.ChangeExtension(masterKdPath, ".cache")
-
-              if System.IO.File.Exists(cacheFile) then
-                  Log.line "Found lazy kdtree cache"
-                  try
-                      (Serialization.loadAs<array<Box3d*Level0KdTree>> cacheFile) |> HMap.ofArray
-                  with
-                    | _ -> 
-                      Log.error "could not load kdtree cache file. please delete %A" cacheFile
-                      HMap.empty
-              else
-                  
-                  Log.line "did not find lazy kdtree cache"
-                  let patchInfos =
-                      h.tree |> QTree.getLeaves |> Seq.map(fun x -> x.info)
-
-                  let kd0Paths = 
-                      patchInfos |> Seq.map(fun x -> x.Name |> getPatchKdTreePath h)
-
-                  let kd0PathsExist = 
-                      kd0Paths |> Seq.forall(System.IO.File.Exists)
-              
-                  match (System.IO.File.Exists(masterKdPath), kd0PathsExist) with
-                      | (true, false) -> 
-                           Log.line "Found master kdtree - loading incore"
-                           let tree = loadKdtree masterKdPath                     
-                           let kd = {
-                              kdTree = tree;
-                              boundingBox = tree.KdIntersectionTree.BoundingBox3d.Transformed(scene.preTransform)
-                           }
-                           HMap.add kd.boundingBox (InCoreKdTree kd) HMap.empty
-                      | (true, true) ->                                                        
-                           Log.line "Found master kdtree and patch trees"
-                                                    
-                           let bla = 
-                              kd0Paths
-                                  |> Seq.zip patchInfos
-                                  |> Seq.map(
-                                      fun (info, kdPath) ->                                
-                                          let t = loadKdtree kdPath
-                                          let lazyTree : LazyKdTree = {
-                                              kdTree        = None
-                                              objectSetPath = info.Name |> getPatchPositionPath h
-                                              kdtreePath    = kdPath
-                                              affine        = info.Local2Global
-                                              boundingBox   = t.KdIntersectionTree.BoundingBox3d.Transformed(scene.preTransform)
-                                          }
-                                          (lazyTree.boundingBox, (LazyKdTree lazyTree))
-                                  )
-                                  |> Seq.toArray 
-
-                           bla |> Serialization.save cacheFile |> ignore 
                               
-                           bla |> HMap.ofArray
-                      | _ ->
-                          Log.warn "Could not find level 0 kdtrees"
-                          HMap.empty
-          
           let kdTreesPerHierarchy =
               [| for h in patchHierarchies do
                   if createKdTrees then   
-                      let kdMap = loadKdTrees h 
+                      let kdMap = KdTrees.loadKdTrees h preTransform ViewerModality.XYZ
 
                       yield kdMap
                   else 
@@ -150,10 +68,7 @@ module Surface =
                       r
                   )
                   |> Array.fold (fun a b -> HMap.union a b) HMap.empty
-
-          Log.stop()
-
-
+          
           // create level of detail hierarchy (Sg)
           let g = 
             patchHierarchies 
