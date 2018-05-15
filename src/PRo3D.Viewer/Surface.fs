@@ -23,6 +23,7 @@ module Surface =
 
     module Sg =
       open Aardvark.Prinziple
+      open Aardvark.VRVis.Opc
 
       let mutable hackRunner = None
 
@@ -49,7 +50,7 @@ module Surface =
           let kdTreesPerHierarchy =
               [| for h in patchHierarchies do
                   if createKdTrees then   
-                      let kdMap = KdTrees.loadKdTrees h preTransform ViewerModality.XYZ
+                      let kdMap = KdTrees.loadKdTrees h preTransform ViewerModality.XYZ Serialization.binarySerializer
 
                       yield kdMap
                   else 

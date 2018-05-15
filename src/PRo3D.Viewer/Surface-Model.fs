@@ -13,6 +13,7 @@ open Aardvark.VRVis
 open PRo3D
 open Aardvark.UI.Trafos
 open Aardvark.SceneGraph.IO.Loader
+open Aardvark.VRVis.Opc
 
 
 //[<DomainType>]
