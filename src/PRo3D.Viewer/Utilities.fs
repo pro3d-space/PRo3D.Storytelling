@@ -165,6 +165,7 @@ module Sg =
     open Aardvark.Base.Rendering
     open Aardvark.UI
     open Aardvark.Rendering.Text
+    open Aardvark.Opc.Internal
 
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
             adaptive {
@@ -197,70 +198,7 @@ module Sg =
                     | None -> [||])
 
     let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
-
-    let fixPosition (viewTrafo: Trafo3d) (campos : V3d) (forw:V3d) (up:V3d) (modelt: Trafo3d) = 
-        //let right = modelt.Forward.C0
-        //let up = modelt.Forward.C1
-        //let forw = modelt.Forward.C2
-        let pos = modelt.Forward.C3
-        let trans = viewTrafo.Forward.C3
-        let transTrafo = 
-            new Trafo3d(
-                new M44d(
-                    1.0, 0.0, 0.0, -trans.X,
-                    0.0, 1.0, 0.0, -trans.Y,
-                    0.0, 0.0, 1.0, -trans.Z,
-                    0.0, 0.0, 0.0, 1.0
-                ),
-                new M44d(
-                    1.0, 0.0, 0.0, 0.0,
-                    0.0, 1.0, 0.0, 0.0,
-                    0.0, 0.0, 1.0, 0.0,
-                    -trans.X, -trans.Y, -trans.Z, 1.0
-                )
-        )
-        let right = forw.Cross up
-        let rot = 
-            new Trafo3d(
-                new M44d(
-                    right.X, up.X, forw.X, pos.X,
-                    right.Y, up.Y, forw.Y, pos.Y,
-                    right.Z, up.Z, forw.Z, pos.Z,
-                    0.0,     0.0,  0.0,    1.0
-                ),
-                new M44d(
-                    right.X, right.Y, right.Z, 0.0,
-                    up.X,    up.Y,    up.Z,    0.0,
-                    forw.X,  forw.Y,  forw.Z,  0.0,
-                    pos.X,     pos.Y,     pos.Z,     1.0
-                )
-        )
-
-        //let mvf = viewTrafo.Forward
-        //let right = mvf.C0
-        //let up = mvf.C1
-        //let forw = mvf.C2
-        
-        let rotTrafo = 
-            new Trafo3d(
-                new M44d(
-                    right.X, up.X, forw.X, 0.0,
-                    right.Y, up.Y, forw.Y, 0.0,
-                    right.Z, up.Z, forw.Z, 0.0,
-                    0.0,     0.0,  0.0,    1.0
-                ),
-                new M44d(
-                    right.X, right.Y, right.Z, 0.0,
-                    up.X,    up.Y,    up.Z,    0.0,
-                    forw.X,  forw.Y,  forw.Z,  0.0,
-                    0.0, 0.0, 0.0, 1.0
-                )
-        )
-       
-        viewTrafo.Inverse * modelt
-        //rotTrafo * inv
-
-                    
+                        
     let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
         let box = points |> AList.toMod |> Mod.map (fun d -> if d.Count > 2 then Box3d d else Box3d.Unit)
 
@@ -270,9 +208,9 @@ module Sg =
             |> Sg.lines color
             |> Sg.noEvents
             |> Sg.shader {
-                 do! Aardvark.VRVis.Opc.Shader.stableTrafo
+                 do! Shader.stableTrafo
                  do! DefaultSurfaces.vertexColor
-                 do! Aardvark.VRVis.Opc.Shader.thickLine    
+                 do! Shader.thickLine    
              }                               
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
@@ -280,24 +218,7 @@ module Sg =
             
             //|> Sg.pass linePass
             //|> Sg.depthTest (Mod.constant DepthTestMode.None)
-
-    let fixLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
-        
-        let edges = edgeLines false points trafo
-        let trafoInv = trafo |> Mod.map(fun d -> d.Inverse)                                                
-        edges
-            |> Sg.lines color
-            |> Sg.noEvents
-            |> Sg.trafo trafo
-            |> Sg.shader {
-                do! Aardvark.VRVis.Opc.Shader.fixPositionTrafo 
-                do! DefaultSurfaces.vertexColor
-                do! DefaultSurfaces.thickLine    
-            }                               
-            |> Sg.trafo trafoInv
-            |> Sg.uniform "LineWidth" width
-            
-            
+                            
     let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =
         adaptive {
             let! p = p
@@ -322,25 +243,12 @@ module Sg =
         } 
         |> Sg.set
         |> Sg.effect [
-            toEffect <| Aardvark.VRVis.Opc.Shader.screenSpaceScale
-            toEffect <| Aardvark.VRVis.Opc.Shader.stableTrafo
+            toEffect <| Shader.screenSpaceScale
+            toEffect <| Shader.stableTrafo
             toEffect <| DefaultSurfaces.vertexColor
           //  toEffect <| Aardvark.Opc.Shader.stableLight
         ]
 
-    let fixDots (points : alist<V3d>) (color : IMod<C4b>) (view : IMod<CameraView>) =
-        aset {
-            for p in points |> ASet.ofAList do
-                let scale = computeScale view (Mod.constant p) 5.0                               
-                yield mkDotISg color (Mod.constant 0.1) (Mod.constant p)
-        } 
-        |> Sg.set
-        |> Sg.effect [
-            toEffect <| Aardvark.VRVis.Opc.Shader.fixPositionTrafo
-            toEffect <| DefaultSurfaces.vertexColor
-        ]
-
-    
     let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) =
         let right = forw.Cross up
         let rotTrafo = 
@@ -378,9 +286,8 @@ module Sg =
         Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
             |> Sg.noEvents
             |> Sg.shader {
-                    do! Aardvark.VRVis.Opc.Shader.stableTrafo
-                }
-            // |> Sg.transform (Trafo3d.FromOrthoNormalBasis(-V3d.IOO, V3d.OOI, V3d.OIO))
+                    do! Shader.stableTrafo
+                }            
             |> Sg.trafo invScaleTrafo
             |> Sg.trafo billboardTrafo  
 
@@ -469,3 +376,28 @@ module Lenses =
     let set    (lens : Lens<'s,'a>) (v : 'a) (s:'s) : 's     = lens.Set(s,v)
     let set'   (lens : Lens<'s,'a>) (s:'s) (v : 'a)  : 's     = lens.Set(s,v)
     let update (lens : Lens<'s,'a>) (f : 'a->'a) (s:'s) : 's = lens.Update(s,f)
+
+module Shader =
+  open FShade
+  open Aardvark.SceneGraph.Opc.Shader
+
+  let private colormap =
+        sampler2d {
+            texture uniform?ColorMapTexture
+            filter Filter.MinMagMipLinear
+            addressU WrapMode.Wrap
+            addressV WrapMode.Wrap
+  }
+
+  let falseColor (v : Vertex) =
+      fragment {           
+          if uniform?falseColors then
+              let range : V2d = uniform?MinMax
+              let norm = V2d((v.scalar - range.X)/ (range.Y - range.X), 0.5)
+
+              let c = colormap.Sample(norm).XYZ
+
+              return v.c * V4d(c.X, c.Y, c.Z, 1.0)
+          else
+              return v.c
+      }

@@ -2,28 +2,31 @@
 
 module DrawingApp =
    // open Newtonsoft.Json
-    open Aardvark.Base
-    open Aardvark.Application
-    open Aardvark.UI
-
     open System
-    
-    open Aardvark.Base.Incremental
-    open Aardvark.Base.Rendering
-    open Aardvark.Application
-    open Aardvark.SceneGraph
-    open Aardvark.Rendering.Text
-    open Aardvark.VRVis
-
-    open Aardvark.UI
-    open Aardvark.UI.Primitives
     
     open System.Windows.Forms
     open System.Text
     open System.Net.WebSockets
     open System.Threading
-    open PRo3D
     open System.Collections.Concurrent    
+
+    open Aardvark.Base
+    open Aardvark.Application
+    open Aardvark.UI
+
+    open Aardvark.Base.Incremental
+    open Aardvark.Base.Rendering
+    open Aardvark.Application
+    open Aardvark.SceneGraph
+    open Aardvark.SceneGraph.Opc
+    open Aardvark.Rendering.Text
+    open Aardvark.VRVis
+    open Aardvark.VRVis.Opc
+
+    open Aardvark.UI
+    open Aardvark.UI.Primitives
+    
+    open PRo3D
     open PRo3D.Drawing
     open PRo3D.Groups
 
@@ -560,8 +563,8 @@ module DrawingApp =
               |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
               |> Sg.uniform "Size" size
               |> Sg.shader {
-                  do! Aardvark.VRVis.Opc.Shader.screenSpaceScale
-                  do! Aardvark.VRVis.Opc.Shader.stableTrafo
+                  do! Shader.screenSpaceScale
+                  do! Shader.stableTrafo
                   do! DefaultSurfaces.vertexColor
                   //do! Aardvark.Opc.Shader.stableLight
               }
@@ -574,7 +577,7 @@ module DrawingApp =
                //|> Sg.uniform "Size" radius
                |> Sg.shader {
                    //do! Aardvark.Opc.Shader.screenSpaceScale
-                   do! Aardvark.VRVis.Opc.Shader.stableTrafo
+                   do! Shader.stableTrafo
                    do! DefaultSurfaces.vertexColor
                    do! DefaultSurfaces.simpleLighting
                }

@@ -17,10 +17,11 @@ open Aardvark.Base.Rendering.Effects
 open FShade    
 
 open Aardvark.SceneGraph.Opc
-open Aardvark.VRVis.Opc
+open Aardvark.Opc.Internal
 
 module Viewer = 
     open MBrace.FsPickler
+    open Aardvark.Opc.Internal
     
     let serializer = FsPickler.CreateBinarySerializer()
 
@@ -44,13 +45,14 @@ module Viewer =
         
 
         let patchHierarchies = 
-          scene.patchHierarchies |> Seq.map(fun x -> PatchHierarchy.load serializer.Pickle serializer.UnPickle x) |> Seq.toList
+          scene.patchHierarchies |> Seq.map(fun x -> PatchHierarchy.load serializer.Pickle serializer.UnPickle (OpcPaths x)) |> Seq.toList
    
         let g = 
             patchHierarchies 
             |> List.map (fun h -> 
                     Sg.patchLod signature runner h.baseDir 
                                 scene.lodDecider scene.useCompressedTextures 
+                                ViewerModality.XYZ
                                 (PatchLod.toRoseTree h.tree)
                                 
                ) 
@@ -108,7 +110,7 @@ module Viewer =
                             DefaultSurfaces.trafo |> toEffect
                             DefaultSurfaces.constantColor C4f.White |> toEffect
                             DefaultSurfaces.diffuseTexture |> toEffect
-                            Aardvark.VRVis.Opc.Shader.LoDColor |> toEffect
+                            Shader.LoDColor |> toEffect
                             //DefaultSurfaces.simpleLighting |> toEffect
                         ]
                 |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)

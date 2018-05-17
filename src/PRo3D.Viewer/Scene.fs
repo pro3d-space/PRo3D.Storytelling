@@ -191,6 +191,7 @@ module Scene =
         let opcSurfs = 
             surfacesList 
             |> PList.filter ( fun x -> x.surfaceType = SurfaceType.SurfaceOPC)
+
         let sgSurfaces = 
             Surface.createSgSurfaces runtime signature opcSurfs |> Files.expandLazyKdTreePaths scenePath surfaces        
 
