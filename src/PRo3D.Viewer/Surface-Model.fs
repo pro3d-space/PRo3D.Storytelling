@@ -83,7 +83,7 @@ type SgSurfaceOpc = {
     trafo       : Transformation
     globalBB    : Box3d
     sceneGraph  : ISg
-    kdTree      : hmap<Box3d,Level0KdTree>
+    kdTree      : hmap<Box3d,KdTrees.Level0KdTree>
 }
 
 [<DomainType>]

@@ -28,7 +28,7 @@ module Surface =
       let mutable hackRunner = None
 
       let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene) (createKdTrees)
-          : (ISg * list<PatchHierarchy> * hmap<Box3d,Level0KdTree>) =
+          : (ISg * list<PatchHierarchy> * hmap<Box3d, KdTrees.Level0KdTree>) =
 
           let runner = 
               match hackRunner with
@@ -126,82 +126,83 @@ module Surface =
             doc |> layers
     
     module Files = 
-
-        /// checks if "path" is a valid opc folder
-        let isOPCPath (path : string) = 
+        open System.IO
+        
+        /// <summary>
+        /// checks if "path" is a valid opc folder containing "images", "patches", and patchhierarchy.xml
+        /// </summary>
+        let isOpcFolder (path : string) = 
             let imagePath = Path.combine [path; "images"]
             let patchPath = Path.combine [path; "patches"]
-            let dirsExist = (System.IO.Directory.Exists imagePath) && (System.IO.Directory.Exists patchPath)
-            let storageExists = System.IO.File.Exists(patchPath + "\\patchhierarchy.xml")
-            if dirsExist && storageExists then
-                true
-            else false
+            (Directory.Exists imagePath) &&
+            (Directory.Exists patchPath) && 
+             File.Exists(patchPath + "\\patchhierarchy.xml")
 
+        /// <summary>
         /// checks if "path" is a valid surface folder
+        /// </summary>        
         let isSurfaceFolder (path : string) =
-            let mutable isValid = false
-            let subfolders = System.IO.Directory.GetDirectories(path)
-            for s in subfolders do
-                isValid <- (isOPCPath(s) || isValid)
-            isValid
-                    
+            Directory.GetDirectories(path) |> Seq.forall isOpcFolder
+        
+        let private retrieve (f :string -> string) (path : string) : list<string> =
+            if path = String.Empty then failwith "encountered empty opc path"
+
+            if isOpcFolder path then
+                [path.Replace(@"\", @"\\\\")]
+            elif Directory.Exists path then
+                Directory.GetDirectories(path)
+                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
+                    |> Seq.filter isOpcFolder
+                    |> Seq.map f
+                    |> Seq.toList 
+            else []
+
+        /// <summary>
         /// returns all valid OPCs in "path"
+        /// </summary>
         let getOPCPaths path = 
-            if path = String.Empty then failwith "encountered empty opcpath"
-
-            if isOPCPath path then
-                [path.Replace(@"\", @"\\\\")]
-            elif System.IO.Directory.Exists path then
-                System.IO.Directory.GetDirectories(path)
-                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
-                    |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
-                    |> Seq.toList 
-            else []
-
+          path |> retrieve (id)
+            
+        /// <summary>
         /// returns all valid OPCs in "path"
+        /// </summary>
         let getOPCNames path = 
-            if path = String.Empty then failwith "encountered empty opcpath"
-
-            if isOPCPath path then
-                [path.Replace(@"\", @"\\\\")]
-            elif System.IO.Directory.Exists path then
-                System.IO.Directory.GetDirectories(path)
-                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
-                    |> Seq.choose (fun a -> if isOPCPath a then Some a else None)
-                    |> Seq.map (fun a -> System.IO.Path.GetFileName a; )
-                    |> Seq.toList 
-            else []
+          path |> retrieve (Path.GetFileName)            
 
         let expandNamesToPaths (path : string) (names : List<string>) =
-            names |> List.map(fun a -> 
-                let p = (Path.combine [path; a]).Replace(@"\", @"\\\\")
-                //Log.warn "%s" p
-                p)
+            names |> List.map(fun a -> (Path.combine [path; a]).Replace(@"\", @"\\\\"))
+
+        let discover (p : string -> bool) path : list<string> =
+          if Directory.Exists path then
+            Directory.EnumerateDirectories path                     
+              |> Seq.filter p            
+              |> Seq.toList
+          else List.empty
 
         /// returns all valid surface folders in "path"   
-        let discover path = 
-            if System.IO.Directory.Exists path then
-                System.IO.Directory.EnumerateDirectories path 
-                    // |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
-                    |> Seq.filter (fun a -> isSurfaceFolder a)
-                    |> Seq.toList 
-            else []
+        let discoverSurfaces path = 
+          discover isSurfaceFolder path          
+
+        let discoverOpcs path = 
+          discover isOpcFolder path
 
         let getSurfaceFolder (surface:PRo3D.Surfaces.Surface) (scenePath:option<string>) =
-            if surface.relativePaths 
-            then
-                match scenePath with
-                    | Some sp -> 
-                        let x = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
-                        let relPath = Path.Combine(x, surface.name)
-                        if Directory.Exists relPath then Some relPath else None
-                    | None -> None
-            else
-                match surface.surfaceType with
-                    | SurfaceType.SurfaceOBJ -> let p = System.IO.Path.GetDirectoryName surface.importPath
-                                                if Directory.Exists p then Some p else None
-                    |_-> let p = surface.importPath
-                         if Directory.Exists p then Some p else None
+          if surface.relativePaths 
+          then
+            match scenePath with
+              | Some sp -> 
+                  let x = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
+                  let relPath = Path.Combine(x, surface.name)
+                  if Directory.Exists relPath then Some relPath else None
+              | None -> None
+          else
+            match surface.surfaceType with
+              | SurfaceType.SurfaceOBJ -> 
+                let p = Path.GetDirectoryName surface.importPath
+                if Directory.Exists p then Some p else None
+              |_-> 
+                let p = surface.importPath
+                if Directory.Exists p then Some p else None
 
 
         /// strips away parts of a file path until the remaining depth is reached
@@ -228,27 +229,27 @@ module Surface =
                   let kd =
                       s.kdTree |> HMap.map (fun _ k -> 
                           match k with 
-                              | Level0KdTree.LazyKdTree lk when surf.relativePaths && scenePath.IsSome -> // scene is portable                                        
+                              | KdTrees.Level0KdTree.LazyKdTree lk when surf.relativePaths && scenePath.IsSome -> // scene is portable                                        
                                   let path = Path.Combine((Path.GetDirectoryName scenePath.Value),"Surfaces")
                                   let kdTreeSub   = lk.kdtreePath    |> sceneRelativePath
                                   let triangleSub = lk.objectSetPath |> sceneRelativePath
                                           
-                                  LazyKdTree { 
+                                  KdTrees.LazyKdTree { 
                                       lk with 
                                           kdtreePath    = Path.Combine(path, kdTreeSub)
                                           objectSetPath = Path.Combine(path, triangleSub)
                                   }
-                              | Level0KdTree.LazyKdTree lk -> // surfaces have absolute paths
+                              | KdTrees.Level0KdTree.LazyKdTree lk -> // surfaces have absolute paths
                   
                                   let kdTreeSub   = lk.kdtreePath    |> surfaceRelativePath
                                   let triangleSub = lk.objectSetPath |> surfaceRelativePath                                                                                
                   
-                                  LazyKdTree {
+                                  KdTrees.LazyKdTree {
                                       lk with 
                                           kdtreePath    = Path.Combine(surf.importPath, kdTreeSub)
                                           objectSetPath = Path.Combine(surf.importPath, triangleSub)
                                   }
-                              | Level0KdTree.InCoreKdTree ik -> InCoreKdTree ik // kdtrees can be loaded as is
+                              | KdTrees.Level0KdTree.InCoreKdTree ik -> KdTrees.InCoreKdTree ik // kdtrees can be loaded as is
                       )
                   (SgSurfaces.SgSurfaceOPC { s with kdTree = kd })
             )                
@@ -287,7 +288,7 @@ module Surface =
         surf        : PRo3D.Surfaces.Surface
         bb          : Box3d
         sg          : ISg        
-        kdtree      : hmap<Box3d,Level0KdTree>
+        kdtree      : hmap<Box3d,KdTrees.Level0KdTree>
     }
 
     let assertInvalidBB (bb:Box3d) = 
@@ -335,7 +336,7 @@ module Surface =
 
         }       
 
-    let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,Level0KdTree>) = 
+    let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,KdTrees.Level0KdTree>) = 
     
         let pose = Pose.translate V3d.Zero // bb.Center
         let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
@@ -352,7 +353,7 @@ module Surface =
     let transformBox (trafo:Trafo3d) (bb:Box3d) =
         bb.Transformed(trafo)
               
-    let createSgSurfaces runtime signature surfaces =        
+    let createSgSurfaces runtime signature surfaces =
         let sghs =
             surfaces
                 |> PList.toList
@@ -448,84 +449,16 @@ module Surface =
         | GroupsMessage             of Groups.Action  
         | PickObject                of V3d
 
-    let triangleIsNan (t:Triangle3d) =
-        t.P0.AnyNaN || t.P1.AnyNaN || t.P2.AnyNaN
+    let computeIndices (size:V2i)(invalids : int[]) : int[] =
+      PRo3DCSharp.ComputeIndexArray(size,invalids)
 
-    let getInvalidIndices (positions : V3d[]) =
-        positions |> List.ofArray |> List.mapi (fun i x -> if x.AnyNaN then Some i else None) |> List.choose id
-
-    let loadTriangles (kd : LazyKdTree) = 
-        
-        let positions = kd.objectSetPath |> Aara.fromFile<V3f>
-
-        let data = 
-            positions.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
-
-        let invalidIndices = getInvalidIndices data
-        let index = PRo3DCSharp.ComputeIndexArray(positions.Size.XY.ToV2i(), invalidIndices)                
-                
-        let triangles =             
-            index 
-                |> Seq.map(fun x -> data.[x])
-                |> Seq.chunkBySize 3                               
-                |> Seq.map(fun x -> Triangle3d(x))
-                |> Seq.filter(fun x -> triangleIsNan x |> not) |> Seq.toArray
-                |> TriangleSet
-
-        triangles
-
-    let loadObjectSet (cache : hmap<string, ConcreteKdIntersectionTree>) (lvl0Tree : Level0KdTree)=       
-    
-        match lvl0Tree with
-            | InCoreKdTree kd -> 
-                kd.kdTree, cache
-            | LazyKdTree kd -> 
-            
-                let kdTree, cache =
-                    match kd.kdTree with
-                        | Some k -> k, cache
-                        | None -> 
-                            let tree = cache |> HMap.tryFind (kd.boundingBox.ToString())
-                            match tree with
-                                | Some t -> 
-                                    //Log.line "cache hit %A" kd.boundingBox
-                                    t, cache
-                                | None ->                                     
-                                    Log.line "cache miss %A- loading kdtree" kd.boundingBox
-
-                                    let mutable tree = KdTrees.loadKdtree kd.kdtreePath                                    
-                                    tree.KdIntersectionTree.ObjectSet <- (kd |> loadTriangles)
-
-                                    let key = tree.KdIntersectionTree.BoundingBox3d.ToString()
-                                                                        
-                                    tree, (HMap.add key tree cache)
-                kdTree, cache
-
-    let intersectKdTrees (kdTreeMap: hmap<Box3d, Level0KdTree>) bb (surface : PRo3D.Surfaces.Surface) (cache : hmap<string, ConcreteKdIntersectionTree>) (ray : FastRay3d) = 
-
-        let kdtree, c = kdTreeMap |> HMap.find bb |> loadObjectSet cache        
-
-        let kdi = kdtree.KdIntersectionTree 
-        let mutable hit = ObjectRayHit.MaxRange
-                
-        let objFilter a b = true
-        try
-           // let hitFilter a b c d = false
-            if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then
-                //let point = ray.Ray.GetPointOnRay(hit.RayHit.T)
-                Some (hit.RayHit.T, surface),c
-            else            
-                None,c
-        with 
-          | _ -> 
-            Report.Error "null ref exception in kdtree intersection" 
-            None,c
+    let intersectKdTrees' = KdTrees.intersectKdTrees computeIndices
 
     let doKdTreeIntersection (m : SurfaceModel) (t : Trafo3d) (r : FastRay3d) cache = 
         let mutable cache = cache
         let sgSurfaces = m.sgSurfaces 
-                            |> HMap.filter( fun id sg -> sgSurface.isSgOPC sg )
-                            |> HMap.map( fun id sg -> sgSurface.toSgOPC sg )
+                            |> HMap.filter( fun _ sg -> sgSurface.isSgOPC sg )
+                            |> HMap.map( fun _ sg -> sgSurface.toSgOPC sg )
         sgSurfaces
             |> HMap.toSeq
             |> Seq.map (fun (_,d) -> d.kdTree, (m.surfaces.flat |> HMap.find d.surface) |> Leaf.toSurface)            
@@ -553,10 +486,10 @@ module Surface =
                                     fun bb -> 
                                         //Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                        
 
+                                        let ray = r.Ray.Transformed(surf.preTransform.Backward) |> FastRay3d  //combine pre and current transform
+
                                         let hit, c = 
-                                            r.Ray.Transformed(surf.preTransform.Backward) //combine pre and current transform
-                                            |> FastRay3d 
-                                            |> intersectKdTrees kd bb surf cache
+                                          kd |> intersectKdTrees' bb surf cache ray
 
                                         cache <- c
                                         hit

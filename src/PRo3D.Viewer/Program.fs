@@ -118,7 +118,7 @@ let main argv =
     //buildLicense(365)
 
     Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.surfaceModelPickler)
-    Serialization.registry.RegisterFactory (fun _ -> level0KdTreePickler)
+    Serialization.registry.RegisterFactory (fun _ -> KdTrees.level0KdTreePickler)
 
     if licenseCheck then
       checkLicense()
