@@ -469,3 +469,28 @@ module Lenses =
     let set    (lens : Lens<'s,'a>) (v : 'a) (s:'s) : 's     = lens.Set(s,v)
     let set'   (lens : Lens<'s,'a>) (s:'s) (v : 'a)  : 's     = lens.Set(s,v)
     let update (lens : Lens<'s,'a>) (f : 'a->'a) (s:'s) : 's = lens.Update(s,f)
+
+module Shaders =
+  open FShade
+  open Aardvark.VRVis.Opc
+
+  let private colormap =
+        sampler2d {
+            texture uniform?ColorMapTexture
+            filter Filter.MinMagMipLinear
+            addressU WrapMode.Wrap
+            addressV WrapMode.Wrap
+    }
+
+  let falseColor (v : Shader.Vertex) =
+      fragment {           
+          if uniform?falseColors then
+              let range : V2d = uniform?MinMax
+              let norm = V2d((v.scalar - range.X)/ (range.Y - range.X), 0.5)
+
+              let c = colormap.Sample(norm).XYZ
+
+              return v.c * V4d(c.X, c.Y, c.Z, 1.0)
+          else
+              return v.c
+      }

@@ -402,8 +402,8 @@ module ViewerUtils =
                             DefaultSurfaces.diffuseTexture |> toEffect
                             Shader.selectionColor          |> toEffect       
                             Shader.LoDColor                |> toEffect
-                            Shader.falseColor              |> toEffect                            
                             Shader.triangleFilter          |> toEffect
+                            PRo3D.Shaders.falseColor       |> toEffect
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
