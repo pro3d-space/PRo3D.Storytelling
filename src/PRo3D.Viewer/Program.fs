@@ -30,7 +30,9 @@ open Aardvark.VRVis
 open PRo3D.Viewer
 open PRo3D.Groups
 open System.Text
+open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis.Opc
+open Aardvark.Opc.Internal
 
 [<DataContract>]
 type Calc =
@@ -114,6 +116,7 @@ let main argv =
     let runtime = app.Runtime    
 
     Aardvark.Rendering.GL.RuntimeConfig.SupressSparseBuffers <- true
+    app.ShaderCachePath <- None
 
     //buildLicense(365)
 
@@ -144,7 +147,7 @@ let main argv =
                 do! webSocket.send Text s true
         }        
 
-    Aardvark.VRVis.Opc.PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
+    PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
         
     // main app
     use form = new Form(Width = 1280, Height = 800)

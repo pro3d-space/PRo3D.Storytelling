@@ -1039,35 +1039,7 @@ module ViewerApp =
                     
                 }
             Incremental.div AttributeMap.empty nodes   
-            
-        let arrowOverlay = 
-            let orSystem =
-                ReferenceSystemApp.Sg.cview
-                    m.scene.config
-                    mrefConfig
-                    m.scene.orientationSystem
-                    m.scene.navigation.camera.view
-                    m.scene.navigation.exploreCenter
-                |> Sg.map ReferenceSystemMessage
-                                                                       
-            let att2 = 
-                AttributeMap.unionMany [
-                    //renderControlAttributes m.scene.navigation
-                    [attribute "style" "width:10%; height: 20%; position: absolute; bottom: 10px; left: 10px; float:left"; attribute "data-samples" "1" ] |> AttributeMap.ofList //"width:10%; height: 20%; position: absolute; top: 100px; float:left"
-                    AttributeMap.ofList [
-                        //onKeyDown (KeyDown)
-                        //onKeyUp (KeyUp)
-                        attribute "style" "width:10%; height: 20%; position: absolute; bottom: 10px; left: 10px; float:left"; ] // right: 400px
-                ]
-            let cmds    = ViewerUtils.renderCommands AList.empty orSystem Sg.empty m
-            let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.overlayFrustum//(Mod.constant(Frustum.perspective 20.0 0.1 10000.0 1.0))//m.frustum          
-            let control = (DomNode.RenderControl(att2, cam, cmds, None))
-            Incremental.div (AttributeMap.ofList[attribute "style" "color: #1B1C1E; border:5px"]) (   
-                alist {
-                    yield control
-                }
-            )
-
+                   
         let pitchAndBearing (r:MReferenceSystem) (view:IMod<CameraView>) =
           adaptive {
             let! up    = r.up.value

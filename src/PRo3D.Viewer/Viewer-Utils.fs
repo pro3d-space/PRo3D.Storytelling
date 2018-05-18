@@ -81,6 +81,8 @@ type ViewerAction =
 
 
 module ViewerUtils =
+    open Aardvark.Opc.Internal
+
     //open OpenCvSharp.XFeatures2D
     
     let colormap = 
@@ -219,7 +221,7 @@ module ViewerUtils =
                         let! texture = s.selectedTexture 
                         let! scalar = s.selectedScalar
 
-                        let attr : Aardvark.VRVis.Opc.AttributeParameters = 
+                        let attr : AttributeParameters = 
                             {
                                 selectedTexture = texture |> Option.map(fun x -> x.index)
                                 selectedScalar  = scalar  |> Option.map(fun x -> x.index)
@@ -383,10 +385,8 @@ module ViewerUtils =
                                 )
                     //|> AMap.choose(fun _ y -> y ) 
                     |> AMap.toASet 
-                    |> ASet.map snd 
-                    
-                )
-                
+                    |> ASet.map snd                     
+                )                
             )
         //grouped   
         alist {        
@@ -402,8 +402,8 @@ module ViewerUtils =
                             DefaultSurfaces.diffuseTexture |> toEffect
                             Shader.selectionColor          |> toEffect       
                             Shader.LoDColor                |> toEffect
-                            Shader.triangleFilter          |> toEffect
-                            PRo3D.Shaders.falseColor       |> toEffect
+                            PRo3D.Shader.falseColor        |> toEffect                            
+                            Shader.triangleFilter          |> toEffect                            
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()

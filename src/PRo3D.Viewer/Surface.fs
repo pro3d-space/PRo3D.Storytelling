@@ -12,6 +12,7 @@ open Aardvark.SceneGraph.IO
 open Aardvark.SceneGraph.Opc
 
 open Aardvark.VRVis.Opc
+open Aardvark.Opc.Internal
 
 open PRo3D
 open PRo3D.Groups
@@ -24,6 +25,7 @@ module Surface =
     module Sg =
       open Aardvark.Prinziple
       open Aardvark.VRVis.Opc
+      open Aardvark.Opc.Internal
 
       let mutable hackRunner = None
 
@@ -44,7 +46,7 @@ module Surface =
           let patchHierarchies = 
             scene.patchHierarchies 
               |> Seq.map Prinziple.registerIfZipped 
-              |> Seq.map (fun x -> PatchHierarchy.load Serialization.binarySerializer.Pickle Serialization.binarySerializer.UnPickle x)
+              |> Seq.map (fun x -> PatchHierarchy.load Serialization.binarySerializer.Pickle Serialization.binarySerializer.UnPickle (OpcPaths x))
               |> Seq.toList
                               
           let kdTreesPerHierarchy =
@@ -75,8 +77,9 @@ module Surface =
             patchHierarchies 
             |> List.map (fun h ->                     
               let sg = 
-                Sg.patchLod signature runner h.baseDir 
+                Sg.patchLod signature runner h.baseDir
                   scene.lodDecider scene.useCompressedTextures
+                  ViewerModality.XYZ
                   (PatchLod.toRoseTree h.tree)
               sg) 
             |> Sg.ofList
@@ -353,7 +356,8 @@ module Surface =
     let transformBox (trafo:Trafo3d) (bb:Box3d) =
         bb.Transformed(trafo)
               
-    let createSgSurfaces runtime signature surfaces =
+    let createSgSurfaces runtime signature (surfaces:plist<PRo3D.Surfaces.Surface>) =
+        
         let sghs =
             surfaces
                 |> PList.toList
