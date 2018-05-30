@@ -84,6 +84,7 @@
     <Compile Include="KdTrees.fs" />
     <Compile Include="ReferenceSystem-Model.fs" />
     <Compile Include="CooTransformation.fs" />
+    <Compile Include="FalseColorLegendApp.fs" />
     <Compile Include="DipAndStrike.fs" />
     <Compile Include="ReferenceSystem.fs" />
     <Compile Include="Surface-Model.fs" />

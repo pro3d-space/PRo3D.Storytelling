@@ -13,6 +13,7 @@ open Aardvark.SceneGraph.Opc
 
 open Aardvark.VRVis.Opc
 open Aardvark.Opc.Internal
+open Aardvark.UI.Trafos  
 
 open PRo3D
 open PRo3D.Groups
@@ -20,7 +21,7 @@ open PRo3D.Groups
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg
-    open Aardvark.UI.Trafos        
+          
 
     module Sg =
       open Aardvark.Prinziple
@@ -452,6 +453,7 @@ module Surface =
         | OpenFolder                of Guid
         | GroupsMessage             of Groups.Action  
         | PickObject                of V3d
+        | PlaceSurface              of V3d
 
     let computeIndices (size:V2i)(invalids : int[]) : int[] =
       PRo3DCSharp.ComputeIndexArray(size,invalids)
@@ -580,6 +582,32 @@ module Surface =
                     { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping                  
                   | _ -> { model with surfaces = groups }
             | PickObject p -> model   
+            | PlaceSurface p -> 
+                match model.surfaces.singleSelectLeaf with
+                    | Some id -> 
+                            match model.surfaces.flat.TryFind(id) with 
+                                 | Some s -> 
+                                    let s = s |> Leaf.toSurface
+                                    let f = (fun _ -> { s with preTransform = Trafo3d.Translation(p) } |> Leaf.Surfaces)
+                                    let g = Groups.updateLeaf s.guid f model.surfaces
+                                    
+                                    let sgs' = 
+                                        model.sgSurfaces
+                                        |> HMap.update id (fun x -> match x with 
+                                                                    | Some sg ->    let pose = Pose.translate p // bb.Center
+                                                                                    let trafo' = { TrafoController.initial with pose = pose; previewTrafo = Trafo3d.Translation(p); mode = TrafoMode.Local }
+                                                                                    match sgSurface.isSgOPC sg with
+                                                                                        | true -> let sg' = sgSurface.toSgOPC sg 
+                                                                                                  let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed (Trafo3d.Translation(p))) } 
+                                                                                                  (SgSurfaces.SgSurfaceOPC t)
+                                                                                        | _ -> let sg' = sgSurface.toSgOBJ sg 
+                                                                                               let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed (Trafo3d.Translation(p))) } 
+                                                                                               (SgSurfaces.SgSurfaceOBJ t)
+                                                                    | None   -> failwith "surface not found")
+                                            
+                                    { model with surfaces = g; sgSurfaces = sgs'} 
+                                 | None -> model
+                    | None -> model
             | _ -> model
 
     let absRelIcons (m : MSurface)=

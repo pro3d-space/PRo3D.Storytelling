@@ -103,6 +103,71 @@ module Statistics =
   }
 
 [<DomainType>]
+type FalseColorsModel = {
+    useFalseColors  : bool
+    lowerBound      : NumericInput
+    upperBound      : NumericInput
+    interval        : NumericInput
+    invertMapping   : bool
+    lowerColor      : ColorInput //C4b
+    upperColor      : ColorInput //C4b
+}
+
+module FalseColorsModel = 
+    let lb  = {
+        value   = 0.0
+        min     = 0.0
+        max     = 100.0
+        step    = 1.0
+        format  = "{000:0}"
+    } 
+    let ub  = {
+        value   = 100.0
+        min     = 0.0
+        max     = 100.0
+        step    = 1.0
+        format  = "{000:0}"
+    } 
+    let interv  = {
+        value   = 5.0
+        min     = 0.0
+        max     = 100.0
+        step    = 1.0
+        format  = "{000:0}"
+    } 
+    let dnSInterv  = {
+        value   = 5.0
+        min     = 0.0
+        max     = 90.0
+        step    = 1.0
+        format  = "{000:0}"
+    } 
+    let initMinAngle = {
+        value   = 0.0
+        min     = 0.0
+        max     = 90.0
+        step    = 1.0
+        format  = "{0:0.0}"
+    }
+    let initMaxAngle = {
+        value   = 90.0
+        min     = 1.0
+        max     = 90.0
+        step    = 1.0
+        format  = "{0:0.0}"
+    }
+    let initDnSLegend = 
+        {
+            useFalseColors  = true
+            lowerBound      = initMinAngle
+            upperBound      = initMaxAngle
+            interval        = dnSInterv
+            invertMapping   = true
+            lowerColor      = { c = C4b.Blue }
+            upperColor      = { c = C4b.Red }
+        }
+
+[<DomainType>]
 type DipAndStrikeResults = {
     plane           : Plane3d
     dipAngle        : float
@@ -471,5 +536,7 @@ module ViewConfigModel =
         lodColoring = false
         //planet = Planet.Mars
     }
+
+
 
 

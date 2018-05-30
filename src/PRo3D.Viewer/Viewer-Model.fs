@@ -61,6 +61,7 @@ type Interactions =
     | PlaceRover            = 3
     | TrafoControls         = 4
     | AlignPick             = 5
+    | PlaceSurface          = 6
 
 type TabMenu = 
     | Surfaces    = 0

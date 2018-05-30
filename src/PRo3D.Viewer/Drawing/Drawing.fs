@@ -308,6 +308,8 @@ module DrawingApp =
             | GroupsMessage msg,_ ->
                 let m = { model with annotations = Groups.update model.annotations msg}
                 m
+            | ColorLegendMessage msg,_ -> 
+                { model with colorLegend = FalseColorLegendApp.update model.colorLegend msg }
             | FlyToAnnotation msg, _ ->
                 model
             | SaveCSV, _ -> 
@@ -609,7 +611,7 @@ module DrawingApp =
                 dnsPlaneSize    : IMod<float>
             }
 
-        let drawDns (anno : MAnnotation) (conf:innerViewConfig)=                         
+        let drawDns (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel)=                         
           aset {                            
             let! dns = anno.dnsResults 
             match dns with
@@ -618,6 +620,8 @@ module DrawingApp =
 
                 let color = 
                   DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
+
+                let color = FalseColorLegendApp.Draw.getColorDnS cl x.dipAngle
                                                                                                                     
                 let scale = 
                   conf.dnsPlaneSize 
@@ -748,8 +752,8 @@ module DrawingApp =
                 Sg.set sgs 
             ] |> Sg.onOff anno.visible
 
-        let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) =
-           anno.showDns |> optional (drawDns anno conf) |> Sg.set
+        let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) =
+           anno.showDns |> optional (drawDns anno conf cl) |> Sg.set
         
         let toAnnotationOpt = 
             fun y -> 
@@ -790,7 +794,7 @@ module DrawingApp =
                 drawWorkingAnnotation model.working
               ]
 
-            let depthTest = annoSet |> ASet.map(fun (_,a) -> finishedAnnotationDiscs a config) |> Sg.set
+            let depthTest = annoSet |> ASet.map(fun (_,a) -> finishedAnnotationDiscs a config model.colorLegend) |> Sg.set
 
             (overlay, depthTest)
             

@@ -207,6 +207,8 @@ module ViewerApp =
                     | false -> { m' with tabMenu = TabMenu.Viewplanner }
             | Interactions.AlignPick -> 
                 { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
+            | Interactions.PlaceSurface -> 
+                { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
             | _ -> m
 
     let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
@@ -309,6 +311,9 @@ module ViewerApp =
                 //{ m with scene = { m.scene with viewPlans = viewPlanModel}}  
                 let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation m
                 { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }}  
+            | DnSColorLegendMessage msg,_,_ ->
+                let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
+                { m with drawing = { m.drawing with colorLegend = cm } }
             | ImportSurface,_,_ -> 
                 match Dialogs.openFolders w with
                     | [] -> m
@@ -784,10 +789,11 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
 
-            //let objects = 
-            //    ViewerUtils.renderOBJ 
-            //        m.scene.surfacesModel.sgSurfaces 
-            //    |> Sg.map SurfaceActions
+            //let dnsColorLegend =
+            //    FalseColorLegendApp.Draw.createFalseColorLegend 
+            //        m.drawing.colorLegend 
+            //        (Aardvark.Base.V2d(100.0, 200.0))
+            //    |> Sg.map DnSColorLegendMessage
 
             //controller, exploreCenter
             [annos; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList // orSystem; ; objects
@@ -821,7 +827,17 @@ module ViewerApp =
                   | MAnnotations ann -> DipAndStrike.viewUI ann
                   | _ -> div[][])
 
-            model.drawing.annotations |> Groups.viewSelected view DnSProperties             
+            model.drawing.annotations |> Groups.viewSelected view DnSProperties    
+            
+        let viewDnSColorLegendUI (model:MModel) = 
+            adaptive { 
+                return model.drawing.colorLegend |>  FalseColorLegendApp.viewDnSLegendProperties DnSColorLegendMessage
+            }
+            //adaptive {
+            //    let opt = FalseColorLegendApp.UI.viewLegendTools model.drawing.colorLegend
+            //    return (opt |> UI.map DrawingMessage)
+            //} 
+          
 
         let viewBookmarkProperties (model:MModel) = 
             let view = (fun leaf ->
@@ -886,6 +902,9 @@ module ViewerApp =
                 
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))] 
+               
+                GuiEx.accordion "Dip&Strike ColorLegend" "Paw" false [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(viewDnSColorLegendUI m))] 
                 ]      
 
 
@@ -1105,13 +1124,18 @@ module ViewerApp =
               ]                              
         ]
         
+        let dnsColorLegend =
+            FalseColorLegendApp.Draw.createColorLegendDnS 
+                    m.drawing.colorLegend 
+                    (Aardvark.Base.V2d(100.0, 200.0))
+
         let rest (model : MModel) = 
             [   
                 control
                 //orientationSystem model
                 //arrowOverlay
                 textOverlays
-                
+                dnsColorLegend
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
                     div[style "height:41px"][text "spacer"]
                     //Incremental.div AttributeMap.empty (scenePath2 model) 

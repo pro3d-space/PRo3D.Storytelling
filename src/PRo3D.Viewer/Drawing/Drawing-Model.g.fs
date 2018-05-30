@@ -26,6 +26,7 @@ module Mutable =
         let _pendingIntersections = ResetMod.Create(__initial.pendingIntersections)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
+        let _colorLegend = PRo3D.Mutable.MFalseColorsModel.Create(__initial.colorLegend)
         
         member x.draw = _draw :> IMod<_>
         member x.hoverPosition = _hoverPosition :> IMod<_>
@@ -40,6 +41,7 @@ module Mutable =
         member x.pendingIntersections = _pendingIntersections :> IMod<_>
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
+        member x.colorLegend = _colorLegend
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Drawing.DrawingModel) =
@@ -59,6 +61,7 @@ module Mutable =
                 ResetMod.Update(_pendingIntersections,v.pendingIntersections)
                 _past.Update(v.past)
                 _future.Update(v.future)
+                PRo3D.Mutable.MFalseColorsModel.Update(_colorLegend, v.colorLegend)
                 
         
         static member Create(__initial : PRo3D.Drawing.DrawingModel) : MDrawingModel = MDrawingModel(__initial)
@@ -152,4 +155,10 @@ module Mutable =
                     override x.Get(r) = r.future
                     override x.Set(r,v) = { r with future = v }
                     override x.Update(r,f) = { r with future = f r.future }
+                }
+            let colorLegend =
+                { new Lens<PRo3D.Drawing.DrawingModel, PRo3D.FalseColorsModel>() with
+                    override x.Get(r) = r.colorLegend
+                    override x.Set(r,v) = { r with colorLegend = v }
+                    override x.Update(r,f) = { r with colorLegend = f r.colorLegend }
                 }

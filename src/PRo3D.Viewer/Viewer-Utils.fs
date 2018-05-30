@@ -44,6 +44,7 @@ type ViewerAction =
     | BookmarkUIMessage         of Groups.Action
     | RoverMessage              of RoverApp.Action
     | ViewPlanMessage           of ViewPlan.Action
+    | DnSColorLegendMessage     of FalseColorLegendApp.Action
     | SetCamera                 of CameraView        
     | SetCameraAndFrustum       of CameraView * double * double        
     | SetCameraAndFrustum2      of CameraView * Frustum
@@ -262,7 +263,7 @@ module ViewerUtils =
                 |> Sg.transform (Trafo3d.Scale(1.0, 1.0, -1.0))
                 |> Sg.scale 3.0
                 |> Sg.noEvents
-                //|> Sg.trafo scaleTrafo
+                //|> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))   
                 |> Sg.withEvents [
                     Sg.onMouseDown ( fun b v -> SurfaceApp.Action.PickObject v )
                 ]
@@ -278,56 +279,34 @@ module ViewerUtils =
     let viewSingleSurfaceSgOBJ (surface : MSgSurfaces) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (globalBB : IMod<Box3d>) =
         
         let surf = lookUp (surface.surface) blarg
-
-        let isSelected = Mod.map(fun x ->
-          match x with
-            | Some id -> id = surface.surface
-            | None -> false) selectedId 
-
-        let createSg (sg : ISg) =
-            sg 
-            |> Sg.noEvents 
-            |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
-            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))         
                 
         let pickable = 
             adaptive {
                 let! bb = globalBB
-                return { shape = PickShape.Box bb; trafo = Trafo3d.Identity }
+                let! trafo = (surf |> Mod.bind(fun x -> x.preTransform))
+                return { shape = PickShape.Box bb; trafo = trafo  } // Trafo3d.Identity
             }        
-
-        let rangeToMinMax (s:MSgSurfaces) =
-            adaptive {
-                let! s = surf
-                let! scalar = s.selectedScalar
-                return match scalar with 
-                          | Some s -> V2d(s.definedRange.Min, s.definedRange.Max)
-                          | None   -> V2d(0.0,1.0)
-            }
-
-        let globalToLocal = 
-            surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation -x.Center)
-            
-        let selectedScalar =
-            adaptive {
-                let! s = surf
-                let! scalar = s.selectedScalar
-                return scalar.IsSome
-            }
        
         let sg = 
-            let scaleTrafo = Mod.constant (Trafo3d.Scale(10.0))
             //let obj = Aardvark.SceneGraph.IO.Loader.Assimp.load @"C:\Users\laura\VRVis\Data\OBJ\aardvark.obj" 
             
             aset {
                 let! obj = surface.sceneGraph
                 yield obj 
                     |> Sg.adapter
-                    |> Sg.transform (Trafo3d.Scale(1.0, 1.0, -1.0))
+                    //|> Sg.transform (Trafo3d.Scale(1.0, 1.0, -1.0))
+                    |> Sg.uniform "TriangleSize" (
+                        adaptive {
+                            let! s = surf
+                            let! maxAngle = s.triangleSize.value
+                            Log.warn "maxAngle: %A" maxAngle
+                            Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
+                            return maxAngle |> Double.radiansFromDegrees |> Math.Cos
+                        })
                     |> Sg.requirePicking
                     |> pickable' pickable
                     |> Sg.noEvents
-                    //|> Sg.trafo globalToLocal
+                    |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))   
                     |> Sg.withEvents [
                         Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
                     ]
@@ -338,26 +317,7 @@ module ViewerUtils =
                         do! DefaultSurfaces.simpleLighting
                     }
                  }       |> Sg.set
-
-        //let sgPicking = 
-        //    aset {
-        //        let! mesh = surface.picking
-        //        yield mesh
-        //        |> Sg.requirePicking
-        //        |> pickable' pickable
-        //        |> Sg.noEvents
-        //        |> Sg.withEvents [
-        //            // Sg.onEnter ( fun v -> Enter v )
-        //            Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
-        //        ]
-        //        |> Sg.shader {
-        //            do! DefaultSurfaces.trafo
-        //            do! DefaultSurfaces.constantColor C4f.White
-        //        }
-        //        |> Sg.depthTest (Mod.constant DepthTestMode.Never)
-                         
-        //        } |> Sg.set
-        //[sg ;sgPicking ] |> Sg.ofList
+                 
         sg
 
         

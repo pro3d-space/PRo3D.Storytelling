@@ -160,5 +160,6 @@ module DipAndStrike =
                 Html.row "Dipping Orientation:" [Incremental.text (daz  |> Mod.map  (fun d -> sprintf "%.2f°" (d)))]
                 Html.row "Strike Orientation:"  [Incremental.text (staz |> Mod.map  (fun d -> sprintf "%.2f°" (d)))]
             ]
+
         )
 

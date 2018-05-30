@@ -42,6 +42,7 @@ type Action =
         | UpVectorChanged         of V3d
         | NorthVectorChanged      of V3d
         | GroupsMessage   of Groups.Action
+        | ColorLegendMessage   of FalseColorLegendApp.Action
         | SaveCSV
 
 [<DomainType>]
@@ -69,6 +70,8 @@ type DrawingModel = {
 
     [<TreatAsValue>]
     future : Option<DrawingModel>
+
+    colorLegend : FalseColorsModel
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
@@ -111,4 +114,6 @@ module DrawingModel =
 
         past    = None
         future  = None
+        
+        colorLegend = FalseColorsModel.initDnSLegend
     }
