@@ -81,8 +81,7 @@ type ViewerAction =
     //| UpdateDockConfig          of DockConfig
 
 
-module ViewerUtils =
-    open Aardvark.Opc.Internal
+module ViewerUtils =    
 
     //open OpenCvSharp.XFeatures2D
     

@@ -12,7 +12,6 @@ open Aardvark.SceneGraph.IO
 open Aardvark.SceneGraph.Opc
 
 open Aardvark.VRVis.Opc
-open Aardvark.Opc.Internal
 open Aardvark.UI.Trafos  
 
 open PRo3D
@@ -25,8 +24,7 @@ module Surface =
 
     module Sg =
       open Aardvark.Prinziple
-      open Aardvark.VRVis.Opc
-      open Aardvark.Opc.Internal
+      open Aardvark.VRVis.Opc      
 
       let mutable hackRunner = None
 
@@ -74,11 +72,12 @@ module Surface =
                   |> Array.fold (fun a b -> HMap.union a b) HMap.empty
           
           // create level of detail hierarchy (Sg)
+          //Sg.patchLod signature runner patchHierarchy.opcPaths.Opc_DirAbsPath
           let g = 
             patchHierarchies 
             |> List.map (fun h ->                     
               let sg = 
-                Sg.patchLod signature runner h.baseDir
+                Sg.patchLod signature runner h.opcPaths.Opc_DirAbsPath
                   scene.lodDecider scene.useCompressedTextures
                   ViewerModality.XYZ
                   (PatchLod.toRoseTree h.tree)
@@ -131,6 +130,7 @@ module Surface =
     
     module Files = 
         open System.IO
+        open Aardvark.Prinziple
         
         /// <summary>
         /// checks if "path" is a valid opc folder containing "images", "patches", and patchhierarchy.xml
@@ -143,6 +143,12 @@ module Surface =
              File.Exists(patchPath + "\\patchhierarchy.xml")
 
         /// <summary>
+        /// should open zip and call isOPCFolder
+        /// </summary>        
+        let isZippedOpcFolder (path : string) = 
+          File.Exists(Path.ChangeExtension(path, "zip"))
+
+        /// <summary>
         /// checks if "path" is a valid surface folder
         /// </summary>        
         let isSurfaceFolder (path : string) =
@@ -153,12 +159,25 @@ module Surface =
 
             if isOpcFolder path then
                 [path.Replace(@"\", @"\\\\")]
+            elif isZippedOpcFolder path then                
+                [path.Replace(@"\", @"\\\\").Replace(".zip", "")]
             elif Directory.Exists path then
-                Directory.GetDirectories(path)
-                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\")) 
+                let opcDirs = 
+                  Directory.GetDirectories(path)
+                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\"))
                     |> Seq.filter isOpcFolder
                     |> Seq.map f
-                    |> Seq.toList 
+                    |> Seq.toList            
+
+                let zipped =
+                  Directory.GetFiles(path)
+                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\"))
+                    |> Seq.filter isZippedOpcFolder
+                    |> Seq.map (fun a -> a.Replace(".zip", ""))
+                    |> Seq.map f
+                    |> Seq.toList            
+
+                opcDirs @ zipped
             else []
 
         /// <summary>

@@ -320,7 +320,7 @@ module ViewerApp =
                     | paths ->
                         let surfaces = 
                             paths 
-                                |> List.filter Files.isSurfaceFolder
+                                |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
                                 |> List.map (Surface.mk SurfaceType.SurfaceOPC)
                                 |> PList.ofList
 

@@ -17,11 +17,10 @@ open Aardvark.Base.Rendering.Effects
 open FShade    
 
 open Aardvark.SceneGraph.Opc
-open Aardvark.Opc.Internal
+open Aardvark.VRVis.Opc
 
 module Viewer = 
-    open MBrace.FsPickler
-    open Aardvark.Opc.Internal
+    open MBrace.FsPickler    
     
     let serializer = FsPickler.CreateBinarySerializer()
 
