@@ -210,8 +210,8 @@ module DrawingApp =
         {            
             getNearPlane       : 'ma -> IMod<float>
             getHfov            : 'ma -> IMod<float>
-            getMaxDipAngle     : 'ma -> IMod<float>
-            getMinDipAngle     : 'ma -> IMod<float>
+            //getMaxDipAngle     : 'ma -> IMod<float>
+            //getMinDipAngle     : 'ma -> IMod<float>
             getArrowThickness  : 'ma -> IMod<float>
             getArrowLength     : 'ma -> IMod<float>
             getDnsPlaneSize    : 'ma -> IMod<float>
@@ -604,8 +604,8 @@ module DrawingApp =
             {
                 nearPlane       : IMod<float>
                 hfov            : IMod<float>
-                maxDipAngle     : IMod<float>
-                minDipAngle     : IMod<float>
+                //maxDipAngle     : IMod<float>
+                //minDipAngle     : IMod<float>
                 arrowThickness  : IMod<float>
                 arrowLength     : IMod<float>
                 dnsPlaneSize    : IMod<float>
@@ -618,8 +618,8 @@ module DrawingApp =
               | Some x -> 
                 let center = anno.points |> AList.toMod |> Mod.map (fun list -> list.[PList.count list / 2])
 
-                let color = 
-                  DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
+                //let color = 
+                //  DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
 
                 let color = FalseColorLegendApp.Draw.getColorDnS cl x.dipAngle
                                                                                                                     
@@ -773,8 +773,8 @@ module DrawingApp =
                 {
                     nearPlane      = msmallConfig.getNearPlane      mbigConfig
                     hfov           = msmallConfig.getHfov           mbigConfig
-                    maxDipAngle    = msmallConfig.getMaxDipAngle    mbigConfig
-                    minDipAngle    = msmallConfig.getMinDipAngle    mbigConfig
+                    //maxDipAngle    = msmallConfig.getMaxDipAngle    mbigConfig
+                    //minDipAngle    = msmallConfig.getMinDipAngle    mbigConfig
                     arrowLength    = msmallConfig.getArrowLength    mbigConfig
                     arrowThickness = msmallConfig.getArrowThickness mbigConfig
                     dnsPlaneSize   = msmallConfig.getDnsPlaneSize   mbigConfig

@@ -694,8 +694,6 @@ module Mutable =
         let _arrowLength = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowLength)
         let _arrowThickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowThickness)
         let _dnsPlaneSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.dnsPlaneSize)
-        let _minDipAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.minDipAngle)
-        let _maxDipAngle = Aardvark.UI.Mutable.MNumericInput.Create(__initial.maxDipAngle)
         let _lodColoring = ResetMod.Create(__initial.lodColoring)
         
         member x.nearPlane = _nearPlane
@@ -704,8 +702,6 @@ module Mutable =
         member x.arrowLength = _arrowLength
         member x.arrowThickness = _arrowThickness
         member x.dnsPlaneSize = _dnsPlaneSize
-        member x.minDipAngle = _minDipAngle
-        member x.maxDipAngle = _maxDipAngle
         member x.lodColoring = _lodColoring :> IMod<_>
         
         member x.Current = __current :> IMod<_>
@@ -719,8 +715,6 @@ module Mutable =
                 Aardvark.UI.Mutable.MNumericInput.Update(_arrowLength, v.arrowLength)
                 Aardvark.UI.Mutable.MNumericInput.Update(_arrowThickness, v.arrowThickness)
                 Aardvark.UI.Mutable.MNumericInput.Update(_dnsPlaneSize, v.dnsPlaneSize)
-                Aardvark.UI.Mutable.MNumericInput.Update(_minDipAngle, v.minDipAngle)
-                Aardvark.UI.Mutable.MNumericInput.Update(_maxDipAngle, v.maxDipAngle)
                 ResetMod.Update(_lodColoring,v.lodColoring)
                 
         
@@ -773,18 +767,6 @@ module Mutable =
                     override x.Get(r) = r.dnsPlaneSize
                     override x.Set(r,v) = { r with dnsPlaneSize = v }
                     override x.Update(r,f) = { r with dnsPlaneSize = f r.dnsPlaneSize }
-                }
-            let minDipAngle =
-                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
-                    override x.Get(r) = r.minDipAngle
-                    override x.Set(r,v) = { r with minDipAngle = v }
-                    override x.Update(r,f) = { r with minDipAngle = f r.minDipAngle }
-                }
-            let maxDipAngle =
-                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
-                    override x.Get(r) = r.maxDipAngle
-                    override x.Set(r,v) = { r with maxDipAngle = v }
-                    override x.Update(r,f) = { r with maxDipAngle = f r.maxDipAngle }
                 }
             let lodColoring =
                 { new Lens<PRo3D.ViewConfigModel, System.Boolean>() with

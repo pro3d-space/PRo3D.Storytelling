@@ -22,8 +22,8 @@ module ConfigProperties =
         | SetArrowLength            of Numeric.Action
         | SetArrowThickness         of Numeric.Action
         | SetDnSPlaneSize           of Numeric.Action
-        | SetMinDipAngle            of Numeric.Action
-        | SetMaxDipAngle            of Numeric.Action
+        //| SetMinDipAngle            of Numeric.Action
+        //| SetMaxDipAngle            of Numeric.Action
         | ToggleLodColors
         
 
@@ -41,10 +41,10 @@ module ConfigProperties =
                 { model with arrowThickness = Numeric.update model.arrowThickness at }
             | SetDnSPlaneSize s ->
                 { model with dnsPlaneSize = Numeric.update model.dnsPlaneSize s }
-            | SetMinDipAngle s ->
-                { model with minDipAngle = Numeric.update model.minDipAngle s }
-            | SetMaxDipAngle s ->
-                { model with maxDipAngle = Numeric.update model.maxDipAngle s }
+            //| SetMinDipAngle s ->
+            //    { model with minDipAngle = Numeric.update model.minDipAngle s }
+            //| SetMaxDipAngle s ->
+            //    { model with maxDipAngle = Numeric.update model.maxDipAngle s }
             | ToggleLodColors ->
                 { model with lodColoring = not model.lodColoring}
            
@@ -58,8 +58,8 @@ module ConfigProperties =
                 Html.row "Arrow Length:"            [Numeric.view' [InputBox] model.arrowLength           |> UI.map SetArrowLength ] 
                 Html.row "Arrow Thickness:"         [Numeric.view' [InputBox] model.arrowThickness        |> UI.map SetArrowThickness ]   
                 Html.row "D+S Plane Size:"          [Numeric.view' [InputBox] model.dnsPlaneSize          |> UI.map SetDnSPlaneSize ]    
-                Html.row "Min Dipping Angle:"       [Numeric.view' [InputBox] model.minDipAngle           |> UI.map SetMinDipAngle ]
-                Html.row "Max Dipping Angle:"       [Numeric.view' [InputBox] model.maxDipAngle           |> UI.map SetMaxDipAngle ]
+                //Html.row "Min Dipping Angle:"       [Numeric.view' [InputBox] model.minDipAngle           |> UI.map SetMinDipAngle ]
+                //Html.row "Max Dipping Angle:"       [Numeric.view' [InputBox] model.maxDipAngle           |> UI.map SetMaxDipAngle ]
                 Html.row "Lod colors:"              [Html.SemUi.toggleBox model.lodColoring ToggleLodColors]
             ]
         )

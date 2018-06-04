@@ -49,16 +49,16 @@ module FalseColorLegendApp =
     let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "semui-overrides.css" }
 
     module UI =
-        let viewLegendTools (model:MFalseColorsModel)=  
+        let viewDnSLegendTools (model:MFalseColorsModel)=  
             //Html.SemUi.accordion "Legend Tools" "Write" true [
                 Html.table [  
-                    Html.row "show legend:"     [Html.SemUi.toggleBox model.useFalseColors UseFalseColors ]
-                    Html.row "upper bound:"     [Numeric.view' [InputBox] model.upperBound |> UI.map SetUpperBound ]
-                    Html.row "lower bound:"     [Numeric.view' [InputBox] model.lowerBound |> UI.map SetLowerBound ]
-                    Html.row "interval:"        [Numeric.view' [InputBox] model.interval |> UI.map SetInterval ]
-                    Html.row "upper color:"     [ColorPicker.view model.upperColor |> UI.map SetUpperColor ]
-                    Html.row "lower color:"     [ColorPicker.view model.lowerColor |> UI.map SetLowerColor ]
-                    Html.row "invert mapping:"  [Html.SemUi.toggleBox model.invertMapping InvertMapping ]
+                    Html.row "show legend:"             [Html.SemUi.toggleBox model.useFalseColors UseFalseColors ]
+                    Html.row "max dipping angle:"       [Numeric.view' [InputBox] model.upperBound |> UI.map SetUpperBound ]
+                    Html.row "min dipping angle:"       [Numeric.view' [InputBox] model.lowerBound |> UI.map SetLowerBound ]
+                    Html.row "interval:"                [Numeric.view' [InputBox] model.interval |> UI.map SetInterval ]
+                    Html.row "upper color:"             [ColorPicker.view model.upperColor |> UI.map SetUpperColor ]
+                    Html.row "lower color:"             [ColorPicker.view model.lowerColor |> UI.map SetLowerColor ]
+                    Html.row "invert mapping:"          [Html.SemUi.toggleBox model.invertMapping InvertMapping ]
                 ]                    
             //]
 
@@ -205,7 +205,7 @@ module FalseColorLegendApp =
                         
                         yield Svg.rect ["fill"          ==> "#EEEEEE";
                                         "width"         ==> "42px";
-                                        "height"        ==> "95%";
+                                        "height"        ==> "95%"; //95%
                                         "x"             ==> "8px";    
                                         "y"             ==> "1.75%";
                                         "rx"            ==> "5";       
@@ -219,7 +219,7 @@ module FalseColorLegendApp =
                         // SVG-RECT applies previously defined gradient (by #id)
                         yield Svg.rect ["style"         ==> "fill:url(#falseColorLegend)";
                                         "width"         ==> "10px";  
-                                        "height"        ==> "95%";
+                                        "height"        ==> "95%"//95%
                                         "x"             ==> "12px";      
                                         "y"             ==> "2.5%"; 
                                         "stroke"        ==> "white";
@@ -263,16 +263,16 @@ module FalseColorLegendApp =
               AttributeMap.ofList[ 
                 "display"               ==> "block"; 
                 "width"                 ==> "55px"; 
-                "height"                ==> "100%"; 
+                "height"                ==> "75%"; //100%
                 "preserveAspectRatio"   ==> "xMidYMid meet"; 
-                "viewBox"               ==> "0 0 5% 100%";
-                "style"                 ==> "position:absolute; left: 0%; top: 0%"
-              ]
+                "viewBox"               ==> "0 0 5% 100%" 
+                "style"                 ==> "position:absolute; left: 0%; top: 25%"
+              ] // "0 0 5% 100%";
 
             Incremental.Svg.svg attr falseColorSvg
 
     let viewDnSLegendProperties lifter (model : MFalseColorsModel) = 
-        UI.viewLegendTools model |> UI.map lifter
+        UI.viewDnSLegendTools model |> UI.map lifter
 
     //let view (m : MFalseColorsModel) =
     //    body [ style "background: #1B1C1E"] [

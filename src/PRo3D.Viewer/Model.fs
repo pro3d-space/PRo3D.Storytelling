@@ -461,8 +461,8 @@ type ViewConfigModel = {
     arrowLength             : NumericInput
     arrowThickness          : NumericInput
     dnsPlaneSize            : NumericInput
-    minDipAngle             : NumericInput
-    maxDipAngle             : NumericInput
+    //minDipAngle             : NumericInput
+    //maxDipAngle             : NumericInput
     lodColoring             : bool
     }
 
@@ -510,20 +510,20 @@ module ViewConfigModel =
         step    = 0.1
         format  = "{0:0.00}"
     }
-    let initMinAngle = {
-        value   = 0.0
-        min     = 0.0
-        max     = 90.0
-        step    = 1.0
-        format  = "{0:0.0}"
-    }
-    let initMaxAngle = {
-        value   = 90.0
-        min     = 1.0
-        max     = 90.0
-        step    = 1.0
-        format  = "{0:0.0}"
-    }
+    //let initMinAngle = {
+    //    value   = 0.0
+    //    min     = 0.0
+    //    max     = 90.0
+    //    step    = 1.0
+    //    format  = "{0:0.0}"
+    //}
+    //let initMaxAngle = {
+    //    value   = 90.0
+    //    min     = 1.0
+    //    max     = 90.0
+    //    step    = 1.0
+    //    format  = "{0:0.0}"
+    //}
     let initial = {
         nearPlane = initNearPlane
         farPlane = initFarPlane
@@ -531,8 +531,8 @@ module ViewConfigModel =
         arrowLength = initArrowLength
         arrowThickness = initArrowThickness
         dnsPlaneSize = initPlaneSize
-        minDipAngle = initMinAngle
-        maxDipAngle = initMaxAngle
+        //minDipAngle = initMinAngle
+        //maxDipAngle = initMaxAngle
         lodColoring = false
         //planet = Planet.Mars
     }

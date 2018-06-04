@@ -117,8 +117,8 @@ module ViewerApp =
         {            
             getNearPlane       = fun x -> x.nearPlane.value
             getHfov            = fun (x:MViewConfigModel) -> ((Mod.init 60.0) :> IMod<float>)
-            getMaxDipAngle     = fun (x:MViewConfigModel) -> x.maxDipAngle.value
-            getMinDipAngle     = fun (x:MViewConfigModel) -> x.minDipAngle.value
+            //getMaxDipAngle     = fun (x:MViewConfigModel) -> x.maxDipAngle.value
+            //getMinDipAngle     = fun (x:MViewConfigModel) -> x.minDipAngle.value
             getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
             getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
             getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
