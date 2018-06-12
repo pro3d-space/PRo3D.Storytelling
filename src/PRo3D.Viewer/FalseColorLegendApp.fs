@@ -43,14 +43,13 @@ module FalseColorLegendApp =
             | SetLowerColor lc -> 
                     { model with lowerColor = ColorPicker.update model.lowerColor lc }            
             | SetUpperColor uc -> 
-                { model with upperColor = ColorPicker.update model.upperColor uc }        
+                    { model with upperColor = ColorPicker.update model.upperColor uc }        
             
             
     let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "semui-overrides.css" }
 
     module UI =
-        let viewDnSLegendTools (model:MFalseColorsModel)=  
-            //Html.SemUi.accordion "Legend Tools" "Write" true [
+        let viewDnSLegendTools (model:MFalseColorsModel)= 
                 Html.table [  
                     Html.row "show legend:"             [Html.SemUi.toggleBox model.useFalseColors UseFalseColors ]
                     Html.row "max dipping angle:"       [Numeric.view' [InputBox] model.upperBound |> UI.map SetUpperBound ]
@@ -60,7 +59,19 @@ module FalseColorLegendApp =
                     Html.row "lower color:"             [ColorPicker.view model.lowerColor |> UI.map SetLowerColor ]
                     Html.row "invert mapping:"          [Html.SemUi.toggleBox model.invertMapping InvertMapping ]
                 ]                    
-            //]
+           
+        let viewDefinedScalarsLegendTools (model:MFalseColorsModel)= 
+            require Html.semui (
+                Html.table [  
+                    Html.row "show legend:"             [Html.SemUi.toggleBox model.useFalseColors UseFalseColors ]
+                    Html.row "upper bound:"             [Numeric.view' [InputBox] model.upperBound |> UI.map SetUpperBound ]
+                    Html.row "lower bound:"             [Numeric.view' [InputBox] model.lowerBound |> UI.map SetLowerBound ]
+                    Html.row "interval:"                [Numeric.view' [InputBox] model.interval |> UI.map SetInterval ]
+                    Html.row "upper color:"             [ColorPicker.view model.upperColor |> UI.map SetUpperColor ]
+                    Html.row "lower color:"             [ColorPicker.view model.lowerColor |> UI.map SetLowerColor ]
+                    Html.row "invert mapping:"          [Html.SemUi.toggleBox model.invertMapping InvertMapping ]
+                ] 
+            )
 
     module Draw =
 
@@ -108,6 +119,41 @@ module FalseColorLegendApp =
                     getColor (hsvEnd.H - (hStepSize * (single (pos'))))
                     
                 return currColor.ToC3f().ToC4b()
+            }
+
+        let getShaderParams (model : MFalseColorsModel) : IMod<FalseColorsShaderParams> = 
+            adaptive {
+                let! fcInterval     = model.interval.value
+                let! startColor     = model.lowerColor.c
+                let! endColor       = model.upperColor.c
+                let! invertMapping  = model.invertMapping
+                let! fcUpperBound   = model.upperBound.value
+                let! fcLowerBound   = model.lowerBound.value
+                
+                let inverted = (not invertMapping)
+                let hsvStart = HSVf.FromC3f (startColor.ToC3f())
+                let hsvEnd   = HSVf.FromC3f (endColor.ToC3f())
+
+                let range = fcUpperBound - fcLowerBound
+                let numOfRangeGaps = int (System.Math.Round (range / fcInterval))
+                let numOfStops = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
+
+                let hStepSize =
+                  if hsvStart.H < hsvEnd.H then 
+                    (hsvEnd.H - hsvStart.H) / (single (numOfStops-1)) 
+                  else 
+                    ((hsvEnd.H + 1.0f) - hsvStart.H) / (single (numOfStops-1))
+
+                return { 
+                    hsvStart = V3d((float)hsvStart.H, (float)hsvStart.S, (float)hsvStart.V)
+                    hsvEnd = V3d(hsvEnd.H, hsvEnd.S, hsvEnd.V)
+                    interval = (float)fcInterval
+                    inverted = inverted
+                    lowerBound = fcLowerBound
+                    upperBound = fcUpperBound
+                    stepS = (float)hStepSize
+                    numOfRG = (float)numOfRangeGaps
+                }
             }
            
 
@@ -271,32 +317,14 @@ module FalseColorLegendApp =
 
             Incremental.Svg.svg attr falseColorSvg
 
+        let createColorLegendScalars (falseColorValues : MFalseColorsModel) = 
+            let falseColorSvg = createFalseColorLegendBasics falseColorValues (Aardvark.Base.V2d(100.0, 200.0))
+            Incremental.Svg.svg AttributeMap.empty falseColorSvg
+
     let viewDnSLegendProperties lifter (model : MFalseColorsModel) = 
         UI.viewDnSLegendTools model |> UI.map lifter
 
-    //let view (m : MFalseColorsModel) =
-    //    body [ style "background: #1B1C1E"] [
-    //        require (Html.semui) (
-                
-    //            div [clazz "ui"; style "background: #1B1C1E"] [
-    //                Draw.createFalseColorLegend m (Aardvark.Base.V2d(100.0, 200.0))
-    //                div [style "width:35%; height: 100%; float:right"] [
-    //                    UI.viewLegendTools m
-                        
-    //                    ]
-                    
-    //            ]
-    //        )
-    //    ]
+    let viewScalarsLegendProperties lifter (model : MFalseColorsModel) = 
+        UI.viewDefinedScalarsLegendTools model |> UI.map lifter
 
-    //let app : App<FalseColorsModel,MFalseColorsModel,Action> =
-    //    {
-    //        unpersist = Unpersist.instance
-    //        threads = constF ThreadPool.empty 
-    //        initial = InitValues.falseColors
-    //        update = update
-    //        view = view
-    //    }
-
-    //let start () = App.start app
-
+   

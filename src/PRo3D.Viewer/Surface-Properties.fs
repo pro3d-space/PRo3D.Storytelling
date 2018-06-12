@@ -63,6 +63,20 @@ module SurfaceProperties =
           |> Seq.mapi(fun i x -> { x with index = i}) 
           |> PList.ofSeq
 
+    let getScalarsHmap (layers : seq<AttributeLayer>) =
+        layers 
+          |> Seq.choose (fun x -> match x with | ScalarLayer l -> Some l | _ -> None) 
+          |> Seq.mapi(fun i x -> { x with index = i}) 
+          |> Seq.map(fun x -> x.index, x)
+          |> HMap.ofSeq
+
+    let mapTolist (input : amap<_,'a>) : alist<'a> = 
+        input |> AMap.toASet |> AList.ofASet |> AList.map snd    
+    
+    let scalarLayerList (m:MSurface) = 
+        (m.scalarLayers |> mapTolist)
+          
+
     let view (model : MSurface) =
         
         require Html.semui (
@@ -74,7 +88,8 @@ module SurfaceProperties =
                 Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider]   model.quality  |> UI.map SetQuality ]
                 Html.row "AngleFilter:"  [Numeric.view' [NumericInputType.InputBox]   model.triangleSize  |> UI.map SetTriangleSize ]
                 Html.row "Fillmode:"    [Html.SemUi.dropDown model.fillMode SetFillMode]
-                Html.row "Scalars:"     [UI.dropDown'' model.scalarLayers  model.selectedScalar   (fun x -> SetScalarMap x)   (fun x -> x.label)]
+                //Html.row "Scalars:"     [UI.dropDown'' model.scalarLayers  model.selectedScalar   (fun x -> SetScalarMap x)   (fun x -> x.label)]
+                Html.row "Scalars:"     [UI.dropDown'' (model |> scalarLayerList)  model.selectedScalar   (fun x -> SetScalarMap (x |> Option.map(fun y -> y.Current |> Mod.force)))   (fun x -> x.label |> Mod.force)]
                 Html.row "Textures:"    [UI.dropDown'' model.textureLayers model.selectedTexture  (fun x -> SetTexturesMap x) (fun x -> x.label)]
                 Html.row "Cull Faces:"  [Html.SemUi.dropDown model.cullMode SetCullMode]
             ]

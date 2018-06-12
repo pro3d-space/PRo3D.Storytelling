@@ -13,6 +13,7 @@ open Aardvark.Base.Incremental.Operators
 open Aardvark.Base.Rendering
 open Aardvark.SceneGraph
 open Aardvark.UI
+open Aardvark.UI.Operators
 open Aardvark.UI.Primitives
 open Aardvark.Rendering.Text
 
@@ -833,12 +834,7 @@ module ViewerApp =
             adaptive { 
                 return model.drawing.colorLegend |>  FalseColorLegendApp.viewDnSLegendProperties DnSColorLegendMessage
             }
-            //adaptive {
-            //    let opt = FalseColorLegendApp.UI.viewLegendTools model.drawing.colorLegend
-            //    return (opt |> UI.map DrawingMessage)
-            //} 
-          
-
+            
         let viewBookmarkProperties (model:MModel) = 
             let view = (fun leaf ->
                 match leaf with
@@ -903,7 +899,7 @@ module ViewerApp =
                 GuiEx.accordion "Dip&Strike" "Calculator" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))] 
                
-                GuiEx.accordion "Dip&Strike ColorLegend" "Paw" false [
+                GuiEx.accordion "Dip&Strike ColorLegend" "paint brush" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewDnSColorLegendUI m))] 
                 ]      
 
@@ -1129,6 +1125,20 @@ module ViewerApp =
                     m.drawing.colorLegend 
                     (Aardvark.Base.V2d(100.0, 200.0))
 
+        let scalarsColorLegend =
+            let attr = 
+              AttributeMap.ofList[ 
+                "display"               ==> "block"; 
+                "width"                 ==> "55px"; 
+                "height"                ==> "75%"; //100%
+                "preserveAspectRatio"   ==> "xMidYMid meet"; 
+                "viewBox"               ==> "0 0 5% 100%" 
+                "style"                 ==> "position:absolute; left: 65%; top: 25%"
+              ] // "0 0 5% 100%";
+            Incremental.Svg.svg attr (SurfaceApp.showColorLegend m.scene.surfacesModel)
+            
+                   
+
         let rest (model : MModel) = 
             [   
                 control
@@ -1136,6 +1146,7 @@ module ViewerApp =
                 //arrowOverlay
                 textOverlays
                 dnsColorLegend
+                scalarsColorLegend
                 div [clazz "ui"; style "width: 30%; float:right; background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] [
                     div[style "height:41px"][text "spacer"]
                     //Incremental.div AttributeMap.empty (scenePath2 model) 

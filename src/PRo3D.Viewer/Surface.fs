@@ -13,6 +13,7 @@ open Aardvark.SceneGraph.Opc
 
 open Aardvark.VRVis.Opc
 open Aardvark.Opc.Internal
+open Aardvark.UI.Operators
 open Aardvark.UI.Trafos  
 
 open PRo3D
@@ -98,12 +99,14 @@ module Surface =
         let get (name : string) (node : XmlNode)=
             node.SelectSingleNode(name).InnerText.Trim()
 
-        let parseMap (index : int)(node : XmlNode) : ScalarLayer =        
+        let parseMap (index : int)(node : XmlNode) : ScalarLayer = 
+            let definedRange = node |> get "ChannelsDefinedRange" |> Range1d.Parse
             { 
                 label        = node |> get "Label" 
                 actualRange  = node |> get "ChannelsActualRange"  |> Range1d.Parse
-                definedRange = node |> get "ChannelsDefinedRange" |> Range1d.Parse
+                definedRange = definedRange //node |> get "ChannelsDefinedRange" |> Range1d.Parse
                 index        = index
+                colorLegend  = (FalseColorsModel.initDefinedScalarsLegend definedRange)
             }
 
         let parseTexture (index : int)(node : XmlNode) : TextureLayer =
@@ -330,14 +333,13 @@ module Surface =
             quality         = Init.quality
             priority        = Init.priority
             preTransform    = Trafo3d.Identity            
-            scalarLayers    = PList.empty
+            scalarLayers    = hmap.Empty //PList.empty
             selectedScalar  = None
             textureLayers   = PList.empty
             selectedTexture = None            
 
             triangleSize = Init.triangleSize
             surfaceType = stype
-
         }       
 
     let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,KdTrees.Level0KdTree>) = 
@@ -454,6 +456,7 @@ module Surface =
         | GroupsMessage             of Groups.Action  
         | PickObject                of V3d
         | PlaceSurface              of V3d
+        | ScalarsColorLegendMessage of FalseColorLegendApp.Action
 
     let computeIndices (size:V2i)(invalids : int[]) : int[] =
       PRo3DCSharp.ComputeIndexArray(size,invalids)
@@ -607,6 +610,18 @@ module Surface =
                                             
                                     { model with surfaces = g; sgSurfaces = sgs'} 
                                  | None -> model
+                    | None -> model
+            | ScalarsColorLegendMessage msg ->
+                match model.surfaces.singleSelectLeaf with
+                    | Some s -> 
+                          let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface 
+                          match surface.selectedScalar with
+                            | Some s -> let sc = { s with colorLegend = (FalseColorLegendApp.update s.colorLegend msg) }
+                                        //let scs = surface.scalarLayers |> PList.remove' s |> PList.prepend sc
+                                        let scs = surface.scalarLayers |> HMap.alter sc.index (Option.map(fun _ -> sc))
+                                        let s' = { surface with selectedScalar = Some sc; scalarLayers = scs }
+                                        model |> SurfaceModel.updateSingleSurface s'   
+                            | None -> model
                     | None -> model
             | _ -> model
 
@@ -844,7 +859,44 @@ module Surface =
         adaptive {                                
             return (Groups.viewUI model.surfaces|> UI.map GroupsMessage)
         } 
-    
+
+    let viewColorLegendTools (model:MSurfaceModel) =
+        adaptive {
+            let! guid = model.surfaces.singleSelectLeaf
+            
+            match guid with
+                | Some i -> 
+
+                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                    let! surf = leaf 
+                    let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> failwith "wrong type"
+                    let! scalar = scalar
+                    match scalar with
+                        | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
+                        | None -> return div[][] |> UI.map ScalarsColorLegendMessage 
+                                  
+                | None -> return div[][] |> UI.map ScalarsColorLegendMessage 
+        }                          
+
+    let showColorLegend (model:MSurfaceModel) =
+        alist {
+            let! guid = model.surfaces.singleSelectLeaf
+            
+            match guid with
+                | Some i -> 
+
+                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                    let! surf = leaf 
+                    let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> failwith "wrong type"
+                    let! scalar = scalar
+                    match scalar with
+                        | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
+                        | None -> yield div [][]
+                                  
+                | None -> yield div [][]
+        }  
+
+
     let surfacesLeafButtonns (model:MSurfaceModel) = 
         let ts = model.surfaces.activeChild
         let sel = model.surfaces.singleSelectLeaf
@@ -890,6 +942,9 @@ module Surface =
             yield GuiEx.accordion "Actions" "Asterisk" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
                 ]     
+            yield GuiEx.accordion "Scalars ColorLegend" "paint brush" false [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(viewColorLegendTools model))] 
+              
         ]
     
     

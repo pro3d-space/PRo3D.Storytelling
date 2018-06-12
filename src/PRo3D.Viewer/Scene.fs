@@ -102,7 +102,7 @@ module Scene =
                             let textures = layers |> SurfaceProperties.getTextures
 
                             { s with 
-                                scalarLayers  = layers |> SurfaceProperties.getScalars
+                                scalarLayers  = layers |> SurfaceProperties.getScalarsHmap //SurfaceProperties.getScalars
                                 textureLayers = textures
                                 selectedTexture = textures |> PList.tryHead
                             }

@@ -401,3 +401,100 @@ module Shader =
           else
               return v.c
       }
+
+  [<ReflectedDefinition>]
+  let hsv2rgb (h : float) (s : float) (v : float) =
+    let s = clamp 0.0 1.0 s
+    let v = clamp 0.0 1.0 v
+
+    let h = h % 1.0
+    let h = if h < 0.0 then h + 1.0 else h
+    let hi = floor ( h * 6.0 ) |> int
+    let f = h * 6.0 - float hi
+    let p = v * (1.0 - s)
+    let q = v * (1.0 - s * f)
+    let t = v * (1.0 - s * ( 1.0 - f ))
+    match hi with
+        | 1 -> V3d(q,v,p)
+        | 2 -> V3d(p,v,t)
+        | 3 -> V3d(p,q,v)
+        | 4 -> V3d(t,p,v)
+        | 5 -> V3d(v,p,q)
+        | _ -> V3d(v,t,p)
+
+  
+  let falseColorLegend (v : Vertex) =
+      fragment {           
+          if uniform?falseColors then
+              let sC : V3d = uniform?startC
+              let eC : V3d = uniform?endC
+              let interval : float = uniform?interval
+              let lowerBound : float = uniform?lowerBound
+              let upperBound : float = uniform?upperBound
+              let stepS : float = uniform?stepS
+              let numOfRG : float = uniform?numOfRG
+              let inverted : bool = uniform?inverted
+
+              let pos = if lowerBound < v.scalar then
+                         (round ( (v.scalar - lowerBound) / interval ))
+                        else 0.0
+                        
+              let pos1 = if upperBound < v.scalar then
+                            numOfRG
+                         else pos
+                     
+              let p = 
+                  if uniform?inverted then
+                    eC.X - (stepS * pos1)
+                  else 
+                    sC.X + (stepS * pos1)
+              
+              let norm = V2d(p, 0.5)
+              let c = hsv2rgb p 0.0 0.0 //colormap.Sample(norm).XYZ
+
+              return v.c * V4d(c.X, c.Y, c.Z, 1.0)
+              //return v.c
+          else
+              return v.c
+      }
+
+  [<ReflectedDefinition>]
+  let mapFalseColors value : float =         
+      let invert = uniform?fcInvert
+      let fcUpperBound = uniform?falseColorUpperBound
+      let fcLowerBound = uniform?falseColorLowerBound
+      let fcInterval = uniform?interval
+      let fcUpperHueBound = uniform?fcHueUpperBound
+      let fcLowerHueBound = uniform?fcHueLowerBound
+
+      let low         = if (invert = false) then fcLowerBound else fcUpperBound
+      let up          = if (invert = false) then fcUpperBound else fcLowerBound
+      let interval    = if (invert = false) then fcInterval   else -1.0 * fcInterval        
+
+      let  rangeValue = up - low + interval
+      let  normInterv = (interval / rangeValue)
+
+      //map range to 0..1 according to lower/upperbound
+      let k = (value - low + interval) / rangeValue
+
+      //discretize lookup
+      let bucket = floor (k / normInterv)
+      let k = ((float) bucket) * normInterv |> clamp 0.0 1.0
+
+      //map values to hue range
+      let fcHueUpperBound = if (fcUpperHueBound < fcLowerHueBound) then fcUpperHueBound + 1.0 else fcUpperHueBound
+      let rangeHue = fcHueUpperBound - fcLowerHueBound
+      (k * rangeHue) + fcLowerHueBound
+
+  let falseColor2 (v : Vertex) =
+      fragment {    
+
+          if (uniform?useFalseColors) 
+          then
+              let mapping = mapFalseColors v.scalar
+              let mappingV2d = V2d(mapping, 0.5)
+              let c = colormap.Sample(mappingV2d).XYZ
+              return v.c *  V4d(c.X, c.Y, c.Z, 1.0)
+          else
+              return v.c
+      }

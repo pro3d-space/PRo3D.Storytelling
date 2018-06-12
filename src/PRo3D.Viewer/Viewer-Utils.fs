@@ -173,9 +173,15 @@ module ViewerUtils =
             adaptive {
                 let! s = surf
                 let! scalar = s.selectedScalar
-                return match scalar with 
-                          | Some s -> V2d(s.definedRange.Min, s.definedRange.Max)
+                let test =  
+                    match scalar with 
+                          | Some s -> let v = s.definedRange |> Mod.map ( fun x -> V2d(x.Min, x.Max))
+                                      Mod.force v
+                                //V2d(s.definedRange.Min, s.definedRange.Max)
                           | None   -> V2d(0.0,1.0)
+                
+
+                return test
             }
 
         let globalToLocal = 
@@ -187,7 +193,21 @@ module ViewerUtils =
                 let! scalar = s.selectedScalar
                 return scalar.IsSome
             }
-       
+        
+        let falseCL =
+           adaptive {
+                let! s = surf
+                let! scalar = s.selectedScalar
+                //return scalar
+                let cl =  
+                    match scalar with 
+                            | Some s -> let t = FalseColorLegendApp.Draw.getShaderParams  s.colorLegend
+                                        Mod.force t
+                            | None   -> FalseColorsModel.initShaderParams
+                return cl
+            } 
+            
+        
         let sg = 
             surface.sceneGraph
                 |> Mod.map createSg
@@ -195,6 +215,14 @@ module ViewerUtils =
                 |> Sg.uniform "selected"       isSelected
                 |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
                 |> Sg.uniform "falseColors"    selectedScalar
+                |> Sg.uniform "startC"         (falseCL |> Mod.map(fun x -> x.hsvStart))
+                |> Sg.uniform "endC"           (falseCL |> Mod.map(fun x -> x.hsvEnd))
+                |> Sg.uniform "interval"       (falseCL |> Mod.map(fun x -> x.interval))
+                |> Sg.uniform "inverted"       (falseCL |> Mod.map(fun x -> x.inverted))
+                |> Sg.uniform "lowerBound"     (falseCL |> Mod.map(fun x -> x.lowerBound))
+                |> Sg.uniform "upperBound"     (falseCL |> Mod.map(fun x -> x.upperBound))
+                |> Sg.uniform "stepS"           (falseCL |> Mod.map(fun x -> x.stepS))
+                |> Sg.uniform "numOfRG"        (falseCL |> Mod.map(fun x -> x.numOfRG))
                 |> Sg.uniform "MinMax"         (surface |> rangeToMinMax)
                 |> Sg.uniform "TriangleSize" (
                         adaptive {
@@ -225,7 +253,7 @@ module ViewerUtils =
                         let attr : AttributeParameters = 
                             {
                                 selectedTexture = texture |> Option.map(fun x -> x.index)
-                                selectedScalar  = scalar  |> Option.map(fun x -> x.index)
+                                selectedScalar  = scalar  |> Option.map(fun x -> x.index |> Mod.force)
                             }
 
                         return attr
@@ -358,11 +386,12 @@ module ViewerUtils =
                     set 
                         |> Sg.set
                         |> Sg.effect [
-                            Shader.stableTrafo             |> toEffect
+                            Shader.stableTrafo  |> toEffect //Shader.stableTrafo Shader.stableLight
                             DefaultSurfaces.diffuseTexture |> toEffect
                             Shader.selectionColor          |> toEffect       
-                            Shader.LoDColor                |> toEffect
-                            PRo3D.Shader.falseColor        |> toEffect                            
+                            Shader.LoDColor                |> toEffect 
+                            //PRo3D.Shader.falseColor        |> toEffect  
+                            PRo3D.Shader.falseColorLegend  |> toEffect 
                             Shader.triangleFilter          |> toEffect                            
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)

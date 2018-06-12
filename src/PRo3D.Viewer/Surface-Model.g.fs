@@ -10,6 +10,79 @@ module Mutable =
 
     
     
+    type MScalarLayer(__initial : PRo3D.Surfaces.ScalarLayer) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.ScalarLayer> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.ScalarLayer>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.ScalarLayer>
+        let _label = ResetMod.Create(__initial.label)
+        let _actualRange = ResetMod.Create(__initial.actualRange)
+        let _definedRange = ResetMod.Create(__initial.definedRange)
+        let _index = ResetMod.Create(__initial.index)
+        let _colorLegend = PRo3D.Mutable.MFalseColorsModel.Create(__initial.colorLegend)
+        
+        member x.label = _label :> IMod<_>
+        member x.actualRange = _actualRange :> IMod<_>
+        member x.definedRange = _definedRange :> IMod<_>
+        member x.index = _index :> IMod<_>
+        member x.colorLegend = _colorLegend
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3D.Surfaces.ScalarLayer) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                ResetMod.Update(_label,v.label)
+                ResetMod.Update(_actualRange,v.actualRange)
+                ResetMod.Update(_definedRange,v.definedRange)
+                ResetMod.Update(_index,v.index)
+                PRo3D.Mutable.MFalseColorsModel.Update(_colorLegend, v.colorLegend)
+                
+        
+        static member Create(__initial : PRo3D.Surfaces.ScalarLayer) : MScalarLayer = MScalarLayer(__initial)
+        static member Update(m : MScalarLayer, v : PRo3D.Surfaces.ScalarLayer) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3D.Surfaces.ScalarLayer> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module ScalarLayer =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let label =
+                { new Lens<PRo3D.Surfaces.ScalarLayer, System.String>() with
+                    override x.Get(r) = r.label
+                    override x.Set(r,v) = { r with label = v }
+                    override x.Update(r,f) = { r with label = f r.label }
+                }
+            let actualRange =
+                { new Lens<PRo3D.Surfaces.ScalarLayer, Aardvark.Base.Range1d>() with
+                    override x.Get(r) = r.actualRange
+                    override x.Set(r,v) = { r with actualRange = v }
+                    override x.Update(r,f) = { r with actualRange = f r.actualRange }
+                }
+            let definedRange =
+                { new Lens<PRo3D.Surfaces.ScalarLayer, Aardvark.Base.Range1d>() with
+                    override x.Get(r) = r.definedRange
+                    override x.Set(r,v) = { r with definedRange = v }
+                    override x.Update(r,f) = { r with definedRange = f r.definedRange }
+                }
+            let index =
+                { new Lens<PRo3D.Surfaces.ScalarLayer, System.Int32>() with
+                    override x.Get(r) = r.index
+                    override x.Set(r,v) = { r with index = v }
+                    override x.Update(r,f) = { r with index = f r.index }
+                }
+            let colorLegend =
+                { new Lens<PRo3D.Surfaces.ScalarLayer, PRo3D.FalseColorsModel>() with
+                    override x.Get(r) = r.colorLegend
+                    override x.Set(r,v) = { r with colorLegend = v }
+                    override x.Update(r,f) = { r with colorLegend = f r.colorLegend }
+                }
+    
+    
     type MSurface(__initial : PRo3D.Surfaces.Surface) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Surface> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.Surface>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Surface>
@@ -26,8 +99,8 @@ module Mutable =
         let _priority = Aardvark.UI.Mutable.MNumericInput.Create(__initial.priority)
         let _triangleSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.triangleSize)
         let _preTransform = ResetMod.Create(__initial.preTransform)
-        let _scalarLayers = MList.Create(__initial.scalarLayers)
-        let _selectedScalar = MOption.Create(__initial.selectedScalar)
+        let _scalarLayers = MMap.Create(__initial.scalarLayers, (fun v -> MScalarLayer.Create(v)), (fun (m,v) -> MScalarLayer.Update(m, v)), (fun v -> v))
+        let _selectedScalar = MOption.Create(__initial.selectedScalar, (fun v -> MScalarLayer.Create(v)), (fun (m,v) -> MScalarLayer.Update(m, v)), (fun v -> v))
         let _textureLayers = MList.Create(__initial.textureLayers)
         let _selectedTexture = MOption.Create(__initial.selectedTexture)
         let _surfaceType = ResetMod.Create(__initial.surfaceType)
@@ -45,7 +118,7 @@ module Mutable =
         member x.priority = _priority
         member x.triangleSize = _triangleSize
         member x.preTransform = _preTransform :> IMod<_>
-        member x.scalarLayers = _scalarLayers :> alist<_>
+        member x.scalarLayers = _scalarLayers :> amap<_,_>
         member x.selectedScalar = _selectedScalar :> IMod<_>
         member x.textureLayers = _textureLayers :> alist<_>
         member x.selectedTexture = _selectedTexture :> IMod<_>
@@ -69,7 +142,7 @@ module Mutable =
                 Aardvark.UI.Mutable.MNumericInput.Update(_priority, v.priority)
                 Aardvark.UI.Mutable.MNumericInput.Update(_triangleSize, v.triangleSize)
                 ResetMod.Update(_preTransform,v.preTransform)
-                MList.Update(_scalarLayers, v.scalarLayers)
+                MMap.Update(_scalarLayers, v.scalarLayers)
                 MOption.Update(_selectedScalar, v.selectedScalar)
                 MList.Update(_textureLayers, v.textureLayers)
                 MOption.Update(_selectedTexture, v.selectedTexture)
@@ -169,7 +242,7 @@ module Mutable =
                     override x.Update(r,f) = { r with preTransform = f r.preTransform }
                 }
             let scalarLayers =
-                { new Lens<PRo3D.Surfaces.Surface, Aardvark.Base.plist<PRo3D.Surfaces.ScalarLayer>>() with
+                { new Lens<PRo3D.Surfaces.Surface, Aardvark.Base.hmap<System.Int32,PRo3D.Surfaces.ScalarLayer>>() with
                     override x.Get(r) = r.scalarLayers
                     override x.Set(r,v) = { r with scalarLayers = v }
                     override x.Update(r,f) = { r with scalarLayers = f r.scalarLayers }

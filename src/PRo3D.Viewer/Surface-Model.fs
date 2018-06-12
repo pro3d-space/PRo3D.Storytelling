@@ -16,12 +16,13 @@ open Aardvark.SceneGraph.IO.Loader
 open Aardvark.VRVis.Opc
 
 
-//[<DomainType>]
+[<DomainType>]
 type ScalarLayer = {
     label        : string
     actualRange  : Range1d
     definedRange : Range1d
     index        : int
+    colorLegend  : FalseColorsModel
 }
 
 //[<DomainType>]
@@ -67,13 +68,15 @@ type Surface = {
     preTransform  : Trafo3d
     
 
-    scalarLayers   : plist<ScalarLayer>
+    scalarLayers   : hmap<int, ScalarLayer> //plist<ScalarLayer>
     selectedScalar : option<ScalarLayer>
 
     textureLayers   : plist<TextureLayer>
     selectedTexture : option<TextureLayer>
 
     surfaceType     : SurfaceType     
+
+    
 }
 
 [<DomainType>]

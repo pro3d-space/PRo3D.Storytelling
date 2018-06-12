@@ -13,6 +13,7 @@ open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis
 open Aardvark.Base.Rendering
 open Aardvark.Base.CameraView
+//open OpenCvSharp.SimpleBlobDetector
 
 //open Aardvark.Data.PhotoNetwork
 
@@ -113,28 +114,20 @@ type FalseColorsModel = {
     upperColor      : ColorInput //C4b
 }
 
+type FalseColorsShaderParams = {
+    hsvStart : V3d //(h, s, v)
+    hsvEnd   : V3d //(h, s, v)
+    interval : float
+    inverted : bool
+    lowerBound : float
+    upperBound : float
+    stepS     : float
+    numOfRG  : float
+    //rParams  : V4d // (lb, ub, step, numOfRG)
+}
+
+
 module FalseColorsModel = 
-    let lb  = {
-        value   = 0.0
-        min     = 0.0
-        max     = 100.0
-        step    = 1.0
-        format  = "{000:0}"
-    } 
-    let ub  = {
-        value   = 100.0
-        min     = 0.0
-        max     = 100.0
-        step    = 1.0
-        format  = "{000:0}"
-    } 
-    let interv  = {
-        value   = 5.0
-        min     = 0.0
-        max     = 100.0
-        step    = 1.0
-        format  = "{000:0}"
-    } 
     let dnSInterv  = {
         value   = 5.0
         min     = 0.0
@@ -156,6 +149,7 @@ module FalseColorsModel =
         step    = 1.0
         format  = "{0:0.0}"
     }
+
     let initDnSLegend = 
         {
             useFalseColors  = true
@@ -166,6 +160,52 @@ module FalseColorsModel =
             lowerColor      = { c = C4b.Blue }
             upperColor      = { c = C4b.Red }
         }
+
+   
+    let scalarsInterv  = {
+        value   = 5.0
+        min     = 0.0
+        max     = 90.0
+        step    = 1.0
+        format  = "{000:0}"
+    } 
+    let initlb (range: Range1d) = {
+        value   = range.Min
+        min     = range.Min
+        max     = range.Max
+        step    = 1.0
+        format  = "{0:0.0}"
+    }
+    let initub (range: Range1d) = {
+        value   = range.Max
+        min     = range.Min
+        max     = range.Max
+        step    = 1.0
+        format  = "{0:0.0}"
+    }
+    let initDefinedScalarsLegend (range: Range1d) = 
+        {
+            useFalseColors  = true
+            lowerBound      = initlb range
+            upperBound      = initub range 
+            interval        = scalarsInterv 
+            invertMapping   = true
+            lowerColor      = { c = C4b.Blue }
+            upperColor      = { c = C4b.Red }
+        }
+
+    let initShaderParams = 
+        {
+            hsvStart = V3d(0.0, 0.0, 0.0) 
+            hsvEnd   = V3d(0.0, 0.0, 0.0) 
+            interval = 1.0
+            inverted = false
+            lowerBound = 0.0
+            upperBound = 1.0
+            stepS     = 1.0
+            numOfRG  = 1.0
+        }
+
 
 [<DomainType>]
 type DipAndStrikeResults = {
