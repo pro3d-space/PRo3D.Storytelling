@@ -17,11 +17,10 @@ open Aardvark.Base.Rendering.Effects
 open FShade    
 
 open Aardvark.SceneGraph.Opc
-open Aardvark.Opc.Internal
+open Aardvark.VRVis.Opc
 
 module Viewer = 
-    open MBrace.FsPickler
-    open Aardvark.Opc.Internal
+    open MBrace.FsPickler    
     
     let serializer = FsPickler.CreateBinarySerializer()
 
@@ -50,7 +49,7 @@ module Viewer =
         let g = 
             patchHierarchies 
             |> List.map (fun h -> 
-                    Sg.patchLod signature runner h.baseDir 
+                    Sg.patchLod signature runner h.opcPaths.Opc_DirAbsPath //baseDir 
                                 scene.lodDecider scene.useCompressedTextures 
                                 ViewerModality.XYZ
                                 (PatchLod.toRoseTree h.tree)

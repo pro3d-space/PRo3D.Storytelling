@@ -190,4 +190,9 @@ type SurfaceModel = {
     kdTreeCache     : hmap<string, ConcreteKdIntersectionTree>
 }
 
+type saveAnnotations = {
+    annotations: GroupsModel 
+    colorLegend : FalseColorsModel
+}
+
     //FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)

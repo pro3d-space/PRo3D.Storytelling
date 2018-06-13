@@ -138,8 +138,8 @@ module KdTrees =
 
         let masterKdPath = 
           mode |> ViewerModality.matchy
-            (h |> PatchHierarchy.getMasterKdTreePath) 
-            (h |> PatchHierarchy.getMasterKdTreePath2d)
+            (h.kdTreeAggZero_FileAbsPath) 
+            (h.kdTreeAggZero2d_FileAbsPath)
 
         let cacheFile = System.IO.Path.ChangeExtension(masterKdPath, ".cache")
 
@@ -157,12 +157,7 @@ module KdTrees =
 
             let kd0Paths = 
                 patchInfos 
-                  |> List.map(fun x -> 
-                    mode 
-                    |> ViewerModality.matchy 
-                       (x.Name |> PatchHierarchy.getPatchKdTreePath h) 
-                       (x.Name |> PatchHierarchy.getPatchKdTreePath2d h)
-                    )
+                  |> List.map(fun x -> h.kdTree_FileAbsPath x.Name 0 mode)
 
             let kd0PathsExist = 
                 kd0Paths |> List.forall(System.IO.File.Exists)
@@ -188,13 +183,14 @@ module KdTrees =
                             |> List.mapi(
                                 fun i (info, kdPath) ->                                
                                     let t = loadKdtree kdPath
-                                    let patchPosF = 
-                                      mode |> ViewerModality.matchy (PatchHierarchy.getPatchPositionPath) 
-                                                                    (PatchHierarchy.getPatch2dPositionPath)
+                                    let pos =
+                                      match mode with
+                                      | XYZ -> info.Positions
+                                      | SvBR -> info.Positions2d.Value
 
                                     let lazyTree : LazyKdTree = {
                                         kdTree        = None
-                                        objectSetPath = info.Name |> patchPosF h
+                                        objectSetPath = h.opcPaths.Patches_DirAbsPath +/ info.Name +/ pos
                                         kdtreePath    = kdPath
                                         affine        = 
                                           mode 

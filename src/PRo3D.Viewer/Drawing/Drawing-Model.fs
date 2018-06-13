@@ -74,6 +74,8 @@ type DrawingModel = {
     colorLegend : FalseColorsModel
 }
 
+
+
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
 module DrawingModel =
     //let tryGet (m:DrawingModel) key = 

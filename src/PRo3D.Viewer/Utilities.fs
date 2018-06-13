@@ -164,8 +164,7 @@ module Sg =
     open Aardvark.SceneGraph
     open Aardvark.Base.Rendering
     open Aardvark.UI
-    open Aardvark.Rendering.Text
-    open Aardvark.Opc.Internal
+    open Aardvark.Rendering.Text    
 
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
             adaptive {

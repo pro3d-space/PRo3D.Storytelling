@@ -277,15 +277,24 @@ module DrawingApp =
                 match Dialogs.saveDialog w with
                     | None -> model
                     | Some p -> 
-                        Serialization.save "./lastMeasure" model.annotations |> ignore
-                        { model with annotations = Serialization.save p model.annotations }
+                        let sa = 
+                            {
+                                annotations = model.annotations
+                                colorLegend = model.colorLegend
+                            }
+                        Serialization.save "./lastMeasure" sa |> ignore //model.annotations
+                        //{ model with annotations = (Serialization.save p model.annotations } 
+                        let saveA = Serialization.save p sa
+                        { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend } 
             | Load,_ ->                
               match Dialogs.openDialog w with
                 | None -> model
                 | Some path -> 
-                  let groups = Groups.tryLoadGroups path
+                  //let groups = Groups.tryLoadGroups path
+                  let groups = Groups.tryLoadAnnotations path
                   match groups with 
-                    | Some g -> { model with annotations = g  }
+                    //| Some g -> { model with annotations = g  }
+                    | Some g -> { model with annotations = g.annotations; colorLegend = g.colorLegend }
                     | None -> model
             | QuickLoad,_ ->                
               let groups = Groups.tryLoadGroups "./lastMeasure" 

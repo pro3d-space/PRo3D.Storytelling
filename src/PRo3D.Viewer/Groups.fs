@@ -102,6 +102,13 @@ module Groups =
         Some (Serialization.loadAs<PRo3D.Groups.GroupsModel> path)
       with _ ->
         Log.error "[loadGroups:] couldn't load %s" path
+        None     
+        
+    let tryLoadAnnotations (path:string) =
+      try
+        Some (Serialization.loadAs<PRo3D.Groups.saveAnnotations> path)
+      with _ ->
+        Log.error "[loadAnnotations:] couldn't load %s" path
         None        
 
     let updateNodeAt (p : list<Index>) (f : Node -> Node) (t : Node) = 

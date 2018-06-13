@@ -65,6 +65,7 @@ module ViewerApp =
     // drawing
     let _drawing         = Model.Lens.drawing
     let _annotations     = _drawing |. DrawingModel.Lens.annotations
+    let _dnsColorLegend  = _drawing |. DrawingModel.Lens.colorLegend
     let _flat            = _annotations  |. GroupsModel.Lens.flat    
     let _lookUp          = _annotations  |. GroupsModel.Lens.groupsLookup
     let _groups          = _annotations  |. GroupsModel.Lens.rootGroup |. Node.Lens.subNodes
@@ -321,7 +322,7 @@ module ViewerApp =
                     | paths ->
                         let surfaces = 
                             paths 
-                                |> List.filter Files.isSurfaceFolder
+                                |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
                                 |> List.map (Surface.mk SurfaceType.SurfaceOPC)
                                 |> PList.ofList
 
@@ -1398,9 +1399,11 @@ module ViewerApp =
     let loadLastAnnotations (m:Model) = 
       match Serialization.fileExists "./lastmeasure" with
         | Some path ->             
-            let groups = Groups.tryLoadGroups path 
+            //let groups = Groups.tryLoadGroups path 
+            let groups = Groups.tryLoadAnnotations path 
             match groups with
-            | Some g -> g |> Lenses.set' _annotations m
+            //| Some g -> g |> Lenses.set' _annotations m
+            | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; colorLegend = g.colorLegend } }
             | None -> m
         | None -> m
 

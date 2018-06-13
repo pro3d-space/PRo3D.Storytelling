@@ -32,7 +32,6 @@ open PRo3D.Groups
 open System.Text
 open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis.Opc
-open Aardvark.Opc.Internal
 
 [<DataContract>]
 type Calc =
