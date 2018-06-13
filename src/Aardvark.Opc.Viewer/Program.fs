@@ -49,7 +49,8 @@ module Viewer =
         let g = 
             patchHierarchies 
             |> List.map (fun h -> 
-                    Sg.patchLod signature runner h.opcPaths.Opc_DirAbsPath //baseDir 
+                    
+                    Sg.patchLod signature runner h.opcPaths.Opc_DirAbsPath
                                 scene.lodDecider scene.useCompressedTextures 
                                 ViewerModality.XYZ
                                 (PatchLod.toRoseTree h.tree)
