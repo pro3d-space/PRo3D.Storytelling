@@ -614,8 +614,9 @@ module Surface =
                                     let sgs' = 
                                         model.sgSurfaces
                                         |> HMap.update id (fun x -> match x with 
-                                                                    | Some sg ->    let pose = Pose.translate p // bb.Center
-                                                                                    let trafo' = { TrafoController.initial with pose = pose; previewTrafo = Trafo3d.Translation(p); mode = TrafoMode.Local }
+                                                                    | Some sg ->    //let pose = Pose.translate p // bb.Center
+                                                                                    let pose = { sg.trafo.pose with position = sg.trafo.pose.position + p }
+                                                                                    let trafo' = { TrafoController.initial with pose = pose ; previewTrafo = Trafo3d.Translation(p); mode = TrafoMode.Local }
                                                                                     match sgSurface.isSgOPC sg with
                                                                                         | true -> let sg' = sgSurface.toSgOPC sg 
                                                                                                   let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed (Trafo3d.Translation(p))) } 

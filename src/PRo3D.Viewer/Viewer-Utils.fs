@@ -338,6 +338,7 @@ module ViewerUtils =
                         |> Sg.withEvents [
                             Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
                         ]
+                        |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform)) 
                         |> Sg.shader {
                             do! DefaultSurfaces.trafo
                             do! DefaultSurfaces.constantColor C4f.White
