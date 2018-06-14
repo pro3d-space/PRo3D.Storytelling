@@ -418,10 +418,7 @@ module Surface =
                 |> Sg.adapter
                 |> Sg.requirePicking
                 |> Sg.noEvents
-                //|> Sg.trafo scaleTrafo
-                // flip the z coordinates (since the model is upside down)
-                //|> Sg.transform (Trafo3d.Scale(1.0, 1.0, -1.0))
-                |> Sg.scale 3.0
+                |> Sg.scale 1.0
 
                 |> Sg.shader {
                     do! DefaultSurfaces.trafo
@@ -429,7 +426,7 @@ module Surface =
                     do! DefaultSurfaces.normalMap
                     do! DefaultSurfaces.simpleLighting
                 }
-            let pose = Pose.translate V3d.Zero // bb.Center
+            let pose = Pose.translate bb.Center // bb.Center V3d.Zero
             let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
             {
                 surface     = s.guid    

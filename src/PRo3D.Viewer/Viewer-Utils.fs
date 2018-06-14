@@ -303,46 +303,55 @@ module ViewerUtils =
                         
         sg
 
-    let viewSingleSurfaceSgOBJ (surface : MSgSurfaces) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (globalBB : IMod<Box3d>) =
+    let viewSingleSurfaceSgOBJ (surface : MSgSurfaces) (blarg : amap<Guid, IMod<MLeaf>>) (objSg : MSgSurfaceObj) (selectedId : IMod<Option<Guid>>) (globalBB : IMod<Box3d>) =
         
         let surf = lookUp (surface.surface) blarg
-                
-        let pickable = 
-            adaptive {
-                let! bb = globalBB
-                let! trafo = (surf |> Mod.bind(fun x -> x.preTransform))
-                return { shape = PickShape.Box bb; trafo = trafo  } // Trafo3d.Identity
-            }        
-       
-        let sg = 
-            //let obj = Aardvark.SceneGraph.IO.Loader.Assimp.load @"C:\Users\laura\VRVis\Data\OBJ\aardvark.obj" 
-            
+        
+        let createSg (sg : ISg) =
+            sg 
+            |> Sg.noEvents 
+            |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
+            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))         
+
+        let sg =
             aset {
                 let! obj = surface.sceneGraph
+                let! meshes = objSg.pickMesh
+
                 yield obj 
+                    |> createSg
                     |> Sg.adapter
-                    //|> Sg.transform (Trafo3d.Scale(1.0, 1.0, -1.0))
-                    |> Sg.uniform "TriangleSize" (
-                        adaptive {
-                            let! s = surf
-                            let! maxAngle = s.triangleSize.value
-                            Log.warn "maxAngle: %A" maxAngle
-                            Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
-                            return maxAngle |> Double.radiansFromDegrees |> Math.Cos
-                        })
-                    |> Sg.requirePicking
-                    |> pickable' pickable
+                    |> Sg.uniform "TriangleSize" (Mod.constant 0.0)
                     |> Sg.noEvents
-                    |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))   
-                    |> Sg.withEvents [
-                        Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
-                    ]
+                    |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform)) 
                     |> Sg.shader {
                         do! DefaultSurfaces.trafo
                         do! DefaultSurfaces.diffuseTexture
                         do! DefaultSurfaces.normalMap
                         do! DefaultSurfaces.simpleLighting
                     }
+
+                yield 
+                    meshes
+                        |> Sg.requirePicking
+                        |> Sg.noEvents
+                        |> Sg.withEvents [
+                            Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
+                        ]
+                        |> Sg.shader {
+                            do! DefaultSurfaces.trafo
+                            do! DefaultSurfaces.constantColor C4f.White
+                        }
+                        |> Sg.depthTest (Mod.constant DepthTestMode.Never)
+                //yield 
+                //    Sg.box (Mod.constant C4b.Red) surface.globalBB
+                //    |> Sg.shader {
+                //                    do! DefaultSurfaces.trafo
+                //                    do! DefaultSurfaces.vertexColor
+                //                    do! DefaultSurfaces.simpleLighting
+                //                }
+                //    |> Sg.noEvents
+                //    |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))  
                  }       |> Sg.set
                  
         sg
@@ -364,10 +373,10 @@ module ViewerUtils =
                         let bla = m.scene.surfacesModel.surfaces.flat
                         let sf = Mod.force sf
                         let test = match sf with
-                                    | MSgSurfaceOPC surf ->
+                                    | MSgSurfaceOPC surf -> 
                                          (viewSingleSurfaceSgOPC sf bla m.frustum selected sf.globalBB)
                                     | MSgSurfaceOBJ surf -> 
-                                        (viewSingleSurfaceSgOBJ sf bla m.frustum selected sf.globalBB)
+                                        (viewSingleSurfaceSgOBJ sf bla surf selected sf.globalBB)
                         test
                                 )
                     //|> AMap.choose(fun _ y -> y ) 
