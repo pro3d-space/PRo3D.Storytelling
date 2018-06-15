@@ -322,14 +322,14 @@ module ViewerUtils =
                     |> createSg
                     |> Sg.adapter
                     |> Sg.uniform "TriangleSize" (Mod.constant 0.0)
-                    |> Sg.noEvents
-                    |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform)) 
+                    |> Sg.noEvents 
                     |> Sg.shader {
                         do! DefaultSurfaces.trafo
                         do! DefaultSurfaces.diffuseTexture
                         do! DefaultSurfaces.normalMap
                         do! DefaultSurfaces.simpleLighting
                     }
+                    |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))
 
                 yield 
                     meshes
@@ -338,11 +338,11 @@ module ViewerUtils =
                         |> Sg.withEvents [
                             Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
                         ]
-                        |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform)) 
                         |> Sg.shader {
                             do! DefaultSurfaces.trafo
                             do! DefaultSurfaces.constantColor C4f.White
                         }
+                        |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform)) 
                         |> Sg.depthTest (Mod.constant DepthTestMode.Never)
                 //yield 
                 //    Sg.box (Mod.constant C4b.Red) surface.globalBB

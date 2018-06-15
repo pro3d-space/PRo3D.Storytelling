@@ -497,3 +497,16 @@ module Shader =
           else
               return v.c
       }
+
+  //let stableTrafoBigKoords (v : Vertex) =
+  //      vertex {
+  //          let vp = uniform.ModelViewTrafo * v.pos
+  //          let wp = uniform.ModelTrafo * v.pos
+  //          return { 
+  //              v with
+  //                  pos  = uniform.ProjTrafo * vp
+  //                  wp   = wp
+  //                  n    = transformNormal v.n
+  //                  ldir = V3d.Zero - vp.XYZ |> Vec.normalize
+  //          } 
+  //      }
