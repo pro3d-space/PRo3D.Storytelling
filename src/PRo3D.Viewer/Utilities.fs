@@ -534,8 +534,8 @@ module Shader =
   [<ReflectedDefinition>]
   let mapBrightness (vColor : V4d) =
     let b = uniform?brightnessS
-    let nc = V4d(vColor.X*255.0, vColor.Y*255.0,vColor.Z*255.0, 255.0)
-    
+    let nc = V4d(vColor.X*255.0, vColor.Y*255.0,vColor.Z*255.0, 255.0)        
+
     let red = (myTrunc(nc.X + b)) / 255.0 
     let green = (myTrunc(nc.Y + b)) / 255.0 
     let blue  = (myTrunc(nc.Z  + b)) / 255.0 
@@ -563,42 +563,35 @@ module Shader =
     V4d(red, green, blue, 1.0)
 
 
-
   let imageCorrection (v : Vertex) =
       fragment {
         let contrast = 
-          if (uniform?useContrastS) 
-          then
-              v.c * (mapContrast v.c) 
+          if (uniform?useContrastS) then
+              (mapContrast v.c) 
           else
               v.c
 
         let brightn = 
-            if (uniform?useBrightnS) 
-              then
-                  contrast * (mapBrightness v.c) 
-              else
-                  contrast
+          if (uniform?useBrightnS) then
+            (mapBrightness contrast) 
+          else
+            contrast
 
         let gamma = 
-            if (uniform?useGammaS) 
-              then
-                  brightn * (mapGamma v.c) 
-              else
-                  brightn
+          if (uniform?useGammaS) then
+            (mapGamma brightn) 
+          else
+            brightn
 
         let grey = 
-            if (uniform?useGrayS) 
-              then
-                  gamma * (grayscale v.c) 
-              else
-                  gamma
+          if (uniform?useGrayS) then
+            (grayscale gamma) 
+          else
+            gamma
 
         if (uniform?useColorS) 
           then
               return addColor grey
           else
               return grey
-
-
       }
