@@ -360,6 +360,8 @@ module Surface =
 
             triangleSize = Init.triangleSize
             surfaceType = stype
+
+            colorCorrection = Init.initColorCorrection
         }       
 
     let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,KdTrees.Level0KdTree>) = 
@@ -420,12 +422,6 @@ module Surface =
                 |> Sg.noEvents
                 |> Sg.scale 1.0
 
-                |> Sg.shader {
-                    do! DefaultSurfaces.trafo
-                    do! DefaultSurfaces.diffuseTexture
-                    do! DefaultSurfaces.normalMap
-                    do! DefaultSurfaces.simpleLighting
-                }
             let pose = Pose.translate bb.Center // bb.Center V3d.Zero
             let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
             {
@@ -474,6 +470,7 @@ module Surface =
         | PickObject                of V3d
         | PlaceSurface              of V3d
         | ScalarsColorLegendMessage of FalseColorLegendApp.Action
+        | ColorCorrectionMessage    of ColorCorrectionProperties.Action
 
     let computeIndices (size:V2i)(invalids : int[]) : int[] =
       PRo3DCSharp.ComputeIndexArray(size,invalids)
@@ -641,6 +638,15 @@ module Surface =
                                         model |> SurfaceModel.updateSingleSurface s'   
                             | None -> model
                     | None -> model
+            | ColorCorrectionMessage msg ->                
+                let m = 
+                  match model.surfaces.singleSelectLeaf with
+                    | Some s -> 
+                      let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface
+                      let s' = { surface with colorCorrection = (ColorCorrectionProperties.update surface.colorCorrection msg) }
+                      model |> SurfaceModel.updateSingleSurface s'                        
+                    | None -> model
+                m
             | _ -> model
 
     let absRelIcons (m : MSurface)=
@@ -878,6 +884,20 @@ module Surface =
             return (Groups.viewUI model.surfaces|> UI.map GroupsMessage)
         } 
 
+    let viewColorCorrectionTools (model:MSurfaceModel) =
+        adaptive {
+            let! guid = model.surfaces.singleSelectLeaf
+            
+            match guid with
+                | Some i -> 
+
+                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                    let! surf = leaf 
+                    let colorCorrection = match surf with | MSurfaces s -> s.colorCorrection | _ -> failwith "wrong type"
+                    return ColorCorrectionProperties.view colorCorrection |> UI.map ColorCorrectionMessage
+                | None -> return div[][] |> UI.map ColorCorrectionMessage 
+        }                          
+
     let viewColorLegendTools (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
@@ -959,10 +979,15 @@ module Surface =
             ]
             yield GuiEx.accordion "Actions" "Asterisk" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
-                ]     
+                ]  
+                
+            yield GuiEx.accordion "Color Correction" "file image outline" false [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(viewColorCorrectionTools model))] 
+
             yield GuiEx.accordion "Scalars ColorLegend" "paint brush" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewColorLegendTools model))] 
-              
+
+            
         ]
     
     

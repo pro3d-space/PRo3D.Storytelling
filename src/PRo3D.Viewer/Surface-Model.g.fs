@@ -83,6 +83,115 @@ module Mutable =
                 }
     
     
+    type MColorCorrection(__initial : PRo3D.Surfaces.ColorCorrection) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.ColorCorrection> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.ColorCorrection>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.ColorCorrection>
+        let _contrast = Aardvark.UI.Mutable.MNumericInput.Create(__initial.contrast)
+        let _useContrast = ResetMod.Create(__initial.useContrast)
+        let _brightness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.brightness)
+        let _useBrightn = ResetMod.Create(__initial.useBrightn)
+        let _gamma = Aardvark.UI.Mutable.MNumericInput.Create(__initial.gamma)
+        let _useGamma = ResetMod.Create(__initial.useGamma)
+        let _color = Aardvark.UI.Mutable.MColorInput.Create(__initial.color)
+        let _useColor = ResetMod.Create(__initial.useColor)
+        let _useGrayscale = ResetMod.Create(__initial.useGrayscale)
+        
+        member x.contrast = _contrast
+        member x.useContrast = _useContrast :> IMod<_>
+        member x.brightness = _brightness
+        member x.useBrightn = _useBrightn :> IMod<_>
+        member x.gamma = _gamma
+        member x.useGamma = _useGamma :> IMod<_>
+        member x.color = _color
+        member x.useColor = _useColor :> IMod<_>
+        member x.useGrayscale = _useGrayscale :> IMod<_>
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3D.Surfaces.ColorCorrection) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                Aardvark.UI.Mutable.MNumericInput.Update(_contrast, v.contrast)
+                ResetMod.Update(_useContrast,v.useContrast)
+                Aardvark.UI.Mutable.MNumericInput.Update(_brightness, v.brightness)
+                ResetMod.Update(_useBrightn,v.useBrightn)
+                Aardvark.UI.Mutable.MNumericInput.Update(_gamma, v.gamma)
+                ResetMod.Update(_useGamma,v.useGamma)
+                Aardvark.UI.Mutable.MColorInput.Update(_color, v.color)
+                ResetMod.Update(_useColor,v.useColor)
+                ResetMod.Update(_useGrayscale,v.useGrayscale)
+                
+        
+        static member Create(__initial : PRo3D.Surfaces.ColorCorrection) : MColorCorrection = MColorCorrection(__initial)
+        static member Update(m : MColorCorrection, v : PRo3D.Surfaces.ColorCorrection) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3D.Surfaces.ColorCorrection> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module ColorCorrection =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let contrast =
+                { new Lens<PRo3D.Surfaces.ColorCorrection, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.contrast
+                    override x.Set(r,v) = { r with contrast = v }
+                    override x.Update(r,f) = { r with contrast = f r.contrast }
+                }
+            let useContrast =
+                { new Lens<PRo3D.Surfaces.ColorCorrection, System.Boolean>() with
+                    override x.Get(r) = r.useContrast
+                    override x.Set(r,v) = { r with useContrast = v }
+                    override x.Update(r,f) = { r with useContrast = f r.useContrast }
+                }
+            let brightness =
+                { new Lens<PRo3D.Surfaces.ColorCorrection, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.brightness
+                    override x.Set(r,v) = { r with brightness = v }
+                    override x.Update(r,f) = { r with brightness = f r.brightness }
+                }
+            let useBrightn =
+                { new Lens<PRo3D.Surfaces.ColorCorrection, System.Boolean>() with
+                    override x.Get(r) = r.useBrightn
+                    override x.Set(r,v) = { r with useBrightn = v }
+                    override x.Update(r,f) = { r with useBrightn = f r.useBrightn }
+                }
+            let gamma =
+                { new Lens<PRo3D.Surfaces.ColorCorrection, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.gamma
+                    override x.Set(r,v) = { r with gamma = v }
+                    override x.Update(r,f) = { r with gamma = f r.gamma }
+                }
+            let useGamma =
+                { new Lens<PRo3D.Surfaces.ColorCorrection, System.Boolean>() with
+                    override x.Get(r) = r.useGamma
+                    override x.Set(r,v) = { r with useGamma = v }
+                    override x.Update(r,f) = { r with useGamma = f r.useGamma }
+                }
+            let color =
+                { new Lens<PRo3D.Surfaces.ColorCorrection, Aardvark.UI.ColorInput>() with
+                    override x.Get(r) = r.color
+                    override x.Set(r,v) = { r with color = v }
+                    override x.Update(r,f) = { r with color = f r.color }
+                }
+            let useColor =
+                { new Lens<PRo3D.Surfaces.ColorCorrection, System.Boolean>() with
+                    override x.Get(r) = r.useColor
+                    override x.Set(r,v) = { r with useColor = v }
+                    override x.Update(r,f) = { r with useColor = f r.useColor }
+                }
+            let useGrayscale =
+                { new Lens<PRo3D.Surfaces.ColorCorrection, System.Boolean>() with
+                    override x.Get(r) = r.useGrayscale
+                    override x.Set(r,v) = { r with useGrayscale = v }
+                    override x.Update(r,f) = { r with useGrayscale = f r.useGrayscale }
+                }
+    
+    
     type MSurface(__initial : PRo3D.Surfaces.Surface) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Surface> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.Surface>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Surface>
@@ -104,6 +213,7 @@ module Mutable =
         let _textureLayers = MList.Create(__initial.textureLayers)
         let _selectedTexture = MOption.Create(__initial.selectedTexture)
         let _surfaceType = ResetMod.Create(__initial.surfaceType)
+        let _colorCorrection = MColorCorrection.Create(__initial.colorCorrection)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
@@ -123,6 +233,7 @@ module Mutable =
         member x.textureLayers = _textureLayers :> alist<_>
         member x.selectedTexture = _selectedTexture :> IMod<_>
         member x.surfaceType = _surfaceType :> IMod<_>
+        member x.colorCorrection = _colorCorrection
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.Surface) =
@@ -147,6 +258,7 @@ module Mutable =
                 MList.Update(_textureLayers, v.textureLayers)
                 MOption.Update(_selectedTexture, v.selectedTexture)
                 ResetMod.Update(_surfaceType,v.surfaceType)
+                MColorCorrection.Update(_colorCorrection, v.colorCorrection)
                 
         
         static member Create(__initial : PRo3D.Surfaces.Surface) : MSurface = MSurface(__initial)
@@ -270,6 +382,12 @@ module Mutable =
                     override x.Get(r) = r.surfaceType
                     override x.Set(r,v) = { r with surfaceType = v }
                     override x.Update(r,f) = { r with surfaceType = f r.surfaceType }
+                }
+            let colorCorrection =
+                { new Lens<PRo3D.Surfaces.Surface, PRo3D.Surfaces.ColorCorrection>() with
+                    override x.Get(r) = r.colorCorrection
+                    override x.Set(r,v) = { r with colorCorrection = v }
+                    override x.Update(r,f) = { r with colorCorrection = f r.colorCorrection }
                 }
     
     

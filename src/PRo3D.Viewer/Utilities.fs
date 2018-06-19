@@ -510,3 +510,95 @@ module Shader =
   //                  ldir = V3d.Zero - vp.XYZ |> Vec.normalize
   //          } 
   //      }
+
+  [<ReflectedDefinition>]
+  let myTrunc (value : float) =
+    if value < 0.0 then
+        0.0
+    elif value > 255.0 then
+        255.0
+    else
+        value
+
+  [<ReflectedDefinition>]
+  let mapContrast (vColor : V4d) =
+    let c = uniform?contrastS
+    let nc = V4d(vColor.X*255.0, vColor.Y*255.0,vColor.Z*255.0, 255.0)
+
+    let factor = (259.0 * (c + 255.0)) / (255.0 * (259.0 - c))
+    let red = (myTrunc (factor * (nc.X   - 128.0) + 128.0)) / 255.0
+    let green = (myTrunc (factor * (nc.Y   - 128.0) + 128.0)) / 255.0
+    let blue = (myTrunc (factor * (nc.Z   - 128.0) + 128.0)) / 255.0
+    V4d(red, green, blue, 1.0)
+
+  [<ReflectedDefinition>]
+  let mapBrightness (vColor : V4d) =
+    let b = uniform?brightnessS
+    let nc = V4d(vColor.X*255.0, vColor.Y*255.0,vColor.Z*255.0, 255.0)
+    
+    let red = (myTrunc(nc.X + b)) / 255.0 
+    let green = (myTrunc(nc.Y + b)) / 255.0 
+    let blue  = (myTrunc(nc.Z  + b)) / 255.0 
+    V4d(red, green, blue, 1.0)
+
+  [<ReflectedDefinition>]
+  let mapGamma (vColor : V4d) =
+    let g = uniform?gammaS
+    let gammaCorrection = 1.0 / g
+    V4d(vColor.X**gammaCorrection, vColor.Y**gammaCorrection, vColor.Z**gammaCorrection, 1.0)
+
+  [<ReflectedDefinition>]
+  let grayscale (vColor : V4d) =
+    let value = vColor.X * 0.299 + vColor.Y * 0.587 + vColor.Z * 0.114
+    V4d(value, value, value, 1.0)
+
+  [<ReflectedDefinition>]
+  let addColor (vColor : V4d) =
+    let col : V3d =  uniform?colorS
+    let nc = V4d(vColor.X*255.0, vColor.Y*255.0,vColor.Z*255.0, 255.0)
+
+    let red = (myTrunc( nc.X * col.X))/255.0
+    let green = (myTrunc( nc.Y * col.Y ))/255.0
+    let blue = (myTrunc( nc.Z * col.Z )) / 255.0
+    V4d(red, green, blue, 1.0)
+
+
+
+  let imageCorrection (v : Vertex) =
+      fragment {
+        let contrast = 
+          if (uniform?useContrastS) 
+          then
+              v.c * (mapContrast v.c) 
+          else
+              v.c
+
+        let brightn = 
+            if (uniform?useBrightnS) 
+              then
+                  contrast * (mapBrightness v.c) 
+              else
+                  contrast
+
+        let gamma = 
+            if (uniform?useGammaS) 
+              then
+                  brightn * (mapGamma v.c) 
+              else
+                  brightn
+
+        let grey = 
+            if (uniform?useGrayS) 
+              then
+                  gamma * (grayscale v.c) 
+              else
+                  gamma
+
+        if (uniform?useColorS) 
+          then
+              return addColor grey
+          else
+              return grey
+
+
+      }

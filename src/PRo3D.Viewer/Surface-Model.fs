@@ -25,6 +25,19 @@ type ScalarLayer = {
     colorLegend  : FalseColorsModel
 }
 
+[<DomainType>]
+type ColorCorrection = {
+    contrast    : NumericInput
+    useContrast : bool
+    brightness  : NumericInput
+    useBrightn  : bool
+    gamma       : NumericInput
+    useGamma    : bool
+    color       : ColorInput
+    useColor    : bool
+    useGrayscale: bool
+}
+
 //[<DomainType>]
 type TextureLayer = {
     label : string
@@ -76,6 +89,7 @@ type Surface = {
 
     surfaceType     : SurfaceType     
 
+    colorCorrection : ColorCorrection
     
 }
 
@@ -184,4 +198,43 @@ module Init =
             step = 1.0
             format = "{0:0}"
         }
+
+    // colorCorrection
+    let contrast = 
+        {
+            value = 0.0
+            min =  -255.0
+            max = 255.0
+            step = 1.0
+            format = "{0:0}"
+        }
+    let brightness = 
+        {
+            value = 0.0
+            min =  -255.0
+            max = 255.0
+            step = 1.0
+            format = "{0:0}"
+        }
+    let gamma = 
+        {
+            value = 1.0
+            min =  0.01
+            max = 10.0
+            step = 0.01
+            format = "{0:00}"
+        }
+    let initColorCorrection = {
+        contrast    = contrast
+        useContrast = false
+        brightness  = brightness
+        useBrightn  = false
+        gamma       = gamma
+        useGamma    = false
+        color       = { c = C4b.Magenta }
+        useColor    = false
+        useGrayscale = false
+    } 
+
+
 

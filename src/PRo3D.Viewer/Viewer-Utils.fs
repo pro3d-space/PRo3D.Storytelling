@@ -205,7 +205,75 @@ module ViewerUtils =
                             | None   -> FalseColorsModel.initShaderParams
                 return cl
             } 
-            
+        
+        let cc =
+           adaptive {
+                let! s = surf
+                return s.colorCorrection
+            } 
+
+        // image correction
+        let contr =
+           adaptive {
+                let! s = surf
+                let! c = s.colorCorrection.contrast.value
+                return c
+            } 
+
+        let useContr =
+           adaptive {
+                let! s = surf
+                let! uc = s.colorCorrection.useContrast
+                return uc
+            } 
+
+        let bright =
+           adaptive {
+                let! s = surf
+                let! b = s.colorCorrection.brightness.value
+                return b
+            } 
+
+        let useB =
+           adaptive {
+                let! s = surf
+                let! ub = s.colorCorrection.useBrightn
+                return ub
+            } 
+
+        let gamma =
+           adaptive {
+                let! s = surf
+                let! g = s.colorCorrection.gamma.value
+                return g
+            } 
+
+        let useG =
+           adaptive {
+                let! s = surf
+                let! ug = s.colorCorrection.useGamma
+                return ug
+            } 
+
+        let useGray =
+           adaptive {
+                let! s = surf
+                let! ug = s.colorCorrection.useGrayscale
+                return ug
+            } 
+
+        let useColor =
+           adaptive {
+                let! s = surf
+                let! uc = s.colorCorrection.useColor
+                return uc
+            } 
+        let color =
+           adaptive {
+                let! s = surf
+                let! uc = s.colorCorrection.color.c
+                return uc
+            } 
         
         let sg = 
             surface.sceneGraph
@@ -214,15 +282,17 @@ module ViewerUtils =
                 |> Sg.uniform "selected"       isSelected
                 |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
                 |> Sg.uniform "falseColors"    selectedScalar
-                |> Sg.uniform "startC"         (falseCL |> Mod.map(fun x -> x.hsvStart))
-                |> Sg.uniform "endC"           (falseCL |> Mod.map(fun x -> x.hsvEnd))
-                |> Sg.uniform "interval"       (falseCL |> Mod.map(fun x -> x.interval))
-                |> Sg.uniform "inverted"       (falseCL |> Mod.map(fun x -> x.inverted))
-                |> Sg.uniform "lowerBound"     (falseCL |> Mod.map(fun x -> x.lowerBound))
-                |> Sg.uniform "upperBound"     (falseCL |> Mod.map(fun x -> x.upperBound))
-                |> Sg.uniform "stepS"           (falseCL |> Mod.map(fun x -> x.stepS))
-                |> Sg.uniform "numOfRG"        (falseCL |> Mod.map(fun x -> x.numOfRG))
+                //|> Sg.uniform "startC"         (falseCL |> Mod.map(fun x -> x.hsvStart))
+                //|> Sg.uniform "endC"           (falseCL |> Mod.map(fun x -> x.hsvEnd))
+                //|> Sg.uniform "interval"       (falseCL |> Mod.map(fun x -> x.interval))
+                //|> Sg.uniform "inverted"       (falseCL |> Mod.map(fun x -> x.inverted))
+                //|> Sg.uniform "lowerBound"     (falseCL |> Mod.map(fun x -> x.lowerBound))
+                //|> Sg.uniform "upperBound"     (falseCL |> Mod.map(fun x -> x.upperBound))
+                //|> Sg.uniform "stepS"           (falseCL |> Mod.map(fun x -> x.stepS))
+                //|> Sg.uniform "numOfRG"        (falseCL |> Mod.map(fun x -> x.numOfRG))
                 |> Sg.uniform "MinMax"         (surface |> rangeToMinMax)
+                //|> Sg.uniform "useContrast"  (cc |> Mod.map(fun x -> x.useContrast))
+                //|> Sg.uniform "contrast"     (cc |> Mod.map(fun x -> x.contrast))
                 |> Sg.uniform "TriangleSize" (
                         adaptive {
                             let! s = surf
@@ -231,6 +301,15 @@ module ViewerUtils =
                             Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
                             return maxAngle |> Double.radiansFromDegrees |> Math.Cos
                         })
+                |> Sg.uniform "useContrastS"  useContr
+                |> Sg.uniform "contrastS"     contr
+                |> Sg.uniform "useBrightnS"   useB 
+                |> Sg.uniform "brightnessS"   bright
+                |> Sg.uniform "useGammaS"     useG 
+                |> Sg.uniform "gammaS"        gamma
+                |> Sg.uniform "useGrayS"      useGray
+                |> Sg.uniform "useColorS"     useColor
+                |> Sg.uniform "colorS"        color
                 |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
                 |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
                 |> Sg.LodParameters( 
@@ -294,12 +373,12 @@ module ViewerUtils =
                 |> Sg.withEvents [
                     Sg.onMouseDown ( fun b v -> SurfaceApp.Action.PickObject v )
                 ]
-                |> Sg.shader {
-                    do! DefaultSurfaces.trafo
-                    do! DefaultSurfaces.diffuseTexture
-                    do! DefaultSurfaces.normalMap
-                    do! DefaultSurfaces.simpleLighting
-                }
+                //|> Sg.shader {
+                //    do! DefaultSurfaces.trafo
+                //    do! DefaultSurfaces.diffuseTexture
+                //    do! DefaultSurfaces.normalMap
+                //    do! DefaultSurfaces.simpleLighting
+                //}
                         
         sg
 
@@ -311,7 +390,75 @@ module ViewerUtils =
             sg 
             |> Sg.noEvents 
             |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
-            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))         
+            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))      
+            
+        let isSelected = Mod.map(fun x ->
+          match x with
+            | Some id -> id = surface.surface
+            | None -> false) selectedId 
+
+        let contr =
+           adaptive {
+                let! s = surf
+                let! c = s.colorCorrection.contrast.value
+                return c
+            } 
+
+        let useContr =
+           adaptive {
+                let! s = surf
+                let! uc = s.colorCorrection.useContrast
+                return uc
+            } 
+
+        let bright =
+           adaptive {
+                let! s = surf
+                let! b = s.colorCorrection.brightness.value
+                return b
+            } 
+
+        let useB =
+           adaptive {
+                let! s = surf
+                let! ub = s.colorCorrection.useBrightn
+                return ub
+            } 
+
+        let gamma =
+           adaptive {
+                let! s = surf
+                let! g = s.colorCorrection.gamma.value
+                return g
+            } 
+
+        let useG =
+           adaptive {
+                let! s = surf
+                let! ug = s.colorCorrection.useGamma
+                return ug
+            } 
+
+        let useGray =
+           adaptive {
+                let! s = surf
+                let! ug = s.colorCorrection.useGrayscale
+                return ug
+            } 
+
+        let useColor =
+           adaptive {
+                let! s = surf
+                let! uc = s.colorCorrection.useColor
+                return uc
+            } 
+        let color =
+           adaptive {
+                let! s = surf
+                let! uc = s.colorCorrection.color.c
+                return uc
+            } 
+        
 
         let sg =
             aset {
@@ -322,13 +469,21 @@ module ViewerUtils =
                     |> createSg
                     |> Sg.adapter
                     |> Sg.uniform "TriangleSize" (Mod.constant 0.0)
+                    |> Sg.uniform "useContrastS"  useContr
+                    |> Sg.uniform "contrastS"     contr
+                    |> Sg.uniform "useBrightnS"   useB 
+                    |> Sg.uniform "brightnessS"   bright
+                    |> Sg.uniform "useGammaS"     useG 
+                    |> Sg.uniform "gammaS"        gamma
+                    |> Sg.uniform "useGrayS"      useGray
+                    |> Sg.uniform "useColorS"     useColor
+                    |> Sg.uniform "colorS"        color
+                    |> Sg.uniform "MinMax"         (Mod.constant (V2d(1.0,1.0)))
+                    |> Sg.uniform "falseColors"    (Mod.constant false)
+                    |> Sg.uniform "selected"       isSelected
+                    |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
+                    |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
                     |> Sg.noEvents 
-                    |> Sg.shader {
-                        do! DefaultSurfaces.trafo
-                        do! DefaultSurfaces.diffuseTexture
-                        do! DefaultSurfaces.normalMap
-                        do! DefaultSurfaces.simpleLighting
-                    }
                     |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))
 
                 yield 
@@ -399,9 +554,10 @@ module ViewerUtils =
                             DefaultSurfaces.diffuseTexture |> toEffect
                             Shader.selectionColor          |> toEffect       
                             Shader.LoDColor                |> toEffect 
-                            //PRo3D.Shader.falseColor        |> toEffect  
-                            PRo3D.Shader.falseColorLegend  |> toEffect 
-                            Shader.triangleFilter          |> toEffect                            
+                            PRo3D.Shader.falseColor        |> toEffect  
+                            //PRo3D.Shader.falseColorLegend  |> toEffect 
+                            PRo3D.Shader.imageCorrection   |> toEffect
+                            //Shader.triangleFilter          |> toEffect                            
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()

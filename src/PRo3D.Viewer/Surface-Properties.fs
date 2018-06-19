@@ -16,7 +16,6 @@ module SurfaceProperties =
     open Aardvark.UI.Html.SemUi
     open FShade.Intrinsics
     
-    
 
     type Action =
         | SetFillMode    of FillMode
@@ -28,6 +27,13 @@ module SurfaceProperties =
         | SetPriority    of Numeric.Action
         | SetScalarMap   of Option<ScalarLayer>
         | SetTexturesMap of Option<TextureLayer>
+        | SetContrast    of Numeric.Action
+        | UseContrast    of bool
+        | SetBrightness  of Numeric.Action
+        | UseBrightness  of bool
+        | SetGamma       of Numeric.Action
+        | UseGamma       of bool
+        | SetColor       of ColorPicker.Action
 
     let update (model : PRo3D.Surfaces.Surface) (act : Action) =
         match act with
@@ -40,7 +46,6 @@ module SurfaceProperties =
             | ToggleVisible ->
                 { model with isVisible = not model.isVisible }
             | SetTriangleSize a ->
-                                
                 { model with triangleSize = Numeric.update model.triangleSize a}
             | SetQuality a ->
                 { model with quality = Numeric.update model.quality a }
@@ -50,6 +55,7 @@ module SurfaceProperties =
                 { model with selectedScalar = a } |> Console.print
             | SetTexturesMap a ->                
                 { model with selectedTexture = a } |> Console.print
+            
 
     let getTextures (layers : seq<AttributeLayer>) =
         layers 
@@ -92,5 +98,57 @@ module SurfaceProperties =
                 Html.row "Scalars:"     [UI.dropDown'' (model |> scalarLayerList)  model.selectedScalar   (fun x -> SetScalarMap (x |> Option.map(fun y -> y.Current |> Mod.force)))   (fun x -> x.label |> Mod.force)]
                 Html.row "Textures:"    [UI.dropDown'' model.textureLayers model.selectedTexture  (fun x -> SetTexturesMap x) (fun x -> x.label)]
                 Html.row "Cull Faces:"  [Html.SemUi.dropDown model.cullMode SetCullMode]
+            ]
+        )
+
+module ColorCorrectionProperties =
+    open Aardvark.UI.Html.SemUi
+    open FShade.Intrinsics
+
+    type Action =
+        | SetContrast    of Numeric.Action
+        | UseContrast    
+        | SetBrightness  of Numeric.Action
+        | UseBrightness  
+        | SetGamma       of Numeric.Action
+        | UseGamma       
+        | SetColor       of ColorPicker.Action
+        | UseColor
+        | UseGrayScale
+
+    let update (model : PRo3D.Surfaces.ColorCorrection) (act : Action) =
+        match act with
+            | SetContrast c ->
+                { model with contrast = Numeric.update model.contrast c }
+            | UseContrast  ->
+                { model with useContrast = (not model.useContrast) }
+            | SetBrightness b ->
+                { model with brightness = Numeric.update model.brightness b }
+            | UseBrightness  ->
+                { model with useBrightn = (not model.useBrightn) }
+            | SetGamma g ->
+                { model with gamma = Numeric.update model.gamma g }
+            | UseGamma  ->
+                { model with useGamma = (not model.useGamma) }
+            | SetColor a ->
+                { model with color = ColorPicker.update model.color a }
+            | UseColor  ->
+                { model with useColor = (not model.useColor) }
+            | UseGrayScale  ->
+                { model with useGrayscale = (not model.useGrayscale) }
+
+    let view (model : MColorCorrection) =
+        
+        require Html.semui (
+            Html.table [       
+                Html.row "use contrast:"        [Html.SemUi.toggleBox model.useContrast UseContrast ]
+                Html.row "set contrast:"        [Numeric.view' [NumericInputType.Slider]   model.contrast  |> UI.map SetContrast ] 
+                Html.row "use brightness:"      [Html.SemUi.toggleBox model.useBrightn UseBrightness ]
+                Html.row "set brightness:"      [Numeric.view' [NumericInputType.Slider]   model.brightness  |> UI.map SetBrightness ] 
+                Html.row "use gamma:"           [Html.SemUi.toggleBox model.useGamma UseGamma ]
+                Html.row "set gamma:"           [Numeric.view' [NumericInputType.Slider]   model.gamma  |> UI.map SetGamma ] 
+                Html.row "grayscale:"           [Html.SemUi.toggleBox model.useGrayscale UseGrayScale ]
+                Html.row "use color:"           [Html.SemUi.toggleBox model.useColor UseColor ]
+                Html.row "color:"               [ColorPicker.view model.color |> UI.map SetColor ]
             ]
         )

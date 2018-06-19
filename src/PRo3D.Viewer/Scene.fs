@@ -118,6 +118,7 @@ module Scene =
             surfaces 
                 |> addLegacyTrafos
                 |> addSurfaceAttributes
+                |> PList.map( fun x -> { x with colorCorrection = PRo3D.Surfaces.Init.initColorCorrection}) 
 
         let existingSurfaces = 
             m.scene.surfacesModel.surfaces.flat
