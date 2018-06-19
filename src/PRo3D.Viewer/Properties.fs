@@ -50,7 +50,7 @@ module ConfigProperties =
            
 
     let view (model : MViewConfigModel) =    
-        require Html.semui (
+        require GuiEx.semui (
             Html.table [      
                 Html.row "Near Plane:"              [Numeric.view' [InputBox] model.nearPlane             |> UI.map SetNearPlane ]               
                 Html.row "Far Plane:"               [Numeric.view' [InputBox] model.farPlane              |> UI.map SetFarPlane ]    
@@ -66,7 +66,7 @@ module ConfigProperties =
 
 module CameraProperties =
     let view (model : MCameraControllerState) =    
-        require Html.semui (
+        require GuiEx.semui (
             Html.table [      
                 Html.row "Location:"    [Incremental.text (model.view |> Mod.map(fun x -> x.Location.ToString("0.00")))]
                 Html.row "Forward:"     [Incremental.text (model.view |> Mod.map(fun x -> x.Forward.ToString("0.000")))]

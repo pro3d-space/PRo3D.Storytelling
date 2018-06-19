@@ -254,7 +254,7 @@ module ReferenceSystemApp =
                         return CooTransformation.getHeight pos planet
                     }
 
-            require Html.semui (
+            require GuiEx.semui (
                 Html.table [                                                
                     Html.row "Pos:"     [Incremental.text (model.origin     |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Up:"      [Vector3d.view model.up |> UI.map SetUp ]

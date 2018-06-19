@@ -61,7 +61,7 @@ module FalseColorLegendApp =
                 ]                    
            
         let viewDefinedScalarsLegendTools (model:MFalseColorsModel)= 
-            require Html.semui (
+            require GuiEx.semui (
                 Html.table [  
                     Html.row "show legend:"             [Html.SemUi.toggleBox model.useFalseColors UseFalseColors ]
                     Html.row "upper bound:"             [Numeric.view' [InputBox] model.upperBound |> UI.map SetUpperBound ]

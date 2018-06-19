@@ -210,14 +210,14 @@ module Bookmarks =
 
 
     let viewBookmarksGroups (model:MBookmarksModel) = 
-        require Html.semui (
+        require GuiEx.semui (
             TreeView.view [] (viewTree [] model.bookmarks.rootGroup model.bookmarks)
         )                                    
  
     module UI =
         let view (model:MBookmark) =
             let view = model.navigationState.camera.view
-            require Html.semui (
+            require GuiEx.semui (
                 Html.table [  
                     Html.row "Change Name:"[Html.SemUi.textBox model.name Groups.SetChildName ]
                     Html.row "Pos:"     [Incremental.text (view |> Mod.map (fun x -> x.Location.ToString("0.00")))] 

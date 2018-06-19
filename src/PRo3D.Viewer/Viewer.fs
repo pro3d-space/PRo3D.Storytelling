@@ -1330,20 +1330,20 @@ module ViewerApp =
                 }
          
         let mainview = 
-            require (Html.semui @ [myCss]) (                             
+            require (GuiEx.semui @ [myCss]) (                             
                 onBoot usingContext (                             
                     body [clazz "context example"; style "overflow-y:hidden"] [Incremental.div AttributeMap.empty control1] 
                 )
             )
 
         let instrumentview = 
-            require (Html.semui @ [myCss]) (                             
+            require (GuiEx.semui @ [myCss]) (                             
                 onBoot usingContext (                             
                     body [clazz "context example"; style "overflow-y:hidden"] [Incremental.div AttributeMap.empty control2] 
                 )
             )
             
-        //require (Html.semui @ [myCss]) (                             
+        //require (GuiEx.semui @ [myCss]) (                             
         //        onBoot usingContext (                             
         //            body [clazz "context example"; style "overflow-y:hidden"] [chooseView] //ViewerMode.Standard
         //        )

@@ -639,7 +639,7 @@ module ViewPlan =
         let instrumentProperties(i : MInstrument) =
             let sensor = i.intrinsics |> Mod.map(fun x -> sprintf "%d X %d" x.horizontalResolution x.verticalResolution)
 
-            require Html.semui (
+            require GuiEx.semui (
                 Html.table [                
                     Html.row "Sensor (px):"  [ Incremental.text sensor ]
                     Html.row "Focal (mm):"   [ focalGui i ]                
@@ -678,7 +678,7 @@ module ViewPlan =
             }
 
         let viewRoverProperties' (r : MRover) (m : MViewPlan) =
-            require Html.semui (
+            require GuiEx.semui (
                 Html.table [
                      Html.row "Change VPName:"[ Html.SemUi.textBox m.name SetVPName ]
                      Html.row "Name:"       [ Incremental.text r.id ]
@@ -712,7 +712,7 @@ module ViewPlan =
 
         let viewViewPlansUI (model:MViewPlanModel) = 
              //let listAttr = AttributeMap.ofList [style "overflow-y : visible"]
-             require Html.semui (
+             require GuiEx.semui (
                 viewViewPlans model
             ) 
 

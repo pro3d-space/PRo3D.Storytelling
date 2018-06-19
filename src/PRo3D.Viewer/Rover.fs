@@ -341,7 +341,7 @@ module RoverApp =
 
     //    let sensor = i.intrinsics |> Mod.map(fun x -> sprintf "%d X %d" x.horizontalResolution x.verticalResolution)
 
-    //    require Html.semui (
+    //    require GuiEx.semui (
     //        Html.table [                
     //            Html.row "Sensor (px):"  [ Incremental.text sensor ]
     //            Html.row "Focal (mm):"   [ focalGui i m ]                
@@ -371,7 +371,7 @@ module RoverApp =
 
     //   // let bla = UI.dropDown'' (roversList m)  m.selectedInstrument SelectRover (fun x -> x.id )
 
-    //    require Html.semui (
+    //    require GuiEx.semui (
     //        Html.table [
     //             Html.row "Name:"       [ Incremental.text r.id ]
     //             Html.row "Instrument:" [ 

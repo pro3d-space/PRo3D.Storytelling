@@ -85,7 +85,7 @@ module SurfaceProperties =
 
     let view (model : MSurface) =
         
-        require Html.semui (
+        require GuiEx.semui (
             Html.table [                                            
                // Html.row "Path:"        [Incremental.text (model.importPath |> Mod.map (fun x -> sprintf "%A" x ))]                
                 Html.row "Name:"        [Html.SemUi.textBox model.name SetName ]
@@ -139,7 +139,7 @@ module ColorCorrectionProperties =
 
     let view (model : MColorCorrection) =
         
-        require Html.semui (
+        require GuiEx.semui (
             Html.table [       
                 Html.row "use contrast:"        [Html.SemUi.toggleBox model.useContrast UseContrast ]
                 Html.row "set contrast:"        [Numeric.view' [NumericInputType.Slider]   model.contrast  |> UI.map SetContrast ] 

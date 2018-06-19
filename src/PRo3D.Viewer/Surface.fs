@@ -837,7 +837,7 @@ module Surface =
 
 
     let viewSurfacesGroups (model:MSurfaceModel) = 
-        require Html.semui (
+        require GuiEx.semui (
             TreeView.view [] (viewTree [] model.surfaces.rootGroup model.surfaces)
         )    
         
