@@ -478,7 +478,7 @@ module ViewerUtils =
                     |> Sg.uniform "useGrayS"      useGray
                     |> Sg.uniform "useColorS"     useColor
                     |> Sg.uniform "colorS"        color
-                    |> Sg.uniform "MinMax"         (Mod.constant (V2d(1.0,1.0)))
+                    |> Sg.uniform "MinMax"         (Mod.constant (V2d(0.0,1.0)))
                     |> Sg.uniform "falseColors"    (Mod.constant false)
                     |> Sg.uniform "selected"       isSelected
                     |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
@@ -552,7 +552,7 @@ module ViewerUtils =
                         |> Sg.effect [
                             Shader.stableTrafo  |> toEffect //Shader.stableTrafo Shader.stableLight
                             DefaultSurfaces.diffuseTexture |> toEffect
-                            Shader.selectionColor          |> toEffect       
+                            //Shader.selectionColor          |> toEffect       
                             Shader.LoDColor                |> toEffect 
                             PRo3D.Shader.falseColor        |> toEffect  
                             //PRo3D.Shader.falseColorLegend  |> toEffect 

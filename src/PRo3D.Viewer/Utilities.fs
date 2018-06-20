@@ -569,28 +569,28 @@ module Shader =
         let contrast = 
           if (uniform?useContrastS) 
           then
-              v.c * (mapContrast v.c) 
+              (mapContrast v.c) 
           else
               v.c
 
         let brightn = 
             if (uniform?useBrightnS) 
               then
-                  contrast * (mapBrightness v.c) 
+                 (mapBrightness contrast) // contrast * 
               else
                   contrast
 
         let gamma = 
             if (uniform?useGammaS) 
               then
-                  brightn * (mapGamma v.c) 
+                  (mapGamma brightn) 
               else
                   brightn
 
         let grey = 
             if (uniform?useGrayS) 
               then
-                  gamma * (grayscale v.c) 
+                  (grayscale gamma) 
               else
                   gamma
 
