@@ -207,6 +207,7 @@ module Mutable =
         let _quality = Aardvark.UI.Mutable.MNumericInput.Create(__initial.quality)
         let _priority = Aardvark.UI.Mutable.MNumericInput.Create(__initial.priority)
         let _triangleSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.triangleSize)
+        let _scaling = Aardvark.UI.Mutable.MNumericInput.Create(__initial.scaling)
         let _preTransform = ResetMod.Create(__initial.preTransform)
         let _scalarLayers = MMap.Create(__initial.scalarLayers, (fun v -> MScalarLayer.Create(v)), (fun (m,v) -> MScalarLayer.Update(m, v)), (fun v -> v))
         let _selectedScalar = MOption.Create(__initial.selectedScalar, (fun v -> MScalarLayer.Create(v)), (fun (m,v) -> MScalarLayer.Update(m, v)), (fun v -> v))
@@ -227,6 +228,7 @@ module Mutable =
         member x.quality = _quality
         member x.priority = _priority
         member x.triangleSize = _triangleSize
+        member x.scaling = _scaling
         member x.preTransform = _preTransform :> IMod<_>
         member x.scalarLayers = _scalarLayers :> amap<_,_>
         member x.selectedScalar = _selectedScalar :> IMod<_>
@@ -252,6 +254,7 @@ module Mutable =
                 Aardvark.UI.Mutable.MNumericInput.Update(_quality, v.quality)
                 Aardvark.UI.Mutable.MNumericInput.Update(_priority, v.priority)
                 Aardvark.UI.Mutable.MNumericInput.Update(_triangleSize, v.triangleSize)
+                Aardvark.UI.Mutable.MNumericInput.Update(_scaling, v.scaling)
                 ResetMod.Update(_preTransform,v.preTransform)
                 MMap.Update(_scalarLayers, v.scalarLayers)
                 MOption.Update(_selectedScalar, v.selectedScalar)
@@ -346,6 +349,12 @@ module Mutable =
                     override x.Get(r) = r.triangleSize
                     override x.Set(r,v) = { r with triangleSize = v }
                     override x.Update(r,f) = { r with triangleSize = f r.triangleSize }
+                }
+            let scaling =
+                { new Lens<PRo3D.Surfaces.Surface, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.scaling
+                    override x.Set(r,v) = { r with scaling = v }
+                    override x.Update(r,f) = { r with scaling = f r.scaling }
                 }
             let preTransform =
                 { new Lens<PRo3D.Surfaces.Surface, Aardvark.Base.Trafo3d>() with

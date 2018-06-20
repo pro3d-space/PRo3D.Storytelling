@@ -352,6 +352,7 @@ module Surface =
             relativePaths   = false
             quality         = Init.quality
             priority        = Init.priority
+            scaling         = Init.scaling
             preTransform    = Trafo3d.Identity            
             scalarLayers    = hmap.Empty //PList.empty
             selectedScalar  = None
@@ -837,7 +838,7 @@ module Surface =
 
 
     let viewSurfacesGroups (model:MSurfaceModel) = 
-        require Html.semui (
+        require GuiEx.semui (
             TreeView.view [] (viewTree [] model.surfaces.rootGroup model.surfaces)
         )    
         

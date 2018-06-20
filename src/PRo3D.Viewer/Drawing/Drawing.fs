@@ -557,7 +557,7 @@ module DrawingApp =
             model.annotations.flat 
               |> AMap.map(fun _ v -> (v |> Mod.force) |> toMAnnotation)              
            
-          require Html.semui (
+          require GuiEx.semui (
               let tree = viewTree [] model.annotations.rootGroup model.annotations a
               //Incremental.div (AttributeMap.ofList [clazz "ui list"]) ([])
               div [clazz "ui list"] [tree]

@@ -214,7 +214,7 @@ module RemoteControlApp =
             )
     
     let view (m : MRemoteModel) : DomNode<RemoteControlModel.Action> =          
-        require Html.semui (
+        require GuiEx.semui (
             div[clazz "ui two column grid"] [
                 div[clazz "ui segment"] [
                     h1 [clazz "ui header"][text "Screenshot Service"]

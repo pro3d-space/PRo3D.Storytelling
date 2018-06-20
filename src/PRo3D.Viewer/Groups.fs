@@ -425,7 +425,7 @@ module Groups =
 
     let viewUI (model : MGroupsModel) =   
         let ts = model.activeGroup
-        require Html.semui (
+        require GuiEx.semui (
             Html.table [                            
                 Html.row "Change Groupname:"[Html.SemUi.textBox (ts |> Mod.map (fun x -> x.name)) SetGroupName ]
                 //div [clazz "ui buttons inverted"] [
@@ -476,7 +476,7 @@ module Groups =
             ]
 
     let viewGroupButtons (ts:TreeSelection)  =
-        require Html.semui (
+        require GuiEx.semui (
                 Html.table [
                      Html.row "Remove/Clear:"[deleteClearGroup ts]
                      Html.row "Selection:"[ viewSelectionButtons ]
@@ -484,7 +484,7 @@ module Groups =
             )
 
     let viewLeafButtons (ts:TreeSelection)  =
-        require Html.semui (
+        require GuiEx.semui (
                 Html.table [
                      Html.row "Remove:"[deleteLeaf ts]
                      Html.row "Selection:"[ viewSelectionButtons ]
@@ -492,7 +492,7 @@ module Groups =
             )
 
     let showNothing : DomNode<Action> = 
-        require Html.semui (div [][]
+        require GuiEx.semui (div [][]
                 )
 
         //let lift   = fun (a:Groups.Action) -> (GroupsMessage a)

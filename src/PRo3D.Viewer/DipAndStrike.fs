@@ -154,7 +154,7 @@ module DipAndStrike =
         let daz  = Mod.bindOption model.dnsResults Double.NaN (fun a -> a.dipAzimuth)
         let staz = Mod.bindOption model.dnsResults Double.NaN (fun a -> a.strikeAzimuth)
         
-        require Html.semui (
+        require GuiEx.semui (
             Html.table [ 
                 Html.row "Dipping Angle:"       [Incremental.text (da   |> Mod.map  (fun d -> sprintf "%.2f°" (d)))]
                 Html.row "Dipping Orientation:" [Incremental.text (daz  |> Mod.map  (fun d -> sprintf "%.2f°" (d)))]

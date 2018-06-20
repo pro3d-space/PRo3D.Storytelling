@@ -4,6 +4,12 @@ open Aardvark.UI
 
 module GuiEx =
     
+    let semui = 
+      [ 
+          { kind = Stylesheet; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
+          { kind = Script; name = "semui"; url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
+      ]
+
     module Layout =
         let boxH ch = td [clazz "collapsing"; style "padding: 0px 5px 0px 0px"] ch
 

@@ -273,7 +273,8 @@ module ViewerUtils =
                 let! s = surf
                 let! uc = s.colorCorrection.color.c
                 return uc
-            } 
+            }
+            
         
         let sg = 
             surface.sceneGraph
@@ -318,6 +319,7 @@ module ViewerUtils =
                         let! frustum = frustum 
                         let sizes = V2i(1024,768)
                         let! quality = s.quality.value
+                        //let! sc = s.scaling.value
                         let! trafo = s.preTransform //combine pre and current transform
 
                         return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality); trafo = trafo }
@@ -337,7 +339,7 @@ module ViewerUtils =
                         return attr
                     })
                 |> pickable' pickable
-                |> Sg.noEvents                
+                |> Sg.noEvents 
                 |> Sg.withEvents [
                         SceneEventKind.Down, (
                             fun sceneHit -> 
@@ -458,7 +460,14 @@ module ViewerUtils =
                 let! uc = s.colorCorrection.color.c
                 return uc
             } 
-        
+
+        let trafo =
+           adaptive {
+                let! s = surf
+                let! sc = s.scaling.value
+                let! t = s.preTransform
+                return (t * Trafo3d.Scale(sc))
+            }
 
         let sg =
             aset {
@@ -484,7 +493,7 @@ module ViewerUtils =
                     |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
                     |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
                     |> Sg.noEvents 
-                    |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform))
+                    |> Sg.trafo trafo //(surf |> Mod.bind(fun x -> x.preTransform))
 
                 yield 
                     meshes
@@ -497,7 +506,7 @@ module ViewerUtils =
                             do! DefaultSurfaces.trafo
                             do! DefaultSurfaces.constantColor C4f.White
                         }
-                        |> Sg.trafo (surf |> Mod.bind(fun x -> x.preTransform)) 
+                        |> Sg.trafo trafo //(surf |> Mod.bind(fun x -> x.preTransform)) 
                         |> Sg.depthTest (Mod.constant DepthTestMode.Never)
                 //yield 
                 //    Sg.box (Mod.constant C4b.Red) surface.globalBB

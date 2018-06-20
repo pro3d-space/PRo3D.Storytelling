@@ -50,7 +50,7 @@ module AnnotationProperties =
         let length   = Mod.bindOption model.results Double.NaN (fun a -> a.length)
         let wLength  = Mod.bindOption model.results Double.NaN (fun a -> a.wayLength)
 
-        require Html.semui (
+        require GuiEx.semui (
             Html.table [                                            
                 Html.row "Geometry:"    [Incremental.text (model.geometry |> Mod.map (fun x -> sprintf "%A" x ))]
                 Html.row "Projection:"  [Incremental.text (model.projection |> Mod.map (fun x -> sprintf "%A" x ))]

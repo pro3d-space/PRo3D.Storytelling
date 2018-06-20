@@ -25,6 +25,7 @@ module SurfaceProperties =
         | SetQuality     of Numeric.Action
         | SetTriangleSize of Numeric.Action
         | SetPriority    of Numeric.Action
+        | SetScaling     of Numeric.Action
         | SetScalarMap   of Option<ScalarLayer>
         | SetTexturesMap of Option<TextureLayer>
         | SetContrast    of Numeric.Action
@@ -51,6 +52,8 @@ module SurfaceProperties =
                 { model with quality = Numeric.update model.quality a }
             | SetPriority a ->
                 { model with priority = Numeric.update model.priority a }
+            | SetScaling a ->
+                { model with scaling = Numeric.update model.scaling a }
             | SetScalarMap a ->                
                 { model with selectedScalar = a } |> Console.print
             | SetTexturesMap a ->                
@@ -85,14 +88,15 @@ module SurfaceProperties =
 
     let view (model : MSurface) =
         
-        require Html.semui (
+        require GuiEx.semui (
             Html.table [                                            
                // Html.row "Path:"        [Incremental.text (model.importPath |> Mod.map (fun x -> sprintf "%A" x ))]                
                 Html.row "Name:"        [Html.SemUi.textBox model.name SetName ]
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
                 Html.row "Priority:"    [Numeric.view' [NumericInputType.InputBox] model.priority |> UI.map SetPriority ]       
                 Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider]   model.quality  |> UI.map SetQuality ]
-                Html.row "AngleFilter:"  [Numeric.view' [NumericInputType.InputBox]   model.triangleSize  |> UI.map SetTriangleSize ]
+                Html.row "AngleFilter:" [Numeric.view' [NumericInputType.InputBox]   model.triangleSize  |> UI.map SetTriangleSize ]
+                Html.row "Scale:"       [Numeric.view' [NumericInputType.InputBox]   model.scaling  |> UI.map SetScaling ]
                 Html.row "Fillmode:"    [Html.SemUi.dropDown model.fillMode SetFillMode]
                 //Html.row "Scalars:"     [UI.dropDown'' model.scalarLayers  model.selectedScalar   (fun x -> SetScalarMap x)   (fun x -> x.label)]
                 Html.row "Scalars:"     [UI.dropDown'' (model |> scalarLayerList)  model.selectedScalar   (fun x -> SetScalarMap (x |> Option.map(fun y -> y.Current |> Mod.force)))   (fun x -> x.label |> Mod.force)]
@@ -139,7 +143,7 @@ module ColorCorrectionProperties =
 
     let view (model : MColorCorrection) =
         
-        require Html.semui (
+        require GuiEx.semui (
             Html.table [       
                 Html.row "use contrast:"        [Html.SemUi.toggleBox model.useContrast UseContrast ]
                 Html.row "set contrast:"        [Numeric.view' [NumericInputType.Slider]   model.contrast  |> UI.map SetContrast ] 

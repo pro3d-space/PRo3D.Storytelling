@@ -77,6 +77,7 @@ type Surface = {
     priority      : NumericInput
 
     triangleSize  : NumericInput
+    scaling       : NumericInput
 
     preTransform  : Trafo3d
     
@@ -198,6 +199,14 @@ module Init =
             step = 1.0
             format = "{0:0}"
         }
+    let scaling = 
+        {
+            value = 1.00
+            min =  0.01
+            max = 50.00
+            step = 0.01
+            format = "{0:0.00}"
+        }
 
     // colorCorrection
     let contrast = 
@@ -222,8 +231,11 @@ module Init =
             min =  0.01
             max = 10.0
             step = 0.01
-            format = "{0:00}"
+            format = "{0:0.00}"
         }
+
+   
+
     let initColorCorrection = {
         contrast    = contrast
         useContrast = false
