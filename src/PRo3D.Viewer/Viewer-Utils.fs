@@ -466,7 +466,7 @@ module ViewerUtils =
                 let! s = surf
                 let! sc = s.scaling.value
                 let! t = s.preTransform
-                return (t * Trafo3d.Scale(sc))
+                return (Trafo3d.Scale(sc) * t)
             }
 
         let sg =
