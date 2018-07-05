@@ -42,7 +42,7 @@ nuget Aardvark.UI.Primitives                ~> 4.0.6
 nuget Aardvark.Service                      ~> 4.0.6
 nuget Aardvark.Cef.WinForms                 ~> 4.0.6
 
-nuget Aardium  ~> 1.0.2
+nuget Aardium  ~> 1.0.5
 
 nuget SKGL                                  ~> 2.0.5.3
 nuget SharpZipLib  ~> 0.86.0

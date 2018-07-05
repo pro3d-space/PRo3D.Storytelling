@@ -12,6 +12,7 @@ open Aardvark.Base
 open PRo3D
 open Aardvark.SceneGraph.Opc
 
+
 module Serialization =
     open Aardvark.UI.Incremental
     
@@ -99,6 +100,45 @@ module Dialogs =
 
     let openFolder (w : Form) =
         openDialog2 w true false
+
+    // aardium dialogs
+
+    open Aardvark.UI
+    
+    //let onSaveFile (w : Form) =
+    //    let cb xs =
+    //        match xs with
+    //            | x::[] when x <> null -> x |> Aardvark.Service.Pickler.json.UnPickleOfString |> Aardvark.Service.PathUtils.ofUnixStyle
+    //            | _ -> failwithf "onSaveFile: %A" xs
+    //    let mutable r = Unchecked.defaultof<_>
+    //    w.Invoke(Action(fun _ -> r <- onEvent "onsave" [] cb )) |> ignore
+    //    r
+
+    let onChooseFiles (chosen : list<string> -> 'msg) =
+        let cb xs =
+            match xs with
+                | [] -> chosen []
+                | x::[] when x <> null -> x |> Aardvark.Service.Pickler.json.UnPickleOfString |> List.map Aardvark.Service.PathUtils.ofUnixStyle |> chosen
+                | _ -> chosen []//failwithf "onChooseFiles: %A" xs
+        onEvent "onchoose" [] cb   
+
+    let onSaveFile (chosen : string -> 'msg) =
+        let cb xs =
+            match xs with
+                | x::[] when x <> null -> x |> Aardvark.Service.Pickler.json.UnPickleOfString |> Aardvark.Service.PathUtils.ofUnixStyle |> chosen
+                | _ -> chosen String.Empty //failwithf "onSaveFile: %A" xs
+        onEvent "onsave" [] cb
+
+    let onSaveFile1 (chosen : string -> 'msg) (path : Option<string>) =
+        let cb xs =
+            match path with
+                | Some p-> p |> chosen
+                | None ->match xs with
+                            | x::[] when x <> null -> x |> Aardvark.Service.Pickler.json.UnPickleOfString |> Aardvark.Service.PathUtils.ofUnixStyle |> chosen
+                            | _ -> String.Empty |> chosen // failwithf "onSaveFile: %A" xs
+        onEvent "onsave" [] cb
+        
+   
 
 module Double =
     let degreesFromRadians (d:float) =
@@ -408,6 +448,10 @@ module Shader =
 
     let h = h % 1.0
     let h = if h < 0.0 then h + 1.0 else h
+    //let h = if h >= 360.0 then 0.0 else h
+    //let hi = h/60.0
+    //let i = (int)(round hi)
+    //let f = hi - (float)i
     let hi = floor ( h * 6.0 ) |> int
     let f = h * 6.0 - float hi
     let p = v * (1.0 - s)
@@ -425,33 +469,44 @@ module Shader =
   let falseColorLegend (v : Vertex) =
       fragment {           
           if uniform?falseColors then
-              let sC : V3d = uniform?startC
-              let eC : V3d = uniform?endC
+              let sC : float = uniform?startC
+              let eC : float  = uniform?endC
               let interval : float = uniform?interval
               let lowerBound : float = uniform?lowerBound
               let upperBound : float = uniform?upperBound
-              let stepS : float = uniform?stepS
-              let numOfRG : float = uniform?numOfRG
+              //let stepS : float = uniform?stepS
+              //let numOfRG : float = uniform?numOfRG
               let inverted : bool = uniform?inverted
+
+              let range = upperBound - lowerBound
+              let numOfRangeGaps = round (range / interval) 
+              let numOfStops = if (numOfRangeGaps + 2.0) > 100.0 then 100.0 else (numOfRangeGaps + 2.0)
+              let stepSize = 1.0 / (float numOfStops)
+
+              let hStepSize =
+                  if sC < eC then 
+                    (eC - sC) / (numOfStops-1.0)
+                  else 
+                    ((eC + 1.0) - sC) / (numOfStops-1.0)
 
               let pos = if lowerBound < v.scalar then
                          (round ( (v.scalar - lowerBound) / interval ))
                         else 0.0
                         
               let pos1 = if upperBound < v.scalar then
-                            numOfRG
+                            numOfRangeGaps
                          else pos
                      
               let p = 
                   if uniform?inverted then
-                    eC.X - (stepS * pos1)
+                    eC - (hStepSize * pos1)
                   else 
-                    sC.X + (stepS * pos1)
+                    sC + (hStepSize * pos1)
               
-              let norm = V2d(p, 0.5)
-              let c = hsv2rgb p 0.0 0.0 //colormap.Sample(norm).XYZ
+              let test = p * stepSize
+              let c = hsv2rgb p 1.0 1.0 //colormap.Sample(norm).XYZ
 
-              return v.c * V4d(c.X, c.Y, c.Z, 1.0)
+              return v.c* V4d(c.X, c.Y, c.Z, 1.0)
               //return v.c
           else
               return v.c
@@ -459,12 +514,12 @@ module Shader =
 
   [<ReflectedDefinition>]
   let mapFalseColors value : float =         
-      let invert = uniform?fcInvert
-      let fcUpperBound = uniform?falseColorUpperBound
-      let fcLowerBound = uniform?falseColorLowerBound
+      let invert = uniform?inverted
+      let fcUpperBound = uniform?upperBound
+      let fcLowerBound = uniform?lowerBound
       let fcInterval = uniform?interval
-      let fcUpperHueBound = uniform?fcHueUpperBound
-      let fcLowerHueBound = uniform?fcHueLowerBound
+      let fcUpperHueBound = uniform?endC
+      let fcLowerHueBound = uniform?startC
 
       let low         = if (invert = false) then fcLowerBound else fcUpperBound
       let up          = if (invert = false) then fcUpperBound else fcLowerBound
@@ -485,31 +540,20 @@ module Shader =
       let rangeHue = fcHueUpperBound - fcLowerHueBound
       (k * rangeHue) + fcLowerHueBound
 
-  let falseColor2 (v : Vertex) =
+  let falseColorLegend2 (v : Vertex) =
       fragment {    
 
-          if (uniform?useFalseColors) 
+          if (uniform?falseColors) 
           then
               let mapping = mapFalseColors v.scalar
-              let mappingV2d = V2d(mapping, 0.5)
-              let c = colormap.Sample(mappingV2d).XYZ
-              return v.c *  V4d(c.X, c.Y, c.Z, 1.0)
+              //let mappingV2d = V2d(mapping, 0.5)
+              //let c = colormap.Sample(mappingV2d).XYZ
+
+              let c = hsv2rgb mapping 1.0 1.0 
+              return v.c * V4d(c.X, c.Y, c.Z, 1.0)
           else
               return v.c
       }
-
-  //let stableTrafoBigKoords (v : Vertex) =
-  //      vertex {
-  //          let vp = uniform.ModelViewTrafo * v.pos
-  //          let wp = uniform.ModelTrafo * v.pos
-  //          return { 
-  //              v with
-  //                  pos  = uniform.ProjTrafo * vp
-  //                  wp   = wp
-  //                  n    = transformNormal v.n
-  //                  ldir = V3d.Zero - vp.XYZ |> Vec.normalize
-  //          } 
-  //      }
 
   [<ReflectedDefinition>]
   let myTrunc (value : float) =
@@ -520,78 +564,66 @@ module Shader =
     else
         value
 
-  [<ReflectedDefinition>]
-  let mapContrast (vColor : V4d) =
-    let c = uniform?contrastS
-    let nc = V4d(vColor.X*255.0, vColor.Y*255.0,vColor.Z*255.0, 255.0)
+  let mapContrast (v : Vertex) =
+    fragment { 
+        if (uniform?useContrastS) then
+            let c = uniform?contrastS
+            let nc = V4d(v.c.X*255.0, v.c.Y*255.0,v.c.Z*255.0, 255.0)
 
-    let factor = (259.0 * (c + 255.0)) / (255.0 * (259.0 - c))
-    let red = (myTrunc (factor * (nc.X   - 128.0) + 128.0)) / 255.0
-    let green = (myTrunc (factor * (nc.Y   - 128.0) + 128.0)) / 255.0
-    let blue = (myTrunc (factor * (nc.Z   - 128.0) + 128.0)) / 255.0
-    V4d(red, green, blue, 1.0)
+            let factor = (259.0 * (c + 255.0)) / (255.0 * (259.0 - c))
+            let red = (myTrunc (factor * (nc.X   - 128.0) + 128.0)) / 255.0
+            let green = (myTrunc (factor * (nc.Y   - 128.0) + 128.0)) / 255.0
+            let blue = (myTrunc (factor * (nc.Z   - 128.0) + 128.0)) / 255.0
+            return V4d(red, green, blue, 1.0)
+        else
+            return v.c
+    }
 
-  [<ReflectedDefinition>]
-  let mapBrightness (vColor : V4d) =
-    let b = uniform?brightnessS
-    let nc = V4d(vColor.X*255.0, vColor.Y*255.0,vColor.Z*255.0, 255.0)        
+  let mapBrightness (v : Vertex) = 
+    fragment { 
+        if (uniform?useBrightnS) then
+            let b = uniform?brightnessS
+            let nc = V4d(v.c.X*255.0, v.c.Y*255.0,v.c.Z*255.0, 255.0)        
 
-    let red = (myTrunc(nc.X + b)) / 255.0 
-    let green = (myTrunc(nc.Y + b)) / 255.0 
-    let blue  = (myTrunc(nc.Z  + b)) / 255.0 
-    V4d(red, green, blue, 1.0)
+            let red = (myTrunc(nc.X + b)) / 255.0 
+            let green = (myTrunc(nc.Y + b)) / 255.0 
+            let blue  = (myTrunc(nc.Z  + b)) / 255.0 
+            return V4d(red, green, blue, 1.0)
+        else
+            return v.c
+    }
 
-  [<ReflectedDefinition>]
-  let mapGamma (vColor : V4d) =
-    let g = uniform?gammaS
-    let gammaCorrection = 1.0 / g
-    V4d(vColor.X**gammaCorrection, vColor.Y**gammaCorrection, vColor.Z**gammaCorrection, 1.0)
+  let mapGamma (v : Vertex) = 
+    fragment { 
+        if (uniform?useGammaS) then
+            let g = uniform?gammaS
+            let gammaCorrection = 1.0 / g
+            return V4d(v.c.X**gammaCorrection, v.c.Y**gammaCorrection, v.c.Z**gammaCorrection, 1.0)
+        else
+            return v.c
+    }
 
-  [<ReflectedDefinition>]
-  let grayscale (vColor : V4d) =
-    let value = vColor.X * 0.299 + vColor.Y * 0.587 + vColor.Z * 0.114
-    V4d(value, value, value, 1.0)
+  let grayscale (v : Vertex) = 
+    fragment { 
+        if (uniform?useGrayS) then
+            let value = v.c.X * 0.299 + v.c.Y * 0.587 + v.c.Z * 0.114
+            return V4d(value, value, value, 1.0)
+        else
+            return v.c
+    }
 
-  [<ReflectedDefinition>]
-  let addColor (vColor : V4d) =
-    let col : V3d =  uniform?colorS
-    let nc = V4d(vColor.X*255.0, vColor.Y*255.0,vColor.Z*255.0, 255.0)
+  let addColor (v : Vertex) = 
+    fragment { 
+        if (uniform?useColorS) then
+            let col : V3d =  uniform?colorS
+            let nc = V4d(v.c.X*255.0, v.c.Y*255.0, v.c.Z*255.0, 255.0)
 
-    let red = (myTrunc( nc.X * col.X))/255.0
-    let green = (myTrunc( nc.Y * col.Y ))/255.0
-    let blue = (myTrunc( nc.Z * col.Z )) / 255.0
-    V4d(red, green, blue, 1.0)
+            let red = (myTrunc( nc.X * col.X))/255.0
+            let green = (myTrunc( nc.Y * col.Y ))/255.0
+            let blue = (myTrunc( nc.Z * col.Z )) / 255.0
+            return V4d(red, green, blue, 1.0)
+        else
+            return v.c
+    }
 
-
-  let imageCorrection (v : Vertex) =
-      fragment {
-        let contrast = 
-          if (uniform?useContrastS) then
-              (mapContrast v.c) 
-          else
-              v.c
-
-        let brightn = 
-          if (uniform?useBrightnS) then
-            (mapBrightness contrast) 
-          else
-            contrast
-
-        let gamma = 
-          if (uniform?useGammaS) then
-            (mapGamma brightn) 
-          else
-            brightn
-
-        let grey = 
-          if (uniform?useGrayS) then
-            (grayscale gamma) 
-          else
-            gamma
-
-        if (uniform?useColorS) 
-          then
-              return addColor grey
-          else
-              return grey
-      }
+  

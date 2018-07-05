@@ -34,8 +34,8 @@ type Action =
         //| RemoveAnnotation        of list<Index>*Guid       
         | Send
         | Export
-        | Save              
-        | Load             
+        | Save                  of string
+        | Load                  of list<string>
         | QuickLoad
         | Clear
         | Nop
@@ -43,7 +43,7 @@ type Action =
         | NorthVectorChanged      of V3d
         | GroupsMessage   of Groups.Action
         | ColorLegendMessage   of FalseColorLegendApp.Action
-        | SaveCSV
+        | SaveCSV               of string
 
 [<DomainType>]
 type DrawingModel = {

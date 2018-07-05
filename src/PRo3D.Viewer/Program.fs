@@ -33,6 +33,8 @@ open System.Text
 open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis.Opc
 
+open Aardium
+
 [<DataContract>]
 type Calc =
    { 
@@ -109,7 +111,8 @@ let main argv =
 
     Ag.initialize()
     Aardvark.Init()
-
+    Aardium.init()
+    
     //use app = new VulkanApplication()
     use app = new OpenGlApplication()
     let runtime = app.Runtime    
@@ -149,10 +152,10 @@ let main argv =
     PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
         
     // main app
-    use form = new Form(Width = 1280, Height = 800)
-    
+    //use form = new Form(Width = 1280, Height = 800)
+
     let mainApp = 
-        PRo3D.ViewerApp.start form runtime signature bc
+        PRo3D.ViewerApp.start runtime signature bc
 
     CooTransformation.initCooTrafo () // should be a function not a value
     
@@ -171,7 +174,6 @@ let main argv =
        // prefix "/instrument" >=> MutableApp.toWebPart runtime instrumentApp
         Suave.Files.browseHome
     ]
-
     //WebPart.startServer 4322 [
     //    MutableApp.toWebPart' runtime false instrumentApp        
     //    Suave.Files.browseHome
@@ -214,22 +216,32 @@ let main argv =
         Suave.Files.browseHome
     ] 
 
+    let titlestr = "PRo3D Viewer - " + viewerVersion + " - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH" + licenseText
+
+    Aardium.run {
+        url "http://localhost:4321/?page=main"
+        width 1280
+        height 800
+        debug true
+        title titlestr
+    }
+
        
-    use ctrl = new AardvarkCefBrowser()
-    ctrl.Dock <- DockStyle.Fill
-    form.Controls.Add ctrl    
-    form.Text <- "PRo3D Viewer - " + viewerVersion + " - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH" + licenseText
-    //form.WindowState <- FormWindowState.Minimized
-    //form.Controls.Add (new Label()) |> ignore
-    ctrl.StartUrl <- "http://localhost:4321/?page=main" //"http://localhost:4321/?page=instrumentview"       
-    //ctrl.ShowDevTools()
+    //use ctrl = new AardvarkCefBrowser()
+    //ctrl.Dock <- DockStyle.Fill
+    //form.Controls.Add ctrl    
+    //form.Text <- "PRo3D Viewer - " + viewerVersion + " - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH" + licenseText
+    ////form.WindowState <- FormWindowState.Minimized
+    ////form.Controls.Add (new Label()) |> ignore
+    //ctrl.StartUrl <- "http://localhost:4321/?page=main" //"http://localhost:4321/?page=instrumentview"       
+    ////ctrl.ShowDevTools()
 
-    //Config.shouldTimeUIUpdate <- true
-    //Config.shouldTimeJsCodeGeneration <- true
-    //Config.shouldTimeUnpersistCalls <- true
+    ////Config.shouldTimeUIUpdate <- true
+    ////Config.shouldTimeJsCodeGeneration <- true
+    ////Config.shouldTimeUnpersistCalls <- true
 
 
-    Application.Run form
+    //Application.Run form
 
     //let p = Process.Start("chrome.exe", "--app=http://localhost:4321/")
 

@@ -217,7 +217,7 @@ module DrawingApp =
             getDnsPlaneSize    : 'ma -> IMod<float>
         }
 
-    let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (w : Form) (bc : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
+    let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (bc : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
         match (act, model.draw) with
             | StartDrawing, _ ->                     
                     { model with draw = true }
@@ -273,24 +273,48 @@ module DrawingApp =
                     //Serialization.writeToFile path json 
                     
                     model
-            | Save,_->
-                match Dialogs.saveDialog w with
-                    | None -> model
-                    | Some p -> 
+            | Save p,_->
+                //match Dialogs.saveDialog w with
+                //    | None -> model
+                //    | Some p -> 
+                //        let sa = 
+                //            {
+                //                annotations = model.annotations
+                //                colorLegend = model.colorLegend
+                //            }
+                //        Serialization.save "./lastMeasure" sa |> ignore //model.annotations
+                //        //{ model with annotations = (Serialization.save p model.annotations } 
+                //        let saveA = Serialization.save p sa
+                //        { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend } 
+
+                match p.IsEmptyOrNull() with
+                    | true -> model
+                    | false-> 
                         let sa = 
                             {
                                 annotations = model.annotations
                                 colorLegend = model.colorLegend
                             }
-                        Serialization.save "./lastMeasure" sa |> ignore //model.annotations
-                        //{ model with annotations = (Serialization.save p model.annotations } 
+                        Serialization.save "./lastMeasure" sa |> ignore 
                         let saveA = Serialization.save p sa
                         { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend } 
-            | Load,_ ->                
-              match Dialogs.openDialog w with
-                | None -> model
-                | Some path -> 
+
+            | Load p,_ ->                
+              //match Dialogs.openDialog w with
+              //  | None -> model
+              //  | Some path -> 
+              //    //let groups = Groups.tryLoadGroups path
+              //    let groups = Groups.tryLoadAnnotations path
+              //    match groups with 
+              //      //| Some g -> { model with annotations = g  }
+              //      | Some g -> { model with annotations = g.annotations; colorLegend = g.colorLegend }
+              //      | None -> model
+
+              match p.Length < 1 with
+                | true -> model
+                | false -> 
                   //let groups = Groups.tryLoadGroups path
+                  let path = p.[0]
                   let groups = Groups.tryLoadAnnotations path
                   match groups with 
                     //| Some g -> { model with annotations = g  }
@@ -321,7 +345,7 @@ module DrawingApp =
                 { model with colorLegend = FalseColorLegendApp.update model.colorLegend msg }
             | FlyToAnnotation msg, _ ->
                 model
-            | SaveCSV, _ -> 
+            | SaveCSV p, _ -> 
                 let annotations =
                     model.annotations.flat
                         |> Leaf.toAnnotations
@@ -332,9 +356,9 @@ module DrawingApp =
                         
                 let csvTable = Csv.Seq.csv "," true id annotations
 
-                match Dialogs.saveDialog w with
-                    | None -> model
-                    | Some p -> 
+                match p.IsEmptyOrNull() with
+                    | true -> model
+                    | false -> 
                         Csv.Seq.write (p) csvTable |> ignore
                         model
             | _ -> model
@@ -374,16 +398,23 @@ module DrawingApp =
         let viewAnnotationImportExport =
            div [clazz "ui buttons inverted"] [
                 
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
+                //button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
+                //    i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
+                button [clazz "ui icon button"; Dialogs.onSaveFile Save;
+                        clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onsave', aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements'}]}));")] [
                     i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
-                                               
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
+
+                //button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
+                //    i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
+                button [clazz "ui icon button"; Dialogs.onChooseFiles Load;
+                    clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onchoose', aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
                     i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
                 
                 button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
                     i [clazz "file outline icon"] [] ] |> UI.wrapToolTipBottom "Clear Annotation List"
 
-                button [clazz "ui icon button"; onMouseClick (fun _ -> SaveCSV)] [
+                button [clazz "ui icon button"; Dialogs.onSaveFile SaveCSV;
+                        clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onsave', aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")] [
                     i [clazz "save icon inverted"] [] ] |> UI.wrapToolTipBottom "Save .csv"
                                 
                 //button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [

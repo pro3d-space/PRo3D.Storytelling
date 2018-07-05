@@ -33,6 +33,8 @@ open PRo3D.Viewer
 open PRo3D.Drawing
 open PRo3D.Groups
 
+open Aardium
+
 //open Viewer.Mutable.ModelModule.Lens
 //open Mutable.AnnotationGroupModule.Lens
  
@@ -172,14 +174,14 @@ module ViewerApp =
             else None
       }
 
-    let matchPickingInteraction (w : Form) (bc : BlockingCollection<string>) (p:V3d) (hit:(V3d-> V3d option)) (surf:Surface) (m:Model) = 
+    let matchPickingInteraction (bc : BlockingCollection<string>) (p:V3d) (hit:(V3d-> V3d option)) (surf:Surface) (m:Model) = 
          match m.interaction with
             | Interactions.DrawAnnotation -> 
                 let m = match surf.surfaceType with
                         | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = Projection.Linear } }   
                         | _ -> m
                 Log.error "closest intersection on %A" surf.name
-                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing (Drawing.Action.AddPointAdv(p,hit,surf.name))
+                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing (Drawing.Action.AddPointAdv(p,hit,surf.name))
                 //Log.stop()
                 { m with drawing = drawing } |> stash
             | Interactions.PlaceCoordinateSystem -> 
@@ -213,7 +215,7 @@ module ViewerApp =
                 { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
             | _ -> m
 
-    let update (w : Form) (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
+    let update (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
@@ -246,7 +248,7 @@ module ViewerApp =
                       | None -> m                    
                 | _ ->
                     let drawing = 
-                        DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing msg
+                        DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing msg
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
                     let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
@@ -316,8 +318,8 @@ module ViewerApp =
             | DnSColorLegendMessage msg,_,_ ->
                 let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
                 { m with drawing = { m.drawing with colorLegend = cm } }
-            | ImportSurface,_,_ -> 
-                match Dialogs.openFolders w with
+            | ImportSurface sl,_,_ -> 
+                match sl with
                     | [] -> m
                     | paths ->
                         let surfaces = 
@@ -346,12 +348,13 @@ module ViewerApp =
                                                                 
                             { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = orSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB
                           | None -> m
-            | ImportObject,_,_ -> 
-                match Dialogs.openDialog w with
-                    | None -> m
-                    | Some paths ->
+            | ImportObject sl,_,_ -> 
+                match sl with
+                    | [] -> m
+                    | paths ->
+                        let p = paths.[0]
                         let objects = 
-                            [paths] 
+                            [p] 
                                 |> List.map (Surface.mk SurfaceType.SurfaceOBJ)
                                 |> PList.ofList
 
@@ -373,11 +376,13 @@ module ViewerApp =
                                                                 
                             { m with scene = { m.scene with referenceSystem = refSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB
                           | None -> m                                                          
-            | ImportAnnotationGroups,_,_ ->
-              match Dialogs.openDialog w with
-                | Some x -> 
+            | ImportAnnotationGroups sl,_,_ ->
+              match sl with
+                | [] -> m   
+                | path -> 
+                  let p = path.[0]
                   //update groups
-                  let imported, flat, lookup = AnnotationGroupsImporter.startImporter x m.scene.referenceSystem
+                  let imported, flat, lookup = AnnotationGroupsImporter.startImporter p m.scene.referenceSystem
 
                   let newGroups = 
                       m.drawing.annotations.rootGroup.subNodes
@@ -420,10 +425,12 @@ module ViewerApp =
                     |> Lenses.set _groups newGroups
                     |> Lenses.set _lookUp lookup
                     |> Lenses.set _flat flat
-                | None -> m   
-            | ImportSurfaceTrafo,_,_ ->
-              match Dialogs.openDialog w with
-                | Some path ->
+                
+            | ImportSurfaceTrafo sl,_,_ ->
+              match sl with
+                | [] -> m 
+                | p ->
+                  let path = p.[0]
                   let imported = SurfaceTrafoImporter.startImporter path
                   let filterIds = File.ReadLines (Path.ChangeExtension(path,".filter")) |> Seq.toList
 
@@ -442,7 +449,7 @@ module ViewerApp =
 
                   let s = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel
                   m |> Lenses.set _surfaceModelLens s                  
-                | None -> m   
+                  
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
             | QuickLoad2,_,_ ->                                
@@ -479,7 +486,7 @@ module ViewerApp =
                 | Some (t,surf), c ->                         
                   cache <- c
                   let hit = r.GetPointOnRay(t)
-                  matchPickingInteraction w bc hit hitF surf m
+                  matchPickingInteraction bc hit hitF surf m
                 | None, _ -> 
                     Log.error ("no hit")
                     m
@@ -488,30 +495,53 @@ module ViewerApp =
                     |true ->
                           let hitF (p : V3d) = None
                           match (m.scene.surfacesModel.surfaces.flat.TryFind id) with
-                            | Some x -> matchPickingInteraction w bc p hitF (x |> Leaf.toSurface) m 
+                            | Some x -> matchPickingInteraction bc p hitF (x |> Leaf.toSurface) m 
                             | None -> m
                     | false -> m
                 
-            | SaveScene, _,_ -> 
+            | SaveScene s, _,_ -> 
+                //match m.scene.scenePath with
+                //    | None ->                        
+                //        match Dialogs.saveDialog w with
+                //            | None -> m
+                //            | Some p -> 
+                //                let s' = { m.scene with scenePath = Some p}
+                //                { m with scene = Serialization.save p s'; } |> Model.stashAndSaveRecent p
+                //    | Some path ->                        
+                //        { m with scene = Serialization.save path m.scene } |> Model.stashAndSaveRecent path
+
+               
                 match m.scene.scenePath with
                     | None ->                        
-                        match Dialogs.saveDialog w with
-                            | None -> m
-                            | Some p -> 
-                                let s' = { m.scene with scenePath = Some p}
-                                { m with scene = Serialization.save p s'; } |> Model.stashAndSaveRecent p
+                        match s.IsEmptyOrNull() with
+                            | true -> m
+                            | _ -> 
+                                let s' = { m.scene with scenePath = Some s}
+                                { m with scene = Serialization.save s s'; } |> Model.stashAndSaveRecent s
                     | Some path ->                        
                         { m with scene = Serialization.save path m.scene } |> Model.stashAndSaveRecent path
-            | SaveAs,_,_ ->
-                match Dialogs.saveDialog w with
-                    | None -> m
-                    | Some p -> 
-                        let s' = { m.scene with scenePath = Some p}                                
-                        { m with scene = Serialization.save p s' } |> Model.stashAndSaveRecent p
-            | OpenScene,_,_ ->
-                match Dialogs.openDialog w with
-                    | None -> m
-                    | Some path -> 
+               
+            | SaveAs s,_,_ ->
+                //match Dialogs.saveDialog w with
+                //    | None -> m
+                //    | Some p -> 
+                //        let s' = { m.scene with scenePath = Some p}                                
+                //        { m with scene = Serialization.save p s' } |> Model.stashAndSaveRecent p
+                 match s.IsEmptyOrNull() with
+                    | true -> m
+                    | _  -> 
+                        let s' = { m.scene with scenePath = Some s}                                
+                        { m with scene = Serialization.save s s' } |> Model.stashAndSaveRecent s
+            | OpenScene sl,_,_ ->
+                //match Dialogs.openDialog w with
+                //    | None -> m
+                //    | Some path -> 
+                //        let m' = Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
+                //        loadRoverData m'
+                match sl.Length < 1 with
+                    | true -> m
+                    | false -> 
+                        let path = sl.[0]
                         let m' = Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
                         loadRoverData m'
             | LoadScene path,_,_ ->
@@ -539,7 +569,7 @@ module ViewerApp =
               let m =
                 match m.interaction with
                 | Interactions.DrawAnnotation -> 
-                    let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing drawingAction } |> stash
+                    let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing drawingAction } |> stash
                     match drawingAction with
                       | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
                       | _ -> m                                
@@ -601,7 +631,7 @@ module ViewerApp =
             | KeyUp k, _,_ ->
                 let d =
                   match k with
-                  | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update m.scene.referenceSystem drawingConfig w bc m.drawing Drawing.Action.StopDrawing
+                  | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing Drawing.Action.StopDrawing
                   | _ -> m.drawing
                 
                 { m with drawing = d; picking = false } |> stash
@@ -1158,16 +1188,30 @@ module ViewerApp =
             ]
 
         //Sidebar adorner                
-        let sceneTools (model : MModel) =
+        let sceneTools (model : MModel) (path : Option<string>) =
+          let p = match path with
+                    | Some p -> p
+                    | None -> String.Empty
+
           div[][
+            //button [
+            //    Dialogs.onSaveFile SaveScene
+            //    clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onsave', aardvark.dialog.showSaveDialog({ title: 'Save Scene',
+            //                                                                                                       defaultPath: p));") 
+            //] [text "save file"]
             div [clazz "ui buttons inverted"] [ 
+
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Save Scene"; onMouseClick (fun _ -> SaveScene)] [
+                    button [clazz "ui icon button"; attribute "data-content" "Save Scene"; Dialogs.onSaveFile SaveScene;
+                    clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onsave', aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene'}]}));")] [ //{defaultPath: p}
+                                                                                                                                
                                 i [clazz "large save icon" ] [] 
                     ]
                 )
+               
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Save Scene As"; onMouseClick (fun _ -> SaveAs)] [
+                    button [clazz "ui icon button"; attribute "data-content" "Save Scene As"; Dialogs.onSaveFile SaveAs;
+                    clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onsave', aardvark.dialog.showSaveDialog({properties: []}));")] [
                         i [clazz "large icons"] [
                             i [clazz "save icon"] [] 
                             i [clazz "top right corner arrow down icon"] [] 
@@ -1175,8 +1219,14 @@ module ViewerApp =
                     ]
                 )
                 
+                //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                //    button [clazz "ui icon button"; attribute "data-content" "Open Scene"; onMouseClick (fun _ -> OpenScene)] [
+                //        i [clazz "large folder outline icon" ] [] 
+                //    ]
+                //)
                 onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                    button [clazz "ui icon button"; attribute "data-content" "Open Scene"; onMouseClick (fun _ -> OpenScene)] [
+                    button [clazz "ui icon button"; attribute "data-content" "Open Scene"; Dialogs.onChooseFiles OpenScene;
+                    clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onchoose', aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
                         i [clazz "large folder outline icon" ] [] 
                     ]
                 )
@@ -1222,26 +1272,30 @@ module ViewerApp =
             [ text "browse"] |> button [
                 clazz "ui button"
                 attribute "data-content" "text text text"
-                onClick (fun _ -> ImportSurface)
+                Dialogs.onChooseFiles ImportSurface;
+                clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onchoose', aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));")
             ]         
 
         let openObject =
             [ text "browse"] |> button [
                 clazz "ui button"
                 attribute "data-content" "text text text"
-                onClick (fun _ -> ImportObject)
+                Dialogs.onChooseFiles ImportObject;
+                clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onchoose', aardvark.dialog.showOpenDialog({properties: ['openFile']}));")
             ]         
 
         let importAnnotationGroups =
             [ text "browse"] |> button [ 
                 clazz "ui button"
-                onClick (fun _ -> ImportAnnotationGroups)
+                Dialogs.onChooseFiles ImportAnnotationGroups;
+                clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onchoose', aardvark.dialog.showOpenDialog({properties: ['openFile']}));")
             ] 
 
         let importSurfaceTrafos =
             [ text "browse"] |> button [ 
                 clazz "ui button"
-                onClick (fun _ -> ImportSurfaceTrafo)
+                Dialogs.onChooseFiles ImportSurfaceTrafo;
+                clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onchoose', aardvark.dialog.showOpenDialog({properties: ['openFile']}));")
             ] 
 
         let usingContext =             
@@ -1285,11 +1339,12 @@ module ViewerApp =
             let stuff = 
                 alist {
                     let! mode = m.viewerMode
+                    let! path = m.scene.scenePath
                     match mode with
                     | ViewerMode.Standard -> 
                         let sections = [
                             "blank", [div[style "height:15px"][]]
-                            "Scene", [sceneTools m]
+                            "Scene", [sceneTools m path]
                            // "Scene Path", [scenePath2 m]
                             "Recent", [recentScenes]
                             "Add Surface", [openSurface]                
@@ -1310,9 +1365,10 @@ module ViewerApp =
         let control1 = 
             alist {
                 let! mode = m.viewerMode
+                let! path = m.scene.scenePath
                 let sections = [
                     "blank", [div[style "height:15px"][]]
-                    "Scene", [sceneTools m]
+                    "Scene", [sceneTools m path]
                     // "Scene Path", [scenePath2 m]
                     "Recent", [recentScenes]
                     "Add Surface", [openSurface]      
@@ -1407,7 +1463,7 @@ module ViewerApp =
             | None -> m
         | None -> m
 
-    let start (w : Form) (runtime: IRuntime) (signature: IFramebufferSignature) bc =
+    let start (runtime: IRuntime) (signature: IFramebufferSignature) bc =
         let m = 
             PRo3D.Viewer.Viewer.initial 
               |> Scene.loadLastScene runtime signature
@@ -1418,6 +1474,6 @@ module ViewerApp =
             unpersist = Unpersist.instance
             threads = pool runtime signature
             view = view //localhost
-            update = update w runtime signature bc
+            update = update runtime signature bc
             initial = m
         }
