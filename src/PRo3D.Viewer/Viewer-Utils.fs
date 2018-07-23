@@ -78,7 +78,7 @@ type ViewerAction =
     | SetTabMenu                of TabMenu
     | OpenSceneFileLocation     of string
     | NoAction                  of string
-    //| UpdateDockConfig          of DockConfig
+    | UpdateDockConfig          of DockConfig
 
 
 module ViewerUtils =    

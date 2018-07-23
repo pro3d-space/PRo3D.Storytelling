@@ -35,6 +35,7 @@ type Scene = {
     orientationSystem : ReferenceSystem
     bookmarksModel    : BookmarksModel
     viewPlans         : ViewPlanModel
+    dockConfig        : DockConfig
     //groups          : AnnotationGroupsModel
 }
 
@@ -103,9 +104,7 @@ type Model = {
     viewerMode      : ViewerMode
 
     animations      : AnimationModel
-
-    //dockConfig      : DockConfig
-
+    
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
 
@@ -137,6 +136,32 @@ module Viewer =
                 viewPlans       = ViewPlanModel.initial
                 
                 //groups          = AnnotationGroupsModel.initial
+
+                dockConfig  =
+                  config {
+                      content (
+                        vertical 0.6 [
+                          element { id "topMenu1"; title "Menu"; weight 0.08 }
+                          horizontal 0.5 [
+                            //element {id "sidebar"; title "Sidebar"; weight 0.3}
+                            element {id "render"; title "Renderview"; weight 0.6}
+                            element {id "instrumentview"; title "Instrumentview"; weight 0.6}
+                            //element {id "tabs"; title "Tabs"; weight 0.4}
+                            horizontal 0.4 [
+                                element {id "scene"; title "Scene"; weight 0.4}
+                                element {id "surfaces"; title "Surfaces"; weight 0.4}
+                                element {id "annotations"; title "Annotations"; weight 0.4}
+                                element {id "bookmarks"; title "Bookmarks"; weight 0.4}
+                                element {id "config"; title "Config"; weight 0.4}
+                                element {id "viewplanner"; title "ViewPlanner"; weight 0.4}
+                            ]
+                          ]
+                  
+                        ]
+                      )
+                      appName "PRo3D"
+                      useCachedConfig false
+                  }
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing
@@ -173,15 +198,5 @@ module Viewer =
 
         viewerMode = ViewerMode.Standard
 
-        //dockConfig =
-        //    config {
-        //        content (
-        //            horizontal 20.0 [
-        //                element { id "main"; title "PRo3D View"; weight 20 }
-        //                element { id "instrumentview"; title "Instrument View"; weight 20 }
-        //            ]
-        //        )
-        //        appName "PRo3D"
-        //        useCachedConfig true
-        //    }
+        
     }

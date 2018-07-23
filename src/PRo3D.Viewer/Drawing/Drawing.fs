@@ -401,20 +401,20 @@ module DrawingApp =
                 //button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
                 //    i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
                 button [clazz "ui icon button"; Dialogs.onSaveFile Save;
-                        clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onsave', aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements'}]}));")] [
+                        clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements'}]}));")] [
                     i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
 
                 //button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
                 //    i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
                 button [clazz "ui icon button"; Dialogs.onChooseFiles Load;
-                    clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onchoose', aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
                     i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
                 
                 button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
                     i [clazz "file outline icon"] [] ] |> UI.wrapToolTipBottom "Clear Annotation List"
 
                 button [clazz "ui icon button"; Dialogs.onSaveFile SaveCSV;
-                        clientEvent "onclick" ("aardvark.processEvent('__ID__', 'onsave', aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")] [
+                        clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")] [
                     i [clazz "save icon inverted"] [] ] |> UI.wrapToolTipBottom "Save .csv"
                                 
                 //button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [

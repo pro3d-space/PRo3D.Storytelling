@@ -22,6 +22,7 @@ module Mutable =
         let _orientationSystem = PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Create(__initial.orientationSystem)
         let _bookmarksModel = PRo3D.Groups.Mutable.MBookmarksModel.Create(__initial.bookmarksModel)
         let _viewPlans = PRo3d.Mutable.MViewPlanModel.Create(__initial.viewPlans)
+        let _dockConfig = ResetMod.Create(__initial.dockConfig)
         
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
@@ -32,6 +33,7 @@ module Mutable =
         member x.orientationSystem = _orientationSystem
         member x.bookmarksModel = _bookmarksModel
         member x.viewPlans = _viewPlans
+        member x.dockConfig = _dockConfig :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.Scene) =
@@ -47,6 +49,7 @@ module Mutable =
                 PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Update(_orientationSystem, v.orientationSystem)
                 PRo3D.Groups.Mutable.MBookmarksModel.Update(_bookmarksModel, v.bookmarksModel)
                 PRo3d.Mutable.MViewPlanModel.Update(_viewPlans, v.viewPlans)
+                ResetMod.Update(_dockConfig,v.dockConfig)
                 
         
         static member Create(__initial : PRo3D.Viewer.Scene) : MScene = MScene(__initial)
@@ -116,6 +119,12 @@ module Mutable =
                     override x.Get(r) = r.viewPlans
                     override x.Set(r,v) = { r with viewPlans = v }
                     override x.Update(r,f) = { r with viewPlans = f r.viewPlans }
+                }
+            let dockConfig =
+                { new Lens<PRo3D.Viewer.Scene, Aardvark.UI.Primitives.DockConfig>() with
+                    override x.Get(r) = r.dockConfig
+                    override x.Set(r,v) = { r with dockConfig = v }
+                    override x.Update(r,f) = { r with dockConfig = f r.dockConfig }
                 }
     
     

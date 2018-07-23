@@ -174,6 +174,7 @@ let main argv =
        // prefix "/instrument" >=> MutableApp.toWebPart runtime instrumentApp
         Suave.Files.browseHome
     ]
+
     //WebPart.startServer 4322 [
     //    MutableApp.toWebPart' runtime false instrumentApp        
     //    Suave.Files.browseHome
@@ -219,7 +220,7 @@ let main argv =
     let titlestr = "PRo3D Viewer - " + viewerVersion + " - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH" + licenseText
 
     Aardium.run {
-        url "http://localhost:4321/?page=main"
+        url "http://localhost:4321/"   //"http://localhost:4321/?page=main"
         width 1280
         height 800
         debug true
