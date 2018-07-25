@@ -36,6 +36,7 @@ type Scene = {
     bookmarksModel    : BookmarksModel
     viewPlans         : ViewPlanModel
     dockConfig        : DockConfig
+    closedPages       : list<DockElement>
     //groups          : AnnotationGroupsModel
 }
 
@@ -122,6 +123,7 @@ module Viewer =
         let init = (NavigationModel.Lens.camera |. CameraControllerState.Lens.zoomFactor).Set(init, 0.0008)
         init        
 
+    let sceneElm = {id = "scene"; title = (Some "Scene"); weight = 0.4; deleteInvisible = None }
     let initial = {           
        // surfaces = HSet.empty
         scene = {
@@ -143,17 +145,29 @@ module Viewer =
                         vertical 0.6 [
                           element { id "topMenu1"; title "Menu"; weight 0.08 }
                           horizontal 0.5 [
+                            
                             //element {id "sidebar"; title "Sidebar"; weight 0.3}
-                            element {id "render"; title "Renderview"; weight 0.6}
-                            element {id "instrumentview"; title "Instrumentview"; weight 0.6}
-                            //element {id "tabs"; title "Tabs"; weight 0.4}
-                            horizontal 0.4 [
-                                element {id "scene"; title "Scene"; weight 0.4}
-                                element {id "surfaces"; title "Surfaces"; weight 0.4}
-                                element {id "annotations"; title "Annotations"; weight 0.4}
-                                element {id "bookmarks"; title "Bookmarks"; weight 0.4}
-                                element {id "config"; title "Config"; weight 0.4}
-                                element {id "viewplanner"; title "ViewPlanner"; weight 0.4}
+                            //element {id "render"; title "Renderview"; weight 0.6}
+                            //element {id "instrumentview"; title "Instrumentview"; weight 0.6}
+                            stack 0.5 None [
+                                {id = "render"; title = Some "Renderview"; weight = 0.6; deleteInvisible = None}
+                                {id = "instrumentview"; title = Some "Instrumentview"; weight = 0.6; deleteInvisible = None}
+                            ]
+                            //horizontal 0.4 [
+                            //    element {id "scene"; title "Scene"; weight 0.4; }
+                            //    element {id "surfaces"; title "Surfaces"; weight 0.4}
+                            //    element {id "annotations"; title "Annotations"; weight 0.4}
+                            //    element {id "bookmarks"; title "Bookmarks"; weight 0.4}
+                            //    element {id "config"; title "Config"; weight 0.4}
+                            //    element {id "viewplanner"; title "ViewPlanner"; weight 0.4}
+                            //]
+                            stack 0.4 None [
+                                {id = "scene"; title = Some "Scene"; weight = 0.4; deleteInvisible = None }
+                                {id = "surfaces"; title = Some "Surfaces"; weight = 0.4; deleteInvisible = None }
+                                {id = "annotations"; title = Some "Annotations"; weight = 0.4; deleteInvisible = None }
+                                {id = "bookmarks"; title = Some "Bookmarks"; weight = 0.4; deleteInvisible = None }
+                                {id = "config"; title = Some "Config"; weight = 0.4; deleteInvisible = None }
+                                {id = "viewplanner"; title = Some "ViewPlanner"; weight = 0.4; deleteInvisible = None }
                             ]
                           ]
                   
@@ -162,6 +176,8 @@ module Viewer =
                       appName "PRo3D"
                       useCachedConfig false
                   }
+
+                closedPages = list.Empty
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing

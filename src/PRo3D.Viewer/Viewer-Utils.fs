@@ -79,6 +79,7 @@ type ViewerAction =
     | OpenSceneFileLocation     of string
     | NoAction                  of string
     | UpdateDockConfig          of DockConfig
+    | AddPage                   of DockElement
 
 
 module ViewerUtils =    

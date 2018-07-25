@@ -174,6 +174,38 @@ module ViewerApp =
             else None
       }
 
+    let rec getAllDockElements (dnc : DockNodeConfig) : (list<DockElement>) = 
+        let mutable ml = list.Empty
+        match dnc with
+            | DockNodeConfig.Vertical (weight,children) -> let test = children |> List.map(fun x -> getAllDockElements x )
+                                                           test |> List.concat |> List.append ml  
+            | DockNodeConfig.Horizontal (weight,children) -> let test = children |> List.map(fun x -> getAllDockElements x )
+                                                             test |> List.concat |> List.append ml
+            | DockNodeConfig.Stack (weight,activeId,children) -> List.append ml children
+            | DockNodeConfig.Element element ->  List.append ml [element]
+    
+    let updateClosedPages (m : Model) (dncUpdated : DockNodeConfig) =
+        let de = getAllDockElements m.scene.dockConfig.content
+        let deUpdated = getAllDockElements dncUpdated
+        let diff = ((Set.ofList de) - (Set.ofList deUpdated)) |> Set.toList
+        // diff contains all changed elements (not only the deleted)
+        match diff with
+            | [] -> m.scene.closedPages
+            | _ -> match (deUpdated |> List.filter(fun x -> x.id = diff.[0].id)) with
+                    | [] -> List.append m.scene.closedPages diff
+                    | _ -> m.scene.closedPages
+
+    let addDockElement (dnc : DockNodeConfig) (de:DockElement) = 
+        match dnc with
+            | DockNodeConfig.Vertical (weight,children) -> let add = List.append children [(Stack(weight, None, [de]))]
+                                                           Vertical(weight,add)
+            | DockNodeConfig.Horizontal (weight,children) -> let add = List.append children [(Stack(weight, None, [de]))]
+                                                             Horizontal(weight,add) 
+            | DockNodeConfig.Stack (weight,activeId,children) -> Stack(weight, activeId, List.append [de] children)
+            | DockNodeConfig.Element element ->  Stack(0.2, None, List.append [de] [element]) 
+
+                       
+
     let matchPickingInteraction (bc : BlockingCollection<string>) (p:V3d) (hit:(V3d-> V3d option)) (surf:Surface) (m:Model) = 
          match m.interaction with
             | Interactions.DrawAnnotation -> 
@@ -704,7 +736,13 @@ module ViewerApp =
                 m
             | NoAction s,_,_ -> m
             | UpdateDockConfig dcf,_,_ ->
-                 { m with scene = { m.scene with dockConfig = dcf } }
+                let closedPages = updateClosedPages m dcf.content
+                { m with scene = { m.scene with dockConfig = dcf; closedPages = closedPages } }
+            | AddPage de,_,_ -> 
+                let closedPages = m.scene.closedPages |> List.filter(fun x -> x.id <> de.id)                
+                let cont = addDockElement m.scene.dockConfig.content de
+                let dockconfig = config {content(cont);appName "PRo3D"; useCachedConfig false }
+                { m with scene = { m.scene with dockConfig = dockconfig; closedPages = closedPages } }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -1529,6 +1567,25 @@ module ViewerApp =
                                             clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
                                             text "Import Trafos"
                                         ]
+
+                                        div[ clazz "ui inverted item" ] [
+                                            onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
+                                                text "Closed Pages"
+                                            )
+
+                                            div [clazz "ui flowing popup bottom left transition hidden"] [
+                                                Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
+                                                            aset {
+                                                                let! closedP = m.scene.closedPages
+                                                                for cp in closedP do
+                                                                     yield a [clazz "item inverted";
+                                                                              onClick (fun _ -> AddPage cp)] [
+                                                                        span [style "color:black"] [Incremental.text (cp.id |> Mod.constant)]
+                                                                     ]
+                                                            } |> AList.ofASet
+                                                        )
+                                            ]
+                                        ]
                                     ] 
                                 ]
                             )
@@ -1699,11 +1756,12 @@ module ViewerApp =
                         require (myCss) (
                             body [][
                                 //sidemenu
-                                topMenu1
-                                //let dc = 
-                                m.scene.dockConfig |> Mod.force |> Mod.constant |> docking [
-                                            style "width:100%;height:100%;"
-                                            onLayoutChanged UpdateDockConfig ]
+                                //topMenu1
+                                let dc = 
+                                    m.scene.dockConfig |> Mod.force |> Mod.constant |> docking [
+                                                style "width:100%;height:100%;"
+                                                onLayoutChanged UpdateDockConfig ]
+                                yield Incremental.div AttributeMap.empty (alist{ yield topMenu1; yield dc })
                                 //yield div[](GuiEx.adornerMenu sections topMenu [dc])
                             ]
                         )
