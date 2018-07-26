@@ -393,6 +393,29 @@ module DrawingApp =
                 match x with 
                   | Some selected -> selected = (a.key |> Mod.force)
                   | None -> false )
+
+        let annotationMenu = 
+            div [ clazz "ui dropdown item"] [
+                text "Annotations"
+                i [clazz "dropdown icon"][] 
+                div [ clazz "menu"] [
+                    div [ clazz "ui inverted item"; Dialogs.onSaveFile Save;
+                            clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene'}]}));")][
+                            text "Save"
+                    ]
+                    div [ clazz "ui inverted item"; Dialogs.onChooseFiles Load;
+                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));" )][
+                            text "Load"
+                    ]
+                    div [ clazz "ui inverted item"; onMouseClick (fun _ -> Clear)][
+                            text "Clear List"
+                    ]
+                    div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveCSV;
+                        clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")][
+                            text "Save .csv"
+                    ]
+                ]
+            ]
                     
 
         let viewAnnotationImportExport =

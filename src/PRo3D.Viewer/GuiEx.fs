@@ -110,7 +110,7 @@ module GuiEx =
                                 //    text text'
                                 //]
                         ]
-                        div [clazz content;  style "overflow-y : auto; max-height: 35%"] content'
+                        div [clazz content;  style "overflow-y : auto; "] content' //max-height: 35%
                     ]
                 ]
             )

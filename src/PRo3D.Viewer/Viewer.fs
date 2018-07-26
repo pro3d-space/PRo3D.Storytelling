@@ -951,8 +951,7 @@ module ViewerApp =
                     )
             
             div [][
-                br []
-                DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
+                //DrawingApp.UI.viewAnnotationImportExport |> UI.map DrawingMessage
                
                 GuiEx.accordion "Annotations" "Write" true [
                     Groups.viewSelectionButtons |> UI.map AnnotationGroupsMessageViewer
@@ -1086,13 +1085,33 @@ module ViewerApp =
                         ] 
                 }
 
-        let choosePlanet = 
-            adaptive {
-                 return Html.Layout.horizontal [
-                    Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
-                    Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ]
-                ] |> UI.map ReferenceSystemMessage
+        
+        let choosePlanet (model : MModel) = 
+            Incremental.div (AttributeMap.Empty) (   
+                alist {
+                    yield div [] [
+                            Html.Layout.boxH [ i [clazz "large Globe icon"][] ] //inverted
+                            Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ]
+                        ] |> UI.map ReferenceSystemMessage
+                    yield br[]
+                    let! scenePath = model.scene.scenePath 
+                    let icon = 
+                      match scenePath with
+                        | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  //inverted
+                        | None -> div[][] // i [clazz "large folder icon" ][] |> UI.wrapToolTip "open folder"  
+                                
+                    let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
+                    yield  div [] [ 
+                      //Html.Layout.boxH [ text "Scene Path:" ]
+                      Html.Layout.boxH [ i [style "color:black"]
+                        [Incremental.text (scenePath 
+                            |> Mod.map(fun x -> 
+                                if x.IsEmpty() then "*new scene" else Path.GetFileName x))]  
+                      ]
+                      Html.Layout.boxH [ icon ]
+                    ]
                 }
+            )
                
         let topMenu = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
@@ -1102,8 +1121,7 @@ module ViewerApp =
                 Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
              ]                        
              Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
-             Incremental.div AttributeMap.empty (AList.ofModSingle switchViewerMode)
-             //Incremental.div AttributeMap.empty (AList.ofModSingle choosePlanet)          
+             choosePlanet m
         ] 
 
         let viewTabs (tab:IMod<TabMenu>) = 
@@ -1157,7 +1175,7 @@ module ViewerApp =
               
               let style' = "color: white; font-family:Consolas;"
 
-              yield div [clazz "ui"; style "position: absolute; top: 50px; float:left" ] [
+              yield div [clazz "ui"; style "position: absolute; top: 45px; float:left" ] [
                   //arrowOverlay
                   yield table [] [
                       tr[][
@@ -1271,31 +1289,8 @@ module ViewerApp =
             br[]
             br[]
 
-            Incremental.div (AttributeMap.Empty) (   
-                alist {
-                    yield div [] [
-                            Html.Layout.boxH [ i [clazz "large inverted Globe icon"][] ]
-                            Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ]
-                        ] |> UI.map ReferenceSystemMessage
-                    yield br[]
-                    let! scenePath = model.scene.scenePath 
-                    let icon = 
-                      match scenePath with
-                        | Some p ->  i [clazz "large inverted folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
-                        | None -> div[][] // i [clazz "large folder icon" ][] |> UI.wrapToolTip "open folder"  
-                                
-                    let scenePath   = Mod.bindOption model.scene.scenePath "" (fun sp -> Mod.constant sp)
-                    yield  div [] [ 
-                      //Html.Layout.boxH [ text "Scene Path:" ]
-                      Html.Layout.boxH [ i [style "color:white"]
-                        [Incremental.text (scenePath 
-                            |> Mod.map(fun x -> 
-                                if x.IsEmpty() then "*new scene" else Path.GetFileName x))]  
-                      ]
-                      Html.Layout.boxH [ icon ]
-                    ]
-                }
-            )]
+            choosePlanet m
+          ]
 
         let openSurface =
             [ text "browse"] |> button [
@@ -1367,207 +1362,92 @@ module ViewerApp =
         let icmds    = ViewerUtils.renderCommands AList.empty Sg.empty Sg.empty m //m.scene.surfacesModel.sgGrouped
         let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
         let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
-
-        //let chooseView = //(mode : ViewerMode)
-
-        //    let stuff = 
-        //        alist {
-        //            let! mode = m.viewerMode
-        //            let! path = m.scene.scenePath
-        //            match mode with
-        //            | ViewerMode.Standard -> 
-        //                let sections = [
-        //                    "blank", [div[style "height:15px"][]]
-        //                    "Scene", [sceneTools m path]
-        //                   // "Scene Path", [scenePath2 m]
-        //                    "Recent", [recentScenes]
-        //                    "Add Surface", [openSurface]                
-        //                    "Import AnnotationGroups", [importAnnotationGroups]  
-        //                    "Import SurfaceTrafos", [importSurfaceTrafos]]
-        //                    //"Switch View", [switchViewerMode] 
-                            
-        //                yield div[](GuiEx.adornerMenu sections topMenu (rest m))
-        //            | ViewerMode.Instrument ->
-        //                //let isections = [
-        //                //    "blank", [div[style "height:15px"][]]
-        //                //    "Switch View", [switchViewerMode]]     
-        //                yield div[](GuiEx.adornerMenu [] topMenu [icontrol]) 
-        //            }
-            
-        //    Incremental.div AttributeMap.empty stuff    
-
-        let control1 = 
-            alist {
-                let! mode = m.viewerMode
-                let! path = m.scene.scenePath
-                let sections = [
-                    "blank", [div[style "height:15px"][]]
-                    "Scene", [sceneTools m path]
-                    // "Scene Path", [scenePath2 m]
-                    "Recent", [recentScenes]
-                    "Add Surface", [openSurface]      
-                    "Add Object", [openObject]      
-                    "Import AnnotationGroups", [importAnnotationGroups]  
-                    "Import SurfaceTrafos", [importSurfaceTrafos]]
-                    //"Switch View", [switchViewerMode] 
-                            
-                yield div[](GuiEx.adornerMenu sections topMenu (rest m))
-
-                }
-
-        //let sidebar = 
-        //    alist {
-        //        let! path = m.scene.scenePath 
-        //        let sections = [
-        //            "blank", [div[style "height:15px"][]]
-        //            "Scene", [sceneTools m path]
-        //            // "Scene Path", [scenePath2 m]
-        //            "Recent", [recentScenes]
-        //            "Add Surface", [openSurface]      
-        //            "Add Object", [openObject]      
-        //            "Import AnnotationGroups", [importAnnotationGroups]  
-        //            "Import SurfaceTrafos", [importSurfaceTrafos]]
-        //            //"Switch View", [switchViewerMode] yield 
-        //        sections
-                    
-                //yield 
-                //    div[clazz "ui top small fixed menu blarg"] [
-                //        yield 
-                //            a [clazz "item blarg topmenu"] [
-                //                i [clazz "large sidebar icon"] []
-                //        ]
-                //        for t in topMenu do
-                //            yield div [clazz "item topmenu"] [t]
-                
-                //    ]
-                //yield
-                //    div [clazz "ui bottom attached segment blarg pushable";] [
-                //        GuiEx.menu "ui vertical inverted sidebar menu" "" sections
-                //        //div [clazz "pusher"; style "background:#000;"] [control]
-                //    ]
-                    //GuiEx.menu "ui vertical inverted sidebar menu" "" sections
-            //} 
-
-        let sections = 
-            [
-                    "blank", [div[style "height:15px"][]]
-                    "Scene", [sceneTools m (Some "")]
-                    // "Scene Path", [scenePath2 m]
-                    "Recent", [recentScenes]
-                    "Add Surface", [openSurface]      
-                    "Add Object", [openObject]      
-                    "Import AnnotationGroups", [importAnnotationGroups]  
-                    "Import SurfaceTrafos", [importSurfaceTrafos]]
-                    //"Switch View", [switchViewerMode] yield 
-                
-
-        let sidebar = 
-            alist {
-                let! path = m.scene.scenePath
-                yield require Html.semui (
-                        body [  style "width: 100%; height:100%; background: #1B1C1E; overflow-y : visible"; ] [
-                            table [clazz "ui very compact unstackable striped inverted table"; style "border-radius: 0;"] [
-                                tr [] [
-                                    td [] [text "Scene"]
-                                    td [] [sceneTools m path]
-                                ]
-                                tr [] [
-                                    td [] [text "Recent"]
-                                    td [] [recentScenes]
-                                ]
-                                tr [] [
-                                    td [] [text "Add Surface"]
-                                    td [] [openSurface]
-                                ]
-                                tr [] [
-                                    td [] [text "Add Object"]
-                                    td [] [openObject]
-                                ]
-                                tr [] [
-                                    td [] [text "Import AnnotationGroups"]
-                                    td [] [importAnnotationGroups]
-                                ]
-                                tr [] [
-                                    td [] [text "Import SurfaceTrafos"]
-                                    td [] [importSurfaceTrafos]
-                                ]
-                            ]
-                        ]
-                    )
-            }
-
+        
         let scenemenu = 
-            //alist {
-            //    let! path = m.scene.scenePath
-                //yield require Html.semui (
-                //        body [  style "width: 100%; height:100%; background: #1B1C1E; overflow-y : visible"; ] [
                 div [clazz "menu-bar"] [
                         // menu
-                        div [ clazz "ui top attached mini menu"; style "z-index: 1000"] [
+                        div [ clazz "ui top attached menu"; style "z-index: 1000"] [
                             onBoot "$('#__ID__').dropdown('on', 'hover');" (
                                 div [ clazz "ui dropdown item" ] [
-                                    //text "Scene"
                                     i [clazz "large sidebar icon"][] 
 
                                     div [ clazz "ui inverted menu" ] [
-                                        //div [ clazz "ui inverted item" ] [
-                                        //    text "Scene"
-                                        //    sceneTools m (Some "")
-                                        //]
-                                        div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
-                                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene'}]}));")][
-                                              text "Save Scene"
-                                        ]
-                                        div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveAs;
-                                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({properties: []}));") ][
-                                              text "Save Scene as..."
-                                        ]
-                                        div [ clazz "ui inverted item"; 
-                                              Dialogs.onChooseFiles OpenScene;
-                                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));")][
-                                              text "Open Scene"
-                                        ]
-                                        div [ clazz "ui inverted item"; onMouseClick (fun _ -> NewScene)][
-                                              text "New Scene"
-                                        ]
-                                        div[ clazz "ui inverted item" ] [
-                                            onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
-                                                text "Recent Scenes"
-                                            )
 
-                                            div [clazz "ui flowing popup bottom left transition hidden"] [
-                                                Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
-                                                            aset {
-                                                                for (_,s) in (m.recent.recentScenes |> AMap.toASet) do
-                                                                     yield a [clazz "item inverted";
-                                                                              onClick (fun _ -> LoadScene (s.path |> Mod.force))] [
-                                                                        span [style "color:black"] [Incremental.text s.name]
-                                                                     ]
-                                                            } |> AList.ofASet
-                                                        )
+                                        div [ clazz "ui dropdown item"] [
+                                            text "Scene"
+                                            i [clazz "dropdown icon"][] 
+                                            div [ clazz "menu"] [
+                                                div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
+                                                      clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene'}]}));")][
+                                                      text "Save"
+                                                ]
+                                                div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveAs;
+                                                      clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({properties: []}));") ][
+                                                      text "Save as..."
+                                                ]
+                                                div [ clazz "ui inverted item"; 
+                                                      Dialogs.onChooseFiles OpenScene;
+                                                      clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));")][
+                                                      text "Open"
+                                                ]
+                                                div [ clazz "ui inverted item"; onMouseClick (fun _ -> NewScene)][
+                                                      text "New"
+                                                ]
+                                                div[ clazz "ui inverted item" ] [
+                                                    onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
+                                                        text "Recent"
+                                                    )
+
+                                                    div [clazz "ui flowing popup bottom left transition hidden"] [
+                                                        Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
+                                                                    aset {
+                                                                        for (_,s) in (m.recent.recentScenes |> AMap.toASet) do
+                                                                             yield a [clazz "item inverted";
+                                                                                      onClick (fun _ -> LoadScene (s.path |> Mod.force))] [
+                                                                                span [style "color:black"] [Incremental.text s.name]
+                                                                             ]
+                                                                    } |> AList.ofASet
+                                                                )
+                                                    ]
+                                                ]
                                             ]
                                         ]
-                                        div [ clazz "ui inverted item"; 
-                                              Dialogs.onChooseFiles ImportSurface;
-                                              clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-                                              text "Open Surface"
+
+                                        div [ clazz "ui dropdown item"] [
+                                            text "Open"
+                                            i [clazz "dropdown icon"][] 
+                                            div [ clazz "menu"] [
+                                                div [ clazz "ui inverted item"; 
+                                                      Dialogs.onChooseFiles ImportSurface;
+                                                      clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
+                                                      text "Surface"
+                                                ]
+                                                div [ clazz "ui inverted item"; 
+                                                    Dialogs.onChooseFiles ImportObject;
+                                                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
+                                                    text "Object"
+                                                ]
+                                            ]
                                         ]
-                                        div [ clazz "ui inverted item"; 
-                                            Dialogs.onChooseFiles ImportObject;
-                                            clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
-                                            text "Open Object"
-                                        ]
-                                        div [ clazz "ui inverted item";
-                                            Dialogs.onChooseFiles ImportAnnotationGroups;
-                                            clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
-                                            text "Import Annotations"
-                                        ]
-                                        div [ clazz "ui inverted item";
-                                            Dialogs.onChooseFiles ImportSurfaceTrafo;
-                                            clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
-                                            text "Import Trafos"
+                                        div [ clazz "ui dropdown item"] [
+                                            text "Import"
+                                            i [clazz "dropdown icon"][] 
+                                            div [ clazz "menu"] [
+                                                div [ clazz "ui inverted item";
+                                                    Dialogs.onChooseFiles ImportAnnotationGroups;
+                                                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
+                                                    text "Annotations Groups"
+                                                ]
+                                                div [ clazz "ui inverted item";
+                                                    Dialogs.onChooseFiles ImportSurfaceTrafo;
+                                                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+                                                    text "Surface Trafos"
+                                                ]
+                                            ]
                                         ]
 
+                                        DrawingApp.UI.annotationMenu  |> UI.map DrawingMessage;
+                                        
                                         div[ clazz "ui inverted item" ] [
                                             onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
                                                 text "Closed Pages"
@@ -1590,16 +1470,8 @@ module ViewerApp =
                                 ]
                             )
                         ]
-                    //    div[clazz "ui top small fixed menu blarg"] [
-                    //    for t in topMenu do
-                    //        div [clazz "item topmenu"] [t]
-                
-                    //            ]
-
                     ]
-                        //])
-           // }
-
+                       
         let topMenu1 =
             div[clazz "ui top small fixed menu blarg"] [
                 yield 
@@ -1637,34 +1509,6 @@ module ViewerApp =
         //            body [clazz "context example"; style "overflow-y:hidden"] [chooseView] //ViewerMode.Standard
         //        )
         //    )
-
-        
-
-        //div [clazz "ui bottom attached segment blarg pushable";] [
-        //                GuiEx.menu "ui vertical inverted sidebar menu" "" sidebar
-        //                div [clazz "pusher"; style "background:#000;"] [
-
-        //let trymain = 
-        //     alist {
-        //        let! mode = m.viewerMode
-        //        let! path = m.scene.scenePath
-        //        let sections = [
-        //            "blank", [div[style "height:15px"][]]
-        //            "Scene", [sceneTools m path]
-        //            // "Scene Path", [scenePath2 m]
-        //            "Recent", [recentScenes]
-        //            "Add Surface", [openSurface]      
-        //            "Add Object", [openObject]      
-        //            "Import AnnotationGroups", [importAnnotationGroups]  
-        //            "Import SurfaceTrafos", [importSurfaceTrafos]]
-        //            //"Switch View", [switchViewerMode] 
-                            
-        //        yield div[](GuiEx.adornerMenu sections topMenu [control
-        //                                                        textOverlays
-        //                                                        dnsColorLegend
-        //                                                        scalarsColorLegend ])
-
-        //        }
 
         let st = 
             require GuiEx.semui (
@@ -1716,11 +1560,11 @@ module ViewerApp =
                     //        [Html.SemUi.dropDown m.tabMenu SetTabMenu
                     //         viewTabs m.tabMenu               ] 
 
-                    | Some "scene" -> 
-                        require (myCss) (
-                            body [style "background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] 
-                                [sceneTab] 
-                        )
+                    //| Some "scene" -> 
+                    //    require (myCss) (
+                    //        body [style "background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"] 
+                    //            [sceneTab] 
+                    //    )
 
                     | Some "surfaces" -> 
                         require (myCss) (
@@ -1756,12 +1600,12 @@ module ViewerApp =
                         require (myCss) (
                             body [][
                                 //sidemenu
-                                //topMenu1
-                                let dc = 
-                                    m.scene.dockConfig |> Mod.force |> Mod.constant |> docking [
-                                                style "width:100%;height:100%;"
-                                                onLayoutChanged UpdateDockConfig ]
-                                yield Incremental.div AttributeMap.empty (alist{ yield topMenu1; yield dc })
+                                topMenu1
+                                //let dc = 
+                                m.scene.dockConfig |> Mod.force |> Mod.constant |> docking [
+                                            style "width:100%;height:100%;"
+                                            onLayoutChanged UpdateDockConfig ]
+                                //yield Incremental.div AttributeMap.empty (alist{ yield topMenu1; yield dc })
                                 //yield div[](GuiEx.adornerMenu sections topMenu [dc])
                             ]
                         )

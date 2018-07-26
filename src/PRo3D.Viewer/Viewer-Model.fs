@@ -162,7 +162,7 @@ module Viewer =
                             //    element {id "viewplanner"; title "ViewPlanner"; weight 0.4}
                             //]
                             stack 0.4 None [
-                                {id = "scene"; title = Some "Scene"; weight = 0.4; deleteInvisible = None }
+                                //{id = "scene"; title = Some "Scene"; weight = 0.4; deleteInvisible = None }
                                 {id = "surfaces"; title = Some "Surfaces"; weight = 0.4; deleteInvisible = None }
                                 {id = "annotations"; title = Some "Annotations"; weight = 0.4; deleteInvisible = None }
                                 {id = "bookmarks"; title = Some "Bookmarks"; weight = 0.4; deleteInvisible = None }
