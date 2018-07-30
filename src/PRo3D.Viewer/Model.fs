@@ -206,6 +206,11 @@ module FalseColorsModel =
             numOfRG  = 1.0
         }
 
+[<DomainType>]
+type OrientationCubeModel =
+  {
+    camera  : CameraControllerState
+  }
 
 [<DomainType>]
 type DipAndStrikeResults = {
@@ -505,6 +510,7 @@ type ViewConfigModel = {
     //minDipAngle             : NumericInput
     //maxDipAngle             : NumericInput
     lodColoring             : bool
+    drawOrientationCube     : bool
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -576,6 +582,7 @@ module ViewConfigModel =
         //maxDipAngle = initMaxAngle
         lodColoring = false
         //planet = Planet.Mars
+        drawOrientationCube = true
     }
 
 

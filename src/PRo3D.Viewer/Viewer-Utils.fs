@@ -78,8 +78,10 @@ type ViewerAction =
     | SetTabMenu                of TabMenu
     | OpenSceneFileLocation     of string
     | NoAction                  of string
+    | OrientationCube           of ISg
     | UpdateDockConfig          of DockConfig
     | AddPage                   of DockElement
+    | ToggleOrientationCube
 
 
 module ViewerUtils =    

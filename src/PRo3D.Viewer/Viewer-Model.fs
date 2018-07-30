@@ -37,7 +37,6 @@ type Scene = {
     viewPlans         : ViewPlanModel
     dockConfig        : DockConfig
     closedPages       : list<DockElement>
-    //groups          : AnnotationGroupsModel
 }
 
 [<DomainType>] 
@@ -178,6 +177,7 @@ module Viewer =
                   }
 
                 closedPages = list.Empty
+                
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing

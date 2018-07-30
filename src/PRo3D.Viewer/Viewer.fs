@@ -32,6 +32,7 @@ open PRo3D.Surfaces
 open PRo3D.Viewer
 open PRo3D.Drawing
 open PRo3D.Groups
+open PRo3D.OrientationCube
 
 open Aardium
 
@@ -735,6 +736,7 @@ module ViewerApp =
                 Process.Start("explorer.exe", argument) |> ignore
                 m
             | NoAction s,_,_ -> m
+            | OrientationCube isg,_,_ -> m
             | UpdateDockConfig dcf,_,_ ->
                 let closedPages = updateClosedPages m dcf.content
                 { m with scene = { m.scene with dockConfig = dcf; closedPages = closedPages } }
@@ -825,7 +827,16 @@ module ViewerApp =
                       | _ -> return failwith ""
                 }
 
-            
+            let orientationCube =
+                aset {
+                    let! draw = m.scene.config.drawOrientationCube
+                    yield match draw with
+                            | true -> OrientationCube.Sg.loadModel "../../data/rotationcube/rotationcube.dae"
+                                        |> OrientationCube.Sg.orthoOrientation m.scene.navigation.camera.view
+                                        |> Sg.map OrientationCube
+                            | false -> Sg.empty
+                } |> Sg.set 
+               
             //let controller = 
             //    adaptive {
             //        let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
@@ -866,7 +877,7 @@ module ViewerApp =
             //    |> Sg.map DnSColorLegendMessage
 
             //controller, exploreCenter
-            [annos; exploreCenter; refSystem; alignment; viewPlans] |> Sg.ofList // orSystem; ; objects
+            [annos; exploreCenter; refSystem; alignment; viewPlans; orientationCube] |> Sg.ofList // orSystem; ; objects
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
@@ -1225,9 +1236,7 @@ module ViewerApp =
                 "style"                 ==> "position:absolute; left: 65%; top: 25%"
               ] // "0 0 5% 100%";
             Incremental.Svg.svg attr (SurfaceApp.showColorLegend m.scene.surfacesModel)
-            
-                   
-
+        
         let rest (model : MModel) = 
             [   
                 control

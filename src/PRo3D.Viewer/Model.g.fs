@@ -174,6 +174,43 @@ module Mutable =
                 }
     
     
+    type MOrientationCubeModel(__initial : PRo3D.OrientationCubeModel) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.OrientationCubeModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.OrientationCubeModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.OrientationCubeModel>
+        let _camera = Aardvark.UI.Primitives.Mutable.MCameraControllerState.Create(__initial.camera)
+        
+        member x.camera = _camera
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3D.OrientationCubeModel) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                Aardvark.UI.Primitives.Mutable.MCameraControllerState.Update(_camera, v.camera)
+                
+        
+        static member Create(__initial : PRo3D.OrientationCubeModel) : MOrientationCubeModel = MOrientationCubeModel(__initial)
+        static member Update(m : MOrientationCubeModel, v : PRo3D.OrientationCubeModel) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3D.OrientationCubeModel> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module OrientationCubeModel =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let camera =
+                { new Lens<PRo3D.OrientationCubeModel, Aardvark.UI.Primitives.CameraControllerState>() with
+                    override x.Get(r) = r.camera
+                    override x.Set(r,v) = { r with camera = v }
+                    override x.Update(r,f) = { r with camera = f r.camera }
+                }
+    
+    
     type MDipAndStrikeResults(__initial : PRo3D.DipAndStrikeResults) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.DipAndStrikeResults> = Aardvark.Base.Incremental.EqModRef<PRo3D.DipAndStrikeResults>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.DipAndStrikeResults>
@@ -695,6 +732,7 @@ module Mutable =
         let _arrowThickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowThickness)
         let _dnsPlaneSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.dnsPlaneSize)
         let _lodColoring = ResetMod.Create(__initial.lodColoring)
+        let _drawOrientationCube = ResetMod.Create(__initial.drawOrientationCube)
         
         member x.nearPlane = _nearPlane
         member x.farPlane = _farPlane
@@ -703,6 +741,7 @@ module Mutable =
         member x.arrowThickness = _arrowThickness
         member x.dnsPlaneSize = _dnsPlaneSize
         member x.lodColoring = _lodColoring :> IMod<_>
+        member x.drawOrientationCube = _drawOrientationCube :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.ViewConfigModel) =
@@ -716,6 +755,7 @@ module Mutable =
                 Aardvark.UI.Mutable.MNumericInput.Update(_arrowThickness, v.arrowThickness)
                 Aardvark.UI.Mutable.MNumericInput.Update(_dnsPlaneSize, v.dnsPlaneSize)
                 ResetMod.Update(_lodColoring,v.lodColoring)
+                ResetMod.Update(_drawOrientationCube,v.drawOrientationCube)
                 
         
         static member Create(__initial : PRo3D.ViewConfigModel) : MViewConfigModel = MViewConfigModel(__initial)
@@ -773,4 +813,10 @@ module Mutable =
                     override x.Get(r) = r.lodColoring
                     override x.Set(r,v) = { r with lodColoring = v }
                     override x.Update(r,f) = { r with lodColoring = f r.lodColoring }
+                }
+            let drawOrientationCube =
+                { new Lens<PRo3D.ViewConfigModel, System.Boolean>() with
+                    override x.Get(r) = r.drawOrientationCube
+                    override x.Set(r,v) = { r with drawOrientationCube = v }
+                    override x.Update(r,f) = { r with drawOrientationCube = f r.drawOrientationCube }
                 }

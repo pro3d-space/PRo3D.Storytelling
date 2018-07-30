@@ -25,6 +25,7 @@ module ConfigProperties =
         //| SetMinDipAngle            of Numeric.Action
         //| SetMaxDipAngle            of Numeric.Action
         | ToggleLodColors
+        | ToggleOrientationCube     
         
 
     let update (model : ViewConfigModel) (act : Action) =
@@ -47,6 +48,7 @@ module ConfigProperties =
             //    { model with maxDipAngle = Numeric.update model.maxDipAngle s }
             | ToggleLodColors ->
                 { model with lodColoring = not model.lodColoring}
+            | ToggleOrientationCube  -> {model with drawOrientationCube = not model.drawOrientationCube}
            
 
     let view (model : MViewConfigModel) =    
@@ -61,6 +63,7 @@ module ConfigProperties =
                 //Html.row "Min Dipping Angle:"       [Numeric.view' [InputBox] model.minDipAngle           |> UI.map SetMinDipAngle ]
                 //Html.row "Max Dipping Angle:"       [Numeric.view' [InputBox] model.maxDipAngle           |> UI.map SetMaxDipAngle ]
                 Html.row "Lod colors:"              [Html.SemUi.toggleBox model.lodColoring ToggleLodColors]
+                Html.row "Orientation Cube: "       [Html.SemUi.toggleBox model.drawOrientationCube ToggleOrientationCube]
             ]
         )
 
