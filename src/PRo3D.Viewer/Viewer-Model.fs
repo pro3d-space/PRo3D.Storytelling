@@ -142,7 +142,7 @@ module Viewer =
                   config {
                       content (
                         vertical 0.6 [
-                          element { id "topMenu1"; title "Menu"; weight 0.08 }
+                         // element { id "topMenu1"; title "Menu"; weight 0.03 }
                           horizontal 0.5 [
                             
                             //element {id "sidebar"; title "Sidebar"; weight 0.3}

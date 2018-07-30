@@ -115,8 +115,9 @@
     <Compile Include="LensConfigs.fs" />
     <Compile Include="AnnotationGroupsImporter.fs" />
     <Compile Include="SurfaceTrafoImporter.fs" />
-    <Compile Include="Viewer-Utils.fs" />
-    <Compile Include="Viewer.fs" />
+    <Compile Include="Viewer\Viewer-Utils.fs" />
+    <Compile Include="Viewer\ViewerGUI.fs" />
+    <Compile Include="Viewer\Viewer.fs" />
     <Compile Include="RemoteControlModel.fs" />
     <Compile Include="RemoteControlApp.fs" />
     <Compile Include="Program.fs" />
