@@ -207,7 +207,7 @@ module FalseColorLegendApp =
                 let offset = sprintf "%f%%" (off * 100.0f)
                 let color = sprintf "stop-color:rgb(%i,%i,%i);stop.opacity:1" col.R col.G col.B
                 //printfn "offset : %s  style : %s" offset color
-                Svg.stop ["offset" ==> offset; style color]
+                Svg.stop ["offset" => offset; style color]
     
         let createFalseColorLegendBasics (falseColor : MFalseColorsModel) (boxSize : V2d) =
             alist { 
@@ -244,34 +244,34 @@ module FalseColorLegendApp =
                         yield Svg.defs [][
                             onBoot "$('#__ID__').attr('id','falseColorLegend')" (
                                 Incremental.Svg.linearGradient 
-                                    (AttributeMap.ofList [  "x1" ==> "0%"; "y1" ==> "0%"; 
-                                                            "x2" ==> "0%"; "y2" ==> "100%"; ]) // x1 = x2 => vertical Gradient
+                                    (AttributeMap.ofList [  "x1" => "0%"; "y1" => "0%"; 
+                                                            "x2" => "0%"; "y2" => "100%"; ]) // x1 = x2 => vertical Gradient
                                     svgstopList
                             )]
                         
-                        yield Svg.rect ["fill"          ==> "#EEEEEE";
-                                        "width"         ==> "42px";
-                                        "height"        ==> "95%"; //95%
-                                        "x"             ==> "8px";    
-                                        "y"             ==> "1.75%";
-                                        "rx"            ==> "5";       
-                                        "ry"            ==> "5";
-                                        "stroke"        ==> "black";
-                                        "stroke-width"  ==> "1px";
-                                        "opacity"       ==> "0.5";
+                        yield Svg.rect ["fill"          => "#EEEEEE";
+                                        "width"         => "42px";
+                                        "height"        => "95%"; //95%
+                                        "x"             => "8px";    
+                                        "y"             => "1.75%";
+                                        "rx"            => "5";       
+                                        "ry"            => "5";
+                                        "stroke"        => "black";
+                                        "stroke-width"  => "1px";
+                                        "opacity"       => "0.5";
                                         ]
 
 
                         // SVG-RECT applies previously defined gradient (by #id)
-                        yield Svg.rect ["style"         ==> "fill:url(#falseColorLegend)";
-                                        "width"         ==> "10px";  
-                                        "height"        ==> "95%"//95%
-                                        "x"             ==> "12px";      
-                                        "y"             ==> "2.5%"; 
-                                        "stroke"        ==> "white";
-                                        "stroke-width"  ==> "1px";
-                                        "rx"            ==> "3";
-                                        "ry"            ==> "3";
+                        yield Svg.rect ["style"         => "fill:url(#falseColorLegend)";
+                                        "width"         => "10px";  
+                                        "height"        => "95%"//95%
+                                        "x"             => "12px";      
+                                        "y"             => "2.5%"; 
+                                        "stroke"        => "white";
+                                        "stroke-width"  => "1px";
+                                        "rx"            => "3";
+                                        "ry"            => "3";
                                         ]
 
                         let labelInterval = range / (float numOfLabels)
@@ -299,7 +299,7 @@ module FalseColorLegendApp =
                             let toPercent value = sprintf ("%f") value + "%"
                             let label = sprintf "%.2f" output
                       
-                            yield Svg.text ([ "x" ==> "25px"; "y" ==> toPercent (a * 100.0f); "text-anchor" ==> "left"; "font-size" ==> "10"; "fill" ==> "#ffffff"]) label
+                            yield Svg.text ([ "x" => "25px"; "y" => toPercent (a * 100.0f); "text-anchor" => "left"; "font-size" => "10"; "fill" => "#ffffff"]) label
                 }
 
         let createColorLegendDnS (falseColorValues : MFalseColorsModel) (boxSize : V2d) = 
@@ -307,12 +307,12 @@ module FalseColorLegendApp =
          
             let attr = 
               AttributeMap.ofList[ 
-                "display"               ==> "block"; 
-                "width"                 ==> "55px"; 
-                "height"                ==> "75%"; //100%
-                "preserveAspectRatio"   ==> "xMidYMid meet"; 
-                "viewBox"               ==> "0 0 5% 100%" 
-                "style"                 ==> "position:absolute; left: 0%; top: 25%"
+                "display"               => "block"; 
+                "width"                 => "55px"; 
+                "height"                => "75%"; //100%
+                "preserveAspectRatio"   => "xMidYMid meet"; 
+                "viewBox"               => "0 0 5% 100%" 
+                "style"                 => "position:absolute; left: 0%; top: 25%"
               ] // "0 0 5% 100%";
 
             Incremental.Svg.svg attr falseColorSvg

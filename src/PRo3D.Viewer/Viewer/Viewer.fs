@@ -1159,12 +1159,12 @@ module ViewerApp =
         let scalarsColorLegend =
             let attr = 
               AttributeMap.ofList[ 
-                "display"               ==> "block"; 
-                "width"                 ==> "55px"; 
-                "height"                ==> "75%"; //100%
-                "preserveAspectRatio"   ==> "xMidYMid meet"; 
-                "viewBox"               ==> "0 0 5% 100%" 
-                "style"                 ==> "position:absolute; left: 65%; top: 25%"
+                "display"               => "block"; 
+                "width"                 => "55px"; 
+                "height"                => "75%"; //100%
+                "preserveAspectRatio"   => "xMidYMid meet"; 
+              //  "viewBox"               => "0 0 5% 100%" 
+                "style"                 => "position:absolute; left: 65%; top: 25%"
               ] // "0 0 5% 100%";
             Incremental.Svg.svg attr (SurfaceApp.showColorLegend m.scene.surfacesModel)                
 
@@ -1471,10 +1471,13 @@ module ViewerApp =
                                 //sidemenu
                                 topMenu1
                                 //let dc = 
-                                m.scene.dockConfig |> Mod.force |> Mod.constant
-                                  |> docking [                                     
-                                     style "width:100%;height:100%; padding:30px; background:#F00"
-                                     onLayoutChanged UpdateDockConfig ]
+                                div[clazz "dockingMainDings"] [
+                                  m.scene.dockConfig |> Mod.force |> Mod.constant
+                                    |> docking [                
+                                       
+                                       style "width:100%; height:100%; background:#F00"
+                                       onLayoutChanged UpdateDockConfig ]
+                                ]
                             ]
                         )
                     | _ -> body [] []
