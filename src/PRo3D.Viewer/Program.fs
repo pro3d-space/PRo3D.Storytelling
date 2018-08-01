@@ -52,6 +52,8 @@ type Result =
       result : string;
    }
 
+type EmbeddedRessource = EmbeddedRessource
+
 type License = {
   key         : string
   userName    : string
@@ -106,8 +108,8 @@ let checkLicense () =
 
 [<EntryPoint;STAThread>]
 let main argv = 
-    Xilium.CefGlue.ChromiumUtilities.unpackCef()
-    Chromium.init argv
+    //Xilium.CefGlue.ChromiumUtilities.unpackCef()
+    //Chromium.init argv
 
     Ag.initialize()
     Aardvark.Init()
@@ -171,6 +173,7 @@ let main argv =
     WebPart.startServer 4321 [
         MutableApp.toWebPart' runtime false mainApp
         path "/websocket" >=> handShake ws
+        Reflection.assemblyWebPart typeof<EmbeddedRessource>.Assembly
        // prefix "/instrument" >=> MutableApp.toWebPart runtime instrumentApp
         Suave.Files.browseHome
     ]

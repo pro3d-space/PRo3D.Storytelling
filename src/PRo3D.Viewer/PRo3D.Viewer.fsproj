@@ -115,16 +115,15 @@
     <Compile Include="LensConfigs.fs" />
     <Compile Include="AnnotationGroupsImporter.fs" />
     <Compile Include="SurfaceTrafoImporter.fs" />
-    <Compile Include="Viewer-Utils.fs" />
-    <Compile Include="Viewer.fs" />
+    <Compile Include="Viewer\Viewer-Utils.fs" />
+    <Compile Include="Viewer\ViewerGUI.fs" />
+    <Compile Include="Viewer\Viewer.fs" />
     <Compile Include="RemoteControlModel.fs" />
     <Compile Include="RemoteControlApp.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />
-    <Content Include="semui-overrides.css">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    <EmbeddedResource Include="ressources\semui-overrides.css" />
     <Content Include="jscolor.min.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
