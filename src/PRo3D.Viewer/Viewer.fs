@@ -877,7 +877,7 @@ module ViewerApp =
             //    |> Sg.map DnSColorLegendMessage
 
             //controller, exploreCenter
-            [annos; exploreCenter; refSystem; alignment; viewPlans; orientationCube] |> Sg.ofList // orSystem; ; objects
+            [annos; exploreCenter; refSystem; alignment; viewPlans; orientationCube] |> Sg.ofList // orSystem; ; objects 
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          

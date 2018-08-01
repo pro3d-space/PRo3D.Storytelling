@@ -641,7 +641,7 @@ module DrawingApp =
                //|> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
                //|> Sg.uniform "Size" radius
                |> Sg.shader {
-                   //do! Aardvark.Opc.Shader.screenSpaceScale
+                   //do! Shader.screenSpaceScale
                    do! Shader.stableTrafo
                    do! DefaultSurfaces.vertexColor
                    do! DefaultSurfaces.simpleLighting
@@ -674,7 +674,7 @@ module DrawingApp =
                 dnsPlaneSize    : IMod<float>
             }
 
-        let drawDns (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel)=                         
+        let drawDns (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =                         
           aset {                            
             let! dns = anno.dnsResults 
             match dns with
@@ -695,8 +695,6 @@ module DrawingApp =
                           | Some k -> k.length |> Mod.map(fun y -> (Math.Pow(y,1.0/3.0)) * size)
                           | None -> Mod.constant 1.0))
                           
-                //let screenSpaceScale = Sg.computeInvariantScale view conf.nearPlane center scale conf.hfov
-
                 let discRadius = scale //Mod.map2 (*) scale screenSpaceScale
                 let posTrafo = center |> Mod.map Trafo3d.Translation
 
@@ -707,26 +705,28 @@ module DrawingApp =
                 yield discISg color discRadius (discRadius |> Mod.map(fun d -> d * 0.01)) discTrafo
 
                 let lineLength = conf.arrowLength //discRadius |> Mod.map((*) 1.5)
+                let size = Sg.computeInvariantScale cam conf.nearPlane center lineLength (Mod.constant 60.0)
                 
-                let coneHeight = lineLength |> Mod.map((*) 0.2)
+                let coneHeight = size |> Mod.map((*) 0.2) //lineLength
                 let coneRadius = coneHeight |> Mod.map((*) 0.3)
 
                 // dip arrow       
 
-                let! lineLength' = lineLength
+                //let! lineLength' = lineLength
                 let! center'     = center
+                let! size'       = size
 
                 let! dip = x.dipDirection
                 let dipLine = 
                   alist {
                       yield center'
-                      yield center' + dip.Normalized * lineLength'
+                      yield center' + dip.Normalized * size' //lineLength'
                   }
 
                 yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key  
 
                 let coneTrafo = 
-                  lineLength |>
+                  size |>
                     Mod.map(fun s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(center' + dip.Normalized * s))
 
                 yield coneISg color coneRadius coneHeight coneTrafo
@@ -735,8 +735,8 @@ module DrawingApp =
                 let! strike = x.strikeDirection
                 let strikeLine1 =
                   alist {                                                                
-                      yield center' - strike.Normalized * lineLength'
-                      yield center' + strike.Normalized * lineLength'
+                      yield center' - strike.Normalized * size' //lineLength'
+                      yield center' + strike.Normalized * size' //lineLength'
                   }                                            
 
                 yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key
@@ -815,8 +815,8 @@ module DrawingApp =
                 Sg.set sgs 
             ] |> Sg.onOff anno.visible
 
-        let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) =
-           anno.showDns |> optional (drawDns anno conf cl) |> Sg.set
+        let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =
+           anno.showDns |> optional (drawDns anno conf cl cam) |> Sg.set
         
         let toAnnotationOpt = 
             fun y -> 
@@ -857,7 +857,7 @@ module DrawingApp =
                 drawWorkingAnnotation model.working
               ]
 
-            let depthTest = annoSet |> ASet.map(fun (_,a) -> finishedAnnotationDiscs a config model.colorLegend) |> Sg.set
+            let depthTest = annoSet |> ASet.map(fun (_,a) -> finishedAnnotationDiscs a config model.colorLegend view) |> Sg.set
 
             (overlay, depthTest)
             
