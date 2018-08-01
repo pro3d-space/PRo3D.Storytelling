@@ -21,7 +21,7 @@
 }
 
 .dockingMainDings {
-  height: calc(100% - 51px);  /*menu size*/
+  height: calc(100% - 40px);  /*menu size*/
 } 
 
 div.title {
