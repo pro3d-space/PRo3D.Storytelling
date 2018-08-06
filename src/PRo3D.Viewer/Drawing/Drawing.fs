@@ -638,10 +638,10 @@ module DrawingApp =
         let coneISg color radius height trafo =  
             Sg.cone 30 color radius height
                |> Sg.noEvents
-               //|> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-               //|> Sg.uniform "Size" radius
+               |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
+               |> Sg.uniform "Size" ( radius |> Mod.map(fun x -> x * 100.0))
                |> Sg.shader {
-                   //do! Shader.screenSpaceScale
+                   do! Shader.screenSpaceScale
                    do! Shader.stableTrafo
                    do! DefaultSurfaces.vertexColor
                    do! DefaultSurfaces.simpleLighting
@@ -707,39 +707,44 @@ module DrawingApp =
                 let lineLength = conf.arrowLength //discRadius |> Mod.map((*) 1.5)
                 let size = Sg.computeInvariantScale cam conf.nearPlane center lineLength (Mod.constant 60.0)
                 
-                let coneHeight = size |> Mod.map((*) 0.2) //lineLength
+                let coneHeight = lineLength |> Mod.map((*) 0.2) //lineLength
                 let coneRadius = coneHeight |> Mod.map((*) 0.3)
 
                 // dip arrow       
 
-                //let! lineLength' = lineLength
+                let! lineLength' = lineLength
                 let! center'     = center
-                let! size'       = size
+                //let! size'       = size
 
                 let! dip = x.dipDirection
                 let dipLine = 
                   alist {
                       yield center'
-                      yield center' + dip.Normalized * size' //lineLength'
+                      yield center' + dip.Normalized * lineLength'
                   }
 
+                let p0 = center' + dip.Normalized * lineLength'
+
                 yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key  
+                //yield Sg.scaledLines dipLine color conf.arrowThickness posTrafo anno.key
 
                 let coneTrafo = 
-                  size |>
+                  lineLength |>
                     Mod.map(fun s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(center' + dip.Normalized * s))
 
                 yield coneISg color coneRadius coneHeight coneTrafo
+                //yield Sg.scaledArrows dipLine p0 color conf.arrowThickness posTrafo dip coneRadius coneHeight coneTrafo cam
 
                 //strikes lines
                 let! strike = x.strikeDirection
                 let strikeLine1 =
                   alist {                                                                
-                      yield center' - strike.Normalized * size' //lineLength'
-                      yield center' + strike.Normalized * size' //lineLength'
+                      yield center' - strike.Normalized * lineLength'
+                      yield center' + strike.Normalized * lineLength'
                   }                                            
 
-                yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key
+                //yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key
+                yield Sg.scaledLines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key
               | None -> ()            
           } |> Sg.set
             

@@ -176,14 +176,13 @@ module ViewerApp =
       }
 
     let rec getAllDockElements (dnc : DockNodeConfig) : (list<DockElement>) = 
-        let mutable ml = list.Empty
         match dnc with
             | DockNodeConfig.Vertical (weight,children) -> let test = children |> List.map(fun x -> getAllDockElements x )
-                                                           test |> List.concat |> List.append ml  
+                                                           test |> List.concat  
             | DockNodeConfig.Horizontal (weight,children) -> let test = children |> List.map(fun x -> getAllDockElements x )
-                                                             test |> List.concat |> List.append ml
-            | DockNodeConfig.Stack (weight,activeId,children) -> List.append ml children
-            | DockNodeConfig.Element element ->  List.append ml [element]
+                                                             test |> List.concat 
+            | DockNodeConfig.Stack (weight,activeId,children) -> children 
+            | DockNodeConfig.Element element -> [element] 
     
     let updateClosedPages (m : Model) (dncUpdated : DockNodeConfig) =
         let de = getAllDockElements m.scene.dockConfig.content
@@ -192,14 +191,20 @@ module ViewerApp =
         // diff contains all changed elements (not only the deleted)
         match diff with
             | [] -> m.scene.closedPages
-            | _ -> match (deUpdated |> List.filter(fun x -> x.id = diff.[0].id)) with
-                    | [] -> List.append m.scene.closedPages diff
-                    | _ -> m.scene.closedPages
+            | _ -> let mutable del = list.Empty
+                   for d in diff do
+                        let t = deUpdated |> List.filter(fun x -> x.id = d.id)
+                        if t.IsEmpty then
+                           del <- del @ [d]
+                        else
+                           del <- del 
+                   List.append m.scene.closedPages del 
+                   
 
     let addDockElement (dnc : DockNodeConfig) (de:DockElement) = 
         match dnc with
             | DockNodeConfig.Vertical (weight,children) -> let add = List.append children [(Stack(weight, None, [de]))]
-                                                           Vertical(weight,add)
+                                                           Horizontal(weight,add)
             | DockNodeConfig.Horizontal (weight,children) -> let add = List.append children [(Stack(weight, None, [de]))]
                                                              Horizontal(weight,add) 
             | DockNodeConfig.Stack (weight,activeId,children) -> Stack(weight, activeId, List.append [de] children)
@@ -779,7 +784,12 @@ module ViewerApp =
         let att = 
             AttributeMap.unionMany [
                 renderControlAttributes m.scene.navigation
-                [attribute "style" "width:100%; height: 100%; float:left"; attribute "data-samples" "1" ] |> AttributeMap.ofList
+                [attribute "style" "width:100%; height: 100%; float:left"
+                 attribute "data-samples" "1"
+                 attribute "useMapping" "true"
+                 attribute "showFPS" "true"
+                 attribute "data-renderalways" "true"
+                ] |> AttributeMap.ofList
                 AttributeMap.ofList [
                     onKeyDown (KeyDown)
                     onKeyUp (KeyUp)
@@ -1126,7 +1136,13 @@ module ViewerApp =
                 Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
              ]                        
              Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
-             choosePlanet m
+
+             Html.Layout.horizontal [
+               Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
+               Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
+             ]
+
+             //choosePlanet m
         ] 
 
         let viewTabs (tab:IMod<TabMenu>) = 
@@ -1253,9 +1269,9 @@ module ViewerApp =
         
         //let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "./semui-overrides.css" }
         let myCss = [
-          { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.9/semantic.min.css" }
+          { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
           { kind = Stylesheet;  name = "semui-overrides"; url = "semui-overrides.css" }
-          { kind = Script;      name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.9/semantic.min.js" }
+          { kind = Script;      name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
         ]
 
         let recentScenes =
@@ -1282,120 +1298,11 @@ module ViewerApp =
         let icmds    = ViewerUtils.renderCommands AList.empty Sg.empty Sg.empty m //m.scene.surfacesModel.sgGrouped
         let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
         let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
-        
-        let scenemenu = 
-          div [clazz "menu-bar"] [
-            // menu
-            div [ clazz "ui top attached menu"; style "z-index: 10000"] [
-              onBoot "$('#__ID__').dropdown('on', 'hover');" (
-                div [ clazz "ui dropdown item" ] [
-                  i [clazz "large sidebar icon"][] 
-                  
-                  div [ clazz "ui inverted menu" ] [
-                  
-                      div [ clazz "ui dropdown item"] [
-                          text "Scene"
-                          i [clazz "dropdown icon"][] 
-                          div [ clazz "menu"] [
-                              div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
-                                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene'}]}));")][
-                                    text "Save"
-                              ]
-                              div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveAs;
-                                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({properties: []}));") ][
-                                    text "Save as..."
-                              ]
-                              div [ clazz "ui inverted item"; Dialogs.onChooseFiles OpenScene;
-                                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));")][
-                                    text "Open"
-                              ]
-                              div [ clazz "ui inverted item"; onMouseClick (fun _ -> NewScene)][
-                                    text "New"
-                              ]
-                              div[ clazz "ui inverted item" ] [
-                                  onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
-                                      text "Recent"
-                                  )
-                  
-                                  div [clazz "ui flowing popup bottom left transition hidden"] [
-                                      Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
-                                          aset {
-                                              for (_,s) in (m.recent.recentScenes |> AMap.toASet) do
-                                                   yield a [clazz "item inverted";
-                                                            onClick (fun _ -> LoadScene (s.path |> Mod.force))] [
-                                                      span [style "color:black"] [Incremental.text s.name]
-                                                   ]
-                                          } |> AList.ofASet
-                                      )
-                                  ]
-                              ]
-                          ]
-                      ]
-                  
-                      div [ clazz "ui dropdown item"] [
-                          text "Import Surface"
-                          i [clazz "dropdown icon"][] 
-                          div [ clazz "menu"] [
-                              div [ clazz "ui inverted item"; 
-                                Dialogs.onChooseFiles ImportSurface;
-                                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-                                text "OPC"
-                              ]
-                              div [ clazz "ui inverted item"; 
-                                Dialogs.onChooseFiles ImportObject;
-                                clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
-                                text "OBJ"
-                              ]
-                          ]
-                      ]
-
-                      div [ clazz "ui dropdown item"] [
-                          text "Import"
-                          i [clazz "dropdown icon"][] 
-                          div [ clazz "menu"] [
-                              div [ clazz "ui inverted item";
-                                  Dialogs.onChooseFiles ImportAnnotationGroups;
-                                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
-                                  text "Annotations Groups"
-                              ]
-                              div [ clazz "ui inverted item";
-                                  Dialogs.onChooseFiles ImportSurfaceTrafo;
-                                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
-                                  text "Surface Trafos"
-                              ]
-                          ]
-                      ]
-                  
-                      DrawingApp.UI.annotationMenu  |> UI.map DrawingMessage;
-                      
-                      div[ clazz "ui inverted item" ] [
-                          onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
-                              text "Closed Pages"
-                          )
-                  
-                          div [clazz "ui flowing popup bottom left transition hidden"] [
-                              Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
-                                  aset {
-                                      let! closedP = m.scene.closedPages
-                                      for cp in closedP do
-                                           yield a [clazz "item inverted";
-                                                    onClick (fun _ -> AddPage cp)] [
-                                              span [style "color:black"] [Incremental.text (cp.id |> Mod.constant)]
-                                           ]
-                                  } |> AList.ofASet
-                              )
-                          ]
-                      ]
-                  ] 
-                ]
-              )
-            ]
-          ]
                        
         let topMenu1 =
-            div[clazz "ui menu"] [
-                yield 
-                    a [clazz "item blarg topmenu"] [ scenemenu ]
+            div[clazz "ui menu"; style "padding:0; margin:0; border:0"] [
+                yield Gui.TopMenu.menu m
+                    //a [clazz "item blarg topmenu"] [  ]
                 for t in topMenu do
                     yield div [clazz "item topmenu"] [t]
                 
@@ -1472,7 +1379,7 @@ module ViewerApp =
                                 topMenu1
                                 //let dc = 
                                 div[clazz "dockingMainDings"] [
-                                  m.scene.dockConfig |> Mod.force |> Mod.constant
+                                  m.scene.dockConfig //|> Mod.force |> Mod.constant
                                     |> docking [                
                                        
                                        style "width:100%; height:100%; background:#F00"
