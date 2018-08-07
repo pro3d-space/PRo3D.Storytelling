@@ -638,15 +638,18 @@ module DrawingApp =
         let coneISg color radius height trafo =  
             Sg.cone 30 color radius height
                |> Sg.noEvents
-               |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-               |> Sg.uniform "Size" ( radius |> Mod.map(fun x -> x * 100.0))
+               //|> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZW))
+               //|> Sg.uniform "Size" ( radius |> Mod.map(fun x -> x * 700.0))
+               //|> Sg.uniform "posTrafo" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward))
                |> Sg.shader {
-                   do! Shader.screenSpaceScale
+                   //do! PRo3D.OrientationCube.Shader.screenSpaceScaleTrafo
                    do! Shader.stableTrafo
                    do! DefaultSurfaces.vertexColor
                    do! DefaultSurfaces.simpleLighting
                }
                |> Sg.trafo(trafo) 
+               
+               
 
         //let brush (hovered : IMod<Trafo3d option>) = 
         //    let trafo =
@@ -725,8 +728,8 @@ module DrawingApp =
 
                 let p0 = center' + dip.Normalized * lineLength'
 
-                yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key  
-                //yield Sg.scaledLines dipLine color conf.arrowThickness posTrafo anno.key
+                //yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key  
+                yield Sg.scaledLines dipLine color conf.arrowThickness posTrafo anno.key
 
                 let coneTrafo = 
                   lineLength |>

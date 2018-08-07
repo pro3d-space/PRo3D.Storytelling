@@ -349,6 +349,7 @@ module Surface =
             fillMode        = FillMode.Fill
             cullMode        = CullMode.None
             isVisible       = true
+            isActive        = true
             relativePaths   = false
             quality         = Init.quality
             priority        = Init.priority
@@ -480,7 +481,13 @@ module Surface =
 
     let doKdTreeIntersection (m : SurfaceModel) (t : Trafo3d) (r : FastRay3d) cache = 
         let mutable cache = cache
-        let sgSurfaces = m.sgSurfaces 
+        let activeSgSurfaces = m.surfaces.flat
+                                |> HMap.filter( fun _ s -> s.active )
+                                |> HMap.map( fun sid s -> 
+                                    (m.sgSurfaces |> HMap.filter( fun sgid sg -> sid = sgid)))
+                                |> HMap.map( fun sid s -> s.Item sid)
+
+        let sgSurfaces = activeSgSurfaces 
                             |> HMap.filter( fun _ sg -> sgSurface.isSgOPC sg )
                             |> HMap.map( fun _ sg -> sgSurface.toSgOPC sg )
         sgSurfaces

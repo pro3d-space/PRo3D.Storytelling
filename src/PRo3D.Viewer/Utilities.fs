@@ -346,30 +346,43 @@ module Sg =
         let line = edges
                     |> Sg.lines color
                     |> Sg.noEvents
-                    //|> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-                    //|> Sg.uniform "Size" size
-                    //|> Sg.shader {
-                    //     //do! Shader.screenSpaceScale
-                    //     do! Shader.stableTrafo
-                    //     do! DefaultSurfaces.vertexColor
-                    //     do! Shader.thickLine    
-                    // }                               
+                    |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
+                    |> Sg.uniform "Size" size
+                    |> Sg.shader {
+                         //do! Shader.screenSpaceScale
+                         do! Shader.stableTrafo
+                         do! DefaultSurfaces.vertexColor
+                         do! Shader.thickLine    
+                     }                               
                      |> Sg.trafo trafo
                      |> Sg.uniform "LineWidth" width
                      |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
-        //let cone = 
-        //Sg.cone 30 color coneRadius coneHight
-        //            |> Sg.noEvents
-        //            |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-        //            |> Sg.uniform "Size" (coneRadius |> Mod.map(fun x -> x * 100.0))
-        //            |> Sg.shader {
-        //                //do! Shader.screenSpaceScale
-        //                do! Shader.stableTrafo
-        //                do! DefaultSurfaces.vertexColor
-        //                do! DefaultSurfaces.simpleLighting
-        //            }
-        //            |> Sg.trafo(coneTrafo) 
 
+        let pos = 
+            Sg.sphere 2 color (Mod.constant 1.0)
+            |> Sg.noEvents
+            |> Sg.trafo(cTrafo )
+            |> Sg.uniform "Size" size
+            |> Sg.uniform "WorldPos" (cTrafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
+            |> Sg.effect [
+                    toEffect <| Shader.screenSpaceScale
+                    toEffect <| Shader.stableTrafo
+                ]
+        let test = pos
+
+        Sg.cone 30 color coneRadius coneHight
+                        |> Sg.noEvents
+                        |> Sg.trafo(cTrafo) 
+                        |> Sg.uniform "WorldPos" (cTrafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
+                        |> Sg.uniform "Size" (coneRadius |> Mod.map(fun x -> x * 100.0))
+                        |> Sg.shader {
+                            do! Shader.screenSpaceScale
+                            //do! Shader.stableTrafo
+                            do! DefaultSurfaces.vertexColor
+                            do! DefaultSurfaces.simpleLighting
+                        }
+                        
+        
         //aset {
         //    yield line; 
         //    yield cone}
@@ -386,18 +399,23 @@ module Sg =
             //|> Sg.effect [
             //    Shader.screenSpaceScale |> toEffect
             //    ]
-        scaledArrows1 color edges 30 coneRadius coneHight pos
-            |> ASet.ofList
-            |> Sg.set
-            |> Sg.noEvents
-            |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-            |> Sg.uniform "Size" size
-            |> Sg.shader {
-                        do! Shader.screenSpaceScale
-                        do! Shader.stableTrafo
-                        do! DefaultSurfaces.vertexColor
-                        //do! DefaultSurfaces.simpleLighting
-                    }
+
+        
+
+
+
+        //scaledArrows1 color edges 30 coneRadius coneHight pos
+        //    |> ASet.ofList
+        //    |> Sg.set
+        //    |> Sg.noEvents
+        //    |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
+        //    |> Sg.uniform "Size" size
+        //    |> Sg.shader {
+        //                do! Shader.screenSpaceScale
+        //                do! Shader.stableTrafo
+        //                do! DefaultSurfaces.vertexColor
+        //                //do! DefaultSurfaces.simpleLighting
+        //            }
         
     
 
@@ -563,6 +581,10 @@ module Lenses =
 module Shader =
   open FShade
   open Aardvark.SceneGraph.Opc.Shader
+  open Aardvark.SceneGraph
+  open Aardvark.Rendering
+  open Aardvark.UI
+  open Aardvark.UI.Trafos
 
   let private colormap =
         sampler2d {
@@ -699,6 +721,9 @@ module Shader =
               return v.c
       }
 
+ 
+
+  
   [<ReflectedDefinition>]
   let myTrunc (value : float) =
     if value < 0.0 then
