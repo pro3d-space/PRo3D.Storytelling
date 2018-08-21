@@ -56,11 +56,11 @@ module Gui =
       
       let lon = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.longitude).ToString("0.00")))
       let lat = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.latitude).ToString("0.00")))
-      let alt = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.altitude).ToString("0.00")))             
+      let alt = spericalc |> Mod.map(fun x -> sprintf "%s m" ((x.altitude).ToString("0.00")))
       
       let style' = "color: white; font-family:Consolas;"
     
-      yield div [clazz "ui"; style "position: absolute; top: 45px; float:left" ] [
+      yield div [clazz "ui"; style "position: absolute; top: 15px; left: 15px; float:left" ] [
           //arrowOverlay
           yield table [] [
               tr[][

@@ -785,8 +785,8 @@ module ViewerApp =
             AttributeMap.unionMany [
                 renderControlAttributes m.scene.navigation
                 [attribute "style" "width:100%; height: 100%; float:left"
-                 attribute "data-samples" "1"
-                 attribute "useMapping" "true"
+                 attribute "data-samples" "8"
+                 attribute "useMapping" "false"
                  attribute "showFPS" "true"
                  attribute "data-renderalways" "true"
                 ] |> AttributeMap.ofList
