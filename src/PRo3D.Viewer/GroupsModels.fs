@@ -36,6 +36,12 @@ type Leaf =
           | Annotations a -> Leaf.Annotations { a with visible = v }
           | Surfaces    s -> Leaf.Surfaces    { s with isVisible = v }
           | Bookmarks   _ -> x
+
+       member x.active =
+        match x with
+          | Annotations a -> false
+          | Surfaces    s -> s.isActive
+          | Bookmarks   b -> false
                 
 [<DomainType>]
 type Node = {

@@ -22,6 +22,7 @@ module SurfaceProperties =
         | SetCullMode    of CullMode
         | SetName        of string
         | ToggleVisible 
+        | ToggleIsActive
         | SetQuality     of Numeric.Action
         | SetTriangleSize of Numeric.Action
         | SetPriority    of Numeric.Action
@@ -46,6 +47,8 @@ module SurfaceProperties =
                 { model with name = s }
             | ToggleVisible ->
                 { model with isVisible = not model.isVisible }
+            | ToggleIsActive ->
+                { model with isActive = not model.isActive }
             | SetTriangleSize a ->
                 { model with triangleSize = Numeric.update model.triangleSize a}
             | SetQuality a ->
@@ -93,6 +96,7 @@ module SurfaceProperties =
                // Html.row "Path:"        [Incremental.text (model.importPath |> Mod.map (fun x -> sprintf "%A" x ))]                
                 Html.row "Name:"        [Html.SemUi.textBox model.name SetName ]
                 Html.row "Visible:"     [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
+                Html.row "Active:"      [Html.SemUi.toggleBox model.isActive ToggleIsActive ]
                 Html.row "Priority:"    [Numeric.view' [NumericInputType.InputBox] model.priority |> UI.map SetPriority ]       
                 Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider]   model.quality  |> UI.map SetQuality ]
                 Html.row "AngleFilter:" [Numeric.view' [NumericInputType.InputBox]   model.triangleSize  |> UI.map SetTriangleSize ]

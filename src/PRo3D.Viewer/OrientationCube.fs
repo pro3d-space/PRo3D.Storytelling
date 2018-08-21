@@ -33,6 +33,27 @@ module Shader =
             let c = samplerAniso.Sample v.tc
             return {v with c = c}
         }
+
+    let screenSpaceScaleTrafo (v : Effects.Vertex) =
+        vertex {
+            let loc = uniform.CameraLocation
+            let hvp = float uniform.ViewportSize.X
+
+            //let mt = uniform?modelTrafo
+            let ct : M44d = uniform?posTrafo
+
+            let p    : V4d   = uniform?WorldPos
+            let size : float = uniform?Size
+
+            let t = ct*p
+            let dist = (V3d(t.X, t.Y, t.Z) - loc).Length      
+            let scale = dist * size / hvp
+            
+            return { 
+              v with
+                pos = V4d(v.pos.X * scale, v.pos.Y * scale, v.pos.Z * scale, v.pos.W)
+            }
+      }
         
 module Sg =
     

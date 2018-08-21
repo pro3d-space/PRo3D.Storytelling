@@ -204,6 +204,7 @@ module Mutable =
         let _fillMode = ResetMod.Create(__initial.fillMode)
         let _cullMode = ResetMod.Create(__initial.cullMode)
         let _isVisible = ResetMod.Create(__initial.isVisible)
+        let _isActive = ResetMod.Create(__initial.isActive)
         let _quality = Aardvark.UI.Mutable.MNumericInput.Create(__initial.quality)
         let _priority = Aardvark.UI.Mutable.MNumericInput.Create(__initial.priority)
         let _triangleSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.triangleSize)
@@ -225,6 +226,7 @@ module Mutable =
         member x.fillMode = _fillMode :> IMod<_>
         member x.cullMode = _cullMode :> IMod<_>
         member x.isVisible = _isVisible :> IMod<_>
+        member x.isActive = _isActive :> IMod<_>
         member x.quality = _quality
         member x.priority = _priority
         member x.triangleSize = _triangleSize
@@ -251,6 +253,7 @@ module Mutable =
                 ResetMod.Update(_fillMode,v.fillMode)
                 ResetMod.Update(_cullMode,v.cullMode)
                 ResetMod.Update(_isVisible,v.isVisible)
+                ResetMod.Update(_isActive,v.isActive)
                 Aardvark.UI.Mutable.MNumericInput.Update(_quality, v.quality)
                 Aardvark.UI.Mutable.MNumericInput.Update(_priority, v.priority)
                 Aardvark.UI.Mutable.MNumericInput.Update(_triangleSize, v.triangleSize)
@@ -331,6 +334,12 @@ module Mutable =
                     override x.Get(r) = r.isVisible
                     override x.Set(r,v) = { r with isVisible = v }
                     override x.Update(r,f) = { r with isVisible = f r.isVisible }
+                }
+            let isActive =
+                { new Lens<PRo3D.Surfaces.Surface, System.Boolean>() with
+                    override x.Get(r) = r.isActive
+                    override x.Set(r,v) = { r with isActive = v }
+                    override x.Update(r,f) = { r with isActive = f r.isActive }
                 }
             let quality =
                 { new Lens<PRo3D.Surfaces.Surface, Aardvark.UI.NumericInput>() with

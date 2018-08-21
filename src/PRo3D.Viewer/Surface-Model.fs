@@ -73,6 +73,7 @@ type Surface = {
     fillMode      : FillMode
     cullMode      : CullMode
     isVisible     : bool
+    isActive      : bool
     quality       : NumericInput
     priority      : NumericInput
 
