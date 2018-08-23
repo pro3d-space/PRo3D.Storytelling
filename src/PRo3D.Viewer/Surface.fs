@@ -132,10 +132,8 @@ module Surface =
             let doc = new XmlDocument() in doc.Load path
             doc |> layers
     
-    module Files = 
-        open System.IO
-        open Aardvark.Prinziple
-        
+    module Discover = 
+
         /// <summary>
         /// checks if "path" is a valid opc folder containing "images", "patches", and patchhierarchy.xml
         /// </summary>
@@ -147,21 +145,40 @@ module Surface =
              File.Exists(patchPath + "\\patchhierarchy.xml")
 
         /// <summary>
+        /// checks if "path" is a valid surface folder
+        /// </summary>        
+        let isSurfaceFolder (path : string) =
+            Directory.GetDirectories(path) |> Seq.forall isOpcFolder
+
+        let discover (p : string -> bool) path : list<string> =
+          if Directory.Exists path then
+            Directory.EnumerateDirectories path                     
+              |> Seq.filter p            
+              |> Seq.toList
+          else List.empty
+
+        /// returns all valid surface folders in "path"   
+        let discoverSurfaces path = 
+          discover isSurfaceFolder path          
+
+        let discoverOpcs path = 
+          discover isOpcFolder path
+
+    module Files = 
+        open System.IO
+        open Aardvark.Prinziple
+        
+        /// <summary>
         /// should open zip and call isOPCFolder
         /// </summary>        
         let isZippedOpcFolder (path : string) = 
           File.Exists(Path.ChangeExtension(path, "zip"))
 
-        /// <summary>
-        /// checks if "path" is a valid surface folder
-        /// </summary>        
-        let isSurfaceFolder (path : string) =
-            Directory.GetDirectories(path) |> Seq.forall isOpcFolder
         
         let private retrieve (f :string -> string) (path : string) : list<string> =
             if path = String.Empty then failwith "encountered empty opc path"
 
-            if isOpcFolder path then
+            if Discover.isOpcFolder path then
                 [path.Replace(@"\", @"\\\\")]
             elif isZippedOpcFolder path then                
                 [path.Replace(@"\", @"\\\\").Replace(".zip", "")]
@@ -169,7 +186,7 @@ module Surface =
                 let opcDirs = 
                   Directory.GetDirectories(path)
                     |> Seq.map (fun a -> a.Replace(@"\", @"\\\\"))
-                    |> Seq.filter isOpcFolder
+                    |> Seq.filter Discover.isOpcFolder
                     |> Seq.map f
                     |> Seq.toList            
 
@@ -198,21 +215,7 @@ module Surface =
 
         let expandNamesToPaths (path : string) (names : List<string>) =
             names |> List.map(fun a -> (Path.combine [path; a]).Replace(@"\", @"\\\\"))
-
-        let discover (p : string -> bool) path : list<string> =
-          if Directory.Exists path then
-            Directory.EnumerateDirectories path                     
-              |> Seq.filter p            
-              |> Seq.toList
-          else List.empty
-
-        /// returns all valid surface folders in "path"   
-        let discoverSurfaces path = 
-          discover isSurfaceFolder path          
-
-        let discoverOpcs path = 
-          discover isOpcFolder path
-
+        
         let getSurfaceFolder (surface:PRo3D.Surfaces.Surface) (scenePath:option<string>) =
           if surface.relativePaths 
           then
@@ -230,7 +233,6 @@ module Surface =
               |_-> 
                 let p = surface.importPath
                 if Directory.Exists p then Some p else None
-
 
         /// strips away parts of a file path until the remaining depth is reached
         let relativePath (path : string) (remaining : int) = 
@@ -388,7 +390,7 @@ module Surface =
         let sghs =
             surfaces
                 |> PList.toList
-                |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.preTransform })
+                |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.preTransform; useCompressedTextures = false })
                 |> List.map (fun d -> Sg.createPlainSceneGraph runtime signature d true)
                 |> List.zip (surfaces |> PList.toList)
                 |> List.map(fun (surf, (sg, hierarchies, kdtree)) -> 
@@ -732,7 +734,7 @@ module Surface =
                 } |> AttributeMap.ofAMap
 
              yield div [clazz "item"; style infoc] [
-                 i [clazz "large cube middle aligned icon"; onClick multiSelect;style bgc][] 
+                 i [clazz "cube middle aligned icon"; onClick multiSelect;style bgc][] 
                  div [clazz "content"; style infoc] [
                      let desc = s.name
                      yield Incremental.div (AttributeMap.ofList [style infoc])(
@@ -801,8 +803,8 @@ module Surface =
                     yield onMouseClick (fun _ -> Action.GroupsMessage(Groups.ToggleExpand path))
                     let! selected = group.expanded
                     if selected 
-                    then yield clazz "icon large outline open folder"
-                    else yield clazz "icon large outline folder"
+                    then yield clazz "icon outline open folder"
+                    else yield clazz "icon outline folder"
                     yield style "overflow-y : visible"
                 } |> AttributeMap.ofAMap
             
@@ -861,6 +863,8 @@ module Surface =
     //        return (opt |> UI.map SurfacePropertiesMessage)
     //    }    
 
+   // let noSurfaceSelected = div[ style "font-style:italic"][ text "no surface selected" ]
+
     let lscToDom lsc isSome = 
         adaptive {
             match lsc with
@@ -884,7 +888,7 @@ module Surface =
                     let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
                                        
                     return SurfaceProperties.view x |> UI.map SurfacePropertiesMessage
-                | None -> return div[][] |> UI.map SurfacePropertiesMessage 
+                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map SurfacePropertiesMessage 
         }                          
         
     let surfaceGroupProperties (model:MSurfaceModel) =
@@ -903,7 +907,7 @@ module Surface =
                     let! surf = leaf 
                     let colorCorrection = match surf with | MSurfaces s -> s.colorCorrection | _ -> failwith "wrong type"
                     return ColorCorrectionProperties.view colorCorrection |> UI.map ColorCorrectionMessage
-                | None -> return div[][] |> UI.map ColorCorrectionMessage 
+                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ColorCorrectionMessage 
         }                          
 
     let viewColorLegendTools (model:MSurfaceModel) =
@@ -921,7 +925,7 @@ module Surface =
                         | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
                         | None -> return div[][] |> UI.map ScalarsColorLegendMessage 
                                   
-                | None -> return div[][] |> UI.map ScalarsColorLegendMessage 
+                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ScalarsColorLegendMessage 
         }                          
 
     let showColorLegend (model:MSurfaceModel) =
@@ -937,9 +941,9 @@ module Surface =
                     let! scalar = scalar
                     match scalar with
                         | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
-                        | None -> yield div [][]
+                        | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
                                   
-                | None -> yield div [][]
+                | None -> yield div[ style "font-style:italic"][ text "no surface selected" ]
         }  
 
 
@@ -951,7 +955,7 @@ module Surface =
             let! sel = sel
             match sel with
                 | Some x -> return (Groups.viewLeafButtons ts |> UI.map GroupsMessage)
-                | None -> return div[][]
+                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map GroupsMessage
         } 
 
     let surfacesGroupButtons (model:MSurfaceModel) = 
@@ -964,7 +968,7 @@ module Surface =
     let surfaceUI (model:MSurfaceModel) =
         let item2 = 
             model.surfaces.lastSelectedItem 
-                |> Mod.map (fun x -> 
+                |> Mod.bind (fun x -> 
                     match x with 
                         | SelectedItem.Group -> surfaceGroupProperties model
                         | _ -> viewSurfaceProperties model
@@ -977,13 +981,13 @@ module Surface =
                         | _ -> surfacesLeafButtonns model
                 )
         div[][                            
-            yield GuiEx.accordion "Surfaces" "Cubes" true [ 
-                //Groups.viewSelectionButtons |> UI.map GroupsMessage
-                viewSurfacesGroups model ]
+            yield GuiEx.accordion "Surfaces" "Cubes" true [ viewSurfacesGroups model ]
             yield GuiEx.accordion "Properties" "Content" true [
-                        Incremental.div AttributeMap.empty (alist{ let! item = item2
-                                                                   let! i = item
-                                                                   yield i})
+              Incremental.div AttributeMap.empty (
+                alist { 
+                  let! item = item2
+                  yield item}
+              )
             ]
             yield GuiEx.accordion "Actions" "Asterisk" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))

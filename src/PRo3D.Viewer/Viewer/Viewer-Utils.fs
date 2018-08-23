@@ -565,15 +565,15 @@ module ViewerUtils =
                         |> Sg.effect [
                             Shader.stableTrafo  |> toEffect //Shader.stableTrafo Shader.stableLight
                             DefaultSurfaces.diffuseTexture |> toEffect
-                            //Shader.selectionColor          |> toEffect       
+                            Shader.selectionColor          |> toEffect       
                             Shader.LoDColor                |> toEffect 
                             //PRo3D.Shader.falseColor        |> toEffect  
                             PRo3D.Shader.falseColorLegend2  |> toEffect 
-                            //PRo3D.Shader.mapContrast     |> toEffect
-                            //PRo3D.Shader.mapBrightness   |> toEffect
-                            //PRo3D.Shader.mapGamma        |> toEffect
-                            //PRo3D.Shader.grayscale       |> toEffect
-                            //PRo3D.Shader.addColor        |> toEffect
+                            PRo3D.Shader.mapContrast     |> toEffect
+                            PRo3D.Shader.mapBrightness   |> toEffect
+                            PRo3D.Shader.mapGamma        |> toEffect
+                            PRo3D.Shader.grayscale       |> toEffect
+                            PRo3D.Shader.addColor        |> toEffect
                             //Shader.triangleFilter          |> toEffect                            
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)

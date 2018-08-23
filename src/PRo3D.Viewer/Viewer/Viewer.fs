@@ -362,7 +362,7 @@ module ViewerApp =
                     | paths ->
                         let surfaces = 
                             paths 
-                                |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
+                                |> List.filter (fun x -> Discover.isSurfaceFolder x || Files.isZippedOpcFolder x)
                                 |> List.map (Surface.mk SurfaceType.SurfaceOPC)
                                 |> PList.ofList
 
@@ -775,26 +775,26 @@ module ViewerApp =
                 let! state = model.navigationMode
                 match state with
                     | NavigationMode.FreeFly -> 
-                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction m.frustum
+                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction
                     | NavigationMode.ArcBall -> 
-                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction m.frustum
+                        yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
 
         let att = 
             AttributeMap.unionMany [
                 renderControlAttributes m.scene.navigation
-                [attribute "style" "width:100%; height: 100%; float:left"
-                 attribute "data-samples" "8"
-                 attribute "useMapping" "false"
-                 attribute "showFPS" "true"
-                 attribute "data-renderalways" "true"
-                ] |> AttributeMap.ofList
+
                 AttributeMap.ofList [
-                    onKeyDown (KeyDown)
-                    onKeyUp (KeyUp)
-                    attribute "style" "width:100%; height: 100%; float:left"; ] 
-            ]
+                 attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
+                 //attribute "data-samples" "8"
+                 attribute "useMapping" "true"
+                 attribute "showFPS" "true"                  
+                 attribute "data-renderalways" "true" 
+                 onKeyDown (KeyDown)
+                 onKeyUp (KeyUp)                    
+                ] 
+            ]            
 
         let annotations, discs =
                 DrawingApp.Sg.view m.scene.config mdrawingConfig m.scene.navigation.camera.view m.drawing

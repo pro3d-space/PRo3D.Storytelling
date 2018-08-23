@@ -558,9 +558,9 @@ module DrawingApp =
                     yield onMouseClick (fun _ -> Action.GroupsMessage(Groups.ToggleExpand path))
                     let! expanded = group.expanded
                     if expanded then 
-                      yield clazz "icon large outline open folder"
+                      yield clazz "icon outline open folder"
                     else 
-                      yield clazz "icon large outline folder"
+                      yield clazz "icon outline folder"
                     yield style "overflow-y : visible"
                 } |> AttributeMap.ofAMap
             
