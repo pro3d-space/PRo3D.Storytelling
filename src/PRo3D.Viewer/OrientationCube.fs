@@ -71,15 +71,15 @@ module Sg =
             )
         
         let orthoTrafo =
-            let d = 5.0
-            let t = V3d((-d+1.0), -d+1.0, 0.0)
+            let d = 3.0
+            //let t = V3d((-d+1.0), -d+1.0, 0.0)
             let min = V3d(-d, -d, -d*2.0)
             let max = V3d(d, d, d*2.0)
             let fr = Frustum.ortho (Box3d(min, max))
             Mod.constant (Frustum.orthoTrafo fr)
         
         model
-        |> Sg.trafo (Mod.constant (Trafo3d.Scale(1.0,1.0,-1.0)))
+        |> Sg.trafo (Mod.constant (Trafo3d.Scale(0.5,0.5, -0.5)))
         |> Sg.trafo (Mod.constant (Trafo3d.RotationXInDegrees(90.0)))
         |> Sg.trafo ( camView |> Mod.map ( fun v ->  Trafo3d.RotateInto(V3d.OOI, v.Sky) ) )
         |> Sg.viewTrafo viewTrafo
@@ -112,11 +112,10 @@ module Sg =
         |> Sg.pass (RenderPass.after "cube" RenderPassOrder.Arbitrary RenderPass.main)
 
     let drawCube (draw:IMod<bool>) (camView : IMod<CameraView>) =
-         draw
-            |> Mod.map( fun x -> 
-                match x with
-                    | true -> loadModel "../../data/rotationcube/rotationcube.dae"
-                                |> orthoOrientation camView
-                    | false -> Sg.empty
-            )          
+      draw
+        |> Mod.map( fun x -> 
+            match x with
+            | true -> loadModel "../../data/rotationcube/rotationcube.dae" |> orthoOrientation camView
+            | false -> Sg.empty
+        )          
     

@@ -130,13 +130,16 @@ module Dialogs =
         onEvent "onsave" [] cb
 
     let onSaveFile1 (chosen : string -> 'msg) (path : Option<string>) =
-        let cb xs =
-            match path with
-                | Some p-> p |> chosen
-                | None ->match xs with
-                            | x::[] when x <> null -> x |> Aardvark.Service.Pickler.json.UnPickleOfString |> Aardvark.Service.PathUtils.ofUnixStyle |> chosen
-                            | _ -> String.Empty |> chosen // failwithf "onSaveFile: %A" xs
-        onEvent "onsave" [] cb
+      let cb xs =
+        match path with
+        | Some p-> p |> chosen
+        | None ->
+          match xs with
+          | x::[] when x <> null -> 
+            x |> Aardvark.Service.Pickler.json.UnPickleOfString |> Aardvark.Service.PathUtils.ofUnixStyle |> chosen
+          | _ -> 
+            String.Empty |> chosen
+      onEvent "onsave" [] cb
         
    
 

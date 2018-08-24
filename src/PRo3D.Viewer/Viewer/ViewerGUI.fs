@@ -25,6 +25,7 @@ open MBrace.FsPickler
 open System.IO
 
 open PRo3D
+open PRo3D.Groups
 open PRo3D.ReferenceSystem
 
 module Gui = 
@@ -120,7 +121,7 @@ module Gui =
         i [clazz "dropdown icon"][]
       
         div [ clazz "menu"] [
-            div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
+            div [ clazz "ui inverted item"; Dialogs.onSaveFile1 SaveScene (m.scene.scenePath |> Mod.force);
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene'}]}));")][
                   text "Save"
             ]
@@ -211,3 +212,157 @@ module Gui =
           )
         ]
       ]
+
+  module Annotations =
+    
+    let viewAnnotationProperties (model :MModel) =
+            let view = (fun leaf ->
+                match leaf with
+                  | MAnnotations ann -> AnnotationProperties.view ann
+                  | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
+            
+            model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
+               
+
+    let viewDipAndStrike (model:MModel) = 
+        let view = (fun leaf ->
+            match leaf with
+              | MAnnotations ann -> DipAndStrike.viewUI ann
+              | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
+
+        model.drawing.annotations |> Groups.viewSelected view DnSProperties    
+        
+    let viewDnSColorLegendUI (model:MModel) = 
+      model.drawing.colorLegend 
+        |> FalseColorLegendApp.viewDnSLegendProperties DnSColorLegendMessage 
+        |> Mod.constant
+
+
+    let annotationLeafButtonns' (model:MModel) = 
+        let ts = model.drawing.annotations.activeChild
+        let sel = model.drawing.annotations.singleSelectLeaf
+        adaptive {  
+            let! ts = ts
+            let! sel = sel
+            match sel with
+                | Some x -> return (Groups.viewLeafButtons ts |> UI.map AnnotationGroupsMessageViewer)
+                | None -> return div[style "font-style:italic"][ text "no annotation group selected" ]
+        }      
+        
+    let annotationLeafButtonns (model:MModel) =           
+      Mod.map2(fun ts sel -> 
+        match sel with
+         | Some _ -> (Groups.viewLeafButtons ts |> UI.map AnnotationGroupsMessageViewer)
+         | None -> div[style "font-style:italic"][ text "no annotation group selected" ]
+        ) model.drawing.annotations.activeChild model.drawing.annotations.singleSelectLeaf
+        
+    let annotationGroupProperties (model:MModel) =                            
+      Groups.viewUI model.drawing.annotations 
+        |> UI.map AnnotationGroupsMessageViewer 
+        |> Mod.constant
+    
+    let annotationGroupButtons (model:MModel) = 
+      model.drawing.annotations.activeGroup 
+        |> Mod.map (fun x -> Groups.viewGroupButtons x |> UI.map AnnotationGroupsMessageViewer)            
+        
+    let annotationUI (m : MModel) = 
+      let prop = 
+          m.drawing.annotations.lastSelectedItem
+              |> Mod.bind (fun x -> 
+                  match x with 
+                    | SelectedItem.Group -> annotationGroupProperties m
+                    | _ -> viewAnnotationProperties m 
+              )
+      let buttons = 
+          m.drawing.annotations.lastSelectedItem
+              |> Mod.bind (fun x -> 
+                  match x with 
+                    | SelectedItem.Group -> annotationGroupButtons m
+                    | _ -> annotationLeafButtonns m 
+              )
+      
+      div [][                
+          GuiEx.accordion "Annotations" "Write" true [
+              Groups.viewSelectionButtons |> UI.map AnnotationGroupsMessageViewer
+              DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
+          ]
+          GuiEx.accordion "Properties" "Content" true [
+              Incremental.div AttributeMap.empty (AList.ofModSingle prop)                                        
+          ]
+         
+          GuiEx.accordion "Actions" "Asterisk" true [
+              Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
+          ]     
+          
+          GuiEx.accordion "Dip&Strike" "Calculator" false [
+              Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))] 
+         
+          GuiEx.accordion "Dip&Strike ColorLegend" "paint brush" false [
+              Incremental.div AttributeMap.empty (AList.ofModSingle(viewDnSColorLegendUI m))] 
+          ]    
+
+  module Bookmarks =
+    let bookmarkGroupProperties (model:MModel) =                                       
+          Groups.viewUI model.scene.bookmarksModel.bookmarks 
+            |> UI.map BookmarkUIMessage 
+            |> Mod.constant
+            
+        
+                        
+    let viewBookmarkProperties (model:MModel) = 
+        let view = (fun leaf ->
+            match leaf with
+              | MBookmarks bm -> Bookmarks.UI.view bm
+              | _ -> div[style "font-style:italic"][ text "no bookmark selected" ])
+
+        model.scene.bookmarksModel.bookmarks |> Groups.viewSelected view BookmarkUIMessage
+
+    let bookmarksLeafButtonns (model:MModel) = 
+        let ts = model.scene.bookmarksModel.bookmarks.activeChild
+        let sel = model.scene.bookmarksModel.bookmarks.singleSelectLeaf
+        adaptive {  
+            let! ts = ts
+            let! sel = sel
+            match sel with
+                | Some _ -> return (Groups.viewLeafButtons ts |> UI.map BookmarkUIMessage)
+                | None -> return div[style "font-style:italic"][ text "no bookmark selected" ]            
+        } 
+    
+    let bookmarksGroupButtons (model:MModel) = 
+        let ts = model.scene.bookmarksModel.bookmarks.activeGroup
+        adaptive {  
+            let! ts = ts
+            return (Groups.viewGroupButtons ts |> UI.map BookmarkUIMessage)
+        } 
+    
+    let bookmarkUI (m:MModel) = 
+        let item2 = 
+            m.scene.bookmarksModel.bookmarks.lastSelectedItem 
+                |> Mod.map (fun x -> 
+                    match x with 
+                      | SelectedItem.Group -> bookmarkGroupProperties m
+                      | _ -> viewBookmarkProperties m 
+                )
+        let buttons = 
+            m.scene.bookmarksModel.bookmarks.lastSelectedItem 
+                |> Mod.bind (fun x -> 
+                    match x with 
+                      | SelectedItem.Group -> bookmarksGroupButtons m
+                      | _ -> bookmarksLeafButtonns m 
+                )
+        div [][
+            br []
+            Bookmarks.UI.viewGUI |> UI.map BookmarkMessage
+    
+            GuiEx.accordion "Bookmarks" "Write" true [
+                //Groups.viewSelectionButtons |> UI.map BookmarkUIMessage
+                Bookmarks.viewBookmarksGroups m.scene.bookmarksModel |> UI.map BookmarkMessage 
+            ]                
+            GuiEx.accordion "Properties" "Content" true [
+                Incremental.div AttributeMap.empty ( item2 |> Mod.bind id |> AList.ofModSingle)
+            ] 
+            GuiEx.accordion "Actions" "Asterisk" true [
+                Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
+            ]
+        ]
+    

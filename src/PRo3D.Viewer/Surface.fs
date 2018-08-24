@@ -777,11 +777,7 @@ module Surface =
             let activeAttributes = 
                 Groups.mkGroupAttributeMap activeIcon (GroupsMessage setActive)
                                    
-            let toggleIcon =
-                adaptive {
-                    let! toggle = group.visible
-                    return if toggle then "unhide icon" else "hide icon"
-                }
+            let toggleIcon = group.visible |> Mod.map(fun toggle -> if toggle then "unhide icon" else "hide icon")                
 
             let toggleAttributes = Groups.mkGroupAttributeMap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
                
@@ -796,6 +792,7 @@ module Surface =
                     |> UI.wrapToolTip "Add Group"                                          
 
                     Incremental.i toggleAttributes AList.empty |> UI.wrapToolTip "Toggle Group"
+                   // GuiEx.iconCheckBox group.visible (GroupsMessage(Groups.ToggleGroup path))
                 ]
                  
             let itemAttributes =

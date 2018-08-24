@@ -3,6 +3,7 @@
 open Aardvark.UI
 
 module GuiEx =
+    open Aardvark.Base.Incremental
     
     let semui = 
       [ 
@@ -113,3 +114,19 @@ module GuiEx =
                     ]
                 ]
             )
+
+
+    let iconToggle (dings : IMod<bool>) onIcon offIcon action =
+      let toggleIcon = dings |> Mod.map(fun isOn -> if isOn then onIcon else offIcon)
+
+      let attributes = 
+        amap {
+            let! icon = toggleIcon
+            yield clazz icon
+            yield onClick (fun _ -> action)
+        } |> AttributeMap.ofAMap
+
+      Incremental.i attributes AList.empty
+
+    let iconCheckBox (dings : IMod<bool>) action =
+      iconToggle dings "check square outline icon" "square icon" action

@@ -93,8 +93,8 @@ module SurfaceProperties =
         Html.table [                                            
           // Html.row "Path:"        [Incremental.text (model.importPath |> Mod.map (fun x -> sprintf "%A" x ))]                
           Html.row "Name:"        [Html.SemUi.textBox model.name SetName ]
-          Html.row "Visible:"     [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
-          Html.row "Active:"      [Html.SemUi.toggleBox model.isActive ToggleIsActive ]
+          Html.row "Visible:"     [GuiEx.iconCheckBox model.isVisible ToggleVisible ]
+          Html.row "Active:"      [GuiEx.iconCheckBox model.isActive ToggleIsActive ]
           Html.row "Priority:"    [Numeric.view' [NumericInputType.InputBox] model.priority |> UI.map SetPriority ]       
           Html.row "Quality:"     [Numeric.view' [NumericInputType.Slider]   model.quality  |> UI.map SetQuality ]
           Html.row "AngleFilter:" [Numeric.view' [NumericInputType.InputBox]   model.triangleSize  |> UI.map SetTriangleSize ]
@@ -144,15 +144,15 @@ module ColorCorrectionProperties =
 
     let view (model : MColorCorrection) =        
       require GuiEx.semui (
-        Html.table [
-          Html.row "use contrast:"        [Html.SemUi.toggleBox model.useContrast UseContrast ]
+        Html.table [          
+          Html.row "use contrast:"        [GuiEx.iconCheckBox model.useContrast UseContrast ] // group.visible (GroupsMessage(Groups.ToggleGroup path))
           Html.row "set contrast:"        [Numeric.view' [NumericInputType.Slider]   model.contrast  |> UI.map SetContrast ] 
-          Html.row "use brightness:"      [Html.SemUi.toggleBox model.useBrightn UseBrightness ]
+          Html.row "use brightness:"      [GuiEx.iconCheckBox model.useBrightn UseBrightness ]
           Html.row "set brightness:"      [Numeric.view' [NumericInputType.Slider]   model.brightness  |> UI.map SetBrightness ] 
-          Html.row "use gamma:"           [Html.SemUi.toggleBox model.useGamma UseGamma ]
+          Html.row "use gamma:"           [GuiEx.iconCheckBox model.useGamma UseGamma ]
           Html.row "set gamma:"           [Numeric.view' [NumericInputType.Slider]   model.gamma  |> UI.map SetGamma ] 
-          Html.row "grayscale:"           [Html.SemUi.toggleBox model.useGrayscale UseGrayScale ]
-          Html.row "use color:"           [Html.SemUi.toggleBox model.useColor UseColor ]
+          Html.row "grayscale:"           [GuiEx.iconCheckBox model.useGrayscale UseGrayScale ]
+          Html.row "use color:"           [GuiEx.iconCheckBox model.useColor UseColor ]
           Html.row "color:"               [ColorPicker.view model.color |> UI.map SetColor ]
         ]
       )

@@ -262,7 +262,7 @@ module ReferenceSystemApp =
                     Html.row "Bearing:" [Incremental.text (bearing |> Mod.map (fun x -> x.ToString("0.00")))] // compute azimuth with view dir, north vector and up vector
                     Html.row "Pitch:"   [Incremental.text (pitch |> Mod.map (fun x -> x.ToString("0.00")))]  // same for pitch which relates to dip angle
                     Html.row "Height:"  [Incremental.text (height |> Mod.map (fun x -> x.ToString("0.00")))]
-                    Html.row "Visible:" [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
+                    Html.row "Visible:" [GuiEx.iconCheckBox model.isVisible ToggleVisible ]
                     
                 ]
             )
