@@ -238,6 +238,44 @@ module Sg =
                     | None -> [||])
 
     let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
+
+    
+    //let pickingLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
+    //    let box = points |> AList.toMod |> Mod.map (fun d -> if d.Count > 2 then Box3d d else Box3d.Unit)
+
+    //    let edges = edgeLines false points trafo 
+    //    let cylinders = points |> AList.toArray |> Array.pairwise |> Array.map(fun (a,b) -> Line3d(a,b)) |> Array.map (fun x -> Cylinder3d(x, 0.02))
+                                                            
+    //    edges
+    //        |> Mod.map (
+    //          fun (v) -> 
+    //            let pickable = { shape = PickShape.Box v; trafo = Trafo3d.Identity } |> Mod.constant
+    //            v.sg 
+    //              |> pickable' pickable
+    //              |> Sg.noEvents
+    //              |> Sg.withEvents [
+    //                SceneEventKind.Down, (
+    //                    fun sceneHit -> 
+    //                      if (picking |> Mod.force) then
+    //                        //hitCounter <- hitCounter + 1
+    //                        true, Seq.ofList[PickPolygonBox (sceneHit,v.id)]
+    //                      else
+    //                        false, Seq.ofList[])
+    //                ]
+              
+    //              )
+    //        |> Sg.set            
+    //        |> Sg.lines color
+    //        |> Sg.noEvents
+    //        |> Sg.shader {
+    //             do! Shader.stableTrafo
+    //             do! DefaultSurfaces.vertexColor
+    //             do! Shader.thickLine    
+    //         }                               
+    //         |> Sg.trafo trafo
+    //         |> Sg.uniform "LineWidth" width
+    //         |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+            
         
     let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
         let box = points |> AList.toMod |> Mod.map (fun d -> if d.Count > 2 then Box3d d else Box3d.Unit)

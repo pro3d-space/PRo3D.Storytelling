@@ -239,6 +239,14 @@ type Segment = {
     points : plist<V3d> 
 }
 
+[<ReferenceEquality>]
+ type CylinderAnnotation =
+   {
+     id        : Guid
+     positions : V3d[]
+     cylinders : Cylinder3d[]
+   }
+
 [<DomainType>]
 type Annotation = {
     [<PrimaryKey>]
