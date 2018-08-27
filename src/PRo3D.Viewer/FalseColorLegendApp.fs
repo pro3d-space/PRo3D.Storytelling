@@ -307,6 +307,7 @@ module FalseColorLegendApp =
          
             let attr = 
               AttributeMap.ofList[ 
+                "clazz"                 => "falsecolorlegend"
                 "display"               => "block"; 
                 "width"                 => "55px"; 
                 "height"                => "75%"; //100%

@@ -683,19 +683,19 @@ module Shader =
 
   [<ReflectedDefinition>]
   let mapFalseColors value : float =         
-      let invert = uniform?inverted
-      let fcUpperBound = uniform?upperBound
-      let fcLowerBound = uniform?lowerBound
-      let fcInterval = uniform?interval
-      let fcUpperHueBound = uniform?endC
-      let fcLowerHueBound = uniform?startC
+      let invert           = uniform?inverted
+      let fcUpperBound     = uniform?upperBound
+      let fcLowerBound     = uniform?lowerBound
+      let fcInterval       = uniform?interval
+      let fcUpperHueBound  = uniform?endC
+      let fcLowerHueBound  = uniform?startC
 
       let low         = if (invert = false) then fcLowerBound else fcUpperBound
       let up          = if (invert = false) then fcUpperBound else fcLowerBound
       let interval    = if (invert = false) then fcInterval   else -1.0 * fcInterval        
 
-      let  rangeValue = up - low + interval
-      let  normInterv = (interval / rangeValue)
+      let rangeValue = up - low + interval
+      let normInterv = (interval / rangeValue)
 
       //map range to 0..1 according to lower/upperbound
       let k = (value - low + interval) / rangeValue

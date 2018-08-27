@@ -953,10 +953,10 @@ module ViewerApp =
             let attr = 
               AttributeMap.ofList[ 
                 "display"               => "block"; 
-                "width"                 => "55px"; 
+                "width"                 => "90px"; 
                 "height"                => "75%"; //100%
                 "preserveAspectRatio"   => "xMidYMid meet"; 
-                "style"                 => "position:absolute; left: 65%; top: 25%"
+                "style"                 => "position:absolute; right: 5px; top: 25%"
               ]
             Incremental.Svg.svg attr (SurfaceApp.showColorLegend m.scene.surfacesModel)                        
                         
