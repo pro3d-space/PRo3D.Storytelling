@@ -115,10 +115,12 @@ module DrawingApp =
                       if PRo3D.Config.useAsyncIntersections then
                         { annotation with segments = PList.append newSegment annotation.segments }, Some (newSegment,segmentIndex)
                       else
-                        let dir = (newSegment.endPoint - newSegment.startPoint).Normalized
+                        let vec = newSegment.endPoint - newSegment.startPoint
+                        let dir = vec.Normalized
+                        let step = vec.Length / float PRo3D.Config.sampleCount
                         let points = [ 
                           for s in 0 .. PRo3D.Config.sampleCount do
-                            let p = newSegment.startPoint + dir * (float s / float PRo3D.Config.sampleCount) // world space
+                            let p = newSegment.startPoint + dir * (float s) * step // world space
                             match samplePoint p with
                               | None -> ()
                               | Some projectedPoint -> yield projectedPoint
@@ -225,15 +227,15 @@ module DrawingApp =
                     { model with draw = false; hoverPosition = None }
             | Move p, true -> 
                     { model with hoverPosition = Some (Trafo3d.Translation p) }
-            | AddPointAdv (point, samplePoint, name), true ->
+            | AddPointAdv (point, hitFunction, name), true ->
                     let up    = smallConfig.up.Get(bigConfig)
                     let north = smallConfig.north.Get(bigConfig)
 
-                    let model, newSegment = addPoint up north samplePoint point model name bc
+                    let model, newSegment = addPoint up north hitFunction point model name bc
                     
                     match newSegment with
                         | None         -> model
-                        | Some segment -> addNewSegment samplePoint model segment
+                        | Some segment -> addNewSegment hitFunction model segment
                     |> stash
 
             | SetSegment(segmentIndex,segment), _ ->
@@ -753,15 +755,21 @@ module DrawingApp =
             
         let getPolylinePoints (a : MAnnotation) =
             alist {                
-                let! hasSegments = a.segments |> AList.count |> Mod.map ((>) 0)
+                let! hasSegments = 
+                  a.segments 
+                    |> AList.count 
+                    |> Mod.map (fun x ->
+                      Log.line "[Drawing] drawing polz with %A segments" x
+                      x > 0)
+
                 if hasSegments then
-                    for segment in a.segments do
-                        let! startPoint = segment.startPoint
-                        let! endPoint = segment.endPoint
-                        yield  startPoint
-                        yield! segment.points
-                        yield  endPoint
-                else
+                  for segment in a.segments do
+                    let! startPoint = segment.startPoint
+                    let! endPoint = segment.endPoint
+                    yield  startPoint
+                    yield! segment.points
+                    yield  endPoint
+                  else
                     yield! a.points
             }
 
@@ -790,6 +798,7 @@ module DrawingApp =
                                    
             Sg.ofList [
                 Sg.lines polyPoints color thickness trafo key //polyline
+                //Sg.dots polyPoints (Mod.constant C4b.VRVisGreen) // debug sample points
                 Sg.dots points color                     //support points
             ]         
         
