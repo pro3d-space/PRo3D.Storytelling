@@ -752,6 +752,7 @@ module Surface =
 
                              yield Incremental.i (absRelIcons) (AList.empty)
                              yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
+                             yield GuiEx.iconCheckBox s.isActive (SurfaceProperties.ToggleIsActive |> SurfacePropertiesMessage)
                          } 
                      ) 
                                     

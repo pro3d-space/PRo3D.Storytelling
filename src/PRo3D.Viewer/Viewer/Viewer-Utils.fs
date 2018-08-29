@@ -88,6 +88,8 @@ module ViewerUtils =
     open Aardvark.SceneGraph.Opc.Shader
     open FShade
 
+    let mutable hitCounter = 0
+
     //open OpenCvSharp.XFeatures2D
     
     let colormap = 
@@ -358,9 +360,13 @@ module ViewerUtils =
                 |> Sg.withEvents [
                         SceneEventKind.Down, (
                             fun sceneHit -> 
-                                let bla = surf |> Mod.force
-                                let bla = bla.name |> Mod.force
-                                true, Seq.ofList [PickSurface (sceneHit,bla)])
+                                let surfM = surf |> Mod.force
+                                let bla = surfM.name |> Mod.force
+                                if (surfM.isActive |> Mod.force) then
+                                  hitCounter <- hitCounter + 1
+                                  true, Seq.ofList [PickSurface (sceneHit,bla)]
+                                else
+                                  false, Seq.empty)
                     ]
                 //|> Sg.trafo (surface.globalBB 
                 //                |> Mod.map(fun x -> 

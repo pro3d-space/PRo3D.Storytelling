@@ -110,6 +110,8 @@ let checkLicense () =
 let main argv = 
     //Xilium.CefGlue.ChromiumUtilities.unpackCef()
     //Chromium.init argv
+    
+    System.Threading.ThreadPool.SetMinThreads(12, 12) |> ignore
 
     Ag.initialize()
     Aardvark.Init()
