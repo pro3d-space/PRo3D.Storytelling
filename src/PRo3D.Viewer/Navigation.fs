@@ -77,8 +77,8 @@ module Navigation =
             amap {
                 let! state = model.navigationMode 
                 match state with
-                    | NavigationMode.FreeFly -> yield! CameraController.extractAttributes model.camera FreeFlyAction (frustum near far)
-                    | NavigationMode.ArcBall -> yield! ArcBallController.extractAttributes model.camera ArcBallAction (frustum near far)
+                    | NavigationMode.FreeFly -> yield! CameraController.extractAttributes model.camera FreeFlyAction
+                    | NavigationMode.ArcBall -> yield! ArcBallController.extractAttributes model.camera ArcBallAction
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap
 

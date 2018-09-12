@@ -32,7 +32,7 @@ module ReferenceSystem =
         value   = 0.0
         min     = -1.0
         max     = +1.0
-        step    = 0.1
+        step    = 0.001
         format  = "{0:0.000}"
     }
 
@@ -47,7 +47,7 @@ module ReferenceSystem =
         value   = 1.0
         min     = 0.1
         max     = 10.0
-        step    = 0.1
+        step    = 0.01
         format  = "{0:0.0}"
     }
 

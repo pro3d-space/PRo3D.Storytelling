@@ -62,8 +62,8 @@ module ConfigProperties =
                 Html.row "D+S Plane Size:"          [Numeric.view' [InputBox] model.dnsPlaneSize          |> UI.map SetDnSPlaneSize ]    
                 //Html.row "Min Dipping Angle:"       [Numeric.view' [InputBox] model.minDipAngle           |> UI.map SetMinDipAngle ]
                 //Html.row "Max Dipping Angle:"       [Numeric.view' [InputBox] model.maxDipAngle           |> UI.map SetMaxDipAngle ]
-                Html.row "Lod colors:"              [Html.SemUi.toggleBox model.lodColoring ToggleLodColors]
-                Html.row "Orientation Cube: "       [Html.SemUi.toggleBox model.drawOrientationCube ToggleOrientationCube]
+                Html.row "Lod colors:"              [GuiEx.iconCheckBox model.lodColoring ToggleLodColors]
+                Html.row "Orientation Cube: "       [GuiEx.iconCheckBox model.drawOrientationCube ToggleOrientationCube]
             ]
         )
 

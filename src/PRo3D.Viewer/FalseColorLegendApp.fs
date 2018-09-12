@@ -51,25 +51,25 @@ module FalseColorLegendApp =
     module UI =
         let viewDnSLegendTools (model:MFalseColorsModel)= 
                 Html.table [  
-                    Html.row "show legend:"             [Html.SemUi.toggleBox model.useFalseColors UseFalseColors ]
+                    Html.row "show legend:"             [GuiEx.iconCheckBox model.useFalseColors UseFalseColors ]
                     Html.row "max dipping angle:"       [Numeric.view' [InputBox] model.upperBound |> UI.map SetUpperBound ]
                     Html.row "min dipping angle:"       [Numeric.view' [InputBox] model.lowerBound |> UI.map SetLowerBound ]
                     Html.row "interval:"                [Numeric.view' [InputBox] model.interval |> UI.map SetInterval ]
                     Html.row "upper color:"             [ColorPicker.view model.upperColor |> UI.map SetUpperColor ]
                     Html.row "lower color:"             [ColorPicker.view model.lowerColor |> UI.map SetLowerColor ]
-                    Html.row "invert mapping:"          [Html.SemUi.toggleBox model.invertMapping InvertMapping ]
+                    Html.row "invert mapping:"          [GuiEx.iconCheckBox model.invertMapping InvertMapping ]
                 ]                    
            
         let viewDefinedScalarsLegendTools (model:MFalseColorsModel)= 
             require GuiEx.semui (
                 Html.table [  
-                    Html.row "show legend:"             [Html.SemUi.toggleBox model.useFalseColors UseFalseColors ]
+                    Html.row "show legend:"             [GuiEx.iconCheckBox model.useFalseColors UseFalseColors ]
                     Html.row "upper bound:"             [Numeric.view' [InputBox] model.upperBound |> UI.map SetUpperBound ]
                     Html.row "lower bound:"             [Numeric.view' [InputBox] model.lowerBound |> UI.map SetLowerBound ]
                     Html.row "interval:"                [Numeric.view' [InputBox] model.interval |> UI.map SetInterval ]
                     Html.row "upper color:"             [ColorPicker.view model.upperColor |> UI.map SetUpperColor ]
                     Html.row "lower color:"             [ColorPicker.view model.lowerColor |> UI.map SetLowerColor ]
-                    Html.row "invert mapping:"          [Html.SemUi.toggleBox model.invertMapping InvertMapping ]
+                    Html.row "invert mapping:"          [GuiEx.iconCheckBox model.invertMapping InvertMapping ]
                 ] 
             )
 
@@ -307,6 +307,7 @@ module FalseColorLegendApp =
          
             let attr = 
               AttributeMap.ofList[ 
+                "clazz"                 => "falsecolorlegend"
                 "display"               => "block"; 
                 "width"                 => "55px"; 
                 "height"                => "75%"; //100%

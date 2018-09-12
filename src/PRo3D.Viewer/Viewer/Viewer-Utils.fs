@@ -85,6 +85,8 @@ type ViewerAction =
 
 
 module ViewerUtils =    
+    open Aardvark.SceneGraph.Opc.Shader
+    open FShade
 
     //open OpenCvSharp.XFeatures2D
     
@@ -310,14 +312,14 @@ module ViewerUtils =
                 //|> Sg.uniform "stepS"          (falseCL |> Mod.map(fun x -> x.stepS))
                 //|> Sg.uniform "numOfRG"        (falseCL |> Mod.map(fun x -> x.numOfRG))
                 |> Sg.uniform "MinMax"         rangeToMinMax
-                |> Sg.uniform "TriangleSize" (
-                        adaptive {
-                            let! s = surf
-                            let! maxAngle = s.triangleSize.value
-                            Log.warn "maxAngle: %A" maxAngle
-                            Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
-                            return maxAngle |> Double.radiansFromDegrees |> Math.Cos
-                        })
+                //|> Sg.uniform "TriangleSize" (
+                //        adaptive {
+                //            let! s = surf
+                //            let! maxAngle = s.triangleSize.value
+                //            Log.warn "maxAngle: %A" maxAngle
+                //            Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
+                //            return maxAngle |> Double.radiansFromDegrees |> Math.Cos
+                //        })
                 |> Sg.uniform "useContrastS"  (useContr |> Mod.map(fun x -> not x))
                 |> Sg.uniform "contrastS"     contr
                 |> Sg.uniform "useBrightnS"   (useB |> Mod.map(fun x -> not x)) 
@@ -483,14 +485,14 @@ module ViewerUtils =
                     |> Sg.uniform "lowerBound"     (adaptive { return falsecol.lowerBound })
                     |> Sg.uniform "upperBound"     (adaptive { return falsecol.upperBound })
                     |> Sg.uniform "TriangleSize"   (Mod.constant 0.0)
-                    |> Sg.uniform "useContrastS"   (useContr |> Mod.map(fun x -> not x))
+                    |> Sg.uniform "useContrastS"   useContr
                     |> Sg.uniform "contrastS"      contr
-                    |> Sg.uniform "useBrightnS"    (useB |> Mod.map(fun x -> not x)) 
+                    |> Sg.uniform "useBrightnS"    useB
                     |> Sg.uniform "brightnessS"    bright
-                    |> Sg.uniform "useGammaS"      (useG |> Mod.map(fun x -> not x))  
+                    |> Sg.uniform "useGammaS"      useG
                     |> Sg.uniform "gammaS"         gamma
-                    |> Sg.uniform "useGrayS"       (useGray |> Mod.map(fun x -> not x)) 
-                    |> Sg.uniform "useColorS"      (useColor |> Mod.map(fun x -> not x)) 
+                    |> Sg.uniform "useGrayS"       useGray
+                    |> Sg.uniform "useColorS"      useColor 
                     |> Sg.uniform "colorS"         color
                     |> Sg.uniform "MinMax"         (Mod.constant (V2d(0.0,1.0)))
                     |> Sg.uniform "selected"       isSelected
@@ -532,6 +534,11 @@ module ViewerUtils =
         let far = m.scene.config.farPlane.value
         (Navigation.UI.frustum near far)
 
+    let fixAlpha (v : Vertex) =
+        fragment {         
+           return V4d(v.c.X, v.c.Y,v.c.Z, 1.0)           
+        }
+
     let renderCommands (sgGrouped:alist<amap<Guid,IMod<MSgSurfaces>>>) overlayed discs (m:MModel) =
         let selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
         
@@ -565,15 +572,15 @@ module ViewerUtils =
                         |> Sg.effect [
                             Shader.stableTrafo  |> toEffect //Shader.stableTrafo Shader.stableLight
                             DefaultSurfaces.diffuseTexture |> toEffect
-                            //Shader.selectionColor          |> toEffect       
-                            Shader.LoDColor                |> toEffect 
-                            //PRo3D.Shader.falseColor        |> toEffect  
+                            fixAlpha |> toEffect
+                            Shader.selectionColor          |> toEffect       
+                            Shader.LoDColor                |> toEffect                             
                             PRo3D.Shader.falseColorLegend2  |> toEffect 
-                            //PRo3D.Shader.mapContrast     |> toEffect
-                            //PRo3D.Shader.mapBrightness   |> toEffect
-                            //PRo3D.Shader.mapGamma        |> toEffect
-                            //PRo3D.Shader.grayscale       |> toEffect
-                            //PRo3D.Shader.addColor        |> toEffect
+                            PRo3D.Shader.mapContrast     |> toEffect
+                            PRo3D.Shader.mapBrightness   |> toEffect
+                            PRo3D.Shader.mapGamma        |> toEffect                            
+                            PRo3D.Shader.grayscale       |> toEffect
+                            PRo3D.Shader.addColor        |> toEffect
                             //Shader.triangleFilter          |> toEffect                            
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)

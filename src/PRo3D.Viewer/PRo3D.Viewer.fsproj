@@ -82,8 +82,8 @@
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
     <Compile Include="KdTrees.fs" />
-    <Compile Include="OrientationCube.fs" />
     <Compile Include="ReferenceSystem-Model.fs" />
+    <Compile Include="OrientationCube.fs" />
     <Compile Include="CooTransformation.fs" />
     <Compile Include="FalseColorLegendApp.fs" />
     <Compile Include="DipAndStrike.fs" />
@@ -1477,7 +1477,7 @@
     <When Condition="($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
       <ItemGroup>
         <Reference Include="System.Runtime">
-          <HintPath>..\..\packages\System.Runtime\ref\netstandard1.5\System.Runtime.dll</HintPath>
+          <HintPath>..\..\packages\System.Runtime\ref\netstandard1.2\System.Runtime.dll</HintPath>
           <Private>False</Private>
           <Paket>True</Paket>
         </Reference>

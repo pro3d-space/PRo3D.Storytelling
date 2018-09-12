@@ -174,7 +174,67 @@ module ReferenceSystemApp =
               | "0.1mm" ->      0.0001
               | _       ->      1.0
 
-        let view<'ma> (mbigConfig : 'ma) (minnerConfig : MInnerConfig<'ma>) (model:MReferenceSystem) (cam:IMod<CameraView>) : ISg<Action> =
+        let getOrientationSystem (mbigConfig : 'ma) (minnerConfig : MInnerConfig<'ma>) (model:MReferenceSystem) (cam:IMod<CameraView>) =
+            let thickness = Mod.constant 2.0
+            let near      = minnerConfig.getNearDistance   mbigConfig
+
+            let east = Mod.map2(fun (l:V3d) (r:V3d) -> r.Cross(l) ) model.up.value model.north.value
+
+            let size = Mod.constant 2.0
+            let posTrafo = Mod.constant (Trafo3d.Translation(V3d.OOO))
+            let position = Mod.constant V3d.OIO
+
+            let styleUp : MarkerStyle = {
+                position  = position
+                direction = model.up.value
+                color     = Mod.constant C4b.Magenta
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant None
+                fix       = Mod.constant false
+            }
+
+
+            let upV = 
+                alist {
+                    let! udir = model.up.value
+                    let! position = position
+                    yield position
+                    yield position + udir.Normalized
+                    }
+                    
+            let northV = 
+                alist {
+                    let! ndir = model.north.value
+                    let! position = position
+                    yield position
+                    yield position + ndir.Normalized
+                    }
+
+            let eastV = 
+                alist {
+                    let! edir = east
+                    let! position = position
+                    yield position
+                    yield position + edir.Normalized
+                    }
+
+            let nLabelPos = Mod.map2(fun l r -> l + r) position model.north.value
+            let nPosTrafo =nLabelPos |> Mod.map(fun d -> Trafo3d.Translation(d))
+            let label = Sg.text cam near (Mod.constant 60.0) nLabelPos nPosTrafo (Mod.constant "N") (Mod.constant 0.05)
+
+            Sg.ofList [
+                point model.origin (Mod.constant C4b.Red) cam
+                //sizeText
+                PRo3D.Sg.lines upV (Mod.constant C4b.Blue) thickness posTrafo (Mod.constant Guid.Empty)  
+                styleUp    |> directionMarker near cam  
+                PRo3D.Sg.lines northV (Mod.constant C4b.Red) thickness posTrafo (Mod.constant Guid.Empty) 
+                PRo3D.Sg.lines eastV (Mod.constant C4b.Green) thickness posTrafo (Mod.constant Guid.Empty) 
+                label                     
+            ]   |> Sg.onOff(model.isVisible)       
+
+        let view<'ma> (mbigConfig : 'ma) (minnerConfig : MInnerConfig<'ma>) (model:MReferenceSystem) (cam:IMod<CameraView>)  : ISg<Action> =
                        
             let length    = minnerConfig.getArrowLength    mbigConfig
             let thickness = minnerConfig.getArrowThickness mbigConfig
@@ -262,7 +322,7 @@ module ReferenceSystemApp =
                     Html.row "Bearing:" [Incremental.text (bearing |> Mod.map (fun x -> x.ToString("0.00")))] // compute azimuth with view dir, north vector and up vector
                     Html.row "Pitch:"   [Incremental.text (pitch |> Mod.map (fun x -> x.ToString("0.00")))]  // same for pitch which relates to dip angle
                     Html.row "Height:"  [Incremental.text (height |> Mod.map (fun x -> x.ToString("0.00")))]
-                    Html.row "Visible:" [Html.SemUi.toggleBox model.isVisible ToggleVisible ]
+                    Html.row "Visible:" [GuiEx.iconCheckBox model.isVisible ToggleVisible ]
                     
                 ]
             )

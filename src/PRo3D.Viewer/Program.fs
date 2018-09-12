@@ -113,8 +113,8 @@ let main argv =
 
     Ag.initialize()
     Aardvark.Init()
-    Aardium.init()
-    
+    Aardium.init()        
+
     //use app = new VulkanApplication()
     use app = new OpenGlApplication()
     let runtime = app.Runtime    

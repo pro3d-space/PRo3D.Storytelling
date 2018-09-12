@@ -402,7 +402,7 @@ module Annotation =
         }
 
     let initial =
-        make Projection.Linear Geometry.Polyline Semantic.Horizon0 ""
+        make Projection.Viewpoint Geometry.Polyline Semantic.Horizon0 ""
 
 module JsonTypes =
     type _V3d = {
