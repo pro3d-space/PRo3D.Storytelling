@@ -211,8 +211,7 @@ module FalseColorLegendApp =
     
         let createFalseColorLegendBasics (falseColor : MFalseColorsModel) (boxSize : V2d) =
             alist { 
-                    let! enabled        = falseColor.useFalseColors
-                    let enabled = (not enabled)
+                    let! enabled        = falseColor.useFalseColors                    
                     let! fcUpperBound   = falseColor.upperBound.value
                     let! fcLowerBound   = falseColor.lowerBound.value
                     let! fcInterval     = falseColor.interval.value

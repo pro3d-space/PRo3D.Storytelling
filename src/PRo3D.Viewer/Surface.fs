@@ -752,6 +752,7 @@ module Surface =
 
                              yield Incremental.i (absRelIcons) (AList.empty)
                              yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
+                             yield GuiEx.iconCheckBox s.isActive (SurfaceProperties.ToggleIsActive |> SurfacePropertiesMessage)
                          } 
                      ) 
                                     
@@ -916,11 +917,15 @@ module Surface =
 
                     let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
                     let! surf = leaf 
-                    let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> failwith "wrong type"
+                    let scalar = 
+                      match surf with 
+                       | MSurfaces s -> s.selectedScalar 
+                       | _ -> failwith "wrong type"
+
                     let! scalar = scalar
                     match scalar with
                         | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
-                        | None -> return div[][] |> UI.map ScalarsColorLegendMessage 
+                        | None -> return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
                                   
                 | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ScalarsColorLegendMessage 
         }                          
@@ -979,21 +984,21 @@ module Surface =
                 )
         div[][                            
             yield GuiEx.accordion "Surfaces" "Cubes" true [ viewSurfacesGroups model ]
-            yield GuiEx.accordion "Properties" "Content" true [
+            yield GuiEx.accordion "Properties" "Content" false [
               Incremental.div AttributeMap.empty (
                 alist { 
                   let! item = item2
                   yield item}
               )
             ]
-            yield GuiEx.accordion "Actions" "Asterisk" true [
+            yield GuiEx.accordion "Actions" "Asterisk" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
                 ]  
                 
             yield GuiEx.accordion "Color Correction" "file image outline" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewColorCorrectionTools model))] 
 
-            yield GuiEx.accordion "Scalars ColorLegend" "paint brush" false [
+            yield GuiEx.accordion "Scalars ColorLegend" "paint brush" true [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewColorLegendTools model))] 
 
             

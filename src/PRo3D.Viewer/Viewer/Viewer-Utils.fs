@@ -88,6 +88,8 @@ module ViewerUtils =
     open Aardvark.SceneGraph.Opc.Shader
     open FShade
 
+    let mutable hitCounter = 0
+
     //open OpenCvSharp.XFeatures2D
     
     let colormap = 
@@ -216,13 +218,13 @@ module ViewerUtils =
 
         let upperC = scalar |> Mod.bind ( fun x ->
                         match x with 
-                            | Some s -> s.colorLegend.upperColor.c
-                            | None   -> Mod.constant(C4b.Red)
+                            | Some s -> s.colorLegend.upperColor.c |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H)
+                            | None   -> Mod.constant(1.0f)
                         )
         let lowerC = scalar |> Mod.bind ( fun x ->
                         match x with 
-                            | Some s -> s.colorLegend.upperColor.c
-                            | None   -> Mod.constant(C4b.Red)
+                            | Some s -> s.colorLegend.lowerColor.c |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H)
+                            | None   -> Mod.constant(0.0f)
                         )
 
         let rangeToMinMax = scalar |> Mod.bind ( fun x -> 
@@ -293,9 +295,7 @@ module ViewerUtils =
                 let! uc = s.colorCorrection.color.c
                 return uc
             }
-
-        let test = (lowerC |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H))
-
+        
         let sg = 
             surface.sceneGraph
                 |> Mod.map createSg
@@ -303,8 +303,8 @@ module ViewerUtils =
                 |> Sg.uniform "selected"       isSelected
                 |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
                 |> Sg.uniform "falseColors"    selectedScalar
-                |> Sg.uniform "startC"         (lowerC |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H))
-                |> Sg.uniform "endC"           (upperC |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H))
+                |> Sg.uniform "startC"         lowerC
+                |> Sg.uniform "endC"           upperC
                 |> Sg.uniform "interval"       interval
                 |> Sg.uniform "inverted"       inverted
                 |> Sg.uniform "lowerBound"     lowerB
@@ -360,9 +360,13 @@ module ViewerUtils =
                 |> Sg.withEvents [
                         SceneEventKind.Down, (
                             fun sceneHit -> 
-                                let bla = surf |> Mod.force
-                                let bla = bla.name |> Mod.force
-                                true, Seq.ofList [PickSurface (sceneHit,bla)])
+                                let surfM = surf |> Mod.force
+                                let bla = surfM.name |> Mod.force
+                                if (surfM.isActive |> Mod.force) then
+                                  hitCounter <- hitCounter + 1
+                                  true, Seq.ofList [PickSurface (sceneHit,bla)]
+                                else
+                                  false, Seq.empty)
                     ]
                 //|> Sg.trafo (surface.globalBB 
                 //                |> Mod.map(fun x -> 

@@ -152,11 +152,11 @@ module FalseColorsModel =
 
     let initDnSLegend = 
         {
-            useFalseColors  = true
+            useFalseColors  = false
             lowerBound      = initMinAngle
             upperBound      = initMaxAngle
             interval        = dnSInterv
-            invertMapping   = true
+            invertMapping   = false
             lowerColor      = { c = C4b.Blue }
             upperColor      = { c = C4b.Red }
         }
@@ -185,11 +185,11 @@ module FalseColorsModel =
     }
     let initDefinedScalarsLegend (range: Range1d) = 
         {
-            useFalseColors  = true
+            useFalseColors  = false
             lowerBound      = initlb range
             upperBound      = initub range 
             interval        = scalarsInterv 
-            invertMapping   = true
+            invertMapping   = false
             lowerColor      = { c = C4b.Blue }
             upperColor      = { c = C4b.Red }
         }

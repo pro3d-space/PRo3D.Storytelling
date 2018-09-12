@@ -212,14 +212,16 @@ module ViewerApp =
 
                        
 
-    let matchPickingInteraction (bc : BlockingCollection<string>) (p:V3d) (hit:(V3d-> V3d option)) (surf:Surface) (m:Model) = 
+    let matchPickingInteraction (bc : BlockingCollection<string>) (p:V3d) (hitFunction:(V3d-> V3d option)) (surf:Surface) (m:Model) = 
          match m.interaction with
             | Interactions.DrawAnnotation -> 
                 let m = match surf.surfaceType with
                         | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = Projection.Linear } }   
                         | _ -> m
-                Log.error "closest intersection on %A" surf.name
-                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing (Drawing.Action.AddPointAdv(p,hit,surf.name))
+                Log.line "closest intersection on %A" surf.name
+
+                let msg = Drawing.Action.AddPointAdv(p, hitFunction, surf.name)
+                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing msg
                 //Log.stop()
                 { m with drawing = drawing } |> stash
             | Interactions.PlaceCoordinateSystem -> 
@@ -496,10 +498,13 @@ module ViewerApp =
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
                 m
-            | PickSurface (p,name), _ ,true ->                 
+            | PickSurface (p,name), _ ,true when ViewerUtils.hitCounter > 0 ->                 
               let fray = p.globalRay.Ray
               let r = fray.Ray
-              Log.startTimed "kdtree intersect %s" name
+              Log.startTimed "kdtree intersect %s %A" name ViewerUtils.hitCounter
+
+              ViewerUtils.hitCounter <- ViewerUtils.hitCounter - 1
+
               let cameraLocation = m.scene.navigation.camera.view.Location 
               
               let hitF (p : V3d) = 
@@ -786,10 +791,10 @@ module ViewerApp =
 
                 AttributeMap.ofList [
                  attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
-                 //attribute "data-samples" "8"
-                 //attribute "useMapping" "true"
-               //  attribute "showFPS" "true"                  
-               //  attribute "data-renderalways" "true" 
+                 attribute "data-samples" "8"
+                 attribute "useMapping" "true"
+                 //attribute "showFPS" "true"                  
+                 //attribute "data-renderalways" "true" 
                  onKeyDown (KeyDown)
                  onKeyUp (KeyUp)                    
                 ] 
@@ -1065,6 +1070,8 @@ module ViewerApp =
         | None -> m
 
     let start (runtime: IRuntime) (signature: IFramebufferSignature) bc =
+
+
         let m = 
             PRo3D.Viewer.Viewer.initial 
               |> Scene.loadLastScene runtime signature
