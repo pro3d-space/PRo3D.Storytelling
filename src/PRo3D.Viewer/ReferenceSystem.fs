@@ -26,6 +26,7 @@ module ReferenceSystemApp =
         | SetOrigin        of V3d
         | SetUp            of Vector3d.Action
         | SetNorth         of Vector3d.Action
+        | SetNOffset       of Numeric.Action
         | ToggleVisible
         | SetScale         of string
         | SetArrowSize     of double
@@ -45,18 +46,25 @@ module ReferenceSystemApp =
             getNearDistance   : 'ma -> IMod<float>
         }
     
+    let updateNorthInDegree (north:V3d) (degree:float) =
+        let x = (north.X * (cos degree)) - (north.Y * (sin degree))
+        let y = (north.X * (sin degree)) + (north.Y * (cos degree))
+        V3d(x, y, north.Z)
+
     let upVector (point:V3d) (planet) = CooTransformation.getUpVector point planet //point.Normalized
     
     let northVector (up:V3d) =
         let east = V3d.OOI.Cross(up)
         up.Cross(east)
-    
+
+   
     let update<'a> (bigConfig : 'a) (config : ReferenceSystemConfig<'a>) (model : ReferenceSystem) (act : Action) =
         match act with
             | InferCoordSystem p ->
                 let up = upVector p (model.planet)
                 let n = northVector up 
-                { model with origin = p; north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up }, bigConfig
+                let n' = updateNorthInDegree n model.noffset.value
+                { model with origin = p; north = ReferenceSystem.setV3d n'.Normalized; up = ReferenceSystem.setV3d up }, bigConfig
             | SetOrigin p -> 
                 { model with origin = p }, bigConfig
             | SetUp up ->    
@@ -68,6 +76,18 @@ module ReferenceSystemApp =
                 let n = ReferenceSystem.setV3d n.value.Normalized
                 
                 { model with north = n }, bigConfig
+            | SetNOffset o ->
+                let noffset = Numeric.update model.noffset o
+                //let test = {
+                //    value   = float 180.0
+                //    min     = float 0.0
+                //    max     = float 360.0
+                //    step    = float 1.0
+                //    format  = "{0:0.00}"
+                //}
+                let n = updateNorthInDegree model.north.value noffset.value
+                let n' = ReferenceSystem.setV3d n.Normalized
+                { model with noffset = noffset; north = n' }, bigConfig
             | ToggleVisible   -> 
                 { model with isVisible = not model.isVisible}, bigConfig
             | SetArrowSize d  ->
@@ -123,8 +143,6 @@ module ReferenceSystemApp =
 
                 let posTrafo =
                     style.position |> Mod.map(fun d -> Trafo3d.Translation(d))
-                
-                
 
                 let coneTrafo = 
                     Mod.map2(fun p s -> Trafo3d.RotateInto(V3d.ZAxis, dirs.Normalized) * Trafo3d.Translation(p + s)) style.position scaledLength
@@ -286,7 +304,8 @@ module ReferenceSystemApp =
                 styleUp    |> directionMarker near cam  
                 styleNorth |> directionMarker near cam
                 styleEast  |> directionMarker near cam                     
-            ]   |> Sg.onOff(model.isVisible)       
+            ]   |> Sg.onOff(model.isVisible)  
+                //|> Sg.trafo (model.noffset.value |> Mod.map ( fun o -> (Trafo3d.RotationXInDegrees(o))))
 
     module UI =
         open Aardvark.UI.Primitives.Mutable
@@ -318,11 +337,10 @@ module ReferenceSystemApp =
                 Html.table [                                                
                     Html.row "Pos:"     [Incremental.text (model.origin     |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Up:"      [Vector3d.view model.up |> UI.map SetUp ]
-                    Html.row "North:"   [Vector3d.view model.north |> UI.map SetNorth ]
                     Html.row "Bearing:" [Incremental.text (bearing |> Mod.map (fun x -> x.ToString("0.00")))] // compute azimuth with view dir, north vector and up vector
                     Html.row "Pitch:"   [Incremental.text (pitch |> Mod.map (fun x -> x.ToString("0.00")))]  // same for pitch which relates to dip angle
                     Html.row "Height:"  [Incremental.text (height |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Visible:" [GuiEx.iconCheckBox model.isVisible ToggleVisible ]
-                    
+                    Html.row "North:"   [Numeric.view' [InputBox] model.noffset |> UI.map SetNOffset ]   
                 ]
             )
