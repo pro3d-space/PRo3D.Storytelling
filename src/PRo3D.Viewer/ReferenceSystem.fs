@@ -45,12 +45,57 @@ module ReferenceSystemApp =
             getArrowThickness : 'ma -> IMod<float>
             getNearDistance   : 'ma -> IMod<float>
         }
-    
-    let updateNorthInDegree (north:V3d) (degree:float) =
-        let x = (north.X * (cos degree)) - (north.Y * (sin degree))
-        let y = (north.X * (sin degree)) + (north.Y * (cos degree))
-        V3d(x, y, north.Z)
 
+    let updateVectorInDegree (up:V3d) (point:V3d) (origin:V3d) (theta:float) =
+        //https://sites.google.com/site/glennmurray/Home/rotation-matrices-and-formulas
+        
+        let xyPlane = new Plane3d(up.Normalized, origin) 
+
+        let u = xyPlane.Normal.X //up.X
+        let v = xyPlane.Normal.Y //up.Y
+        let w = xyPlane.Normal.Z //up.Z
+        let a = xyPlane.Point.X //pos.X
+        let b = xyPlane.Point.Y //pos.Y
+        let c = xyPlane.Point.Z //pos.Z
+        let x = point.X
+        let y = point.Y
+        let z = point.Z
+        
+        let t = theta.RadiansFromDegrees()
+
+        let u2 = u*u
+        let v2 = v*v
+        let w2 = w*w
+        let cosT = Math.Cos(t)
+        let oneMinusCosT = 1.0-cosT
+        let sinT = Math.Sin(t)
+        
+        // Build the matrix entries element by element.
+        let m11 = u2 + (v2 + w2) * cosT
+        let m12 = u*v * oneMinusCosT - w*sinT
+        let m13 = u*w * oneMinusCosT + v*sinT
+        let m14 = (a*(v2 + w2) - u*(b*v + c*w))*oneMinusCosT
+                + (b*w - c*v)*sinT
+
+        let m21 = u*v * oneMinusCosT + w*sinT
+        let m22 = v2 + (u2 + w2) * cosT
+        let m23 = v*w * oneMinusCosT - u*sinT
+        let m24 = (b*(u2 + w2) - v*(a*u + c*w))*oneMinusCosT
+                + (c*u - a*w)*sinT
+
+        let m31 = u*w * oneMinusCosT - v*sinT
+        let m32 = v*w * oneMinusCosT + u*sinT
+        let m33 = w2 + (u2 + v2) * cosT
+        let m34 = (c*(u2 + v2) - w*(a*u + b*v))*oneMinusCosT
+                + (a*v - b*u)*sinT
+                
+        let px = m11*x + m12*y + m13*z + m14
+        let py = m21*x + m22*y + m23*z + m24
+        let pz = m31*x + m32*y + m33*z + m34
+
+        V3d(px, py, pz)
+    
+   
     let upVector (point:V3d) (planet) = CooTransformation.getUpVector point planet //point.Normalized
     
     let northVector (up:V3d) =
@@ -63,8 +108,8 @@ module ReferenceSystemApp =
             | InferCoordSystem p ->
                 let up = upVector p (model.planet)
                 let n = northVector up 
-                let n' = updateNorthInDegree n model.noffset.value
-                { model with origin = p; north = ReferenceSystem.setV3d n'.Normalized; up = ReferenceSystem.setV3d up }, bigConfig
+                let no = updateVectorInDegree up n model.origin model.noffset.value 
+                { model with origin = p; north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up; northO = no }, bigConfig
             | SetOrigin p -> 
                 { model with origin = p }, bigConfig
             | SetUp up ->    
@@ -73,21 +118,13 @@ module ReferenceSystemApp =
                 { model with up =  up}, bigConfig
             | SetNorth  n     -> 
                 let n = Vector3d.update model.north n
-                let n = ReferenceSystem.setV3d n.value.Normalized
+                let n = ReferenceSystem.setV3d n.value//.Normalized
                 
                 { model with north = n }, bigConfig
             | SetNOffset o ->
                 let noffset = Numeric.update model.noffset o
-                //let test = {
-                //    value   = float 180.0
-                //    min     = float 0.0
-                //    max     = float 360.0
-                //    step    = float 1.0
-                //    format  = "{0:0.00}"
-                //}
-                let n = updateNorthInDegree model.north.value noffset.value
-                let n' = ReferenceSystem.setV3d n.Normalized
-                { model with noffset = noffset; north = n' }, bigConfig
+                let no = updateVectorInDegree model.up.value model.north.value model.origin model.noffset.value 
+                { model with noffset = noffset; northO = no }, bigConfig 
             | ToggleVisible   -> 
                 { model with isVisible = not model.isVisible}, bigConfig
             | SetArrowSize d  ->
@@ -97,8 +134,9 @@ module ReferenceSystemApp =
                 { model with selectedScale = s }, bigConfig
             | SetPlanet p ->                              
               let up = upVector model.origin p                                                
-              let n = northVector up               
-              { model with  north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up; planet = p }, bigConfig
+              let n = northVector up        
+              let no = updateVectorInDegree up n model.origin model.noffset.value
+              { model with  north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up; planet = p; northO = no }, bigConfig
 
     module Sg =
 
@@ -258,7 +296,7 @@ module ReferenceSystemApp =
             let thickness = minnerConfig.getArrowThickness mbigConfig
             let near      = minnerConfig.getNearDistance   mbigConfig
 
-            let east = Mod.map2(fun (l:V3d) (r:V3d) -> r.Cross(l) ) model.up.value model.north.value
+            let east = Mod.map2(fun (l:V3d) (r:V3d) -> r.Cross(l) ) model.up.value model.northO // model.north.value
 
             let size = model.selectedScale |> Mod.map scaleToSize
 
@@ -275,7 +313,7 @@ module ReferenceSystemApp =
 
             let styleNorth : MarkerStyle = {
                 position  = model.origin
-                direction = model.north.value
+                direction = model.northO //model.north.value
                 color     = Mod.constant C4b.Red
                 size      = size
                 thickness = thickness
@@ -295,6 +333,82 @@ module ReferenceSystemApp =
                 fix       = Mod.constant false
             }
 
+            //test
+            //let n90 =
+            //    adaptive {
+            //        let! up = model.up.value
+            //        let! n = model.north.value
+            //        let! o = model.origin
+            //        return updateVectorInDegree up n o 90.0
+            //    }
+                     
+            //let styleNorth90 : MarkerStyle = {
+            //    position  = model.origin
+            //    direction =  n90 //Mod.constant(V3d(19417.0692,323595.2722,-323129.0951))//
+            //    color     = Mod.constant C4b.Yellow
+            //    size      = size
+            //    thickness = thickness
+            //    hasArrow  = Mod.constant true
+            //    text      = Mod.constant (Some "90°")
+            //    fix       = Mod.constant false
+            //}
+
+            //let n180 =
+            //    adaptive {
+            //        let! up = model.up.value
+            //        let! n = model.north.value
+            //        let! o = model.origin
+            //        return updateVectorInDegree up n o -180.0
+            //    }
+
+            //let styleNorth180 : MarkerStyle = {
+            //    position  = model.origin
+            //    direction = n180 //Mod.constant(V3d(62072.2456,644324.9248,625.4524))//
+            //    color     = Mod.constant C4b.Yellow
+            //    size      = size
+            //    thickness = thickness
+            //    hasArrow  = Mod.constant true
+            //    text      = Mod.constant (Some "180°")
+            //    fix       = Mod.constant false
+            //}
+
+            //let n260 =
+            //    adaptive {
+            //        let! up = model.up.value
+            //        let! n = model.north.value
+            //        let! o = model.origin
+            //        return updateVectorInDegree up n o 260.0
+            //    }
+
+            //let styleNorth260 : MarkerStyle = {
+            //    position  = model.origin
+            //    direction = n260
+            //    color     = Mod.constant C4b.Yellow
+            //    size      = size
+            //    thickness = thickness
+            //    hasArrow  = Mod.constant true
+            //    text      = Mod.constant (Some "260°")
+            //    fix       = Mod.constant false
+            //}
+
+            //let n120 =
+            //    adaptive {
+            //        let! up = model.up.value
+            //        let! n = model.north.value
+            //        let! o = model.origin
+            //        return updateVectorInDegree up n o 120.0
+            //    }
+
+            //let styleNorth120 : MarkerStyle = {
+            //    position  = model.origin
+            //    direction = n120
+            //    color     = Mod.constant C4b.Yellow
+            //    size      = size
+            //    thickness = thickness
+            //    hasArrow  = Mod.constant true
+            //    text      = Mod.constant (Some "120°")
+            //    fix       = Mod.constant false
+            //}
             
             let sizeText = Sg.text cam near (Mod.constant 60.0) model.origin (model.origin |> Mod.map Trafo3d.Translation) model.selectedScale (Mod.constant 0.05)
 
@@ -303,6 +417,10 @@ module ReferenceSystemApp =
                 sizeText
                 styleUp    |> directionMarker near cam  
                 styleNorth |> directionMarker near cam
+                //styleNorth90 |> directionMarker near cam
+                //styleNorth120 |> directionMarker near cam
+                //styleNorth180 |> directionMarker near cam
+                //styleNorth260 |> directionMarker near cam
                 styleEast  |> directionMarker near cam                     
             ]   |> Sg.onOff(model.isVisible)  
                 //|> Sg.trafo (model.noffset.value |> Mod.map ( fun o -> (Trafo3d.RotationXInDegrees(o))))
@@ -314,7 +432,7 @@ module ReferenceSystemApp =
             let bearing = 
                 adaptive {
                     let! up = model.up.value
-                    let! north = model.north.value 
+                    let! north = model.northO //model.north.value 
                     let! view = camera.view
                     return DipAndStrike.bearing up north view.Forward
                     }
@@ -337,10 +455,13 @@ module ReferenceSystemApp =
                 Html.table [                                                
                     Html.row "Pos:"     [Incremental.text (model.origin     |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Up:"      [Vector3d.view model.up |> UI.map SetUp ]
+                    Html.row "North:"   [Incremental.text (model.north.value |> Mod.map (fun x -> x.ToString("0.00")))]
+                    Html.row "NorthO:"  [Incremental.text (model.northO |> Mod.map (fun x -> x.ToString("0.00")))]
+                    Html.row "N-Offset:"[Numeric.view' [InputBox] model.noffset |> UI.map SetNOffset ] 
                     Html.row "Bearing:" [Incremental.text (bearing |> Mod.map (fun x -> x.ToString("0.00")))] // compute azimuth with view dir, north vector and up vector
                     Html.row "Pitch:"   [Incremental.text (pitch |> Mod.map (fun x -> x.ToString("0.00")))]  // same for pitch which relates to dip angle
                     Html.row "Height:"  [Incremental.text (height |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Visible:" [GuiEx.iconCheckBox model.isVisible ToggleVisible ]
-                    Html.row "North:"   [Numeric.view' [InputBox] model.noffset |> UI.map SetNOffset ]   
+                      
                 ]
             )

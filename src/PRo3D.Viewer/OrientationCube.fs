@@ -71,12 +71,7 @@ module Sg =
                 let view = CameraView.look V3d.OOO cv.Forward cv.Sky
                 view.ViewTrafo
             )
-        //let viewTrafo =
-        //    Mod.map2 ( fun (n:V3d) u ->
-        //        let view = CameraView.look V3d.OOO n u
-        //        view.ViewTrafo
-        //    ) north up
-        
+       
         let orthoTrafo =
             let d = 3.0
             //let t = V3d((-d+1.0), -d+1.0, 0.0)
@@ -92,27 +87,14 @@ module Sg =
                 let! offset = refSys.noffset.value
                 let Vn = (V3d.Cross(cam.Forward.Normalized, n.OYO)).Normalized
                 //((Va x Vb) . Vn) / (Va . Vb)
-                let angle = (V3d.Dot((V3d.Cross(cam.Forward.Normalized, n.OYO)), Vn)) / (V3d.Dot(cam.Forward.Normalized, n.OYO))
-                return angle //+ offset
-            } //|> Mod.force
+                let angle = (V3d.Dot((V3d.Cross(cam.Forward.Normalized, n.OYO)), Vn)) / (V3d.Dot(cam.Forward.Normalized, n.OYO)) //.OYO
+                return angle + offset
+            }
 
-       
-        let upAngle = 
-            adaptive {
-                let! cam = camView
-                let! u = refSys.up.value
-                let Vn = (V3d.Cross(cam.Sky, u)).Normalized
-                //((Va x Vb) . Vn) / (Va . Vb)
-                return (V3d.Dot((V3d.Cross(cam.Sky, u)), Vn)) / (V3d.Dot(cam.Sky, u))
-            } //|> Mod.force
-        
         model
         |> Sg.trafo (Mod.constant (Trafo3d.Scale(0.5,0.5, -0.5)))
         |> Sg.trafo (Mod.constant (Trafo3d.RotationXInDegrees(90.0)))
-        //|> Sg.trafo (Mod.constant (Trafo3d.RotationYInDegrees(northAngle)))
-        //|> Sg.trafo (upAngle |> Mod.map( fun u ->  (Trafo3d.RotationYInDegrees(u))))
         |> Sg.trafo (refSys.up.value |> Mod.map ( fun u ->  Trafo3d.RotateInto(V3d.ZAxis, u)))
-       // |> Sg.trafo ( refSys.north.value |> Mod.map ( fun n ->  Trafo3d.RotateInto(V3d.YAxis, n) ) )
         |> Sg.trafo (northAngle |> Mod.map ( fun n -> (Trafo3d.RotationXInDegrees(n))))
         |> Sg.viewTrafo viewTrafo
         |> Sg.projTrafo orthoTrafo
