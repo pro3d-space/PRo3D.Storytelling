@@ -239,6 +239,14 @@ type Segment = {
     points : plist<V3d> 
 }
 
+[<ReferenceEquality>]
+ type CylinderAnnotation =
+   {
+     id        : Guid
+     positions : V3d[]
+     cylinders : Cylinder3d[]
+   }
+
 [<DomainType>]
 type Annotation = {
     [<PrimaryKey>]
@@ -394,7 +402,7 @@ module Annotation =
         }
 
     let initial =
-        make Projection.Linear Geometry.Polyline Semantic.Horizon0 ""
+        make Projection.Viewpoint Geometry.Polyline Semantic.Horizon0 ""
 
 module JsonTypes =
     type _V3d = {

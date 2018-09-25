@@ -833,9 +833,18 @@ module ViewerApp =
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation            
           
+            let orientationRef = 
+                ReferenceSystemApp.Sg.getOrientationSystem
+                    m.scene.config
+                    mrefConfig
+                    m.scene.referenceSystem
+                    m.scene.navigation.camera.view
+                //|> Sg.map OrientationCube
+
             let orientationCube =                                    
-              OrientationCube.Sg.loadModel "../../data/rotationcube/rotationcube.dae"
-                |> OrientationCube.Sg.orthoOrientation m.scene.navigation.camera.view                      
+              OrientationCube.Sg.loadCubeModel "../../data/rotationcube/rotationcube.dae"
+              //orientationRef
+                |> OrientationCube.Sg.orthoOrientation m.scene.navigation.camera.view m.scene.referenceSystem                 
                 |> Sg.map OrientationCube
                 |> Sg.onOff m.scene.config.drawOrientationCube
                

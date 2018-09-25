@@ -10,6 +10,8 @@ type ReferenceSystem = {
 
     origin      : V3d
     north       : V3dInput
+    noffset     : NumericInput
+    northO      : V3d
     up          : V3dInput
     isVisible   : bool       
     size        : NumericInput
@@ -32,7 +34,7 @@ module ReferenceSystem =
         value   = 0.0
         min     = -1.0
         max     = +1.0
-        step    = 0.1
+        step    = 0.001
         format  = "{0:0.000}"
     }
 
@@ -47,7 +49,7 @@ module ReferenceSystem =
         value   = 1.0
         min     = 0.1
         max     = 10.0
-        step    = 0.1
+        step    = 0.01
         format  = "{0:0.0}"
     }
 
@@ -59,9 +61,19 @@ module ReferenceSystem =
         format  = "{0:0.000}"
     }
 
+    let initNoffset = {
+        value   = float 0.0
+        min     = float 0.0
+        max     = float 360.0
+        step    = float 1.0
+        format  = "{0:0.0}"
+    }
+
     let initial = {
         origin        = V3d.IIO
         north         = setV3d V3d.IOO
+        noffset       = initNoffset
+        northO        = V3d.OOO
         up            = setV3d V3d.OOI
         isVisible     = true              
         size          = initNum2

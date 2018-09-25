@@ -8,6 +8,7 @@ open Aardvark.Rendering
 open Aardvark.UI
 open Aardvark.UI.Trafos
 open Aardvark.UI.Primitives
+open PRo3D
 
 module Shader =
     
@@ -56,20 +57,21 @@ module Shader =
       }
         
 module Sg =
+    open PRo3D.ReferenceSystem.Mutable
     
-    let loadModel (filename : string) =
+    let loadCubeModel (filename : string) =
         Aardvark.SceneGraph.IO.Loader.Assimp.load filename
         |> Sg.adapter
         |> Sg.noEvents
     
-    let orthoOrientation (camView : IMod<CameraView>) (model : ISg<'msg>) =
+    let orthoOrientation (camView : IMod<CameraView>) (refSys:MReferenceSystem) (model : ISg<'msg>) = // (model:ISg<obj>) = //
         let viewTrafo =
             camView
             |> Mod.map ( fun cv ->
                 let view = CameraView.look V3d.OOO cv.Forward cv.Sky
                 view.ViewTrafo
             )
-        
+       
         let orthoTrafo =
             let d = 3.0
             //let t = V3d((-d+1.0), -d+1.0, 0.0)
@@ -77,11 +79,23 @@ module Sg =
             let max = V3d(d, d, d*2.0)
             let fr = Frustum.ortho (Box3d(min, max))
             Mod.constant (Frustum.orthoTrafo fr)
-        
+
+        let northAngle = 
+            adaptive {
+                let! cam = camView
+                let! n = refSys.north.value
+                let! offset = refSys.noffset.value
+                let Vn = (V3d.Cross(cam.Forward.Normalized, n.OYO)).Normalized
+                //((Va x Vb) . Vn) / (Va . Vb)
+                let angle = (V3d.Dot((V3d.Cross(cam.Forward.Normalized, n.OYO)), Vn)) / (V3d.Dot(cam.Forward.Normalized, n.OYO)) //.OYO
+                return angle + offset
+            }
+
         model
         |> Sg.trafo (Mod.constant (Trafo3d.Scale(0.5,0.5, -0.5)))
         |> Sg.trafo (Mod.constant (Trafo3d.RotationXInDegrees(90.0)))
-        |> Sg.trafo ( camView |> Mod.map ( fun v ->  Trafo3d.RotateInto(V3d.OOI, v.Sky) ) )
+        |> Sg.trafo (refSys.up.value |> Mod.map ( fun u ->  Trafo3d.RotateInto(V3d.ZAxis, u)))
+        |> Sg.trafo (northAngle |> Mod.map ( fun n -> (Trafo3d.RotationXInDegrees(n))))
         |> Sg.viewTrafo viewTrafo
         |> Sg.projTrafo orthoTrafo
         |> Sg.shader {
@@ -111,11 +125,11 @@ module Sg =
         }
         |> Sg.pass (RenderPass.after "cube" RenderPassOrder.Arbitrary RenderPass.main)
 
-    let drawCube (draw:IMod<bool>) (camView : IMod<CameraView>) =
-      draw
-        |> Mod.map( fun x -> 
-            match x with
-            | true -> loadModel "../../data/rotationcube/rotationcube.dae" |> orthoOrientation camView
-            | false -> Sg.empty
-        )          
+    //let drawCube (draw:IMod<bool>) (up : IMod<V3d>) (north : IMod<V3d>) (camView : IMod<CameraView>) =
+    //  draw
+    //    |> Mod.map( fun x -> 
+    //        match x with
+    //        | true -> loadModel "../../data/rotationcube/rotationcube.dae" |> orthoOrientation camView up north
+    //        | false -> Sg.empty
+    //    )          
     

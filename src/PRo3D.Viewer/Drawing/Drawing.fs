@@ -131,7 +131,7 @@ module DrawingApp =
                     annotation, None
                 | _ -> failwith "case does not exist"
             
-            result
+            result 
           | None ->  //no working state, start new working annotation
             { 
                 //annotation states should be immutable after creation

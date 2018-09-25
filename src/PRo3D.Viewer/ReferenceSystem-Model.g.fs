@@ -15,6 +15,8 @@ module Mutable =
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.ReferenceSystem.ReferenceSystem> = Aardvark.Base.Incremental.EqModRef<PRo3D.ReferenceSystem.ReferenceSystem>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.ReferenceSystem.ReferenceSystem>
         let _origin = ResetMod.Create(__initial.origin)
         let _north = Aardvark.UI.Mutable.MV3dInput.Create(__initial.north)
+        let _noffset = Aardvark.UI.Mutable.MNumericInput.Create(__initial.noffset)
+        let _northO = ResetMod.Create(__initial.northO)
         let _up = Aardvark.UI.Mutable.MV3dInput.Create(__initial.up)
         let _isVisible = ResetMod.Create(__initial.isVisible)
         let _size = Aardvark.UI.Mutable.MNumericInput.Create(__initial.size)
@@ -24,6 +26,8 @@ module Mutable =
         
         member x.origin = _origin :> IMod<_>
         member x.north = _north
+        member x.noffset = _noffset
+        member x.northO = _northO :> IMod<_>
         member x.up = _up
         member x.isVisible = _isVisible :> IMod<_>
         member x.size = _size
@@ -38,6 +42,8 @@ module Mutable =
                 
                 ResetMod.Update(_origin,v.origin)
                 Aardvark.UI.Mutable.MV3dInput.Update(_north, v.north)
+                Aardvark.UI.Mutable.MNumericInput.Update(_noffset, v.noffset)
+                ResetMod.Update(_northO,v.northO)
                 Aardvark.UI.Mutable.MV3dInput.Update(_up, v.up)
                 ResetMod.Update(_isVisible,v.isVisible)
                 Aardvark.UI.Mutable.MNumericInput.Update(_size, v.size)
@@ -71,6 +77,18 @@ module Mutable =
                     override x.Get(r) = r.north
                     override x.Set(r,v) = { r with north = v }
                     override x.Update(r,f) = { r with north = f r.north }
+                }
+            let noffset =
+                { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.noffset
+                    override x.Set(r,v) = { r with noffset = v }
+                    override x.Update(r,f) = { r with noffset = f r.noffset }
+                }
+            let northO =
+                { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.northO
+                    override x.Set(r,v) = { r with northO = v }
+                    override x.Update(r,f) = { r with northO = f r.northO }
                 }
             let up =
                 { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, Aardvark.UI.V3dInput>() with

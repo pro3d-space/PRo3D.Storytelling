@@ -33,7 +33,7 @@ module Gui =
   let pitchAndBearing (r:MReferenceSystem) (view:IMod<CameraView>) =
           adaptive {
             let! up    = r.up.value
-            let! north = r.north.value   
+            let! north = r.northO//r.north.value   
             let! v     = view
 
             return (DipAndStrike.pitch up v.Forward, DipAndStrike.bearing up north v.Forward)
@@ -116,15 +116,27 @@ module Gui =
       ]
 
     let private scene (m:MModel) = 
+      let save = 
+        match (m.scene.scenePath|> Mod.force) with
+            | Some p ->
+                 div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
+                  text "Save"
+                ]
+            | None ->
+                div [ clazz "ui inverted item"; Dialogs.onSaveFile1 SaveScene (m.scene.scenePath |> Mod.force);
+                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene', defaultPath :'C:\Users\laura\VRVis\PRo3D_25062018\src\test.xml'}]}));")][
+                  text "Save"
+                ]
       [
         text "Scene" 
         i [clazz "dropdown icon"][]
       
         div [ clazz "menu"] [
-            div [ clazz "ui inverted item"; Dialogs.onSaveFile1 SaveScene (m.scene.scenePath |> Mod.force);
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene'}]}));")][
-                  text "Save"
-            ]
+            save
+            //div [ clazz "ui inverted item"; Dialogs.onSaveFile1 SaveScene (m.scene.scenePath |> Mod.force);
+            //      clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene', defaultPath :'C:\Users\laura\VRVis\PRo3D_25062018\src\test.xml'}]}));")][
+            //      text "Save"
+            //]
             div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveAs;
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({properties: []}));") ][
                   text "Save as..."
