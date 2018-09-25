@@ -122,8 +122,6 @@ module ViewerApp =
         {            
             getNearPlane       = fun x -> x.nearPlane.value
             getHfov            = fun (x:MViewConfigModel) -> ((Mod.init 60.0) :> IMod<float>)
-            //getMaxDipAngle     = fun (x:MViewConfigModel) -> x.maxDipAngle.value
-            //getMinDipAngle     = fun (x:MViewConfigModel) -> x.minDipAngle.value
             getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
             getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
             getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
@@ -543,44 +541,27 @@ module ViewerApp =
                     | false -> m
                 
             | SaveScene s, _,_ -> 
-                //match m.scene.scenePath with
-                //    | None ->                        
-                //        match Dialogs.saveDialog w with
-                //            | None -> m
-                //            | Some p -> 
-                //                let s' = { m.scene with scenePath = Some p}
-                //                { m with scene = Serialization.save p s'; } |> Model.stashAndSaveRecent p
-                //    | Some path ->                        
-                //        { m with scene = Serialization.save path m.scene } |> Model.stashAndSaveRecent path
-
-               
                 match m.scene.scenePath with
                     | None ->                        
                         match s.IsEmptyOrNull() with
                             | true -> m
                             | _ -> 
                                 let s' = { m.scene with scenePath = Some s}
-                                { m with scene = Serialization.save s s'; } |> Model.stashAndSaveRecent s
+                                
+                                { m with scene = Serialization.saveJson s s'; } |> Model.stashAndSaveRecent s
+                                //{ m with scene = Serialization.save s s'; } |> Model.stashAndSaveRecent s
                     | Some path ->                        
-                        { m with scene = Serialization.save path m.scene } |> Model.stashAndSaveRecent path
+                        { m with scene = Serialization.saveJson path m.scene; } |> Model.stashAndSaveRecent path
+                        //{ m with scene = Serialization.save path m.scene } |> Model.stashAndSaveRecent path
                
             | SaveAs s,_,_ ->
-                //match Dialogs.saveDialog w with
-                //    | None -> m
-                //    | Some p -> 
-                //        let s' = { m.scene with scenePath = Some p}                                
-                //        { m with scene = Serialization.save p s' } |> Model.stashAndSaveRecent p
-                 match s.IsEmptyOrNull() with
+                match s.IsEmptyOrNull() with
                     | true -> m
                     | _  -> 
                         let s' = { m.scene with scenePath = Some s}                                
-                        { m with scene = Serialization.save s s' } |> Model.stashAndSaveRecent s
+                        { m with scene = Serialization.saveJson s s'; } |> Model.stashAndSaveRecent s
+                        //{ m with scene = Serialization.save s s' } |> Model.stashAndSaveRecent s
             | OpenScene sl,_,_ ->
-                //match Dialogs.openDialog w with
-                //    | None -> m
-                //    | Some path -> 
-                //        let m' = Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
-                //        loadRoverData m'
                 match sl.Length < 1 with
                     | true -> m
                     | false -> 
@@ -1077,6 +1058,11 @@ module ViewerApp =
               |> Scene.loadLastScene runtime signature
               |> loadRoverData
               |> loadLastAnnotations  
+
+        //let m = PRo3D.Viewer.Viewer.initial 
+        //let m' = m|> Scene.loadLastScene runtime signature
+        //let m'' = m' |> loadRoverData
+        //let m''' = m'' |> loadLastAnnotations  
               
         App.start {
             unpersist = Unpersist.instance

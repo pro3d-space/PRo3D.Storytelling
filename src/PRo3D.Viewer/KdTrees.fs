@@ -28,9 +28,17 @@ module KdTrees =
         | LazyKdTree of LazyKdTree
         | InCoreKdTree of InCoreKdTree
 
-    let makeInCoreKd a = 
+   
+    let makeCKI t = new ConcreteKdIntersectionTree(new KdIntersectionTree(), t)
+        
+    let concreteKdIntersectionPickler : Pickler<ConcreteKdIntersectionTree> =
+        Pickler.product makeCKI
+        //^+ Pickler.field (fun (s:ConcreteKdIntersectionTree) -> s.KdIntersectionTree)       Pickler.auto<KdIntersectionTree>
+        ^. Pickler.field (fun (s:ConcreteKdIntersectionTree) -> s.Trafo)                    Pickler.auto<Trafo3d>
+
+    let makeInCoreKd kd a = 
         {
-            kdTree = new ConcreteKdIntersectionTree()
+            kdTree = kd //new ConcreteKdIntersectionTree()
             boundingBox = a
         }
 
@@ -45,6 +53,7 @@ module KdTrees =
 
     let incorePickler : Pickler<InCoreKdTree> =
         Pickler.product makeInCoreKd
+        ^+ Pickler.field (fun s -> s.kdTree)          Pickler.auto<ConcreteKdIntersectionTree>
         ^. Pickler.field (fun s -> s.boundingBox)     Pickler.auto<Box3d>
 
     let lazyPickler : Pickler<LazyKdTree> =

@@ -353,62 +353,6 @@ module ReferenceSystemApp =
             //    fix       = Mod.constant false
             //}
 
-            //let n180 =
-            //    adaptive {
-            //        let! up = model.up.value
-            //        let! n = model.north.value
-            //        let! o = model.origin
-            //        return updateVectorInDegree up n o -180.0
-            //    }
-
-            //let styleNorth180 : MarkerStyle = {
-            //    position  = model.origin
-            //    direction = n180 //Mod.constant(V3d(62072.2456,644324.9248,625.4524))//
-            //    color     = Mod.constant C4b.Yellow
-            //    size      = size
-            //    thickness = thickness
-            //    hasArrow  = Mod.constant true
-            //    text      = Mod.constant (Some "180°")
-            //    fix       = Mod.constant false
-            //}
-
-            //let n260 =
-            //    adaptive {
-            //        let! up = model.up.value
-            //        let! n = model.north.value
-            //        let! o = model.origin
-            //        return updateVectorInDegree up n o 260.0
-            //    }
-
-            //let styleNorth260 : MarkerStyle = {
-            //    position  = model.origin
-            //    direction = n260
-            //    color     = Mod.constant C4b.Yellow
-            //    size      = size
-            //    thickness = thickness
-            //    hasArrow  = Mod.constant true
-            //    text      = Mod.constant (Some "260°")
-            //    fix       = Mod.constant false
-            //}
-
-            //let n120 =
-            //    adaptive {
-            //        let! up = model.up.value
-            //        let! n = model.north.value
-            //        let! o = model.origin
-            //        return updateVectorInDegree up n o 120.0
-            //    }
-
-            //let styleNorth120 : MarkerStyle = {
-            //    position  = model.origin
-            //    direction = n120
-            //    color     = Mod.constant C4b.Yellow
-            //    size      = size
-            //    thickness = thickness
-            //    hasArrow  = Mod.constant true
-            //    text      = Mod.constant (Some "120°")
-            //    fix       = Mod.constant false
-            //}
             
             let sizeText = Sg.text cam near (Mod.constant 60.0) model.origin (model.origin |> Mod.map Trafo3d.Translation) model.selectedScale (Mod.constant 0.05)
 

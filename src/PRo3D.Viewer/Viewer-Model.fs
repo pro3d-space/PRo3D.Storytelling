@@ -123,8 +123,10 @@ module Viewer =
         init        
 
     let sceneElm = {id = "scene"; title = (Some "Scene"); weight = 0.4; deleteInvisible = None }
+    
     let initial = {           
        // surfaces = HSet.empty
+        //let test = SurfaceModel.initial
         scene = {
                 navigation      = navInit
                 interaction     = InteractionMode.PickOrbitCenter
