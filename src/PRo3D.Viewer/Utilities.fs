@@ -14,7 +14,7 @@ open Aardvark.SceneGraph.Opc
 
 
 module Serialization =
-    open Aardvark.UI.Incremental
+  //  open Aardvark.UI.Incremental
     
     let registry = new CustomPicklerRegistry()    
     let cache = PicklerCache.FromCustomPicklerRegistry registry    

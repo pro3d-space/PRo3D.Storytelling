@@ -477,7 +477,7 @@ module Surface =
         | ColorCorrectionMessage    of ColorCorrectionProperties.Action
 
     let computeIndices (size:V2i)(invalids : int[]) : int[] =
-      PRo3DCSharp.ComputeIndexArray(size,invalids)
+      Aardvark.VRVis.IndexComputation.ComputeIndexArray(size,invalids)
 
     let intersectKdTrees' = KdTrees.intersectKdTrees computeIndices
 
@@ -515,7 +515,7 @@ module Surface =
                         //intersect corresponding kdtrees
                         let closestHit =
                             hitBoxes
-                                |> Seq.map(
+                                |> Seq.choose(
                                     fun bb -> 
                                         //Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                        
 
@@ -526,8 +526,7 @@ module Surface =
 
                                         cache <- c
                                         hit
-                                        )
-                                |> Seq.choose(fun x -> x)
+                                        )                                
                                 |> Seq.sortBy(fun (t,_)-> t)
                                 |> Seq.tryHead                                               
 
