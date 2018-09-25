@@ -81,8 +81,8 @@
     <Compile Include="Model.fs" />
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
-    <Compile Include="OrientationCube.fs" />
     <Compile Include="ReferenceSystem-Model.fs" />
+    <Compile Include="OrientationCube.fs" />
     <Compile Include="CooTransformation.fs" />
     <Compile Include="FalseColorLegendApp.fs" />
     <Compile Include="DipAndStrike.fs" />
