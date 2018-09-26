@@ -549,7 +549,7 @@ module ViewerApp =
                                 let s' = { m.scene with scenePath = Some s}
                                 
                                 { m with scene = Serialization.saveJson s s'; } |> Model.stashAndSaveRecent s
-                                //{ m with scene = Serialization.save s s'; } |> Model.stashAndSaveRecent s
+                                ///{ m with scene = Serialization.save s s'; } |> Model.stashAndSaveRecent s
                     | Some path ->                        
                         { m with scene = Serialization.saveJson path m.scene; } |> Model.stashAndSaveRecent path
                         //{ m with scene = Serialization.save path m.scene } |> Model.stashAndSaveRecent path
