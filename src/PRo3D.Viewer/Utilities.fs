@@ -20,7 +20,7 @@ module Serialization =
     let cache = PicklerCache.FromCustomPicklerRegistry registry    
 
     let binarySerializer = FsPickler.CreateBinarySerializer(picklerResolver = cache)
-    let jsonSerializer = FsPickler.CreateJsonSerializer(picklerResolver = cache) // FsPickler.CreateJsonSerializer(indent=true)
+    let jsonSerializer = FsPickler.CreateJsonSerializer(picklerResolver = cache) //  FsPickler.CreateJsonSerializer(indent=true) // 
 
     let save path (d : 'a) =    
         let arr =  binarySerializer.Pickle d
@@ -40,8 +40,10 @@ module Serialization =
         d
 
     let loadJsonAs<'a> path : 'a =
-        let json = File.readAllText path
-        jsonSerializer.UnPickleOfString json
+        let json = System.IO.File.ReadAllText path //readAllText path
+        let test2 : 'a = jsonSerializer.UnPickleOfString<'a> json
+        test2
+        
 
     let fileExists filePath =
         match System.IO.File.Exists filePath with

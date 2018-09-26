@@ -130,12 +130,11 @@ let main argv =
     //Serialization.registry.DeclareSerializable<Aardvark.Geometry.KdIntersectionTree>()
     //Serialization.registry.RegisterFactory (fun _ -> KdTrees.concreteKdIntersectionPickler)
     //Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.sgSurfacePickler)
+    
     Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.surfaceModelPickler)
     Serialization.registry.RegisterFactory (fun _ -> KdTrees.level0KdTreePickler)
     
     
-    //Serialization.registry.DeclareSerializable<NonSerializable>()
-
     if licenseCheck then
       checkLicense()
     

@@ -297,10 +297,10 @@ module DrawingApp =
                                 annotations = model.annotations
                                 colorLegend = model.colorLegend
                             }
-                        Serialization.save "./lastMeasure" sa |> ignore 
-                        //Serialization.saveJson "./lastMeasure" sa |> ignore 
-                        let saveA = Serialization.save p sa
-                        //let saveA = Serialization.saveJson p sa
+                        //Serialization.save "./lastMeasure" sa |> ignore 
+                        Serialization.saveJson "./lastMeasure" sa |> ignore 
+                        //let saveA = Serialization.save p sa
+                        let saveA = Serialization.saveJson p sa
                         { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend } 
 
             | Load p,_ ->                

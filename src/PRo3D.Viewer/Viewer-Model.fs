@@ -126,7 +126,7 @@ module Viewer =
     
     let initial = {           
        // surfaces = HSet.empty
-        //let test = SurfaceModel.initial
+        
         scene = {
                 navigation      = navInit
                 interaction     = InteractionMode.PickOrbitCenter

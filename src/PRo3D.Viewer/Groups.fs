@@ -526,66 +526,65 @@ module SurfaceModel =
         let surfaces = GroupsModel.initial
         { surfaces with rootGroup = group; singleSelectLeaf = selected; flat = flat }
 
-    let initSurfaceModel group flat selected sgs =
+    let initSurfaceModel group flat selected  = //sgs
         let surfaces = initSurfaceGroups group flat selected
         {
             surfaces    = surfaces
-            sgSurfaces  = sgs //hmap.Empty
+            sgSurfaces  = hmap.Empty //sgs //
             //sgSurfaceObjs = hmap.Empty
             sgGrouped   = plist.Empty
             kdTreeCache = hmap.Empty
         }
 
-    let makeSgObj b t sg mesh = 
-        {
-            surface = Guid.NewGuid()
-            trafo = t
-            globalBB = b
-            sceneGraph = sg
-            pickMesh  = mesh
-        }
+    //let makeSgObj b t sg mesh = 
+    //    {
+    //        surface = Guid.NewGuid()
+    //        trafo = t
+    //        globalBB = b
+    //        sceneGraph = sg
+    //        pickMesh  = mesh
+    //    }
 
-    let objPickler : Pickler<SgSurfaceObj> =
-        Pickler.product makeSgObj
-        ^+ Pickler.field (fun (s:SgSurfaceObj) -> s.globalBB)     Pickler.auto<Box3d>
-        ^+ Pickler.field (fun (s:SgSurfaceObj) -> s.trafo)        Pickler.auto<Transformation>
-        ^+ Pickler.field (fun (s:SgSurfaceObj) -> s.sceneGraph)   Pickler.auto<ISg>
-        ^. Pickler.field (fun (s:SgSurfaceObj) -> s.pickMesh)     Pickler.auto<ISg>
+    //let objPickler : Pickler<SgSurfaceObj> =
+    //    Pickler.product makeSgObj
+    //    ^+ Pickler.field (fun (s:SgSurfaceObj) -> s.globalBB)     Pickler.auto<Box3d>
+    //    ^+ Pickler.field (fun (s:SgSurfaceObj) -> s.trafo)        Pickler.auto<Transformation>
+    //    ^+ Pickler.field (fun (s:SgSurfaceObj) -> s.sceneGraph)   Pickler.auto<ISg>
+    //    ^. Pickler.field (fun (s:SgSurfaceObj) -> s.pickMesh)     Pickler.auto<ISg>
     
-    let makeSgOpc b t sg kdt = 
-        {
-            surface = Guid.NewGuid()
-            trafo = t
-            globalBB = b
-            sceneGraph = sg
-            kdTree  = kdt
-        }
+    //let makeSgOpc b t sg kdt = 
+    //    {
+    //        surface = Guid.NewGuid()
+    //        trafo = t
+    //        globalBB = b
+    //        sceneGraph = sg
+    //        kdTree  = kdt
+    //    }
 
-    let opcPickler : Pickler<SgSurfaceOpc> =
-        Pickler.product makeSgOpc
-        ^+ Pickler.field (fun (s:SgSurfaceOpc) -> s.globalBB)     Pickler.auto<Box3d>
-        ^+ Pickler.field (fun (s:SgSurfaceOpc) -> s.trafo)        Pickler.auto<Transformation>
-        ^+ Pickler.field (fun (s:SgSurfaceOpc) -> s.sceneGraph)   Pickler.auto<ISg>
-        ^. Pickler.field (fun (s:SgSurfaceOpc) -> s.kdTree)       Pickler.auto<hmap<Box3d,KdTrees.Level0KdTree>>
+    //let opcPickler : Pickler<SgSurfaceOpc> =
+    //    Pickler.product makeSgOpc
+    //    ^+ Pickler.field (fun (s:SgSurfaceOpc) -> s.globalBB)     Pickler.auto<Box3d>
+    //    ^+ Pickler.field (fun (s:SgSurfaceOpc) -> s.trafo)        Pickler.auto<Transformation>
+    //    ^+ Pickler.field (fun (s:SgSurfaceOpc) -> s.sceneGraph)   Pickler.auto<ISg>
+    //    ^. Pickler.field (fun (s:SgSurfaceOpc) -> s.kdTree)       Pickler.auto<hmap<Box3d,KdTrees.Level0KdTree>>
 
-    let sgSurfacePickler : Pickler<SgSurfaces> =
-        Pickler.sum (fun x k1 k2->
-            match x with
-                | SgSurfaceOPC k -> k1 k
-                | SgSurfaceOBJ k -> k2 k)
-        ^+ Pickler.case SgSurfaceOPC opcPickler
-        ^. Pickler.case SgSurfaceOBJ objPickler
+    //let sgSurfacePickler : Pickler<SgSurfaces> =
+    //    Pickler.sum (fun x k1 k2->
+    //        match x with
+    //            | SgSurfaceOPC k -> k1 k
+    //            | SgSurfaceOBJ k -> k2 k)
+    //    ^+ Pickler.case SgSurfaceOPC opcPickler
+    //    ^. Pickler.case SgSurfaceOBJ objPickler
 
     let surfaceModelPickler : Pickler<SurfaceModel> =
         Pickler.product initSurfaceModel
         ^+ Pickler.field (fun s -> s.surfaces.rootGroup)             Pickler.auto<Node> //Surface
         ^+ Pickler.field (fun s -> s.surfaces.flat)                  Pickler.auto<hmap<Guid,Leaf>> //Surface
-        ^+ Pickler.field (fun s -> s.surfaces.singleSelectLeaf)      Pickler.auto<option<Guid>> //Pickler.auto<option<Surface>>
-        ^. Pickler.field (fun s -> s.sgSurfaces)                     Pickler.auto<hmap<Guid,SgSurfaces>> 
+        ^. Pickler.field (fun s -> s.surfaces.singleSelectLeaf)      Pickler.auto<option<Guid>> //Pickler.auto<option<Surface>>
+        //^. Pickler.field (fun s -> s.sgSurfaces)                     Pickler.auto<hmap<Guid,SgSurfaces>> 
 
-    let initial = initSurfaceModel Group.initRoot hmap.Empty None hmap.Empty
+    let initial = initSurfaceModel Group.initRoot hmap.Empty None //hmap.Empty
     
-    //Serialization.registry.RegisterFactory (fun _ -> surfaceModelPickler)
 
     let getSurface model guid =
         model.surfaces.flat |> HMap.tryFind guid        
