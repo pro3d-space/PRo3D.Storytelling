@@ -70,10 +70,10 @@ module ReferenceSystem =
     }
 
     let initial = {
-        origin        = V3d.IIO
+        origin        = V3d.Zero
         north         = setV3d V3d.IOO
         noffset       = initNoffset
-        northO        = V3d.OOO
+        northO        = V3d.IOO
         up            = setV3d V3d.OOI
         isVisible     = true              
         size          = initNum2

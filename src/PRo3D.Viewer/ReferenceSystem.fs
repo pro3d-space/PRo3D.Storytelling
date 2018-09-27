@@ -107,7 +107,11 @@ module ReferenceSystemApp =
         match act with
             | InferCoordSystem p ->
                 let up = upVector p (model.planet)
-                let n = northVector up 
+                let n = 
+                  match model.planet with
+                    | Planet.None -> V3d.IOO
+                    | _ -> northVector up
+
                 let no = updateVectorInDegree up n model.origin model.noffset.value 
                 { model with origin = p; north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up; northO = no }, bigConfig
             | SetOrigin p -> 
@@ -134,7 +138,12 @@ module ReferenceSystemApp =
                 { model with selectedScale = s }, bigConfig
             | SetPlanet p ->                              
               let up = upVector model.origin p                                                
-              let n = northVector up        
+
+              let n = 
+                match p with
+                  | Planet.None -> V3d.IOO
+                  | _ -> northVector up
+                                          
               let no = updateVectorInDegree up n model.origin model.noffset.value
               { model with  north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up; planet = p; northO = no }, bigConfig
 
