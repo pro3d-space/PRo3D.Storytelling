@@ -619,17 +619,11 @@ module ViewerApp =
                   |_                                   -> { m with picking = false;}
 
               let m =
-                match k with
-                    | Aardvark.Application.Keys.S -> 
-                        match m.ctrlFlag with
-                            | true ->  match m.scene.scenePath with
-                                        | None ->  { m with ctrlFlag = false }  
-                                        | Some path -> let m' = saveSceneAndAnnotations path m
-                                                       { m' with ctrlFlag = false }
-                            | _ -> m
-                    |_-> m
-                    
-         
+                match (m.ctrlFlag, k, m.scene.scenePath) with
+                | (true, Aardvark.Application.Keys.S, Some path) -> 
+                  { (saveSceneAndAnnotations path m) with ctrlFlag = false }                  
+                |_-> m
+                             
               let m =
                 match m.interaction with
                 | Interactions.DrawAnnotation -> 

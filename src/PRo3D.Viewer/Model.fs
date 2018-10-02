@@ -531,7 +531,7 @@ module ViewConfigModel =
         format  = "{0:0.00}"
     }
     let initFarPlane = {
-        value   = 5000.0
+        value   = 50000.0
         min     = 1.0
         max     = 10000000.0
         step    = 10.0
@@ -590,7 +590,7 @@ module ViewConfigModel =
         //maxDipAngle = initMaxAngle
         lodColoring = false
         //planet = Planet.Mars
-        drawOrientationCube = true
+        drawOrientationCube = false
     }
 
 
