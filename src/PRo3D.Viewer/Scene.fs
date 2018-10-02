@@ -21,15 +21,18 @@ module Model =
         { m with scene = s}
 
     let private stashAndSaveRecent' (s : SceneHandle) (model : Model) =
-        let scenePaths = 
-            model.recent.recentScenes                 
-                |> HMap.update s.path 
-                    (
-                        fun v -> 
-                            match v with
-                                | Some x -> { x with writeDate = s.writeDate }
-                                | None -> s
-                    )
+        let scenePaths = model.recent.recentScenes                 
+                            |> List.filter (fun x -> x.path <> s.path)   
+                            |> List.append [s]
+        //let scenePaths = 
+        //    model.recent.recentScenes                 
+        //        |> HMap.update s.path 
+        //            (
+        //                fun v -> 
+        //                    match v with
+        //                        | Some x -> { x with writeDate = s.writeDate }
+        //                        | None -> s
+        //            )
 
         let recent = { model.recent with recentScenes = scenePaths }
 
@@ -217,8 +220,8 @@ module Scene =
 
     let loadScene path m runtime signature =
         try
-            let s = { (Serialization.loadJsonAs<Scene> path) with scenePath = Some path }
-            //let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
+            //let s = { (Serialization.loadJsonAs<Scene> path) with scenePath = Some path }
+            let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
         
             let m = 
                 m |> Model.withScene (expandRelativePaths <| s)
@@ -240,11 +243,11 @@ module Scene =
         match Serialization.fileExists "./recent" with
             | Some path  ->
               try 
-                //let r = Serialization.loadAs<Recent> path
-                let r = Serialization.loadJsonAs<Recent> path
+                let r = Serialization.loadAs<Recent> path
+                //let r = Serialization.loadJsonAs<Recent> path
                 let m = { m with recent = r}
-                match r.recentScenes |> HMap.toList |> List.sortByDescending (fun (_,v) -> v.writeDate) |> List.tryHead with
-                    | Some (_,scenePath) ->
+                match r.recentScenes |> List.sortByDescending (fun v -> v.writeDate) |> List.tryHead with
+                    | Some (scenePath) ->
                         try
                            loadScene scenePath.path m runtime signature
                         with

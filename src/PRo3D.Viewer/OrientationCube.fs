@@ -88,8 +88,11 @@ module Sg =
                 let Vn = (V3d.Cross(cam.Forward.Normalized, n.OYO)).Normalized
                 //((Va x Vb) . Vn) / (Va . Vb)
                 let angle = (V3d.Dot((V3d.Cross(cam.Forward.Normalized, n.OYO)), Vn)) / (V3d.Dot(cam.Forward.Normalized, n.OYO)) //.OYO
-                return angle + offset
+                //return angle + offset
+                let nangle = (angle + offset) % 360.0
+                return (nangle + 360.0) % 360.0 
             }
+   
 
         model
         |> Sg.trafo (Mod.constant (Trafo3d.Scale(0.5,0.5, -0.5)))

@@ -540,43 +540,43 @@ module UI =
     open Aardvark.Base.Incremental
 
     let wrapToolTip (text:string) (dom:DomNode<'a>) : DomNode<'a> =
-        dom
-        //let attr = 
-        //    [ attribute "title" text
-        //      attribute "data-position" "top center"
-        //      attribute "data-variation" "mini" ] 
-        //        |> AttributeMap.ofList
-        //        |> AttributeMap.union dom.Attributes                
+        //dom
+        let attr = 
+            [ attribute "title" text
+              attribute "data-position" "top center"
+              attribute "data-variation" "mini" ] 
+                |> AttributeMap.ofList
+                //|> AttributeMap.union dom.                
                 
-        //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
-        //    dom.WithAttributes attr     
-        //)
+        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
+            dom.WithAttributes attr     
+        )
 
     let wrapToolTipRight (text:string) (dom:DomNode<'a>) : DomNode<'a> =
-        dom
-        //let attr = 
-        //    [ attribute "title" text
-        //      attribute "data-position" "right center"
-        //      attribute "data-variation" "mini"] 
-        //        |> AttributeMap.ofList
-        //        |> AttributeMap.union dom.Attributes                
+        //dom
+        let attr = 
+            [ attribute "title" text
+              attribute "data-position" "right center"
+              attribute "data-variation" "mini"] 
+                |> AttributeMap.ofList
+                //|> AttributeMap.union dom.Attributes                
                 
-        //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
-        //    dom.WithAttributes attr     
-        //)
+        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
+            dom.WithAttributes attr     
+        )
 
     let wrapToolTipBottom (text:string) (dom:DomNode<'a>) : DomNode<'a> =
-        dom
-        //let attr = 
-        //    [ attribute "title" text
-        //      attribute "data-position" "bottom center"
-        //      attribute "data-variation" "mini"] 
-        //        |> AttributeMap.ofList
-        //        |> AttributeMap.union dom.Attributes                
+        //dom
+        let attr = 
+            [ attribute "title" text
+              attribute "data-position" "bottom center"
+              attribute "data-variation" "mini"] 
+                |> AttributeMap.ofList
+                //|> AttributeMap.union dom.Attributes                
                 
-        //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
-        //    dom.WithAttributes attr     
-        //)
+        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
+            dom.WithAttributes attr     
+        )
 
 
     let dropDown'' (values : alist<'a>)(selected : IMod<Option<'a>>) (change : Option<'a> -> 'msg) (f : 'a ->string)  =

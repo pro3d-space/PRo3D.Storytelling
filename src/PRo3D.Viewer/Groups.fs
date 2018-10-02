@@ -43,8 +43,8 @@ module Groups =
         | Nop
         
     let loadAnnotationGroups (path:string) =
-        //Serialization.loadAs<PRo3D.Groups.GroupsModel> path               
-        Serialization.loadJsonAs<PRo3D.Groups.GroupsModel> path               
+        Serialization.loadAs<PRo3D.Groups.GroupsModel> path               
+        //Serialization.loadJsonAs<PRo3D.Groups.GroupsModel> path               
         
     let getNode (path : list<Index>) (root : Node) : Node =
         let rec goDeeper (p : list<Index>) (node : Node) =
@@ -104,16 +104,16 @@ module Groups =
     
     let tryLoadGroups (path:string) =
       try
-        //Some (Serialization.loadAs<PRo3D.Groups.GroupsModel> path)
-        Some (Serialization.loadJsonAs<PRo3D.Groups.GroupsModel> path)
+        Some (Serialization.loadAs<PRo3D.Groups.GroupsModel> path)
+        //Some (Serialization.loadJsonAs<PRo3D.Groups.GroupsModel> path)
       with _ ->
         Log.error "[loadGroups:] couldn't load %s" path
         None     
         
     let tryLoadAnnotations (path:string) =
       try
-        //Some (Serialization.loadAs<PRo3D.Groups.saveAnnotations> path)
-        Some (Serialization.loadJsonAs<PRo3D.Groups.saveAnnotations> path)
+        Some (Serialization.loadAs<PRo3D.Groups.saveAnnotations> path)
+        //Some (Serialization.loadJsonAs<PRo3D.Groups.saveAnnotations> path)
       with _ ->
         Log.error "[loadAnnotations:] couldn't load %s" path
         None        
@@ -415,18 +415,19 @@ module Groups =
         } |> AttributeMap.ofAMap
 
     let viewSelectionButtons =
-        Html.table [ 
+       // Html.table [
+       div[][
             div [clazz "ui buttons inverted"] [
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "Move Selection"; onMouseClick (fun _ -> MoveChilds)] [
-                            i [clazz "Move icon"] [] ] 
-                )
+                            i [clazz "Move icon"] [] ] |> UI.wrapToolTip "Move Selection"
+                //)
                 ]
             div [clazz "ui buttons inverted"] [
-                onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "Clear Selection"; onMouseClick (fun _ -> ClearSelection)] [
-                            i [clazz "Remove icon"] [] ]
-                )
+                            i [clazz "Remove icon"] [] ] |> UI.wrapToolTip "Clear Selection"
+                //)
                 ] 
             ]
 
@@ -461,7 +462,7 @@ module Groups =
                 div [clazz "ui buttons inverted"] [
                     onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                         button [clazz "ui icon button"; onMouseClick (fun _ -> RemoveChild (ts.id,ts.path))] [
-                                i [clazz "remove icon red"] [] ] |> UI.wrapToolTip "Remove"
+                                i [clazz "remove icon red"] [] ] |> UI.wrapToolTipRight "Remove"
                     )
                 ] 
             ]
@@ -469,16 +470,16 @@ module Groups =
     let deleteClearGroup (ts:TreeSelection) =
         Html.table [                            
                 div [clazz "ui buttons inverted"] [
-                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                         button [clazz "ui icon button"; attribute "data-content" "Remove Group"; onMouseClick (fun _ -> RemoveGroup ts.path)] [ //
-                                i [clazz "remove icon red"] [] ] 
-                    )
+                                i [clazz "remove icon red"] [] ] |> UI.wrapToolTipRight "Remove Group"
+                    //)
                 ] 
                 div [clazz "ui buttons inverted"] [
-                    onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
+                    //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                         button [clazz "ui icon button"; attribute "data-content" "Clear Group"; onMouseClick (fun _ -> ClearGroup ts.path)] [ //
-                                i [clazz "remove circle icon"] [] ] 
-                    )
+                                i [clazz "remove circle icon"] [] ] |> UI.wrapToolTipRight "Clear Group"
+                    //)
                 ] 
             ]
 

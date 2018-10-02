@@ -195,16 +195,16 @@ module Mutable =
     type MRecent(__initial : PRo3D.Viewer.Recent) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Recent> = Aardvark.Base.Incremental.EqModRef<PRo3D.Viewer.Recent>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Recent>
-        let _recentScenes = MMap.Create(__initial.recentScenes, (fun v -> MSceneHandle.Create(v)), (fun (m,v) -> MSceneHandle.Update(m, v)), (fun v -> v))
+        let _recentScenes = ResetMod.Create(__initial.recentScenes)
         
-        member x.recentScenes = _recentScenes :> amap<_,_>
+        member x.recentScenes = _recentScenes :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.Recent) =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
-                MMap.Update(_recentScenes, v.recentScenes)
+                ResetMod.Update(_recentScenes,v.recentScenes)
                 
         
         static member Create(__initial : PRo3D.Viewer.Recent) : MRecent = MRecent(__initial)
@@ -222,7 +222,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let recentScenes =
-                { new Lens<PRo3D.Viewer.Recent, Aardvark.Base.hmap<System.String,PRo3D.Viewer.SceneHandle>>() with
+                { new Lens<PRo3D.Viewer.Recent, Microsoft.FSharp.Collections.List<PRo3D.Viewer.SceneHandle>>() with
                     override x.Get(r) = r.recentScenes
                     override x.Set(r,v) = { r with recentScenes = v }
                     override x.Update(r,f) = { r with recentScenes = f r.recentScenes }
@@ -237,6 +237,7 @@ module Mutable =
         let _properties = ResetMod.Create(__initial.properties)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _picking = ResetMod.Create(__initial.picking)
+        let _ctrlFlag = ResetMod.Create(__initial.ctrlFlag)
         let _recent = MRecent.Create(__initial.recent)
         let _waypoints = MList.Create(__initial.waypoints)
         let _frustum = ResetMod.Create(__initial.frustum)
@@ -256,6 +257,7 @@ module Mutable =
         member x.properties = _properties :> IMod<_>
         member x.interaction = _interaction :> IMod<_>
         member x.picking = _picking :> IMod<_>
+        member x.ctrlFlag = _ctrlFlag :> IMod<_>
         member x.recent = _recent
         member x.waypoints = _waypoints :> alist<_>
         member x.frustum = _frustum :> IMod<_>
@@ -280,6 +282,7 @@ module Mutable =
                 ResetMod.Update(_properties,v.properties)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_picking,v.picking)
+                ResetMod.Update(_ctrlFlag,v.ctrlFlag)
                 MRecent.Update(_recent, v.recent)
                 MList.Update(_waypoints, v.waypoints)
                 ResetMod.Update(_frustum,v.frustum)
@@ -338,6 +341,12 @@ module Mutable =
                     override x.Get(r) = r.picking
                     override x.Set(r,v) = { r with picking = v }
                     override x.Update(r,f) = { r with picking = f r.picking }
+                }
+            let ctrlFlag =
+                { new Lens<PRo3D.Viewer.Model, System.Boolean>() with
+                    override x.Get(r) = r.ctrlFlag
+                    override x.Set(r,v) = { r with ctrlFlag = v }
+                    override x.Update(r,f) = { r with ctrlFlag = f r.ctrlFlag }
                 }
             let recent =
                 { new Lens<PRo3D.Viewer.Model, PRo3D.Viewer.Recent>() with

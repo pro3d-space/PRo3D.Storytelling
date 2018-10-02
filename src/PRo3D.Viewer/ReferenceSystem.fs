@@ -18,12 +18,13 @@ module ReferenceSystemApp =
     open Aardvark.VRVis.Opc
 
     open PRo3D.ReferenceSystem
+    open Aardvark.Base.MultimethodTest
 
     //open Aardvark.UI.ChoiceModule
    
     type Action =
         | InferCoordSystem of V3d
-        | SetOrigin        of V3d
+        //| SetOrigin        of V3d
         | SetUp            of Vector3d.Action
         | SetNorth         of Vector3d.Action
         | SetNOffset       of Numeric.Action
@@ -101,17 +102,23 @@ module ReferenceSystemApp =
     let northVector (up:V3d) =
         let east = V3d.OOI.Cross(up)
         up.Cross(east)
-
+    
+    let updateCoordSystem (p:V3d) (planet:Planet) (model : ReferenceSystem) = 
+        let up = upVector p planet
+        let n = northVector up 
+        let no = updateVectorInDegree up n model.origin model.noffset.value 
+        { model with north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up; northO = no }
    
     let update<'a> (bigConfig : 'a) (config : ReferenceSystemConfig<'a>) (model : ReferenceSystem) (act : Action) =
         match act with
             | InferCoordSystem p ->
-                let up = upVector p (model.planet)
-                let n = northVector up 
-                let no = updateVectorInDegree up n model.origin model.noffset.value 
-                { model with origin = p; north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up; northO = no }, bigConfig
-            | SetOrigin p -> 
-                { model with origin = p }, bigConfig
+                let m' = updateCoordSystem p model.planet model
+                //let up = upVector p (model.planet)
+                //let n = northVector up 
+                //let no = updateVectorInDegree up n model.origin model.noffset.value 
+                { m' with origin = p }, bigConfig
+            //| SetOrigin p -> 
+            //    { model with origin = p }, bigConfig
             | SetUp up ->    
                 let up = Vector3d.update model.up up
                 let up = ReferenceSystem.setV3d up.value.Normalized
@@ -132,11 +139,12 @@ module ReferenceSystemApp =
                 model, big'          
             | SetScale s ->
                 { model with selectedScale = s }, bigConfig
-            | SetPlanet p ->                              
-              let up = upVector model.origin p                                                
-              let n = northVector up        
-              let no = updateVectorInDegree up n model.origin model.noffset.value
-              { model with  north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up; planet = p; northO = no }, bigConfig
+            | SetPlanet p ->      
+                let m' = updateCoordSystem model.origin p model
+                //let up = upVector model.origin p                                                
+                //let n = northVector up        
+                //let no = updateVectorInDegree up n model.origin model.noffset.value
+                { m' with planet = p }, bigConfig
 
     module Sg =
 

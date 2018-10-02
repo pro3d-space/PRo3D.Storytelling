@@ -30,7 +30,7 @@ type Scene = {
     interaction       : InteractionMode
     surfacesModel     : SurfaceModel  
     config            : ViewConfigModel
-    scenePath         : option<string>
+    scenePath         : Option<string>
     referenceSystem   : ReferenceSystem
     orientationSystem : ReferenceSystem
     bookmarksModel    : BookmarksModel
@@ -48,7 +48,7 @@ type SceneHandle = {
 
 [<DomainType>] 
 type Recent = {
-    recentScenes : hmap<string,SceneHandle>
+    recentScenes : list<SceneHandle> //hmap<string,SceneHandle>
 }
 
 type Properties = 
@@ -89,6 +89,7 @@ type Model = {
     properties      : Properties
     interaction     : Interactions
     picking         : bool
+    ctrlFlag        : bool
     recent          : Recent
     waypoints       : plist<WayPoint>
     frustum         : Frustum
@@ -186,12 +187,13 @@ module Viewer =
         properties      = NoProperties
         interaction     = Interactions.DrawAnnotation
         picking         = false
-        
+        ctrlFlag        = false
+
         frustum         = Frustum.perspective 60.0 0.1 10000.0 1.0
         overlayFrustum  = Frustum.perspective 20.0 0.1 10000.0 1.0
         aspect          = 1.6
 
-        recent          = { recentScenes = HMap.empty }
+        recent          = { recentScenes = List.empty }
         waypoints       = PList.empty
 
         trafoKind       = TrafoKind.Rotate

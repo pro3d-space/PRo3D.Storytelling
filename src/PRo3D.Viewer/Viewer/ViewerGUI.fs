@@ -117,26 +117,26 @@ module Gui =
 
     let private scene (m:MModel) = 
       let save = 
-        match (m.scene.scenePath|> Mod.force) with
-            | Some p ->
-                 div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
-                  text "Save"
-                ]
-            | None ->
-                div [ clazz "ui inverted item"; Dialogs.onSaveFile1 SaveScene (m.scene.scenePath |> Mod.force);
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene', defaultPath :'C:\Users\laura\VRVis\PRo3D_25062018\src\test.xml'}]}));")][
-                  text "Save"
-                ]
+        adaptive
+            {
+                let! path = m.scene.scenePath
+                return match path with
+                            | Some p ->
+                                 div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
+                                  text "Save"
+                                ]
+                            | None ->
+                                div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
+                                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
+                                  text "Save"
+                                ]
+            }
       [
         text "Scene" 
         i [clazz "dropdown icon"][]
       
         div [ clazz "menu"] [
-            save
-            //div [ clazz "ui inverted item"; Dialogs.onSaveFile1 SaveScene (m.scene.scenePath |> Mod.force);
-            //      clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene', defaultPath :'C:\Users\laura\VRVis\PRo3D_25062018\src\test.xml'}]}));")][
-            //      text "Save"
-            //]
+            Incremental.div AttributeMap.empty (AList.ofModSingle save)
             div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveAs;
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({properties: []}));") ][
                   text "Save as..."
@@ -152,19 +152,20 @@ module Gui =
                 onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
                     text "Recent"
                 )
-        
+     
                 div [clazz "ui flowing popup bottom left transition hidden"] [
                     Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
                         aset {
-                            for (_,s) in (m.recent.recentScenes |> AMap.toASet) do
+                            let! recentScenes = m.recent.recentScenes
+                            for s in recentScenes do
                                  yield a [clazz "item inverted";
-                                          onClick (fun _ -> LoadScene (s.path |> Mod.force))] [
-                                    span [style "color:black"] [Incremental.text s.name]
+                                          onClick (fun _ -> LoadScene s.path)] [
+                                    span [style "color:black"] [Incremental.text (Mod.constant s.name)]
                                  ]
                         } |> AList.ofASet
                     )
-                ]
-            ]
+                ] 
+            ] 
          ]
       ]
 
@@ -291,7 +292,7 @@ module Gui =
                   match x with 
                     | SelectedItem.Group -> annotationGroupButtons m
                     | _ -> annotationLeafButtonns m 
-              )
+              ) 
       
       div [][                
           GuiEx.accordion "Annotations" "Write" true [
@@ -303,7 +304,7 @@ module Gui =
           ]
          
           GuiEx.accordion "Actions" "Asterisk" true [
-              Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
+            Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
           ]     
           
           GuiEx.accordion "Dip&Strike" "Calculator" false [

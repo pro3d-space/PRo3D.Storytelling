@@ -151,6 +151,22 @@ module ViewerApp =
         let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
         { m with scene = { m.scene with viewPlans = vps } }
 
+    let loadLastAnnotations (m:Model) = 
+          match  m.scene.scenePath with
+            | Some p -> let ap = DrawingApp.getAnnotationPath p
+                        let groups = Groups.tryLoadAnnotations ap 
+                        match groups with          
+                            | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; colorLegend = g.colorLegend } }
+                            | None -> m
+            |None -> m
+          //match Serialization.fileExists "./lastmeasure" with
+          //  | Some path ->                       
+          //    let groups = Groups.tryLoadAnnotations path 
+          //    match groups with          
+          //      | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; colorLegend = g.colorLegend } }
+          //      | None -> m
+          //  | None -> m
+
     let animateFowardAndLocation (pos : V3d) (dir : V3d) (duration : RelativeTime) (name : string) = 
       {
         (CameraAnimations.initial name) with 
@@ -208,7 +224,11 @@ module ViewerApp =
             | DockNodeConfig.Stack (weight,activeId,children) -> Stack(weight, activeId, List.append [de] children)
             | DockNodeConfig.Element element ->  Stack(0.2, None, List.append [de] [element]) 
 
-                       
+    
+    let saveSceneAndAnnotations (path:string) (m:Model) = 
+        let s' = { m.scene with scenePath = Some path}
+        let drawing = DrawingApp.saveSceneAnnotations path m.drawing
+        { m with scene = Serialization.save path s'; drawing = drawing } |> Model.stashAndSaveRecent path
 
     let matchPickingInteraction (bc : BlockingCollection<string>) (p:V3d) (hitFunction:(V3d-> V3d option)) (surf:Surface) (m:Model) = 
          match m.interaction with
@@ -546,32 +566,40 @@ module ViewerApp =
                         match s.IsEmptyOrNull() with
                             | true -> m
                             | _ -> 
-                                let s' = { m.scene with scenePath = Some s}
-                                
-                                { m with scene = Serialization.saveJson s s'; } |> Model.stashAndSaveRecent s
-                                ///{ m with scene = Serialization.save s s'; } |> Model.stashAndSaveRecent s
-                    | Some path ->                        
-                        { m with scene = Serialization.saveJson path m.scene; } |> Model.stashAndSaveRecent path
-                        //{ m with scene = Serialization.save path m.scene } |> Model.stashAndSaveRecent path
+                                saveSceneAndAnnotations s m
+                                //let s' = { m.scene with scenePath = Some s}
+                                //let drawing = DrawingApp.saveSceneAnnotations s m.drawing
+                                //{ m with scene = Serialization.save s s'; drawing = drawing } |> Model.stashAndSaveRecent s
+                    | Some path -> 
+                        saveSceneAndAnnotations path m
+                        //let drawing = DrawingApp.saveSceneAnnotations path m.drawing
+                        //{ m with scene = Serialization.save path m.scene; drawing = drawing } |> Model.stashAndSaveRecent path
                
             | SaveAs s,_,_ ->
                 match s.IsEmptyOrNull() with
                     | true -> m
                     | _  -> 
-                        let s' = { m.scene with scenePath = Some s}                                
-                        { m with scene = Serialization.saveJson s s'; } |> Model.stashAndSaveRecent s
-                        //{ m with scene = Serialization.save s s' } |> Model.stashAndSaveRecent s
+                        saveSceneAndAnnotations s m
+                        //let s' = { m.scene with scenePath = Some s}   
+                        //let drawing = DrawingApp.saveSceneAnnotations s m.drawing
+                        //{ m with scene = Serialization.save s s'; drawing = drawing } |> Model.stashAndSaveRecent s
             | OpenScene sl,_,_ ->
                 match sl.Length < 1 with
                     | true -> m
                     | false -> 
                         let path = sl.[0]
-                        let m' = Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
-                        loadRoverData m'
+                        Scene.loadScene path m runtime signature 
+                            |> Model.stashAndSaveRecent path
+                            |> loadRoverData
+                            |> loadLastAnnotations  
             | LoadScene path,_,_ ->
-                Scene.loadScene path m runtime signature |> Model.stashAndSaveRecent path
+                Scene.loadScene path m runtime signature 
+                    |> Model.stashAndSaveRecent path
+                    |> loadRoverData
+                    |> loadLastAnnotations  
             | NewScene,_,_ ->
                 let m' = { PRo3D.Viewer.Viewer.initial with recent = m.recent }
+                //let m'' = {m' with scene = {m'.scene with scenePath = None}}
                 //m'
                 loadRoverData m'
             | KeyDown k, _, _ ->
@@ -587,8 +615,20 @@ module ViewerApp =
 
               let m =
                 match k with 
-                  | Aardvark.Application.Keys.LeftCtrl -> { m with picking = true }
-                  |_                                   -> { m with picking = false }
+                  | Aardvark.Application.Keys.LeftCtrl -> { m with picking = true; ctrlFlag = true }
+                  |_                                   -> { m with picking = false;}
+
+              let m =
+                match k with
+                    | Aardvark.Application.Keys.S -> 
+                        match m.ctrlFlag with
+                            | true ->  match m.scene.scenePath with
+                                        | None ->  { m with ctrlFlag = false }  
+                                        | Some path -> let m' = saveSceneAndAnnotations path m
+                                                       { m' with ctrlFlag = false }
+                            | _ -> m
+                    |_-> m
+                    
          
               let m =
                 match m.interaction with
@@ -916,7 +956,30 @@ module ViewerApp =
               | _ -> 
                 return div[][]
           }
-                      
+        
+        let style' = "color: white; font-family:Consolas;"
+        let scenepath = 
+            Incremental.div (AttributeMap.Empty) (   
+                    alist {
+                        let! scenePath = m.scene.scenePath 
+                        let icon = 
+                          match scenePath with
+                            | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
+                            | None -> div[][]  
+                                
+                        let scenePath   = Mod.bindOption m.scene.scenePath "" (fun sp -> Mod.constant sp)
+                        yield  div [] [ 
+                          //Html.Layout.boxH [ text "Scene Path:" ]
+                          Html.Layout.boxH [ 
+                            Incremental.text (scenePath 
+                                |> Mod.map(fun x -> 
+                                    if x.IsEmpty() then "*new scene" else Path.GetFileName x))  
+                          ]
+                          Html.Layout.boxH [ icon ]
+                        ]
+                    }
+                )
+
         let topMenuItems = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
 
@@ -929,7 +992,11 @@ module ViewerApp =
              Html.Layout.horizontal [
                Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
                Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
-             ]             
+             ] 
+             Html.Layout.horizontal [
+               Html.Layout.boxH [ scenepath ]
+             ] 
+             
         ]        
 
         let topMenu =
@@ -966,9 +1033,8 @@ module ViewerApp =
         let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
         let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
                        
-        
                                  
-        let bodyAttributes = [style "background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden; overflow-y : visible"]
+        let bodyAttributes = [style "background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden;"] //overflow-y : visible
 
         page (fun request -> 
           match Map.tryFind "page" request.queryParams with
@@ -1041,14 +1107,7 @@ module ViewerApp =
           { m with waypoints = wp }
         | None -> m
 
-    let loadLastAnnotations (m:Model) = 
-      match Serialization.fileExists "./lastmeasure" with
-        | Some path ->                       
-          let groups = Groups.tryLoadAnnotations path 
-          match groups with          
-            | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; colorLegend = g.colorLegend } }
-            | None -> m
-        | None -> m
+    
 
     let start (runtime: IRuntime) (signature: IFramebufferSignature) bc =
 
@@ -1059,11 +1118,7 @@ module ViewerApp =
               |> loadRoverData
               |> loadLastAnnotations  
 
-        //let m = PRo3D.Viewer.Viewer.initial 
-        //let m' = m|> Scene.loadLastScene runtime signature
-        //let m'' = m' |> loadRoverData
-        //let m''' = m'' |> loadLastAnnotations  
-              
+       
         App.start {
             unpersist = Unpersist.instance
             threads   = threadPool

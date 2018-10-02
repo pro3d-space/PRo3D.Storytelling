@@ -22,7 +22,7 @@ module Mutable =
         let _color = Aardvark.UI.Mutable.MColorInput.Create(__initial.color)
         let _thickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.thickness)
         let _annotations = PRo3D.Groups.Mutable.MGroupsModel.Create(__initial.annotations)
-        let _exportPath = ResetMod.Create(__initial.exportPath)
+        let _exportPath = MOption.Create(__initial.exportPath)
         let _pendingIntersections = ResetMod.Create(__initial.pendingIntersections)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
@@ -57,7 +57,7 @@ module Mutable =
                 Aardvark.UI.Mutable.MColorInput.Update(_color, v.color)
                 Aardvark.UI.Mutable.MNumericInput.Update(_thickness, v.thickness)
                 PRo3D.Groups.Mutable.MGroupsModel.Update(_annotations, v.annotations)
-                ResetMod.Update(_exportPath,v.exportPath)
+                MOption.Update(_exportPath, v.exportPath)
                 ResetMod.Update(_pendingIntersections,v.pendingIntersections)
                 _past.Update(v.past)
                 _future.Update(v.future)
@@ -133,7 +133,7 @@ module Mutable =
                     override x.Update(r,f) = { r with annotations = f r.annotations }
                 }
             let exportPath =
-                { new Lens<PRo3D.Drawing.DrawingModel, System.String>() with
+                { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.Option<System.String>>() with
                     override x.Get(r) = r.exportPath
                     override x.Set(r,v) = { r with exportPath = v }
                     override x.Update(r,f) = { r with exportPath = f r.exportPath }

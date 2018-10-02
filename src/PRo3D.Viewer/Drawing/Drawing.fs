@@ -3,6 +3,7 @@
 module DrawingApp =
    // open Newtonsoft.Json
     open System
+    open System.IO
     
     open System.Windows.Forms
     open System.Text
@@ -218,6 +219,28 @@ module DrawingApp =
             getArrowLength     : 'ma -> IMod<float>
             getDnsPlaneSize    : 'ma -> IMod<float>
         }
+   
+
+    let saveAnnotations (path:string) (model:DrawingModel) = 
+        match path.IsEmptyOrNull() with
+            | true -> model
+            | false-> 
+                let sa = 
+                    {
+                        annotations = model.annotations
+                        colorLegend = model.colorLegend
+                    }
+                Serialization.save "./lastMeasure" sa |> ignore 
+                let saveA = Serialization.save path sa
+                { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend } 
+
+    let getAnnotationPath (scenePath:string) = 
+        let p = System.IO.Path.GetDirectoryName(scenePath)
+        let name = System.IO.Path.GetFileNameWithoutExtension(scenePath) + ".ann"
+        p + "\\" + name
+
+    let saveSceneAnnotations (scenePath:string) (model:DrawingModel) = 
+        saveAnnotations (getAnnotationPath scenePath) model
 
     let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (bc : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
         match (act, model.draw) with
@@ -267,7 +290,7 @@ module DrawingApp =
             | ChangeThickness th, _ ->
                 { model with thickness = Numeric.update model.thickness th }
             | SetExportPath s, _ ->
-                    { model with exportPath = s }
+                    { model with exportPath = Some s }
             | Export, _ ->
                     //let path = Path.combine([model.exportPath; "drawing.json"])
                     //printf "Writing %i annotations to %s" (model.annotations |> PList.count) path
@@ -289,19 +312,18 @@ module DrawingApp =
                 //        let saveA = Serialization.save p sa
                 //        { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend } 
 
-                match p.IsEmptyOrNull() with
-                    | true -> model
-                    | false-> 
-                        let sa = 
-                            {
-                                annotations = model.annotations
-                                colorLegend = model.colorLegend
-                            }
-                        //Serialization.save "./lastMeasure" sa |> ignore 
-                        Serialization.saveJson "./lastMeasure" sa |> ignore 
-                        //let saveA = Serialization.save p sa
-                        let saveA = Serialization.saveJson p sa
-                        { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend } 
+                //match p.IsEmptyOrNull() with
+                //    | true -> model
+                //    | false-> 
+                //        let sa = 
+                //            {
+                //                annotations = model.annotations
+                //                colorLegend = model.colorLegend
+                //            }
+                //        Serialization.save "./lastMeasure" sa |> ignore 
+                //        let saveA = Serialization.save p sa
+                //        { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend } 
+                saveAnnotations p model
 
             | Load p,_ ->                
               //match Dialogs.openDialog w with
@@ -403,10 +425,10 @@ module DrawingApp =
                 text "Annotations"
                 i [clazz "dropdown icon"][] 
                 div [ clazz "menu"] [
-                    div [ clazz "ui inverted item"; Dialogs.onSaveFile Save;
-                            clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene'}]}));")][
-                            text "Save"
-                    ]
+                    //div [ clazz "ui inverted item"; Dialogs.onSaveFile Save;
+                    //        clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene'}]}));")][
+                    //        text "Save"
+                    //]
                     div [ clazz "ui inverted item"; Dialogs.onChooseFiles Load;
                     clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));" )][
                             text "Load"
@@ -422,7 +444,7 @@ module DrawingApp =
             ]
                     
 
-        let viewAnnotationImportExport =
+        let viewAnnotationImportExport (m:MDrawingModel) =
            div [clazz "ui buttons inverted"] [
                 
                 //button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
@@ -430,7 +452,7 @@ module DrawingApp =
                 button [clazz "ui icon button"; Dialogs.onSaveFile Save;
                         clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements'}]}));")] [
                     i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
-
+                
                 //button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
                 //    i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
                 button [clazz "ui icon button"; Dialogs.onChooseFiles Load;

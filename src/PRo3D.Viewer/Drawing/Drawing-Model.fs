@@ -59,7 +59,7 @@ type DrawingModel = {
     thickness : NumericInput
 
     annotations: GroupsModel 
-    exportPath : string
+    exportPath : Option<string>
 
     pendingIntersections : ThreadPool<Action>
     //config : ViewConfigModel
@@ -110,7 +110,7 @@ module DrawingModel =
 
         annotations = GroupsModel.initial
 
-        exportPath  = @"."
+        exportPath  = Some @"."
         
         pendingIntersections    = ThreadPool.empty            
 
