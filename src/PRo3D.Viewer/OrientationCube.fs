@@ -57,7 +57,7 @@ module Shader =
       }
         
 module Sg =
-    open PRo3D.ReferenceSystem.Mutable
+    open PRo3D.ReferenceSystem
     
     let loadCubeModel (filename : string) =
         Aardvark.SceneGraph.IO.Loader.Assimp.load filename

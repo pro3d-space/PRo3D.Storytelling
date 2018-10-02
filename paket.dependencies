@@ -28,9 +28,9 @@ nuget Aardvark.Base.Essentials              ~> 4.0.20
 nuget Aardvark.Compiler.DomainTypes         ~> 4.0.10
 nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 4.0.10
 
-nuget Aardvark.VRVis.Geometry               ~> 4.0.16
-nuget Aardvark.VRVis.Opc                    ~> 4.0.16
-nuget Aardvark.Fitting.Planes               ~> 4.0.16
+nuget Aardvark.VRVis.Geometry               ~> 4.0.20
+nuget Aardvark.VRVis.Opc                    ~> 4.0.20
+nuget Aardvark.Fitting.Planes               ~> 4.0.20
 
 nuget FSharp.Core                           ~> 4.3.0
 
