@@ -1,8 +1,7 @@
 framework: netstandard2.0, net471, netcoreapp2.0
 
 source https://api.nuget.org/v3/index.json
-source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
-source https://vrvis.myget.org/F/aardvark/auth/11394d4d-4fe9-44ec-87c8-f3e98909f975/api/v3/index.json
+source https://pkgs.dev.azure.com/aardvark-platform/_packaging/internal/nuget/v3/index.json
 
 nuget Aardvark.Base.Rendering              ~> 4.3.20
 nuget Aardvark.Application.WinForms.GL     ~> 4.3.20
@@ -55,7 +54,6 @@ group Build
 framework: net45
 
 content: none
-source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://api.nuget.org/v3/index.json
 
 github aardvark-platform/aardvark.fake:v4

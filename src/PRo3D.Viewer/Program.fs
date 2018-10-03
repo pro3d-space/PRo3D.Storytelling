@@ -145,14 +145,14 @@ let main argv =
             DefaultSemantic.Depth,  { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
         ]
 
-    use bc = new BlockingCollection<string>()    
+    use sendQueue = new BlockingCollection<string>()    
         
     let ws (webSocket : WebSocket) (context: HttpContext) =
         socket {
             let mutable loop = true
 
             while loop do
-                let str = bc.Take()
+                let str = sendQueue.Take()
                 Log.warn "taking item from bc"
                 let s = ByteSegment(System.Text.Encoding.UTF8.GetBytes str)
                 
@@ -165,7 +165,7 @@ let main argv =
     //use form = new Form(Width = 1280, Height = 800)
 
     let mainApp = 
-        PRo3D.ViewerApp.start runtime signature bc
+        PRo3D.ViewerApp.start runtime signature sendQueue
 
     CooTransformation.initCooTrafo () // should be a function not a value
     

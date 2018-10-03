@@ -273,7 +273,7 @@ module ViewerApp =
                 { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
             | _ -> m
 
-    let update (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
+    let update (runtime : IRuntime) (signature: IFramebufferSignature) (sendQueue : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
@@ -306,27 +306,26 @@ module ViewerApp =
                       | None -> m                    
                 | _ ->
                     let drawing = 
-                        DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing msg
+                        DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing msg
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
-                    let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
-                    let animation = 
-                          match msg with
-                            | SurfaceApp.Action.FlyToSurface id -> 
-                                let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
-                                match surf with
-                                    | Some s ->
-                                            let bb = s.globalBB
-                                            let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
-                                            
-                                            let animationMessage = 
-                                                animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
-                                            let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                                            a'
-                                    | None -> m.animations
-                            | _-> m.animations
-                           
-                    { m with scene = { m.scene with surfacesModel = s}; animations = animation}
+              let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
+              let animation = 
+                match msg with
+                  | SurfaceApp.Action.FlyToSurface id -> 
+                    let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
+                    match surf with
+                      | Some s ->
+                              let bb = s.globalBB
+                              let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value                                  
+                              let animationMessage = 
+                                  animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                              let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                              a'
+                      | None -> m.animations
+                  | _-> m.animations
+                     
+              { m with scene = { m.scene with surfacesModel = s}; animations = animation}
             | AnnotationMessage msg,_,_ ->                
                 match m.drawing.annotations.singleSelectLeaf with
                   | Some selected ->                             
@@ -547,7 +546,7 @@ module ViewerApp =
                 | Some (t,surf), c ->                         
                   cache <- c
                   let hit = r.GetPointOnRay(t)
-                  matchPickingInteraction bc hit hitF surf m
+                  matchPickingInteraction sendQueue hit hitF surf m
                 | None, _ -> 
                     Log.error ("no hit")
                     m
@@ -556,7 +555,7 @@ module ViewerApp =
                     |true ->
                           let hitF (p : V3d) = None
                           match (m.scene.surfacesModel.surfaces.flat.TryFind id) with
-                            | Some x -> matchPickingInteraction bc p hitF (x |> Leaf.toSurface) m 
+                            | Some x -> matchPickingInteraction sendQueue p hitF (x |> Leaf.toSurface) m 
                             | None -> m
                     | false -> m
                 
@@ -627,7 +626,7 @@ module ViewerApp =
               let m =
                 match m.interaction with
                 | Interactions.DrawAnnotation -> 
-                    let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing drawingAction } |> stash
+                    let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing drawingAction } |> stash
                     match drawingAction with
                       | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
                       | _ -> m                                
@@ -689,9 +688,9 @@ module ViewerApp =
             | KeyUp k, _,_ ->
                 let d =
                   match k with
-                  | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing Drawing.Action.StopDrawing
-                  | _ -> m.drawing
-                
+                  | Aardvark.Application.Keys.LeftCtrl -> 
+                    DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopDrawing
+                  | _ -> m.drawing                
                 { m with drawing = d; picking = false } |> stash
             | SetInteraction t,_,_ -> { m with interaction = t }
             | ReferenceSystemMessage a,_,_ ->                                
@@ -1103,7 +1102,7 @@ module ViewerApp =
 
     
 
-    let start (runtime: IRuntime) (signature: IFramebufferSignature) bc =
+    let start (runtime: IRuntime) (signature: IFramebufferSignature) sendQueue =
 
 
         let m = 
@@ -1117,6 +1116,6 @@ module ViewerApp =
             unpersist = Unpersist.instance
             threads   = threadPool
             view      = view //localhost
-            update    = update runtime signature bc
+            update    = update runtime signature sendQueue
             initial   = m
         }
