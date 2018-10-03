@@ -520,21 +520,41 @@ module DrawingApp =
                   let! c = mkColor model a
                   yield style (sprintf "color: %s" (Html.ofC4b c))
                 } |> AttributeMap.ofAMap
-
-
               
+              let headerAttributes =
+                amap {
+                  yield onClick singleSelect
+                  let! selected = isSingleSelect model a
+                  yield if selected then style "text-transform:uppercase" else style "text-transform:none"
+                } |> AttributeMap.ofAMap
+
+              let headerText = 
+                adaptive {
+                  let! geometry = a.geometry
+                  let! semantic = a.semantic
+
+                  return 
+                    match semantic with
+                      | Semantic.None -> 
+                        geometry  |> sprintf "%A"
+                      | _ -> 
+                        semantic  |> sprintf "%A"
+                   
+                }
+
               div [clazz "item"] [
                 Incremental.i iconAttributes AList.empty
-                div [clazz "content"] [
-                  let header = Mod.map2 (fun x y -> sprintf "%A | %A | " x y) a.geometry a.semantic
-                  let desc   = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.count) a.surfaceName
+                div [clazz "content"] [                  
+                  let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.count) a.surfaceName
                   
                   //header
                   yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
                       alist {                          
-                          yield div[onClick singleSelect][Incremental.text header]
-                          yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
-                          yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation key)][] |> UI.wrapToolTip "FlyTo"
+                          yield div[][
+                            Incremental.span headerAttributes ([Incremental.text headerText] |> AList.ofList)
+                            Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
+                            i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation key)][] |> UI.wrapToolTip "FlyTo"
+                          ]
                       } 
                   ) 
 

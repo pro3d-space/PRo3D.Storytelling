@@ -238,15 +238,15 @@ module Init =
    
 
     let initColorCorrection = {
-        contrast    = contrast
-        useContrast = true
-        brightness  = brightness
-        useBrightn  = true
-        gamma       = gamma
-        useGamma    = true
-        color       = { c = C4b.Magenta }
-        useColor    = true
-        useGrayscale = true
+        contrast     = contrast
+        useContrast  = false
+        brightness   = brightness
+        useBrightn   = false
+        gamma        = gamma
+        useGamma     = false
+        color        = { c = C4b.Magenta }
+        useColor     = false
+        useGrayscale = false
     } 
 
 

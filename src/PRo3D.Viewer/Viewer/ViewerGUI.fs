@@ -99,7 +99,7 @@ module Gui =
     
     let private importSurface (m:MModel) =
       [
-         text "Import Surface"
+         text "Import"
          i [clazz "dropdown icon"][] 
          div [ clazz "menu"] [
              div [ clazz "ui inverted item"; 
@@ -107,11 +107,11 @@ module Gui =
                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
                text "OPC"
              ]
-             div [ clazz "ui inverted item"; 
-               Dialogs.onChooseFiles ImportObject;
-               clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
-               text "OBJ"
-             ]
+             //div [ clazz "ui inverted item"; 
+             //  Dialogs.onChooseFiles ImportObject;
+             //  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
+             //  text "OBJ"
+             //]
          ]
       ]
 
@@ -120,16 +120,17 @@ module Gui =
         adaptive
             {
                 let! path = m.scene.scenePath
-                return match path with
-                            | Some p ->
-                                 div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
-                                  text "Save"
-                                ]
-                            | None ->
-                                div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
-                                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
-                                  text "Save"
-                                ]
+                return 
+                  match path with
+                  | Some p ->
+                    div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
+                     text "Save"
+                    ]
+                  | None ->
+                    div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
+                      clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
+                      text "Save"
+                    ]
             }
       [
         text "Scene" 
@@ -178,27 +179,10 @@ module Gui =
               i [clazz "large sidebar icon"; style "margin:0px 2px"][] 
               
               div [ clazz "ui menu"] [
-                  div [ clazz "ui dropdown item"; style "width: 150px"] [] //spacer as workaround for taboverdraw
+                  div [ clazz "ui dropdown item"; style "width: 150px"] [] //spacer as workaround for tab overdraw
                   div [ clazz "ui dropdown item"] (scene m)
               
                   div [ clazz "ui dropdown item"] (importSurface m)
-
-                  div [ clazz "ui dropdown item"] [
-                      text "Import"
-                      i [clazz "dropdown icon"][] 
-                      div [ clazz "menu"] [
-                          div [ clazz "ui item";
-                              Dialogs.onChooseFiles ImportAnnotationGroups;
-                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
-                              text "Annotations Groups"
-                          ]
-                          div [ clazz "ui item";
-                              Dialogs.onChooseFiles ImportSurfaceTrafo;
-                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
-                              text "Surface Trafos"
-                          ]
-                      ]
-                  ]
               
                   DrawingApp.UI.annotationMenu  |> UI.map DrawingMessage;
                   
@@ -218,6 +202,23 @@ module Gui =
                                        ]
                               } |> AList.ofASet
                           )
+                      ]
+                  ]
+
+                  div [ clazz "ui dropdown item"] [
+                      text "Extras"
+                      i [clazz "dropdown icon"][] 
+                      div [ clazz "menu"] [
+                          div [ clazz "ui item";
+                              Dialogs.onChooseFiles ImportAnnotationGroups;
+                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
+                              text "Import Annotations Groups"
+                          ]
+                          div [ clazz "ui item";
+                              Dialogs.onChooseFiles ImportSurfaceTrafo;
+                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+                              text "Import Surface Trafos"
+                          ]
                       ]
                   ]
               ] 

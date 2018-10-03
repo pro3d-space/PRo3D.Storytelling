@@ -320,14 +320,14 @@ module ViewerUtils =
                 //            Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
                 //            return maxAngle |> Double.radiansFromDegrees |> Math.Cos
                 //        })
-                |> Sg.uniform "useContrastS"  (useContr |> Mod.map(fun x -> not x))
+                |> Sg.uniform "useContrastS"  useContr
                 |> Sg.uniform "contrastS"     contr
-                |> Sg.uniform "useBrightnS"   (useB |> Mod.map(fun x -> not x)) 
+                |> Sg.uniform "useBrightnS"   useB
                 |> Sg.uniform "brightnessS"   bright
-                |> Sg.uniform "useGammaS"     (useG |> Mod.map(fun x -> not x))  
+                |> Sg.uniform "useGammaS"     useG 
                 |> Sg.uniform "gammaS"        gamma
-                |> Sg.uniform "useGrayS"      (useGray |> Mod.map(fun x -> not x)) 
-                |> Sg.uniform "useColorS"     (useColor |> Mod.map(fun x -> not x)) 
+                |> Sg.uniform "useGrayS"      useGray
+                |> Sg.uniform "useColorS"     useColor
                 |> Sg.uniform "colorS"        color
                 |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
                 |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
