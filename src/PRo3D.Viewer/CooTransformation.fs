@@ -69,9 +69,9 @@ module CooTransformation =
 
         V3d(!pX, !pY, !pZ)
 
-    let getHeight (p:V3d) (planet:Planet) = 
+    let getHeight (p:V3d) (up:V3d) (planet:Planet) = 
       match planet with
-      | Planet.None -> p.Z
+      | Planet.None -> p.Z //(p * up).Z //
       | _ ->
         let sc = getLatLonAlt p planet
         sc.altitude

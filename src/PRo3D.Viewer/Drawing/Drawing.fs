@@ -53,7 +53,7 @@ module DrawingApp =
             | _ -> { a with points = a.points |> PList.append firstP }
 
 
-    let getFinishedAnnotation up north (model : DrawingModel) =
+    let getFinishedAnnotation up north planet (model : DrawingModel) =
         match model.working with
             | Some w ->  
                 let w = match w.geometry with
@@ -67,11 +67,11 @@ module DrawingApp =
                     //        let result = w.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
                     //        Some result //more acc. by using segments as well?
                     //    | _ -> None 
-                let results = Annotation.calculateAnnotationResults w up
+                let results = DrawingUtilities.Calculations.calculateAnnotationResults w up planet
                 Some { w with dnsResults = dns ; results = Some results }
             | None -> None
 
-    let finishAndAppendAndSend up north (model : DrawingModel) (bc : BlockingCollection<string>) = 
+    let finishAndAppendAndSend up north planet (model : DrawingModel) (bc : BlockingCollection<string>) = 
       //if there are at least 3 points do dns calculation (debug, dev). 
       //might take long for large number of points so created on demand?
 
@@ -82,7 +82,7 @@ module DrawingApp =
       //        | None -> model.annotations.annotationsFlat
 
       let groups = 
-        match getFinishedAnnotation up north model with
+        match getFinishedAnnotation up north planet model with
           | Some a -> 
             let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
             bc.Add json                    
@@ -95,7 +95,7 @@ module DrawingApp =
     
     
 
-    let addPoint up north samplePoint p model surfaceName bc =
+    let addPoint up north planet samplePoint p model surfaceName bc =
       let working, newSegment = 
         match model.working with
           | Some w ->     
@@ -146,9 +146,9 @@ module DrawingApp =
 
       match (working.geometry, (working.points |> PList.count)) with
           | Geometry.Point, 1 -> 
-              finishAndAppendAndSend up north model bc, None
+              finishAndAppendAndSend up north planet model bc, None
           | Geometry.Line, 2 -> 
-              finishAndAppendAndSend up north model bc, None
+              finishAndAppendAndSend up north planet model bc, None
           | _ -> 
               model, newSegment // returns current segment for async computations outside
 
@@ -205,8 +205,9 @@ module DrawingApp =
 
     type SmallConfig<'a> =
         {
-            up    : Lens<'a,V3d>
-            north : Lens<'a,V3d>
+            up     : Lens<'a,V3d>
+            north  : Lens<'a,V3d>
+            planet : Lens<'a,Planet>
         }
 
     type MSmallConfig<'ma> =
@@ -253,8 +254,9 @@ module DrawingApp =
             | AddPointAdv (point, hitFunction, name), true ->
                     let up    = smallConfig.up.Get(bigConfig)
                     let north = smallConfig.north.Get(bigConfig)
+                    let planet = smallConfig.planet.Get(bigConfig)
 
-                    let model, newSegment = addPoint up north hitFunction point model name bc
+                    let model, newSegment = addPoint up north planet hitFunction point model name bc
                     
                     match newSegment with
                         | None         -> model
@@ -268,10 +270,11 @@ module DrawingApp =
                         { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
 
             | Finish, _ -> 
-                    let up    = smallConfig.up.Get(bigConfig)
-                    let north = smallConfig.north.Get(bigConfig)
+                    let up     = smallConfig.up.Get(bigConfig)
+                    let north  = smallConfig.north.Get(bigConfig)
+                    let planet = smallConfig.planet.Get(bigConfig)
 
-                    (finishAndAppendAndSend up north model bc) |> stash
+                    (finishAndAppendAndSend up north planet model bc) |> stash
             | Exit, _ -> 
                     { model with hoverPosition = None }
             | SetSemantic mode, _ ->

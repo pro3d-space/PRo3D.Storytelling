@@ -114,8 +114,9 @@ module ViewerApp =
     
     let drawingConfig : DrawingApp.SmallConfig<ReferenceSystem> =
         { 
-            up    = (ReferenceSystem.Lens.up    |. V3dInput.Lens.value)
-            north = (ReferenceSystem.Lens.north |. V3dInput.Lens.value)
+            up     = (ReferenceSystem.Lens.up     |. V3dInput.Lens.value)
+            north  = (ReferenceSystem.Lens.north  |. V3dInput.Lens.value)
+            planet = (ReferenceSystem.Lens.planet)
         }
 
     let mdrawingConfig : DrawingApp.MSmallConfig<MViewConfigModel> =

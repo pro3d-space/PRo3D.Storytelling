@@ -54,10 +54,16 @@ module Gui =
       let spericalc = 
         Mod.map2 (fun (a : CameraView) b -> 
           CooTransformation.getLatLonAlt(a.Location) b ) cv m.planet
+
+      let height = 
+        Mod.map2 (fun (a : CameraView) b -> 
+          CooTransformation.getHeight a.Location a.Up b ) cv m.planet
       
       let lon = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.longitude).ToString("0.00")))
       let lat = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.latitude).ToString("0.00")))
       let alt = spericalc |> Mod.map(fun x -> sprintf "%s m" ((x.altitude).ToString("0.00")))
+      let alt1 = height |> Mod.map(fun x -> sprintf "%s m" ((x).ToString("0.00")))
+                           
       
       let style' = "color: white; font-family:Consolas;"
     
@@ -90,6 +96,10 @@ module Gui =
               tr[][
                   td[style style'][text "Altitude: "]
                   td[style style'][Incremental.text alt]
+              ]
+              tr[][
+                  td[style style'][text "Altitude new: "]
+                  td[style style'][Incremental.text alt1]
               ]
           ]
       ]                              

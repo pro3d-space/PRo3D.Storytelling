@@ -370,12 +370,9 @@ module ReferenceSystemApp =
                 styleUp    |> directionMarker near cam  
                 styleNorth |> directionMarker near cam
                 //styleNorth90 |> directionMarker near cam
-                //styleNorth120 |> directionMarker near cam
-                //styleNorth180 |> directionMarker near cam
-                //styleNorth260 |> directionMarker near cam
                 styleEast  |> directionMarker near cam                     
             ]   |> Sg.onOff(model.isVisible)  
-                //|> Sg.trafo (model.noffset.value |> Mod.map ( fun o -> (Trafo3d.RotationXInDegrees(o))))
+                
 
     module UI =
         open Aardvark.UI.Primitives.Mutable
@@ -400,7 +397,8 @@ module ReferenceSystemApp =
                 adaptive {
                         let! pos = model.origin
                         let! planet = model.planet
-                        return CooTransformation.getHeight pos planet
+                        let! up = model.up.value
+                        return CooTransformation.getHeight pos up planet
                     }
 
             require GuiEx.semui (
