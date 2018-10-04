@@ -16,10 +16,11 @@ module DrawingUtilities =
         let getHeightDelta2 (p:V3d) (upVec:V3d) (planet:Planet) = 
             CooTransformation.getHeight p upVec planet
 
-        let calcResultsPoint = //(point:V3d) (trafo:Trafo3d) (upVec:V3d) 
+        let calcResultsPoint (model:Annotation) (upVec:V3d) (planet:Planet) =
             //let p = point //trafo.Forward.TransformPos(point)
             {   height = 0.0
                 heightDelta = 0.0
+                avgAltitude = CooTransformation.getAltitude model.points.[0] upVec planet
                 length = 0.0
                 wayLength = 0.0
                 }
@@ -57,6 +58,7 @@ module DrawingUtilities =
 
             {   height = (heights |> List.max) - (heights |> List.min)
                 heightDelta = Fun.Abs (heights.[hcount-1] - heights.[0])
+                avgAltitude = (heights |> List.average)
                 length = dist
                 wayLength = way
                 }
@@ -64,4 +66,4 @@ module DrawingUtilities =
         let calculateAnnotationResults (model:Annotation) (upVec:V3d) (planet:Planet) =
             match model.points.Count with
                 | x when x > 1 -> calcResultsLine model upVec planet
-                | _ -> calcResultsPoint //model.points.[0] model.modelTrafo upVec
+                | _ -> calcResultsPoint model upVec planet

@@ -860,7 +860,7 @@ module DrawingApp =
             ] |> Sg.onOff anno.visible
 
         let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =
-           anno.showDns |> optional (drawDns anno conf cl cam) |> Sg.set
+           anno.showDns |> optional (drawDns anno conf cl cam) |> Sg.set |> Sg.onOff anno.visible
         
         let toAnnotationOpt = 
             fun y -> 

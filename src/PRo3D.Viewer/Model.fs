@@ -13,6 +13,8 @@ open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis
 open Aardvark.Base.Rendering
 open Aardvark.Base.CameraView
+//open Microsoft.WindowsAPICodePack.Shell.PropertySystem.SystemProperties.System
+
 //open OpenCvSharp.SimpleBlobDetector
 
 //open Aardvark.Data.PhotoNetwork
@@ -228,6 +230,7 @@ type DipAndStrikeResults = {
 type AnnotationResults = {
     height      : float
     heightDelta : float
+    avgAltitude : float
     length      : float
     wayLength   : float
 }

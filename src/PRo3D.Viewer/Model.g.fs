@@ -316,11 +316,13 @@ module Mutable =
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.AnnotationResults> = Aardvark.Base.Incremental.EqModRef<PRo3D.AnnotationResults>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.AnnotationResults>
         let _height = ResetMod.Create(__initial.height)
         let _heightDelta = ResetMod.Create(__initial.heightDelta)
+        let _avgAltitude = ResetMod.Create(__initial.avgAltitude)
         let _length = ResetMod.Create(__initial.length)
         let _wayLength = ResetMod.Create(__initial.wayLength)
         
         member x.height = _height :> IMod<_>
         member x.heightDelta = _heightDelta :> IMod<_>
+        member x.avgAltitude = _avgAltitude :> IMod<_>
         member x.length = _length :> IMod<_>
         member x.wayLength = _wayLength :> IMod<_>
         
@@ -331,6 +333,7 @@ module Mutable =
                 
                 ResetMod.Update(_height,v.height)
                 ResetMod.Update(_heightDelta,v.heightDelta)
+                ResetMod.Update(_avgAltitude,v.avgAltitude)
                 ResetMod.Update(_length,v.length)
                 ResetMod.Update(_wayLength,v.wayLength)
                 
@@ -360,6 +363,12 @@ module Mutable =
                     override x.Get(r) = r.heightDelta
                     override x.Set(r,v) = { r with heightDelta = v }
                     override x.Update(r,f) = { r with heightDelta = f r.heightDelta }
+                }
+            let avgAltitude =
+                { new Lens<PRo3D.AnnotationResults, System.Double>() with
+                    override x.Get(r) = r.avgAltitude
+                    override x.Set(r,v) = { r with avgAltitude = v }
+                    override x.Update(r,f) = { r with avgAltitude = f r.avgAltitude }
                 }
             let length =
                 { new Lens<PRo3D.AnnotationResults, System.Double>() with

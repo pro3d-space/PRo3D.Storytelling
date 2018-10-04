@@ -393,12 +393,12 @@ module ReferenceSystemApp =
                     return DipAndStrike.pitch up view.Forward
                     }
 
-            let height = 
+            let altitude = 
                 adaptive {
                         let! pos = model.origin
                         let! planet = model.planet
                         let! up = model.up.value
-                        return CooTransformation.getHeight pos up planet
+                        return CooTransformation.getAltitude pos up planet
                     }
 
             require GuiEx.semui (
@@ -410,7 +410,7 @@ module ReferenceSystemApp =
                     Html.row "N-Offset:"[Numeric.view' [InputBox] model.noffset |> UI.map SetNOffset ] 
                     Html.row "Bearing:" [Incremental.text (bearing |> Mod.map (fun x -> x.ToString("0.00")))] // compute azimuth with view dir, north vector and up vector
                     Html.row "Pitch:"   [Incremental.text (pitch |> Mod.map (fun x -> x.ToString("0.00")))]  // same for pitch which relates to dip angle
-                    Html.row "Height:"  [Incremental.text (height |> Mod.map (fun x -> x.ToString("0.00")))]
+                    Html.row "Altitude:"  [Incremental.text (altitude |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Visible:" [GuiEx.iconCheckBox model.isVisible ToggleVisible ]
                       
                 ]
