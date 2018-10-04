@@ -71,7 +71,14 @@ module CooTransformation =
 
     let getHeight (p:V3d) (up:V3d) (planet:Planet) = 
       match planet with
-      | Planet.None -> p.Z //(p * up).Z //
+      | Planet.None -> (p * up).Length // p.Z //
+      | _ ->
+        let sc = getLatLonAlt p planet
+        sc.altitude
+
+    let getAltitude (p:V3d) (up:V3d) (planet:Planet) = 
+      match planet with
+      | Planet.None -> (p * up).Z // p.Z //
       | _ ->
         let sc = getLatLonAlt p planet
         sc.altitude

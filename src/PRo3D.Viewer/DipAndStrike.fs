@@ -121,7 +121,7 @@ module DipAndStrike =
                     strikeDirection = strike
                     dipAzimuth      = computeAzimuth v north up
                     strikeAzimuth   = computeAzimuth strike north up
-                    centerOfMass    = (new Box3d(points)).Center
+                    centerOfMass    = (new Box3d(points)).Center //[@LF] this is not the center of mass (sum over points / no of points)
                     error           = 
                       { 
                         average = avg

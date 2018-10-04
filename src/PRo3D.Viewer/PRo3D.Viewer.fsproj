@@ -82,12 +82,11 @@
     <Compile Include="CooTransformation.fs" />
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
-    <Compile Include="KdTrees.fs" />
     <Compile Include="ReferenceSystem-Model.fs" />
     <Compile Include="FalseColorLegendApp.fs" />
     <Compile Include="DipAndStrike.fs" />
-    <Compile Include="OrientationCube.fs" />
     <Compile Include="ReferenceSystem.fs" />
+    <Compile Include="OrientationCube.fs" />
     <Compile Include="Surface-Model.fs" />
     <Compile Include="Navigation-Model.fs" />
     <Compile Include="Bookmark-Model.fs" />
