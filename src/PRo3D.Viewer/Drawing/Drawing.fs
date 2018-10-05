@@ -25,12 +25,10 @@ module DrawingApp =
     open Aardvark.VRVis.Opc
 
     open Aardvark.UI
-    open Aardvark.UI.Primitives
-    
+    open Aardvark.UI.Primitives    
     open PRo3D
     open PRo3D.Drawing
     open PRo3D.Groups
-
     open MBrace.FsPickler.Json   
     
     let closePolyline (a:Annotation) = 
@@ -52,7 +50,6 @@ module DrawingApp =
                     { a with segments = PList.append newSegment a.segments }
             | _ -> { a with points = a.points |> PList.append firstP }
 
-
     let getFinishedAnnotation up north (model : DrawingModel) =
         match model.working with
             | Some w ->  
@@ -72,15 +69,7 @@ module DrawingApp =
             | None -> None
 
     let finishAndAppendAndSend up north (model : DrawingModel) (bc : BlockingCollection<string>) = 
-      //if there are at least 3 points do dns calculation (debug, dev). 
-      //might take long for large number of points so created on demand?
-
-      //let anns = 
-      //    match getFinishedAnnotation up north model with
-      //        | Some a -> 
-      //            model.annotations.annotationsFlat |> PList.prepend a
-      //        | None -> model.annotations.annotationsFlat
-
+      
       let groups = 
         match getFinishedAnnotation up north model with
           | Some a -> 
@@ -92,9 +81,7 @@ module DrawingApp =
           | None -> model.annotations             
 
       { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
-    
-    
-
+        
     let addPoint up north samplePoint p model surfaceName bc =
       let working, newSegment = 
         match model.working with
@@ -212,15 +199,12 @@ module DrawingApp =
     type MSmallConfig<'ma> =
         {            
             getNearPlane       : 'ma -> IMod<float>
-            getHfov            : 'ma -> IMod<float>
-            //getMaxDipAngle     : 'ma -> IMod<float>
-            //getMinDipAngle     : 'ma -> IMod<float>
+            getHfov            : 'ma -> IMod<float>            
             getArrowThickness  : 'ma -> IMod<float>
             getArrowLength     : 'ma -> IMod<float>
             getDnsPlaneSize    : 'ma -> IMod<float>
         }
    
-
     let saveAnnotations (path:string) (model:DrawingModel) = 
         match path.IsEmptyOrNull() with
             | true -> model
@@ -242,7 +226,7 @@ module DrawingApp =
     let saveSceneAnnotations (scenePath:string) (model:DrawingModel) = 
         saveAnnotations (getAnnotationPath scenePath) model
 
-    let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (bc : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
+    let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (webSocket : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
         match (act, model.draw) with
             | StartDrawing, _ ->                     
                     { model with draw = true }
@@ -254,7 +238,7 @@ module DrawingApp =
                     let up    = smallConfig.up.Get(bigConfig)
                     let north = smallConfig.north.Get(bigConfig)
 
-                    let model, newSegment = addPoint up north hitFunction point model name bc
+                    let model, newSegment = addPoint up north hitFunction point model name webSocket
                     
                     match newSegment with
                         | None         -> model
@@ -271,7 +255,7 @@ module DrawingApp =
                     let up    = smallConfig.up.Get(bigConfig)
                     let north = smallConfig.north.Get(bigConfig)
 
-                    (finishAndAppendAndSend up north model bc) |> stash
+                    (finishAndAppendAndSend up north model webSocket) |> stash
             | Exit, _ -> 
                     { model with hoverPosition = None }
             | SetSemantic mode, _ ->
@@ -298,44 +282,9 @@ module DrawingApp =
                     //Serialization.writeToFile path json 
                     
                     model
-            | Save p,_->
-                //match Dialogs.saveDialog w with
-                //    | None -> model
-                //    | Some p -> 
-                //        let sa = 
-                //            {
-                //                annotations = model.annotations
-                //                colorLegend = model.colorLegend
-                //            }
-                //        Serialization.save "./lastMeasure" sa |> ignore //model.annotations
-                //        //{ model with annotations = (Serialization.save p model.annotations } 
-                //        let saveA = Serialization.save p sa
-                //        { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend } 
+            | Save p,_-> saveAnnotations p model
 
-                //match p.IsEmptyOrNull() with
-                //    | true -> model
-                //    | false-> 
-                //        let sa = 
-                //            {
-                //                annotations = model.annotations
-                //                colorLegend = model.colorLegend
-                //            }
-                //        Serialization.save "./lastMeasure" sa |> ignore 
-                //        let saveA = Serialization.save p sa
-                //        { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend } 
-                saveAnnotations p model
-
-            | Load p,_ ->                
-              //match Dialogs.openDialog w with
-              //  | None -> model
-              //  | Some path -> 
-              //    //let groups = Groups.tryLoadGroups path
-              //    let groups = Groups.tryLoadAnnotations path
-              //    match groups with 
-              //      //| Some g -> { model with annotations = g  }
-              //      | Some g -> { model with annotations = g.annotations; colorLegend = g.colorLegend }
-              //      | None -> model
-
+            | Load p,_ ->                              
               match p.Length < 1 with
                 | true -> model
                 | false -> 
@@ -694,30 +643,11 @@ module DrawingApp =
                    do! DefaultSurfaces.simpleLighting
                }
                |> Sg.trafo(trafo) 
-               
-               
-
-        //let brush (hovered : IMod<Trafo3d option>) = 
-        //    let trafo =
-        //        hovered |> Mod.map (fun o -> 
-        //            match o with 
-        //                | Some t-> t
-        //                | None -> Trafo3d.Scale(V3d.Zero)
-        //        )
-
-        //    Sg.mkDotISg (Mod.constant C4b.Red) (Mod.constant 0.05) trafo
-        //    |> Sg.effect [
-        //        toEffect <| Aardvark.Opc.Shader.stableTrafo
-        //        toEffect <| DefaultSurfaces.vertexColor
-        //        toEffect <| DefaultSurfaces.simpleLighting
-        //    ]                                                       
-        
+                                                                                      
         type innerViewConfig =
             {
                 nearPlane       : IMod<float>
-                hfov            : IMod<float>
-                //maxDipAngle     : IMod<float>
-                //minDipAngle     : IMod<float>
+                hfov            : IMod<float>                
                 arrowThickness  : IMod<float>
                 arrowLength     : IMod<float>
                 dnsPlaneSize    : IMod<float>

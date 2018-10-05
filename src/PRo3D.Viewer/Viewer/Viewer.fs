@@ -273,12 +273,14 @@ module ViewerApp =
                 { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
             | _ -> m
 
-    let update (runtime : IRuntime) (signature: IFramebufferSignature) (sendQueue : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
+    let update (runtime : IRuntime) (signature: IFramebufferSignature) (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
                let ref = m.scene.referenceSystem
                let nav = Navigation.update c ref navConf m.scene.navigation msg               
+
+               m.scene.navigation.camera.view.Location.ToString() |> NoAction |> ViewerAction |> mailbox.Post
 
                m 
                  |> Lenses.set _navigation nav
@@ -342,7 +344,7 @@ module ViewerApp =
 
                 let animation = 
                   match msg with
-                  | Bookmarks.Action.GroupsMessage k ->
+                  | BookmarkAction.GroupsMessage k ->
                     match k with 
                     | Groups.Action.UpdateCam _->
                       let location = m'.scene.navigation.camera.view.Location
@@ -481,8 +483,7 @@ module ViewerApp =
                   m 
                     |> Lenses.set _groups newGroups
                     |> Lenses.set _lookUp lookup
-                    |> Lenses.set _flat flat
-                
+                    |> Lenses.set _flat flat                
             | ImportSurfaceTrafo sl,_,_ ->
               match sl with
                 | [] -> m 
@@ -505,8 +506,7 @@ module ViewerApp =
                   Csv.Seq.write (@"./shift.csv") csvTable |> ignore
 
                   let s = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel
-                  m |> Lenses.set _surfaceModelLens s                  
-                  
+                  m |> Lenses.set _surfaceModelLens s                                    
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
             | QuickLoad2,_,_ ->                                
@@ -521,16 +521,14 @@ module ViewerApp =
               Log.startTimed "kdtree intersect %s %A" name ViewerUtils.hitCounter
 
               ViewerUtils.hitCounter <- ViewerUtils.hitCounter - 1
-
-              let cameraLocation = m.scene.navigation.camera.view.Location 
-              
-              let hitF (p : V3d) = 
+                            
+              let hitF (camLocation : V3d) (p : V3d) = 
                 
                 let ray =
                     match m.drawing.projection with
                         | Projection.Viewpoint -> 
-                            let dir = (p-cameraLocation).Normalized
-                            FastRay3d(cameraLocation, dir)  
+                            let dir = (p-camLocation).Normalized
+                            FastRay3d(camLocation, dir)  
                         | Projection.Sky -> 
                             let up = m.scene.referenceSystem.up.value
                             FastRay3d(p + (up * 5000.0), -up)  
@@ -546,6 +544,9 @@ module ViewerApp =
                 | Some (t,surf), c ->                         
                   cache <- c
                   let hit = r.GetPointOnRay(t)
+                  let cameraLocation = m.scene.navigation.camera.view.Location 
+                  let hitF = hitF cameraLocation
+
                   matchPickingInteraction sendQueue hit hitF surf m
                 | None, _ -> 
                     Log.error ("no hit")
@@ -590,7 +591,7 @@ module ViewerApp =
                     |> loadRoverData
                     |> loadLastAnnotations  
             | NewScene,_,_ ->
-                let m' = { PRo3D.Viewer.Viewer.initial with recent = m.recent }
+                let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox with recent = m.recent }
                 //let m'' = {m' with scene = {m'.scene with scenePath = None}}
                 //m'
                 loadRoverData m'
@@ -752,7 +753,11 @@ module ViewerApp =
                 let argument = sprintf "/select, \"%s\"" p
                 Process.Start("explorer.exe", argument) |> ignore
                 m
-            | NoAction s,_,_ -> m        
+            | NoAction s,_,_ -> 
+              if s.IsEmptyOrNull() |> not then 
+                Log.line "[Viewer.fs] No Action %A" s
+              
+              m                   
             | UpdateDockConfig dcf,_,_ ->
                 let closedPages = updateClosedPages m dcf.content
                 { m with scene = { m.scene with dockConfig = dcf; closedPages = closedPages } }
@@ -967,35 +972,32 @@ module ViewerApp =
                 )
 
         let topMenuItems = [
-             Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
-
-             Html.Layout.horizontal [
-                Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
-                Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
-             ]                        
-             Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
-
-             Html.Layout.horizontal [
-               Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
-               Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
-             ] 
-             Html.Layout.horizontal [
-               Html.Layout.boxH [ scenepath ]
-             ] 
-             
+          Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
+          
+          Html.Layout.horizontal [
+             Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
+             Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
+          ]                        
+          Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
+          
+          Html.Layout.horizontal [
+            Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
+            Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
+          ] 
+          Html.Layout.horizontal [
+            Html.Layout.boxH [ scenepath ]
+          ]              
         ]        
 
         let topMenu =
-            div[clazz "ui menu"; style "padding:0; margin:0; border:0"] [
-                yield Gui.TopMenu.menu m
-                for t in topMenuItems do
-                    yield div [clazz "item topmenu"] [t]
-            ]
+          div[clazz "ui menu"; style "padding:0; margin:0; border:0"] [
+            yield Gui.TopMenu.menu m
+            for t in topMenuItems do
+              yield div [clazz "item topmenu"] [t]
+          ]
                                            
         let dnsColorLegend =
-            FalseColorLegendApp.Draw.createColorLegendDnS 
-                    m.drawing.colorLegend 
-                    (Aardvark.Base.V2d(100.0, 200.0))
+          FalseColorLegendApp.Draw.createColorLegendDnS m.drawing.colorLegend (V2d(100.0, 200.0))
 
         let scalarsColorLegend =
             let attr = 
@@ -1092,23 +1094,19 @@ module ViewerApp =
           let wp = Serialization.loadAs<plist<WayPoint>> path
           { m with waypoints = wp }
         | None -> m
-
     
-
-    let start (runtime: IRuntime) (signature: IFramebufferSignature) sendQueue =
-
+    let start (runtime: IRuntime) (signature: IFramebufferSignature) messagingMailbox sendQueue =
 
         let m = 
-            PRo3D.Viewer.Viewer.initial 
+            PRo3D.Viewer.Viewer.initial messagingMailbox 
               |> Scene.loadLastScene runtime signature
               |> loadRoverData
-              |> loadLastAnnotations  
-
-       
+              |> loadLastAnnotations
+                             
         App.start {
             unpersist = Unpersist.instance
             threads   = threadPool
             view      = view //localhost
-            update    = update runtime signature sendQueue
+            update    = update runtime signature sendQueue messagingMailbox
             initial   = m
         }

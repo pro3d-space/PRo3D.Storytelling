@@ -34,6 +34,7 @@ open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis.Opc
 
 open Aardium
+open System.Threading
 
 [<DataContract>]
 type Calc =
@@ -125,16 +126,10 @@ let main argv =
     app.ShaderCachePath <- None
 
     //buildLicense(365)
-
-    
-    //Serialization.registry.DeclareSerializable<Aardvark.Geometry.KdIntersectionTree>()
-    //Serialization.registry.RegisterFactory (fun _ -> KdTrees.concreteKdIntersectionPickler)
-    //Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.sgSurfacePickler)
-    
+        
     Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.surfaceModelPickler)
     Serialization.registry.RegisterFactory (fun _ -> KdTrees.level0KdTreePickler)
-    
-    
+        
     if licenseCheck then
       checkLicense()
     
@@ -163,10 +158,15 @@ let main argv =
         
     // main app
     //use form = new Form(Width = 1280, Height = 800)
+    let cts = new CancellationTokenSource()
+    let messagingMailbox = MailboxProcessor.Start(Viewer.messagingMailbox cts, cts.Token)    
 
     let mainApp = 
-        PRo3D.ViewerApp.start runtime signature sendQueue
+        PRo3D.ViewerApp.start runtime signature messagingMailbox sendQueue
 
+    let s = { MailboxState.empty with update = mainApp.update Guid.Empty }
+    MailboxAction.InitMailboxState s |> messagingMailbox.Post
+    
     CooTransformation.initCooTrafo () // should be a function not a value
     
     let domainError (sender:obj) (args:UnhandledExceptionEventArgs) =
@@ -175,6 +175,7 @@ let main argv =
         MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |>ignore
         ()
     
+
     if catchDomainErrors then
       AppDomain.CurrentDomain.UnhandledException.AddHandler(UnhandledExceptionEventHandler(domainError))
 

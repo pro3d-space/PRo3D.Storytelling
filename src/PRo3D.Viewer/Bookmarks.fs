@@ -14,11 +14,8 @@ module Bookmarks =
     open Aardvark.UI.Primitives.Mutable
     open Aardvark.SceneGraph.SgFSharp.Sg
     open PRo3D.Groups
-    open Aardvark.Base.MultimethodTest
-
-    type Action =
-        | AddBookmark 
-        | GroupsMessage   of Groups.Action
+    open Aardvark.Base.MultimethodTest    
+    open PRo3D.Viewer
     
     let tryGet (ans:plist<Bookmark>) key = 
             ans |> Seq.tryFind(fun x -> x.key = key)
@@ -31,7 +28,7 @@ module Bookmarks =
             navigationState = navigation
         }
             
-    let update (model : BookmarksModel) (act : Action) (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*BookmarksModel) = 
+    let update (model : BookmarksModel) (act : BookmarkAction) (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*BookmarksModel) = 
         match act with
             | AddBookmark -> 
                 let newBm = 
@@ -121,7 +118,7 @@ module Bookmarks =
         }     
                
 
-    let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<Action>> =
+    let rec viewTree path (group : MNode) (model : MGroupsModel) : alist<DomNode<BookmarkAction>> =
 
         alist {
 
@@ -136,7 +133,7 @@ module Bookmarks =
                 }
                       
             let map = 
-                Groups.mkGroupAttributeMap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+                Groups.mkGroupAttributeMap icon (BookmarkAction.GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                
             let desc =
                 div [style color] [       
@@ -145,22 +142,13 @@ module Bookmarks =
                         
                     i [clazz "plus icon"
                        onMouseClick (fun _ -> 
-                         GroupsMessage(Groups.AddGroup path))] [] 
-                    |> UI.wrapToolTip "Add Group"   
-                        
-                    //i [clazz "remove circle icon"
-                    //   onMouseClick (fun _ -> 
-                    //     GroupsMessage(Groups.ClearGroup path))] [] 
-                    //|> UI.wrapToolTip "Clear Group"
-                        
-                    //i [clazz "remove icon red"
-                    //   onMouseClick (fun _ -> Action.GroupsMessage(Groups.RemoveGroup path))] [] 
-                    //|> UI.wrapToolTip "Remove Group"                    
+                         BookmarkAction.GroupsMessage(Groups.AddGroup path))] [] 
+                    |> UI.wrapToolTip "Add Group"                                 
                 ]
                  
             let itemAttributes =
                 amap {
-                    yield onMouseClick (fun _ -> Action.GroupsMessage(Groups.ToggleExpand path))
+                    yield onMouseClick (fun _ -> BookmarkAction.GroupsMessage(Groups.ToggleExpand path))
                     let! selected = group.expanded
                     if selected 
                     then yield clazz "icon large outline open folder"
@@ -179,14 +167,14 @@ module Bookmarks =
             let leafDomNodes = AList.collecti (fun i v -> viewTree (i::path) v model) group.subNodes    
 
             let singleSelect = 
-                    fun (a:MBookmark,path:list<Index>) -> 
-                        Action.GroupsMessage(Groups.SingleSelectLeaf (path, a.key |> Mod.force, ""))
+                fun (a:MBookmark,path:list<Index>) -> 
+                    BookmarkAction.GroupsMessage(Groups.SingleSelectLeaf (path, a.key |> Mod.force, ""))
 
             let multiSelect = 
                 fun (a:MBookmark,path:list<Index>) -> 
-                    Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key |> Mod.force, ""))
+                    BookmarkAction.GroupsMessage(Groups.AddLeafToSelection (path, a.key |> Mod.force, ""))
 
-            let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
+            let lift   = fun (a:Groups.Action) -> (BookmarkAction.GroupsMessage a)
 
             yield div [ clazz "item"] [
                 Incremental.i itemAttributes AList.empty
