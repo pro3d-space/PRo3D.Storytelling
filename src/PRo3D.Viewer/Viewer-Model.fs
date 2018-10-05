@@ -143,33 +143,23 @@ module Viewer =
 
                 dockConfig  =
                   config {
-                      content (
-                        //vertical 0.6 [
-                         // element { id "topMenu1"; title "Menu"; weight 0.03 }
-                          horizontal 1.0 [
-                            
-                            //element {id "sidebar"; title "Sidebar"; weight 0.3}
-                            //element {id "render"; title "Renderview"; weight 0.6}
-                            //element {id "instrumentview"; title "Instrumentview"; weight 0.6}
+                      content (                        
+                          horizontal 1.0 [                                                        
                             stack 0.7 None [
                                 {id = "render"; title = Some "Renderview"; weight = 0.6; deleteInvisible = None}
-                                {id = "instrumentview"; title = Some "Instrumentview"; weight = 0.6; deleteInvisible = None}
-                            ]
-                            //horizontal 0.4 [
-                            //    element {id "scene"; title "Scene"; weight 0.4; }
-                            //    element {id "surfaces"; title "Surfaces"; weight 0.4}
-                            //    element {id "annotations"; title "Annotations"; weight 0.4}
-                            //    element {id "bookmarks"; title "Bookmarks"; weight 0.4}
-                            //    element {id "config"; title "Config"; weight 0.4}
-                            //    element {id "viewplanner"; title "ViewPlanner"; weight 0.4}
-                            //]
-                            stack 0.3 None [
+                                //{id = "instrumentview"; title = Some "Instrumentview"; weight = 0.6; deleteInvisible = None}
+                            ]                            
+                            vertical 0.3 [
+                              stack 0.5 None [
                                 //{id = "scene"; title = Some "Scene"; weight = 0.4; deleteInvisible = None }
                                 {id = "surfaces"; title = Some "Surfaces"; weight = 0.4; deleteInvisible = None }
                                 {id = "annotations"; title = Some "Annotations"; weight = 0.4; deleteInvisible = None }
-                                {id = "bookmarks"; title = Some "Bookmarks"; weight = 0.4; deleteInvisible = None }
+                              ]                          
+                              stack 0.5 None [
                                 {id = "config"; title = Some "Config"; weight = 0.4; deleteInvisible = None }
-                                {id = "viewplanner"; title = Some "ViewPlanner"; weight = 0.4; deleteInvisible = None }
+                                {id = "bookmarks"; title = Some "Bookmarks"; weight = 0.4; deleteInvisible = None }
+                               // {id = "viewplanner"; title = Some "ViewPlanner"; weight = 0.4; deleteInvisible = None }
+                              ]
                             ]
                           ]
                   

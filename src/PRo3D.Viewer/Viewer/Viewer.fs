@@ -564,16 +564,9 @@ module ViewerApp =
                     | None ->                        
                         match s.IsEmptyOrNull() with
                             | true -> m
-                            | _ -> 
-                                saveSceneAndAnnotations s m
-                                //let s' = { m.scene with scenePath = Some s}
-                                //let drawing = DrawingApp.saveSceneAnnotations s m.drawing
-                                //{ m with scene = Serialization.save s s'; drawing = drawing } |> Model.stashAndSaveRecent s
+                            | _ -> saveSceneAndAnnotations s m
                     | Some path -> 
-                        saveSceneAndAnnotations path m
-                        //let drawing = DrawingApp.saveSceneAnnotations path m.drawing
-                        //{ m with scene = Serialization.save path m.scene; drawing = drawing } |> Model.stashAndSaveRecent path
-               
+                        saveSceneAndAnnotations path m                                     
             | SaveAs s,_,_ ->
                 match s.IsEmptyOrNull() with
                     | true -> m
