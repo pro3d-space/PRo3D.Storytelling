@@ -51,10 +51,15 @@ module Model =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Scene =
     open Aardvark.Base.MultimethodTest       
+    open Aardvark.UI.Primitives
+    open PRo3D.Navigation2
+
     //open Aardvark.Base.Incremental.Computation Expression Builders
     
     let _surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _flatSurfaces = Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.flat
+    let _camera = Scene.Lens.navigation |. NavigationModel.Lens.camera
+
 
     let expandRelativePaths (m:Scene) =
                         
@@ -218,13 +223,21 @@ module Scene =
        Frustum.perspective 60.0 near far 1.0
            
 
+    let resetControllerState (scn :Scene) = 
+      let state = scn.navigation.camera
+      { state with forward = false; backward = false; left = false; right = false; isWheel = false; zoom = false; pan = false; look = false; moveVec = V3i.Zero }
+      |> Lenses.set' _camera scn
+
     let loadScene path m runtime signature =
         try
             //let s = { (Serialization.loadJsonAs<Scene> path) with scenePath = Some path }
-            let s = { (Serialization.loadAs<Scene> path) with scenePath = Some path }
+            let s = 
+              { (Serialization.loadAs<Scene> path) with scenePath = Some path }
+              |> expandRelativePaths
+              |> resetControllerState
         
             let m = 
-                m |> Model.withScene (expandRelativePaths <| s)
+                m |> Model.withScene s
 
             let m = { m with frustum = setFrustum m }
 
