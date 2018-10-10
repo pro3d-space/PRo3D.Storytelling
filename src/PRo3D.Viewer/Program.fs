@@ -61,16 +61,16 @@ type License = {
   institution : string
 }
 
-let viewerVersion       = "2.7.0*"
+let viewerVersion       = "2.8.0*"
 let mutable licenseText = ""
-let catchDomainErrors   = false
+let catchDomainErrors   = true
 let licenseCheck        = false
 let licPath             = @".\pro3d.lic"
 
 let buildLicense(time) = 
   
-  let userName    = "Laura Fritz" //"Thomas Ortner"
-  let institution = "VRVis"
+  let userName    = "Elyse Allender"
+  let institution = "St. Andrews"
 
   let mutable createAKey = new SKGL.Generate()
   createAKey.secretPhase <- (userName + institution + viewerVersion).GetHashCode().ToString()
@@ -86,7 +86,7 @@ let buildLicense(time) =
   Environment.Exit(0)
 
 let checkLicense () =
-  let contact = "Please contact hesina@vrvis.at, VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH, Vienna, Austria, www.vrvis.at"  
+  let contact = "Please contact ortner@vrvis.at, VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH, Vienna, Austria, www.vrvis.at"  
 
   if (not (System.IO.File.Exists(licPath))) then            
     MessageBox.Show("No licencefile found at " + licPath + ". \n" + contact) |> ignore

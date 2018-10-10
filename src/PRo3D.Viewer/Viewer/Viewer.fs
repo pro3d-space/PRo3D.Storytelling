@@ -280,7 +280,7 @@ module ViewerApp =
                let ref = m.scene.referenceSystem
                let nav = Navigation.update c ref navConf m.scene.navigation msg               
 
-               m.scene.navigation.camera.view.Location.ToString() |> NoAction |> ViewerAction |> mailbox.Post
+//               m.scene.navigation.camera.view.Location.ToString() |> NoAction |> ViewerAction |> mailbox.Post
 
                m 
                  |> Lenses.set _navigation nav
