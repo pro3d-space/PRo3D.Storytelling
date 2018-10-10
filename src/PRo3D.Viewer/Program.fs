@@ -61,7 +61,7 @@ type License = {
   institution : string
 }
 
-let viewerVersion       = "2.8.0*"
+let viewerVersion       = "2.8.1*"
 let mutable licenseText = ""
 let catchDomainErrors   = true
 let licenseCheck        = false
@@ -133,6 +133,8 @@ let main argv =
     if licenseCheck then
       checkLicense()
     
+    Log.line "PRo3D Viewer - Version: %s; lic: %A" viewerVersion licenseCheck
+
    // use form = new Form(Width = 0, Height = 0)
     let signature =
         runtime.CreateFramebufferSignature [
@@ -179,12 +181,14 @@ let main argv =
     if catchDomainErrors then
       AppDomain.CurrentDomain.UnhandledException.AddHandler(UnhandledExceptionEventHandler(domainError))
 
-    WebPart.startServer 4321 [
+    
+
+    WebPart.startServerLocalhost 4321 [
         MutableApp.toWebPart' runtime false mainApp
         path "/websocket" >=> handShake ws
         Reflection.assemblyWebPart typeof<EmbeddedRessource>.Assembly
        // prefix "/instrument" >=> MutableApp.toWebPart runtime instrumentApp
-        Suave.Files.browseHome
+        Suave.Files.browseHome        
     ]
 
     //WebPart.startServer 4322 [
@@ -222,7 +226,7 @@ let main argv =
         remoteApp.update Guid.Empty act
         { result = shot.folder }
 
-    WebPart.startServer 1234 [ 
+    WebPart.startServerLocalhost 1234 [ 
         MutableApp.toWebPart runtime (remoteApp)
         POST >=> path "/shots" >=> mapJson takeScreenshot
         POST >=> path "/platformshots" >=> mapJson takePlatformShot
