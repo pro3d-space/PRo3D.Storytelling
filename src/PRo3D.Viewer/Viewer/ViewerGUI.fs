@@ -29,6 +29,7 @@ open PRo3D.Groups
 open PRo3D.ReferenceSystem
 
 module Gui = 
+  open PRo3d.Mutable
 
   let pitchAndBearing (r:MReferenceSystem) (view:IMod<CameraView>) =
           adaptive {
@@ -105,7 +106,46 @@ module Gui =
       ]                              
     ]
 
+  let textOverlaysInstrumentView (m : MViewPlanModel)  = 
+    let instrument =
+        adaptive {
+            let! vp = m.selectedViewPlan
+            let! inst = 
+                    match vp with
+                            | Some v -> Mod.bindOption v.selectedInstrument "" (fun a -> a.id)
+                            | None -> Mod.constant("")
+
+            return inst
+        }
+    div [js "oncontextmenu" "event.preventDefault();"] [ 
+      let style' = "color: white; font-family:Consolas;"
+    
+      yield div [clazz "ui"; style "position: absolute; top: 15px; left: 15px; float:left" ] [
+          //arrowOverlay
+          yield table [] [
+              tr[][
+                  td[style style'][Incremental.text instrument]
+              ]
+          ]
+      ]                              
+    ]
   module TopMenu =
+
+    let save (m:MModel) = 
+        adaptive
+            {
+                let! path = m.scene.scenePath
+                return match path with
+                            | Some p ->
+                                 div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
+                                  text "Save"
+                                ]
+                            | None ->
+                                div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
+                                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
+                                  text "Save"
+                                ]
+            }
     
     let private importSurface (m:MModel) =
       [
@@ -126,27 +166,12 @@ module Gui =
       ]
 
     let private scene (m:MModel) = 
-      let save = 
-        adaptive
-            {
-                let! path = m.scene.scenePath
-                return match path with
-                            | Some p ->
-                                 div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
-                                  text "Save"
-                                ]
-                            | None ->
-                                div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
-                                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
-                                  text "Save"
-                                ]
-            }
       [
         text "Scene" 
         i [clazz "dropdown icon"][]
       
         div [ clazz "menu"] [
-            Incremental.div AttributeMap.empty (AList.ofModSingle save)
+            Incremental.div AttributeMap.empty (AList.ofModSingle (save m))
             div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveAs;
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({properties: []}));") ][
                   text "Save as..."

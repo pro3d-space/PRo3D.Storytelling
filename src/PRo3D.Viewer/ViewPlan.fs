@@ -35,7 +35,7 @@ module ViewPlan =
         | RemoveViewPlan   of Guid
         | SelectInstrument of option<Instrument>
         | SelectAxis       of option<Axis>
-        | ChangeAngle      of string * Numeric.Action
+        | ChangeAngle      of string * PRo3DNumeric.Action
         | ChangeFocal      of string * Numeric.Action
         | SetVPName        of string
              
@@ -263,17 +263,16 @@ module ViewPlan =
                                         let w = List.append model.working [p]
                                         let navigation = (navigation.Get outerModel)
                                         let wp = createViewPlan w r ref navigation.camera kdTree surfaceModel
-                                        outerModel, { model with viewPlans = HSet.add wp model.viewPlans; working = List.Empty }
+                                        outerModel, { model with viewPlans = HSet.add wp model.viewPlans; working = List.Empty; selectedViewPlan = Some wp }
                     | None -> outerModel, model
             | SelectViewPlan id ->
                 let vp = model.viewPlans |> Seq.tryFind(fun x -> x.id = id)
-                let vp =
+                let vp' =
                     match vp, model.selectedViewPlan with
                         | Some a, Some b -> if a.id = b.id then None else Some a
                         | Some a, None   -> Some a
                         | None, _        -> None
-
-                outerModel, { model with selectedViewPlan = vp }
+                outerModel, { model with selectedViewPlan = vp' }
             | FlyToViewPlan id -> 
                 let vp = model.viewPlans |> Seq.tryFind(fun x -> x.id = id)
                 match vp with
@@ -288,7 +287,8 @@ module ViewPlan =
                 let vp' = match  model.selectedViewPlan with
                             | Some v -> if v.id = id then None else Some v
                             | _ -> None
-                outerModel, { model with viewPlans = removeViewPlan model.viewPlans id; selectedViewPlan = vp' }
+                let vps = removeViewPlan model.viewPlans id
+                outerModel, { model with viewPlans = vps; selectedViewPlan = vp' }
             | SelectInstrument i -> match model.selectedViewPlan with
                                         | Some vp -> let newVp = { vp with selectedInstrument = i }
                                                      let m' = updateInstrumentCam newVp model
@@ -301,7 +301,7 @@ module ViewPlan =
             | ChangeAngle (id,a) ->  match model.selectedViewPlan with
                                         | Some vp -> match vp.rover.axes.TryFind id with
                                                         | Some ax -> 
-                                                            let angle = Numeric.update ax.angle a
+                                                            let angle = PRo3DNumeric.update ax.angle a
                                                             let ax' = { ax with angle = angle } 
                                                             let vp' = { vp with rover = {vp.rover with axes = (vp.rover.axes |> HMap.update id (fun _ -> ax')) }; currentAngle = angle }
                                                             let roverModel' = RoverApp.updateAnglePlatform { roverId = vp'.rover.id ;axisId = ax'.id ; angle = ax'.angle.value } model.roverModel
@@ -382,13 +382,13 @@ module ViewPlan =
                     return (trafo.Forward.UpperLeftM33().C2)
                 }
 
-            let size = Sg.computeInvariantScale cam near viewPlan.position length (Mod.constant 60.0)
+            //let size = Sg.computeInvariantScale cam near viewPlan.position length (Mod.constant 60.0)
 
             let marker : ReferenceSystemApp.Sg.MarkerStyle = {
                 position  = viewPlan.position
                 direction = Mod.constant V3d.NaN
                 color     = Mod.constant C4b.Black
-                size      = size
+                size      = length //size
                 thickness = thickness
                 hasArrow  = Mod.constant true
                 text      = Mod.constant None
@@ -457,13 +457,13 @@ module ViewPlan =
                         | Some s -> 
                             let! sid = s.id
                             let! id = i.id
-                            let size = Sg.computeInvariantScale cam near viewPlan.position length (Mod.constant 60.0)
+                            //let size = Sg.computeInvariantScale cam near viewPlan.position length (Mod.constant 60.0)
 
                             let marker : ReferenceSystemApp.Sg.MarkerStyle = {
                                 position  = camPosTrans
                                 direction = Mod.constant V3d.NaN
                                 color     = Mod.constant C4b.Black
-                                size      = size
+                                size      = length //size
                                 thickness = thickness
                                 hasArrow  = Mod.constant true
                                 text      = Mod.constant None
@@ -539,12 +539,12 @@ module ViewPlan =
                        match showVectors with
                         | true -> yield drawVectors vp near length thickness cam
                                   let! selected = model.selectedViewPlan
-                                  let id = vp.id
-                                  yield match selected with
-                                                | Some s -> if ((s.id |> Mod.force) = (id |> Mod.force)) then 
-                                                                drawSelectionGeometry vp near length thickness cam model.roverModel
-                                                            else Sg.ofList []
-                                                | None -> Sg.ofList []
+                                  let! id = vp.id
+                                  let! selDrawing = 
+                                            match selected with
+                                                | Some s -> s.id |> Mod.map (fun g -> if g = id then (drawSelectionGeometry vp near length thickness cam model.roverModel) else Sg.ofList [])
+                                                | None -> Mod.constant (Sg.ofList [])
+                                  yield selDrawing
                         | false -> yield Sg.ofList []
                 } |> Sg.set
                 
@@ -658,23 +658,32 @@ module ViewPlan =
         
         
 
-        let viewAxesList (r : MRover) =
+        let viewAxesList (r : MRover) (m : MViewPlan) =
             alist {
-                for axis in (r.axes |> RoverApp.mapTolist) do
-                    yield div[][Incremental.text axis.id; text "(deg)"]
-                    //yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (axis.id |> Mod.force,x))
-                    let! id = axis.id
-                    let! value = axis.angle.value
-                    let! max = axis.angle.max
-                    let! min = axis.angle.min
-                    //yield Numeric.view' [InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
-                    yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
-                    //if (value <= max) && (value >= min) then                    
-                    //    yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
-                    //else
-                    //    yield Incremental.text (axis.angle.value |> Mod.map string)
-                    yield br[]
-                    yield Incremental.text (axis.startPoint |> Mod.map (sprintf "%A"))
+                let! selectedI = m.selectedInstrument
+                match selectedI with
+                    | Some i ->
+                        for axis in (r.axes |> RoverApp.mapTolist) do
+                            yield div[][Incremental.text axis.id; text "(deg)"]
+                            //yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (axis.id |> Mod.force,x))
+                            let! id = axis.id
+                            let! value = axis.angle.value
+                            let! max = axis.angle.max
+                            let! min = axis.angle.min
+                            //yield Numeric.view' [InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
+                            yield PRo3DNumeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
+                            //if (value <= max) && (value >= min) then                    
+                            //    yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
+                            //else
+                            //    yield Incremental.text (axis.angle.value |> Mod.map string)
+                            yield br[]
+                            //yield Incremental.text (axis.startPoint |> Mod.map (sprintf "%A"))
+                            yield Incremental.text (axis.angle.min |> Mod.map string) 
+                            yield br[]
+                            yield Incremental.text (axis.angle.max |> Mod.map string)
+
+                    | None -> yield div[][]
+
             }
 
         let viewRoverProperties' (r : MRover) (m : MViewPlan) =
@@ -686,8 +695,8 @@ module ViewPlan =
                         instrumentsDd r m 
                         Incremental.div AttributeMap.empty (AList.ofModSingle (viewInstrumentProperties m))                    
                      ]
-                     Html.row "Axes:" [                    
-                        Incremental.div AttributeMap.empty (viewAxesList r)
+                     Html.row "Axes:" [   
+                        Incremental.div AttributeMap.empty (viewAxesList r m)
                      ]
                 ]
             )
@@ -696,10 +705,6 @@ module ViewPlan =
             Html.Layout.horizontal [
                 Html.Layout.boxH [ i [clazz "large Rocket icon"][] ]
                 Html.Layout.boxH [ UI.dropDown'' (RoverApp.roversList m)  m.selectedRover (fun x -> RoverApp.Action.SelectRover (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) ) ]                
-            //Static.div[][
-            //    RoverApp.viewRovers m
-            //    br[]
-            //    UI.dropDown'' (RoverApp.roversList m)  m.selectedRover (fun x -> RoverApp.Action.SelectRover (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )
             ]
 
 

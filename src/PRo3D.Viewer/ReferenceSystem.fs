@@ -24,14 +24,12 @@ module ReferenceSystemApp =
    
     type Action =
         | InferCoordSystem of V3d
-        //| SetOrigin        of V3d
         | SetUp            of Vector3d.Action
         | SetNorth         of Vector3d.Action
         | SetNOffset       of Numeric.Action
         | ToggleVisible
         | SetScale         of string
         | SetArrowSize     of double
-    //    | SetViewConfig    of ViewConfigModel
         | SetPlanet        of Planet
 
     type InnerConfig<'a> =
@@ -113,12 +111,7 @@ module ReferenceSystemApp =
         match act with
             | InferCoordSystem p ->
                 let m' = updateCoordSystem p model.planet model
-                //let up = upVector p (model.planet)
-                //let n = northVector up 
-                //let no = updateVectorInDegree up n model.origin model.noffset.value 
                 { m' with origin = p }, bigConfig
-            //| SetOrigin p -> 
-            //    { model with origin = p }, bigConfig
             | SetUp up ->    
                 let up = Vector3d.update model.up up
                 let up = ReferenceSystem.setV3d up.value.Normalized
@@ -141,9 +134,6 @@ module ReferenceSystemApp =
                 { model with selectedScale = s }, bigConfig
             | SetPlanet p ->      
                 let m' = updateCoordSystem model.origin p model
-                //let up = upVector model.origin p                                                
-                //let n = northVector up        
-                //let no = updateVectorInDegree up n model.origin model.noffset.value
                 { m' with planet = p }, bigConfig
 
     module Sg =
