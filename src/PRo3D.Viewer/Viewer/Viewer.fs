@@ -853,12 +853,12 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 //|> Sg.map OrientationCube
 
-            let orientationCube =                                    
-              OrientationCube.Sg.loadCubeModel "../../data/rotationcube/rotationcube.dae"
-              //orientationRef
-                |> OrientationCube.Sg.orthoOrientation m.scene.navigation.camera.view m.scene.referenceSystem                 
-                |> Sg.map OrientationCube
-                |> Sg.onOff m.scene.config.drawOrientationCube
+            //let orientationCube =                                    
+            //  OrientationCube.Sg.loadCubeModel "../../data/rotationcube/rotationcube.dae"
+            //  //orientationRef
+            //    |> OrientationCube.Sg.orthoOrientation m.scene.navigation.camera.view m.scene.referenceSystem                 
+            //    |> Sg.map OrientationCube
+            //    |> Sg.onOff m.scene.config.drawOrientationCube
                
             //let controller = 
             //    adaptive {
@@ -893,7 +893,7 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
                         
-            [annos; exploreCenter; refSystem; alignment; viewPlans; orientationCube] |> Sg.ofList
+            [annos; exploreCenter; refSystem; alignment; viewPlans(*;orientationCube*)] |> Sg.ofList
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
