@@ -19,6 +19,96 @@ open Aardvark.UI.Trafos
 open PRo3D
 open PRo3D.Groups
 
+module DebugKdTrees = 
+  open Aardvark.VRVis.Opc.KdTrees
+  open MBrace.FsPickler
+
+  let loadKdTrees' (h : PatchHierarchy) (trafo:Trafo3d) (load : bool) (mode:ViewerModality) (b : BinarySerializer) : hmap<Box3d,Level0KdTree> =
+                    
+        //ObjectBuilder
+
+        let masterKdPath = 
+          mode |> ViewerModality.matchy
+            (h.kdTreeAggZero_FileAbsPath) 
+            (h.kdTreeAggZero2d_FileAbsPath)
+
+        let cacheFile = System.IO.Path.ChangeExtension(masterKdPath, ".cache")
+
+        if System.IO.File.Exists(cacheFile) then
+            Log.line "Found lazy kdtree cache"
+            if load then
+              loadAs<list<Box3d*Level0KdTree>> cacheFile b |> HMap.ofList
+            else
+              HMap.empty
+        else
+            
+            Log.line "did not find lazy kdtree cache"
+            let patchInfos =
+                h.tree |> QTree.getLeaves |> Seq.toList |> List.map(fun x -> x.info)
+
+            let kd0Paths = 
+                patchInfos 
+                  |> List.map(fun x -> h.kdTree_FileAbsPath x.Name 0 mode)
+
+            let kd0PathsExist = 
+                kd0Paths |> List.forall(System.IO.File.Exists)
+        
+            match (System.IO.File.Exists(masterKdPath), kd0PathsExist) with
+                | (true, false) -> 
+                     Log.line "Found master kdtree - loading incore"
+                     let tree = loadKdtree masterKdPath                     
+                     let kd = {
+                        kdTree = tree;
+                        boundingBox = tree.KdIntersectionTree.BoundingBox3d.Transformed(trafo)
+                     }
+                     HMap.add kd.boundingBox (InCoreKdTree kd) HMap.empty
+                | (true, true) ->   
+                     Log.line "Found master kdtree and patch trees"
+                     Log.startTimed "building lazy kdtree cache"
+                             
+                     let num = kd0Paths |> List.ofSeq |> List.length                     
+
+                     let bla = 
+                        kd0Paths
+                            |> List.zip patchInfos
+                            |> List.mapi(
+                                fun i (info, kdPath) ->                                
+                                    let t = loadKdtree kdPath
+                                    let pos =
+                                      match mode with
+                                      | XYZ -> info.Positions
+                                      | SvBR -> info.Positions2d.Value
+
+                                    let lazyTree : LazyKdTree = {
+                                        kdTree        = None
+                                        objectSetPath = h.opcPaths.Patches_DirAbsPath +/ info.Name +/ pos
+                                        kdtreePath    = kdPath
+                                        affine        = 
+                                          mode 
+                                            |> ViewerModality.matchy info.Local2Global info.Local2Global2d
+                                        boundingBox   = t.KdIntersectionTree.BoundingBox3d.Transformed(trafo)
+                                    }
+                                    Report.Progress(float i / float num)
+
+                                    (lazyTree.boundingBox, (LazyKdTree lazyTree))
+                            )                            
+                      
+                     Log.stop()
+                      
+                     bla |> save cacheFile b |> ignore
+                        
+                     if load then
+                       bla |> HMap.ofList
+                     else
+                       HMap.empty
+                | _ ->
+                    Log.warn "Could not find level 0 kdtrees"
+                    HMap.empty
+    
+  let loadKdTrees (h : PatchHierarchy) (trafo:Trafo3d) (mode:ViewerModality) (b : BinarySerializer) : hmap<Box3d,Level0KdTree> =
+      loadKdTrees' (h) (trafo) (true) mode b
+
+
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg
@@ -53,7 +143,7 @@ module Surface =
           let kdTreesPerHierarchy =
               [| for h in patchHierarchies do
                   if createKdTrees then   
-                      let kdMap = KdTrees.loadKdTrees h preTransform ViewerModality.XYZ Serialization.binarySerializer
+                      let kdMap = DebugKdTrees.loadKdTrees h preTransform ViewerModality.XYZ Serialization.binarySerializer
 
                       yield kdMap
                   else 
@@ -390,7 +480,12 @@ module Surface =
         let sghs =
             surfaces
                 |> PList.toList
-                |> List.map (fun d -> { Configurations.Empty.mars() with patchHierarchies = d.opcPaths; preTransform = d.preTransform; useCompressedTextures = false })
+                |> List.map (fun d -> 
+                 { 
+                   Configurations.Empty.mars() with 
+                     patchHierarchies = d.opcPaths
+                     preTransform = d.preTransform
+                     useCompressedTextures = false })
                 |> List.map (fun d -> Sg.createPlainSceneGraph runtime signature d true)
                 |> List.zip (surfaces |> PList.toList)
                 |> List.map(fun (surf, (sg, hierarchies, kdtree)) -> 
