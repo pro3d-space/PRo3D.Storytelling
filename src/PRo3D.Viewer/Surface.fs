@@ -557,6 +557,7 @@ module Surface =
     open PRo3DCompability    
     open Aardvark.VRVis
     open Aardvark.Geometry
+    open Surface
     
     type Action =
         | SurfacePropertiesMessage  of SurfaceProperties.Action
@@ -699,25 +700,21 @@ module Surface =
                     let path = Surface.Files.getSurfaceFolder sf scenePath
                     match path with
                        | Some p -> 
-                           //Process.Start("explorer.exe", p) |> ignore          
-                           Log.line "%A" (Path.GetFullPath("."))
-                           Log.line "%A" (Directory.Exists(Path.GetFullPath(@".\InstrumentStuff")))
-
+                           
                            let path = @".\20170530_TextureConverter_single\Vrvis.TextureConverter.exe"
                            if File.Exists(path) then //\Vrvis.TextureConverter.exe") then
-                             Log.line "start processing"
-                             let opcpath = @"i:\20181011_ExofitTesing\Shaler\MSL_Mastcam_Sol_120_id_47013_singleOpc\OPC_000_000"
-                        
                              let mutable converter = new Process() 
-                             converter.StartInfo.FileName <- "Vrvis.TextureConverter.exe"
-                             converter.StartInfo.Arguments <- opcpath
-                             converter.StartInfo.UseShellExecute <- true
-                          //   Log.line "workdir %A" (Path.GetFullPath(converter.StartInfo.WorkingDirectory))
-                             converter.StartInfo.WorkingDirectory <- @".\20170530_TextureConverter_single"
-                             Log.line "workdir %A" (Path.GetFullPath(converter.StartInfo.WorkingDirectory))
-                           //  converter.StartInfo.RedirectStandardOutput <- true
-                           //  converter.StartInfo.RedirectStandardError <- true
-                             converter.Start() |> ignore                       
+                             let opcDirs = p |> Directory.GetDirectories |> List.ofArray |> List.filter Discover.isOpcFolder
+                             opcDirs
+                               |> List.iter(fun opcPath ->
+                                    Log.line "start processing"                                                                                                                                                
+                                    converter.StartInfo.FileName <- "Vrvis.TextureConverter.exe"
+                                    converter.StartInfo.Arguments <- opcPath + " -overwrite"
+                                    converter.StartInfo.UseShellExecute <- true                          
+                                    converter.StartInfo.WorkingDirectory <- @".\20170530_TextureConverter_single"                                    
+                                    converter.Start() |> ignore    
+                                    converter.WaitForExit()
+                                )
                            else
                              Log.line "texture converter not found"
                              //Process.Start("@.\20170530_TextureConverter_single\Vrvis.TextureConverter.exe") |> ignore
