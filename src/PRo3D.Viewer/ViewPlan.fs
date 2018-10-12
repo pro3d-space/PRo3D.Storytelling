@@ -267,12 +267,13 @@ module ViewPlan =
                     | None -> outerModel, model
             | SelectViewPlan id ->
                 let vp = model.viewPlans |> Seq.tryFind(fun x -> x.id = id)
-                let vp' =
+                let vp', m =
                     match vp, model.selectedViewPlan with
-                        | Some a, Some b -> if a.id = b.id then None else Some a
-                        | Some a, None   -> Some a
-                        | None, _        -> None
-                outerModel, { model with selectedViewPlan = vp' }
+                        | Some a, Some b -> if a.id = b.id then None, model else Some a, (updateInstrumentCam a model)
+                        | Some a, None  -> Some a, (updateInstrumentCam a model)
+                        | None, _        -> None, model
+                
+                outerModel, { m with selectedViewPlan = vp' }
             | FlyToViewPlan id -> 
                 let vp = model.viewPlans |> Seq.tryFind(fun x -> x.id = id)
                 match vp with
@@ -305,6 +306,7 @@ module ViewPlan =
                                                             let ax' = { ax with angle = angle } 
                                                             let vp' = { vp with rover = {vp.rover with axes = (vp.rover.axes |> HMap.update id (fun _ -> ax')) }; currentAngle = angle }
                                                             let roverModel' = RoverApp.updateAnglePlatform { roverId = vp'.rover.id ;axisId = ax'.id ; angle = ax'.angle.value } model.roverModel
+                                 
                                                             let m' = updateRovers model roverModel' vp'
                                                             
                                                             outerModel, m'
@@ -653,10 +655,11 @@ module ViewPlan =
                       | Some i -> instrumentProperties i
                       | None ->   div[][])
 
+        //let instrumentsDd (r:MRover) (m : MViewPlan) = 
+        //    UI.dropDown'' (r.instruments |> RoverApp.mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )   
+        
         let instrumentsDd (r:MRover) (m : MViewPlan) = 
             UI.dropDown'' (r.instruments |> RoverApp.mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )   
-        
-        
 
         let viewAxesList (r : MRover) (m : MViewPlan) =
             alist {
@@ -676,12 +679,10 @@ module ViewPlan =
                             //    yield Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] axis.angle |> UI.map (fun x -> ChangeAngle (id,x))
                             //else
                             //    yield Incremental.text (axis.angle.value |> Mod.map string)
-                            yield br[]
+                            //yield br[]
                             //yield Incremental.text (axis.startPoint |> Mod.map (sprintf "%A"))
-                            yield Incremental.text (axis.angle.min |> Mod.map string) 
+                            yield div[][text "["; Incremental.text (axis.angle.min |> Mod.map string); text ";"; Incremental.text (axis.angle.max |> Mod.map string); text "]"]
                             yield br[]
-                            yield Incremental.text (axis.angle.max |> Mod.map string)
-
                     | None -> yield div[][]
 
             }
