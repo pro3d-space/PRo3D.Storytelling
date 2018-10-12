@@ -495,7 +495,7 @@ module Groups =
         require GuiEx.semui (
                 Html.table [
                      Html.row "Remove:"[deleteLeaf ts]
-                     Html.row "Selection:"[ viewSelectionButtons ]
+                     Html.row "Selection:"[ viewSelectionButtons ]                     
                 ]
             )
 

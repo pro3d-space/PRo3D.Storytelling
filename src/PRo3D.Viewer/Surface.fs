@@ -565,6 +565,7 @@ module Surface =
         | RemoveSurface             of Guid*list<Index>
         | PickSurface               of SceneHit*string
         | OpenFolder                of Guid
+        | RebuildKdTrees            of Guid
         | GroupsMessage             of Groups.Action  
         | PickObject                of V3d
         | PlaceSurface              of V3d
@@ -691,6 +692,36 @@ module Surface =
                                     | None -> model      
                             | _ -> failwith "can only contain surfaces"
                     | None -> model
+            | RebuildKdTrees id ->                
+                let surf = id |> SurfaceModel.getSurface model
+                match surf with
+                  | Some (Leaf.Surfaces sf) ->                    
+                    let path = Surface.Files.getSurfaceFolder sf scenePath
+                    match path with
+                       | Some p -> 
+                           //Process.Start("explorer.exe", p) |> ignore          
+                           Log.line "%A" (Path.GetFullPath("."))
+                           Log.line "%A" (Directory.Exists(Path.GetFullPath(@".\InstrumentStuff")))
+
+                           let path = @".\20170530_TextureConverter_single\Vrvis.TextureConverter.exe"
+                           if File.Exists(path) then //\Vrvis.TextureConverter.exe") then
+                             Log.line "start processing"
+                             let opcpath = @"i:\20181011_ExofitTesing\Shaler\MSL_Mastcam_Sol_120_id_47013_singleOpc\OPC_000_000"
+                             Process.Start(path, opcpath) |> ignore
+
+                             let mutable converter = new Process() 
+                             converter.StartInfo.FileName <- path
+                             converter.StartInfo.Arguments <- @"i:\20181011_ExofitTesing\Shaler\MSL_Mastcam_Sol_120_id_47013_singleOpc\OPC_000_000"
+                             converter.StartInfo.UseShellExecute <- false
+                             converter.StartInfo.RedirectStandardOutput <- true
+                             converter.StartInfo.RedirectStandardError <- true
+                             converter.Start() |> ignore                             
+                           else
+                             Log.line "texture converter not found"
+                             //Process.Start("@.\20170530_TextureConverter_single\Vrvis.TextureConverter.exe") |> ignore
+                           model
+                       | None -> model                         
+                  | _ -> model
             | GroupsMessage msg -> 
                 let groups = Groups.update model.surfaces msg
 
@@ -705,31 +736,40 @@ module Surface =
             | PickObject p -> model   
             | PlaceSurface p -> 
                 match model.surfaces.singleSelectLeaf with
-                    | Some id -> 
-                            match model.surfaces.flat.TryFind(id) with 
-                                 | Some s -> 
-                                    let s = s |> Leaf.toSurface
-                                    let f = (fun _ -> { s with preTransform = Trafo3d.Translation(p) } |> Leaf.Surfaces)
-                                    let g = Groups.updateLeaf s.guid f model.surfaces
-                                    
-                                    let sgs' = 
-                                        model.sgSurfaces
-                                        |> HMap.update id (fun x -> match x with 
-                                                                    | Some sg ->    //let pose = Pose.translate p // bb.Center
-                                                                                    let pose = { sg.trafo.pose with position = sg.trafo.pose.position + p }
-                                                                                    let trafo' = { TrafoController.initial with pose = pose ; previewTrafo = Trafo3d.Translation(p); mode = TrafoMode.Local }
-                                                                                    match sgSurface.isSgOPC sg with
-                                                                                        | true -> let sg' = sgSurface.toSgOPC sg 
-                                                                                                  let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed (Trafo3d.Translation(p))) } 
-                                                                                                  (SgSurfaces.SgSurfaceOPC t)
-                                                                                        | _ -> let sg' = sgSurface.toSgOBJ sg 
-                                                                                               let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed (Trafo3d.Translation(p))) } 
-                                                                                               (SgSurfaces.SgSurfaceOBJ t)
-                                                                    | None   -> failwith "surface not found")
-                                            
-                                    { model with surfaces = g; sgSurfaces = sgs'} 
-                                 | None -> model
-                    | None -> model
+                | Some id -> 
+                  match model.surfaces.flat.TryFind(id) with 
+                  | Some s -> 
+                     let trans = Trafo3d.Translation(p)
+                     let s = s |> Leaf.toSurface
+                     let f = (fun _ -> { s with preTransform = trans  } |> Leaf.Surfaces)
+                     let g = Groups.updateLeaf s.guid f model.surfaces
+                     
+                     let sgs' = 
+                         model.sgSurfaces
+                         |> HMap.update id (fun x -> 
+                           match x with 
+                           | Some sg ->    //let pose = Pose.translate p // bb.Center
+                             let pose = { sg.trafo.pose with position = sg.trafo.pose.position + p }
+
+                             let trafo' = { 
+                               TrafoController.initial with 
+                                 pose = pose
+                                 previewTrafo = trans
+                                 mode = TrafoMode.Local 
+                             }
+                             
+                             if sgSurface.isSgOPC sg then
+                               let sg' = sgSurface.toSgOPC sg 
+                               let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed trafo'.previewTrafo) } 
+                               (SgSurfaces.SgSurfaceOPC t)
+                             else
+                               let sg' = sgSurface.toSgOBJ sg 
+                               let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed trafo'.previewTrafo) } 
+                               (SgSurfaces.SgSurfaceOBJ t)
+                           | None   -> failwith "surface not found")                             
+                     { model with surfaces = g; sgSurfaces = sgs'} 
+                  | None -> model
+                | None -> model
             | ScalarsColorLegendMessage msg ->
                 match model.surfaces.singleSelectLeaf with
                     | Some s -> 
@@ -854,6 +894,11 @@ module Surface =
 
                              yield i [clazz "folder icon"                                                
                                       onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"
+
+                             yield i [
+                               clazz "microchip icon"
+                               onClick (fun _ -> RebuildKdTrees key)
+                             ][] |> UI.wrapToolTip "process kdtrees"
 
                              yield Incremental.i (absRelIcons) (AList.empty)
                              yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
