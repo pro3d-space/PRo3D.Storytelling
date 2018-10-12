@@ -732,16 +732,27 @@ module Surface =
                     yield clazz "hide icon"
                 } |> AttributeMap.ofAMap
 
+             let headerAttributes =
+                amap {
+                  yield onClick singleSelect
+                  let! selected = isSingleSelect model s
+                  yield if selected then style "text-transform:uppercase" else style "text-transform:none"
+                } |> AttributeMap.ofAMap
+
+             let headerColor = sprintf "color: %s" (Html.ofC4b C4b.Gray)
+
              yield div [clazz "item"; style infoc] [
                  i [clazz "cube middle aligned icon"; onClick multiSelect;style bgc][] 
-                 div [clazz "content"; style infoc] [
-                     let desc = s.name
+                 div [clazz "content"; style infoc] [                     
                      yield Incremental.div (AttributeMap.ofList [style infoc])(
                          alist {
-                             if selected then
-                                 yield div[onClick singleSelect][ u[][Incremental.text desc]]
-                             else
-                                 yield div[onClick singleSelect][Incremental.text desc]
+                             yield div[clazz "header"; style headerColor][
+                                Incremental.span headerAttributes ([Incremental.text s.name] |> AList.ofList)
+                             ]
+                             //if selected then
+                             //    yield div[onClick singleSelect][ u[][Incremental.text desc]]
+                             //else
+                             //    yield div[onClick singleSelect][Incremental.text desc]
  
                              yield i [clazz "home icon"                                                
                                       onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                     

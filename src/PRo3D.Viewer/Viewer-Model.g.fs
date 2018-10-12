@@ -249,6 +249,8 @@ module Mutable =
         let _tabMenu = ResetMod.Create(__initial.tabMenu)
         let _viewerMode = ResetMod.Create(__initial.viewerMode)
         let _animations = Aardvark.UI.Animation.Mutable.MAnimationModel.Create(__initial.animations)
+        let _messagingMailbox = ResetMod.Create(__initial.messagingMailbox)
+        let _mailboxState = ResetMod.Create(__initial.mailboxState)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
         
@@ -269,6 +271,8 @@ module Mutable =
         member x.tabMenu = _tabMenu :> IMod<_>
         member x.viewerMode = _viewerMode :> IMod<_>
         member x.animations = _animations
+        member x.messagingMailbox = _messagingMailbox :> IMod<_>
+        member x.mailboxState = _mailboxState :> IMod<_>
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         
@@ -294,6 +298,8 @@ module Mutable =
                 ResetMod.Update(_tabMenu,v.tabMenu)
                 ResetMod.Update(_viewerMode,v.viewerMode)
                 Aardvark.UI.Animation.Mutable.MAnimationModel.Update(_animations, v.animations)
+                ResetMod.Update(_messagingMailbox,v.messagingMailbox)
+                ResetMod.Update(_mailboxState,v.mailboxState)
                 _past.Update(v.past)
                 _future.Update(v.future)
                 
@@ -413,6 +419,18 @@ module Mutable =
                     override x.Get(r) = r.animations
                     override x.Set(r,v) = { r with animations = v }
                     override x.Update(r,f) = { r with animations = f r.animations }
+                }
+            let messagingMailbox =
+                { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Control.MailboxProcessor<PRo3D.Viewer.MailboxAction>>() with
+                    override x.Get(r) = r.messagingMailbox
+                    override x.Set(r,v) = { r with messagingMailbox = v }
+                    override x.Update(r,f) = { r with messagingMailbox = f r.messagingMailbox }
+                }
+            let mailboxState =
+                { new Lens<PRo3D.Viewer.Model, PRo3D.Viewer.MailboxState>() with
+                    override x.Get(r) = r.mailboxState
+                    override x.Set(r,v) = { r with mailboxState = v }
+                    override x.Update(r,f) = { r with mailboxState = f r.mailboxState }
                 }
             let past =
                 { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with
