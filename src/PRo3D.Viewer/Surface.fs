@@ -707,15 +707,17 @@ module Surface =
                            if File.Exists(path) then //\Vrvis.TextureConverter.exe") then
                              Log.line "start processing"
                              let opcpath = @"i:\20181011_ExofitTesing\Shaler\MSL_Mastcam_Sol_120_id_47013_singleOpc\OPC_000_000"
-                             Process.Start(path, opcpath) |> ignore
-
+                        
                              let mutable converter = new Process() 
-                             converter.StartInfo.FileName <- path
-                             converter.StartInfo.Arguments <- @"i:\20181011_ExofitTesing\Shaler\MSL_Mastcam_Sol_120_id_47013_singleOpc\OPC_000_000"
-                             converter.StartInfo.UseShellExecute <- false
-                             converter.StartInfo.RedirectStandardOutput <- true
-                             converter.StartInfo.RedirectStandardError <- true
-                             converter.Start() |> ignore                             
+                             converter.StartInfo.FileName <- "Vrvis.TextureConverter.exe"
+                             converter.StartInfo.Arguments <- opcpath
+                             converter.StartInfo.UseShellExecute <- true
+                          //   Log.line "workdir %A" (Path.GetFullPath(converter.StartInfo.WorkingDirectory))
+                             converter.StartInfo.WorkingDirectory <- @".\20170530_TextureConverter_single"
+                             Log.line "workdir %A" (Path.GetFullPath(converter.StartInfo.WorkingDirectory))
+                           //  converter.StartInfo.RedirectStandardOutput <- true
+                           //  converter.StartInfo.RedirectStandardError <- true
+                             converter.Start() |> ignore                       
                            else
                              Log.line "texture converter not found"
                              //Process.Start("@.\20170530_TextureConverter_single\Vrvis.TextureConverter.exe") |> ignore
