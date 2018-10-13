@@ -610,6 +610,9 @@ module SurfaceModel =
 
         { model with surfaces = surfaces' } // sgSurfaces = sgSurfaces'; sgGrouped = group' }
 
+    let updateSingleSurface' (model:SurfaceModel) (s':PRo3D.Surfaces.Surface) =
+      updateSingleSurface s' model
+
     //let updateSurfaces model (surfaces' : plist<PRo3D.Surfaces.Surface>) =
     //    let sgSurfaces' =
     //        surfaces' 

@@ -487,25 +487,31 @@ module ViewerApp =
             | ImportSurfaceTrafo sl,_,_ ->
               match sl with
                 | [] -> m 
-                | p ->
-                  let path = p.[0]
-                  let imported = SurfaceTrafoImporter.startImporter path
-                  let filterIds = File.ReadLines (Path.ChangeExtension(path,".filter")) |> Seq.toList
+                | path :: _ ->
+                  let imported = SurfaceTrafoImporter.startImporter path |> PList.toList
 
-                  let k = 
-                    imported 
-                      |> PList.toList 
-                      |> List.filter(fun x -> List.contains x.id filterIds) 
-                      |> List.map (fun x ->
-                        {
-                          id = x.id
-                          shift = x.trafo.Forward.C3.XYZ.Length
-                        })
+                  //let filterSet = 
+                  //  m.scene.surfacesModel.surfaces.flat 
+                  //    |> HMap.toList
+                  //    |> List.map(fun (_,v) -> 
+                  //      let s = (v |> Leaf.toSurface)
+                  //      s.name, s)
+                  //    |> HMap.ofList
 
-                  let csvTable = Csv.Seq.csv "," true id k
-                  Csv.Seq.write (@"./shift.csv") csvTable |> ignore
+                  //let k = 
+                  //  imported 
+                  //    |> PList.toList 
+                  //    |> List.filter(fun x -> x.id |> filterSet.ContainsKey)//m.scene.surfacesModel.surfaces.flat.ContainsKey) 
+                  //    |> List.map (fun x ->
+                  //      {
+                  //        id = x.id
+                  //        shift = x.trafo.Forward.C3.XYZ.Length
+                  //      })
 
-                  let s = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel
+                  //let csvTable = Csv.Seq.csv "," true id k
+                  //Csv.Seq.write (@"./shift.csv") csvTable |> ignore
+
+                  let s = Surfaces.SurfaceApp.updateSurfaceTrafos imported m.scene.surfacesModel
                   m |> Lenses.set _surfaceModelLens s                                    
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
@@ -540,7 +546,8 @@ module ViewerApp =
                     | None, c ->
                         cache <- c; None
                                   
-              match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray cache with
+              let result = 
+                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray cache with
                 | Some (t,surf), c ->                         
                   cache <- c
                   let hit = r.GetPointOnRay(t)
@@ -551,6 +558,8 @@ module ViewerApp =
                 | None, _ -> 
                     Log.error ("no hit")
                     m
+              Log.stop()
+              result
             | PickObject (p,id), _ ,_ ->  
                 match m.picking with
                     |true ->

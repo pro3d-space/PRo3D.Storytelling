@@ -48,10 +48,10 @@ module DebugKdTrees =
 
             let kd0Paths = 
                 patchInfos 
-                  |> List.map(fun x -> h.kdTree_FileAbsPath x.Name 0 mode)
+                  |> List.map(fun x -> h.kdTree_FileAbsPath x.Name 0 mode) |> List.sort 
 
             let kd0PathsExist = 
-                kd0Paths |> List.forall(System.IO.File.Exists)
+                kd0Paths |> List.filter(System.IO.File.Exists) |> List.length > 0
         
             match (System.IO.File.Exists(masterKdPath), kd0PathsExist) with
                 | (true, false) -> 
@@ -567,6 +567,7 @@ module Surface =
         | PickSurface               of SceneHit*string
         | OpenFolder                of Guid
         | RebuildKdTrees            of Guid
+        | ToggleActiveFlag          of Guid
         | GroupsMessage             of Groups.Action  
         | PickObject                of V3d
         | PlaceSurface              of V3d
@@ -658,139 +659,169 @@ module Surface =
             | _ -> model
       update (trafos |> PList.toList) model
 
+    let union (l : SurfaceModel) (r : SurfaceModel) : SurfaceModel =
+      let l' = { l with 
+
+      l
+
+    let updateSurfaceTrafos (trafos: list<SurfaceTrafo>) (model:SurfaceModel) =
+      let surfaces =        
+        model.surfaces.flat 
+          |> HMap.toList
+          |> List.map(fun (_,v) -> 
+            let s = (v |> Leaf.toSurface)
+            s.name, s)
+          |> HMap.ofList
+      
+      let surfaces' = 
+        trafos 
+          |> List.filter (fun x -> x.id |> surfaces.ContainsKey)
+          |> List.map(fun x -> surfaces.Find x.id,x)
+          |> List.map(fun (a,b) ->
+            { a with preTransform = b.trafo })
+
+      //let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface
+      let models = 
+        surfaces' 
+          |> List.map(fun x -> SurfaceModel.updateSingleSurface x model)
+          |> List.fold (fun l r -> union l r) model
+      Log.line "%A" trafos
+      model
+
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
-        match action with
-            | SurfacePropertiesMessage msg ->                
-                let m = 
-                  match model.surfaces.singleSelectLeaf with
-                    | Some s -> 
-                      let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface                        
-                      let s' = SurfaceProperties.update surface msg
-                      model |> SurfaceModel.updateSingleSurface s'                        
-                    | None -> model
-                match msg with
-                  | SurfaceProperties.SetPriority _ -> m |> SurfaceModel.triggerSgGrouping 
-                  | _ -> m            
-            | MakeRelative id ->                
-                let model = Surface.Files.makeSurfaceRelative id model scenePath
-                let sgSurfaces = model.sgSurfaces |> Surface.Files.expandLazyKdTreePaths scenePath (model.surfaces.flat |> Leaf.toSurfaces)
-                { model with sgSurfaces = sgSurfaces}
-            | RemoveSurface (id,path) -> //model
-                let groups = Groups.removeLeaf model.surfaces id path true
-                let sg' = model.sgSurfaces |> HMap.remove id
-                { model with surfaces = groups; sgSurfaces = sg'} |> SurfaceModel.triggerSgGrouping              
-            | OpenFolder id ->
-                let surf = id |> SurfaceModel.getSurface model
-                match surf with
-                    | Some s -> 
-                        match s with 
-                            | Leaf.Surfaces sf ->
-                                let path = Surface.Files.getSurfaceFolder sf scenePath
-                                match path with
-                                    | Some p -> 
-                                        Process.Start("explorer.exe", p) |> ignore
-                                        model
-                                    | None -> model      
-                            | _ -> failwith "can only contain surfaces"
-                    | None -> model
-            | RebuildKdTrees id ->                
-                let surf = id |> SurfaceModel.getSurface model
-                match surf with
-                  | Some (Leaf.Surfaces sf) ->                    
-                    let path = Surface.Files.getSurfaceFolder sf scenePath
-                    match path with
-                       | Some p -> 
-                           
-                           let path = @".\20170530_TextureConverter_single\Vrvis.TextureConverter.exe"
-                           if File.Exists(path) then //\Vrvis.TextureConverter.exe") then
-                             let mutable converter = new Process() 
-                             let opcDirs = p |> Directory.GetDirectories |> List.ofArray |> List.filter Discover.isOpcFolder
-                             opcDirs
-                               |> List.iter(fun opcPath ->
-                                    Log.line "start processing"                                                                                                                                                
-                                    converter.StartInfo.FileName <- "Vrvis.TextureConverter.exe"
-                                    converter.StartInfo.Arguments <- opcPath + " -overwrite"
-                                    converter.StartInfo.UseShellExecute <- true                          
-                                    converter.StartInfo.WorkingDirectory <- @".\20170530_TextureConverter_single"                                    
-                                    converter.Start() |> ignore    
-                                    converter.WaitForExit()
-                                )
-                           else
-                             Log.line "texture converter not found"
-                             //Process.Start("@.\20170530_TextureConverter_single\Vrvis.TextureConverter.exe") |> ignore
-                           model
-                       | None -> model                         
-                  | _ -> model
-            | GroupsMessage msg -> 
-                let groups = Groups.update model.surfaces msg
-
-                match msg with
-                  | Groups.Action.RemoveGroup _ | Groups.Action.RemoveChild _ ->
-                    let sgs = 
-                        model.sgSurfaces 
-                            |> HMap.filter(fun k _ -> groups.flat |> HMap.containsKey k)
-
-                    { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping                  
-                  | _ -> { model with surfaces = groups }
-            | PickObject p -> model   
-            | PlaceSurface p -> 
-                match model.surfaces.singleSelectLeaf with
-                | Some id -> 
-                  match model.surfaces.flat.TryFind(id) with 
-                  | Some s -> 
-                     let trans = Trafo3d.Translation(p)
-                     let s = s |> Leaf.toSurface
-                     let f = (fun _ -> { s with preTransform = trans  } |> Leaf.Surfaces)
-                     let g = Groups.updateLeaf s.guid f model.surfaces
-                     
-                     let sgs' = 
-                         model.sgSurfaces
-                         |> HMap.update id (fun x -> 
-                           match x with 
-                           | Some sg ->    //let pose = Pose.translate p // bb.Center
-                             let pose = { sg.trafo.pose with position = sg.trafo.pose.position + p }
-
-                             let trafo' = { 
-                               TrafoController.initial with 
-                                 pose = pose
-                                 previewTrafo = trans
-                                 mode = TrafoMode.Local 
-                             }
-                             
-                             if sgSurface.isSgOPC sg then
-                               let sg' = sgSurface.toSgOPC sg 
-                               let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed trafo'.previewTrafo) } 
-                               (SgSurfaces.SgSurfaceOPC t)
-                             else
-                               let sg' = sgSurface.toSgOBJ sg 
-                               let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed trafo'.previewTrafo) } 
-                               (SgSurfaces.SgSurfaceOBJ t)
-                           | None   -> failwith "surface not found")                             
-                     { model with surfaces = g; sgSurfaces = sgs'} 
-                  | None -> model
+      match action with
+        | SurfacePropertiesMessage msg ->                
+            let m = 
+              match model.surfaces.singleSelectLeaf with
+                | Some s -> 
+                  let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface                        
+                  let s' = SurfaceProperties.update surface msg
+                  model |> SurfaceModel.updateSingleSurface s'                        
                 | None -> model
-            | ScalarsColorLegendMessage msg ->
-                match model.surfaces.singleSelectLeaf with
-                    | Some s -> 
-                          let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface 
-                          match surface.selectedScalar with
-                            | Some s -> let sc = { s with colorLegend = (FalseColorLegendApp.update s.colorLegend msg) }
-                                        //let scs = surface.scalarLayers |> PList.remove' s |> PList.prepend sc
-                                        let scs = surface.scalarLayers |> HMap.alter sc.index (Option.map(fun _ -> sc))
-                                        let s' = { surface with selectedScalar = Some sc; scalarLayers = scs }
-                                        model |> SurfaceModel.updateSingleSurface s'   
-                            | None -> model
-                    | None -> model
-            | ColorCorrectionMessage msg ->                
-                let m = 
-                  match model.surfaces.singleSelectLeaf with
-                    | Some s -> 
-                      let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface
-                      let s' = { surface with colorCorrection = (ColorCorrectionProperties.update surface.colorCorrection msg) }
-                      model |> SurfaceModel.updateSingleSurface s'                        
-                    | None -> model
-                m
+            match msg with
+              | SurfaceProperties.SetPriority _ -> m |> SurfaceModel.triggerSgGrouping 
+              | _ -> m            
+        | MakeRelative id ->                
+            let model = Surface.Files.makeSurfaceRelative id model scenePath
+            let sgSurfaces = model.sgSurfaces |> Surface.Files.expandLazyKdTreePaths scenePath (model.surfaces.flat |> Leaf.toSurfaces)
+            { model with sgSurfaces = sgSurfaces}
+        | RemoveSurface (id,path) -> //model
+            let groups = Groups.removeLeaf model.surfaces id path true
+            let sg' = model.sgSurfaces |> HMap.remove id
+            { model with surfaces = groups; sgSurfaces = sg'} |> SurfaceModel.triggerSgGrouping              
+        | OpenFolder id ->
+            let surf = id |> SurfaceModel.getSurface model
+            match surf with
+                | Some s -> 
+                    match s with 
+                        | Leaf.Surfaces sf ->
+                            let path = Surface.Files.getSurfaceFolder sf scenePath
+                            match path with
+                                | Some p -> 
+                                    Process.Start("explorer.exe", p) |> ignore
+                                    model
+                                | None -> model      
+                        | _ -> failwith "can only contain surfaces"
+                | None -> model
+        | RebuildKdTrees id ->                
+            let surf = id |> SurfaceModel.getSurface model
+            match surf with
+              | Some (Leaf.Surfaces sf) ->                    
+                let path = Surface.Files.getSurfaceFolder sf scenePath
+                match path with
+                   | Some p ->                            
+                       let path = @".\20170530_TextureConverter_single\Vrvis.TextureConverter.exe"
+                       if File.Exists(path) then //\Vrvis.TextureConverter.exe") then
+                         let mutable converter = new Process()                             
+                         Log.line "start processing"                                                                                        
+                         converter.StartInfo.FileName <- "Vrvis.TextureConverter.exe"
+                         converter.StartInfo.Arguments <- p + " -overwrite" //-lazy"
+                         converter.StartInfo.UseShellExecute <- true                          
+                         converter.StartInfo.WorkingDirectory <- @".\20170530_TextureConverter_single"                                    
+                         converter.Start() |> ignore    
+                         converter.WaitForExit()
+                            //)
+                       else
+                         Log.line "texture converter not found"                             
+                       model
+                   | None -> model                         
+              | _ -> model
+        | ToggleActiveFlag id ->               
+          let surf = id |> SurfaceModel.getSurface model
+          match surf with
+            | Some (Leaf.Surfaces s) ->
+              { s with isActive = not s.isActive } |> SurfaceModel.updateSingleSurface' model
             | _ -> model
+        | GroupsMessage msg -> 
+            let groups = Groups.update model.surfaces msg
+
+            match msg with
+              | Groups.Action.RemoveGroup _ | Groups.Action.RemoveChild _ ->
+                let sgs = 
+                    model.sgSurfaces 
+                        |> HMap.filter(fun k _ -> groups.flat |> HMap.containsKey k)
+
+                { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping                  
+              | _ -> { model with surfaces = groups }
+        | PickObject p -> model   
+        | PlaceSurface p -> 
+            match model.surfaces.singleSelectLeaf with
+            | Some id -> 
+              match model.surfaces.flat.TryFind(id) with 
+              | Some s -> 
+                 let trans = Trafo3d.Translation(p)
+                 let s = s |> Leaf.toSurface
+                 let f = (fun _ -> { s with preTransform = trans  } |> Leaf.Surfaces)
+                 let g = Groups.updateLeaf s.guid f model.surfaces
+                 
+                 let sgs' = 
+                     model.sgSurfaces
+                     |> HMap.update id (fun x -> 
+                       match x with 
+                       | Some sg ->    //let pose = Pose.translate p // bb.Center
+                         let pose = { sg.trafo.pose with position = sg.trafo.pose.position + p }
+
+                         let trafo' = { 
+                           TrafoController.initial with 
+                             pose = pose
+                             previewTrafo = trans
+                             mode = TrafoMode.Local 
+                         }
+                         
+                         if sgSurface.isSgOPC sg then
+                           let sg' = sgSurface.toSgOPC sg 
+                           let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed trafo'.previewTrafo) } 
+                           (SgSurfaces.SgSurfaceOPC t)
+                         else
+                           let sg' = sgSurface.toSgOBJ sg 
+                           let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed trafo'.previewTrafo) } 
+                           (SgSurfaces.SgSurfaceOBJ t)
+                       | None   -> failwith "surface not found")                             
+                 { model with surfaces = g; sgSurfaces = sgs'} 
+              | None -> model
+            | None -> model
+        | ScalarsColorLegendMessage msg ->
+            match model.surfaces.singleSelectLeaf with
+              | Some s -> 
+                let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface 
+                match surface.selectedScalar with
+                  | Some s -> 
+                    let sc = { s with colorLegend = (FalseColorLegendApp.update s.colorLegend msg) }                        
+                    let scs = surface.scalarLayers |> HMap.alter sc.index (Option.map(fun _ -> sc))
+                    let s' = { surface with selectedScalar = Some sc; scalarLayers = scs }
+                    model |> SurfaceModel.updateSingleSurface s'   
+                  | None -> model
+              | None -> model
+        | ColorCorrectionMessage msg ->       
+            let m = 
+              match model.surfaces.singleSelectLeaf with
+                | Some s -> 
+                  let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface
+                  let s' = { surface with colorCorrection = (ColorCorrectionProperties.update surface.colorCorrection msg) }
+                  model |> SurfaceModel.updateSingleSurface s'                        
+                | None -> model
+            m
+        | _ -> model
 
     let absRelIcons (m : MSurface)=
         adaptive {
@@ -865,7 +896,7 @@ module Surface =
                   else 
                     yield clazz "hide icon"
                 } |> AttributeMap.ofAMap
-
+            
              let headerAttributes =
                 amap {
                   yield onClick singleSelect
@@ -889,10 +920,10 @@ module Surface =
                              //    yield div[onClick singleSelect][Incremental.text desc]
  
                              yield i [clazz "home icon"                                                
-                                      onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "FlyTo"                                                     
+                                      onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "Fly to surface"                                                     
 
                              yield i [clazz "folder icon"                                                
-                                      onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "open folder"
+                                      onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "Open Folder"
 
                              yield i [
                                clazz "microchip icon"
@@ -901,7 +932,7 @@ module Surface =
 
                              yield Incremental.i (absRelIcons) (AList.empty)
                              yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
-                             yield GuiEx.iconCheckBox s.isActive (SurfaceProperties.ToggleIsActive |> SurfacePropertiesMessage) |> UI.wrapToolTip "is active"
+                             yield GuiEx.iconCheckBox s.isActive (ToggleActiveFlag key) |> UI.wrapToolTip "Toggle IsActive"
                          } 
                      ) 
                                     

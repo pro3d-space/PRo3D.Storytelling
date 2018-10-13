@@ -246,9 +246,9 @@ module Scene =
                   |> prepareSurfaceModel runtime signature s.scenePath
 
             _surfaceModelLens.Set(m, sModel)        
-        with e ->
+        with e ->            
             Log.error "Could not load selected scenefile %A. It is either outdated or not a valid scene" path
-            //Log.error "error %A" e
+            Log.error "exact error %A" e
             m
 
     
