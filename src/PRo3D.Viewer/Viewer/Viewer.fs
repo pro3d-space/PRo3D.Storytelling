@@ -488,31 +488,11 @@ module ViewerApp =
               match sl with
                 | [] -> m 
                 | path :: _ ->
-                  let imported = SurfaceTrafoImporter.startImporter path |> PList.toList
-
-                  //let filterSet = 
-                  //  m.scene.surfacesModel.surfaces.flat 
-                  //    |> HMap.toList
-                  //    |> List.map(fun (_,v) -> 
-                  //      let s = (v |> Leaf.toSurface)
-                  //      s.name, s)
-                  //    |> HMap.ofList
-
-                  //let k = 
-                  //  imported 
-                  //    |> PList.toList 
-                  //    |> List.filter(fun x -> x.id |> filterSet.ContainsKey)//m.scene.surfacesModel.surfaces.flat.ContainsKey) 
-                  //    |> List.map (fun x ->
-                  //      {
-                  //        id = x.id
-                  //        shift = x.trafo.Forward.C3.XYZ.Length
-                  //      })
-
-                  //let csvTable = Csv.Seq.csv "," true id k
-                  //Csv.Seq.write (@"./shift.csv") csvTable |> ignore
-
+                  let imported = SurfaceTrafoImporter.startImporter path |> PList.toList                  
                   let s = Surfaces.SurfaceApp.updateSurfaceTrafos imported m.scene.surfacesModel
-                  m |> Lenses.set _surfaceModelLens s                                    
+                  s.surfaces.flat |> HMap.toList |> List.iter(fun (_,v) -> Log.warn "%A" (v |> Leaf.toSurface).preTransform)
+                  m 
+                    |> Lenses.set _surfaceModelLens s                                    
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
             | QuickLoad2,_,_ ->                                

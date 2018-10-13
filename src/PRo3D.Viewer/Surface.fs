@@ -659,10 +659,10 @@ module Surface =
             | _ -> model
       update (trafos |> PList.toList) model
 
-    let union (l : SurfaceModel) (r : SurfaceModel) : SurfaceModel =
-      let l' = { l with 
+    //let union (l : SurfaceModel) (r : SurfaceModel) : SurfaceModel =
+    //  let l' = { l with 
 
-      l
+    //  l
 
     let updateSurfaceTrafos (trafos: list<SurfaceTrafo>) (model:SurfaceModel) =
       let surfaces =        
@@ -679,14 +679,20 @@ module Surface =
           |> List.map(fun x -> surfaces.Find x.id,x)
           |> List.map(fun (a,b) ->
             { a with preTransform = b.trafo })
+      
+      Log.line "%A" surfaces'
 
-      //let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface
-      let models = 
+      let flat' = 
         surfaces' 
-          |> List.map(fun x -> SurfaceModel.updateSingleSurface x model)
-          |> List.fold (fun l r -> union l r) model
-      Log.line "%A" trafos
-      model
+          |> List.map(fun x -> 
+            let f = (fun _ -> x |> Leaf.Surfaces)
+            Groups.updateLeaf' x.guid f model.surfaces |> HMap.filter(fun k _ -> k = x.guid)) // only return single hmap
+          |> List.fold (fun l r -> HMap.union l r) HMap.empty
+                
+      //write union of surface models ... union flat and recalculate all others
+
+      //this does only update surfaces ... not kdtrees or sgs !!!!             
+      { model with surfaces = { model.surfaces with flat = flat' } }
 
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
       match action with
