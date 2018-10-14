@@ -35,9 +35,7 @@ open Aardvark.UI.Animation
 module ViewerUtils =    
     open Aardvark.SceneGraph.Opc.Shader
     open FShade
-
-    let mutable hitCounter = 0
-
+    
     //open OpenCvSharp.XFeatures2D
     
     let colormap = 
@@ -306,16 +304,16 @@ module ViewerUtils =
                 |> pickable' pickable
                 |> Sg.noEvents 
                 |> Sg.withEvents [
-                        SceneEventKind.Down, (
-                            fun sceneHit -> 
-                                let surfM = surf |> Mod.force
-                                let bla = surfM.name |> Mod.force
-                                if (surfM.isActive |> Mod.force) then
-                                  hitCounter <- hitCounter + 1
-                                  true, Seq.ofList [PickSurface (sceneHit,bla)]
-                                else
-                                  false, Seq.empty)
-                    ]
+                     SceneEventKind.Down, (
+                       fun sceneHit -> 
+                         let surfM = surf       |> Mod.force
+                         let name  = surfM.name |> Mod.force
+                         if (surfM.isActive |> Mod.force) then                           
+                           Log.warn "spawing picksurface %s" name
+                           true, Seq.ofList [PickSurface (sceneHit,name)]
+                         else
+                           false, Seq.empty)
+                   ]
                 //|> Sg.trafo (surface.globalBB 
                 //                |> Mod.map(fun x -> 
                 //                    let t = Trafo3d.Translation(-x.Center)

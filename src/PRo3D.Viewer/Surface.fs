@@ -579,58 +579,57 @@ module Surface =
 
     let intersectKdTrees' = KdTrees.intersectKdTrees computeIndices
 
-    let doKdTreeIntersection (m : SurfaceModel) (t : Trafo3d) (r : FastRay3d) cache = 
+    let doKdTreeIntersection (m : SurfaceModel) (r : FastRay3d) cache = 
         let mutable cache = cache
-        let activeSgSurfaces = m.surfaces.flat
-                                |> HMap.filter( fun _ s -> s.active )
-                                |> HMap.map( fun sid s -> 
-                                    (m.sgSurfaces |> HMap.filter( fun sgid sg -> sid = sgid)))
-                                |> HMap.map( fun sid s -> s.Item sid)
+        let activeSgSurfaces = 
+          m.surfaces.flat
+            |> HMap.filter(fun _ s -> s.active)
+            |> HMap.toList 
+            |> List.map fst
+            |> List.choose(fun id -> m.sgSurfaces |> HMap.tryFind id)
 
-        let sgSurfaces = activeSgSurfaces 
-                            |> HMap.filter( fun _ sg -> sgSurface.isSgOPC sg )
-                            |> HMap.map( fun _ sg -> sgSurface.toSgOPC sg )
-        sgSurfaces
-            |> HMap.toSeq
-            |> Seq.map (fun (_,d) -> d.kdTree, (m.surfaces.flat |> HMap.find d.surface) |> Leaf.toSurface)            
-            |> Seq.sortByDescending(fun (_,surf) -> surf.priority.value)
-            |> Seq.choose (
-                fun (kd ,surf) ->
-                    if kd.IsEmpty then 
-                        Log.error "no kdtree loaded for %s" surf.name
-                        None
-                    else                        
-                        //get bbs that are hit
-                        let hitBoxes =
-                            kd  |> HMap.toSeq 
-                                |> Seq.map fst
-                                |> Seq.filter(
-                                    fun x -> 
-                                       let mutable t = 0.0
-                                       let r' = r.Ray.Transformed(surf.preTransform.Backward) //combine pre and current transform
-                                       x.Intersects(r', &t)
-                                )                                                
-                        //intersect corresponding kdtrees
-                        let closestHit =
-                            hitBoxes
-                                |> Seq.choose(
-                                    fun bb -> 
-                                        //Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                        
+        let sgSurfaces = 
+          activeSgSurfaces 
+            |> List.filter( fun sg -> sgSurface.isSgOPC sg )
+            |> List.map( fun sg -> sgSurface.toSgOPC sg )
 
-                                        let ray = r.Ray.Transformed(surf.preTransform.Backward) |> FastRay3d  //combine pre and current transform
-
-                                        let hit, c = 
-                                          kd |> intersectKdTrees' bb surf cache ray
-
-                                        cache <- c
-                                        hit
-                                        )                                
-                                |> Seq.sortBy(fun (t,_)-> t)
-                                |> Seq.tryHead                                               
-
-                        closestHit
-                )
-            |> Seq.tryPick(fun d -> Some d), cache    
+        
+        sgSurfaces          
+          |> List.map (fun d -> d.kdTree, (m.surfaces.flat |> HMap.find d.surface) |> Leaf.toSurface)            
+          |> List.sortByDescending(fun (_,surf) -> surf.priority.value)
+          |> List.choose (
+             fun (kd ,surf) ->
+               if kd.IsEmpty then Log.error "no kdtree loaded for %s" surf.name; None
+               else                        
+                 //get bbs that are hit
+                 let hitBoxes =
+                   kd  
+                     |> HMap.toList |> List.map fst
+                     |> List.filter(
+                         fun x -> 
+                            let mutable t = 0.0
+                            let r' = r.Ray.Transformed(surf.preTransform.Backward) //combine pre and current transform
+                            x.Intersects(r', &t)
+                     )
+                 //intersect corresponding kdtrees
+                 let closestHit =
+                   hitBoxes
+                     |> List.choose(
+                         fun bb -> 
+                             //Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                                             
+                             let ray = r.Ray.Transformed(surf.preTransform.Backward) |> FastRay3d  //combine pre and current transform                     
+                             let hit, c = 
+                               kd |> intersectKdTrees' bb surf cache ray                     
+                             cache <- c
+                             hit
+                             )                                
+                     |> List.sortBy(fun (t,_)-> t)
+                     |> List.tryHead                                               
+             
+                 closestHit
+             )
+          |> List.sortBy(fun (t,_) -> t)
+          |> List.tryPick(fun d -> Some d), cache
 
     let updateTrafo (trafo:SurfaceTrafo) (surfaces:hmap<string,PRo3D.Surfaces.Surface>) (model:SurfaceModel) =                                
       match surfaces.TryFind(trafo.id) with

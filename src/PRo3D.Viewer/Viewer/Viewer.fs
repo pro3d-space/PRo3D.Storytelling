@@ -236,8 +236,7 @@ module ViewerApp =
                 let m = match surf.surfaceType with
                         | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = Projection.Linear } }   
                         | _ -> m
-                Log.line "closest intersection on %A" surf.name
-
+                
                 let msg = Drawing.Action.AddPointAdv(p, hitFunction, surf.name)
                 let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing msg
                 //Log.stop()
@@ -501,10 +500,10 @@ module ViewerApp =
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
                 m
-            | PickSurface (p,name), _ ,true when ViewerUtils.hitCounter > 0 ->                 
+            | PickSurface (p,name), _ ,true ->
               let fray = p.globalRay.Ray
               let r = fray.Ray
-              Log.startTimed "kdtree intersect %s %A" name ViewerUtils.hitCounter
+              Log.startTimed "[PickSurface] try intersect kdtree of %s" name               
 
               ViewerUtils.hitCounter <- ViewerUtils.hitCounter - 1
                             
@@ -520,25 +519,26 @@ module ViewerApp =
                             FastRay3d(p + (up * 5000.0), -up)  
                         | _ -> Log.error "projection started without proj mode"; FastRay3d()
                 
-                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray cache with
+                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) ray cache with
                     | Some (t,surf), c ->                             
                         cache <- c; ray.Ray.GetPointOnRay t |> Some
                     | None, c ->
                         cache <- c; None
                                   
               let result = 
-                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray cache with
+                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) fray cache with
                 | Some (t,surf), c ->                         
                   cache <- c
                   let hit = r.GetPointOnRay(t)
                   let cameraLocation = m.scene.navigation.camera.view.Location 
                   let hitF = hitF cameraLocation
 
-                  matchPickingInteraction sendQueue hit hitF surf m
+                  matchPickingInteraction sendQueue hit hitF surf m                                    
                 | None, _ -> 
-                    Log.error ("no hit")
+                    Log.error "[PickSurface] no hit of %s" name
                     m
               Log.stop()
+              Log.error "done intersecting"
               result
             | PickObject (p,id), _ ,_ ->  
                 match m.picking with
