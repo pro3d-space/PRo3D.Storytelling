@@ -150,7 +150,7 @@ module Scene =
         let m = 
             allSurfaces
                 |> PList.filter (fun s -> s.surfaceType = SurfaceType.SurfaceOPC)
-                |> Surface.createSgSurfaces runtime signature
+                |> Sg.createSgSurfaces runtime signature
                 |> HMap.union m.scene.surfacesModel.sgSurfaces
                 |> Files.expandLazyKdTreePaths m.scene.scenePath surfaceMap
                 |> Lenses.set' (_surfaceModelLens |. SurfaceModel.Lens.sgSurfaces) m                                               
@@ -192,17 +192,17 @@ module Scene =
         let surfaces = model.surfaces.flat |> Leaf.toSurfaces 
 
         let surfacesList =
-            surfaces
-              |> HMap.toList 
-              |> List.map snd 
-              |> PList.ofList
+          surfaces
+            |> HMap.toList 
+            |> List.map snd 
+            |> PList.ofList
 
         let opcSurfs = 
-            surfacesList 
+          surfacesList 
             |> PList.filter ( fun x -> x.surfaceType = SurfaceType.SurfaceOPC)
 
         let sgSurfaces = 
-            Surface.createSgSurfaces runtime signature opcSurfs |> Files.expandLazyKdTreePaths scenePath surfaces        
+          Sg.createSgSurfaces runtime signature opcSurfs |> Files.expandLazyKdTreePaths scenePath surfaces        
 
         let objSurfs = 
             surfacesList 

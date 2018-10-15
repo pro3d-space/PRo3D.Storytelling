@@ -100,8 +100,10 @@
     <Compile Include="Navigation.fs" />
     <Compile Include="AlignmentModel.fs" />
     <Compile Include="AlignmentApp.fs" />
-    <Compile Include="Surface-Properties.fs" />
-    <Compile Include="Surface.fs" />
+    <Compile Include="Surface\Surface-Properties.fs" />
+    <Compile Include="Surface\Surface.Files.fs" />
+    <Compile Include="Surface\Surface.Sg.fs" />
+    <Compile Include="Surface\Surface.fs" />
     <Compile Include="Rover-Model.fs" />
     <Compile Include="Rover.fs" />
     <Compile Include="ViewPlan.fs" />

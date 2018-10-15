@@ -382,8 +382,8 @@ module ViewerApp =
                     | paths ->
                         let surfaces = 
                             paths 
-                                |> List.filter (fun x -> Discover.isSurfaceFolder x || Files.isZippedOpcFolder x)
-                                |> List.map (Surface.mk SurfaceType.SurfaceOPC)
+                                |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
+                                |> List.map (Sg.mk SurfaceType.SurfaceOPC)
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m
@@ -413,7 +413,7 @@ module ViewerApp =
                         let p = paths.[0]
                         let objects = 
                             [p] 
-                                |> List.map (Surface.mk SurfaceType.SurfaceOBJ)
+                                |> List.map (Sg.mk SurfaceType.SurfaceOBJ)
                                 |> PList.ofList
 
                         let m = Scene.importObj runtime signature objects m
@@ -505,7 +505,7 @@ module ViewerApp =
               let r = fray.Ray
               Log.startTimed "[PickSurface] try intersect kdtree of %s" name               
 
-              ViewerUtils.hitCounter <- ViewerUtils.hitCounter - 1
+            //  ViewerUtils.hitCounter <- ViewerUtils.hitCounter - 1
                             
               let hitF (camLocation : V3d) (p : V3d) = 
                 
