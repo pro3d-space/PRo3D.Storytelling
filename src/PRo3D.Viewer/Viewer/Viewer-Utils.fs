@@ -99,7 +99,7 @@ module ViewerUtils =
        
            
 
-    let viewSingleSurfaceSgOPC (surface : MSgSurfaces) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (globalBB : IMod<Box3d>) =
+    let viewSingleSurfaceSgOPC (surface : MSgSurfaces) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) =
         
         let surf = lookUp (surface.surface) blarg
             //Mod.bind(fun x -> lookUp (x.surface) blarg )
@@ -307,12 +307,9 @@ module ViewerUtils =
                      SceneEventKind.Down, (
                        fun sceneHit -> 
                          let surfM = surf       |> Mod.force
-                         let name  = surfM.name |> Mod.force
-                         if (surfM.isActive |> Mod.force) then                           
-                           Log.warn "spawing picksurface %s" name
-                           true, Seq.ofList [PickSurface (sceneHit,name)]
-                         else
-                           false, Seq.empty)
+                         let name  = surfM.name |> Mod.force                                                  
+                         Log.warn "spawing picksurface %s" name
+                         true, Seq.ofList [PickSurface (sceneHit,name)])                         
                    ]
                 //|> Sg.trafo (surface.globalBB 
                 //                |> Mod.map(fun x -> 
@@ -500,7 +497,7 @@ module ViewerUtils =
                         let sf = Mod.force sf
                         let test = match sf with
                                     | MSgSurfaceOPC surf -> 
-                                         (viewSingleSurfaceSgOPC sf bla m.frustum selected sf.globalBB)
+                                         (viewSingleSurfaceSgOPC sf bla m.frustum selected m.ctrlFlag sf.globalBB)
                                     | MSgSurfaceOBJ surf -> 
                                         (viewSingleSurfaceSgOBJ sf bla surf selected sf.globalBB)
                         test

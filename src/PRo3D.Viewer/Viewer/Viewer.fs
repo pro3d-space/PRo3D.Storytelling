@@ -505,6 +505,8 @@ module ViewerApp =
               let r = fray.Ray
               Log.startTimed "[PickSurface] try intersect kdtree of %s" name               
 
+              Log.warn "%A" (r.GetHashCode())
+
             //  ViewerUtils.hitCounter <- ViewerUtils.hitCounter - 1
                             
               let hitF (camLocation : V3d) (p : V3d) = 
