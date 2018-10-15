@@ -112,11 +112,196 @@ module DebugKdTrees =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg
-          
+                      
+    module Files = 
+       open System.IO
+       open Aardvark.Prinziple
+       
+       /// <summary>
+       /// checks if "path" is a valid opc folder containing "images", "patches", and patchhierarchy.xml
+       /// </summary>
+       let isOpcFolder (path : string) = 
+           let imagePath = Path.combine [path; "images"]
+           let patchPath = Path.combine [path; "patches"]
+           (Directory.Exists imagePath) &&
+           (Directory.Exists patchPath) && 
+            File.Exists(patchPath + "\\patchhierarchy.xml")
+
+       /// <summary>
+       /// checks if "path" is a valid surface folder
+       /// </summary>        
+       let isSurfaceFolder (path : string) =
+           Directory.GetDirectories(path) |> Seq.forall isOpcFolder
+
+       let discover (p : string -> bool) path : list<string> =
+         if Directory.Exists path then
+           Directory.EnumerateDirectories path                     
+             |> Seq.filter p            
+             |> Seq.toList
+         else List.empty
+
+       /// returns all valid surface folders in "path"   
+       let discoverSurfaces path = 
+         discover isSurfaceFolder path          
+
+       let discoverOpcs path = 
+         discover isOpcFolder path
+
+       /// <summary>
+       /// should open zip and call isOPCFolder
+       /// </summary>        
+       let isZippedOpcFolder (path : string) = 
+         File.Exists(Path.ChangeExtension(path, "zip"))
+
+       
+       let private retrieve (f :string -> string) (path : string) : list<string> =
+           if path = String.Empty then failwith "encountered empty opc path"
+
+           if isOpcFolder path then
+               [path.Replace(@"\", @"\\\\")]
+           elif isZippedOpcFolder path then                
+               [path.Replace(@"\", @"\\\\").Replace(".zip", "")]
+           elif Directory.Exists path then
+               let opcDirs = 
+                 Directory.GetDirectories(path)
+                   |> Seq.map (fun a -> a.Replace(@"\", @"\\\\"))
+                   |> Seq.filter isOpcFolder
+                   |> Seq.map f
+                   |> Seq.toList            
+
+               let zipped =
+                 Directory.GetFiles(path)
+                   |> Seq.map (fun a -> a.Replace(@"\", @"\\\\"))
+                   |> Seq.filter isZippedOpcFolder
+                   |> Seq.map (fun a -> a.Replace(".zip", ""))
+                   |> Seq.map f
+                   |> Seq.toList            
+
+               opcDirs @ zipped
+           else []
+
+       /// <summary>
+       /// returns all valid OPCs in "path"
+       /// </summary>
+       let getOPCPaths path = 
+         path |> retrieve (id)
+           
+       /// <summary>
+       /// returns all valid OPCs in "path"
+       /// </summary>
+       let getOPCNames path = 
+         path |> retrieve (Path.GetFileName)            
+
+       let expandNamesToPaths (path : string) (names : List<string>) =
+           names |> List.map(fun a -> (Path.combine [path; a]).Replace(@"\", @"\\\\"))
+       
+       let getSurfaceFolder (surface:PRo3D.Surfaces.Surface) (scenePath:option<string>) =
+         if surface.relativePaths 
+         then
+           match scenePath with
+             | Some sp -> 
+                 let x = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
+                 let relPath = Path.Combine(x, surface.name)
+                 if Directory.Exists relPath then Some relPath else None
+             | None -> None
+         else
+           match surface.surfaceType with
+             | SurfaceType.SurfaceOBJ -> 
+               let p = Path.GetDirectoryName surface.importPath
+               if Directory.Exists p then Some p else None
+             |_-> 
+               let p = surface.importPath
+               if Directory.Exists p then Some p else None
+
+       /// strips away parts of a file path until the remaining depth is reached
+       let relativePath (path : string) (remaining : int) = 
+           path.Split(Path.DirectorySeparatorChar) 
+               |> List.ofArray 
+               |> List.rev 
+               |> List.take remaining 
+               |> List.rev 
+               |> Path.combine
+
+       let sceneRelativePath (path : string) = 
+           relativePath path 5
+
+       let surfaceRelativePath (path : string) =
+           relativePath path 4
+
+       let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, PRo3D.Surfaces.Surface>) (sgSurfaces : hmap<Guid, SgSurfaces>) =
+          let sgS = sgSurfaces |> HMap.filter (fun id sg -> (sgSurface.isSgOPC sg))
+          sgS 
+             |> HMap.map (fun _ s -> 
+                 let s = (sgSurface.toSgOPC s)
+                 let surf = surfaces |> HMap.find s.surface
+                 let kd =
+                     s.kdTree |> HMap.map (fun _ k -> 
+                         match k with 
+                             | KdTrees.Level0KdTree.LazyKdTree lk when surf.relativePaths && scenePath.IsSome -> // scene is portable                                        
+                                 let path = Path.Combine((Path.GetDirectoryName scenePath.Value),"Surfaces")
+                                 let kdTreeSub   = lk.kdtreePath    |> sceneRelativePath
+                                 let triangleSub = lk.objectSetPath |> sceneRelativePath
+                                         
+                                 KdTrees.LazyKdTree { 
+                                     lk with 
+                                         kdtreePath    = Path.Combine(path, kdTreeSub)
+                                         objectSetPath = Path.Combine(path, triangleSub)
+                                 }
+                             | KdTrees.Level0KdTree.LazyKdTree lk -> // surfaces have absolute paths
+                 
+                                 let kdTreeSub   = lk.kdtreePath    |> surfaceRelativePath
+                                 let triangleSub = lk.objectSetPath |> surfaceRelativePath                                                                                
+                 
+                                 KdTrees.LazyKdTree {
+                                     lk with 
+                                         kdtreePath    = Path.Combine(surf.importPath, kdTreeSub)
+                                         objectSetPath = Path.Combine(surf.importPath, triangleSub)
+                                 }
+                             | KdTrees.Level0KdTree.InCoreKdTree ik -> KdTrees.InCoreKdTree ik // kdtrees can be loaded as is
+                     )
+                 (SgSurfaces.SgSurfaceOPC { s with kdTree = kd })
+           )                
+
+       let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
+           match scenePath with
+               | Some sp ->
+                   let surf = SurfaceModel.getSurface surfaceModel guid
+                   match surf with
+                       | Some s ->
+                           // create target dir
+                           let targetSurfaceDir = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
+                           if not (Directory.Exists targetSurfaceDir) then
+                               Directory.CreateDirectory(targetSurfaceDir) |> ignore
+
+                           // copy data
+                           match s with
+                               |Leaf.Surfaces sf -> 
+                                   let targetDir = Path.Combine(targetSurfaceDir, sf.name)
+                                   Copy.copyAll sf.importPath targetDir true
+
+                                   // update opc paths and scene
+                                   let s' = { sf with opcPaths = expandNamesToPaths targetDir sf.opcNames; relativePaths = true }
+                                   surfaceModel |> SurfaceModel.updateSingleSurface s'
+                               | _ ->
+                                   Log.error "surface %s not found" (guid.ToString())
+                                   surfaceModel
+                       | None ->
+                           Log.error "surface %s not found" (guid.ToString())
+                           surfaceModel
+               | None -> 
+                   Log.error "can't make surface relative. not valid scene path has not been saved yet."
+                   surfaceModel
 
     module Sg =
       open Aardvark.Prinziple
       open Aardvark.VRVis.Opc      
+
+      type SgHelper = {
+        surf        : PRo3D.Surfaces.Surface
+        bb          : Box3d
+        sg          : ISg        
+        kdtree      : hmap<Box3d,KdTrees.Level0KdTree>
+      }
 
       let mutable hackRunner = None
 
@@ -183,6 +368,136 @@ module Surface =
                                   
           sg, patchHierarchies, kdTrees
     
+      let assertInvalidBB (bb:Box3d) = 
+          if(bb.IsInvalid) then 
+              failwith (sprintf "invalid bounding box %s" (bb.ToString()))
+          else bb
+      
+      let combineLeafBBs (hierarchies : list<PatchHierarchy>) =
+              hierarchies
+              |> List.map(fun d -> d.tree |> QTree.getLeaves)
+              |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
+              |> Seq.concat
+              |> Box3d.ofSeq
+      
+      let combineRootBBs (hierarchies : list<PatchHierarchy>) =
+              hierarchies
+              |> List.map(fun d -> d.tree |> QTree.getRoot)                  
+              |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
+              |> Box3d.ofSeq
+
+      /// creates a surface from opc folder path
+      let mk (stype:SurfaceType) path =                 
+      
+          let names = Files.getOPCNames path                
+          {
+              guid            = Guid.NewGuid()
+              name            = IO.Path.GetFileName path
+              importPath      = path
+              opcNames        = names
+              opcPaths        = names |> Files.expandNamesToPaths path
+              fillMode        = FillMode.Fill
+              cullMode        = CullMode.None
+              isVisible       = true
+              isActive        = true
+              relativePaths   = false
+              quality         = Init.quality
+              priority        = Init.priority
+              scaling         = Init.scaling
+              preTransform    = Trafo3d.Identity            
+              scalarLayers    = hmap.Empty //PList.empty
+              selectedScalar  = None
+              textureLayers   = PList.empty
+              selectedTexture = None            
+      
+              triangleSize = Init.triangleSize
+              surfaceType = stype
+      
+              colorCorrection = Init.initColorCorrection
+          }       
+      
+      let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,KdTrees.Level0KdTree>) = 
+      
+          let pose = Pose.translate V3d.Zero // bb.Center
+          let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
+      
+          let sgSurfaceOpc = {
+                  surface    = s.guid
+                  sceneGraph = sg
+                  globalBB   = bb
+                  kdTree     = kd
+                  trafo      = trafo
+              }
+          (SgSurfaces.SgSurfaceOPC sgSurfaceOpc)
+      
+      let transformBox (trafo:Trafo3d) (bb:Box3d) = bb.Transformed(trafo)
+                
+      let createSgSurfaces runtime signature (surfaces:plist<PRo3D.Surfaces.Surface>) =
+        
+        let sghs =
+          surfaces
+            |> PList.toList
+            |> List.map (fun d -> 
+             { 
+               Configurations.Empty.mars() with 
+                 patchHierarchies = d.opcPaths
+                 preTransform = d.preTransform
+                 useCompressedTextures = false })
+            |> List.map (fun d -> createPlainSceneGraph runtime signature d true)
+            |> List.zip (surfaces |> PList.toList)
+            |> List.map(fun (surf, (sg, hierarchies, kdtree)) -> 
+                let bb = hierarchies |> combineLeafBBs |> transformBox surf.preTransform
+                { surf = surf; bb = bb; sg = sg; kdtree = kdtree })
+      
+        let sgSurfaces =
+          sghs 
+            |> List.map (fun d -> sgOfSurface d.surf d.sg d.bb d.kdtree)
+            |> List.map (fun d -> (d.surface, d))
+            |> HMap.ofList       
+      
+        sgSurfaces
+
+    module ObjectFiles =        
+
+        let loadObject (s:PRo3D.Surfaces.Surface) : SgSurfaceObj =                        
+            let obj = Loader.Assimp.load (s.importPath)            
+            let meshes = 
+                [
+                    for mesh in obj.meshes do
+                        yield mesh.geometry.Sg |> Sg.noEvents
+                ] |> Sg.ofList
+
+            let bb = obj.bounds
+            let sg = 
+                obj
+                |> Sg.adapter
+                |> Sg.requirePicking
+                |> Sg.noEvents
+                |> Sg.scale 1.0
+
+            let pose = Pose.translate bb.Center // bb.Center V3d.Zero
+            let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
+            {
+                surface     = s.guid    
+                trafo       = trafo
+                globalBB    = bb
+                sceneGraph  = sg
+                pickMesh    = meshes
+            }
+                 
+        let createSgObjects runtime signature surfaces =        
+            let sghs =
+                surfaces
+                    |> PList.toList
+                    |> List.map (fun d -> (loadObject d))
+
+            let sgObjects =
+                sghs 
+                  |> List.map (fun d -> (d.surface, SgSurfaces.SgSurfaceOBJ d))
+                  |> HMap.ofList       
+
+            sgObjects
+
     module SurfaceAttributes = 
         open System.Xml
             
@@ -221,335 +536,8 @@ module Surface =
         let read (path:string) =
             let doc = new XmlDocument() in doc.Load path
             doc |> layers
-    
-    module Discover = 
-
-        /// <summary>
-        /// checks if "path" is a valid opc folder containing "images", "patches", and patchhierarchy.xml
-        /// </summary>
-        let isOpcFolder (path : string) = 
-            let imagePath = Path.combine [path; "images"]
-            let patchPath = Path.combine [path; "patches"]
-            (Directory.Exists imagePath) &&
-            (Directory.Exists patchPath) && 
-             File.Exists(patchPath + "\\patchhierarchy.xml")
-
-        /// <summary>
-        /// checks if "path" is a valid surface folder
-        /// </summary>        
-        let isSurfaceFolder (path : string) =
-            Directory.GetDirectories(path) |> Seq.forall isOpcFolder
-
-        let discover (p : string -> bool) path : list<string> =
-          if Directory.Exists path then
-            Directory.EnumerateDirectories path                     
-              |> Seq.filter p            
-              |> Seq.toList
-          else List.empty
-
-        /// returns all valid surface folders in "path"   
-        let discoverSurfaces path = 
-          discover isSurfaceFolder path          
-
-        let discoverOpcs path = 
-          discover isOpcFolder path
-
-    module Files = 
-        open System.IO
-        open Aardvark.Prinziple
-        
-        /// <summary>
-        /// should open zip and call isOPCFolder
-        /// </summary>        
-        let isZippedOpcFolder (path : string) = 
-          File.Exists(Path.ChangeExtension(path, "zip"))
-
-        
-        let private retrieve (f :string -> string) (path : string) : list<string> =
-            if path = String.Empty then failwith "encountered empty opc path"
-
-            if Discover.isOpcFolder path then
-                [path.Replace(@"\", @"\\\\")]
-            elif isZippedOpcFolder path then                
-                [path.Replace(@"\", @"\\\\").Replace(".zip", "")]
-            elif Directory.Exists path then
-                let opcDirs = 
-                  Directory.GetDirectories(path)
-                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\"))
-                    |> Seq.filter Discover.isOpcFolder
-                    |> Seq.map f
-                    |> Seq.toList            
-
-                let zipped =
-                  Directory.GetFiles(path)
-                    |> Seq.map (fun a -> a.Replace(@"\", @"\\\\"))
-                    |> Seq.filter isZippedOpcFolder
-                    |> Seq.map (fun a -> a.Replace(".zip", ""))
-                    |> Seq.map f
-                    |> Seq.toList            
-
-                opcDirs @ zipped
-            else []
-
-        /// <summary>
-        /// returns all valid OPCs in "path"
-        /// </summary>
-        let getOPCPaths path = 
-          path |> retrieve (id)
-            
-        /// <summary>
-        /// returns all valid OPCs in "path"
-        /// </summary>
-        let getOPCNames path = 
-          path |> retrieve (Path.GetFileName)            
-
-        let expandNamesToPaths (path : string) (names : List<string>) =
-            names |> List.map(fun a -> (Path.combine [path; a]).Replace(@"\", @"\\\\"))
-        
-        let getSurfaceFolder (surface:PRo3D.Surfaces.Surface) (scenePath:option<string>) =
-          if surface.relativePaths 
-          then
-            match scenePath with
-              | Some sp -> 
-                  let x = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
-                  let relPath = Path.Combine(x, surface.name)
-                  if Directory.Exists relPath then Some relPath else None
-              | None -> None
-          else
-            match surface.surfaceType with
-              | SurfaceType.SurfaceOBJ -> 
-                let p = Path.GetDirectoryName surface.importPath
-                if Directory.Exists p then Some p else None
-              |_-> 
-                let p = surface.importPath
-                if Directory.Exists p then Some p else None
-
-        /// strips away parts of a file path until the remaining depth is reached
-        let relativePath (path : string) (remaining : int) = 
-            path.Split(Path.DirectorySeparatorChar) 
-                |> List.ofArray 
-                |> List.rev 
-                |> List.take remaining 
-                |> List.rev 
-                |> Path.combine
-
-        let sceneRelativePath (path : string) = 
-            relativePath path 5
-
-        let surfaceRelativePath (path : string) =
-            relativePath path 4
-
-        let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, PRo3D.Surfaces.Surface>) (sgSurfaces : hmap<Guid, SgSurfaces>) =
-           let sgS = sgSurfaces |> HMap.filter (fun id sg -> (sgSurface.isSgOPC sg))
-           sgS 
-              |> HMap.map (fun _ s -> 
-                  let s = (sgSurface.toSgOPC s)
-                  let surf = surfaces |> HMap.find s.surface
-                  let kd =
-                      s.kdTree |> HMap.map (fun _ k -> 
-                          match k with 
-                              | KdTrees.Level0KdTree.LazyKdTree lk when surf.relativePaths && scenePath.IsSome -> // scene is portable                                        
-                                  let path = Path.Combine((Path.GetDirectoryName scenePath.Value),"Surfaces")
-                                  let kdTreeSub   = lk.kdtreePath    |> sceneRelativePath
-                                  let triangleSub = lk.objectSetPath |> sceneRelativePath
-                                          
-                                  KdTrees.LazyKdTree { 
-                                      lk with 
-                                          kdtreePath    = Path.Combine(path, kdTreeSub)
-                                          objectSetPath = Path.Combine(path, triangleSub)
-                                  }
-                              | KdTrees.Level0KdTree.LazyKdTree lk -> // surfaces have absolute paths
-                  
-                                  let kdTreeSub   = lk.kdtreePath    |> surfaceRelativePath
-                                  let triangleSub = lk.objectSetPath |> surfaceRelativePath                                                                                
-                  
-                                  KdTrees.LazyKdTree {
-                                      lk with 
-                                          kdtreePath    = Path.Combine(surf.importPath, kdTreeSub)
-                                          objectSetPath = Path.Combine(surf.importPath, triangleSub)
-                                  }
-                              | KdTrees.Level0KdTree.InCoreKdTree ik -> KdTrees.InCoreKdTree ik // kdtrees can be loaded as is
-                      )
-                  (SgSurfaces.SgSurfaceOPC { s with kdTree = kd })
-            )                
-
-        let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
-            match scenePath with
-                | Some sp ->
-                    let surf = SurfaceModel.getSurface surfaceModel guid
-                    match surf with
-                        | Some s ->
-                            // create target dir
-                            let targetSurfaceDir = Path.Combine((Path.GetDirectoryName sp),"Surfaces")
-                            if not (Directory.Exists targetSurfaceDir) then
-                                Directory.CreateDirectory(targetSurfaceDir) |> ignore
-
-                            // copy data
-                            match s with
-                                |Leaf.Surfaces sf -> 
-                                    let targetDir = Path.Combine(targetSurfaceDir, sf.name)
-                                    Copy.copyAll sf.importPath targetDir true
-
-                                    // update opc paths and scene
-                                    let s' = { sf with opcPaths = expandNamesToPaths targetDir sf.opcNames; relativePaths = true }
-                                    surfaceModel |> SurfaceModel.updateSingleSurface s'
-                                | _ ->
-                                    Log.error "surface %s not found" (guid.ToString())
-                                    surfaceModel
-                        | None ->
-                            Log.error "surface %s not found" (guid.ToString())
-                            surfaceModel
-                | None -> 
-                    Log.error "can't make surface relative. not valid scene path has not been saved yet."
-                    surfaceModel
-
-    type SgHelper = {
-        surf        : PRo3D.Surfaces.Surface
-        bb          : Box3d
-        sg          : ISg        
-        kdtree      : hmap<Box3d,KdTrees.Level0KdTree>
-    }
-
-    let assertInvalidBB (bb:Box3d) = 
-        if(bb.IsInvalid) then 
-            failwith (sprintf "invalid bounding box %s" (bb.ToString()))
-        else bb
-   
-    let combineLeafBBs (hierarchies : list<PatchHierarchy>) =
-         hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getLeaves)
-            |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
-            |> Seq.concat
-            |> Box3d.ofSeq
-
-    let combineRootBBs (hierarchies : list<PatchHierarchy>) =
-         hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getRoot)                  
-            |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
-            |> Box3d.ofSeq
-
-    /// creates a surface from opc folder path
-    let mk (stype:SurfaceType) path =                 
-
-        let names = Files.getOPCNames path                
-        {
-            guid            = Guid.NewGuid()
-            name            = IO.Path.GetFileName path
-            importPath      = path
-            opcNames        = names
-            opcPaths        = names |> Files.expandNamesToPaths path
-            fillMode        = FillMode.Fill
-            cullMode        = CullMode.None
-            isVisible       = true
-            isActive        = true
-            relativePaths   = false
-            quality         = Init.quality
-            priority        = Init.priority
-            scaling         = Init.scaling
-            preTransform    = Trafo3d.Identity            
-            scalarLayers    = hmap.Empty //PList.empty
-            selectedScalar  = None
-            textureLayers   = PList.empty
-            selectedTexture = None            
-
-            triangleSize = Init.triangleSize
-            surfaceType = stype
-
-            colorCorrection = Init.initColorCorrection
-        }       
-
-    let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,KdTrees.Level0KdTree>) = 
-    
-        let pose = Pose.translate V3d.Zero // bb.Center
-        let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
-
-        let sgSurfaceOpc = {
-                surface    = s.guid
-                sceneGraph = sg
-                globalBB   = bb
-                kdTree     = kd
-                trafo      = trafo
-            }
-        (SgSurfaces.SgSurfaceOPC sgSurfaceOpc)
-
-    let transformBox (trafo:Trafo3d) (bb:Box3d) =
-        bb.Transformed(trafo)
-              
-    let createSgSurfaces runtime signature (surfaces:plist<PRo3D.Surfaces.Surface>) =
-        
-        let sghs =
-            surfaces
-                |> PList.toList
-                |> List.map (fun d -> 
-                 { 
-                   Configurations.Empty.mars() with 
-                     patchHierarchies = d.opcPaths
-                     preTransform = d.preTransform
-                     useCompressedTextures = false })
-                |> List.map (fun d -> Sg.createPlainSceneGraph runtime signature d true)
-                |> List.zip (surfaces |> PList.toList)
-                |> List.map(fun (surf, (sg, hierarchies, kdtree)) -> 
-                    let bb = hierarchies |> combineLeafBBs |> transformBox surf.preTransform
-                    { surf = surf; bb = bb; sg = sg; kdtree = kdtree })
-
-        let sgSurfaces =
-            sghs 
-              |> List.map (fun d -> sgOfSurface d.surf d.sg d.bb d.kdtree)
-              |> List.map (fun d -> (d.surface, d))
-              |> HMap.ofList       
-
-        sgSurfaces
-
-    module ObjectFiles =        
-
-        let loadObject (s:PRo3D.Surfaces.Surface) : SgSurfaceObj =
-            //Ag.initialize()
-            let test = s.importPath
-            let obj = Loader.Assimp.load (s.importPath)
-            //let obj = Aardvark.SceneGraph.IO.Loader.Assimp.load @"C:\Users\laura\VRVis\Data\OBJ\WusonOBJ.obj"
-            let meshes = 
-                [
-                    for mesh in obj.meshes do
-                        yield mesh.geometry.Sg |> Sg.noEvents
-                ] |> Sg.ofList
-
-            let bb = obj.bounds
-            let sg = 
-                obj
-                |> Sg.adapter
-                |> Sg.requirePicking
-                |> Sg.noEvents
-                |> Sg.scale 1.0
-
-            let pose = Pose.translate bb.Center // bb.Center V3d.Zero
-            let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
-            {
-                surface     = s.guid    
-                trafo       = trafo
-                globalBB    = bb
-                sceneGraph  = sg
-                pickMesh    = meshes
-            }
-          
-       
-        let createSgObjects runtime signature surfaces =        
-            let sghs =
-                surfaces
-                    |> PList.toList
-                    |> List.map (fun d -> (loadObject d))
-
-            let sgObjects =
-                sghs 
-                  |> List.map (fun d -> (d.surface, SgSurfaces.SgSurfaceOBJ d))
-                  |> HMap.ofList       
-
-            sgObjects
-
-
-
-
-       
-                  
+                   
+                         
  module SurfaceApp =
     open System.Diagnostics
     open Aardvark.Rendering.GL.Compiler
@@ -663,6 +651,8 @@ module Surface =
 
     //  l
 
+    let hmapsingle (k,v) = HMap.single k v
+
     let updateSurfaceTrafos (trafos: list<SurfaceTrafo>) (model:SurfaceModel) =
       let surfaces =        
         model.surfaces.flat 
@@ -676,20 +666,18 @@ module Surface =
         trafos 
           |> List.filter (fun x -> x.id |> surfaces.ContainsKey)
           |> List.map(fun x -> surfaces.Find x.id,x)
-          |> List.map(fun (a,b) ->
-            { a with preTransform = b.trafo })
-      
-      Log.line "%A" surfaces'
-
+          |> List.map(fun (a,b) -> { a with preTransform = b.trafo })
+            
       let flat' = 
         surfaces' 
-          |> List.map(fun x -> 
+          |> List.choose(fun x -> 
             let f = (fun _ -> x |> Leaf.Surfaces)
-            Groups.updateLeaf' x.guid f model.surfaces |> HMap.filter(fun k _ -> k = x.guid)) // only return single hmap
-          |> List.fold (fun l r -> HMap.union l r) HMap.empty
-                
+            Groups.updateLeaf' x.guid f model.surfaces 
+              |> HMap.tryFind x.guid 
+              |> Option.map(fun leaf -> (x.guid,leaf) |> hmapsingle))          
+          |> List.fold HMap.union HMap.empty
+                    
       //write union of surface models ... union flat and recalculate all others
-
       //this does only update surfaces ... not kdtrees or sgs !!!!             
       { model with surfaces = { model.surfaces with flat = flat' } }
 
@@ -717,17 +705,17 @@ module Surface =
         | OpenFolder id ->
             let surf = id |> SurfaceModel.getSurface model
             match surf with
-                | Some s -> 
-                    match s with 
-                        | Leaf.Surfaces sf ->
-                            let path = Surface.Files.getSurfaceFolder sf scenePath
-                            match path with
-                                | Some p -> 
-                                    Process.Start("explorer.exe", p) |> ignore
-                                    model
-                                | None -> model      
-                        | _ -> failwith "can only contain surfaces"
-                | None -> model
+              | Some s -> 
+                match s with 
+                  | Leaf.Surfaces sf ->
+                    let path = Surface.Files.getSurfaceFolder sf scenePath
+                    match path with
+                      | Some p -> 
+                          Process.Start("explorer.exe", p) |> ignore
+                          model
+                      | None -> model
+                  | _ -> failwith "can only contain surfaces"
+              | None -> model
         | RebuildKdTrees id ->                
             let surf = id |> SurfaceModel.getSurface model
             match surf with
@@ -738,7 +726,7 @@ module Surface =
                        let path = @".\20170530_TextureConverter_single\Vrvis.TextureConverter.exe"
                        if File.Exists(path) then //\Vrvis.TextureConverter.exe") then
                          let mutable converter = new Process()                             
-                         Log.line "start processing"                                                                                        
+                         Log.line "start processing"                        
                          converter.StartInfo.FileName <- "Vrvis.TextureConverter.exe"
                          converter.StartInfo.Arguments <- p + " -overwrite" //-lazy"
                          converter.StartInfo.UseShellExecute <- true                          
