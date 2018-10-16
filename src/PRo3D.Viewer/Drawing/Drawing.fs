@@ -623,10 +623,10 @@ module DrawingApp =
               |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
               |> Sg.uniform "Size" size
               |> Sg.shader {
-                  do! Shader.screenSpaceScale
+                  //do! Shader.screenSpaceScale
                   do! Shader.stableTrafo
                   do! DefaultSurfaces.vertexColor
-                  //do! Aardvark.Opc.Shader.stableLight
+                  do! Shader.stableLight
               }
               |> Sg.trafo(trafo)
 

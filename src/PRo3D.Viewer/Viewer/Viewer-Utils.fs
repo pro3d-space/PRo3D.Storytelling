@@ -167,11 +167,13 @@ module ViewerUtils =
                             | Some s -> s.colorLegend.upperColor.c |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H)
                             | None   -> Mod.constant(1.0f)
                         )
-        let lowerC = scalar |> Mod.bind ( fun x ->
-                        match x with 
-                            | Some s -> s.colorLegend.lowerColor.c |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H)
-                            | None   -> Mod.constant(0.0f)
-                        )
+        let lowerC = 
+          scalar 
+            |> Mod.bind ( fun x ->
+              match x with 
+                  | Some s -> s.colorLegend.lowerColor.c |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H)
+                  | None   -> Mod.constant(0.0f)
+              )
 
         let rangeToMinMax = scalar |> Mod.bind ( fun x -> 
                                 match x with 

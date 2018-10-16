@@ -39,7 +39,7 @@ module FalseColorLegendApp =
             | SetInterval i -> 
                     { model with interval = Numeric.update model.interval i }
             | InvertMapping ->
-                    { model with invertMapping = (not model.invertMapping) }
+                    { model with invertMapping = not model.invertMapping }
             | SetLowerColor lc -> 
                     { model with lowerColor = ColorPicker.update model.lowerColor lc }            
             | SetUpperColor uc -> 
@@ -83,13 +83,12 @@ module FalseColorLegendApp =
             adaptive {
                 let! dipAngle = angle
                 let! fcInterval     = model.interval.value
-                let! startColor     = model.lowerColor.c
-                let! endColor       = model.upperColor.c
+                let! startColor     = model.upperColor.c
+                let! endColor       = model.lowerColor.c
                 let! invertMapping  = model.invertMapping
                 let! fcUpperBound   = model.upperBound.value
                 let! fcLowerBound   = model.lowerBound.value
-                
-                let inverted = (not invertMapping)
+                                
                 let hsvStart = HSVf.FromC3f (startColor.ToC3f())
                 let hsvEnd   = HSVf.FromC3f (endColor.ToC3f())
 
@@ -113,7 +112,7 @@ module FalseColorLegendApp =
                         | _ -> pos
                      
                 let currColor = 
-                  if not inverted then
+                  if invertMapping then
                     getColor (hsvStart.H + (hStepSize * (single (pos'))))
                   else 
                     getColor (hsvEnd.H - (hStepSize * (single (pos'))))
@@ -129,8 +128,7 @@ module FalseColorLegendApp =
                 let! invertMapping  = model.invertMapping
                 let! fcUpperBound   = model.upperBound.value
                 let! fcLowerBound   = model.lowerBound.value
-                
-                let inverted = (not invertMapping)
+                             
                 let hsvStart = HSVf.FromC3f (startColor.ToC3f())
                 let hsvEnd   = HSVf.FromC3f (endColor.ToC3f())
 
@@ -148,7 +146,7 @@ module FalseColorLegendApp =
                     hsvStart = V3d((float)hsvStart.H, (float)hsvStart.S, (float)hsvStart.V)
                     hsvEnd = V3d(hsvEnd.H, hsvEnd.S, hsvEnd.V)
                     interval = (float)fcInterval
-                    inverted = inverted
+                    inverted = invertMapping
                     lowerBound = fcLowerBound
                     upperBound = fcUpperBound
                     stepS = (float)hStepSize
@@ -215,8 +213,8 @@ module FalseColorLegendApp =
                     let! fcUpperBound   = falseColor.upperBound.value
                     let! fcLowerBound   = falseColor.lowerBound.value
                     let! fcInterval     = falseColor.interval.value
-                    let! startColor     = falseColor.lowerColor.c
-                    let! endColor       = falseColor.upperColor.c
+                    let! startColor     = falseColor.upperColor.c
+                    let! endColor       = falseColor.lowerColor.c
                     let! invertMapping  = falseColor.invertMapping
 
 
