@@ -483,21 +483,21 @@ module ViewConfigModel =
         format  = "{0:0.00}"
     }
     let initArrowLength = {
-        value   = 0.5
+        value   = 1.0
         min     = 0.00
         max     = 10.0
         step    = 0.01
         format  = "{0:0.00}"
     }
     let initArrowThickness = {
-        value   = 1.0
+        value   = 2.0
         min     = 0.0
         max     = 10.0
         step    = 0.1
         format  = "{0:0.00}"
     }
     let initPlaneSize = {
-        value   = 0.2
+        value   = 0.8
         min     = 0.0
         max     = 10.0
         step    = 0.1
