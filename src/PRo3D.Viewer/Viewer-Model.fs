@@ -240,7 +240,7 @@ module Viewer =
               horizontal 1.0 [                                                        
                 stack 0.7 None [
                     {id = "render"; title = Some "Renderview"; weight = 0.6; deleteInvisible = None}
-                    //{id = "instrumentview"; title = Some "Instrumentview"; weight = 0.6; deleteInvisible = None}
+                    {id = "instrumentview"; title = Some "Instrumentview"; weight = 0.6; deleteInvisible = None}
                 ]                            
                 vertical 0.3 [
                   stack 0.5 None [
@@ -251,7 +251,7 @@ module Viewer =
                   stack 0.5 None [
                     {id = "config"; title = Some "Config"; weight = 0.4; deleteInvisible = None }
                     {id = "bookmarks"; title = Some "Bookmarks"; weight = 0.4; deleteInvisible = None }
-                   // {id = "viewplanner"; title = Some "ViewPlanner"; weight = 0.4; deleteInvisible = None }
+                    {id = "viewplanner"; title = Some "ViewPlanner"; weight = 0.4; deleteInvisible = None }
                   ]
                 ]
               ]              
