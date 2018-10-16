@@ -8,7 +8,7 @@ Aardvark.Application.WinForms.GL
 Aardvark.SceneGraph
 Aardvark.SceneGraph.Opc
 
-Aardvark.VRVis.Geometry
+Aardvark.Geometry.Intersection
 Aardvark.VRVis.Opc
 
 FSharp.Core

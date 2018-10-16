@@ -130,7 +130,7 @@ module Surface =
         | ColorCorrectionMessage    of ColorCorrectionProperties.Action
 
     let computeIndices (size:V2i)(invalids : int[]) : int[] =
-      Aardvark.VRVis.IndexComputation.ComputeIndexArray(size,invalids)
+      CSharpUtils.IndexComputation.ComputeIndexArray(size,invalids)
 
     let intersectKdTrees' = KdTrees.intersectKdTrees computeIndices
 

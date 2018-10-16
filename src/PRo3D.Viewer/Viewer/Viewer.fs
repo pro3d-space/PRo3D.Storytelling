@@ -819,11 +819,11 @@ module ViewerApp =
                     |> Sg.fillMode (Mod.constant FillMode.Fill)
                     |> Sg.cullMode (Mod.constant CullMode.None)
             
-            let alignment = 
-                AlignmentApp.view m.alignment m.scene.navigation.camera.view
-                    |> Sg.map AlignmentActions
-                    |> Sg.fillMode (Mod.constant FillMode.Fill)
-                    |> Sg.cullMode (Mod.constant CullMode.None)
+            //let alignment = 
+            //    AlignmentApp.view m.alignment m.scene.navigation.camera.view
+            //        |> Sg.map AlignmentActions
+            //        |> Sg.fillMode (Mod.constant FillMode.Fill)
+            //        |> Sg.cullMode (Mod.constant CullMode.None)
 
             let refSystem =
                 ReferenceSystemApp.Sg.view
@@ -884,7 +884,7 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
                         
-            [annos; exploreCenter; refSystem; alignment; viewPlans(*;orientationCube*)] |> Sg.ofList
+            [annos; exploreCenter; refSystem; viewPlans(*;orientationCube*)] |> Sg.ofList
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          

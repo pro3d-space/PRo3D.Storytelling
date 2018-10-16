@@ -62,17 +62,17 @@ module AlignmentApp =
                     { m with alignment = Some al'; pickedPoints = points }
                   | _ -> m                                
                                                         
-          | Finish -> 
-            match m.alignment with
-              | Some al when al.bluePoints.Count = al.redPoints.Count ->
-                let source = al.redPoints |> PList.toArray
-                let dest   = al.bluePoints |> PList.toArray
+          | Finish -> m
+            //match m.alignment with
+            //  | Some al when al.bluePoints.Count = al.redPoints.Count ->
+            //    let source = al.redPoints |> PList.toArray
+            //    let dest   = al.bluePoints |> PList.toArray
                 
-                let c = Aardvark.VRVis.Approx.PoseTrafoEstimation.Config.SimilarityTrafoDefault
+            //    let c = Aardvark.VRVis.Approx.PoseTrafoEstimation.Config.SimilarityTrafoDefault
 
-                let t = Aardvark.VRVis.Approx.PoseTrafoEstimation.SimilarityTrafo(source, dest, c).Value
-                { m with resultTrafo = Some t }
-              | _ -> m
+            //    let t = Aardvark.VRVis.Approx.PoseTrafoEstimation.SimilarityTrafo(source, dest, c).Value
+            //    { m with resultTrafo = Some t }
+            //  | _ -> m
 
     let view (m : MAlignmentModel) (view : IMod<CameraView>) : ISg<AlignmentActions> =
                 
