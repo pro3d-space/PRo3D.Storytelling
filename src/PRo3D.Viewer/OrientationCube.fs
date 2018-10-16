@@ -90,7 +90,7 @@ module Sg =
                 let angle = (V3d.Dot((V3d.Cross(cam.Forward.Normalized, n.OYO)), Vn)) / (V3d.Dot(cam.Forward.Normalized, n.OYO)) //.OYO
                 //return angle + offset
                 let nangle = (angle + offset) % 360.0
-                return (nangle + 360.0) % 360.0 
+                return nangle //(nangle + 360.0) % 360.0 
             }
    
 
@@ -128,11 +128,4 @@ module Sg =
         }
         |> Sg.pass (RenderPass.after "cube" RenderPassOrder.Arbitrary RenderPass.main)
 
-    //let drawCube (draw:IMod<bool>) (up : IMod<V3d>) (north : IMod<V3d>) (camView : IMod<CameraView>) =
-    //  draw
-    //    |> Mod.map( fun x -> 
-    //        match x with
-    //        | true -> loadModel "../../data/rotationcube/rotationcube.dae" |> orthoOrientation camView up north
-    //        | false -> Sg.empty
-    //    )          
-    
+   

@@ -24,14 +24,12 @@ module ReferenceSystemApp =
    
     type Action =
         | InferCoordSystem of V3d
-        //| SetOrigin        of V3d
         | SetUp            of Vector3d.Action
         | SetNorth         of Vector3d.Action
         | SetNOffset       of Numeric.Action
         | ToggleVisible
         | SetScale         of string
         | SetArrowSize     of double
-    //    | SetViewConfig    of ViewConfigModel
         | SetPlanet        of Planet
 
     type InnerConfig<'a> =
@@ -113,12 +111,7 @@ module ReferenceSystemApp =
         match act with
             | InferCoordSystem p ->
                 let m' = updateCoordSystem p model.planet model
-                //let up = upVector p (model.planet)
-                //let n = northVector up 
-                //let no = updateVectorInDegree up n model.origin model.noffset.value 
                 { m' with origin = p }, bigConfig
-            //| SetOrigin p -> 
-            //    { model with origin = p }, bigConfig
             | SetUp up ->    
                 let up = Vector3d.update model.up up
                 let up = ReferenceSystem.setV3d up.value.Normalized
@@ -141,9 +134,6 @@ module ReferenceSystemApp =
                 { model with selectedScale = s }, bigConfig
             | SetPlanet p ->      
                 let m' = updateCoordSystem model.origin p model
-                //let up = upVector model.origin p                                                
-                //let n = northVector up        
-                //let no = updateVectorInDegree up n model.origin model.noffset.value
                 { m' with planet = p }, bigConfig
 
     module Sg =
@@ -370,12 +360,9 @@ module ReferenceSystemApp =
                 styleUp    |> directionMarker near cam  
                 styleNorth |> directionMarker near cam
                 //styleNorth90 |> directionMarker near cam
-                //styleNorth120 |> directionMarker near cam
-                //styleNorth180 |> directionMarker near cam
-                //styleNorth260 |> directionMarker near cam
                 styleEast  |> directionMarker near cam                     
             ]   |> Sg.onOff(model.isVisible)  
-                //|> Sg.trafo (model.noffset.value |> Mod.map ( fun o -> (Trafo3d.RotationXInDegrees(o))))
+                
 
     module UI =
         open Aardvark.UI.Primitives.Mutable
@@ -396,11 +383,12 @@ module ReferenceSystemApp =
                     return DipAndStrike.pitch up view.Forward
                     }
 
-            let height = 
+            let altitude = 
                 adaptive {
                         let! pos = model.origin
                         let! planet = model.planet
-                        return CooTransformation.getHeight pos planet
+                        let! up = model.up.value
+                        return CooTransformation.getAltitude pos up planet
                     }
 
             require GuiEx.semui (
@@ -412,7 +400,7 @@ module ReferenceSystemApp =
                     Html.row "N-Offset:"[Numeric.view' [InputBox] model.noffset |> UI.map SetNOffset ] 
                     Html.row "Bearing:" [Incremental.text (bearing |> Mod.map (fun x -> x.ToString("0.00")))] // compute azimuth with view dir, north vector and up vector
                     Html.row "Pitch:"   [Incremental.text (pitch |> Mod.map (fun x -> x.ToString("0.00")))]  // same for pitch which relates to dip angle
-                    Html.row "Height:"  [Incremental.text (height |> Mod.map (fun x -> x.ToString("0.00")))]
+                    Html.row "Altitude:"  [Incremental.text (altitude |> Mod.map (fun x -> x.ToString("0.00")))]
                     Html.row "Visible:" [GuiEx.iconCheckBox model.isVisible ToggleVisible ]
                       
                 ]

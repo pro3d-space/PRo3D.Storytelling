@@ -36,7 +36,7 @@ module AnnotationGroupsImporter =
                   |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
 
               let results = 
-                Annotation.calculateAnnotationResults x up
+                DrawingUtilities.Calculations.calculateAnnotationResults x up Planet.None
 
               { x with dnsResults = dns; results = Some results} )
           |> List.map Leaf.Annotations

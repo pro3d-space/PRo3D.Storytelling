@@ -87,6 +87,13 @@ module RoverProvider =
         else 
             axis
 
+    let shiftOutput (axis:Axis) (shift:bool) = 
+        if (axis.id = "Pan Axis") && shift
+        then
+            {axis with angle = {axis.angle with value = axis.angle.value - 360.0}}
+        else 
+            axis
+
 
     let toAxes (axes : IPWrapper.SAxis[]) : list<Axis> =
         axes |> Array.mapi(fun i x->
@@ -96,9 +103,6 @@ module RoverProvider =
                 description  = x.m_pcAxisDescription.ToStrAnsi()
                 startPoint   = x.m_oStartPoint.ToV3d()
                 endPoint     = x.m_oEndPoint.ToV3d()
-                //minAngle     = x.m_fMinAngle.DegreesFromGons()
-                //maxAngle     = x.m_fMaxAngle.DegreesFromGons()
-                //currentAngle = x.m_fCurrentAngle.DegreesFromGons()
 
                 angle = {
                             value  = x.m_fCurrentAngle.DegreesFromGons()
@@ -179,13 +183,14 @@ module RoverApp =
         //| SelectInstrument of option<Instrument>
         //| SelectAxis       of option<Axis>
 
-    let updateRoversAndPlatforms p m=
+    let updateRoversAndPlatforms p m shift =
         let error = IPWrapper.UpdatePlatform(ref p)
         match error with
           | 0 ->
             let r'         = p |> RoverProvider.toRover
-            let rovers'    = m.rovers |> HMap.alter r'.id (Option.map(fun _ -> r'))
-            let platforms' = m.platforms |> HMap.alter r'.id (Option.map(fun _ -> p))
+            let r''        = { r' with axes = r'.axes |> HMap.map(fun x y -> RoverProvider.shiftOutput y shift) }
+            let rovers'    = m.rovers |> HMap.alter r''.id (Option.map(fun _ -> r''))
+            let platforms' = m.platforms |> HMap.alter r''.id (Option.map(fun _ -> p))
 
             { m with rovers = rovers'; platforms = platforms' }
           | _ -> 
@@ -201,7 +206,7 @@ module RoverApp =
         pInstruments.[i.index].m_dCurrentFocalLengthInMm <- up.focal
         IPWrapper.MarshalArray(pInstruments, p.m_poPlatformInstruments)
 
-        updateRoversAndPlatforms p m        
+        updateRoversAndPlatforms p m false    
 
     let updateAnglePlatform (up : AxisAngleUpdate) (m : RoverModel) = 
         // use option map ?
@@ -213,12 +218,15 @@ module RoverApp =
         //let up = { up with angle = -up.angle}
 
         // push new angles to platform (deg to gon!!!)               
-        //let angle = if (up.axisId = "Pan Axis"  && (up.angle < 0.0)) then (up.angle + 360.0) else up.angle
+        let angle, shift = if (up.axisId = "Pan Axis"  && (up.angle < 0.0)) then 
+                                (up.angle + 360.0), true 
+                            else
+                                up.angle, false
 
-        pAxes.[a.index].m_fCurrentAngle <- up.angle.GonsFromDegrees()
+        pAxes.[a.index].m_fCurrentAngle <- angle.GonsFromDegrees() //up.angle.GonsFromDegrees()
         IPWrapper.MarshalArray(pAxes, p.m_poPlatformAxes)        
         
-        updateRoversAndPlatforms p m
+        updateRoversAndPlatforms p m shift
             
 
     let updateRovers (r : Rover) (m : RoverModel) = 

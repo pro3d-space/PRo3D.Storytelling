@@ -114,8 +114,9 @@ module ViewerApp =
     
     let drawingConfig : DrawingApp.SmallConfig<ReferenceSystem> =
         { 
-            up    = (ReferenceSystem.Lens.up    |. V3dInput.Lens.value)
-            north = (ReferenceSystem.Lens.north |. V3dInput.Lens.value)
+            up     = (ReferenceSystem.Lens.up     |. V3dInput.Lens.value)
+            north  = (ReferenceSystem.Lens.north  |. V3dInput.Lens.value)
+            planet = (ReferenceSystem.Lens.planet)
         }
 
     let mdrawingConfig : DrawingApp.MSmallConfig<MViewConfigModel> =
@@ -140,6 +141,25 @@ module ViewerApp =
         _camera.Set(m,cam')    
     
     let mutable cache = hmap.Empty
+
+    let updateSceneWithNewSurface (m:Model) =
+        let sgSurfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
+        let head = sgSurfaces |> List.tryHead
+        match head with
+            | Some v ->
+                let fullBb = 
+                    sgSurfaces 
+                        |> List.map(fun x -> x.globalBB) 
+                        |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
+
+                let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
+                let (refSystem',_)= 
+                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
+                let (orSystem',_)= 
+                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.orientationSystem) refAction  
+                                                                
+                { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = orSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB
+            | None -> m
 
     let isGrabbed (model : Model) =
         let sel = _selectedSurface.Get(model) |> Option.bind(fun x -> _sgSurfaces.Get(model).TryFind x)
@@ -205,14 +225,15 @@ module ViewerApp =
         // diff contains all changed elements (not only the deleted)
         match diff with
             | [] -> m.scene.closedPages
-            | _ -> let mutable del = list.Empty
-                   for d in diff do
-                        let t = deUpdated |> List.filter(fun x -> x.id = d.id)
-                        if t.IsEmpty then
-                           del <- del @ [d]
-                        else
-                           del <- del 
-                   List.append m.scene.closedPages del 
+            | _ -> let test = 
+                         diff 
+                            |> List.choose (fun x -> let t = deUpdated |> List.filter(fun y -> y.id = x.id)
+                                                     match t with
+                                                        | [] -> Some x
+                                                        | _  -> None 
+                                                      )
+                                   
+                   List.append m.scene.closedPages test 
                    
 
     let addDockElement (dnc : DockNodeConfig) (de:DockElement) = 
@@ -312,23 +333,23 @@ module ViewerApp =
                         DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing msg
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
-              let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
-              let animation = 
-                match msg with
-                  | SurfaceApp.Action.FlyToSurface id -> 
-                    let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
-                    match surf with
-                      | Some s ->
-                              let bb = s.globalBB
-                              let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value                                  
-                              let animationMessage = 
-                                  animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
-                              let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                              a'
-                      | None -> m.animations
-                  | _-> m.animations
-                     
-              { m with scene = { m.scene with surfacesModel = s}; animations = animation}
+                    let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
+                    let animation = 
+                          match msg with
+                            | SurfaceApp.Action.FlyToSurface id -> 
+                                let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
+                                match surf with
+                                    | Some s ->
+                                            let bb = s.globalBB
+                                            let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
+                                            let animationMessage = 
+                                                animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                                            let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                                            a'
+                                    | None -> m.animations
+                            | _-> m.animations
+                           
+                    { m with scene = { m.scene with surfacesModel = s}; animations = animation}
             | AnnotationMessage msg,_,_ ->                
                 match m.drawing.annotations.singleSelectLeaf with
                   | Some selected ->                             
@@ -389,25 +410,7 @@ module ViewerApp =
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m
-
-                        let sgSurfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
-                        let head = sgSurfaces |> List.tryHead
-                        match head with
-                          | Some v ->
-
-                            let fullBb = 
-                               sgSurfaces 
-                                  |> List.map(fun x -> x.globalBB) 
-                                  |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
-
-                            let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
-                            let (refSystem',_)= 
-                                ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
-                            let (orSystem',_)= 
-                                ReferenceSystemApp.update m.scene.config refConfig (m.scene.orientationSystem) refAction  
-                                                                
-                            { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = orSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB
-                          | None -> m
+                        updateSceneWithNewSurface m
             | ImportObject sl,_,_ -> 
                 match sl with
                     | [] -> m
@@ -419,23 +422,7 @@ module ViewerApp =
                                 |> PList.ofList
 
                         let m = Scene.importObj runtime signature objects m
-
-                        let sgSurfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
-                        let head = sgSurfaces |> List.tryHead
-                        match head with
-                          | Some v ->
-
-                            let fullBb = 
-                               sgSurfaces 
-                                  |> List.map(fun x -> x.globalBB) 
-                                  |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
-
-                            let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
-                            let (refSystem',_)= 
-                                ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
-                                                                
-                            { m with scene = { m.scene with referenceSystem = refSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB
-                          | None -> m                                                          
+                        updateSceneWithNewSurface m    
             | ImportAnnotationGroups sl,_,_ ->
               match sl with
                 | [] -> m   
@@ -564,11 +551,7 @@ module ViewerApp =
             | SaveAs s,_,_ ->
                 match s.IsEmptyOrNull() with
                     | true -> m
-                    | _  -> 
-                        saveSceneAndAnnotations s m
-                        //let s' = { m.scene with scenePath = Some s}   
-                        //let drawing = DrawingApp.saveSceneAnnotations s m.drawing
-                        //{ m with scene = Serialization.save s s'; drawing = drawing } |> Model.stashAndSaveRecent s
+                    | _  -> saveSceneAndAnnotations s m
             | OpenScene sl,_,_ ->
                 match sl.Length < 1 with
                     | true -> m
@@ -585,8 +568,6 @@ module ViewerApp =
                     |> loadLastAnnotations  
             | NewScene,_,_ ->
                 let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox with recent = m.recent }
-                //let m'' = {m' with scene = {m'.scene with scenePath = None}}
-                //m'
                 loadRoverData m'
             | KeyDown k, _, _ ->
               let drawingAction =
@@ -607,7 +588,10 @@ module ViewerApp =
               let m =
                 match (m.ctrlFlag, k, m.scene.scenePath) with
                 | (true, Aardvark.Application.Keys.S, Some path) -> 
-                  { (saveSceneAndAnnotations path m) with ctrlFlag = false }                  
+                  { (saveSceneAndAnnotations path m) with ctrlFlag = false }   
+                | (true, Aardvark.Application.Keys.S, None) -> 
+                   Log.error "please use \"save\" in the menu to save the scene";
+                   { m with ctrlFlag = false }   // (saveSceneAndAnnotations p m)
                 |_-> m
                              
               let m =
@@ -965,29 +949,29 @@ module ViewerApp =
                 )
 
         let topMenuItems = [
-          Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
+             Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
           
-          Html.Layout.horizontal [
-             Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
-             Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
-          ]                        
-          Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
+             Html.Layout.horizontal [
+                Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
+                Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
+             ]                        
+             Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
           
-          Html.Layout.horizontal [
-            Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
-            Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
-          ] 
-          Html.Layout.horizontal [
-            Html.Layout.boxH [ scenepath ]
-          ]              
+             Html.Layout.horizontal [
+               Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
+               Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
+             ] 
+             Html.Layout.horizontal [
+               Html.Layout.boxH [ scenepath ]
+             ] 
         ]        
 
         let topMenu =
-          div[clazz "ui menu"; style "padding:0; margin:0; border:0"] [
-            yield Gui.TopMenu.menu m
-            for t in topMenuItems do
-              yield div [clazz "item topmenu"] [t]
-          ]
+            div[clazz "ui menu"; style "padding:0; margin:0; border:0"] [
+                yield Gui.TopMenu.menu m
+                for t in topMenuItems do
+                    yield div [clazz "item topmenu"] [t]
+            ]
                                            
         let dnsColorLegend =
           FalseColorLegendApp.Draw.createColorLegendDnS m.drawing.colorLegend (V2d(100.0, 200.0))
@@ -1009,8 +993,16 @@ module ViewerApp =
           { kind = Script;      name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
         ]
         
+        let ioverlayed =
+            let annos = 
+              annotations
+                    |> Sg.map DrawingMessage
+                    |> Sg.fillMode (Mod.constant FillMode.Fill)
+                    |> Sg.cullMode (Mod.constant CullMode.None)
+            [annos] |> Sg.ofList
+
         // instrument view control
-        let icmds    = ViewerUtils.renderCommands AList.empty Sg.empty Sg.empty m //m.scene.surfacesModel.sgGrouped
+        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped ioverlayed Sg.empty m // m.scene.surfacesModel.sgGrouped overlayed discs m
         let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
         let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
                        
@@ -1021,7 +1013,10 @@ module ViewerApp =
           match Map.tryFind "page" request.queryParams with
             | Some "instrumentview" ->
                 require (myCss) (
-                  body [style "background: #1B1C1E; height:100%; width:100%"] [ icontrol ]
+                  body [style "background: #1B1C1E; height:100%; width:100%"] [ 
+                        icontrol 
+                        Viewer.Gui.textOverlaysInstrumentView m.scene.viewPlans
+                  ]
                 )
             | Some "render" -> 
                 require (myCss) (
@@ -1095,7 +1090,7 @@ module ViewerApp =
               |> Scene.loadLastScene runtime signature
               |> loadRoverData
               |> loadLastAnnotations
-                             
+       
         App.start {
             unpersist = Unpersist.instance
             threads   = threadPool

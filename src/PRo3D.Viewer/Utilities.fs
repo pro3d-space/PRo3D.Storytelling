@@ -796,4 +796,83 @@ module Shader =
             return v.c
     }
 
+module PRo3DNumeric = 
+    open Aardvark.Base.Incremental
+    open Aardvark.UI
+
+    let inline (=>) a b = Attributes.attribute a b
+
+    type Action = 
+        | SetValue of float
+        | SetMin of float
+        | SetMax of float
+        | SetStep of float
+        | SetFormat of string
+
+    let update (model : NumericInput) (action : Action) =
+        match action with
+        | SetValue v -> { model with value = v }
+        | SetMin v ->   { model with min = v }
+        | SetMax v ->   { model with max = v }
+        | SetStep v ->  { model with step = v }
+        | SetFormat s -> { model with format = s }
+
+    let formatNumber (format : string) (value : float) =
+        String.Format(Globalization.CultureInfo.InvariantCulture, format, value)
+
+    let numericField<'msg> ( f : Action -> seq<'msg> ) ( atts : AttributeMap<'msg> ) ( model : MNumericInput ) inputType =         
+
+        let tryParseAndClamp min max fallback s =
+            let parsed = 0.0
+            match Double.TryParse(s, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture) with
+                | (true,v) -> clamp min max v
+                | _ ->  printfn "validation failed: %s" s
+                        fallback
+
+        let onWheel' (f : Aardvark.Base.V2d -> seq<'msg>) =
+            let serverClick (args : list<string>) : Aardvark.Base.V2d = 
+                let delta = List.head args |> Pickler.unpickleOfJson
+                delta  / Aardvark.Base.V2d(-100.0,-100.0) // up is down in mouse wheel events
+
+            onEvent' "onwheel" ["{ X: event.deltaX.toFixed(10), Y: event.deltaY.toFixed(10)  }"] (serverClick >> f)
+
+        let attributes = 
+            amap {                
+                yield style "text-align:right; color : black"                
+
+                let! min = model.min
+                let! max = model.max
+                let! value = model.value
+                match inputType with
+                    | Slider ->   
+                        yield "type" => "range"
+                        yield onChange' (tryParseAndClamp min max value >> SetValue >> f)   // continous updates for slider
+                    | InputBox -> 
+                        yield "type" => "number"
+                        yield onChange' (tryParseAndClamp min max value >> SetValue >> f)  // batch updates for input box (to let user type)
+
+                let! step = model.step
+                yield onWheel' (fun d -> value + d.Y * step |> clamp min max |> SetValue |> f)
+
+                yield "step" => sprintf "%f" step
+                yield "min"  => sprintf "%f" min
+                yield "max"  => sprintf "%f" max
+
+                let! format = model.format
+                yield "value" => formatNumber format value
+            } 
+
+        Incremental.input (AttributeMap.ofAMap attributes |> AttributeMap.union atts)
+
+    let numericField' = numericField (Seq.singleton) AttributeMap.empty
+
+    let view' (inputTypes : list<NumericInputType>) (model : MNumericInput) : DomNode<Action> =
+        inputTypes 
+            |> List.map (numericField' model) 
+            |> List.intersperse (text " ") 
+            |> div []
+
+    let view (model : MNumericInput) =
+        view' [InputBox] model
+
   

@@ -29,6 +29,7 @@ open PRo3D.Groups
 open PRo3D.ReferenceSystem
 
 module Gui = 
+  open PRo3d.Mutable
 
   let pitchAndBearing (r:MReferenceSystem) (view:IMod<CameraView>) =
           adaptive {
@@ -54,10 +55,16 @@ module Gui =
       let spericalc = 
         Mod.map2 (fun (a : CameraView) b -> 
           CooTransformation.getLatLonAlt(a.Location) b ) cv m.planet
+
+      let alt2 = 
+        Mod.map2 (fun (a : CameraView) b -> 
+          CooTransformation.getAltitude a.Location a.Up b ) cv m.planet
       
       let lon = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.longitude).ToString("0.00")))
       let lat = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.latitude).ToString("0.00")))
-      let alt = spericalc |> Mod.map(fun x -> sprintf "%s m" ((x.altitude).ToString("0.00")))
+      //let alt = spericalc |> Mod.map(fun x -> sprintf "%s m" ((x.altitude).ToString("0.00")))
+      let alt2 = alt2 |> Mod.map(fun x -> sprintf "%s m" ((x).ToString("0.00")))
+                           
       
       let style' = "color: white; font-family:Consolas;"
     
@@ -87,15 +94,58 @@ module Gui =
                   td[style style'][text "Latitude: "]
                   td[style style'][Incremental.text lat]
               ]
+              //tr[][
+              //    td[style style'][text "Altitude: "]
+              //    td[style style'][Incremental.text alt]
+              //]
               tr[][
                   td[style style'][text "Altitude: "]
-                  td[style style'][Incremental.text alt]
+                  td[style style'][Incremental.text alt2]
               ]
           ]
       ]                              
     ]
 
+  let textOverlaysInstrumentView (m : MViewPlanModel)  = 
+    let instrument =
+        adaptive {
+            let! vp = m.selectedViewPlan
+            let! inst = 
+                    match vp with
+                            | Some v -> Mod.bindOption v.selectedInstrument "" (fun a -> a.id)
+                            | None -> Mod.constant("")
+
+            return inst
+        }
+    div [js "oncontextmenu" "event.preventDefault();"] [ 
+      let style' = "color: white; font-family:Consolas;"
+    
+      yield div [clazz "ui"; style "position: absolute; top: 15px; left: 15px; float:left" ] [
+          //arrowOverlay
+          yield table [] [
+              tr[][
+                  td[style style'][Incremental.text instrument]
+              ]
+          ]
+      ]                              
+    ]
   module TopMenu =
+
+    let save (m:MModel) = 
+        adaptive
+            {
+                let! path = m.scene.scenePath
+                return match path with
+                            | Some p ->
+                                 div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
+                                  text "Save"
+                                ]
+                            | None ->
+                                div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
+                                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
+                                  text "Save"
+                                ]
+            }
     
     let private importSurface (m:MModel) =
       [
@@ -112,32 +162,30 @@ module Gui =
              //  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
              //  text "OBJ"
              //]
+             ]
          ]
-      ]
 
     let private scene (m:MModel) = 
-      let save = 
+      let save (m:MModel) = 
         adaptive
-            {
-                let! path = m.scene.scenePath
-                return 
-                  match path with
-                  | Some p ->
-                    div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
-                     text "Save"
-                    ]
-                  | None ->
-                    div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
-                      clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
-                      text "Save"
-                    ]
-            }
+          {
+            let! path = m.scene.scenePath
+            return 
+              match path with
+              | Some p ->
+                div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][text "Save"]
+              | None ->
+                div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
+                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
+                  text "Save"
+                ]
+          }
       [
         text "Scene" 
         i [clazz "dropdown icon"][]
       
         div [ clazz "menu"] [
-            Incremental.div AttributeMap.empty (AList.ofModSingle save)
+            Incremental.div AttributeMap.empty (AList.ofModSingle (save m))
             div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveAs;
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({properties: []}));") ][
                   text "Save as..."

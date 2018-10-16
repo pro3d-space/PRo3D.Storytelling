@@ -50,7 +50,7 @@ module DrawingApp =
                     { a with segments = PList.append newSegment a.segments }
             | _ -> { a with points = a.points |> PList.append firstP }
 
-    let getFinishedAnnotation up north (model : DrawingModel) =
+    let getFinishedAnnotation up north planet (model : DrawingModel) =
         match model.working with
             | Some w ->  
                 let w = match w.geometry with
@@ -64,14 +64,14 @@ module DrawingApp =
                     //        let result = w.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
                     //        Some result //more acc. by using segments as well?
                     //    | _ -> None 
-                let results = Annotation.calculateAnnotationResults w up
+                let results = DrawingUtilities.Calculations.calculateAnnotationResults w up planet
                 Some { w with dnsResults = dns ; results = Some results }
             | None -> None
 
-    let finishAndAppendAndSend up north (model : DrawingModel) (bc : BlockingCollection<string>) = 
+    let finishAndAppendAndSend up north planet (model : DrawingModel) (bc : BlockingCollection<string>) = 
       
       let groups = 
-        match getFinishedAnnotation up north model with
+        match getFinishedAnnotation up north planet model with
           | Some a -> 
             let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
             bc.Add json                    
@@ -81,8 +81,8 @@ module DrawingApp =
           | None -> model.annotations             
 
       { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
-        
-    let addPoint up north samplePoint p model surfaceName bc =
+    
+    let addPoint up north planet samplePoint p model surfaceName bc =
       let working, newSegment = 
         match model.working with
           | Some w ->     
@@ -133,9 +133,9 @@ module DrawingApp =
 
       match (working.geometry, (working.points |> PList.count)) with
           | Geometry.Point, 1 -> 
-              finishAndAppendAndSend up north model bc, None
+              finishAndAppendAndSend up north planet model bc, None
           | Geometry.Line, 2 -> 
-              finishAndAppendAndSend up north model bc, None
+              finishAndAppendAndSend up north planet model bc, None
           | _ -> 
               model, newSegment // returns current segment for async computations outside
 
@@ -192,8 +192,9 @@ module DrawingApp =
 
     type SmallConfig<'a> =
         {
-            up    : Lens<'a,V3d>
-            north : Lens<'a,V3d>
+            up     : Lens<'a,V3d>
+            north  : Lens<'a,V3d>
+            planet : Lens<'a,Planet>
         }
 
     type MSmallConfig<'ma> =
@@ -237,8 +238,9 @@ module DrawingApp =
             | AddPointAdv (point, hitFunction, name), true ->
                     let up    = smallConfig.up.Get(bigConfig)
                     let north = smallConfig.north.Get(bigConfig)
+                    let planet = smallConfig.planet.Get(bigConfig)
 
-                    let model, newSegment = addPoint up north hitFunction point model name webSocket
+                    let model, newSegment = addPoint up north planet hitFunction point model name webSocket
                     
                     match newSegment with
                         | None         -> model
@@ -252,10 +254,11 @@ module DrawingApp =
                         { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
 
             | Finish, _ -> 
-                    let up    = smallConfig.up.Get(bigConfig)
-                    let north = smallConfig.north.Get(bigConfig)
+                    let up     = smallConfig.up.Get(bigConfig)
+                    let north  = smallConfig.north.Get(bigConfig)
+                    let planet = smallConfig.planet.Get(bigConfig)
 
-                    (finishAndAppendAndSend up north model webSocket) |> stash
+                    (finishAndAppendAndSend up north planet model webSocket) |> stash
             | Exit, _ -> 
                     { model with hoverPosition = None }
             | SetSemantic mode, _ ->
@@ -284,7 +287,7 @@ module DrawingApp =
                     model
             | Save p,_-> saveAnnotations p model
 
-            | Load p,_ ->                              
+            | Load p,_ ->                
               match p.Length < 1 with
                 | true -> model
                 | false -> 
@@ -488,13 +491,13 @@ module DrawingApp =
                         geometry  |> sprintf "%A"
                       | _ -> 
                         semantic  |> sprintf "%A"
-                   
+              
                 }
 
               div [clazz "item"] [
                 Incremental.i iconAttributes AList.empty
                 div [clazz "content"] [                  
-                  let desc = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.count) a.surfaceName
+                  let desc   = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.count) a.surfaceName
                   
                   //header
                   yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
@@ -643,7 +646,7 @@ module DrawingApp =
                    do! DefaultSurfaces.simpleLighting
                }
                |> Sg.trafo(trafo) 
-                                                                                      
+               
         type innerViewConfig =
             {
                 nearPlane       : IMod<float>
@@ -807,7 +810,7 @@ module DrawingApp =
             ] |> Sg.onOff anno.visible
 
         let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =
-           anno.showDns |> optional (drawDns anno conf cl cam) |> Sg.set
+           anno.showDns |> optional (drawDns anno conf cl cam) |> Sg.set |> Sg.onOff anno.visible
         
         let toAnnotationOpt = 
             fun y -> 

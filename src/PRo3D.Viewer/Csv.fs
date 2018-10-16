@@ -61,6 +61,7 @@ module Csv =
             { 
               height      = Double.NaN
               heightDelta = Double.NaN
+              avgAltitude = Double.NaN
               length      = Double.NaN
               wayLength   = Double.NaN
             }

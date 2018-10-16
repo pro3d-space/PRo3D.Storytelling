@@ -131,7 +131,7 @@ type ViewPlan = {
 [<DomainType>]
 type ViewPlanModel = {
     viewPlans           : hset<ViewPlan>
-    selectedViewPlan    : option<ViewPlan>
+    selectedViewPlan    : Option<ViewPlan>
     working             : list<V3d> // pos + lookAt
     roverModel          : RoverModel
     instrumentCam       : CameraControllerState
