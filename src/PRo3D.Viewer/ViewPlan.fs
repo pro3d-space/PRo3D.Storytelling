@@ -221,6 +221,38 @@ module ViewPlan =
             }
         newViewPlan
 
+    let createViewPlanFromFile (data:hmap<string,string>) (model:ViewPlanModel) (rover:Rover) (ref:ReferenceSystem) (camState:CameraControllerState) =
+        let pos = V3d((data |> HMap.find "X").ToFloat(), (data |> HMap.find "Y").ToFloat(), (data |> HMap.find "Z").ToFloat())
+        
+        let posQ = V4d((data |> HMap.find "qX").ToFloat(), (data |> HMap.find "qY").ToFloat(), (data |> HMap.find "qZ").ToFloat(), (data |> HMap.find "qW").ToFloat())
+        let rot = Rot3d(posQ.W,posQ.X, posQ.Y,posQ.Z)
+        let forward = rot.TransformDir(V3d.OOI)
+        let trafo = initialPlacementTrafo pos forward ref.up.value
+        let angle = 
+            {
+                value = 0.0
+                min =  -90.0
+                max = 90.0
+                step = 0.1
+                format = "{0:0.0}"
+            }
+
+        let newViewPlan = {
+            id = Guid.NewGuid()
+            name = rover.id
+            position = pos
+            lookAt = forward
+            viewerState = camState
+            vectorsVisible = true
+            rover = rover
+            roverTrafo = trafo
+            isVisible = true
+            selectedInstrument = None
+            selectedAxis = None
+            currentAngle = angle
+            }
+        { model with viewPlans = HSet.add newViewPlan model.viewPlans; working = List.Empty; selectedViewPlan = Some newViewPlan }
+
     let removeViewPlan (vps:hset<ViewPlan>) (id:Guid) = 
         vps |> HSet.filter (fun x -> x.id <> id)   
     

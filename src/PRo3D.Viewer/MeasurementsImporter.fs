@@ -1,12 +1,15 @@
 ﻿namespace PRo3D
 
-module MeasurementsImporter = 
-    open System
-    open System.Xml.Linq
-    open System.Xml
+open System
+open System.Xml.Linq
+open System.Xml
 
-    open Aardvark.Base
-    open Aardvark.UI
+open Aardvark.Base
+open Aardvark.UI
+
+
+module MeasurementsImporter = 
+   
 
     let xname s = XName.Get(s)
 

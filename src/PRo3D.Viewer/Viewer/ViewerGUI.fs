@@ -232,6 +232,11 @@ module Gui =
                               clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
                               text "Surface Trafos"
                           ]
+                          div [ clazz "ui item";
+                              Dialogs.onChooseFiles ImportRoverPlacement;
+                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+                              text "Rover Placement"
+                          ]
                       ]
                   ]
               

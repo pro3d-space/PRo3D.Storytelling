@@ -52,6 +52,7 @@ type ViewerAction =
     | ImportObject              of list<string>
     | ImportAnnotationGroups    of list<string>
     | ImportSurfaceTrafo        of list<string>
+    | ImportRoverPlacement      of list<string>
     | SwitchViewerMode
     | DnSProperties             of PropertyActions
     | ConfigPropertiesMessage   of ConfigProperties.Action

@@ -115,6 +115,7 @@
     <Compile Include="LensConfigs.fs" />
     <Compile Include="AnnotationGroupsImporter.fs" />
     <Compile Include="SurfaceTrafoImporter.fs" />
+    <Compile Include="RoverPlacementImporter.fs" />
     <Compile Include="Viewer\Viewer-Utils.fs" />
     <Compile Include="Viewer\ViewerGUI.fs" />
     <Compile Include="Viewer\Viewer.fs" />

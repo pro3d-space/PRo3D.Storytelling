@@ -494,7 +494,16 @@ module ViewerApp =
 
                   let s = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel
                   m |> Lenses.set _surfaceModelLens s                  
-                  
+            | ImportRoverPlacement sl,_,_ ->
+              match sl with
+                | [] -> m 
+                | p ->
+                  let path = p.[0]
+                  let importedData = RoverPlacementImporter.startRPImporter path 
+                  match m.scene.viewPlans.roverModel.selectedRover with
+                    | Some r -> let vp = ViewPlan.createViewPlanFromFile importedData m.scene.viewPlans r m.scene.referenceSystem m.scene.navigation.camera
+                                { m with scene = { m.scene with viewPlans = vp}} 
+                    | None -> m
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
             | QuickLoad2,_,_ ->                                
