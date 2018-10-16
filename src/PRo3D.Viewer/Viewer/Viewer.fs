@@ -272,6 +272,8 @@ module ViewerApp =
                 { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
             | _ -> m
 
+    let mutable lastHash = -1
+    
     let update (runtime : IRuntime) (signature: IFramebufferSignature) (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
@@ -503,45 +505,45 @@ module ViewerApp =
             | PickSurface (p,name), _ ,true ->
               let fray = p.globalRay.Ray
               let r = fray.Ray
-              Log.startTimed "[PickSurface] try intersect kdtree of %s" name               
-
-              Log.warn "%A" (r.GetHashCode())
-
-            //  ViewerUtils.hitCounter <- ViewerUtils.hitCounter - 1
-                            
-              let hitF (camLocation : V3d) (p : V3d) = 
+              let rayHash = r.GetHashCode()
+              if rayHash = lastHash then
+                m
+              else                                
+                Log.startTimed "[PickSurface] try intersect kdtree of %s" name                                                                     
+                let hitF (camLocation : V3d) (p : V3d) = 
+                  
+                  let ray =
+                      match m.drawing.projection with
+                          | Projection.Viewpoint -> 
+                              let dir = (p-camLocation).Normalized
+                              FastRay3d(camLocation, dir)  
+                          | Projection.Sky -> 
+                              let up = m.scene.referenceSystem.up.value
+                              FastRay3d(p + (up * 5000.0), -up)  
+                          | _ -> Log.error "projection started without proj mode"; FastRay3d()
+                  
+                  match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) ray cache with
+                      | Some (t,surf), c ->                             
+                          cache <- c; ray.Ray.GetPointOnRay t |> Some
+                      | None, c ->
+                          cache <- c; None
+                                    
+                let result = 
+                  match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) fray cache with
+                  | Some (t,surf), c ->                         
+                    cache <- c
+                    let hit = r.GetPointOnRay(t)
+                    let cameraLocation = m.scene.navigation.camera.view.Location 
+                    let hitF = hitF cameraLocation
                 
-                let ray =
-                    match m.drawing.projection with
-                        | Projection.Viewpoint -> 
-                            let dir = (p-camLocation).Normalized
-                            FastRay3d(camLocation, dir)  
-                        | Projection.Sky -> 
-                            let up = m.scene.referenceSystem.up.value
-                            FastRay3d(p + (up * 5000.0), -up)  
-                        | _ -> Log.error "projection started without proj mode"; FastRay3d()
-                
-                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) ray cache with
-                    | Some (t,surf), c ->                             
-                        cache <- c; ray.Ray.GetPointOnRay t |> Some
-                    | None, c ->
-                        cache <- c; None
-                                  
-              let result = 
-                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) fray cache with
-                | Some (t,surf), c ->                         
-                  cache <- c
-                  let hit = r.GetPointOnRay(t)
-                  let cameraLocation = m.scene.navigation.camera.view.Location 
-                  let hitF = hitF cameraLocation
-
-                  matchPickingInteraction sendQueue hit hitF surf m                                    
-                | None, _ -> 
-                    Log.error "[PickSurface] no hit of %s" name
-                    m
-              Log.stop()
-              Log.error "done intersecting"
-              result
+                    matchPickingInteraction sendQueue hit hitF surf m                                    
+                  | None, _ -> 
+                      Log.error "[PickSurface] no hit of %s" name
+                      m
+                Log.stop()
+                Log.error "done intersecting"
+                lastHash <- rayHash
+                result
             | PickObject (p,id), _ ,_ ->  
                 match m.picking with
                     |true ->
