@@ -1,46 +1,45 @@
 framework: netstandard2.0, net471, netcoreapp2.0
 
 source https://api.nuget.org/v3/index.json
-source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://vrvis.myget.org/F/aardvark/auth/11394d4d-4fe9-44ec-87c8-f3e98909f975/api/v3/index.json
 
-nuget Aardvark.Base.Rendering              ~> 4.3.20
-nuget Aardvark.Application.WinForms.GL     ~> 4.3.20
-nuget Aardvark.Application.WinForms.Vulkan ~> 4.3.20
-nuget Aardvark.SceneGraph                  ~> 4.3.20
-nuget Aardvark.SceneGraph.IO               ~> 4.3.20
-nuget Aardvark.SceneGraph.Opc              ~> 4.3.20
-nuget Aardvark.Rendering.Text              ~> 4.3.20
-nuget Aardvark.Rendering.Vulkan            ~> 4.3.20
-nuget Aardvark.Rendering.GL                ~> 4.3.20
+nuget Aardvark.Base.Rendering              ~> 4.4.0
+nuget Aardvark.Application.WinForms.GL     ~> 4.4.0
+nuget Aardvark.Application.WinForms.Vulkan ~> 4.4.0
+nuget Aardvark.SceneGraph                  ~> 4.4.0
+nuget Aardvark.SceneGraph.IO               ~> 4.4.0
+nuget Aardvark.SceneGraph.Opc              ~> 4.4.0
+nuget Aardvark.Rendering.Text              ~> 4.4.0
+nuget Aardvark.Rendering.Vulkan            ~> 4.4.0
+nuget Aardvark.Rendering.GL                ~> 4.4.0
 
 nuget Unofficial.OpenTK                  ~> 3.0.16
 
-nuget FShade        ~> 4.1.16
-nuget FShade.Debug  ~> 4.1.16
+nuget FShade        ~> 4.2.21
+nuget FShade.Debug  ~> 4.2.21
 
-nuget Aardvark.Base                         ~> 4.0.20
-nuget Aardvark.Base.IO                      ~> 4.0.20
-nuget Aardvark.Base.Incremental             ~> 4.0.20
-nuget Aardvark.Base.FSharp                  ~> 4.0.20
-nuget Aardvark.Base.Essentials              ~> 4.0.20
+nuget Aardvark.Base                         ~> 4.2.0
+nuget Aardvark.Base.IO                      ~> 4.2.0
+nuget Aardvark.Base.Incremental             ~> 4.2.0
+nuget Aardvark.Base.FSharp                  ~> 4.2.0
+nuget Aardvark.Base.Essentials              ~> 4.2.0
                                              
-nuget Aardvark.Compiler.DomainTypes         ~> 4.0.10
-nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 4.0.10
+nuget Aardvark.Compiler.DomainTypes         ~> 4.2.0
+nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 4.2.0
 
-nuget Aardvark.VRVis.Geometry               ~> 4.0.20
-nuget Aardvark.VRVis.Opc                    ~> 4.0.20
-nuget Aardvark.Fitting.Planes               ~> 4.0.20
+nuget Aardvark.VRVis.Geometry               ~> 4.2.0
+nuget Aardvark.VRVis.Opc                    ~> 4.2.0
+nuget Aardvark.Fitting.Planes               ~> 4.2.0
 
 nuget FSharp.Core                           ~> 4.3.0
 
 nuget FsPickler                             ~> 5.2.0
 nuget FsPickler.Json                        ~> 5.2.0
 
-nuget Aardvark.UI                           ~> 4.2.1
-nuget Aardvark.UI.Primitives                ~> 4.2.1
-nuget Aardvark.Service                      ~> 4.2.1
-nuget Aardvark.Cef.WinForms                 ~> 4.2.1
+nuget Aardvark.UI                           ~> 4.3.1
+nuget Aardvark.UI.Primitives                ~> 4.3.1
+nuget Aardvark.Service                      ~> 4.3.1
+nuget Aardvark.Cef.WinForms                 ~> 4.3.1
 
 nuget Aardium  ~> 1.0.9
 
@@ -55,7 +54,6 @@ group Build
 framework: net45
 
 content: none
-source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://api.nuget.org/v3/index.json
 
 github aardvark-platform/aardvark.fake:v4

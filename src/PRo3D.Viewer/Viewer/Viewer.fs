@@ -294,12 +294,14 @@ module ViewerApp =
                 { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
             | _ -> m
 
-    let update (runtime : IRuntime) (signature: IFramebufferSignature) (bc : BlockingCollection<string>) (m : Model) (msg : ViewerAction) =        
+    let update (runtime : IRuntime) (signature: IFramebufferSignature) (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
                let ref = m.scene.referenceSystem
                let nav = Navigation.update c ref navConf m.scene.navigation msg               
+
+//               m.scene.navigation.camera.view.Location.ToString() |> NoAction |> ViewerAction |> mailbox.Post
 
                m 
                  |> Lenses.set _navigation nav
@@ -327,7 +329,7 @@ module ViewerApp =
                       | None -> m                    
                 | _ ->
                     let drawing = 
-                        DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing msg
+                        DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing msg
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
                     let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
@@ -339,7 +341,6 @@ module ViewerApp =
                                     | Some s ->
                                             let bb = s.globalBB
                                             let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
-                                            
                                             let animationMessage = 
                                                 animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
                                             let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
@@ -364,7 +365,7 @@ module ViewerApp =
 
                 let animation = 
                   match msg with
-                  | Bookmarks.Action.GroupsMessage k ->
+                  | BookmarkAction.GroupsMessage k ->
                     match k with 
                     | Groups.Action.UpdateCam _->
                       let location = m'.scene.navigation.camera.view.Location
@@ -469,8 +470,7 @@ module ViewerApp =
                   m 
                     |> Lenses.set _groups newGroups
                     |> Lenses.set _lookUp lookup
-                    |> Lenses.set _flat flat
-                
+                    |> Lenses.set _flat flat                
             | ImportSurfaceTrafo sl,_,_ ->
               match sl with
                 | [] -> m 
@@ -518,16 +518,14 @@ module ViewerApp =
               Log.startTimed "kdtree intersect %s %A" name ViewerUtils.hitCounter
 
               ViewerUtils.hitCounter <- ViewerUtils.hitCounter - 1
-
-              let cameraLocation = m.scene.navigation.camera.view.Location 
               
-              let hitF (p : V3d) = 
+              let hitF (camLocation : V3d) (p : V3d) = 
                 
                 let ray =
                     match m.drawing.projection with
                         | Projection.Viewpoint -> 
-                            let dir = (p-cameraLocation).Normalized
-                            FastRay3d(cameraLocation, dir)  
+                            let dir = (p-camLocation).Normalized
+                            FastRay3d(camLocation, dir)  
                         | Projection.Sky -> 
                             let up = m.scene.referenceSystem.up.value
                             FastRay3d(p + (up * 5000.0), -up)  
@@ -543,7 +541,10 @@ module ViewerApp =
                 | Some (t,surf), c ->                         
                   cache <- c
                   let hit = r.GetPointOnRay(t)
-                  matchPickingInteraction bc hit hitF surf m
+                  let cameraLocation = m.scene.navigation.camera.view.Location 
+                  let hitF = hitF cameraLocation
+
+                  matchPickingInteraction sendQueue hit hitF surf m
                 | None, _ -> 
                     Log.error ("no hit")
                     m
@@ -552,7 +553,7 @@ module ViewerApp =
                     |true ->
                           let hitF (p : V3d) = None
                           match (m.scene.surfacesModel.surfaces.flat.TryFind id) with
-                            | Some x -> matchPickingInteraction bc p hitF (x |> Leaf.toSurface) m 
+                            | Some x -> matchPickingInteraction sendQueue p hitF (x |> Leaf.toSurface) m 
                             | None -> m
                     | false -> m
                 
@@ -562,7 +563,8 @@ module ViewerApp =
                         match s.IsEmptyOrNull() with
                             | true -> m
                             | _ -> saveSceneAndAnnotations s m
-                    | Some path -> saveSceneAndAnnotations path m
+                    | Some path -> 
+                        saveSceneAndAnnotations path m                                     
             | SaveAs s,_,_ ->
                 match s.IsEmptyOrNull() with
                     | true -> m
@@ -582,7 +584,7 @@ module ViewerApp =
                     |> loadRoverData
                     |> loadLastAnnotations  
             | NewScene,_,_ ->
-                let m' = { PRo3D.Viewer.Viewer.initial with recent = m.recent }
+                let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox with recent = m.recent }
                 loadRoverData m'
             | KeyDown k, _, _ ->
               let drawingAction =
@@ -612,7 +614,7 @@ module ViewerApp =
               let m =
                 match m.interaction with
                 | Interactions.DrawAnnotation -> 
-                    let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing drawingAction } |> stash
+                    let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing drawingAction } |> stash
                     match drawingAction with
                       | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
                       | _ -> m                                
@@ -674,9 +676,9 @@ module ViewerApp =
             | KeyUp k, _,_ ->
                 let d =
                   match k with
-                  | Aardvark.Application.Keys.LeftCtrl -> DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing Drawing.Action.StopDrawing
-                  | _ -> m.drawing
-                
+                  | Aardvark.Application.Keys.LeftCtrl -> 
+                    DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopDrawing
+                  | _ -> m.drawing                
                 { m with drawing = d; picking = false } |> stash
             | SetInteraction t,_,_ -> { m with interaction = t }
             | ReferenceSystemMessage a,_,_ ->                                
@@ -745,7 +747,11 @@ module ViewerApp =
                 let argument = sprintf "/select, \"%s\"" p
                 Process.Start("explorer.exe", argument) |> ignore
                 m
-            | NoAction s,_,_ -> m        
+            | NoAction s,_,_ -> 
+              if s.IsEmptyOrNull() |> not then 
+                Log.line "[Viewer.fs] No Action %A" s
+              
+              m                   
             | UpdateDockConfig dcf,_,_ ->
                 let closedPages = updateClosedPages m dcf.content
                 { m with scene = { m.scene with dockConfig = dcf; closedPages = closedPages } }
@@ -841,12 +847,12 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 //|> Sg.map OrientationCube
 
-            let orientationCube =                                    
-              OrientationCube.Sg.loadCubeModel "../../data/rotationcube/rotationcube.dae"
-              //orientationRef
-                |> OrientationCube.Sg.orthoOrientation m.scene.navigation.camera.view m.scene.referenceSystem                 
-                |> Sg.map OrientationCube
-                |> Sg.onOff m.scene.config.drawOrientationCube
+            //let orientationCube =                                    
+            //  OrientationCube.Sg.loadCubeModel "../../data/rotationcube/rotationcube.dae"
+            //  //orientationRef
+            //    |> OrientationCube.Sg.orthoOrientation m.scene.navigation.camera.view m.scene.referenceSystem                 
+            //    |> Sg.map OrientationCube
+            //    |> Sg.onOff m.scene.config.drawOrientationCube
                
             //let controller = 
             //    adaptive {
@@ -881,7 +887,7 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
                         
-            [annos; exploreCenter; refSystem; alignment; viewPlans; orientationCube] |> Sg.ofList
+            [annos; exploreCenter; refSystem; alignment; viewPlans (*;orientationCube*)] |> Sg.ofList
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
@@ -961,13 +967,13 @@ module ViewerApp =
 
         let topMenuItems = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
-
+          
              Html.Layout.horizontal [
                 Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
                 Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
              ]                        
              Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
-
+          
              Html.Layout.horizontal [
                Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
                Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
@@ -975,7 +981,6 @@ module ViewerApp =
              Html.Layout.horizontal [
                Html.Layout.boxH [ scenepath ]
              ] 
-             
         ]        
 
         let topMenu =
@@ -986,9 +991,7 @@ module ViewerApp =
             ]
                                            
         let dnsColorLegend =
-            FalseColorLegendApp.Draw.createColorLegendDnS 
-                    m.drawing.colorLegend 
-                    (Aardvark.Base.V2d(100.0, 200.0))
+          FalseColorLegendApp.Draw.createColorLegendDnS m.drawing.colorLegend (V2d(100.0, 200.0))
 
         let scalarsColorLegend =
             let attr = 
@@ -1096,23 +1099,19 @@ module ViewerApp =
           let wp = Serialization.loadAs<plist<WayPoint>> path
           { m with waypoints = wp }
         | None -> m
-
     
-
-    let start (runtime: IRuntime) (signature: IFramebufferSignature) bc =
-
+    let start (runtime: IRuntime) (signature: IFramebufferSignature) messagingMailbox sendQueue =
 
         let m = 
-            PRo3D.Viewer.Viewer.initial 
+            PRo3D.Viewer.Viewer.initial messagingMailbox 
               |> Scene.loadLastScene runtime signature
               |> loadRoverData
-              |> loadLastAnnotations  
-
+              |> loadLastAnnotations
        
         App.start {
             unpersist = Unpersist.instance
             threads   = threadPool
             view      = view //localhost
-            update    = update runtime signature bc
+            update    = update runtime signature sendQueue messagingMailbox
             initial   = m
         }

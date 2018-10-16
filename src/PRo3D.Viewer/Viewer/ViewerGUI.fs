@@ -149,7 +149,7 @@ module Gui =
     
     let private importSurface (m:MModel) =
       [
-         text "Import Surface"
+         text "Import"
          i [clazz "dropdown icon"][] 
          div [ clazz "menu"] [
              div [ clazz "ui inverted item"; 
@@ -157,15 +157,16 @@ module Gui =
                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
                text "OPC"
              ]
-             div [ clazz "ui inverted item"; 
-               Dialogs.onChooseFiles ImportObject;
-               clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
-               text "OBJ"
+             //div [ clazz "ui inverted item"; 
+             //  Dialogs.onChooseFiles ImportObject;
+             //  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
+             //  text "OBJ"
+             //]
              ]
          ]
-      ]
 
     let private scene (m:MModel) = 
+      
       [
         text "Scene" 
         i [clazz "dropdown icon"][]
@@ -213,7 +214,7 @@ module Gui =
               i [clazz "large sidebar icon"; style "margin:0px 2px"][] 
               
               div [ clazz "ui menu"] [
-                  div [ clazz "ui dropdown item"; style "width: 150px"] [] //spacer as workaround for taboverdraw
+                  div [ clazz "ui dropdown item"; style "width: 150px"] [] //spacer as workaround for tab overdraw
                   div [ clazz "ui dropdown item"] (scene m)
               
                   div [ clazz "ui dropdown item"] (importSurface m)
@@ -258,6 +259,23 @@ module Gui =
                                        ]
                               } |> AList.ofASet
                           )
+                      ]
+                  ]
+
+                  div [ clazz "ui dropdown item"] [
+                      text "Extras"
+                      i [clazz "dropdown icon"][] 
+                      div [ clazz "menu"] [
+                          div [ clazz "ui item";
+                              Dialogs.onChooseFiles ImportAnnotationGroups;
+                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
+                              text "Import Annotations Groups"
+                          ]
+                          div [ clazz "ui item";
+                              Dialogs.onChooseFiles ImportSurfaceTrafo;
+                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+                              text "Import Surface Trafos"
+                          ]
                       ]
                   ]
               ] 

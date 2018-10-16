@@ -29,60 +29,57 @@ open PRo3D.Groups
 open Aardvark.UI.Trafos
 open Aardvark.UI.Animation
 
-type PropertyActions =
-    | DrawingMessage    of Drawing.Action
-    | AnnotationMessage of AnnotationProperties.Action
 
-type ViewerAction =                
-    | DrawingMessage            of Drawing.Action
-    | AnnotationGroupsMessageViewer   of Groups.Action
-    | NavigationMessage         of Navigation.Action
-    | AnimationMessage          of AnimationAction
-    | ReferenceSystemMessage    of ReferenceSystemApp.Action
-    | AnnotationMessage         of AnnotationProperties.Action
-    | BookmarkMessage           of Bookmarks.Action
-    | BookmarkUIMessage         of Groups.Action
-    | RoverMessage              of RoverApp.Action
-    | ViewPlanMessage           of ViewPlan.Action
-    | DnSColorLegendMessage     of FalseColorLegendApp.Action
-    | SetCamera                 of CameraView        
-    | SetCameraAndFrustum       of CameraView * double * double        
-    | SetCameraAndFrustum2      of CameraView * Frustum
-    | ImportSurface             of list<string>
-    | ImportObject              of list<string>
-    | ImportAnnotationGroups    of list<string>
-    | ImportSurfaceTrafo        of list<string>
-    | ImportRoverPlacement      of list<string>
-    | SwitchViewerMode
-    | DnSProperties             of PropertyActions
-    | ConfigPropertiesMessage   of ConfigProperties.Action
-    | QuickLoad1
-    | QuickLoad2
-    | DeleteLast
-    | AddSg                     of ISg
-    | PickSurface               of SceneHit*string
-    | PickObject                of V3d*Guid
-    | SaveScene                 of string
-    | SaveAs                    of string
-    | OpenScene                 of list<string>
-    | LoadScene                 of string
-    | NewScene
-    | KeyDown                   of key : Aardvark.Application.Keys
-    | KeyUp                     of key : Aardvark.Application.Keys      
-    | SetKind                   of TrafoKind
-    | SetInteraction            of Interactions        
-    | SetMode                   of TrafoMode
-    | Translate                 of string * TrafoController.Action
-    | Rotate                    of string * TrafoController.Action
-    | SurfaceActions            of SurfaceApp.Action
-    | AlignmentActions          of PRo3d.Align.AlignmentActions
-    | SetTabMenu                of TabMenu
-    | OpenSceneFileLocation     of string
-    | NoAction                  of string
-    | OrientationCube           of ISg
-    | UpdateDockConfig          of DockConfig
-    | AddPage                   of DockElement
-    | ToggleOrientationCube
+//type ViewerAction =                
+//    | DrawingMessage            of Drawing.Action
+//    | AnnotationGroupsMessageViewer   of Groups.Action
+//    | NavigationMessage         of Navigation.Action
+//    | AnimationMessage          of AnimationAction
+//    | ReferenceSystemMessage    of ReferenceSystemApp.Action
+//    | AnnotationMessage         of AnnotationProperties.Action
+//    | BookmarkMessage           of Bookmarks.Action
+//    | BookmarkUIMessage         of Groups.Action
+//    | RoverMessage              of RoverApp.Action
+//    | ViewPlanMessage           of ViewPlan.Action
+//    | DnSColorLegendMessage     of FalseColorLegendApp.Action
+//    | SetCamera                 of CameraView        
+//    | SetCameraAndFrustum       of CameraView * double * double        
+//    | SetCameraAndFrustum2      of CameraView * Frustum
+//    | ImportSurface             of list<string>
+//    | ImportObject              of list<string>
+//    | ImportAnnotationGroups    of list<string>
+//    | ImportSurfaceTrafo        of list<string>
+//    | ImportRoverPlacement      of list<string>
+//    | SwitchViewerMode
+//    | DnSProperties             of PropertyActions
+//    | ConfigPropertiesMessage   of ConfigProperties.Action
+//    | QuickLoad1
+//    | QuickLoad2
+//    | DeleteLast
+//    | AddSg                     of ISg
+//    | PickSurface               of SceneHit*string
+//    | PickObject                of V3d*Guid
+//    | SaveScene                 of string
+//    | SaveAs                    of string
+//    | OpenScene                 of list<string>
+//    | LoadScene                 of string
+//    | NewScene
+//    | KeyDown                   of key : Aardvark.Application.Keys
+//    | KeyUp                     of key : Aardvark.Application.Keys      
+//    | SetKind                   of TrafoKind
+//    | SetInteraction            of Interactions        
+//    | SetMode                   of TrafoMode
+//    | Translate                 of string * TrafoController.Action
+//    | Rotate                    of string * TrafoController.Action
+//    | SurfaceActions            of SurfaceApp.Action
+//    | AlignmentActions          of PRo3d.Align.AlignmentActions
+//    | SetTabMenu                of TabMenu
+//    | OpenSceneFileLocation     of string
+//    | NoAction                  of string
+//    | OrientationCube           of ISg
+//    | UpdateDockConfig          of DockConfig
+//    | AddPage                   of DockElement
+//    | ToggleOrientationCube
 
 
 module ViewerUtils =    
@@ -321,14 +318,14 @@ module ViewerUtils =
                 //            Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
                 //            return maxAngle |> Double.radiansFromDegrees |> Math.Cos
                 //        })
-                |> Sg.uniform "useContrastS"  (useContr |> Mod.map(fun x -> not x))
+                |> Sg.uniform "useContrastS"  useContr
                 |> Sg.uniform "contrastS"     contr
-                |> Sg.uniform "useBrightnS"   (useB |> Mod.map(fun x -> not x)) 
+                |> Sg.uniform "useBrightnS"   useB
                 |> Sg.uniform "brightnessS"   bright
-                |> Sg.uniform "useGammaS"     (useG |> Mod.map(fun x -> not x))  
+                |> Sg.uniform "useGammaS"     useG 
                 |> Sg.uniform "gammaS"        gamma
-                |> Sg.uniform "useGrayS"      (useGray |> Mod.map(fun x -> not x)) 
-                |> Sg.uniform "useColorS"     (useColor |> Mod.map(fun x -> not x)) 
+                |> Sg.uniform "useGrayS"      useGray
+                |> Sg.uniform "useColorS"     useColor
                 |> Sg.uniform "colorS"        color
                 |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
                 |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))

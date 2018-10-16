@@ -13,12 +13,6 @@ open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis
 open Aardvark.Base.Rendering
 open Aardvark.Base.CameraView
-//open Microsoft.WindowsAPICodePack.Shell.PropertySystem.SystemProperties.System
-
-//open OpenCvSharp.SimpleBlobDetector
-
-//open Aardvark.Data.PhotoNetwork
-
 type NavigationMode = FreeFly = 0 | ArcBall = 1
 type InteractionMode = PickOrbitCenter = 0 | Draw = 1 | PlaceObject = 2
 
@@ -234,6 +228,7 @@ type AnnotationResults = {
     length      : float
     wayLength   : float
 }
+
 [<DomainType>]
 type Segment = {
     startPoint : V3d
@@ -241,14 +236,6 @@ type Segment = {
     
     points : plist<V3d> 
 }
-
-[<ReferenceEquality>]
- type CylinderAnnotation =
-   {
-     id        : Guid
-     positions : V3d[]
-     cylinders : Cylinder3d[]
-   }
 
 [<DomainType>]
 type Annotation = {
@@ -516,20 +503,7 @@ module ViewConfigModel =
         step    = 0.1
         format  = "{0:0.00}"
     }
-    //let initMinAngle = {
-    //    value   = 0.0
-    //    min     = 0.0
-    //    max     = 90.0
-    //    step    = 1.0
-    //    format  = "{0:0.0}"
-    //}
-    //let initMaxAngle = {
-    //    value   = 90.0
-    //    min     = 1.0
-    //    max     = 90.0
-    //    step    = 1.0
-    //    format  = "{0:0.0}"
-    //}
+    
     let initial = {
         nearPlane = initNearPlane
         farPlane = initFarPlane

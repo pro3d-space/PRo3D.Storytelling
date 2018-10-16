@@ -34,6 +34,7 @@ open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis.Opc
 
 open Aardium
+open System.Threading
 
 [<DataContract>]
 type Calc =
@@ -60,16 +61,16 @@ type License = {
   institution : string
 }
 
-let viewerVersion       = "2.7.0*"
+let viewerVersion       = "2.8.2-preview"
 let mutable licenseText = ""
-let catchDomainErrors   = false
+let catchDomainErrors   = true
 let licenseCheck        = false
 let licPath             = @".\pro3d.lic"
 
 let buildLicense(time) = 
   
-  let userName    = "Laura Fritz" //"Thomas Ortner"
-  let institution = "VRVis"
+  let userName    = "Elyse Allender"
+  let institution = "St. Andrews"
 
   let mutable createAKey = new SKGL.Generate()
   createAKey.secretPhase <- (userName + institution + viewerVersion).GetHashCode().ToString()
@@ -85,7 +86,7 @@ let buildLicense(time) =
   Environment.Exit(0)
 
 let checkLicense () =
-  let contact = "Please contact hesina@vrvis.at, VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH, Vienna, Austria, www.vrvis.at"  
+  let contact = "Please contact ortner@vrvis.at, VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH, Vienna, Austria, www.vrvis.at"  
 
   if (not (System.IO.File.Exists(licPath))) then            
     MessageBox.Show("No licencefile found at " + licPath + ". \n" + contact) |> ignore
@@ -125,19 +126,15 @@ let main argv =
     app.ShaderCachePath <- None
 
     //buildLicense(365)
-
-    
-    //Serialization.registry.DeclareSerializable<Aardvark.Geometry.KdIntersectionTree>()
-    //Serialization.registry.RegisterFactory (fun _ -> KdTrees.concreteKdIntersectionPickler)
-    //Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.sgSurfacePickler)
-    
+        
     Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.surfaceModelPickler)
     Serialization.registry.RegisterFactory (fun _ -> KdTrees.level0KdTreePickler)
-    
-    
+        
     if licenseCheck then
       checkLicense()
     
+    Log.line "PRo3D Viewer - Version: %s; lic: %A" viewerVersion licenseCheck
+
    // use form = new Form(Width = 0, Height = 0)
     let signature =
         runtime.CreateFramebufferSignature [
@@ -145,14 +142,14 @@ let main argv =
             DefaultSemantic.Depth,  { format = RenderbufferFormat.Depth24Stencil8; samples = 1 }
         ]
 
-    use bc = new BlockingCollection<string>()    
+    use sendQueue = new BlockingCollection<string>()    
         
     let ws (webSocket : WebSocket) (context: HttpContext) =
         socket {
             let mutable loop = true
 
             while loop do
-                let str = bc.Take()
+                let str = sendQueue.Take()
                 Log.warn "taking item from bc"
                 let s = ByteSegment(System.Text.Encoding.UTF8.GetBytes str)
                 
@@ -163,10 +160,15 @@ let main argv =
         
     // main app
     //use form = new Form(Width = 1280, Height = 800)
+    let cts = new CancellationTokenSource()
+    let messagingMailbox = MailboxProcessor.Start(Viewer.messagingMailbox cts, cts.Token)    
 
     let mainApp = 
-        PRo3D.ViewerApp.start runtime signature bc
+        PRo3D.ViewerApp.start runtime signature messagingMailbox sendQueue
 
+    let s = { MailboxState.empty with update = mainApp.update Guid.Empty }
+    MailboxAction.InitMailboxState s |> messagingMailbox.Post
+    
     CooTransformation.initCooTrafo () // should be a function not a value
     
     let domainError (sender:obj) (args:UnhandledExceptionEventArgs) =
@@ -175,15 +177,18 @@ let main argv =
         MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |>ignore
         ()
     
+
     if catchDomainErrors then
       AppDomain.CurrentDomain.UnhandledException.AddHandler(UnhandledExceptionEventHandler(domainError))
 
-    WebPart.startServer 4321 [
+    
+
+    WebPart.startServerLocalhost 4321 [
         MutableApp.toWebPart' runtime false mainApp
         path "/websocket" >=> handShake ws
         Reflection.assemblyWebPart typeof<EmbeddedRessource>.Assembly
        // prefix "/instrument" >=> MutableApp.toWebPart runtime instrumentApp
-        Suave.Files.browseHome
+        Suave.Files.browseHome        
     ]
 
     //WebPart.startServer 4322 [
@@ -221,7 +226,7 @@ let main argv =
         remoteApp.update Guid.Empty act
         { result = shot.folder }
 
-    WebPart.startServer 1234 [ 
+    WebPart.startServerLocalhost 1234 [ 
         MutableApp.toWebPart runtime (remoteApp)
         POST >=> path "/shots" >=> mapJson takeScreenshot
         POST >=> path "/platformshots" >=> mapJson takePlatformShot

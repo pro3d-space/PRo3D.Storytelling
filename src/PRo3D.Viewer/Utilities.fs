@@ -386,23 +386,23 @@ module Sg =
                 return ((float (line.Length)) * 100.0)
             }
                                                             
-        let line = edges
-                    |> Sg.lines color
-                    |> Sg.noEvents
-                    |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-                    |> Sg.uniform "Size" size
-                    |> Sg.shader {
-                         //do! Shader.screenSpaceScale
-                         do! Shader.stableTrafo
-                         do! DefaultSurfaces.vertexColor
-                         do! Shader.thickLine    
-                     }                               
-                     |> Sg.trafo trafo
-                     |> Sg.uniform "LineWidth" width
-                     |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+        let line = 
+          edges
+          |> Sg.lines color
+          |> Sg.noEvents
+          |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
+          |> Sg.uniform "Size" size
+          |> Sg.shader {                         
+               do! Shader.stableTrafo
+               do! DefaultSurfaces.vertexColor
+               do! Shader.thickLine    
+           }                               
+          |> Sg.trafo trafo
+          |> Sg.uniform "LineWidth" width
+          |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
 
         let pos = 
-            Sg.sphere 2 color (Mod.constant 1.0)
+          Sg.sphere 2 color (Mod.constant 1.0)
             |> Sg.noEvents
             |> Sg.trafo(cTrafo )
             |> Sg.uniform "Size" size
@@ -410,58 +410,19 @@ module Sg =
             |> Sg.effect [
                     toEffect <| Shader.screenSpaceScale
                     toEffect <| Shader.stableTrafo
-                ]
-        let test = pos
+                ]        
 
         Sg.cone 30 color coneRadius coneHight
-                        |> Sg.noEvents
-                        |> Sg.trafo(cTrafo) 
-                        |> Sg.uniform "WorldPos" (cTrafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-                        |> Sg.uniform "Size" (coneRadius |> Mod.map(fun x -> x * 100.0))
-                        |> Sg.shader {
-                            do! Shader.screenSpaceScale
-                            //do! Shader.stableTrafo
-                            do! DefaultSurfaces.vertexColor
-                            do! DefaultSurfaces.simpleLighting
-                        }
-                        
-        
-        //aset {
-        //    yield line; 
-        //    yield cone}
-        //    |> Sg.set
-        //    |> Sg.noEvents
-        //    |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-        //    |> Sg.uniform "Size" size
-        //    |> Sg.shader {
-        //                do! Shader.screenSpaceScale
-        //                do! Shader.stableTrafo
-        //                do! DefaultSurfaces.vertexColor
-        //                //do! DefaultSurfaces.simpleLighting
-        //            }
-            //|> Sg.effect [
-            //    Shader.screenSpaceScale |> toEffect
-            //    ]
-
-        
-
-
-
-        //scaledArrows1 color edges 30 coneRadius coneHight pos
-        //    |> ASet.ofList
-        //    |> Sg.set
-        //    |> Sg.noEvents
-        //    |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-        //    |> Sg.uniform "Size" size
-        //    |> Sg.shader {
-        //                do! Shader.screenSpaceScale
-        //                do! Shader.stableTrafo
-        //                do! DefaultSurfaces.vertexColor
-        //                //do! DefaultSurfaces.simpleLighting
-        //            }
-        
-    
-
+          |> Sg.noEvents
+          |> Sg.trafo(cTrafo) 
+          |> Sg.uniform "WorldPos" (cTrafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
+          |> Sg.uniform "Size" (coneRadius |> Mod.map(fun x -> x * 100.0))
+          |> Sg.shader {
+              do! Shader.screenSpaceScale
+              //do! Shader.stableTrafo
+              do! DefaultSurfaces.vertexColor
+              do! DefaultSurfaces.simpleLighting
+          }
 
     let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =
         adaptive {
@@ -514,26 +475,26 @@ module Sg =
 
     
     let text (view : IMod<CameraView>) near hfov pos modelTrafo text size =
-           
-        let invScaleTrafo = 
-            computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
-
-        let billboardTrafo = 
-            adaptive {
-                let! v = view
-                let! modelt = modelTrafo
-
-                return screenAligned v.Forward v.Up modelt
-            }
-        let bounds : Border2d = { left = 0.1; right = 0.1; top = 0.1; bottom = 0.1 }
-
-        Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
-            |> Sg.noEvents
-            |> Sg.shader {
-                    do! Shader.stableTrafo
-                }            
-            |> Sg.trafo invScaleTrafo
-            |> Sg.trafo billboardTrafo  
+         
+      let invScaleTrafo = 
+          computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
+      
+      let billboardTrafo = 
+          adaptive {
+              let! v = view
+              let! modelt = modelTrafo
+      
+              return screenAligned v.Forward v.Up modelt
+          }
+      let bounds : Border2d = { left = 0.1; right = 0.1; top = 0.1; bottom = 0.1 }
+      
+      Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
+          |> Sg.noEvents
+          |> Sg.shader {
+            do! Shader.stableTrafo
+          }            
+          |> Sg.trafo invScaleTrafo
+          |> Sg.trafo billboardTrafo  
 
 module UI =
     open Aardvark.UI
@@ -769,23 +730,18 @@ module Shader =
   
   [<ReflectedDefinition>]
   let myTrunc (value : float) =
-    if value < 0.0 then
-        0.0
-    elif value > 255.0 then
-        255.0
-    else
-        value
-
+    clamp 0.0 255.0 value
+  
   let mapContrast (v : Vertex) =
     fragment { 
         if (uniform?useContrastS) then
             let c = uniform?contrastS
             let nc = V4d(v.c.X*255.0, v.c.Y*255.0,v.c.Z*255.0, 255.0)
-
+            
             let factor = (259.0 * (c + 255.0)) / (255.0 * (259.0 - c))
-            let red = (myTrunc (factor * (nc.X   - 128.0) + 128.0)) / 255.0
-            let green = (myTrunc (factor * (nc.Y   - 128.0) + 128.0)) / 255.0
-            let blue = (myTrunc (factor * (nc.Z   - 128.0) + 128.0)) / 255.0
+            let red    = (myTrunc (factor * (nc.X   - 128.0) + 128.0)) / 255.0
+            let green  = (myTrunc (factor * (nc.Y   - 128.0) + 128.0)) / 255.0
+            let blue   = (myTrunc (factor * (nc.Z   - 128.0) + 128.0)) / 255.0
             return V4d(red, green, blue, 1.0)
         else
             return v.c
@@ -796,10 +752,10 @@ module Shader =
         if (uniform?useBrightnS) then
             let b = uniform?brightnessS
             let nc = V4d(v.c.X*255.0, v.c.Y*255.0,v.c.Z*255.0, 255.0)        
-
-            let red = (myTrunc(nc.X + b)) / 255.0 
+            
+            let red   = (myTrunc(nc.X + b)) / 255.0 
             let green = (myTrunc(nc.Y + b)) / 255.0 
-            let blue  = (myTrunc(nc.Z  + b)) / 255.0 
+            let blue  = (myTrunc(nc.Z + b)) / 255.0 
             return V4d(red, green, blue, 1.0)
         else
             return v.c
@@ -830,9 +786,9 @@ module Shader =
             let col : V3d =  uniform?colorS
             let nc = V4d(v.c.X*255.0, v.c.Y*255.0, v.c.Z*255.0, 255.0)
 
-            let red = (myTrunc( nc.X * col.X))/255.0
-            let green = (myTrunc( nc.Y * col.Y ))/255.0
-            let blue = (myTrunc( nc.Z * col.Z )) / 255.0
+            let red   = (myTrunc( nc.X * col.X)) / 255.0
+            let green = (myTrunc( nc.Y * col.Y)) / 255.0
+            let blue  = (myTrunc( nc.Z * col.Z)) / 255.0
             return V4d(red, green, blue, 1.0)
         else
             return v.c
