@@ -799,8 +799,7 @@ module ViewerApp =
                 ] 
             ]            
 
-        let annotations, discs =
-                DrawingApp.Sg.view m.scene.config mdrawingConfig m.scene.navigation.camera.view m.drawing
+        let annotations, discs = DrawingApp.view m.scene.config mdrawingConfig m.scene.navigation.camera.view m.drawing
             
         let discs = 
            discs

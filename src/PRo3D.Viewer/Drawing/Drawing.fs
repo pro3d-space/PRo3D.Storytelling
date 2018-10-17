@@ -1,4 +1,4 @@
-﻿namespace PRo3D
+﻿namespace PRo3D.Drawing
 
 open System
 open System.IO
@@ -26,6 +26,7 @@ open Aardvark.UI
 open Aardvark.UI.Primitives    
 open PRo3D
 open PRo3D.Drawing
+open PRo3D.DrawingApp
 open PRo3D.Groups
 open MBrace.FsPickler.Json   
 
@@ -52,22 +53,24 @@ module DrawingApp =
             | _ -> { a with points = a.points |> PList.append firstP }
 
     let getFinishedAnnotation up north planet (model : DrawingModel) =
-        match model.working with
-            | Some w ->  
-                let w = match w.geometry with
-                        | Geometry.Polygon -> closePolyline w
-                        | _-> w 
-                let dns = w.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
-                    //match w.points.Count with 
-                    //    | x when x > 2 ->
-                    //        //let up = 
-                    //        //let north = up.Cross(V3d.OOI.Cross(up))
-                    //        let result = w.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
-                    //        Some result //more acc. by using segments as well?
-                    //    | _ -> None 
-                let results = DrawingUtilities.Calculations.calculateAnnotationResults w up planet
-                Some { w with dnsResults = dns ; results = Some results }
-            | None -> None
+      match model.working with
+        | Some w ->  
+            let w = 
+              match w.geometry with
+                | Geometry.Polygon -> closePolyline w
+                | _-> w 
+
+            let dns = w.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
+                //match w.points.Count with 
+                //    | x when x > 2 ->
+                //        //let up = 
+                //        //let north = up.Cross(V3d.OOI.Cross(up))
+                //        let result = w.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
+                //        Some result //more acc. by using segments as well?
+                //    | _ -> None 
+            let results = DrawingUtilities.Calculations.calculateAnnotationResults w up planet
+            Some { w with dnsResults = dns ; results = Some results }
+        | None -> None
 
     let finishAndAppendAndSend up north planet (model : DrawingModel) (bc : BlockingCollection<string>) = 
       
@@ -75,14 +78,13 @@ module DrawingApp =
         match getFinishedAnnotation up north planet model with
           | Some a -> 
             let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
-            bc.Add json                    
-                                              
-            model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true
-                            
+            bc.Add json
+            model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true                            
           | None -> model.annotations             
 
-      { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups } 
+      { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups; draw = false } 
     
+    //adds new point to working state, if certain conditions are met the annotation finishes itself
     let addPoint up north planet samplePoint p model surfaceName bc =
       let working, newSegment = 
         match model.working with
@@ -118,8 +120,7 @@ module DrawingApp =
                         { annotation with segments = PList.append newSegment annotation.segments }, None
                 | Projection.Linear ->
                     annotation, None
-                | _ -> failwith "case does not exist"
-            
+                | _ -> failwith "case does not exist"            
             result 
           | None ->  //no working state, start new working annotation
             { 
@@ -208,17 +209,17 @@ module DrawingApp =
         }
    
     let saveAnnotations (path:string) (model:DrawingModel) = 
-        match path.IsEmptyOrNull() with
-            | true -> model
-            | false-> 
-                let sa = 
-                    {
-                        annotations = model.annotations
-                        colorLegend = model.colorLegend
-                    }
-                Serialization.save "./lastMeasure" sa |> ignore 
-                let saveA = Serialization.save path sa
-                { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend } 
+      match path.IsEmptyOrNull() with
+        | true -> model
+        | false-> 
+            let sa = 
+                {
+                    annotations = model.annotations
+                    colorLegend = model.colorLegend
+                }
+            Serialization.save "./lastMeasure" sa |> ignore 
+            let saveA = Serialization.save path sa
+            { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend }
 
     let getAnnotationPath (scenePath:string) = 
         let p = System.IO.Path.GetDirectoryName(scenePath)
@@ -229,364 +230,115 @@ module DrawingApp =
         saveAnnotations (getAnnotationPath scenePath) model
 
     let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (webSocket : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
-        match (act, model.draw) with
-            | StartDrawing, _ ->                     
-                    { model with draw = true }
-            | StopDrawing, _ -> 
-                    { model with draw = false; hoverPosition = None }
-            | Move p, true -> 
-                    { model with hoverPosition = Some (Trafo3d.Translation p) }
-            | AddPointAdv (point, hitFunction, name), true ->
-                    let up    = smallConfig.up.Get(bigConfig)
-                    let north = smallConfig.north.Get(bigConfig)
-                    let planet = smallConfig.planet.Get(bigConfig)
+      match (act, model.draw) with
+        | StartDrawing, _ ->                     
+                { model with draw = true }
+        | StopDrawing, _ -> 
+                { model with draw = false; hoverPosition = None }
+        | Move p, true -> 
+                { model with hoverPosition = Some (Trafo3d.Translation p) }
+        | AddPointAdv (point, hitFunction, name), true ->
+                let up    = smallConfig.up.Get(bigConfig)
+                let north = smallConfig.north.Get(bigConfig)
+                let planet = smallConfig.planet.Get(bigConfig)
 
-                    let model, newSegment = addPoint up north planet hitFunction point model name webSocket
-                    
-                    match newSegment with
-                        | None         -> model
-                        | Some segment -> addNewSegment hitFunction model segment
-                    |> stash
-
-            | SetSegment(segmentIndex,segment), _ ->
-                match model.working with
-                    | None -> model
-                    | Some w ->                         
-                        { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
-
-            | Finish, _ -> 
-                    let up     = smallConfig.up.Get(bigConfig)
-                    let north  = smallConfig.north.Get(bigConfig)
-                    let planet = smallConfig.planet.Get(bigConfig)
-
-                    (finishAndAppendAndSend up north planet model webSocket) |> stash
-            | Exit, _ -> 
-                    { model with hoverPosition = None }
-            | SetSemantic mode, _ ->
-                    let model =
-                        match mode with
-                            | Semantic.GrainSize -> { model with geometry = Geometry.Line }
-                            | _ -> model
-
-                    {model with semantic = mode }
-            | SetGeometry mode, _ ->
-                    { model with geometry = mode }
-            | SetProjection mode, _ ->
-                    { model with projection = mode }                  
-            | ChangeColor c, _ -> 
-                { model with color = ColorPicker.update model.color c }
-            | ChangeThickness th, _ ->
-                { model with thickness = Numeric.update model.thickness th }
-            | SetExportPath s, _ ->
-                    { model with exportPath = Some s }
-            | Export, _ ->
-                    //let path = Path.combine([model.exportPath; "drawing.json"])
-                    //printf "Writing %i annotations to %s" (model.annotations |> PList.count) path
-                    //let json = model.annotations |> PList.map JsonTypes.ofAnnotation |> JsonConvert.SerializeObject
-                    //Serialization.writeToFile path json 
-                    
-                    model
-            | Save p,_-> saveAnnotations p model
-
-            | Load p,_ ->                
-              match p.Length < 1 with
-                | true -> model
-                | false -> 
-                  //let groups = Groups.tryLoadGroups path
-                  let path = p.[0]
-                  let groups = Groups.tryLoadAnnotations path
-                  match groups with 
-                    //| Some g -> { model with annotations = g  }
-                    | Some g -> { model with annotations = g.annotations; colorLegend = g.colorLegend }
-                    | None -> model
-            | QuickLoad,_ ->                
-              let groups = Groups.tryLoadGroups "./lastMeasure" 
-              match groups with 
-                | Some g -> { model with annotations = g  }
-                | None -> model
-            | Send, _ ->                                                      
-                model
-            | Clear,_ ->
-                { model with annotations = GroupsModel.initial }
-            | Nop, _ -> model                   
-            | Undo, _ -> 
-                match model.past with
-                    | Some p -> { p with future = Some model }
-                    | None -> model
-            | Redo, _ ->
-                match model.future with
-                    | Some f -> f
-                    | None -> model           
-            | GroupsMessage msg,_ ->
-                let m = { model with annotations = Groups.update model.annotations msg}
-                m
-            | ColorLegendMessage msg,_ -> 
-                { model with colorLegend = FalseColorLegendApp.update model.colorLegend msg }
-            | FlyToAnnotation msg, _ ->
-                model
-            | SaveCSV p, _ -> 
-                let annotations =
-                    model.annotations.flat
-                        |> Leaf.toAnnotations
-                        |> HMap.toList 
-                        |> List.map snd
-                        |> List.map (Csv.exportAnnotation model.annotations.groupsLookup)
-                      //  |> Seq.ofList
-                        
-                let csvTable = Csv.Seq.csv "," true id annotations
-
-                match p.IsEmptyOrNull() with
-                    | true -> model
-                    | false -> 
-                        Csv.Seq.write (p) csvTable |> ignore
-                        model
-            | _ -> model
-
-    module UI =
-        open Aardvark.Base.Incremental
-        //open Aardvark.UI.TreeViewApp
-
-        let viewAnnotationToolsHorizontal (model:MDrawingModel) =
-            Html.Layout.horizontal [
-                Html.Layout.boxH [ i [clazz "large Write icon"][] ]
-                Html.Layout.boxH [ Html.SemUi.dropDown model.geometry SetGeometry ]
-                Html.Layout.boxH [ Html.SemUi.dropDown model.projection SetProjection ]
-                Html.Layout.boxH [ ColorPicker.view model.color |> UI.map ChangeColor; div[][] ]
-                Html.Layout.boxH [ Numeric.view' [InputBox] model.thickness |> UI.map ChangeThickness ]
-              //  Html.Layout.boxH [ Html.SemUi.dropDown model.semantic SetSemantic ]                
-            ]
-                      
-        let mkColor (model : MGroupsModel) (a : MAnnotation) =
-          let color =  
-              model.selectedLeaves
-                  |> ASet.map(fun x -> x.id = a.key)
-                  |> ASet.contains true
-                  |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
-          
-          color
-
-        let isSingleSelect (model : MGroupsModel) (a : MAnnotation) =
-            model.singleSelectLeaf |> Mod.map( fun x -> 
-                match x with 
-                  | Some selected -> selected = a.key
-                  | None -> false )
-
-        let annotationMenu = 
-            div [ clazz "ui dropdown item"] [
-                text "Annotations"
-                i [clazz "dropdown icon"][] 
-                div [ clazz "menu"] [                    
-                    div [ clazz "ui inverted item"; Dialogs.onChooseFiles Load;
-                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));" )][
-                            text "Load"
-                    ]
-                    div [ clazz "ui inverted item"; onMouseClick (fun _ -> Clear)][
-                            text "Clear List"
-                    ]
-                    div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveCSV;
-                        clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")][
-                            text "Save .csv"
-                    ]
-                ]
-            ]                    
-
-        let viewAnnotationImportExport (m:MDrawingModel) =
-           div [clazz "ui buttons inverted"] [
-                                
-                button [clazz "ui icon button"; Dialogs.onSaveFile Save;
-                        clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements'}]}));")] [
-                    i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
-                                
-                button [clazz "ui icon button"; Dialogs.onChooseFiles Load;
-                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
-                    i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
+                let model, newSegment = addPoint up north planet hitFunction point model name webSocket
                 
-                button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
-                    i [clazz "file outline icon"] [] ] |> UI.wrapToolTipBottom "Clear Annotation List"
+                match newSegment with
+                    | None         -> model
+                    | Some segment -> addNewSegment hitFunction model segment
+                |> stash
 
-                button [clazz "ui icon button"; Dialogs.onSaveFile SaveCSV;
-                        clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")] [
-                    i [clazz "save icon inverted"] [] ] |> UI.wrapToolTipBottom "Save .csv"                                                                
-            ] 
+        | SetSegment(segmentIndex,segment), _ ->
+            match model.working with
+                | None -> model
+                | Some w ->                         
+                    { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
 
-        let viewAnnotations (annotations : alist<MAnnotation>) : alist<DomNode<Action>> =
-          
-            annotations |> AList.map(fun a ->
-              div [clazz "item"] [
-                i [clazz "large Sticky Note middle aligned icon"][]
-                div [clazz "content"] [
-                  div [clazz "header"][Incremental.text (a.geometry |> Mod.map(string))]
-                  div [clazz "description"][Incremental.text (a.points |> AList.count |> Mod.map(string))]
-                ]
-              ])
-                         
-        let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(singleSelect : MAnnotation*list<Index> -> 'outer)(multiSelect : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<MAnnotation>) : alist<DomNode<'outer>> =                         
-          annotations 
-            |> AList.map(fun a ->
-              
-              let singleSelect = fun _ -> singleSelect(a,path)
-              let multiSelect  = fun _ -> multiSelect(a,path)
-              
-              let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
-              
-              let visibleIcon = 
-                amap {
-                  yield onMouseClick (fun _ -> lift <| Groups.ToggleChildVisibility (a.key,path))
-                  let! visible = a.visible
-                  if visible then 
-                    yield clazz "unhide icon" 
-                  else 
-                    yield clazz "hide icon"
-                } |> AttributeMap.ofAMap
+        | Finish, _ -> 
+                let up     = smallConfig.up.Get(bigConfig)
+                let north  = smallConfig.north.Get(bigConfig)
+                let planet = smallConfig.planet.Get(bigConfig)
 
-              let iconAttributes =
-                amap {                  
-                  yield clazz "large Sticky Note middle aligned icon"
-                  yield onMouseClick (multiSelect)
+                (finishAndAppendAndSend up north planet model webSocket) |> stash
+        | Exit, _ -> 
+                { model with hoverPosition = None }
+        | SetSemantic mode, _ ->
+                let model =
+                    match mode with
+                        | Semantic.GrainSize -> { model with geometry = Geometry.Line }
+                        | _ -> model
 
-                  let! c = mkColor model a
-                  yield style (sprintf "color: %s" (Html.ofC4b c))
-                } |> AttributeMap.ofAMap
-              
-              let headerAttributes =
-                amap {
-                  yield onClick singleSelect
-                  let! selected = isSingleSelect model a
-                  yield if selected then style "text-transform:uppercase" else style "text-transform:none"
-                } |> AttributeMap.ofAMap
+                {model with semantic = mode }
+        | SetGeometry mode, _ ->
+                { model with geometry = mode }
+        | SetProjection mode, _ ->
+                { model with projection = mode }                  
+        | ChangeColor c, _ -> 
+            { model with color = ColorPicker.update model.color c }
+        | ChangeThickness th, _ ->
+            { model with thickness = Numeric.update model.thickness th }
+        | SetExportPath s, _ ->
+                { model with exportPath = Some s }
+        | Export, _ ->
+                //let path = Path.combine([model.exportPath; "drawing.json"])
+                //printf "Writing %i annotations to %s" (model.annotations |> PList.count) path
+                //let json = model.annotations |> PList.map JsonTypes.ofAnnotation |> JsonConvert.SerializeObject
+                //Serialization.writeToFile path json 
+                
+                model
+        | Save p,_-> saveAnnotations p model
 
-              let headerText = 
-                adaptive {
-                  let! geometry = a.geometry
-                  let! semantic = a.semantic
-
-                  return 
-                    match semantic with
-                      | Semantic.None -> 
-                        geometry  |> sprintf "%A"
-                      | _ -> 
-                        semantic  |> sprintf "%A"
-              
-                }
-
-              div [clazz "item"] [
-                Incremental.i iconAttributes AList.empty
-                div [clazz "content"] [                  
-                  let desc   = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.count) a.surfaceName
+        | Load p,_ ->                
+          match p.Length < 1 with
+            | true -> model
+            | false -> 
+              //let groups = Groups.tryLoadGroups path
+              let path = p.[0]
+              let groups = Groups.tryLoadAnnotations path
+              match groups with 
+                //| Some g -> { model with annotations = g  }
+                | Some g -> { model with annotations = g.annotations; colorLegend = g.colorLegend }
+                | None -> model
+        | QuickLoad,_ ->                
+          let groups = Groups.tryLoadGroups "./lastMeasure" 
+          match groups with 
+            | Some g -> { model with annotations = g  }
+            | None -> model
+        | Send, _ ->                                                      
+            model
+        | Clear,_ ->
+            { model with annotations = GroupsModel.initial }
+        | Nop, _ -> model                   
+        | Undo, _ -> 
+            match model.past with
+                | Some p -> { p with future = Some model }
+                | None -> model
+        | Redo, _ ->
+            match model.future with
+                | Some f -> f
+                | None -> model           
+        | GroupsMessage msg,_ ->
+            let m = { model with annotations = Groups.update model.annotations msg}
+            m
+        | ColorLegendMessage msg,_ -> 
+            { model with colorLegend = FalseColorLegendApp.update model.colorLegend msg }
+        | FlyToAnnotation msg, _ ->
+            model
+        | SaveCSV p, _ -> 
+          let annotations =
+            model.annotations.flat
+              |> Leaf.toAnnotations
+              |> HMap.toList 
+              |> List.map snd
+              |> List.map (Csv.exportAnnotation model.annotations.groupsLookup)                  
                   
-                  //header
-                  yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
-                      alist {                          
-                          yield div[][
-                            Incremental.span headerAttributes ([Incremental.text headerText] |> AList.ofList)
-                            Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
-                            i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation a.key)][] |> UI.wrapToolTip "FlyTo"
-                          ]
-                      } 
-                  ) 
+          let csvTable = Csv.Seq.csv "," true id annotations
+          if p.IsEmptyOrNull() |> not then Csv.Seq.write (p) csvTable
+          model
+        | _ -> model
 
-                  //description
-                  yield div [clazz "description";style ac ] [Incremental.text desc]      
-                ]
-              ]                            
-            )     
-              
-        let rec viewTree path (group : MNode) (model : MGroupsModel) (lookup : amap<Guid, MAnnotation>) : DomNode<Action> =
-                                                    
-            let icon =
-                adaptive {
-                    let! s = model.activeGroup    
-                    let active = s.id
-                    let! group  =  group.key
-
-                    return if (active = group) then "circle icon" else "circle thin icon"
-                }
-                  
-            let map = Groups.mkGroupAttributeMap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
-               
-            let toggleIcon =
-                adaptive {
-                    let! toggle = group.visible
-                    return if toggle then "unhide icon" else "hide icon"
-                }
-
-            let toggleMap = Groups.mkGroupAttributeMap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
-            
-            let color = sprintf "color: %s" (Html.ofC4b C4b.White)
-            let desc =
-                div [style color] [       
-                    Incremental.text group.name
-                    Incremental.i map AList.empty |> UI.wrapToolTip "Set active"
-                    
-                    i [clazz "plus icon"
-                       onMouseClick (fun _ -> 
-                         GroupsMessage(Groups.AddGroup path))] [] 
-                    |> UI.wrapToolTip "Add Group"                        
-
-                    Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
-                ]
-             
-            let itemAttributes =
-                amap {
-                    yield onMouseClick (fun _ -> Action.GroupsMessage(Groups.ToggleExpand path))
-                    let! expanded = group.expanded
-                    if expanded then 
-                      yield clazz "icon outline open folder"
-                    else 
-                      yield clazz "icon outline folder"
-                    yield style "overflow-y : visible"
-                } |> AttributeMap.ofAMap
-            
-            let childrenAttribs =
-                amap {
-                    yield clazz "list"
-                    let! isExpanded = group.expanded
-                    if (not isExpanded) then 
-                      yield style "display:none"                             
-                }         
-
-            let singleSelect = 
-                fun (a:MAnnotation,path:list<Index>) -> 
-                    Action.GroupsMessage(Groups.SingleSelectLeaf (path, a.key, ""))
-
-            let multiSelect = 
-                fun (a:MAnnotation,path:list<Index>) -> 
-                    Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key, ""))
-
-            let lift = fun (a:Groups.Action) -> (GroupsMessage a)
-
-            let subNodes = group.subNodes |> AList.mapi (fun i v -> viewTree (i::path) v model lookup) 
-            
-            let annos = 
-              group.leaves 
-                |> AList.map(fun x -> lookup |> AMap.find x |> Mod.force) 
-                |> viewAnnotationsInGroup path model singleSelect multiSelect lift                
-
-            let nodes = annos |> AList.append subNodes
-
-            div [ clazz "item"] [
-              Incremental.i itemAttributes AList.empty
-              div [ clazz "content" ] [
-                div [ clazz "description noselect"] [desc]
-                Incremental.div (AttributeMap.ofAMap childrenAttribs) (nodes)
-              ]
-            ]
-            
-        let toMAnnotation (leaf : MLeaf) =
-          match leaf with 
-          | MAnnotations a -> a
-          | _ -> failwith "wrong type"
-
-        let viewAnnotationGroups (model:MDrawingModel) = 
-          let a = 
-            model.annotations.flat 
-              |> AMap.map(fun _ v -> (v |> Mod.force) |> toMAnnotation)              
-           
-          require GuiEx.semui (
-              let tree = viewTree [] model.annotations.rootGroup model.annotations a
-              //Incremental.div (AttributeMap.ofList [clazz "ui list"]) ([])
-              div [clazz "ui list"] [tree]
-          )  
+    
                                 
     let threads (m : DrawingModel) = m.pendingIntersections
     
