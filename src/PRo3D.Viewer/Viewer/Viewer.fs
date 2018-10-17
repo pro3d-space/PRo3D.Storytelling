@@ -257,8 +257,7 @@ module ViewerApp =
                 let m = match surf.surfaceType with
                         | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = Projection.Linear } }   
                         | _ -> m
-                Log.line "closest intersection on %A" surf.name
-
+                
                 let msg = Drawing.Action.AddPointAdv(p, hitFunction, surf.name)
                 let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing msg
                 //Log.stop()
@@ -294,6 +293,8 @@ module ViewerApp =
                 { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
             | _ -> m
 
+    let mutable lastHash = -1
+    
     let update (runtime : IRuntime) (signature: IFramebufferSignature) (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
@@ -404,8 +405,8 @@ module ViewerApp =
                     | paths ->
                         let surfaces = 
                             paths 
-                                |> List.filter (fun x -> Discover.isSurfaceFolder x || Files.isZippedOpcFolder x)
-                                |> List.map (Surface.mk SurfaceType.SurfaceOPC)
+                                |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
+                                |> List.map (Sg.mk SurfaceType.SurfaceOPC)
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m
@@ -417,7 +418,7 @@ module ViewerApp =
                         let p = paths.[0]
                         let objects = 
                             [p] 
-                                |> List.map (Surface.mk SurfaceType.SurfaceOBJ)
+                                |> List.map (Sg.mk SurfaceType.SurfaceOBJ)
                                 |> PList.ofList
 
                         let m = Scene.importObj runtime signature objects m
@@ -474,36 +475,22 @@ module ViewerApp =
             | ImportSurfaceTrafo sl,_,_ ->
               match sl with
                 | [] -> m 
-                | p ->
-                  let path = p.[0]
-                  let imported = SurfaceTrafoImporter.startImporter path
-                  let filterIds = File.ReadLines (Path.ChangeExtension(path,".filter")) |> Seq.toList
-
-                  let k = 
-                    imported 
-                      |> PList.toList 
-                      |> List.filter(fun x -> List.contains x.id filterIds) 
-                      |> List.map (fun x ->
-                        {
-                          id = x.id
-                          shift = x.trafo.Forward.C3.XYZ.Length
-                        })
-
-                  let csvTable = Csv.Seq.csv "," true id k
-                  Csv.Seq.write (@"./shift.csv") csvTable |> ignore
-
-                  let s = Surfaces.SurfaceApp.updateTrafos imported m.scene.surfacesModel
-                  m |> Lenses.set _surfaceModelLens s                  
+                | path :: _ ->
+                  let imported = SurfaceTrafoImporter.startImporter path |> PList.toList                  
+                  let s = Surfaces.SurfaceApp.updateSurfaceTrafos imported m.scene.surfacesModel
+                  s.surfaces.flat |> HMap.toList |> List.iter(fun (_,v) -> Log.warn "%A" (v |> Leaf.toSurface).preTransform)
+                  m 
+                    |> Lenses.set _surfaceModelLens s                                    
             | ImportRoverPlacement sl,_,_ ->
               match sl with
                 | [] -> m 
-                | p ->
-                  let path = p.[0]
-                  let importedData = RoverPlacementImporter.startRPImporter path 
-                  match m.scene.viewPlans.roverModel.selectedRover with
-                    | Some r -> let vp = ViewPlan.createViewPlanFromFile importedData m.scene.viewPlans r m.scene.referenceSystem m.scene.navigation.camera
-                                { m with scene = { m.scene with viewPlans = vp}} 
-                    | None -> Log.error "no rover selected"; m
+                | p -> m
+                  //let path = p.[0]
+                  //let importedData = RoverPlacementImporter.startRPImporter path 
+                  //match m.scene.viewPlans.roverModel.selectedRover with
+                  //  | Some r -> let vp = ViewPlan.createViewPlanFromFile importedData m.scene.viewPlans r m.scene.referenceSystem m.scene.navigation.camera
+                  //              { m with scene = { m.scene with viewPlans = vp}} 
+                  //  | None -> Log.error "no rover selected"; m
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
             | QuickLoad2,_,_ ->                                
@@ -512,42 +499,48 @@ module ViewerApp =
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
                 m
-            | PickSurface (p,name), _ ,true when ViewerUtils.hitCounter > 0 ->                 
+            | PickSurface (p,name), _ ,true ->
               let fray = p.globalRay.Ray
               let r = fray.Ray
-              Log.startTimed "kdtree intersect %s %A" name ViewerUtils.hitCounter
-
-              ViewerUtils.hitCounter <- ViewerUtils.hitCounter - 1
-              
-              let hitF (camLocation : V3d) (p : V3d) = 
-                
-                let ray =
-                    match m.drawing.projection with
-                        | Projection.Viewpoint -> 
-                            let dir = (p-camLocation).Normalized
-                            FastRay3d(camLocation, dir)  
-                        | Projection.Sky -> 
-                            let up = m.scene.referenceSystem.up.value
-                            FastRay3d(p + (up * 5000.0), -up)  
-                        | _ -> Log.error "projection started without proj mode"; FastRay3d()
-                
-                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity ray cache with
-                    | Some (t,surf), c ->                             
-                        cache <- c; ray.Ray.GetPointOnRay t |> Some
-                    | None, c ->
-                        cache <- c; None
+              let rayHash = r.GetHashCode()
+              if rayHash = lastHash then
+                m
+              else                                
+                Log.startTimed "[PickSurface] try intersect kdtree of %s" name                                                                     
+                let hitF (camLocation : V3d) (p : V3d) = 
+                  
+                  let ray =
+                      match m.drawing.projection with
+                          | Projection.Viewpoint -> 
+                              let dir = (p-camLocation).Normalized
+                              FastRay3d(camLocation, dir)  
+                          | Projection.Sky -> 
+                              let up = m.scene.referenceSystem.up.value
+                              FastRay3d(p + (up * 5000.0), -up)  
+                          | _ -> Log.error "projection started without proj mode"; FastRay3d()
+                  
+                  match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) ray cache with
+                      | Some (t,surf), c ->                             
+                          cache <- c; ray.Ray.GetPointOnRay t |> Some
+                      | None, c ->
+                          cache <- c; None
                                   
-              match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) Trafo3d.Identity fray cache with
-                | Some (t,surf), c ->                         
-                  cache <- c
-                  let hit = r.GetPointOnRay(t)
-                  let cameraLocation = m.scene.navigation.camera.view.Location 
-                  let hitF = hitF cameraLocation
-
-                  matchPickingInteraction sendQueue hit hitF surf m
-                | None, _ -> 
-                    Log.error ("no hit")
-                    m
+                let result = 
+                  match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) fray cache with
+                   | Some (t,surf), c ->                         
+                     cache <- c
+                     let hit = r.GetPointOnRay(t)
+                     let cameraLocation = m.scene.navigation.camera.view.Location 
+                     let hitF = hitF cameraLocation
+                   
+                     matchPickingInteraction sendQueue hit hitF surf m                                    
+                   | None, _ -> 
+                     Log.error "[PickSurface] no hit of %s" name
+                     m
+                Log.stop()
+                Log.error "done intersecting"
+                lastHash <- rayHash
+                result
             | PickObject (p,id), _ ,_ ->  
                 match m.picking with
                     |true ->
@@ -822,11 +815,11 @@ module ViewerApp =
                     |> Sg.fillMode (Mod.constant FillMode.Fill)
                     |> Sg.cullMode (Mod.constant CullMode.None)
             
-            let alignment = 
-                AlignmentApp.view m.alignment m.scene.navigation.camera.view
-                    |> Sg.map AlignmentActions
-                    |> Sg.fillMode (Mod.constant FillMode.Fill)
-                    |> Sg.cullMode (Mod.constant CullMode.None)
+            //let alignment = 
+            //    AlignmentApp.view m.alignment m.scene.navigation.camera.view
+            //        |> Sg.map AlignmentActions
+            //        |> Sg.fillMode (Mod.constant FillMode.Fill)
+            //        |> Sg.cullMode (Mod.constant CullMode.None)
 
             let refSystem =
                 ReferenceSystemApp.Sg.view
@@ -887,7 +880,7 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
                         
-            [annos; exploreCenter; refSystem; alignment; viewPlans (*;orientationCube*)] |> Sg.ofList
+            [annos; exploreCenter; refSystem; viewPlans(*;orientationCube*)] |> Sg.ofList
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          

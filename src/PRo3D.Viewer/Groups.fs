@@ -495,7 +495,7 @@ module Groups =
         require GuiEx.semui (
                 Html.table [
                      Html.row "Remove:"[deleteLeaf ts]
-                     Html.row "Selection:"[ viewSelectionButtons ]
+                     Html.row "Selection:"[ viewSelectionButtons ]                     
                 ]
             )
 
@@ -609,6 +609,9 @@ module SurfaceModel =
             Groups.replaceLeaf (Leaf.Surfaces s') model.surfaces      
 
         { model with surfaces = surfaces' } // sgSurfaces = sgSurfaces'; sgGrouped = group' }
+
+    let updateSingleSurface' (model:SurfaceModel) (s':PRo3D.Surfaces.Surface) =
+      updateSingleSurface s' model
 
     //let updateSurfaces model (surfaces' : plist<PRo3D.Surfaces.Surface>) =
     //    let sgSurfaces' =

@@ -103,7 +103,7 @@ module ViewPlan =
         let mutable cache = cache
         let ray = FastRay3d(p, dir)  
                  
-        match SurfaceApp.doKdTreeIntersection surfaceModel Trafo3d.Identity ray cache with
+        match SurfaceApp.doKdTreeIntersection surfaceModel ray cache with
             | Some (t,surf), c -> ray.Ray.GetPointOnRay(t) |> Some
             | None, c -> None
        
