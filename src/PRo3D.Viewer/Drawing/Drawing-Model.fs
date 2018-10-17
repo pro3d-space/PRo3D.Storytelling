@@ -100,12 +100,12 @@ module DrawingModel =
     let initialdrawing : DrawingModel = {
         hoverPosition = None
         draw          = false                    
-        color         = { c = C4b.Blue } 
+        color         = { c = C4b.Yellow } 
         thickness     = Annotation.thickn
 
         working     = None
-        projection  = Projection.Viewpoint
-        geometry    = Geometry.Polyline
+        projection  = Projection.Sky
+        geometry    = Geometry.Point
         semantic    = Semantic.Horizon3
 
         annotations = GroupsModel.initial

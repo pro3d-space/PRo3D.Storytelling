@@ -7,11 +7,11 @@ module DipAndStrike =
 
     open System
     
-    open Aardvark.Base.Incremental
-    open Aardvark.Fitting
+    open Aardvark.Base.Incremental    
 
     open Aardvark.UI
     open Aardvark.UI.Primitives    
+    open CSharpUtils
 
     let projectOntoPlane (x:V3d) (n:V3d) = (x - (x * n)).Normalized
 
@@ -47,7 +47,7 @@ module DipAndStrike =
               Math.Pow(k,2.0))
           |> List.sum
 
-      Math.Sqrt (sosq / float (input.Length - 1))
+      Math.Sqrt (sosq / float (input.Length - 1))          
 
     let calculateDnsErrors (points:plist<V3d>) =
       let points = points |> PList.filter(fun x -> not x.IsNaN)
@@ -55,7 +55,7 @@ module DipAndStrike =
       if points.Count < 3 then []
       else
         let v3dArray = points.AsList |> List.toArray
-        let mutable plane = PlaneFitting.FitPlane3dLeastSquares(v3dArray)
+        let mutable plane = PlaneFitting.Fit(v3dArray)
 
         let distances = 
           points 
@@ -77,7 +77,7 @@ module DipAndStrike =
                 //let p = v3dArray.[0]
                // let up = p.Normalized        
 
-                let mutable plane = PlaneFitting.FitPlane3dLeastSquares(v3dArray)                
+                let mutable plane = PlaneFitting.Fit(v3dArray)
 
                 let distances = 
                   points 

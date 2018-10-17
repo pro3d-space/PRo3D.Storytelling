@@ -85,9 +85,7 @@ open Aardvark.UI.Animation
 module ViewerUtils =    
     open Aardvark.SceneGraph.Opc.Shader
     open FShade
-
-    let mutable hitCounter = 0
-
+    
     //open OpenCvSharp.XFeatures2D
     
     let colormap = 
@@ -151,7 +149,7 @@ module ViewerUtils =
        
            
 
-    let viewSingleSurfaceSgOPC (surface : MSgSurfaces) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (globalBB : IMod<Box3d>) =
+    let viewSingleSurfaceSgOPC (surface : MSgSurfaces) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) =
         
         let surf = lookUp (surface.surface) blarg
             //Mod.bind(fun x -> lookUp (x.surface) blarg )
@@ -219,11 +217,13 @@ module ViewerUtils =
                             | Some s -> s.colorLegend.upperColor.c |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H)
                             | None   -> Mod.constant(1.0f)
                         )
-        let lowerC = scalar |> Mod.bind ( fun x ->
-                        match x with 
-                            | Some s -> s.colorLegend.lowerColor.c |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H)
-                            | None   -> Mod.constant(0.0f)
-                        )
+        let lowerC = 
+          scalar 
+            |> Mod.bind ( fun x ->
+              match x with 
+                  | Some s -> s.colorLegend.lowerColor.c |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H)
+                  | None   -> Mod.constant(0.0f)
+              )
 
         let rangeToMinMax = scalar |> Mod.bind ( fun x -> 
                                 match x with 
@@ -356,16 +356,13 @@ module ViewerUtils =
                 |> pickable' pickable
                 |> Sg.noEvents 
                 |> Sg.withEvents [
-                        SceneEventKind.Down, (
-                            fun sceneHit -> 
-                                let surfM = surf |> Mod.force
-                                let bla = surfM.name |> Mod.force
-                                if (surfM.isActive |> Mod.force) then
-                                  hitCounter <- hitCounter + 1
-                                  true, Seq.ofList [PickSurface (sceneHit,bla)]
-                                else
-                                  false, Seq.empty)
-                    ]
+                     SceneEventKind.Down, (
+                       fun sceneHit -> 
+                         let surfM = surf       |> Mod.force
+                         let name  = surfM.name |> Mod.force                                                  
+                         Log.warn "spawing picksurface %s" name
+                         true, Seq.ofList [PickSurface (sceneHit,name)])                         
+                   ]
                 //|> Sg.trafo (surface.globalBB 
                 //                |> Mod.map(fun x -> 
                 //                    let t = Trafo3d.Translation(-x.Center)
@@ -552,7 +549,7 @@ module ViewerUtils =
                         let sf = Mod.force sf
                         let test = match sf with
                                     | MSgSurfaceOPC surf -> 
-                                         (viewSingleSurfaceSgOPC sf bla m.frustum selected sf.globalBB)
+                                         (viewSingleSurfaceSgOPC sf bla m.frustum selected m.ctrlFlag sf.globalBB)
                                     | MSgSurfaceOBJ surf -> 
                                         (viewSingleSurfaceSgOBJ sf bla surf selected sf.globalBB)
                         test
