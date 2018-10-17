@@ -282,9 +282,8 @@ module Sg =
     //         |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
             
         
-    let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
-        let box = points |> AList.toMod |> Mod.map (fun d -> if d.Count > 2 then Box3d d else Box3d.Unit)
-
+    let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
+        
         let edges = edgeLines false points trafo       
                                                             
         edges
@@ -302,7 +301,7 @@ module Sg =
             //|> Sg.pass linePass
             //|> Sg.depthTest (Mod.constant DepthTestMode.None)
 
-    let scaledLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
+    let scaledLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
         let edges = edgeLines false points trafo     
         let size =
             adaptive {

@@ -1,36 +1,37 @@
 ﻿namespace PRo3D
 
+open System
+open System.IO
+
+open System.Windows.Forms
+open System.Text
+open System.Net.WebSockets
+open System.Threading
+open System.Collections.Concurrent    
+
+open Aardvark.Base
+open Aardvark.Application
+open Aardvark.UI
+
+open Aardvark.Base.Incremental
+open Aardvark.Base.Rendering
+open Aardvark.Application
+open Aardvark.SceneGraph
+open Aardvark.SceneGraph.Opc
+open Aardvark.Rendering.Text
+open Aardvark.VRVis
+open Aardvark.VRVis.Opc
+
+open Aardvark.UI
+open Aardvark.UI.Primitives    
+open PRo3D
+open PRo3D.Drawing
+open PRo3D.Groups
+open MBrace.FsPickler.Json   
+
 module DrawingApp =
    // open Newtonsoft.Json
-    open System
-    open System.IO
-    
-    open System.Windows.Forms
-    open System.Text
-    open System.Net.WebSockets
-    open System.Threading
-    open System.Collections.Concurrent    
-
-    open Aardvark.Base
-    open Aardvark.Application
-    open Aardvark.UI
-
-    open Aardvark.Base.Incremental
-    open Aardvark.Base.Rendering
-    open Aardvark.Application
-    open Aardvark.SceneGraph
-    open Aardvark.SceneGraph.Opc
-    open Aardvark.Rendering.Text
-    open Aardvark.VRVis
-    open Aardvark.VRVis.Opc
-
-    open Aardvark.UI
-    open Aardvark.UI.Primitives    
-    open PRo3D
-    open PRo3D.Drawing
-    open PRo3D.Groups
-    open MBrace.FsPickler.Json   
-    
+        
     let closePolyline (a:Annotation) = 
         let firstP = a.points.[0]
         let lastP = a.points.[(a.points.Count-1)]
@@ -356,31 +357,25 @@ module DrawingApp =
             ]
                       
         let mkColor (model : MGroupsModel) (a : MAnnotation) =
-            let id = a.key |> Mod.force
-
-            let color =  
-                model.selectedLeaves
-                    |> ASet.map(fun x -> x.id = id)
-                    |> ASet.contains true
-                    |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
-            
-            color
+          let color =  
+              model.selectedLeaves
+                  |> ASet.map(fun x -> x.id = a.key)
+                  |> ASet.contains true
+                  |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
+          
+          color
 
         let isSingleSelect (model : MGroupsModel) (a : MAnnotation) =
             model.singleSelectLeaf |> Mod.map( fun x -> 
                 match x with 
-                  | Some selected -> selected = (a.key |> Mod.force)
+                  | Some selected -> selected = a.key
                   | None -> false )
 
         let annotationMenu = 
             div [ clazz "ui dropdown item"] [
                 text "Annotations"
                 i [clazz "dropdown icon"][] 
-                div [ clazz "menu"] [
-                    //div [ clazz "ui inverted item"; Dialogs.onSaveFile Save;
-                    //        clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Scene'}]}));")][
-                    //        text "Save"
-                    //]
+                div [ clazz "menu"] [                    
                     div [ clazz "ui inverted item"; Dialogs.onChooseFiles Load;
                     clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));" )][
                             text "Load"
@@ -393,20 +388,15 @@ module DrawingApp =
                             text "Save .csv"
                     ]
                 ]
-            ]
-                    
+            ]                    
 
         let viewAnnotationImportExport (m:MDrawingModel) =
            div [clazz "ui buttons inverted"] [
-                
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> Save)] [
-                //    i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
+                                
                 button [clazz "ui icon button"; Dialogs.onSaveFile Save;
                         clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements'}]}));")] [
                     i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
-                
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> Load)] [
-                //    i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
+                                
                 button [clazz "ui icon button"; Dialogs.onChooseFiles Load;
                     clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
                     i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
@@ -416,20 +406,7 @@ module DrawingApp =
 
                 button [clazz "ui icon button"; Dialogs.onSaveFile SaveCSV;
                         clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")] [
-                    i [clazz "save icon inverted"] [] ] |> UI.wrapToolTipBottom "Save .csv"
-                                
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> QuickLoad)] [
-                //    i [clazz "folder icon"] [] ] |> UI.wrapToolTipBottom "Load recent Annotations"
-                                
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> Send)] [
-                //    i [clazz "send icon"] [] ] |> UI.wrapToolTipBottom "???"
-                
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> Undo)] [
-                //    i [clazz "arrow left icon"] [] ]  |> UI.wrapToolTipBottom "Undo"
-                
-                //button [clazz "ui icon button"; onMouseClick (fun _ -> Redo)] [
-                //    i [clazz "arrow right icon"] [] ] |> UI.wrapToolTipBottom "Redo"
-                
+                    i [clazz "save icon inverted"] [] ] |> UI.wrapToolTipBottom "Save .csv"                                                                
             ] 
 
         let viewAnnotations (annotations : alist<MAnnotation>) : alist<DomNode<Action>> =
@@ -442,8 +419,7 @@ module DrawingApp =
                   div [clazz "description"][Incremental.text (a.points |> AList.count |> Mod.map(string))]
                 ]
               ])
-          
-               
+                         
         let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(singleSelect : MAnnotation*list<Index> -> 'outer)(multiSelect : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<MAnnotation>) : alist<DomNode<'outer>> =                         
           annotations 
             |> AList.map(fun a ->
@@ -452,11 +428,10 @@ module DrawingApp =
               let multiSelect  = fun _ -> multiSelect(a,path)
               
               let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
-
-              let key = a.key |> Mod.force
+              
               let visibleIcon = 
                 amap {
-                  yield onMouseClick (fun _ -> lift <| Groups.ToggleChildVisibility (key,path))
+                  yield onMouseClick (fun _ -> lift <| Groups.ToggleChildVisibility (a.key,path))
                   let! visible = a.visible
                   if visible then 
                     yield clazz "unhide icon" 
@@ -505,7 +480,7 @@ module DrawingApp =
                           yield div[][
                             Incremental.span headerAttributes ([Incremental.text headerText] |> AList.ofList)
                             Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
-                            i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation key)][] |> UI.wrapToolTip "FlyTo"
+                            i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation a.key)][] |> UI.wrapToolTip "FlyTo"
                           ]
                       } 
                   ) 
@@ -572,11 +547,11 @@ module DrawingApp =
 
             let singleSelect = 
                 fun (a:MAnnotation,path:list<Index>) -> 
-                    Action.GroupsMessage(Groups.SingleSelectLeaf (path, a.key |> Mod.force, ""))
+                    Action.GroupsMessage(Groups.SingleSelectLeaf (path, a.key, ""))
 
             let multiSelect = 
                 fun (a:MAnnotation,path:list<Index>) -> 
-                    Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key |> Mod.force, ""))
+                    Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key, ""))
 
             let lift = fun (a:Groups.Action) -> (GroupsMessage a)
 
@@ -585,8 +560,7 @@ module DrawingApp =
             let annos = 
               group.leaves 
                 |> AList.map(fun x -> lookup |> AMap.find x |> Mod.force) 
-                |> viewAnnotationsInGroup path model singleSelect multiSelect lift
-                //|> viewAnnotations
+                |> viewAnnotationsInGroup path model singleSelect multiSelect lift                
 
             let nodes = annos |> AList.append subNodes
 
@@ -598,7 +572,6 @@ module DrawingApp =
               ]
             ]
             
-
         let toMAnnotation (leaf : MLeaf) =
           match leaf with 
           | MAnnotations a -> a
@@ -614,244 +587,47 @@ module DrawingApp =
               //Incremental.div (AttributeMap.ofList [clazz "ui list"]) ([])
               div [clazz "ui list"] [tree]
           )  
-                               
- 
-    let threads (m : DrawingModel) = m.pendingIntersections
-
-    module Sg =                
-             
-        let discISg color size height trafo =
-            Sg.cylinder 30 color size height              
-              |> Sg.noEvents
-              |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-              |> Sg.uniform "Size" size
-              |> Sg.shader {
-                  //do! Shader.screenSpaceScale
-                  do! Shader.stableTrafo
-                  do! DefaultSurfaces.vertexColor
-                  do! Shader.stableLight
-              }
-              |> Sg.trafo(trafo)
-
-        let coneISg color radius height trafo =  
-            Sg.cone 30 color radius height
-               |> Sg.noEvents
-               //|> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZW))
-               //|> Sg.uniform "Size" ( radius |> Mod.map(fun x -> x * 700.0))
-               //|> Sg.uniform "posTrafo" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward))
-               |> Sg.shader {
-                   //do! PRo3D.OrientationCube.Shader.screenSpaceScaleTrafo
-                   do! Shader.stableTrafo
-                   do! DefaultSurfaces.vertexColor
-                   do! DefaultSurfaces.simpleLighting
-               }
-               |> Sg.trafo(trafo) 
-               
-        type innerViewConfig =
-            {
-                nearPlane       : IMod<float>
-                hfov            : IMod<float>                
-                arrowThickness  : IMod<float>
-                arrowLength     : IMod<float>
-                dnsPlaneSize    : IMod<float>
-            }
-
-        let drawDns (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =                         
-          aset {                            
-            let! dns = anno.dnsResults 
-            match dns with
-              | Some x -> 
-                let center = anno.points |> AList.toMod |> Mod.map (fun list -> list.[PList.count list / 2])
-
-                //let color = 
-                //  DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
-
-                let color = FalseColorLegendApp.Draw.getColorDnS cl x.dipAngle
-                                                                                                                    
-                let scale = 
-                  conf.dnsPlaneSize 
-                    |> Mod.bind(fun size -> 
-                      anno.results 
-                        |> Mod.bind(fun y ->
-                          match y with
-                          | Some k -> k.length |> Mod.map(fun y -> (Math.Pow(y,1.0/3.0)) * size)
-                          | None -> Mod.constant 1.0))
-                          
-                let discRadius = scale //Mod.map2 (*) scale screenSpaceScale
-                let posTrafo = center |> Mod.map Trafo3d.Translation
-
-                // disc
-                let discTrafo =
-                    Mod.map2(fun (pln:Plane3d) pos -> (Trafo3d.RotateInto(V3d.ZAxis, pln.Normal) * pos)) x.plane posTrafo
-
-                yield discISg color discRadius (discRadius |> Mod.map(fun d -> d * 0.01)) discTrafo
-
-                let lineLength = conf.arrowLength //discRadius |> Mod.map((*) 1.5)
-                let size = Sg.computeInvariantScale cam conf.nearPlane center lineLength (Mod.constant 60.0)
-                
-                let coneHeight = lineLength |> Mod.map((*) 0.2) //lineLength
-                let coneRadius = coneHeight |> Mod.map((*) 0.3)
-
-                // dip arrow       
-
-                let! lineLength' = lineLength
-                let! center'     = center
-                //let! size'       = size
-
-                let! dip = x.dipDirection
-                let dipLine = 
-                  alist {
-                      yield center'
-                      yield center' + dip.Normalized * lineLength'
-                  }
-
-                let p0 = center' + dip.Normalized * lineLength'
-
-                //yield Sg.lines dipLine color conf.arrowThickness posTrafo anno.key  
-                yield Sg.scaledLines dipLine color conf.arrowThickness posTrafo anno.key
-
-                let coneTrafo = 
-                  lineLength |>
-                    Mod.map(fun s -> Trafo3d.RotateInto(V3d.ZAxis, dip) * Trafo3d.Translation(center' + dip.Normalized * s))
-
-                yield coneISg color coneRadius coneHeight coneTrafo
-                //yield Sg.scaledArrows dipLine p0 color conf.arrowThickness posTrafo dip coneRadius coneHeight coneTrafo cam
-
-                //strikes lines
-                let! strike = x.strikeDirection
-                let strikeLine1 =
-                  alist {                                                                
-                      yield center' - strike.Normalized * lineLength'
-                      yield center' + strike.Normalized * lineLength'
-                  }                                            
-
-                //yield Sg.lines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key
-                yield Sg.scaledLines strikeLine1 (Mod.constant C4b.Red) conf.arrowThickness posTrafo anno.key
-              | None -> ()            
-          } |> Sg.set
-            
-        let getPolylinePoints (a : MAnnotation) =
-            alist {                
-                let! hasSegments = 
-                  a.segments 
-                    |> AList.count 
-                    |> Mod.map (fun x ->
-                      Log.line "[Drawing] drawing polz with %A segments" x
-                      x > 0)
-
-                if hasSegments then
-                  for segment in a.segments do
-                    let! startPoint = segment.startPoint
-                    let! endPoint = segment.endPoint
-                    yield  startPoint
-                    yield! segment.points
-                    yield  endPoint
-                  else
-                    yield! a.points
-            }
-
-        let drawWorkingAnnotation (anno : IMod<Option<MAnnotation>>)  = 
-
-            let polyPoints =
-                alist {
-                    let! anno = anno
-                    match anno with
-                        | Some a -> yield! getPolylinePoints a
-                        | None -> ()
-                }
-
-            let points = 
-                alist {
-                    let! anno = anno
-                    match anno with
-                        | Some a -> yield! a.points
-                        | None -> ()
-                }
-                
-            let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color.c) 
-            let thickness = Mod.bindOption anno 1.0              (fun a -> a.thickness.value) 
-            let key       = Mod.bindOption anno Guid.Empty       (fun a -> a.key) 
-            let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)
-                                   
-            Sg.ofList [
-                Sg.lines polyPoints color thickness trafo key //polyline
-                //Sg.dots polyPoints (Mod.constant C4b.VRVisGreen) // debug sample points
-                Sg.dots points color                     //support points
-            ]         
-        
-        let drawText (view : IMod<CameraView>) conf (anno : MAnnotation) = 
-            let points = anno.points |> AList.toMod
-            let pos = 
-                points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
-
-            Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo anno.text anno.textsize.value
-
-        let optional (sg : ISg<_>) (m : IMod<bool>) : aset<ISg<_>> =
-          adaptive {
-              let! m = m 
-              if m then return sg
-              else return Sg.empty
-          } |> ASet.ofModSingle
-
-        let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (view : IMod<CameraView>) (dots : IMod<bool>) =
-            let points = getPolylinePoints anno            
-            let dots  = dots |> optional (Sg.dots anno.points c)
-           
-            let texts = 
-              anno.text 
-                |> Mod.map (String.IsNullOrEmpty >> not) 
-                |> optional (drawText view conf anno)
-
-            let sgs = ASet.unionMany' [dots; texts]
-
-            Sg.ofList [
-                Sg.lines points c anno.thickness.value anno.modelTrafo anno.key                  
-                Sg.set sgs 
-            ] |> Sg.onOff anno.visible
-
-        let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =
-           anno.showDns |> optional (drawDns anno conf cl cam) |> Sg.set |> Sg.onOff anno.visible
-        
-        let toAnnotationOpt = 
-            fun y -> 
-                match y with
-                    | MAnnotations ann -> Some ann
-                    | _ -> None
-
-        let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> * ISg<Drawing.Action>=
-            // order is irrelevant for rendering. change list to set,
-            // since set provides more degrees of freedom for the compiler           
-            let annoSet = 
-                model.annotations.flat 
-                    |> AMap.chooseM(fun _ y -> y |> Mod.map toAnnotationOpt) 
-                    |> AMap.toASet
-
-            let config = 
-                {
-                    nearPlane      = msmallConfig.getNearPlane      mbigConfig
-                    hfov           = msmallConfig.getHfov           mbigConfig
-                    //maxDipAngle    = msmallConfig.getMaxDipAngle    mbigConfig
-                    //minDipAngle    = msmallConfig.getMinDipAngle    mbigConfig
-                    arrowLength    = msmallConfig.getArrowLength    mbigConfig
-                    arrowThickness = msmallConfig.getArrowThickness mbigConfig
-                    dnsPlaneSize   = msmallConfig.getDnsPlaneSize   mbigConfig
-                }
-           
-            let annotations =              
-              annoSet 
-                |> ASet.map(fun (_,a) -> 
-                  let c = UI.mkColor model.annotations a
-                  finishedAnnotation a c config view (a.geometry |> Mod.map(function | Geometry.Point -> true | _ -> false)))
-                |> Sg.set               
                                 
-            let overlay = 
-              Sg.ofList [
-               // brush model.hoverPosition; 
-                annotations
-                drawWorkingAnnotation model.working
-              ]
+    let threads (m : DrawingModel) = m.pendingIntersections
+    
+    let toAnnotationOpt = 
+      fun y -> 
+        match y with
+          | MAnnotations ann -> Some ann
+          | _ -> None
 
-            let depthTest = annoSet |> ASet.map(fun (_,a) -> finishedAnnotationDiscs a config model.colorLegend view) |> Sg.set
+    let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> * ISg<Drawing.Action>=
+        // order is irrelevant for rendering. change list to set,
+        // since set provides more degrees of freedom for the compiler           
+        let annoSet = 
+            model.annotations.flat 
+                |> AMap.chooseM(fun _ y -> y |> Mod.map toAnnotationOpt) 
+                |> AMap.toASet
 
-            (overlay, depthTest)
+        let config : Sg.innerViewConfig = 
+            {
+                nearPlane      = msmallConfig.getNearPlane      mbigConfig
+                hfov           = msmallConfig.getHfov           mbigConfig                    
+                arrowLength    = msmallConfig.getArrowLength    mbigConfig
+                arrowThickness = msmallConfig.getArrowThickness mbigConfig
+                dnsPlaneSize   = msmallConfig.getDnsPlaneSize   mbigConfig
+            }
+       
+        let annotations =              
+          annoSet 
+            |> ASet.map(fun (_,a) -> 
+              let c = UI.mkColor model.annotations a
+              Sg.finishedAnnotation a c config view (a.geometry |> Mod.map(function | Geometry.Point -> true | _ -> false)))
+            |> Sg.set               
+                            
+        let overlay = 
+          Sg.ofList [
+           // brush model.hoverPosition; 
+            annotations
+            Sg.drawWorkingAnnotation model.working
+          ]
+
+        let depthTest = annoSet |> ASet.map(fun (_,a) -> Sg.finishedAnnotationDiscs a config model.colorLegend view) |> Sg.set
+
+        (overlay, depthTest)
             

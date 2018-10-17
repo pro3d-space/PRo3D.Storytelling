@@ -442,7 +442,6 @@ module Mutable =
     type MAnnotation(__initial : PRo3D.Annotation) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Annotation> = Aardvark.Base.Incremental.EqModRef<PRo3D.Annotation>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Annotation>
-        let _key = ResetMod.Create(__initial.key)
         let _modelTrafo = ResetMod.Create(__initial.modelTrafo)
         let _geometry = ResetMod.Create(__initial.geometry)
         let _projection = ResetMod.Create(__initial.projection)
@@ -459,7 +458,7 @@ module Mutable =
         let _textsize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.textsize)
         let _surfaceName = ResetMod.Create(__initial.surfaceName)
         
-        member x.key = _key :> IMod<_>
+        member x.key = __current.Value.key
         member x.modelTrafo = _modelTrafo :> IMod<_>
         member x.geometry = _geometry :> IMod<_>
         member x.projection = _projection :> IMod<_>
@@ -481,7 +480,6 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
-                ResetMod.Update(_key,v.key)
                 ResetMod.Update(_modelTrafo,v.modelTrafo)
                 ResetMod.Update(_geometry,v.geometry)
                 ResetMod.Update(_projection,v.projection)

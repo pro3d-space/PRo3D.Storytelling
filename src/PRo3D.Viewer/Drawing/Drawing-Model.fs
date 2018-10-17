@@ -48,22 +48,20 @@ type Action =
 [<DomainType>]
 type DrawingModel = {
 
-    draw    : bool 
+    draw          : bool
     hoverPosition : option<Trafo3d>    
 
-    working : Option<Annotation>
+    working    : Option<Annotation>
     projection : Projection
-    geometry : Geometry
-    semantic : Semantic
-    color    : ColorInput
-    thickness : NumericInput
+    geometry   : Geometry
+    semantic   : Semantic
+    color      : ColorInput
+    thickness  : NumericInput
 
     annotations: GroupsModel 
     exportPath : Option<string>
 
-    pendingIntersections : ThreadPool<Action>
-    //config : ViewConfigModel
-  //  coordinates : ReferenceSystem
+    pendingIntersections : ThreadPool<Action>    
 
     [<TreatAsValue>]
     past : Option<DrawingModel> 

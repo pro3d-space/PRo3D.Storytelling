@@ -239,7 +239,7 @@ type Segment = {
 
 [<DomainType>]
 type Annotation = {
-    [<PrimaryKey>]
+    [<PrimaryKey; NonIncremental>]
     key         : Guid
 
     modelTrafo  : Trafo3d

@@ -465,7 +465,7 @@ module ViewPlan =
             Sg.ofList [
                     Sg.dots start color  
                     Sg.dots endp color  
-                    PRo3D.Sg.lines axisLine color thickness trafo (Mod.constant Guid.Empty)
+                    PRo3D.Sg.lines axisLine color thickness trafo
                 ] 
         
         let drawInstruments (instruments:alist<MInstrument>) (viewPlan:MViewPlan) (near:IMod<float>) (length:IMod<float>) (thickness:IMod<float>) (cam:IMod<CameraView>) =
@@ -523,8 +523,7 @@ module ViewPlan =
                                     ] 
                         | None -> yield Sg.ofList []
                 }
-                
-          
+                          
         let drawWheels (vp:MViewPlan) (cam:IMod<CameraView>) =
             alist {
                 let! wheels = vp.rover.wheelPositions
@@ -537,8 +536,7 @@ module ViewPlan =
                     yield Sg.ofList [
                             ReferenceSystemApp.Sg.point wheelPos (Mod.constant C4b.White) cam ]   
                 }
-        
-        
+                
         let drawSelectionGeometry (vp:MViewPlan) (near:IMod<float>) (length:IMod<float>) (thickness:IMod<float>) (cam:IMod<CameraView>) (roverM:MRoverModel)= 
             let wheels = drawWheels vp cam
                             |> ASet.ofAList 
