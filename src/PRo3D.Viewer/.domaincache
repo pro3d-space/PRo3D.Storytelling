@@ -39,9 +39,10 @@ Scene.fs|false|5248439812046087800|x2yjqQprATlEZw6uDALMjw==
 LensConfigs.fs|false|5248298801332339276|DQQAzk+kwk7YOeTVnE/Teg==
 AnnotationGroupsImporter.fs|false|5248439730701193952|KokWAxGQO+OuuKm5miYzjg==
 SurfaceTrafoImporter.fs|false|5248298801332499438|8GLf+ynyrUK5JdMZCNkuwA==
+RoverPlacementImporter.fs|false|5248439646612666367|U5ioa53gkWYJZsGof85PyA==
 Viewer\Viewer-Utils.fs|false|5248439812046877546|YjclRTE5vQHS0I7T5Ly5QA==
 Viewer\ViewerGUI.fs|false|5248439812435006099|j5IBCgigCVOYZQU+a8UmWA==
-Viewer\Viewer.fs|false|5248439814667968899|dwCl+tEaDR+vkUKIP3mG6w==
-RemoteControlModel.fs|true|5248298801332439387|oGEIsCRJi5AHyg9r/vRcbQ==
+Viewer\Viewer.fs|false|5248439956074935910|SeS232sshYWr42Zq97I3Kg==
+RemoteControlModel.fs|true|5248341152064535070|oGEIsCRJi5AHyg9r/vRcbQ==
 RemoteControlApp.fs|false|5248365387641332111|iqmCZqIGenot7s5X5iI+og==
 Program.fs|false|5248439812046077804|IPcDoOtAtxn3TCO10nUEpg==
