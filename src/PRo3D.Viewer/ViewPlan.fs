@@ -226,8 +226,9 @@ module ViewPlan =
         
         let posQ = V4d((data |> HMap.find "qX").ToFloat(), (data |> HMap.find "qY").ToFloat(), (data |> HMap.find "qZ").ToFloat(), (data |> HMap.find "qW").ToFloat())
         let rot = Rot3d(posQ.W,posQ.X, posQ.Y,posQ.Z)
-        let forward = rot.TransformDir(V3d.OOI)
-        let trafo = initialPlacementTrafo pos forward ref.up.value
+        let forward = rot.TransformDir(ref.north.value) //ref.north.value
+        let forward' = pos + forward
+        let trafo = initialPlacementTrafo pos forward' ref.up.value
         let angle = 
             {
                 value = 0.0

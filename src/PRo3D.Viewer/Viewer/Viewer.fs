@@ -503,7 +503,7 @@ module ViewerApp =
                   match m.scene.viewPlans.roverModel.selectedRover with
                     | Some r -> let vp = ViewPlan.createViewPlanFromFile importedData m.scene.viewPlans r m.scene.referenceSystem m.scene.navigation.camera
                                 { m with scene = { m.scene with viewPlans = vp}} 
-                    | None -> m
+                    | None -> Log.error "no rover selected"; m
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
             | QuickLoad2,_,_ ->                                
