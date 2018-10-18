@@ -79,10 +79,10 @@ module DrawingApp =
           | Some a -> 
             let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
             bc.Add json
-            model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true                            
+            model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true
           | None -> model.annotations             
 
-      { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups; draw = false } 
+      { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups }
     
     //adds new point to working state, if certain conditions are met the annotation finishes itself
     let addPoint up north planet samplePoint p model surfaceName bc =

@@ -131,8 +131,8 @@ module Surface =
 
     let computeIndices (size:V2i)(invalids : int[]) : int[] =
       CSharpUtils.IndexComputation.ComputeIndexArray(size,invalids)
-
-    let intersectKdTrees' = KdTrees.intersectKdTrees computeIndices
+    
+    let intersectKdTrees' = DebugKdTrees.intersectKdTrees computeIndices
 
     let doKdTreeIntersection (m : SurfaceModel) (r : FastRay3d) cache : option<float * PRo3D.Surfaces.Surface> * hmap<_,_> = 
         let mutable cache = cache
@@ -147,7 +147,6 @@ module Surface =
           activeSgSurfaces 
             |> List.filter( fun sg -> sgSurface.isSgOPC sg )
             |> List.map( fun sg -> sgSurface.toSgOPC sg )
-
         
         let hits = 
           sgSurfaces          
@@ -179,7 +178,7 @@ module Surface =
                                hit
                                )
                        |> List.sortBy(fun (t,_)-> t)
-                       |> List.tryHead                                               
+                       |> List.tryHead
                
                    closestHit
                )

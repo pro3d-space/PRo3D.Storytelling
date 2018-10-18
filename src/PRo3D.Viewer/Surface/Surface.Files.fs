@@ -23,7 +23,60 @@ open PRo3D.Groups
 module DebugKdTrees = 
     open Aardvark.VRVis.Opc.KdTrees
     open MBrace.FsPickler
-  
+    open Aardvark.Geometry
+    
+    let loadObjectSet (cache : hmap<string, ConcreteKdIntersectionTree>) (computeIndices) (lvl0Tree : Level0KdTree) =       
+      
+      match lvl0Tree with
+        | InCoreKdTree kd -> 
+          kd.kdTree, cache
+        | LazyKdTree kd ->             
+          let kdTree, cache =
+            match kd.kdTree with
+            | Some k -> k, cache
+            | None -> 
+              let tree = cache |> HMap.tryFind (kd.boundingBox.ToString())
+              match tree with
+              | Some t -> 
+                //Log.line "cache hit %A" kd.boundingBox
+                t, cache
+              | None ->                                     
+                Log.line "cache miss %A- loading kdtree" kd.boundingBox
+            
+                let mutable tree = KdTrees.loadKdtree kd.kdtreePath                                    
+                tree.KdIntersectionTree.ObjectSet <- (kd |> loadTriangles computeIndices)
+            
+                if(tree == null) then
+                  Log.line "help"
+
+                let key = tree.KdIntersectionTree.BoundingBox3d.ToString()
+                Log.line "%A" key
+                Log.line "%A" kd.boundingBox
+
+                tree, HMap.empty // (HMap.add key tree cache)
+          kdTree, cache
+
+    let intersectKdTrees (computeIndices) bb (hitObject : 'a) (cache : hmap<string, ConcreteKdIntersectionTree>) (ray : FastRay3d) (kdTreeMap: hmap<Box3d, KdTrees.Level0KdTree>) = 
+
+        let kdtree, c = kdTreeMap |> HMap.find bb |> loadObjectSet cache computeIndices
+
+        let kdi = kdtree.KdIntersectionTree 
+        let mutable hit = ObjectRayHit.MaxRange
+                
+        let objFilter a b = true
+        try
+             // let hitFilter a b c d = false
+          if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then
+              //let point = ray.Ray.GetPointOnRay(hit.RayHit.T)
+              Some (hit.RayHit.T, hitObject),c
+          else            
+              None,c
+        with 
+          | e -> 
+            Log.error "[DebugKdtrees] error in kdtree intersection" 
+            Log.error "%A" e
+            None,c
+
     let loadKdTrees' (h : PatchHierarchy) (trafo:Trafo3d) (load : bool) (mode:ViewerModality) (b : BinarySerializer) : hmap<Box3d,Level0KdTree> =
                       
           //ObjectBuilder
