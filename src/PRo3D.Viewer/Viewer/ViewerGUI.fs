@@ -112,7 +112,7 @@ module Gui =
             let! vp = m.selectedViewPlan
             let! inst = 
                     match vp with
-                            | Some v -> Mod.bindOption v.selectedInstrument "" (fun a -> a.id)
+                            | Some v -> Mod.bindOption v.selectedInstrument "No instrument selected" (fun a -> a.id)
                             | None -> Mod.constant("")
 
             return inst
@@ -187,11 +187,12 @@ module Gui =
         div [ clazz "menu"] [
             Incremental.div AttributeMap.empty (AList.ofModSingle (save m))
             div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveAs;
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({properties: []}));") ][
+                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
                   text "Save as..."
             ]
             div [ clazz "ui inverted item"; Dialogs.onChooseFiles OpenScene;
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));")][
+                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({ filters: [{ name: 'Scene', extensions: ['scn']},], properties: ['openFile']}));")][ 
+                                                    
                   text "Open"
             ]
             div [ clazz "ui inverted item"; onMouseClick (fun _ -> NewScene)][

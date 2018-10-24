@@ -214,15 +214,18 @@ module ViewerUtils =
 
         let upperC = scalar |> Mod.bind ( fun x ->
                         match x with 
-                            | Some s -> s.colorLegend.upperColor.c |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H)
-                            | None   -> Mod.constant(1.0f)
+                            | Some s -> s.colorLegend.upperColor.c |> Mod.map(fun x -> let t = x.ToC3f()
+                                                                                       let t1 = HSVf.FromC3f(t)
+                                                                                       let t2 = (float)t1.H
+                                                                                       t2 )
+                            | None   -> Mod.constant(1.0)
                         )
         let lowerC = 
           scalar 
             |> Mod.bind ( fun x ->
               match x with 
-                  | Some s -> s.colorLegend.lowerColor.c |> Mod.map(fun x -> (HSVf.FromC3f (x.ToC3f())).H)
-                  | None   -> Mod.constant(0.0f)
+                  | Some s -> s.colorLegend.lowerColor.c |> Mod.map(fun x -> ((float)(HSVf.FromC3f (x.ToC3f())).H))
+                  | None   -> Mod.constant(0.0)
               )
 
         let rangeToMinMax = scalar |> Mod.bind ( fun x -> 

@@ -832,21 +832,7 @@ module ViewerApp =
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation            
           
-            let orientationRef = 
-                ReferenceSystemApp.Sg.getOrientationSystem
-                    m.scene.config
-                    mrefConfig
-                    m.scene.referenceSystem
-                    m.scene.navigation.camera.view
-                //|> Sg.map OrientationCube
-
-            //let orientationCube =                                    
-            //  OrientationCube.Sg.loadCubeModel "../../data/rotationcube/rotationcube.dae"
-            //  //orientationRef
-            //    |> OrientationCube.Sg.orthoOrientation m.scene.navigation.camera.view m.scene.referenceSystem                 
-            //    |> Sg.map OrientationCube
-            //    |> Sg.onOff m.scene.config.drawOrientationCube
-               
+            
             //let controller = 
             //    adaptive {
             //        let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
@@ -1012,7 +998,7 @@ module ViewerApp =
             [annos] |> Sg.ofList
 
         // instrument view control
-        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped ioverlayed Sg.empty m // m.scene.surfacesModel.sgGrouped overlayed discs m
+        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped ioverlayed discs m // m.scene.surfacesModel.sgGrouped overlayed discs m
         let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
         let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
                        
