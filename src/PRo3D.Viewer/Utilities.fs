@@ -457,7 +457,7 @@ module Sg =
 
     ///probably move to a shader
     let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) =
-        let right = forw.Cross up
+        let right = up.Cross forw
         let rotTrafo = 
             new Trafo3d(
                 new M44d(

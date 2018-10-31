@@ -287,10 +287,10 @@ module ViewerApp =
                 match m.scene.viewPlans.working.IsEmpty with
                     | true -> m' 
                     | false -> { m' with tabMenu = TabMenu.Viewplanner }
-            | Interactions.AlignPick -> 
-                { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
-            | Interactions.PlaceSurface -> 
-                { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
+            //| Interactions.AlignPick -> 
+            //    { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
+            //| Interactions.PlaceSurface -> 
+            //    { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
             | _ -> m
 
     let mutable lastHash = -1
@@ -611,23 +611,23 @@ module ViewerApp =
                     match drawingAction with
                       | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
                       | _ -> m                                
-                | Interactions.AlignPick -> 
-                    match k with
-                     | Aardvark.Application.Keys.Enter -> 
-                        let m = { m with alignment = AlignmentApp.update m.alignment PRo3d.Align.AlignmentActions.Finish }
+                //| Interactions.AlignPick -> 
+                //    match k with
+                //     | Aardvark.Application.Keys.Enter -> 
+                //        let m = { m with alignment = AlignmentApp.update m.alignment PRo3d.Align.AlignmentActions.Finish }
 
-                        match (m.alignment.resultTrafo, m.alignment.alignment)with
-                          | Some t, Some al ->                             
-                            let f = (fun x -> 
-                                let s = x |> Leaf.toSurface
-                                { s with preTransform = t} |> Leaf.Surfaces)
+                //        match (m.alignment.resultTrafo, m.alignment.alignment)with
+                //          | Some t, Some al ->                             
+                //            let f = (fun x -> 
+                //                let s = x |> Leaf.toSurface
+                //                { s with preTransform = t} |> Leaf.Surfaces)
 
-                            let g = Groups.updateLeaf al.blue f m.scene.surfacesModel.surfaces
-                            { m.scene.surfacesModel with surfaces = g }
-                              |> SurfaceModel.triggerSgGrouping
-                              |> Lenses.set' _surfacesModel m
-                          | _ -> m
-                     | _ -> m
+                //            let g = Groups.updateLeaf al.blue f m.scene.surfacesModel.surfaces
+                //            { m.scene.surfacesModel with surfaces = g }
+                //              |> SurfaceModel.triggerSgGrouping
+                //              |> Lenses.set' _surfacesModel m
+                //          | _ -> m
+                //     | _ -> m
                 | _ -> m
                                                   
 
