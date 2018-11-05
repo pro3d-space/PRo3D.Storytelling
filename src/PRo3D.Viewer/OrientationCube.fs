@@ -10,6 +10,7 @@ open Aardvark.UI.Trafos
 open Aardvark.UI.Primitives
 open PRo3D
 
+
 module Shader =
     
     open FShade
@@ -127,5 +128,14 @@ module Sg =
             do! DefaultSurfaces.diffuseTexture
         }
         |> Sg.pass (RenderPass.after "cube" RenderPassOrder.Arbitrary RenderPass.main)
+
+    //let view (camView : IMod<CameraView>) (config:MViewConfigModel) (refSys:MReferenceSystem) =
+    //    aset {
+    //        let! draw = config.drawOrientationCube
+    //        yield match draw with
+    //                | true ->  loadCubeModel "../../data/rotationcube/rotationcube.dae"
+    //                            |> orthoOrientation camView refSys
+    //                |_-> Sg.empty
+    //        }  |> Sg.set
 
    

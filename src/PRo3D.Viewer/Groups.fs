@@ -590,7 +590,7 @@ module SurfaceModel =
     let getSurface model guid =
         model.surfaces.flat |> HMap.tryFind guid        
 
-    let groupSurfaces (sgSurfaces : hmap<Guid, SgSurfaces>) (surfaces : hmap<Guid, Surface>) =
+    let groupSurfaces (sgSurfaces : hmap<Guid, SgSurface>) (surfaces : hmap<Guid, Surface>) =
       sgSurfaces
         |> HMap.toList
         |> List.groupBy(fun (_,x) -> 

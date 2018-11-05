@@ -656,7 +656,7 @@ module Shader =
       let lH = fcLowerHueBound * 255.0
       //map values to hue range
       let fcHueUpperBound = if (uH < lH) then uH + 1.0 else uH
-      let rangeHue = uH - lH
+      let rangeHue = uH - lH // fcHueUpperBound - lH
       (k * rangeHue) + lH
 
   [<ReflectedDefinition>]
@@ -691,9 +691,9 @@ module Shader =
                      
         let currColorH = 
             if invertMapping then
-                (endColor - (hStepSize * ((float)(pos1-1))))
+                (endColor - (hStepSize * ((float)(pos1))))
             else 
-                (startColor + (hStepSize * ((float)(pos1-1))))
+                (startColor + (hStepSize * ((float)(pos1))))
         currColorH
             
 
@@ -702,7 +702,7 @@ module Shader =
 
           if (uniform?falseColors) 
           then
-              let hue = mapFalseColors v.scalar
+              let hue = mapFalseColors2 v.scalar
               let c = hsv2rgb ((clamp 0.0 255.0 hue)/ 255.0 ) 1.0 1.0 // 
               return v.c * V4d(c.X, c.Y, c.Z, 1.0)
           else

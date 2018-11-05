@@ -157,11 +157,11 @@ module Gui =
                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
                text "OPC"
              ]
-             //div [ clazz "ui inverted item"; 
-             //  Dialogs.onChooseFiles ImportObject;
-             //  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
-             //  text "OBJ"
-             //]
+             div [ clazz "ui inverted item"; 
+               Dialogs.onChooseFiles ImportObject;
+               clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
+               text "OBJ"
+             ]
              ]
          ]
 

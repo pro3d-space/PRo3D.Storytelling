@@ -155,10 +155,10 @@ module ViewerApp =
                 let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
                 let (refSystem',_)= 
                     ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
-                let (orSystem',_)= 
-                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.orientationSystem) refAction  
+                //let (orSystem',_)= 
+                //    ReferenceSystemApp.update m.scene.config refConfig (m.scene.orientationSystem) refAction  
                                                                 
-                { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = orSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB
+                { m with scene = { m.scene with referenceSystem = refSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB //; orientationSystem = orSystem'
             | None -> m
 
     let isGrabbed (model : Model) =
@@ -268,9 +268,9 @@ module ViewerApp =
                 let (refSystem',_)= 
                     ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
                           
-                let origin = new V3d(m.overlayFrustum.right * 0.5, m.overlayFrustum.bottom * 0.5, 1.0)
-                let os = { refSystem' with origin = origin }
-                let m = { m with scene = { m.scene with referenceSystem = refSystem'; orientationSystem = os }}
+                //let origin = new V3d(m.overlayFrustum.right * 0.5, m.overlayFrustum.bottom * 0.5, 1.0)
+                //let os = { refSystem' with origin = origin }
+                let m = { m with scene = { m.scene with referenceSystem = refSystem' }} //; orientationSystem = os
                           
                 //update camera upvector
                 updateCameraUp m
@@ -677,7 +677,7 @@ module ViewerApp =
             | ReferenceSystemMessage a,_,_ ->                                
                 let refsystem',_ = ReferenceSystemApp.update m.scene.config refConfig m.scene.referenceSystem a
                 let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
-                let m = (Model.Lens.scene |. Scene.Lens.orientationSystem).Set(m, refsystem')
+                //let m = (Model.Lens.scene |. Scene.Lens.orientationSystem).Set(m, refsystem')
                
                 match a with 
                   | ReferenceSystemApp.Action.SetUp _ | ReferenceSystemApp.Action.SetPlanet _ -> updateCameraUp m
@@ -765,12 +765,7 @@ module ViewerApp =
         |> Sg.noEvents
         |> Sg.trafo(trafo)
    
-    type MSgSurfaces with
-                member x.trafo =
-                    match x with
-                        | MSgSurfaceOPC opc -> opc.trafo
-                        | MSgSurfaceOBJ obj -> obj.trafo
-
+   
     let view (m : MModel) = //(localhost: string)
         
         let renderControlAttributes (model : MNavigationModel)  =            
@@ -857,6 +852,13 @@ module ViewerApp =
             //          | None -> return Sg.empty
                     
             //    } |> Sg.dynamic
+
+            //let orientationCube = 
+            //    OrientationCube.Sg.view
+            //        m.scene.navigation.camera.view
+            //        m.scene.config 
+            //        m.scene.referenceSystem
+               
             
             let viewPlans =
                 ViewPlan.Sg.view 
@@ -866,7 +868,7 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
                         
-            [annos; exploreCenter; refSystem; viewPlans(*;orientationCube*)] |> Sg.ofList
+            [annos; exploreCenter; refSystem; viewPlans] |> Sg.ofList // (*;orientationCube*)
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
