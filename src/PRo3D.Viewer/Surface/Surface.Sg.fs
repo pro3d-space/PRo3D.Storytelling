@@ -149,14 +149,14 @@ module Sg =
         let pose = Pose.translate V3d.Zero // bb.Center
         let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
     
-        let sgSurfaceOpc = {
+        let sgSurface = {
                 surface    = s.guid
                 sceneGraph = sg
                 globalBB   = bb
-                kdTree     = kd
+                picking    = Picking.KdTree kd
                 trafo      = trafo
             }
-        (SgSurfaces.SgSurfaceOPC sgSurfaceOpc)
+        sgSurface
     
     let transformBox (trafo:Trafo3d) (bb:Box3d) = bb.Transformed(trafo)
               

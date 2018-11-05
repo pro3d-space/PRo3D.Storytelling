@@ -95,82 +95,19 @@ type Surface = {
     
 }
 
+type Picking =
+  | PickMesh of ISg
+  | KdTree   of hmap<Box3d,KdTrees.Level0KdTree>
+
 [<DomainType>]
-type SgSurfaceOpc = {    
+type SgSurface = {    
     [<NonIncremental>]
     surface     : Guid    
     trafo       : Transformation
     globalBB    : Box3d
     sceneGraph  : ISg
-    kdTree      : hmap<Box3d,KdTrees.Level0KdTree>
+    picking     : Picking
 }
-
-[<DomainType>]
-type SgSurfaceObj = {    
-    [<NonIncremental>]
-    surface     : Guid    
-    trafo       : Transformation
-    globalBB    : Box3d
-    sceneGraph  : ISg
-    pickMesh    : ISg
-}
-
-[<DomainType>]
-type SgSurfaces = 
-    | SgSurfaceOPC    of value : SgSurfaceOpc
-    | SgSurfaceOBJ    of value : SgSurfaceObj
-
-    with     
-      member x.surface =
-        match x with
-          | SgSurfaceOPC opc -> opc.surface
-          | SgSurfaceOBJ obj -> obj.surface
-
-      member x.trafo =
-        match x with
-          | SgSurfaceOPC opc -> opc.trafo
-          | SgSurfaceOBJ obj -> obj.trafo
-
-      member x.globalBB =
-        match x with
-          | SgSurfaceOPC opc -> opc.globalBB
-          | SgSurfaceOBJ obj -> obj.globalBB
-
-module sgSurface = 
-    let isSgOPC (sgSurf:SgSurfaces) =
-        match sgSurf with 
-            | SgSurfaceOPC opc -> true
-            |_-> false
-
-    let toSgOPC (sgSurf:SgSurfaces) =
-        match sgSurf with 
-            | SgSurfaceOPC opc -> opc
-            |_-> failwith "wrong type"
-
-    let toSgSurfacesOPC surfs =
-        surfs
-            |> HMap.choose(fun _ x -> 
-                match x with
-                | SgSurfaceOPC s -> Some s
-                | _ -> None )
-
-    let isSgOBJ (sgSurf:SgSurfaces) =
-        match sgSurf with 
-            | SgSurfaceOBJ obj -> true
-            |_-> false
-
-    let toSgOBJ (sgSurf:SgSurfaces) =
-        match sgSurf with 
-            | SgSurfaceOBJ obj -> obj
-            |_-> failwith "wrong type"
-
-    let toSgSurfacesOBJ surfs =
-        surfs
-            |> HMap.choose(fun _ x -> 
-                match x with
-                | SgSurfaceOBJ s -> Some s
-                | _ -> None )
-
 
 module Init =
     let quality = 

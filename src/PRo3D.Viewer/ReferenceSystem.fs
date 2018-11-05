@@ -104,7 +104,7 @@ module ReferenceSystemApp =
     let updateCoordSystem (p:V3d) (planet:Planet) (model : ReferenceSystem) = 
         let up = upVector p planet
         let n = northVector up 
-        let no = updateVectorInDegree up n model.origin model.noffset.value 
+        let no = Rot3d(up, model.noffset.value |> Double.radiansFromDegrees).TransformDir(n) //updateVectorInDegree up n model.origin model.noffset.value 
         { model with north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up; northO = no }
    
     let update<'a> (bigConfig : 'a) (config : ReferenceSystemConfig<'a>) (model : ReferenceSystem) (act : Action) =
@@ -123,7 +123,7 @@ module ReferenceSystemApp =
                 { model with north = n }, bigConfig
             | SetNOffset o ->
                 let noffset = Numeric.update model.noffset o
-                let no = updateVectorInDegree model.up.value model.north.value model.origin model.noffset.value 
+                let no = Rot3d(model.up.value, model.noffset.value |> Double.radiansFromDegrees).TransformDir(model.north.value) //updateVectorInDegree model.up.value model.north.value model.origin model.noffset.value 
                 { model with noffset = noffset; northO = no }, bigConfig 
             | ToggleVisible   -> 
                 { model with isVisible = not model.isVisible}, bigConfig
