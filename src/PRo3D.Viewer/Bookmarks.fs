@@ -21,7 +21,7 @@ module Bookmarks =
             ans |> Seq.tryFind(fun x -> x.key = key)
 
     let getNewBookmark (navigation:NavigationModel) (count:int) =  
-        let name = sprintf "bm%d" count
+        let name = sprintf "Bookmark #%d" count
         {
             key = Guid.NewGuid()
             name = name

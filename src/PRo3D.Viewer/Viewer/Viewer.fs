@@ -533,13 +533,14 @@ module ViewerApp =
                      let cameraLocation = m.scene.navigation.camera.view.Location 
                      let hitF = hitF cameraLocation
                    
+                     lastHash <- rayHash
                      matchPickingInteraction sendQueue hit hitF surf m                                    
                    | None, _ -> 
                      Log.error "[PickSurface] no hit of %s" name
                      m
                 Log.stop()
                 Log.error "done intersecting"
-                lastHash <- rayHash
+                
                 result
             | PickObject (p,id), _ ,_ ->  
                 match m.picking with

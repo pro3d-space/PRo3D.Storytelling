@@ -150,34 +150,34 @@ module Surface =
                fun (p ,surf) ->
                  match p with
                     | Picking.KdTree kd ->
-                 if kd.IsEmpty then Log.error "no kdtree loaded for %s" surf.name; None
-                 else                        
-                   //get bbs that are hit
-                   let hitBoxes =
-                     kd  
-                       |> HMap.toList |> List.map fst
-                       |> List.filter(
-                           fun x -> 
-                              let mutable t = 0.0
-                              let r' = r.Ray.Transformed(surf.preTransform.Backward) //combine pre and current transform
-                              x.Intersects(r', &t)
-                       )
-                   //intersect corresponding kdtrees
-                   let closestHit =
-                     hitBoxes
-                       |> List.choose(
-                           fun bb -> 
-                               //Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                                             
-                               let ray = r.Ray.Transformed(surf.preTransform.Backward) |> FastRay3d  //combine pre and current transform                     
-                               let hit, c = 
-                                 kd |> intersectKdTrees' bb surf cache ray                     
-                               cache <- c
-                               hit
-                               )
-                       |> List.sortBy(fun (t,_)-> t)
-                       |> List.tryHead
-               
-                   closestHit
+                      if kd.IsEmpty then Log.error "no kdtree loaded for %s" surf.name; None
+                      else                        
+                        //get bbs that are hit
+                        let hitBoxes =
+                          kd  
+                            |> HMap.toList |> List.map fst
+                            |> List.filter(
+                                fun x -> 
+                                   let mutable t = 0.0
+                                   let r' = r.Ray.Transformed(surf.preTransform.Backward) //combine pre and current transform
+                                   x.Intersects(r', &t)
+                            )
+                        //intersect corresponding kdtrees
+                        let closestHit =
+                          hitBoxes
+                            |> List.choose(
+                                fun bb -> 
+                                    //Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                                             
+                                    let ray = r.Ray.Transformed(surf.preTransform.Backward) |> FastRay3d  //combine pre and current transform                     
+                                    let hit, c = 
+                                      kd |> intersectKdTrees' bb surf cache ray                     
+                                    cache <- c
+                                    hit
+                                    )
+                            |> List.sortBy(fun (t,_)-> t)
+                            |> List.tryHead
+                      
+                        closestHit
                     | Picking.PickMesh pm -> Log.error "no kdtree loaded for %s" surf.name; None
                )
             |> List.groupBy(fun (_,surf) -> surf.priority.value) |> List.sortByDescending fst
@@ -424,21 +424,19 @@ module Surface =
 
          let surfaces = 
             surfaces
-               |> AList.map (fun x -> Mod.force x)
-               |> AList.choose( fun x -> match x with
-                                           | MSurfaces s -> Some s
-                                           | _-> None )
+               |> AList.map Mod.force
+               |> AList.choose(function | MSurfaces s -> Some s | _-> None )
+
          for s in surfaces do
 
              let singleSelect = fun _ -> singleSelect(s,path)
-             let multiSelect  = fun _ -> multiSelect(s,path)
-             let! selected = s |> isSingleSelect model
+             let multiSelect = fun _ -> multiSelect(s,path)
+             //let! selected = s |> isSingleSelect model
 
              let! c = mkColor model s
-             let bgc = sprintf "color: %s" (Html.ofC4b c)
              let infoc = sprintf "color: %s" (Html.ofC4b C4b.White)
-             let! key = s.guid
-                                                                             
+
+             let! key = s.guid                                                                             
              let! absRelIcons = absRelIcons s
 
              let visibleIcon = 
@@ -451,22 +449,35 @@ module Surface =
                     yield clazz "hide icon"
                 } |> AttributeMap.ofAMap
             
+             let headerColor = 
+               (isSingleSelect model s) 
+                 |> Mod.map(fun x -> 
+                   (if x then C4b.VRVisGreen else C4b.Gray) 
+                     |> Html.ofC4b 
+                     |> sprintf "color: %s"
+                 ) 
+
+            // let headerColor = sprintf "color: %s" (Html.ofC4b C4b.Gray)
              let headerAttributes =
                 amap {
                   yield onClick singleSelect
-                  let! selected = isSingleSelect model s
-                  yield if selected then style "text-transform:uppercase" else style "text-transform:none"
+                  //let! selected = isSingleSelect model s
+                  
+                  //yield if selected then style "text-transform:uppercase" else style "text-transform:none"
+                  //yield if selected then style bgc else style bgc
                 } |> AttributeMap.ofAMap
 
-             let headerColor = sprintf "color: %s" (Html.ofC4b C4b.Gray)
+             let headerText = Mod.map2 (fun a b -> sprintf "%.0f|%s" a b) (s.priority.value) s.name
 
+             let bgc = sprintf "color: %s" (Html.ofC4b c)
              yield div [clazz "item"; style infoc] [
                  i [clazz "cube middle aligned icon"; onClick multiSelect;style bgc][] 
                  div [clazz "content"; style infoc] [                     
                      yield Incremental.div (AttributeMap.ofList [style infoc])(
                          alist {
-                             yield div[clazz "header"; style headerColor][
-                                Incremental.span headerAttributes ([Incremental.text s.name] |> AList.ofList)
+                             let! hc = headerColor
+                             yield div[clazz "header"; style hc][
+                                Incremental.span headerAttributes ([Incremental.text headerText] |> AList.ofList)
                              ]
                              //if selected then
                              //    yield div[onClick singleSelect][ u[][Incremental.text desc]]
@@ -488,8 +499,7 @@ module Surface =
                              yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
                              yield GuiEx.iconCheckBox s.isActive (ToggleActiveFlag key) |> UI.wrapToolTip "Toggle IsActive"
                          } 
-                     ) 
-                                    
+                     )                                     
                  ]
              ]
        }
@@ -580,7 +590,9 @@ module Surface =
 
     let viewSurfacesGroups (model:MSurfaceModel) = 
         require GuiEx.semui (
-            TreeView.view [] (viewTree [] model.surfaces.rootGroup model.surfaces)
+            Incremental.div 
+              (AttributeMap.ofList [clazz "ui celled list"]) 
+              (viewTree [] model.surfaces.rootGroup model.surfaces)            
         )    
         
 
