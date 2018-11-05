@@ -114,7 +114,7 @@ type Scene = {
     config            : ViewConfigModel
     scenePath         : Option<string>
     referenceSystem   : ReferenceSystem
-    orientationSystem : ReferenceSystem
+    //orientationSystem : ReferenceSystem
     bookmarksModel    : BookmarksModel
     viewPlans         : ViewPlanModel
     dockConfig        : DockConfig
@@ -272,7 +272,7 @@ module Viewer =
             config          = ViewConfigModel.initial
             scenePath       = None
             referenceSystem = ReferenceSystem.initial
-            orientationSystem = ReferenceSystem.initial
+            //orientationSystem = ReferenceSystem.initial
             bookmarksModel  = BookmarksModel.initial
             viewPlans       = ViewPlanModel.initial                                        
             dockConfig      = initialDockConfig                          

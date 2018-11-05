@@ -453,8 +453,6 @@ type ViewConfigModel = {
     arrowLength             : NumericInput
     arrowThickness          : NumericInput
     dnsPlaneSize            : NumericInput
-    //minDipAngle             : NumericInput
-    //maxDipAngle             : NumericInput
     lodColoring             : bool
     drawOrientationCube     : bool
     }
@@ -511,8 +509,6 @@ module ViewConfigModel =
         arrowLength = initArrowLength
         arrowThickness = initArrowThickness
         dnsPlaneSize = initPlaneSize
-        //minDipAngle = initMinAngle
-        //maxDipAngle = initMaxAngle
         lodColoring = false
         //planet = Planet.Mars
         drawOrientationCube = false

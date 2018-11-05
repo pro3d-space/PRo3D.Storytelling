@@ -614,74 +614,19 @@ module Shader =
 
   [<ReflectedDefinition>]
   let hsv2rgb (h : float) (s : float) (v : float) =
-    let s = clamp 0.0 1.0 s
-    let v = clamp 0.0 1.0 v
-
-    let h = h % 1.0
-    let h = if h < 0.0 then h + 1.0 else h
-    //let h = if h >= 360.0 then 0.0 else h
-    //let hi = h/60.0
-    //let i = (int)(round hi)
-    //let f = hi - (float)i
-    let hi = floor ( h * 6.0 ) |> int
-    let f = h * 6.0 - float hi
-    let p = v * (1.0 - s)
-    let q = v * (1.0 - s * f)
-    let t = v * (1.0 - s * ( 1.0 - f ))
-    match hi with
-        | 1 -> V3d(q,v,p)
-        | 2 -> V3d(p,v,t)
-        | 3 -> V3d(p,q,v)
-        | 4 -> V3d(t,p,v)
-        | 5 -> V3d(v,p,q)
-        | _ -> V3d(v,t,p)
-
-  
-  let falseColorLegend (v : Vertex) =
-      fragment {           
-          if uniform?falseColors then
-              let sC : float = uniform?startC
-              let eC : float  = uniform?endC
-              let interval : float = uniform?interval
-              let lowerBound : float = uniform?lowerBound
-              let upperBound : float = uniform?upperBound
-              //let stepS : float = uniform?stepS
-              //let numOfRG : float = uniform?numOfRG
-              let inverted : bool = uniform?inverted
-
-              let range = upperBound - lowerBound
-              let numOfRangeGaps = round (range / interval) 
-              let numOfStops = if (numOfRangeGaps + 2.0) > 100.0 then 100.0 else (numOfRangeGaps + 2.0)
-              let stepSize = 1.0 / (float numOfStops)
-
-              let hStepSize =
-                  if sC < eC then 
-                    (eC - sC) / (numOfStops-1.0)
-                  else 
-                    ((eC + 1.0) - sC) / (numOfStops-1.0)
-
-              let pos = if lowerBound < v.scalar then
-                         (round ( (v.scalar - lowerBound) / interval ))
-                        else 0.0
-                        
-              let pos1 = if upperBound < v.scalar then
-                            numOfRangeGaps
-                         else pos
-                     
-              let p = 
-                  if uniform?inverted then
-                    eC - (hStepSize * pos1)
-                  else 
-                    sC + (hStepSize * pos1)
-              
-              let test = p * stepSize
-              let c = hsv2rgb p 1.0 1.0 //colormap.Sample(norm).XYZ
-
-              return v.c* V4d(c.X, c.Y, c.Z, 1.0)
-              //return v.c
-          else
-              return v.c
-      }
+    let h = Fun.Frac(h)
+    let chr = v * s
+    let x = chr * (1.0 - Fun.Abs(Fun.Frac(h * 3.0) * 2.0 - 1.0))
+    let m = v - chr
+    let t = (int)(h * 6.0)
+    match t with
+        | 0 -> V3d(chr + m, x + m, m)
+        | 1 -> V3d(x + m, chr + m, m)
+        | 2 -> V3d(m, chr + m, x + m)
+        | 3 -> V3d(m, x + m, chr + m)
+        | 4 -> V3d(x + m, m, chr + m)
+        | 5 -> V3d(chr + m, m, x + m)
+        | _ -> V3d(chr + m, x + m, m)
 
   [<ReflectedDefinition>]
   let mapFalseColors value : float =         
@@ -706,28 +651,63 @@ module Shader =
       let bucket = floor (k / normInterv)
       let k = ((float) bucket) * normInterv |> clamp 0.0 1.0
 
+      let uH = fcUpperHueBound * 255.0
+      let lH = fcLowerHueBound * 255.0
       //map values to hue range
-      let fcHueUpperBound = if (fcUpperHueBound < fcLowerHueBound) then fcUpperHueBound + 1.0 else fcUpperHueBound
-      let rangeHue = fcHueUpperBound - fcLowerHueBound
-      (k * rangeHue) + fcLowerHueBound
+      let fcHueUpperBound = if (uH < lH) then uH + 1.0 else uH
+      let rangeHue = uH - lH // fcHueUpperBound - lH
+      (k * rangeHue) + lH
+
+  [<ReflectedDefinition>]
+  let mapFalseColors2 value : float =
+        let fcInterval     = uniform?interval
+        let startColorHue     = uniform?startC
+        let endColorHue       = uniform?endC
+        let invertMapping  = uniform?inverted
+        let fcUpperBound   = uniform?upperBound
+        let fcLowerBound   = uniform?lowerBound
+
+        let range = fcUpperBound - fcLowerBound
+        let numOfRangeGaps = int(round (range / fcInterval)) //round
+        let numOfStops = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
+
+        let startColor = startColorHue *255.0
+        let endColor = endColorHue *255.0
+        let hStepSize =
+            if startColor < endColor then 
+                (endColor - startColor) / ((float)(numOfStops-1))
+            else 
+                ((endColor + 1.0) - startColor) / ((float)(numOfStops-1))
+                
+        let pos = 
+            match fcLowerBound < value with
+                    | true -> (int ( round(value - fcLowerBound) / fcInterval )) //+1//round
+                    | _ -> 0
+        let pos1 = 
+            match fcUpperBound < value with
+                | true -> numOfRangeGaps
+                | _ -> pos
+                     
+        let currColorH = 
+            if invertMapping then
+                (endColor - (hStepSize * ((float)(pos1))))
+            else 
+                (startColor + (hStepSize * ((float)(pos1))))
+        currColorH
+            
 
   let falseColorLegend2 (v : Vertex) =
       fragment {    
 
           if (uniform?falseColors) 
           then
-              let mapping = mapFalseColors v.scalar
-              //let mappingV2d = V2d(mapping, 0.5)
-              //let c = colormap.Sample(mappingV2d).XYZ
-
-              let c = hsv2rgb mapping 1.0 1.0 
+              let hue = mapFalseColors2 v.scalar
+              let c = hsv2rgb ((clamp 0.0 255.0 hue)/ 255.0 ) 1.0 1.0 // 
               return v.c * V4d(c.X, c.Y, c.Z, 1.0)
           else
               return v.c
       }
-
- 
-
+      
   
   [<ReflectedDefinition>]
   let myTrunc (value : float) =

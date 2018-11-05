@@ -22,8 +22,6 @@ module ConfigProperties =
         | SetArrowLength            of Numeric.Action
         | SetArrowThickness         of Numeric.Action
         | SetDnSPlaneSize           of Numeric.Action
-        //| SetMinDipAngle            of Numeric.Action
-        //| SetMaxDipAngle            of Numeric.Action
         | ToggleLodColors
         | ToggleOrientationCube     
         
@@ -42,10 +40,6 @@ module ConfigProperties =
                 { model with arrowThickness = Numeric.update model.arrowThickness at }
             | SetDnSPlaneSize s ->
                 { model with dnsPlaneSize = Numeric.update model.dnsPlaneSize s }
-            //| SetMinDipAngle s ->
-            //    { model with minDipAngle = Numeric.update model.minDipAngle s }
-            //| SetMaxDipAngle s ->
-            //    { model with maxDipAngle = Numeric.update model.maxDipAngle s }
             | ToggleLodColors ->
                 { model with lodColoring = not model.lodColoring}
             | ToggleOrientationCube  -> {model with drawOrientationCube = not model.drawOrientationCube}
@@ -59,9 +53,7 @@ module ConfigProperties =
                 Html.row "Navigation Sensitivity:"  [Numeric.view' [Slider] model.navigationSensitivity |> UI.map SetNavigationSensitivity ]    
                 Html.row "Arrow Length:"            [Numeric.view' [InputBox] model.arrowLength           |> UI.map SetArrowLength ] 
                 Html.row "Arrow Thickness:"         [Numeric.view' [InputBox] model.arrowThickness        |> UI.map SetArrowThickness ]   
-                Html.row "D+S Plane Size:"          [Numeric.view' [InputBox] model.dnsPlaneSize          |> UI.map SetDnSPlaneSize ]    
-                //Html.row "Min Dipping Angle:"       [Numeric.view' [InputBox] model.minDipAngle           |> UI.map SetMinDipAngle ]
-                //Html.row "Max Dipping Angle:"       [Numeric.view' [InputBox] model.maxDipAngle           |> UI.map SetMaxDipAngle ]
+                Html.row "D+S Plane Size:"          [Numeric.view' [InputBox] model.dnsPlaneSize          |> UI.map SetDnSPlaneSize ]   
                 Html.row "Lod colors:"              [GuiEx.iconCheckBox model.lodColoring ToggleLodColors]
                 Html.row "Orientation Cube: "       [GuiEx.iconCheckBox model.drawOrientationCube ToggleOrientationCube]
             ]

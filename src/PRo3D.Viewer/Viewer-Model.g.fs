@@ -19,7 +19,6 @@ module Mutable =
         let _config = PRo3D.Mutable.MViewConfigModel.Create(__initial.config)
         let _scenePath = MOption.Create(__initial.scenePath)
         let _referenceSystem = PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Create(__initial.referenceSystem)
-        let _orientationSystem = PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Create(__initial.orientationSystem)
         let _bookmarksModel = PRo3D.Groups.Mutable.MBookmarksModel.Create(__initial.bookmarksModel)
         let _viewPlans = PRo3d.Mutable.MViewPlanModel.Create(__initial.viewPlans)
         let _dockConfig = ResetMod.Create(__initial.dockConfig)
@@ -31,7 +30,6 @@ module Mutable =
         member x.config = _config
         member x.scenePath = _scenePath :> IMod<_>
         member x.referenceSystem = _referenceSystem
-        member x.orientationSystem = _orientationSystem
         member x.bookmarksModel = _bookmarksModel
         member x.viewPlans = _viewPlans
         member x.dockConfig = _dockConfig :> IMod<_>
@@ -48,7 +46,6 @@ module Mutable =
                 PRo3D.Mutable.MViewConfigModel.Update(_config, v.config)
                 MOption.Update(_scenePath, v.scenePath)
                 PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Update(_referenceSystem, v.referenceSystem)
-                PRo3D.ReferenceSystem.Mutable.MReferenceSystem.Update(_orientationSystem, v.orientationSystem)
                 PRo3D.Groups.Mutable.MBookmarksModel.Update(_bookmarksModel, v.bookmarksModel)
                 PRo3d.Mutable.MViewPlanModel.Update(_viewPlans, v.viewPlans)
                 ResetMod.Update(_dockConfig,v.dockConfig)
@@ -104,12 +101,6 @@ module Mutable =
                     override x.Get(r) = r.referenceSystem
                     override x.Set(r,v) = { r with referenceSystem = v }
                     override x.Update(r,f) = { r with referenceSystem = f r.referenceSystem }
-                }
-            let orientationSystem =
-                { new Lens<PRo3D.Viewer.Scene, PRo3D.ReferenceSystem.ReferenceSystem>() with
-                    override x.Get(r) = r.orientationSystem
-                    override x.Set(r,v) = { r with orientationSystem = v }
-                    override x.Update(r,f) = { r with orientationSystem = f r.orientationSystem }
                 }
             let bookmarksModel =
                 { new Lens<PRo3D.Viewer.Scene, PRo3D.Groups.BookmarksModel>() with

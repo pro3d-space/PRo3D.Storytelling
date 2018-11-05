@@ -375,8 +375,8 @@ module Mutable =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Groups.SurfaceModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Groups.SurfaceModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Groups.SurfaceModel>
         let _surfaces = MGroupsModel.Create(__initial.surfaces)
-        let _sgSurfaces = MMap.Create(__initial.sgSurfaces, (fun v -> PRo3D.Surfaces.Mutable.MSgSurfaces.Create(v)), (fun (m,v) -> PRo3D.Surfaces.Mutable.MSgSurfaces.Update(m, v)), (fun v -> v))
-        let _sgGrouped = MList.Create(__initial.sgGrouped, (fun v -> MMap.Create(v, (fun v -> PRo3D.Surfaces.Mutable.MSgSurfaces.Create(v)), (fun (m,v) -> PRo3D.Surfaces.Mutable.MSgSurfaces.Update(m, v)), (fun v -> v))), (fun (m,v) -> MMap.Update(m, v)), (fun v -> v :> amap<_,_>))
+        let _sgSurfaces = MMap.Create(__initial.sgSurfaces, (fun v -> PRo3D.Surfaces.Mutable.MSgSurface.Create(v)), (fun (m,v) -> PRo3D.Surfaces.Mutable.MSgSurface.Update(m, v)), (fun v -> v))
+        let _sgGrouped = MList.Create(__initial.sgGrouped, (fun v -> MMap.Create(v, (fun v -> PRo3D.Surfaces.Mutable.MSgSurface.Create(v)), (fun (m,v) -> PRo3D.Surfaces.Mutable.MSgSurface.Update(m, v)), (fun v -> v))), (fun (m,v) -> MMap.Update(m, v)), (fun v -> v :> amap<_,_>))
         let _kdTreeCache = MMap.Create(__initial.kdTreeCache)
         
         member x.surfaces = _surfaces
@@ -416,13 +416,13 @@ module Mutable =
                     override x.Update(r,f) = { r with surfaces = f r.surfaces }
                 }
             let sgSurfaces =
-                { new Lens<PRo3D.Groups.SurfaceModel, Aardvark.Base.hmap<System.Guid,PRo3D.Surfaces.SgSurfaces>>() with
+                { new Lens<PRo3D.Groups.SurfaceModel, Aardvark.Base.hmap<System.Guid,PRo3D.Surfaces.SgSurface>>() with
                     override x.Get(r) = r.sgSurfaces
                     override x.Set(r,v) = { r with sgSurfaces = v }
                     override x.Update(r,f) = { r with sgSurfaces = f r.sgSurfaces }
                 }
             let sgGrouped =
-                { new Lens<PRo3D.Groups.SurfaceModel, Aardvark.Base.plist<Aardvark.Base.hmap<System.Guid,PRo3D.Surfaces.SgSurfaces>>>() with
+                { new Lens<PRo3D.Groups.SurfaceModel, Aardvark.Base.plist<Aardvark.Base.hmap<System.Guid,PRo3D.Surfaces.SgSurface>>>() with
                     override x.Get(r) = r.sgGrouped
                     override x.Set(r,v) = { r with sgGrouped = v }
                     override x.Update(r,f) = { r with sgGrouped = f r.sgGrouped }

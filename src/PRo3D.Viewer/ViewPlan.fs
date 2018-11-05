@@ -54,12 +54,19 @@ module ViewPlan =
                   |> Array.map RoverProvider.initRover 
                   |> List.ofArray 
 
-            let rovs = roverData|> List.map(fun (r,_) -> r.id, r) |> HMap.ofList
+            let rovs = roverData|> List.map(fun (r,_) -> r.id, r) 
+            let rovsHm = rovs |> HMap.ofList
             let plats = roverData|> List.map(fun (r,p) -> r.id, p) |> HMap.ofList
 
-            printfn "found rover(s): %d" (rovs |> HMap.count)
+            printfn "found rover(s): %d" (rovsHm |> HMap.count)
+
+            let selected = 
+                match rovs.IsEmptyOrNull() with
+                    | true -> None
+                    | _-> let srid, sr = rovs.[0]
+                          Some sr
       
-            { model with roverModel = { model.roverModel with rovers = rovs; platforms = plats } }
+            { model with roverModel = { model.roverModel with rovers = rovsHm; platforms = plats; selectedRover = selected } }
         | _ -> model
 
     let updateViewPlans (vp:ViewPlan) (vps:hset<ViewPlan>) =
@@ -272,7 +279,8 @@ module ViewPlan =
                         {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt ex.position (ex.position + ex.camLookAt) ex.camUp };
                                     instrumentFrustum = ifrustum} //CameraController.initial
                         //{ model with instrumentCam = cam } 
-            | _-> model
+            | _-> {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI };
+                                    instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0 }
         
     let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan)=
         let r = roverModel.rovers  |> HMap.find vp.rover.id

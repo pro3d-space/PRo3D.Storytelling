@@ -26,7 +26,7 @@ module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg                          
     module ObjectFiles =        
 
-        let loadObject (s:PRo3D.Surfaces.Surface) : SgSurfaceObj =                        
+        let loadObject (s:PRo3D.Surfaces.Surface) : SgSurface =                        
             let obj = Loader.Assimp.load (s.importPath)            
             let meshes = 
                 [
@@ -49,7 +49,7 @@ module Surface =
                 trafo       = trafo
                 globalBB    = bb
                 sceneGraph  = sg
-                pickMesh    = meshes
+                picking     = Picking.PickMesh meshes
             }
                  
         let createSgObjects runtime signature surfaces =        
@@ -60,7 +60,7 @@ module Surface =
 
             let sgObjects =
                 sghs 
-                  |> List.map (fun d -> (d.surface, SgSurfaces.SgSurfaceOBJ d))
+                  |> List.map (fun d -> (d.surface, d))
                   |> HMap.ofList       
 
             sgObjects
@@ -143,16 +143,13 @@ module Surface =
             |> List.map fst
             |> List.choose(fun id -> m.sgSurfaces |> HMap.tryFind id)
 
-        let sgSurfaces = 
-          activeSgSurfaces 
-            |> List.filter( fun sg -> sgSurface.isSgOPC sg )
-            |> List.map( fun sg -> sgSurface.toSgOPC sg )
-        
         let hits = 
-          sgSurfaces          
-            |> List.map (fun d -> d.kdTree, (m.surfaces.flat |> HMap.find d.surface) |> Leaf.toSurface)                      
+          activeSgSurfaces 
+            |> List.map (fun d -> d.picking, (m.surfaces.flat |> HMap.find d.surface) |> Leaf.toSurface)                      
             |> List.choose (
-               fun (kd ,surf) ->
+               fun (p ,surf) ->
+                 match p with
+                    | Picking.KdTree kd ->
                  if kd.IsEmpty then Log.error "no kdtree loaded for %s" surf.name; None
                  else                        
                    //get bbs that are hit
@@ -181,6 +178,7 @@ module Surface =
                        |> List.tryHead
                
                    closestHit
+                    | Picking.PickMesh pm -> Log.error "no kdtree loaded for %s" surf.name; None
                )
             |> List.groupBy(fun (_,surf) -> surf.priority.value) |> List.sortByDescending fst
             |> List.tryHead
@@ -351,15 +349,7 @@ module Surface =
                              previewTrafo = trans
                              mode = TrafoMode.Local 
                          }
-                         
-                         if sgSurface.isSgOPC sg then
-                           let sg' = sgSurface.toSgOPC sg 
-                           let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed trafo'.previewTrafo) } 
-                           (SgSurfaces.SgSurfaceOPC t)
-                         else
-                           let sg' = sgSurface.toSgOBJ sg 
-                           let t = { sg' with trafo = trafo'; globalBB = (sg'.globalBB.Transformed trafo'.previewTrafo) } 
-                           (SgSurfaces.SgSurfaceOBJ t)
+                         { sg with trafo = trafo'; globalBB = (sg.globalBB.Transformed trafo'.previewTrafo) }
                        | None   -> failwith "surface not found")                             
                  { model with surfaces = g; sgSurfaces = sgs'} 
               | None -> model
