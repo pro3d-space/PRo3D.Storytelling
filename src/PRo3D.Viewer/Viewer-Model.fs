@@ -36,8 +36,8 @@ type Interactions =
     | DrawAnnotation        = 2
     | PlaceRover            = 3
     | TrafoControls         = 4
+    | PlaceSurface          = 5
     //| AlignPick             = 5
-    //| PlaceSurface          = 6
 
 type BookmarkAction =
   | AddBookmark 

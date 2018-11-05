@@ -289,8 +289,8 @@ module ViewerApp =
                     | false -> { m' with tabMenu = TabMenu.Viewplanner }
             //| Interactions.AlignPick -> 
             //    { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
-            //| Interactions.PlaceSurface -> 
-            //    { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
+            | Interactions.PlaceSurface -> 
+                { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
             | _ -> m
 
     let mutable lastHash = -1
