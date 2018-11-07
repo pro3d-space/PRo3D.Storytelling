@@ -838,7 +838,6 @@ NUGET
     WindowsAPICodePack-ShellExtensions (1.1.1)
       WindowsAPICodePack-Shell (>= 1.1.1)
   remote: https://vrvis.myget.org/F/aardvark/auth/11394d4d-4fe9-44ec-87c8-f3e98909f975/api/v3/index.json
-    Aardvark.OpenCVSharp (4.3.0-prerelease1)
     Aardvark.VRVis.Opc (4.3.0-prerelease1)
       Aardvark.Base (>= 4.2.3 < 4.3)
       Aardvark.Base.FSharp (>= 4.2.3 < 4.3)
