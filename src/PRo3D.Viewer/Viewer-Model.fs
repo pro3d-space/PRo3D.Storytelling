@@ -36,8 +36,8 @@ type Interactions =
     | DrawAnnotation        = 2
     | PlaceRover            = 3
     | TrafoControls         = 4
-    | AlignPick             = 5
-    | PlaceSurface          = 6
+    //| AlignPick             = 5
+    //| PlaceSurface          = 6
 
 type BookmarkAction =
   | AddBookmark 
@@ -232,26 +232,26 @@ module Viewer =
         let init = (NavigationModel.Lens.camera |. CameraControllerState.Lens.zoomFactor).Set(init, 0.0008)
         init        
 
-    let sceneElm = {id = "scene"; title = (Some "Scene"); weight = 0.4; deleteInvisible = None }
+    let sceneElm = {id = "scene"; title = (Some "Scene"); weight = 0.4; deleteInvisible = None; isCloseable = None }
     
     let initialDockConfig = 
       config {
           content (                        
               horizontal 1.0 [                                                        
                 stack 0.7 None [
-                    {id = "render"; title = Some "Renderview"; weight = 0.6; deleteInvisible = None}
-                    {id = "instrumentview"; title = Some "Instrumentview"; weight = 0.6; deleteInvisible = None}
+                    {id = "render"; title = Some " Main View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
+                    {id = "instrumentview"; title = Some " Instrument View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
                 ]                            
                 vertical 0.3 [
                   stack 0.5 None [
                     //{id = "scene"; title = Some "Scene"; weight = 0.4; deleteInvisible = None }
-                    {id = "surfaces"; title = Some "Surfaces"; weight = 0.4; deleteInvisible = None }
-                    {id = "annotations"; title = Some "Annotations"; weight = 0.4; deleteInvisible = None }
+                    {id = "surfaces"; title = Some " Surfaces "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "annotations"; title = Some " Annotations "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                   ]                          
                   stack 0.5 None [
-                    {id = "config"; title = Some "Config"; weight = 0.4; deleteInvisible = None }
-                    {id = "bookmarks"; title = Some "Bookmarks"; weight = 0.4; deleteInvisible = None }
-                    {id = "viewplanner"; title = Some "ViewPlanner"; weight = 0.4; deleteInvisible = None }
+                    {id = "config"; title = Some " Config "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "bookmarks"; title = Some " Bookmarks"; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "viewplanner"; title = Some " ViewPlanner "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                   ]
                 ]
               ]              

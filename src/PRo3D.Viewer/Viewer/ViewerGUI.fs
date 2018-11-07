@@ -231,29 +231,7 @@ module Gui =
                   div [ clazz "ui dropdown item"; style "width: 150px"] [] //spacer as workaround for tab overdraw
                   div [ clazz "ui dropdown item"] (scene m)
               
-                  div [ clazz "ui dropdown item"] (importSurface m)
-
-                  div [ clazz "ui dropdown item"] [
-                      text "Import"
-                      i [clazz "dropdown icon"][] 
-                      div [ clazz "menu"] [
-                          div [ clazz "ui item";
-                              Dialogs.onChooseFiles ImportAnnotationGroups;
-                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
-                              text "Annotations Groups"
-                          ]
-                          div [ clazz "ui item";
-                              Dialogs.onChooseFiles ImportSurfaceTrafo;
-                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
-                              text "Surface Trafos"
-                          ]
-                          div [ clazz "ui item";
-                              Dialogs.onChooseFiles ImportRoverPlacement;
-                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
-                              text "Rover Placement"
-                          ]
-                      ]
-                  ]
+                  div [ clazz "ui dropdown item"] (importSurface m)                  
               
                   DrawingApp.UI.annotationMenu  |> UI.map DrawingMessage;
                   
@@ -289,6 +267,11 @@ module Gui =
                               Dialogs.onChooseFiles ImportSurfaceTrafo;
                               clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
                               text "Import Surface Trafos"
+                          ]
+                          div [ clazz "ui item";
+                              Dialogs.onChooseFiles ImportRoverPlacement;
+                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+                              text "Rover Placement"
                           ]
                       ]
                   ]
