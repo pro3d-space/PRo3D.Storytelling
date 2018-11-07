@@ -176,7 +176,7 @@ module Gui =
                 div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][text "Save"]
               | None ->
                 div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
+                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));")][
                   text "Save"
                 ]
           }
