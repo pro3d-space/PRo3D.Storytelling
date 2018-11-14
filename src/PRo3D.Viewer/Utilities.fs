@@ -9,9 +9,8 @@ open System.Windows.Forms
 open MBrace.FsPickler
 open MBrace.FsPickler.Json
 open Aardvark.Base
-open PRo3D
 open Aardvark.SceneGraph.Opc
-
+open PRo3D
 
 module Serialization =
   //  open Aardvark.UI.Incremental
@@ -142,9 +141,7 @@ module Dialogs =
           | _ -> 
             String.Empty |> chosen
       onEvent "onsave" [] cb
-        
-   
-
+          
 module Double =
     let degreesFromRadians (d:float) =
         d.DegreesFromRadians()
@@ -580,7 +577,7 @@ module Console =
 module Lenses = 
     let get    (lens : Lens<'s,'a>) (s:'s) : 'a              = lens.Get(s)
     let set    (lens : Lens<'s,'a>) (v : 'a) (s:'s) : 's     = lens.Set(s,v)
-    let set'   (lens : Lens<'s,'a>) (s:'s) (v : 'a)  : 's     = lens.Set(s,v)
+    let set'   (lens : Lens<'s,'a>) (s:'s) (v : 'a)  : 's    = lens.Set(s,v)
     let update (lens : Lens<'s,'a>) (f : 'a->'a) (s:'s) : 's = lens.Update(s,f)
 
 module Shader =
