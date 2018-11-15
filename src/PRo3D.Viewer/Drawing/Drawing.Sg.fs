@@ -52,7 +52,7 @@ module Sg =
          |> Sg.shader {                   
              do! Shader.stableTrafo
              do! DefaultSurfaces.vertexColor
-             do! DefaultSurfaces.simpleLighting
+             do! Shader.stableLight
          }
          |> Sg.trafo(trafo) 
          
