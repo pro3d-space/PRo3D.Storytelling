@@ -48,9 +48,17 @@ module UI =
             model.selectedLeaves
                 |> ASet.map(fun x -> x.id = a.key)
                 |> ASet.contains true
-                |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
+                |> Mod.bind (function x -> if x then Mod.constant C4b.Blue else a.color.c)
+
+        adaptive
+            {
+                let! singleSelected = model.singleSelectLeaf
+                match singleSelected with
+                    | Some id -> if id = a.key then return C4b.VRVisGreen else return (color|> Mod.force)
+                    | None -> return (color |> Mod.force)
+            }
         
-        color
+        
 
       let isSingleSelect (model : MGroupsModel) (a : MAnnotation) =
           model.singleSelectLeaf |> Mod.map( fun x -> 
@@ -139,7 +147,7 @@ module UI =
               amap {
                 yield onClick singleSelect
                 let! selected = isSingleSelect model a
-                yield if selected then style "text-transform:uppercase" else style "text-transform:none"
+                yield if selected then style ("text-transform:uppercase") else style "text-transform:none"
               } |> AttributeMap.ofAMap
 
             let headerText = 

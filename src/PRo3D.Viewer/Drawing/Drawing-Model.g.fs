@@ -14,6 +14,7 @@ module Mutable =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Drawing.DrawingModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Drawing.DrawingModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Drawing.DrawingModel>
         let _draw = ResetMod.Create(__initial.draw)
+        let _pick = ResetMod.Create(__initial.pick)
         let _hoverPosition = MOption.Create(__initial.hoverPosition)
         let _working = MOption.Create(__initial.working, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
         let _projection = ResetMod.Create(__initial.projection)
@@ -29,6 +30,7 @@ module Mutable =
         let _colorLegend = PRo3D.Mutable.MFalseColorsModel.Create(__initial.colorLegend)
         
         member x.draw = _draw :> IMod<_>
+        member x.pick = _pick :> IMod<_>
         member x.hoverPosition = _hoverPosition :> IMod<_>
         member x.working = _working :> IMod<_>
         member x.projection = _projection :> IMod<_>
@@ -49,6 +51,7 @@ module Mutable =
                 __current.Value <- v
                 
                 ResetMod.Update(_draw,v.draw)
+                ResetMod.Update(_pick,v.pick)
                 MOption.Update(_hoverPosition, v.hoverPosition)
                 MOption.Update(_working, v.working)
                 ResetMod.Update(_projection,v.projection)
@@ -83,6 +86,12 @@ module Mutable =
                     override x.Get(r) = r.draw
                     override x.Set(r,v) = { r with draw = v }
                     override x.Update(r,f) = { r with draw = f r.draw }
+                }
+            let pick =
+                { new Lens<PRo3D.Drawing.DrawingModel, System.Boolean>() with
+                    override x.Get(r) = r.pick
+                    override x.Set(r,v) = { r with pick = v }
+                    override x.Update(r,f) = { r with pick = f r.pick }
                 }
             let hoverPosition =
                 { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.Option<Aardvark.Base.Trafo3d>>() with

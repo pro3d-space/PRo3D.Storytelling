@@ -24,7 +24,9 @@ type Action =
         | Move             of V3d
         | Exit            
         | StartDrawing            
-        | StopDrawing        
+        | StopDrawing   
+        | StartPicking            
+        | StopPicking  
         | AddPointAdv      of V3d * (V3d -> Option<V3d>) * string
         | SetSegment       of int * Segment
         | Finish                
@@ -44,11 +46,13 @@ type Action =
         | GroupsMessage   of Groups.Action
         | ColorLegendMessage   of FalseColorLegendApp.Action
         | SaveCSV               of string
+        | PickAnnotation        of SceneHit * Guid
 
 [<DomainType>]
 type DrawingModel = {
 
     draw          : bool
+    pick          : bool
     hoverPosition : option<Trafo3d>    
 
     working    : Option<Annotation>
@@ -97,7 +101,8 @@ module DrawingModel =
 
     let initialdrawing : DrawingModel = {
         hoverPosition = None
-        draw          = false                    
+        draw          = false  
+        pick          = false
         color         = { c = C4b.Yellow } 
         thickness     = Annotation.thickn
 

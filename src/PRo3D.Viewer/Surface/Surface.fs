@@ -124,7 +124,7 @@ module Surface =
         | RebuildKdTrees            of Guid
         | ToggleActiveFlag          of Guid
         | GroupsMessage             of Groups.Action  
-        | PickObject                of V3d
+        //| PickObject                of V3d
         | PlaceSurface              of V3d
         | ScalarsColorLegendMessage of FalseColorLegendApp.Action
         | ColorCorrectionMessage    of ColorCorrectionProperties.Action
@@ -325,7 +325,7 @@ module Surface =
 
                 { model with surfaces = groups; sgSurfaces = sgs } |> SurfaceModel.triggerSgGrouping                  
               | _ -> { model with surfaces = groups }
-        | PickObject p -> model   
+        //| PickObject p -> model   
         | PlaceSurface p -> 
             match model.surfaces.singleSelectLeaf with
             | Some id -> 

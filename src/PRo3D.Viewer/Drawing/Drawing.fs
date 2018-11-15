@@ -230,14 +230,18 @@ module DrawingApp =
         saveAnnotations (getAnnotationPath scenePath) model
 
     let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (webSocket : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
-      match (act, model.draw) with
-        | StartDrawing, _ ->                     
+      match (act, model.draw, model.pick) with
+        | StartDrawing, _, false ->                     
                 { model with draw = true }
-        | StopDrawing, _ -> 
-                { model with draw = false; hoverPosition = None }
-        | Move p, true -> 
+        | StopDrawing, _, false -> 
+                { model with draw = false; hoverPosition = None; pick = false }
+        | StartPicking, _, _ ->                     
+                { model with pick = true }
+        | StopPicking, _, _ -> 
+                { model with pick = false}
+        | Move p, true, false -> 
                 { model with hoverPosition = Some (Trafo3d.Translation p) }
-        | AddPointAdv (point, hitFunction, name), true ->
+        | AddPointAdv (point, hitFunction, name), true, false ->
                 let up    = smallConfig.up.Get(bigConfig)
                 let north = smallConfig.north.Get(bigConfig)
                 let planet = smallConfig.planet.Get(bigConfig)
@@ -249,47 +253,47 @@ module DrawingApp =
                     | Some segment -> addNewSegment hitFunction model segment
                 |> stash
 
-        | SetSegment(segmentIndex,segment), _ ->
+        | SetSegment(segmentIndex,segment), _, _ ->
             match model.working with
                 | None -> model
                 | Some w ->                         
                     { model with working = Some { w with segments = PList.setAt segmentIndex segment w.segments } }
 
-        | Finish, _ -> 
+        | Finish, _, _ -> 
                 let up     = smallConfig.up.Get(bigConfig)
                 let north  = smallConfig.north.Get(bigConfig)
                 let planet = smallConfig.planet.Get(bigConfig)
 
                 (finishAndAppendAndSend up north planet model webSocket) |> stash
-        | Exit, _ -> 
+        | Exit, _, _ -> 
                 { model with hoverPosition = None }
-        | SetSemantic mode, _ ->
+        | SetSemantic mode, _, _ ->
                 let model =
                     match mode with
                         | Semantic.GrainSize -> { model with geometry = Geometry.Line }
                         | _ -> model
 
                 {model with semantic = mode }
-        | SetGeometry mode, _ ->
+        | SetGeometry mode, _, _ ->
                 { model with geometry = mode }
-        | SetProjection mode, _ ->
+        | SetProjection mode, _, _ ->
                 { model with projection = mode }                  
-        | ChangeColor c, _ -> 
+        | ChangeColor c, _, _ -> 
             { model with color = ColorPicker.update model.color c }
-        | ChangeThickness th, _ ->
+        | ChangeThickness th, _, _ ->
             { model with thickness = Numeric.update model.thickness th }
-        | SetExportPath s, _ ->
+        | SetExportPath s, _, _ ->
                 { model with exportPath = Some s }
-        | Export, _ ->
+        | Export, _, _ ->
                 //let path = Path.combine([model.exportPath; "drawing.json"])
                 //printf "Writing %i annotations to %s" (model.annotations |> PList.count) path
                 //let json = model.annotations |> PList.map JsonTypes.ofAnnotation |> JsonConvert.SerializeObject
                 //Serialization.writeToFile path json 
                 
                 model
-        | Save p,_-> saveAnnotations p model
+        | Save p,_, _-> saveAnnotations p model
 
-        | Load p,_ ->                
+        | Load p,_, _ ->                
           match p.Length < 1 with
             | true -> model
             | false -> 
@@ -300,32 +304,32 @@ module DrawingApp =
                 //| Some g -> { model with annotations = g  }
                 | Some g -> { model with annotations = g.annotations; colorLegend = g.colorLegend }
                 | None -> model
-        | QuickLoad,_ ->                
+        | QuickLoad,_ , _->                
           let groups = Groups.tryLoadGroups "./lastMeasure" 
           match groups with 
             | Some g -> { model with annotations = g  }
             | None -> model
-        | Send, _ ->                                                      
+        | Send, _, _ ->                                                      
             model
-        | Clear,_ ->
+        | Clear,_ , _->
             { model with annotations = GroupsModel.initial }
-        | Nop, _ -> model                   
-        | Undo, _ -> 
+        | Nop, _, _ -> model                   
+        | Undo, _, _ -> 
             match model.past with
                 | Some p -> { p with future = Some model }
                 | None -> model
-        | Redo, _ ->
+        | Redo, _, _ ->
             match model.future with
                 | Some f -> f
                 | None -> model           
-        | GroupsMessage msg,_ ->
+        | GroupsMessage msg,_, _ ->
             let m = { model with annotations = Groups.update model.annotations msg}
             m
-        | ColorLegendMessage msg,_ -> 
+        | ColorLegendMessage msg,_, _ -> 
             { model with colorLegend = FalseColorLegendApp.update model.colorLegend msg }
-        | FlyToAnnotation msg, _ ->
+        | FlyToAnnotation msg, _, _ ->
             model
-        | SaveCSV p, _ -> 
+        | SaveCSV p, _, _ -> 
           let annotations =
             model.annotations.flat
               |> Leaf.toAnnotations
@@ -336,6 +340,11 @@ module DrawingApp =
           let csvTable = Csv.Seq.csv "," true id annotations
           if p.IsEmptyOrNull() |> not then Csv.Seq.write (p) csvTable
           model
+        | PickAnnotation (hit, id), false, true -> 
+            Log.error "hit annotation %A" id
+            match (model.annotations.flat.TryFind id) with
+                | Some x -> {model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty x.id ""}
+                | None -> model
         | _ -> model
 
     

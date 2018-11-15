@@ -157,6 +157,47 @@ module Sg =
               yield! a.points
       }
 
+  let pickingLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking : bool) = 
+    match (points |> AList.toArray).Length with
+        | 0  -> Sg.empty //| 1
+        |  _ ->
+            let edges = Sg.edgeLines false points trafo 
+            let pickable = 
+                adaptive {
+                    let! edg = edges
+                    let! w = width
+                    match edg.Length with
+                        | 0 -> let sphere = Sphere3d((points |> AList.toArray).[0], 1.0) // point
+                               return { shape = PickShape.Sphere sphere; trafo = Trafo3d.Identity } // line
+                        | _ -> return { shape = PickShape.Box (Box3d(points |> AList.toArray)); trafo = Trafo3d.Identity } 
+                }
+   
+            let pline =
+                edges
+                  |> Aardvark.SceneGraph.SgPrimitives.Sg.lines color
+                  |> Sg.noEvents
+                  |> Sg.shader {
+                        do! Shader.stableTrafo
+                        do! DefaultSurfaces.vertexColor
+                        do! Shader.thickLine    
+                    }                               
+                  |> Sg.trafo trafo
+                  |> Sg.uniform "LineWidth" width
+                  |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+                  |> Sg.pickable' pickable
+                  |> Sg.noEvents
+                  |> Sg.withEvents [
+                        SceneEventKind.Down, (
+                            fun sceneHit ->
+                            if (picking) then
+                                true, Seq.ofList[PickAnnotation (sceneHit, (id|> Mod.force))]
+                            else
+                                false, Seq.ofList[])
+                    ]
+    
+            pline
+               
+
   let drawWorkingAnnotation (anno : IMod<Option<MAnnotation>>)  = 
 
       let polyPoints =
@@ -174,6 +215,14 @@ module Sg =
                   | Some a -> yield! a.points
                   | None -> ()
           }
+
+      let id = 
+          adaptive {
+              let! anno = anno
+              match anno with
+                  | Some a -> return a.key
+                  | None -> return Guid.Empty
+          }
           
       let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color.c) 
       let thickness = Mod.bindOption anno 1.0              (fun a -> a.thickness.value)             
@@ -181,6 +230,7 @@ module Sg =
                              
       Sg.ofList [
           Sg.lines polyPoints color thickness trafo //polyline
+          //pickingLines polyPoints color thickness trafo id true
           //Sg.dots polyPoints (Mod.constant C4b.VRVisGreen) // debug sample points
           Sg.dots points color                     //support points
       ]         
@@ -211,9 +261,28 @@ module Sg =
       let sgs = ASet.unionMany' [dots; texts]
 
       Sg.ofList [
-          Sg.lines points c anno.thickness.value anno.modelTrafo
+          //Sg.lines points c anno.thickness.value anno.modelTrafo
+          pickingLines points c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
           Sg.set sgs 
       ] |> Sg.onOff anno.visible
+
+  //let finishedPickingAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (view : IMod<CameraView>) (dots : IMod<bool>) =
+  //  let points = anno |> getPolylinePoints     
+  //  let dots  = dots |> optional (Sg.dots anno.points c)
+     
+  //  let texts = 
+  //      anno.text 
+  //          |> Mod.map (String.IsNullOrEmpty >> not) 
+  //          |> optional (drawText view conf anno)
+
+  //  let sgs = ASet.unionMany' [dots; texts]
+
+    
+
+  //  Sg.ofList [
+  //      Sg.cylinders points
+  //      Sg.set sgs 
+  //  ] |> Sg.onOff anno.visible
 
   let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =
      anno.showDns |> optional (drawDns anno conf cl cam) |> Sg.set |> Sg.onOff anno.visible

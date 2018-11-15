@@ -284,8 +284,7 @@ module Sg =
         
     let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
         
-        let edges = edgeLines false points trafo       
-                                                            
+        let edges = edgeLines false points trafo     
         edges
             |> Sg.lines color
             |> Sg.noEvents
@@ -323,6 +322,61 @@ module Sg =
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
              |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+
+    let cylinders positions = 
+        positions |> Array.pairwise |> Array.map(fun (a,b) -> Line3d(a,b)) |> Array.map (fun x -> Cylinder3d(x, 0.02))
+
+    //let pickable' (pick :IMod<Pickable>) (sg: ISg) =
+    //    Sg.PickableApplicator (pick, Mod.constant sg)
+
+    let pickable' (pick :IMod<Pickable>) (sg: ISg) =
+        Sg.PickableApplicator (pick, Mod.constant sg)
+
+    let getTriangles (pos : V3d[]) : array<Triangle3d> =
+        let get (ti : int) =
+            let i0 = 3 * ti
+            Triangle3d(pos.[i0], pos.[i0 + 1], pos.[i0 + 2])
+
+        Array.init (pos.Length / 3) get
+    
+    //let pickingLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: Guid) (picking : bool) = 
+
+    //    let edges = edgeLines false points trafo 
+
+        
+    //    let pickable = 
+    //        adaptive {
+    //            let! edg = edges
+    //            let! w = width
+    //            let t = edg |> Array.map (fun x -> PickShape.Cylinder(Cylinder3d(x, w)))
+    //           //return t |> Array.map ( fun x -> { shape = PickShape.Cylinder x; trafo = Trafo3d.Identity } )
+    //            let bb = Box3d(points |> AList.toArray)
+    //            return { shape = PickShape.Box (bb.Scaled(V3d(w))); trafo = Trafo3d.Identity }
+    //            //return { shape = t; trafo = Trafo3d.Identity }
+    //        }
+    //    let pline = 
+    //            edges
+    //                |> Sg.lines color
+    //                |> pickable' pickable
+    //                |> Sg.noEvents
+    //                |> Sg.withEvents [
+    //                   SceneEventKind.Down, (
+    //                     fun sceneHit ->
+    //                       if (picking) then
+    //                         true, Seq.ofList[PickAnnotation (sceneHit, id)]
+    //                       else
+    //                         false, Seq.ofList[])
+    //                ]
+    //                |> Sg.shader {
+    //                     do! Shader.stableTrafo
+    //                     do! DefaultSurfaces.vertexColor
+    //                     do! Shader.thickLine    
+    //                 }                               
+    //                 |> Sg.trafo trafo
+    //                 |> Sg.uniform "LineWidth" width
+    //                 |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+
+    //    pline
 
     //let scaledArrows1 (color : IMod<C4b>) (lines : IMod<Line3d[]>) (tess : int) (radius : IMod<float>) (height : IMod<float>) (dir : V3d) =
     //        let call = 
@@ -497,6 +551,7 @@ module Sg =
           |> Sg.trafo invScaleTrafo
           |> Sg.trafo billboardTrafo  
 
+    
 module UI =
     open Aardvark.UI
     open Aardvark.Base.Incremental

@@ -241,6 +241,22 @@ module Groups =
                         else Some x
             | _ -> None 
 
+    let addSingleSelectedLeaf (model:GroupsModel) (p : list<Index>) (id : Guid) (s: string) = 
+        let treeSelection = {
+                id = id
+                path = p
+                name = s
+                }
+        let single = 
+            match model.singleSelectLeaf with
+                | Some s -> if s = id then None else Some id
+                | None -> Some id
+
+        { model with singleSelectLeaf = single; 
+                     activeChild = treeSelection; 
+                     lastSelectedItem = SelectedItem.Child }
+        
+
     let update (model : GroupsModel) (action : Action) =
         printfn "action: %A" action
         match action with
@@ -341,19 +357,7 @@ module Groups =
 
                 { m' with selectedLeaves = selection ; singleSelectLeaf = last }
             | SingleSelectLeaf (p,id,s) ->
-                let treeSelection = {
-                    id = id
-                    path = p
-                    name = s
-                    }
-                let single = 
-                    match model.singleSelectLeaf with
-                      | Some s -> if s = id then None else Some id
-                      | None -> Some id
-
-                { model with singleSelectLeaf = single; 
-                             activeChild = treeSelection; 
-                             lastSelectedItem = SelectedItem.Child }
+                addSingleSelectedLeaf model p id s
             | AddLeafToSelection (p,id,s) ->
                 let selected = model.selectedLeaves
                 let treeSelection = {
