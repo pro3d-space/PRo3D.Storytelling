@@ -260,7 +260,7 @@ module Gui =
                       div [ clazz "menu"] [
                           div [ clazz "ui item";
                               Dialogs.onChooseFiles ImportAnnotationGroups;
-                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
+                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'xml', extensions: ['xml']},], properties: ['openFile']}));") ][
                               text "Import Annotations Groups"
                           ]
                           div [ clazz "ui item";

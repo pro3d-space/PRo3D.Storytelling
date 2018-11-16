@@ -53,12 +53,18 @@ module UI =
         adaptive
             {
                 let! singleSelected = model.singleSelectLeaf
+                let! color = color
                 match singleSelected with
-                    | Some id -> if id = a.key then return C4b.VRVisGreen else return (color|> Mod.force)
-                    | None -> return (color |> Mod.force)
+                    | Some id -> if id = a.key then return C4b.VRVisGreen else return color
+                    | None -> return color
             }
-        
-        
+      
+      
+      let mkCubeColor (model : MGroupsModel) (a : MAnnotation) =
+        model.selectedLeaves
+                |> ASet.map(fun x -> x.id = a.key)
+                |> ASet.contains true
+                |> Mod.bind (function x -> if x then Mod.constant C4b.Blue else a.color.c)
 
       let isSingleSelect (model : MGroupsModel) (a : MAnnotation) =
           model.singleSelectLeaf |> Mod.map( fun x -> 
@@ -72,7 +78,7 @@ module UI =
               i [clazz "dropdown icon"][] 
               div [ clazz "menu"] [                    
                   div [ clazz "ui inverted item"; Dialogs.onChooseFiles Load;
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));" )][
+                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));" )][
                           text "Load"
                   ]
                   div [ clazz "ui inverted item"; onMouseClick (fun _ -> Clear)][
@@ -93,7 +99,7 @@ module UI =
                   i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
                               
               button [clazz "ui icon button"; Dialogs.onChooseFiles Load;
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));") ] [
                   i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
               
               button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
@@ -122,7 +128,7 @@ module UI =
             let singleSelect = fun _ -> singleSelect(a,path)
             let multiSelect  = fun _ -> multiSelect(a,path)
             
-            let ac = sprintf "color: %s" (Html.ofC4b C4b.Gray)
+            let ac = sprintf "color: %s" (Html.ofC4b C4b.White)
             
             let visibleIcon = 
               amap {
@@ -136,18 +142,26 @@ module UI =
 
             let iconAttributes =
               amap {                  
-                yield clazz "large Sticky Note middle aligned icon"
-                yield onMouseClick (multiSelect)
+                yield clazz "cube middle aligned icon"
+                yield onClick (multiSelect)
 
-                let! c = mkColor model a
+                let! c = mkCubeColor model a
                 yield style (sprintf "color: %s" (Html.ofC4b c))
               } |> AttributeMap.ofAMap
             
+            let headerColor = 
+               (isSingleSelect model a) 
+                 |> Mod.map(fun x -> 
+                   (if x then C4b.VRVisGreen else C4b.Gray) 
+                     |> Html.ofC4b 
+                     |> sprintf "color: %s"
+                 ) 
+
             let headerAttributes =
               amap {
                 yield onClick singleSelect
-                let! selected = isSingleSelect model a
-                yield if selected then style ("text-transform:uppercase") else style "text-transform:none"
+                //let! selected = isSingleSelect model a
+                //yield if selected then style ("text-transform:uppercase") else style "text-transform:none"
               } |> AttributeMap.ofAMap
 
             let headerText = 
@@ -163,20 +177,25 @@ module UI =
                       semantic  |> sprintf "%A"
             
               }
-
+            
             div [clazz "item"] [
               Incremental.i iconAttributes AList.empty
               div [clazz "content"] [                  
                 let desc   = Mod.map2 (fun x y -> sprintf "#Points: %A | taken on: %A" x y) (a.points |> AList.count) a.surfaceName
                 
                 //header
-                yield Incremental.div (AttributeMap.ofList [clazz "header"; style ac]) (
+                yield Incremental.div (AttributeMap.ofList [style ac]) (
                     alist {                          
-                        yield div[][
-                          Incremental.span headerAttributes ([Incremental.text headerText] |> AList.ofList)
-                          Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
-                          i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation a.key)][] |> UI.wrapToolTip "FlyTo"
-                        ]
+                        //yield div[][
+                          let! hc = headerColor
+                          yield div[clazz "header"; style hc][
+                                Incremental.span headerAttributes ([Incremental.text headerText] |> AList.ofList)
+                            ]
+                          yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
+                          yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation a.key)][] |> UI.wrapToolTip "FlyTo"
+                          //Incremental.span headerAttributes ([Incremental.text headerText] |> AList.ofList)
+                          
+                        //]
                     } 
                 )
 

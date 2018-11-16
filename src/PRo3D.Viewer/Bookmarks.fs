@@ -60,7 +60,7 @@ module Bookmarks =
                 model.selectedLeaves
                     |> ASet.map(fun x -> x.id = id)
                     |> ASet.contains true
-                    |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)
+                    |> Mod.bind (function x -> if x then Mod.constant C4b.Blue else Mod.constant C4b.White)
             
             color
 
@@ -98,21 +98,35 @@ module Bookmarks =
             let! selected = b |> isSingleSelect model
             let! key = b.key
 
+            let headerColor = 
+               (isSingleSelect model b) 
+                 |> Mod.map(fun x -> 
+                   (if x then C4b.VRVisGreen else C4b.Gray) 
+                     |> Html.ofC4b 
+                     |> sprintf "color: %s"
+                 ) 
+            let headerAttributes =
+                amap {
+                  yield onClick singleSelect
+                } |> AttributeMap.ofAMap
+
+            
+
             yield div [clazz "item"; style bgc] [
-              i [clazz "large Sticky Note middle aligned icon"; onClick multiSelect;style bgc][] 
+              i [clazz "cube middle aligned icon"; onClick multiSelect;style bgc][] 
               div [clazz "content"; style infoc] [
                   //let desc = b.name
-                  yield Incremental.div (AttributeMap.ofList [clazz "header"; style infoc])(
+                  yield Incremental.div (AttributeMap.ofList [style infoc])(
                     alist {
-                      yield i [clazz "home icon"; 
+                        let! hc = headerColor
+                        yield div[clazz "header"; style hc][
+                            Incremental.span headerAttributes ([Incremental.text b.name] |> AList.ofList)
+                        ]
+                        yield i [clazz "home icon"; 
                         onClick (fun _ -> lift <| Groups.UpdateCam key)][] |> UI.wrapToolTipRight "FlyTo"                                            
                       } 
                   ) 
-                  if selected then
-                      yield div[onClick singleSelect][u[][Incremental.text b.name]]
-                  else
-                      yield div[onClick singleSelect][Incremental.text b.name]
-                  //yield div [clazz "description"; style bgc] [Incremental.text desc]      
+                  
               ]
             ]
         }     

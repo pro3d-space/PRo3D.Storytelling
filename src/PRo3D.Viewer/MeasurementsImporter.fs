@@ -108,6 +108,7 @@ module MeasurementsImporter =
                         | null -> false
                         | _ -> m.Element(xname "Closed").Value.ToBool()
         let style = (getStyle (m.Element(xname "LineAttributes")))
+        let color = new C4b(style.color.R, style.color.G, style.color.B)
         let id = (m.Element(xname "Id")).Value |> Guid.Parse
         let trafo = getTrafo (m.Element(xname "LocalToGlobal"))
         let points = 
@@ -135,7 +136,7 @@ module MeasurementsImporter =
                 semantic = Semantic.Horizon0
                 points = points
                 segments = segments
-                color = { c = style.color }
+                color = { c = color }
                 thickness = style.thickness
                 results = None
                 dnsResults = None
