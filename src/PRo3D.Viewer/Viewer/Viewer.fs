@@ -429,6 +429,9 @@ module ViewerApp =
                 | [] -> m   
                 | path -> 
                   let p = path.[0]
+
+                  
+
                   //update groups
                   let imported, flat, lookup = AnnotationGroupsImporter.startImporter p m.scene.referenceSystem
 

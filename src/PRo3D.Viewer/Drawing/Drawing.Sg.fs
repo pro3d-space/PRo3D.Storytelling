@@ -143,7 +143,7 @@ module Sg =
             a.segments 
               |> AList.count 
               |> Mod.map (fun x ->
-                Log.line "[Drawing] drawing polz with %A segments" x
+                Log.line "[Drawing] drawing poly with %A segments" x
                 x > 0)
 
           if hasSegments then
@@ -162,15 +162,15 @@ module Sg =
         | 0  -> Sg.empty //| 1
         |  _ ->
             let edges = Sg.edgeLines false points trafo 
-            let pickable = 
-                adaptive {
-                    let! edg = edges
-                    let! w = width
-                    match edg.Length with
-                        | 0 -> let sphere = Sphere3d((points |> AList.toArray).[0], 1.0) // point
-                               return { shape = PickShape.Sphere sphere; trafo = Trafo3d.Identity } // line
-                        | _ -> return { shape = PickShape.Box (Box3d(points |> AList.toArray)); trafo = Trafo3d.Identity } 
-                }
+            //let pickable = 
+            //    adaptive {
+            //        let! edg = edges
+            //        let! w = width
+            //        match edg.Length with
+            //            | 0 -> let sphere = Sphere3d((points |> AList.toArray).[0], 1.0) // point
+            //                   return { shape = PickShape.Sphere sphere; trafo = Trafo3d.Identity } // line
+            //            | _ -> return { shape = PickShape.Box (Box3d(points |> AList.toArray)); trafo = Trafo3d.Identity } 
+            //    }
    
             let pline =
                 edges
@@ -184,7 +184,7 @@ module Sg =
                   |> Sg.trafo trafo
                   |> Sg.uniform "LineWidth" width
                   |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
-                  |> Sg.pickable' pickable
+              //    |> Sg.pickable' pickable
                   |> Sg.noEvents
                   |> Sg.withEvents [
                         SceneEventKind.Down, (
