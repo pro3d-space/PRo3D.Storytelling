@@ -357,6 +357,7 @@ module ViewerUtils =
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
+                        //|> Sg.pass RenderPass.main
 
                 yield RenderCommand.SceneGraph sg                    
 

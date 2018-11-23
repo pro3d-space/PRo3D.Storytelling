@@ -378,7 +378,8 @@ module DrawingApp =
           annoSet 
             |> ASet.map(fun (_,a) -> 
               let c = UI.mkColor model.annotations a
-              Sg.finishedAnnotation a c config view (a.geometry |> Mod.map(function | Geometry.Point -> true | _ -> false)))
+              let picked = UI.isSingleSelect model.annotations a
+              Sg.finishedAnnotation a c config view (a.geometry |> Mod.map(function | Geometry.Point -> true | _ -> false)) picked)
             |> Sg.set               
                             
         let overlay = 

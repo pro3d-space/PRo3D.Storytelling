@@ -131,21 +131,21 @@ module Gui =
     ]
   module TopMenu =
 
-    let save (m:MModel) = 
-        adaptive
-            {
-                let! path = m.scene.scenePath
-                return match path with
-                            | Some p ->
-                                 div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
-                                  text "Save"
-                                ]
-                            | None ->
-                                div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
-                                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
-                                  text "Save"
-                                ]
-            }
+    //let save (m:MModel) = 
+    //    adaptive
+    //        {
+    //            let! path = m.scene.scenePath
+    //            return match path with
+    //                        | Some p ->
+    //                             div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
+    //                              text "Save"
+    //                            ]
+    //                        | None ->
+    //                            div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
+    //                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
+    //                              text "Save"
+    //                            ]
+    //        }
     
     let private importSurface (m:MModel) =
       [
@@ -176,7 +176,7 @@ module Gui =
                 div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][text "Save"]
               | None ->
                 div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
+                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
                   text "Save"
                 ]
           }
@@ -265,7 +265,7 @@ module Gui =
                           ]
                           div [ clazz "ui item";
                               Dialogs.onChooseFiles ImportSurfaceTrafo;
-                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'xml', extensions: ['xml']},],properties: ['openFile']}));") ] [
                               text "Import Surface Trafos"
                           ]
                           div [ clazz "ui item";

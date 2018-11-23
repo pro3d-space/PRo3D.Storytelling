@@ -441,7 +441,9 @@ module ViewerApp =
                       |> HMap.map(fun k v -> 
                         let a = v |> Leaf.toAnnotation
                         let a' = if a.geometry = Geometry.DnS then { a with showDns = true } else a                                                             
-                        a'|> Leaf.Annotations)                                  
+                        a'|> Leaf.Annotations)    
+                        
+                  let newflat = m.drawing.annotations.flat |> HMap.union flat
 
                   //let inline median input = 
                   //  let sorted = input |> Seq.toArray |> Array.sort
@@ -472,7 +474,7 @@ module ViewerApp =
                   m 
                     |> Lenses.set _groups newGroups
                     |> Lenses.set _lookUp lookup
-                    |> Lenses.set _flat flat                
+                    |> Lenses.set _flat newflat                
             | ImportSurfaceTrafo sl,_,_ ->
               match sl with
                 | [] -> m 
@@ -816,6 +818,7 @@ module ViewerApp =
              |> Sg.cullMode (Mod.constant CullMode.None)
 
         let overlayed =
+
             let annos = 
               annotations
                     |> Sg.map DrawingMessage

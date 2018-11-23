@@ -49,15 +49,15 @@ module UI =
                 |> ASet.map(fun x -> x.id = a.key)
                 |> ASet.contains true
                 |> Mod.bind (function x -> if x then Mod.constant C4b.Blue else a.color.c)
-
-        adaptive
-            {
-                let! singleSelected = model.singleSelectLeaf
-                let! color = color
-                match singleSelected with
-                    | Some id -> if id = a.key then return C4b.VRVisGreen else return color
-                    | None -> return color
-            }
+        color
+        //adaptive
+        //    {
+        //        let! singleSelected = model.singleSelectLeaf
+        //        let! color = color
+        //        match singleSelected with
+        //            | Some id -> if id = a.key then return C4b.VRVisGreen else return color
+        //            | None -> return color
+        //    }
       
       
       let mkCubeColor (model : MGroupsModel) (a : MAnnotation) =
