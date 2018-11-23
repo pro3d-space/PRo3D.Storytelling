@@ -102,7 +102,7 @@ module MeasurementsImporter =
                                 |_ -> Geometry.Point
         geometry
 
-    let getAnnotation (m:XElement) = 
+    let getAnnotation (t: Trafo3d) (m:XElement) = 
         let anType = (m.Attribute(xname "type").Value.ToString().Split ',').[0]
         let closed = match m.Element(xname "Closed") with
                         | null -> false
@@ -110,7 +110,7 @@ module MeasurementsImporter =
         let style = (getStyle (m.Element(xname "LineAttributes")))
         let color = new C4b(style.color.R, style.color.G, style.color.B)
         let id = (m.Element(xname "Id")).Value |> Guid.Parse
-        let trafo = getTrafo (m.Element(xname "LocalToGlobal"))
+        let trafo = getTrafo (m.Element(xname "LocalToGlobal")) * t
         let points = 
             getPoints (m.Element(xname "Points")) anType 
                 |> PList.ofArray 
@@ -123,7 +123,7 @@ module MeasurementsImporter =
                     fun s -> 
                         let ps = s.points |> PList.map (fun x -> trafo.Forward.TransformPos x)
                         let startPoint = s.startPoint |> trafo.Forward.TransformPos 
-                        let endPoint = s.endPoint |> trafo.Forward.TransformPos 
+                        let endPoint = s.endPoint  |> trafo.Forward.TransformPos 
                         {s with startPoint = startPoint; endPoint = endPoint; points = ps}
                 )
 
@@ -140,7 +140,7 @@ module MeasurementsImporter =
                 thickness = style.thickness
                 results = None
                 dnsResults = None
-                modelTrafo = trafo
+                modelTrafo = trafo 
                 visible = true 
                 showDns = false
                 text = ""
@@ -168,7 +168,7 @@ module MeasurementsImporter =
         let reader = XmlReader.Create path
         let measurements = reader.StreamElements("Measurements").Elements(xname "object")
         let annotations = measurements 
-                            |> Seq.map (fun x -> getAnnotation x)
+                            |> Seq.map (fun x -> getAnnotation Trafo3d.Identity x)
                             |> PList.ofSeq  
         annotations
 

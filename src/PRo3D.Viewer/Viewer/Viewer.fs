@@ -291,7 +291,7 @@ module ViewerApp =
             //    { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
             | Interactions.PlaceSurface -> 
                 { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
-            | Interactions.PickAnnotation -> m
+           // | Interactions.PickAnnotation -> m
             | _ -> m
 
     let mutable lastHash = -1
@@ -429,6 +429,9 @@ module ViewerApp =
                 | [] -> m   
                 | path -> 
                   let p = path.[0]
+
+                  
+
                   //update groups
                   let imported, flat, lookup = AnnotationGroupsImporter.startImporter p m.scene.referenceSystem
 
@@ -615,10 +618,10 @@ module ViewerApp =
                     match drawingAction with
                       | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
                       | _ -> m     
-                | Interactions.PickAnnotation -> 
-                    match m.picking with
-                        | true -> { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StartPicking } |> stash
-                        | false -> m
+                //| Interactions.PickAnnotation -> 
+                //    match m.picking with
+                //        | true -> { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StartPicking } |> stash
+                //        | false -> m
                     
                    
                 //| Interactions.AlignPick -> 
@@ -683,8 +686,8 @@ module ViewerApp =
                     match m.interaction with
                         | Interactions.DrawAnnotation -> 
                             DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopDrawing
-                        | Interactions.PickAnnotation -> 
-                            DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopPicking 
+                        //| Interactions.PickAnnotation -> 
+                        //    DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopPicking 
                         |_-> m.drawing
                   | _ -> m.drawing                
                 { m with drawing = d; picking = false } |> stash

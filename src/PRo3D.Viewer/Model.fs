@@ -291,31 +291,8 @@ module Annotation =
         step    = 0.01
         format  = "{0:0.00}"
     }
-    
-
-    let make (projection) (geometry) (semantic) (surfName) : Annotation  = 
-        let thickness = thickness.[int semantic]
-        let color = color.[int semantic]
-        {
-            key = Guid.NewGuid()
-            geometry = geometry
-            semantic = semantic
-            points = plist.Empty
-            segments = plist.Empty //[]
-            color = { c = color }
-            thickness = { thickn with value = thickness}
-            results = None
-            dnsResults = None            
-            projection = projection
-            visible = true
-            text = ""
-            textsize = texts
-            modelTrafo = Trafo3d.Identity
-            showDns = match semantic with | Semantic.Crossbed -> true | _ -> false 
-            surfaceName = surfName
-        }
-
-    let make2 (projection) (geometry) (color) (thickness) (surfName) : Annotation  = 
+        
+    let make (projection) (geometry) (color) (thickness) (surfName) : Annotation  = 
                
         {
             key         = Guid.NewGuid()
@@ -340,7 +317,7 @@ module Annotation =
         }
 
     let initial =
-        make Projection.Viewpoint Geometry.Polyline Semantic.Horizon0 ""
+        make Projection.Viewpoint Geometry.Polyline { c = C4b.Magenta } thickn ""
 
 module JsonTypes =
     type _V3d = {

@@ -127,7 +127,7 @@ module DrawingApp =
                 //annotation states should be immutable after creation
                 //(Annotation.make model.projection model.geometry model.semantic surfaceName)  
                 //    with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
-                (Annotation.make2 model.projection model.geometry model.color model.thickness surfaceName)
+                (Annotation.make model.projection model.geometry model.color model.thickness surfaceName)
                     with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
             }, None
 

@@ -22,14 +22,14 @@ module AnnotationGroupsImporter =
     //                sg |> HSet.ofList |> HSet.collect flatten
     //            HSet.union (c |> HSet.ofList) sga
 
-    let rec getGroups up north (m:XElement) : (Node * hmap<Guid,Leaf> * hmap<Guid,string>) = 
+    let rec getGroups (trafo:Trafo3d) up north (m:XElement) : (Node * hmap<Guid,Leaf> * hmap<Guid,string>) = 
       let name    = (m.Element(xname "Name")).Value.ToString()
       let visible = (m.Element(xname "IsVisible")).Value.ToBool()
                          
       let annotations = 
         (m.Elements(xname "Measurements").Elements(xname "object")) 
           |> List.ofSeq
-          |> List.map MeasurementsImporter.getAnnotation
+          |> List.map (MeasurementsImporter.getAnnotation trafo)
           |> List.map(fun x -> 
               let dns = 
                 x.points 
@@ -49,7 +49,7 @@ module AnnotationGroupsImporter =
       let subGroupsNFlatNLookup = 
         (m.Elements(xname "SubGroups")).Elements(xname "MeasurementGroup") 
           |> List.ofSeq 
-          |> List.map(fun x -> getGroups up north x)     
+          |> List.map(fun x -> getGroups trafo up north x)     
       
       let flat' = 
         subGroupsNFlatNLookup 
@@ -99,7 +99,18 @@ module AnnotationGroupsImporter =
                     | _ -> ()
             }
 
+    let readLine (filePath:string) =
+                use sr = new System.IO.StreamReader (filePath)
+                sr.ReadLine ()       
+
     let startImporter (path:string) (refSys:ReferenceSystem) =
+
+        let trafoFile = System.IO.Path.ChangeExtension(path, ".trafo")
+        let t = 
+         match (Serialization.fileExists trafoFile) with
+           | Some path-> readLine path |> Trafo3d.Parse                       
+           | None -> Trafo3d.Identity
+
         let reader = XmlReader.Create path
         let root = reader.StreamElements("MeasurementGroups") 
         let xGroups = (root.Elements(xname "MeasurementGroup")).ToListOfT<XElement>()
@@ -107,7 +118,7 @@ module AnnotationGroupsImporter =
         let groupsNFlat = 
           xGroups 
             |> Seq.toList
-            |> List.map(getGroups refSys.up.value refSys.north.value)
+            |> List.map(getGroups t refSys.up.value refSys.north.value)
 
         let flat = 
           groupsNFlat 
