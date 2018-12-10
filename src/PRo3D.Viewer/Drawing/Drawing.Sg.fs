@@ -138,24 +138,18 @@ module Sg =
     } |> Sg.set
       
   let getPolylinePoints (a : MAnnotation) =
-      alist {                
-          let! hasSegments = 
-            a.segments 
-              |> AList.count 
-              |> Mod.map (fun x ->
-                Log.line "[Drawing] drawing poly with %A segments" x
-                x > 0)
-
-          if hasSegments then
-            for segment in a.segments do
-              let! startPoint = segment.startPoint
-              let! endPoint = segment.endPoint
-              yield  startPoint
-              yield! segment.points
-              yield  endPoint
-            else
-              yield! a.points
-      }
+    alist {                          
+      let! hasSegments = (a.segments |> AList.count) |> Mod.map(fun x -> x > 0)
+      if hasSegments |> not then
+          yield! a.points
+      else
+        for segment in a.segments do
+          let! startPoint = segment.startPoint
+          let! endPoint = segment.endPoint
+          yield  startPoint
+          yield! segment.points
+          yield  endPoint
+    }
 
   let pickingLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking : bool) = 
     match (points |> AList.toArray).Length with
