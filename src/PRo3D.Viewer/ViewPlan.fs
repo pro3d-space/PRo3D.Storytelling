@@ -10,7 +10,6 @@ open Aardvark.Base.Rendering
 
 open System
 open System.IO
-open OpenCvSharp
 
 open PRo3d
 open PRo3D.ReferenceSystem
@@ -18,12 +17,11 @@ open PRo3D.Surfaces
 open PRo3D.Groups
 open PRo3D.Navigation2
 open Aardvark.UI.Primitives
-
+open CSharpUtils
 
 module ViewPlan = 
     open ViewPlanner
     open Aardvark.Base.MultimethodTest
-    open OpenCvSharp
     open Aardvark.Geometry
     
 
@@ -134,51 +132,15 @@ module ViewPlan =
         let p = plane.Point;
         (x - plane.Normal.Dot(x - p) * plane.Normal);
     
-    let computeEigenValues (A:float[]) : V3d = //float[]
-        let mutable eVal = OutputArray.Create(new Mat())
-        let mutable eVec = OutputArray.Create(new Mat())
-        let imat = new Mat(3,3,MatType.CV_64FC1,A)
-        let input = InputArray.Create(imat)
-       
-        let bla = Cv2.Eigen(input, eVal, eVec)
-        let ma = eVec.GetMat()
-        let cols = ma.Cols
-        let cols = cols - 1
-        let rows = ma.Rows
-        let rows = rows - 1
-        let mutable eVecVals = new M33d()
-        for r in 0..rows do
-            for c in 0..cols do
-                eVecVals.[r,c] <- ma.At(r,c)
-        
-        //eigenvector with largest eigenvalue is best fit line
-        new V3d(eVecVals.R0)
-        
-
-    let fitLineLeastSquares(points:list<V3d>) =
-        let centroid = points.ComputeCentroid()
-        let normalizedPositions = points |> List.map(fun p -> p - centroid)
-        let xx = normalizedPositions |> List.map(fun p -> p.X * p.X) |> List.sum
-        let xy = normalizedPositions |> List.map(fun p -> p.X * p.Y) |> List.sum
-        let xz = normalizedPositions |> List.map(fun p -> p.X * p.Z) |> List.sum
-        let yy = normalizedPositions |> List.map(fun p -> p.Y * p.Y) |> List.sum
-        let yz = normalizedPositions |> List.map(fun p -> p.Y * p.Z) |> List.sum
-        let zz = normalizedPositions |> List.map(fun p -> p.Z * p.Z) |> List.sum
-
-        let covariance = [|xx; xy; xz; xy; yy; yz; xz; yz; zz|]
-        let eVec = computeEigenValues covariance
-        
-        (new Line3d(centroid - eVec, centroid + eVec))
-        
-
+    
     let calculateRoverPlacement (working:list<V3d>) (wheels:list<V3d>) (up:V3d) : Trafo3d = 
         let forward = (working.[1] - working.[0]).Normalized
         // projects intersection points along the lookAt vector onto a plane
         let plane1 = new Plane3d(forward, working.[1]);
-        let planeIntersectionPoints = wheels |> List.map(fun x -> nearestPoint x plane1)
+        let planeIntersectionPoints = wheels |> List.map(fun x -> nearestPoint x plane1) |> List.toArray
 
         // line fitting with the projected points to get right vector
-        let rightVecLine = fitLineLeastSquares planeIntersectionPoints
+        let rightVecLine = PlaneFitting.Line planeIntersectionPoints //fitLineLeastSquares planeIntersectionPoints
 
         let newRightVec = rightVecLine.Direction.Normalized
         let newTiltVec = V3d.Cross(forward, newRightVec).Normalized
@@ -324,7 +286,10 @@ module ViewPlan =
                                (newOuterModel, model)
                     | _ -> (outerModel,model) 
             | IsVisible id -> 
-                outerModel, { model with viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = id then { x with isVisible = not x.isVisible } else x) }
+                outerModel, { model with viewPlans = model.viewPlans 
+                                                        |> HSet.map(fun x -> if x.id = id then 
+                                                                                { x with isVisible = not x.isVisible } 
+                                                                                else x) }
             | RemoveViewPlan id ->
                 let vp' = match  model.selectedViewPlan with
                             | Some v -> if v.id = id then None else Some v
@@ -334,19 +299,32 @@ module ViewPlan =
             | SelectInstrument i -> match model.selectedViewPlan with
                                         | Some vp -> let newVp = { vp with selectedInstrument = i }
                                                      let m' = updateInstrumentCam newVp model
-                                                     outerModel, { m' with selectedViewPlan = Some newVp; viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then newVp else x) }
+                                                     outerModel, { m' with selectedViewPlan = Some newVp; 
+                                                                        viewPlans = model.viewPlans 
+                                                                                        |> HSet.map(fun x -> if x.id = vp.id then 
+                                                                                                                newVp 
+                                                                                                                else x) }
                                         | None -> outerModel, model                                                     
             | SelectAxis a       -> match model.selectedViewPlan with
                                         | Some vp -> let newVp = { vp with selectedAxis = a }
-                                                     outerModel, { model with selectedViewPlan = Some newVp; viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then newVp else x) }
+                                                     outerModel, { model with selectedViewPlan = Some newVp; 
+                                                                            viewPlans = model.viewPlans 
+                                                                                            |> HSet.map(fun x -> if x.id = vp.id then
+                                                                                                                    newVp 
+                                                                                                                    else x) }
                                         | None -> outerModel, model    
             | ChangeAngle (id,a) ->  match model.selectedViewPlan with
                                         | Some vp -> match vp.rover.axes.TryFind id with
                                                         | Some ax -> 
                                                             let angle = PRo3DNumeric.update ax.angle a
                                                             let ax' = { ax with angle = angle } 
-                                                            let vp' = { vp with rover = {vp.rover with axes = (vp.rover.axes |> HMap.update id (fun _ -> ax')) }; currentAngle = angle }
-                                                            let roverModel' = RoverApp.updateAnglePlatform { roverId = vp'.rover.id ;axisId = ax'.id ; angle = ax'.angle.value } model.roverModel
+                                                            let vp' = { vp with rover = {vp.rover with axes = (vp.rover.axes 
+                                                                                                                |> HMap.update id (fun _ -> ax')) };
+                                                                                                                currentAngle = angle }
+                                                            let roverModel' = RoverApp.updateAnglePlatform { roverId = vp'.rover.id ;
+                                                                                                                axisId = ax'.id ; 
+                                                                                                                angle = ax'.angle.value } 
+                                                                                                                model.roverModel
                                  
                                                             let m' = updateRovers model roverModel' vp'
                                                             
@@ -367,13 +345,20 @@ module ViewPlan =
                                         | Some _ -> inst'
                                         | None   -> failwith "instrument not found")
                             let vp' = {vp with rover = {vp.rover with instruments = instruments'}; selectedInstrument = Some inst'}
-                            let roverModel' = RoverApp.updateFocusPlatform { roverId = vp'.rover.id ; instrumentId = inst'.id ; focal = inst'.focal.value } model.roverModel
+                            let roverModel' = RoverApp.updateFocusPlatform { roverId = vp'.rover.id ; 
+                                                                             instrumentId = inst'.id ; 
+                                                                             focal = inst'.focal.value } 
+                                                                             model.roverModel
                             outerModel, updateRovers model roverModel' vp'
                         | None -> outerModel, model                                       
                     | None -> outerModel, model 
             | SetVPName t -> match model.selectedViewPlan with
                                 | Some vp -> let vp' = {vp with name = t}
-                                             outerModel, {model with selectedViewPlan = Some vp'; viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then vp' else x) }              
+                                             outerModel, {model with selectedViewPlan = Some vp';
+                                                                     viewPlans = model.viewPlans 
+                                                                                    |> HSet.map(fun x -> if x.id = vp.id then
+                                                                                                            vp' 
+                                                                                                            else x) }              
                                 | _ -> outerModel, model
                 
             //| _ -> model

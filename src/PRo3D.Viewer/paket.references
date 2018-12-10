@@ -13,7 +13,6 @@ Aardvark.Rendering.Text
 
 Aardvark.Geometry.Intersection
 Aardvark.VRVis.Opc
-Aardvark.OpenCVSharp
        
 Aardvark.UI.Primitives
 Aardvark.Service      
@@ -23,6 +22,8 @@ Aardvark.Compiler.DomainTypes
 Aardvark.Compiler.DomainTypes.MSBuild
 
 FSharp.Core
+
+Uncodium.Eigensystems
 
 WindowsAPICodePack-Core
 WindowsAPICodePack-ShellExtensions

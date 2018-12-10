@@ -29,10 +29,10 @@ nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 4.2.0
 
 nuget Uncodium.Eigensystems                 ~> 1.0.1
 
-nuget Aardvark.Geometry.Intersection        ~> 4.5.0
-nuget Aardvark.VRVis.Opc                    ~> 4.5.0
 
-nuget Aardvark.OpenCVSharp                  ~> 4.4.1
+nuget Aardvark.Geometry.Intersection        ~> 4.3.0-prerelease1
+nuget Aardvark.VRVis.Opc                    ~> 4.3.0-prerelease1
+
 
 nuget FSharp.Core                           ~> 4.3.0
 
