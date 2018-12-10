@@ -694,7 +694,6 @@ module Surface =
                 | None -> yield div[ style "font-style:italic"][ text "no surface selected" ]
         }  
 
-
     let surfacesLeafButtonns (model:MSurfaceModel) = 
         let ts = model.surfaces.activeChild
         let sel = model.surfaces.singleSelectLeaf
