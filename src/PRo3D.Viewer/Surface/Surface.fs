@@ -400,7 +400,7 @@ module Surface =
     
     let mkColor (model : MGroupsModel) (s : MSurface) =
         isSelected model s 
-          |> Mod.bind (fun x -> if x then Mod.constant C4b.Blue else Mod.constant C4b.White)
+          |> Mod.bind (fun x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)
 
     let lastSelected (model : MGroupsModel) (s : MSurface) =
             let id = s.guid |> Mod.force
