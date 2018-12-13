@@ -16,7 +16,8 @@ module Navigation =
 
     type Action =
         | ArcBallAction         of ArcBallController.Message
-        | FreeFlyAction         of CameraController.Message
+        //| FreeFlyAction         of CameraController.Message
+        | FreeFlyAction         of FreeFlyController.Message
         | SetNavigationMode     of NavigationMode
 
     type smallConfig<'a,'b> = 
@@ -41,8 +42,22 @@ module Navigation =
               | None -> { model with camera = cam }
                 
         | FreeFlyAction a ->
-          let cam' = CameraController.update model.camera a                
-          { model with camera = { cam' with sensitivity = smallConfig.navigationSensitivity.Get(bigConfigA) } }
+          let cam' = FreeFlyController.update model.camera a
+          let sensitivity = smallConfig.navigationSensitivity.Get(bigConfigA)          
+          
+          let config = { 
+            cam'.freeFlyConfig with
+              panMouseSensitivity       = exp(sensitivity) * 0.0025
+              dollyMouseSensitivity     = exp(sensitivity) * 0.0025
+              zoomMouseWheelSensitivity = exp(sensitivity) * 0.1
+              moveSensitivity           = sensitivity
+              lookAtMouseSensitivity    = 0.004
+              lookAtDamping             = 50.0
+              }
+
+          { 
+            model with camera = { cam' with freeFlyConfig = config }
+          }
         | SetNavigationMode mode ->
           match mode with
             | NavigationMode.FreeFly ->
@@ -77,7 +92,7 @@ module Navigation =
             amap {
                 let! state = model.navigationMode 
                 match state with
-                    | NavigationMode.FreeFly -> yield! CameraController.extractAttributes model.camera FreeFlyAction
+                    | NavigationMode.FreeFly -> yield! FreeFlyController.extractAttributes model.camera FreeFlyAction
                     | NavigationMode.ArcBall -> yield! ArcBallController.extractAttributes model.camera ArcBallAction
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap

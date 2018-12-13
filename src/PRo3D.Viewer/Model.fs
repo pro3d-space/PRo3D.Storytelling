@@ -452,8 +452,8 @@ module ViewConfigModel =
     }
     let initNavSens = {
         value   = 2.0
-        min     = -8.0
-        max     = +10.0
+        min     = -1.0
+        max     = 8.0
         step    = 0.25
         format  = "{0:0.00}"
     }

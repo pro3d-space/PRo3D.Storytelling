@@ -792,7 +792,7 @@ module ViewerApp =
                 let! state = model.navigationMode
                 match state with
                     | NavigationMode.FreeFly -> 
-                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction
+                        yield! FreeFlyController.extractAttributes model.camera Navigation.Action.FreeFlyAction
                     | NavigationMode.ArcBall -> 
                         yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction
                     | _ -> failwith "Invalid NavigationMode"
@@ -1083,7 +1083,7 @@ module ViewerApp =
         let nav =
           match m.scene.navigation.navigationMode with
             | NavigationMode.FreeFly -> 
-                CameraController.threads m.scene.navigation.camera
+                FreeFlyController.threads m.scene.navigation.camera
                   |> ThreadPool.map Navigation.FreeFlyAction |> ThreadPool.map NavigationMessage
             | NavigationMode.ArcBall ->
                 ArcBallController.threads m.scene.navigation.camera

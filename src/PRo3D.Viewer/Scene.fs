@@ -225,7 +225,7 @@ module Scene =
 
     let resetControllerState (scn :Scene) = 
       let state = scn.navigation.camera
-      { state with forward = false; backward = false; left = false; right = false; isWheel = false; zoom = false; pan = false; look = false; moveVec = V3i.Zero }
+      { state with forward = false; backward = false; left = false; right = false; isWheel = false; zoom = false; pan = false; look = false; moveVec = V3d.Zero }
       |> Lenses.set' _camera scn
 
     let loadScene path m runtime signature =
