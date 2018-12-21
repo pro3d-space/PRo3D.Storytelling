@@ -240,45 +240,7 @@ module Sg =
                     | None -> [||])
 
     let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
-
-    
-    //let pickingLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id : IMod<Guid>) = 
-    //    let box = points |> AList.toMod |> Mod.map (fun d -> if d.Count > 2 then Box3d d else Box3d.Unit)
-
-    //    let edges = edgeLines false points trafo 
-    //    let cylinders = points |> AList.toArray |> Array.pairwise |> Array.map(fun (a,b) -> Line3d(a,b)) |> Array.map (fun x -> Cylinder3d(x, 0.02))
-                                                            
-    //    edges
-    //        |> Mod.map (
-    //          fun (v) -> 
-    //            let pickable = { shape = PickShape.Box v; trafo = Trafo3d.Identity } |> Mod.constant
-    //            v.sg 
-    //              |> pickable' pickable
-    //              |> Sg.noEvents
-    //              |> Sg.withEvents [
-    //                SceneEventKind.Down, (
-    //                    fun sceneHit -> 
-    //                      if (picking |> Mod.force) then
-    //                        //hitCounter <- hitCounter + 1
-    //                        true, Seq.ofList[PickPolygonBox (sceneHit,v.id)]
-    //                      else
-    //                        false, Seq.ofList[])
-    //                ]
-              
-    //              )
-    //        |> Sg.set            
-    //        |> Sg.lines color
-    //        |> Sg.noEvents
-    //        |> Sg.shader {
-    //             do! Shader.stableTrafo
-    //             do! DefaultSurfaces.vertexColor
-    //             do! Shader.thickLine    
-    //         }                               
-    //         |> Sg.trafo trafo
-    //         |> Sg.uniform "LineWidth" width
-    //         |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
-            
-        
+                            
     let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
         
         let edges = edgeLines false points trafo     
@@ -293,10 +255,7 @@ module Sg =
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
              |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
-            
-            //|> Sg.pass linePass
-            //|> Sg.depthTest (Mod.constant DepthTestMode.None)
-
+                        
     let scaledLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
         let edges = edgeLines false points trafo     
         let size =
@@ -321,10 +280,7 @@ module Sg =
              |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
 
     let cylinders positions = 
-        positions |> Array.pairwise |> Array.map(fun (a,b) -> Line3d(a,b)) |> Array.map (fun x -> Cylinder3d(x, 0.02))
-
-    //let pickable' (pick :IMod<Pickable>) (sg: ISg) =
-    //    Sg.PickableApplicator (pick, Mod.constant sg)
+        positions |> Array.pairwise |> Array.map(fun (a,b) -> Line3d(a,b)) |> Array.map (fun x -> Cylinder3d(x, 0.02))    
 
     let pickable' (pick :IMod<Pickable>) (sg: ISg) =
         Sg.PickableApplicator (pick, Mod.constant sg)
@@ -335,156 +291,7 @@ module Sg =
             Triangle3d(pos.[i0], pos.[i0 + 1], pos.[i0 + 2])
 
         Array.init (pos.Length / 3) get
-    
-    //let pickingLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: Guid) (picking : bool) = 
-
-    //    let edges = edgeLines false points trafo 
-
-        
-    //    let pickable = 
-    //        adaptive {
-    //            let! edg = edges
-    //            let! w = width
-    //            let t = edg |> Array.map (fun x -> PickShape.Cylinder(Cylinder3d(x, w)))
-    //           //return t |> Array.map ( fun x -> { shape = PickShape.Cylinder x; trafo = Trafo3d.Identity } )
-    //            let bb = Box3d(points |> AList.toArray)
-    //            return { shape = PickShape.Box (bb.Scaled(V3d(w))); trafo = Trafo3d.Identity }
-    //            //return { shape = t; trafo = Trafo3d.Identity }
-    //        }
-    //    let pline = 
-    //            edges
-    //                |> Sg.lines color
-    //                |> pickable' pickable
-    //                |> Sg.noEvents
-    //                |> Sg.withEvents [
-    //                   SceneEventKind.Down, (
-    //                     fun sceneHit ->
-    //                       if (picking) then
-    //                         true, Seq.ofList[PickAnnotation (sceneHit, id)]
-    //                       else
-    //                         false, Seq.ofList[])
-    //                ]
-    //                |> Sg.shader {
-    //                     do! Shader.stableTrafo
-    //                     do! DefaultSurfaces.vertexColor
-    //                     do! Shader.thickLine    
-    //                 }                               
-    //                 |> Sg.trafo trafo
-    //                 |> Sg.uniform "LineWidth" width
-    //                 |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
-
-    //    pline
-
-    //let scaledArrows1 (color : IMod<C4b>) (lines : IMod<Line3d[]>) (tess : int) (radius : IMod<float>) (height : IMod<float>) (dir : V3d) =
-    //        let call = 
-    //            lines |> Mod.map (fun lines ->
-    //                DrawCallInfo(
-    //                    FaceVertexCount = 2 * lines.Length,
-    //                    InstanceCount = 1
-    //                )
-    //            )
-
-    //        let positions =
-    //            lines |> Mod.map (fun l ->
-    //                l |> Array.collect (fun l -> [|V3f l.P0; V3f l.P1|])
-    //            )
-            
-    //        let ctrafo = positions |> Mod.map ( fun p -> Trafo3d.RotateInto(V3d.ZAxis, dir) * Trafo3d.Translation((p |> Seq.ofArray |> Seq.last).ToV3d()) )  
-    //        let ctrafoScale = Mod.map2 (fun r h -> Trafo3d.Scale(r*50.0,r*50.0,h*50.0)) radius height
-    //        let ctrafo' = Mod.map2 (fun rt s -> rt*s) ctrafo ctrafoScale
-
-    //        let cone = 
-    //            Sg.cone 30 color radius height
-    //                    |> Sg.noEvents
-    //                    |> Sg.trafo(ctrafo') 
-    //        //    Aardvark.SceneGraph.SgPrimitives.Cone.getSg tess
-    //        //        |> Sg.vertexBufferValue DefaultSemantic.Colors (color |> Mod.map (fun c -> c.ToC4f() |> V4f))
-    //        //        |> Sg.trafo ctrafo'
-    //        let line = 
-    //            Aardvark.SceneGraph.Sg.RenderNode(call, IndexedGeometryMode.LineList)
-    //                |> Aardvark.SceneGraph.SgFSharp.Sg.vertexAttribute DefaultSemantic.Positions positions
-    //                |> Aardvark.SceneGraph.SgFSharp.Sg.vertexBufferValue DefaultSemantic.Colors (color |> Mod.map (fun c -> c.ToC4f().ToV4f())) 
-
-    //        let line = 
-    //            line
-    //            |> Sg.noEvents
-                    
-    //        [line;cone]
-
-
-    //let scaledArrows (points : alist<V3d>) (pos : V3d) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (dir : V3d) 
-    //                    (coneRadius : IMod<float>) (coneHight : IMod<float>)  (cTrafo : IMod<Trafo3d>) (cam:IMod<CameraView>) = 
-    //    let edges = edgeLines false points trafo   
-    //    let coneTrafo =
-    //        adaptive {
-    //            let! line = edges
-    //            let size = ((float (line.Length)) * 100.0)
-
-    //            let! cam' = cam
-    //            let loc     = cam'.Location 
-    //            let! trafo' = trafo
-    //            let p = trafo'.Forward.C3.XYZ
-
-    //            let dist = (p - loc).Length      
-    //            let scale = (dist * size / 60.0)
-    //            return (Trafo3d.RotateInto(V3d.ZAxis, dir) * Trafo3d.Translation(pos*scale))
-    //        }
-
-    //    //let size =
-    //    //    adaptive {
-    //    //        let! line = edges
-    //    //        return ((float (line.Length)) * 100.0)
-    //    //    }
-                                                            
-    //    //let line = 
-    //    //  edges
-    //    //  |> Sg.lines color
-    //    //  |> Sg.noEvents
-    //    //  |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-    //    //  |> Sg.uniform "Size" size
-    //    //  |> Sg.shader {                         
-    //    //       do! Shader.stableTrafo
-    //    //       do! Shader.stableLight
-    //    //       do! DefaultSurfaces.vertexColor
-    //    //       do! Shader.thickLine    
-    //    //   }                               
-    //    //  |> Sg.trafo trafo
-    //    //  |> Sg.uniform "LineWidth" width
-    //    //  |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
-
-    //    //let pos = 
-    //    //  Sg.sphere 2 color (Mod.constant 1.0)
-    //    //    |> Sg.noEvents
-    //    //    |> Sg.trafo(cTrafo )
-    //    //    |> Sg.uniform "Size" size
-    //    //    |> Sg.uniform "WorldPos" (cTrafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-    //    //    |> Sg.effect [
-    //    //            toEffect <| Shader.screenSpaceScale
-    //    //            toEffect <| Shader.stableTrafo
-    //    //        ]        
-
-    //    Sg.cone 15 color coneRadius coneHight
-    //      |> Sg.noEvents
-    //      |> Sg.trafo(cTrafo) 
-    //      |> Sg.uniform "WorldPos" (cTrafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
-    //      |> Sg.uniform "Size" (coneRadius |> Mod.map(fun x -> x * 100.0))
-    //      |> Sg.shader {
-    //          do! Shader.screenSpaceScale
-    //          //do! Shader.stableTrafo
-    //          do! DefaultSurfaces.vertexColor
-    //          do! DefaultSurfaces.simpleLighting
-    //      }
-
-    ///Too expensive
-    //let computeScale (view : IMod<CameraView>)(p:IMod<V3d>)(size:float) =
-    //    adaptive {
-    //        let! p = p
-    //        let! v = view
-    //        let distV = p - v.Location
-    //        let distF = V3d.Dot(v.Forward, distV)
-    //        return distF * size / 800.0 //needs hfov at this point
-    //    }    
-
+         
     let mkDotISg color size (pos : IMod<V3d>) = 
         Sg.sphere 2 color (Mod.constant 1.0)
             |> Sg.noEvents
@@ -524,7 +331,6 @@ module Sg =
                 )
         )
         rotTrafo * modelt
-
     
     let text (view : IMod<CameraView>) near hfov pos modelTrafo text size =
          
