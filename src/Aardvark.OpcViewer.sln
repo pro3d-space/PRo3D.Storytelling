@@ -10,6 +10,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Aardvark.Opc.Viewer", "Aard
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DGMViewer", "DGMViewer\DGMViewer.fsproj", "{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PRo3D.Minerva", "PRo3D.Minerva\PRo3D.Minerva.fsproj", "{EEAC5C2E-F7B2-47E7-903A-89DF421DDD0C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{70F513AA-7B23-40C3-8C6F-D8B75A83D2A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EEAC5C2E-F7B2-47E7-903A-89DF421DDD0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EEAC5C2E-F7B2-47E7-903A-89DF421DDD0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EEAC5C2E-F7B2-47E7-903A-89DF421DDD0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EEAC5C2E-F7B2-47E7-903A-89DF421DDD0C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

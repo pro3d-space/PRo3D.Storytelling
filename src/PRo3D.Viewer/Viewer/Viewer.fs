@@ -772,6 +772,8 @@ module ViewerApp =
                 let cont = addDockElement m.scene.dockConfig.content de
                 let dockconfig = config {content(cont);appName "PRo3D"; useCachedConfig false }
                 { m with scene = { m.scene with dockConfig = dockconfig; closedPages = closedPages } }
+            | MinervaActions a,_,_ ->
+              { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -1057,6 +1059,8 @@ module ViewerApp =
                 require (myCss) (body bodyAttributes [configUI])
             | Some "viewplanner" -> 
                 require (myCss) (body bodyAttributes [viewPlannerUI])
+            | Some "minerva" -> 
+               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui m.minervaModel |> UI.map MinervaActions])
             | None -> 
                 require (myCss) (
                   body [][                    

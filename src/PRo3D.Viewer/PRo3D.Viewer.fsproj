@@ -162,6 +162,11 @@
       <Project>{70f513aa-7b23-40c3-8c6f-d8b75a83d2a0}</Project>
       <Private>True</Private>
     </ProjectReference>
+    <ProjectReference Include="..\PRo3D.Minerva\PRo3D.Minerva.fsproj">
+      <Name>PRo3D.Minerva</Name>
+      <Project>{eeac5c2e-f7b2-47e7-903a-89df421ddd0c}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1') Or ($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
