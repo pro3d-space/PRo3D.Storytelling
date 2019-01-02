@@ -55,6 +55,11 @@ type Properties =
     | Mastcam     k -> k.id
     | APXS        k -> k.id
 
+type Instrument = 
+  | MAHLI       = 0
+  | FrontHazcam = 1
+  | Mastcam     = 2
+  | APXS        = 3
 
 type Geometry = 
   {
@@ -65,6 +70,7 @@ type Geometry =
 type Feature =
   { 
     id          : string
+    instrument  : Instrument
     typus       : Typus
     properties  : Properties
     boundingBox : Box2d
@@ -86,6 +92,17 @@ type Model =
     data : FeatureCollection
     queries  : list<string>
   }
+
+module Model = 
+  let toInstrument (id : string) =
+    let instr = id.ToCharArray() |> Array.takeWhile(fun x -> x <> '_')
+    let instr = new string(instr)
+    match instr.ToLowerInvariant() with
+      | "mahli"       -> Instrument.MAHLI
+      | "fronthazcam" -> Instrument.FrontHazcam        
+      | "mastcam"     -> Instrument.Mastcam
+      | "apxs"        -> Instrument.APXS
+      | _ -> instr |> sprintf "unknown instrument %A" |> failwith
 
 module Initial = 
   let data = 

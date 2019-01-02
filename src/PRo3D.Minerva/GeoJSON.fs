@@ -31,34 +31,30 @@ module MinervaGeoJSON =
       | s -> s |> sprintf "[parseTypus] string %A unknown" |> failwith
 
   let parseProperties (properties : JsonValue) : Properties = 
-    let id = (properties?id).AsString()
-    let instr = id.ToCharArray() |> Array.takeWhile(fun x -> x <> '_')
-    let instr = new string(instr)
-            
-    match instr.ToLowerInvariant() with
-        | "mahli" ->          
+    let id = (properties?id).AsString()                
+    match id |> Model.toInstrument with
+        | Instrument.MAHLI ->          
           {
             MAHLI_Properties.id = id |> FeatureId
             beginTime = (properties?begin_time).AsDateTime()
             endTime = (properties?end_time).AsDateTime()
           } |> Properties.MAHLI
-        | "fronthazcam" ->
+        | Instrument.FrontHazcam ->
           {
             FrontHazcam_Properties.id = id |> FeatureId
             beginTime = (properties?begin_time).AsDateTime()
             endTime = (properties?end_time).AsDateTime()
           } |> Properties.FrontHazcam
-        | "mastcam" ->
+        | Instrument.Mastcam ->
           {
             Mastcam_Properties.id = id |> FeatureId
             beginTime = (properties?begin_time).AsDateTime()
             endTime = (properties?end_time).AsDateTime()
           } |> Properties.Mastcam
-        | "apxs" ->
+        | Instrument.APXS ->
           {
             APXS_Properties.id = id |> FeatureId
-          } |> Properties.APXS
-        | _ -> instr |> sprintf "unknown instrument %A" |> failwith
+          } |> Properties.APXS       
 
   let parseSingleCoord (c : array<float>) : V2d =
     if c.Length <> 2 then failwith "invalid coordinate of size other than 2"
@@ -82,6 +78,7 @@ module MinervaGeoJSON =
 
     {
       id          = s
+      instrument  = s |> Model.toInstrument
       typus       = feature.GetProperty("type") |> parseTypus
       boundingBox = feature?bbox |> parseBoundingBox
       properties  = prop

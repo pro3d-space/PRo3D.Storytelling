@@ -177,12 +177,9 @@ let main argv =
         MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |>ignore
         ()
     
-
     if catchDomainErrors then
       AppDomain.CurrentDomain.UnhandledException.AddHandler(UnhandledExceptionEventHandler(domainError))
-
     
-
     WebPart.startServerLocalhost 4321 [
         MutableApp.toWebPart' runtime false mainApp
         path "/websocket" >=> handShake ws
