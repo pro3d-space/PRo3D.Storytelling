@@ -132,7 +132,7 @@ module Surface =
     let computeIndices (size:V2i)(invalids : int[]) : int[] =
       CSharpUtils.IndexComputation.ComputeIndexArray(size,invalids)
     
-    let intersectKdTrees' = DebugKdTrees.intersectKdTrees computeIndices
+    let intersectKdTrees' = KdTrees.intersectKdTrees computeIndices
 
     let doKdTreeIntersection (m : SurfaceModel) (r : FastRay3d) cache : option<float * PRo3D.Surfaces.Surface> * hmap<_,_> = 
         let mutable cache = cache

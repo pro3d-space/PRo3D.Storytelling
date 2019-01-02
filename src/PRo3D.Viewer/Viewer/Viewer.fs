@@ -804,10 +804,10 @@ module ViewerApp =
 
                 AttributeMap.ofList [
                  attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
-                 attribute "data-samples" "8"
+                 attribute "data-samples" "4"
                  attribute "useMapping" "true"
-                 //attribute "showFPS" "true"                  
-                 //attribute "data-renderalways" "true" 
+                 attribute "showFPS" "false"        
+                 attribute "data-renderalways" "false"
                  onKeyDown (KeyDown)
                  onKeyUp (KeyUp)                    
                 ] 

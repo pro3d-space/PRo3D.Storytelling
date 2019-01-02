@@ -20,7 +20,7 @@ open PRo3D
 open PRo3D.Groups
 
 
-module DebugKdTrees = 
+module DebugKdTreesX = 
     open Aardvark.VRVis.Opc.KdTrees
     open MBrace.FsPickler
     open Aardvark.Geometry
