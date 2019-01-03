@@ -35,6 +35,7 @@ open Aardvark.VRVis.Opc
 
 open Aardium
 open System.Threading
+open PRo3D.Base
 
 [<DataContract>]
 type Calc =

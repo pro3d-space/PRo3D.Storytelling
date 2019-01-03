@@ -55,6 +55,7 @@ module MinervaGeoJSON =
           {
             APXS_Properties.id = id |> FeatureId
           } |> Properties.APXS       
+        | _ -> failwith "encountered invalid instrument from parsing"
 
   let parseSingleCoord (c : array<float>) : V2d =
     if c.Length <> 2 then failwith "invalid coordinate of size other than 2"

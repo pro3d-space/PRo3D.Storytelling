@@ -10,6 +10,7 @@ module DrawingUtilities =
     
     
     module Calculations =
+        open PRo3D.Base
 
         //let getHeightDelta (p:V3d) (upVec:V3d) = (p * upVec).Length
 

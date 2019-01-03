@@ -31,6 +31,8 @@ open PRo3D.Groups
 open MBrace.FsPickler.Json   
 
 module DrawingApp =
+    open PRo3D.Base
+
    // open Newtonsoft.Json
         
     let closePolyline (a:Annotation) = 

@@ -1,9 +1,7 @@
-﻿namespace PRo3D
+﻿namespace PRo3D.Base
 
 open Aardvark.Base
 open ViewPlanner
-
-
 
 module CooTransformation = 
 
