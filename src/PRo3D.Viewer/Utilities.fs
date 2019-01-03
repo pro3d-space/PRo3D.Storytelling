@@ -43,7 +43,6 @@ module Serialization =
         let test2 : 'a = jsonSerializer.UnPickleOfString<'a> json
         test2
         
-
     let fileExists filePath =
         match System.IO.File.Exists filePath with
           | true  -> Some filePath

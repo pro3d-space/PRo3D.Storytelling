@@ -6,6 +6,7 @@ open FSharp.Data.JsonExtensions
 
 module MinervaGeoJSON =
   open FSharp.Data.Runtime
+  open PRo3D.Base
 
   let shout s =
     Log.line "%A" s  
@@ -68,9 +69,11 @@ module MinervaGeoJSON =
 
   let parseGeometry (geometry : JsonValue) : PRo3D.Minerva.Geometry = 
     let typus = geometry.GetProperty("type") |> parseTypus
+    let coords = geometry?coordinates |> parseCoordinates typus |> List.singleton
     {
       typus       = typus
-      coordinates = geometry?coordinates |> parseCoordinates typus |> List.singleton
+      coordinates = coords
+      positions   = List.empty
     }        
 
   let parseFeature (feature : JsonValue) : Feature =

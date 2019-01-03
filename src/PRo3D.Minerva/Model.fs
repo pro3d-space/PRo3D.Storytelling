@@ -65,6 +65,7 @@ type Geometry =
   {
     typus       : Typus
     coordinates : list<V2d>
+    positions   : list<V3d>
   }
 
 type Feature =

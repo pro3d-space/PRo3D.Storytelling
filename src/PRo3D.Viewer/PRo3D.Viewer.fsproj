@@ -79,7 +79,6 @@
   <ItemGroup>
     <Compile Include="Config.fs" />
     <Compile Include="Model.fs" />
-    <Compile Include="CooTransformation.fs" />
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
     <Compile Include="ReferenceSystem-Model.fs" />

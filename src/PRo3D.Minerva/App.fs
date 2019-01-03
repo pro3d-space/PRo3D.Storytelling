@@ -8,17 +8,34 @@ open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.Base.Rendering
 
+open PRo3D.Base
+
 type MinervaAction =
   | PerformQueries
 
 module App =
+
+  //coords  -4831.341805
+
+  let computeXYZFeatures (features : FeatureCollection) : FeatureCollection =
+    let a = 
+      features.features 
+        |> PList.map(fun feature ->
+          let pos =
+            feature.geometry.coordinates 
+              |> List.map(fun c -> 
+                    let sc = { longitude = 360.0 - c.Y; latitude = c.X; altitude = -4831.341805; radian = 0.0 }
+                    CooTransformation.getXYZFromLatLonAlt sc Planet.Mars)
+          { feature with geometry = { feature.geometry with positions = pos }})
+
+    { features with features = a }
 
   let update (model : Model) (msg : MinervaAction) : Model =
       match msg with
       | PerformQueries -> 
         let data = model.queries |> MinervaGeoJSON.loadMultiple
 
-        { model with data = data }
+        { model with data = data |> computeXYZFeatures}
 
   let instrumentText (instr : Instrument) =
     match instr with
@@ -49,9 +66,7 @@ module App =
   let viewFeaturesGui (model :MModel) =
     
      let content =
-        alist {
-          
-          
+        alist {                    
           let! features = model.data.features |> AList.toMod
           let groupedFeatures = features |> PList.toList |> List.groupBy(fun x -> x.instrument)
 
@@ -69,3 +84,26 @@ module App =
        button [clazz "ui button"; onClick (fun _ -> PerformQueries)][text "Load Minerva"]
        Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) content  
      ]
+
+  let drawPoint color size (pos : IMod<V3d>) = 
+    Sg.sphere 2 color (Mod.constant 1.0)
+        |> Sg.noEvents
+        |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
+        |> Sg.uniform "Size" size
+        |> Sg.uniform "WorldPos" pos
+
+  let viewFeaturesSg (model : MModel) =
+    model.data.features 
+      |> AList.map(fun x -> 
+        x.geometry.positions 
+          |> List.map(fun y -> 
+            drawPoint (C4b.VRVisGreen |> Mod.constant) (1.5 |> Mod.constant) (y |> Mod.constant)) |> Sg.ofList
+      ) 
+      |> AList.toASet 
+      |> Sg.set
+      |> Sg.effect [
+        DefaultSurfaces.stableTrafo |> toEffect
+        DefaultSurfaces.vertexColor |> toEffect
+      ]
+
+    

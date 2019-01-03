@@ -78,6 +78,13 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PRo3D.Base\PRo3D.Base.fsproj">
+      <Name>PRo3D.Base</Name>
+      <Project>{e96acf20-d554-407d-bf77-f67a8f60fdb3}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

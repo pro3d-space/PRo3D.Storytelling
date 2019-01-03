@@ -887,8 +887,11 @@ module ViewerApp =
                     m.scene.viewPlans 
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
+
+            let minervaFeatures = 
+              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions
                         
-            [annos; exploreCenter; refSystem; viewPlans] |> Sg.ofList // (*;orientationCube*)
+            [annos; exploreCenter; refSystem; viewPlans; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          

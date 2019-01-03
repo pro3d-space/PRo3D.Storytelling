@@ -6,8 +6,8 @@ type Planet =
   | None  = 2
 
 type SphericalCoo = {
-  latitude  : double
   longitude : double
+  latitude  : double
   altitude  : double
   radian    : double
 }
