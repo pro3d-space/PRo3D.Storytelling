@@ -130,21 +130,10 @@ module AnnotationGroupsImporter =
 
         let groups = 
           groupsNFlat |> List.map (fun (x,_,_) -> x) |> PList.ofList
-
         
         let lookup = 
           groupsNFlat 
             |> List.map (fun (_,_,x) -> x)
             |> List.fold (fun acc x -> HMap.union acc x) HMap.empty        
 
-        groups, flat, lookup
-
-
-    //type Action =
-    //    | ImportGroups    of string
-        
-    //let update (model : AnnotationGroupsImporterModel) (act : Action) =
-    //    match act with
-    //        | ImportGroups s         -> 
-    //            let groups, flat = startImporter s
-    //            { model with rootGroupI = groups ; flatI = flat  }
+        groups, flat, lookup    
