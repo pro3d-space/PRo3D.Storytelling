@@ -286,7 +286,7 @@ module Gui =
               i [clazz "large sidebar icon"; style "margin:0px 2px"][] 
               
               div [ clazz "ui menu"] [
-                  div [ clazz "ui dropdown item"; style "width: 150px"] [] //spacer as workaround for tab overdraw
+                  //div [ clazz "ui dropdown item"; style "width: 150px"] [] //spacer as workaround for tab overdraw
                   div [ clazz "ui dropdown item"] (scene m)
               
                   div [ clazz "ui dropdown item"] (importSurface m)                  

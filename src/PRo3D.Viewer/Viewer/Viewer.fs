@@ -568,7 +568,7 @@ module ViewerApp =
                      Log.error "[PickSurface] no hit of %s" name
                      m
                 Log.stop()
-                Log.error "done intersecting"
+                Log.line "done intersecting"
                 
                 result
             | PickObject (p,id), _ ,_ ->  
@@ -838,8 +838,8 @@ module ViewerApp =
                  attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
                  attribute "data-samples" "4"
                  attribute "useMapping" "true"
-                 attribute "showFPS" "false"        
-                 attribute "data-renderalways" "false"
+                 attribute "showFPS" "true"        
+                 attribute "data-renderalways" "true"
                  onKeyDown (KeyDown)
                  onKeyUp (KeyUp)                    
                 ] 

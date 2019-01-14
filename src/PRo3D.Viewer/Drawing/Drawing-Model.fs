@@ -107,7 +107,7 @@ module DrawingModel =
         thickness     = Annotation.thickn
 
         working     = None
-        projection  = Projection.Sky
+        projection  = Projection.Linear
         geometry    = Geometry.Point
         semantic    = Semantic.Horizon3
 

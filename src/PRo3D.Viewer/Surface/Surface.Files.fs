@@ -376,7 +376,7 @@ module Files =
                            Log.error "surface %s not found" (guid.ToString())
                            surfaceModel
                | None -> 
-                   Log.error "can't make surface relative. not valid scene path has not been saved yet."
+                   Log.error "can't make surface relative. no valid scene path has not been saved yet."
                    surfaceModel
 
   

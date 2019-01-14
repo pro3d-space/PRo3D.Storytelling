@@ -139,7 +139,7 @@ module FalseColorsModel =
         format  = "{0:0.0}"
     }
     let initMaxAngle = {
-        value   = 90.0
+        value   = 45.0
         min     = 1.0
         max     = 90.0
         step    = 1.0
@@ -460,24 +460,24 @@ module ViewConfigModel =
         format  = "{0:0.00}"
     }
     let initArrowLength = {
-        value   = 1.0
+        value   = 0.10
         min     = 0.00
         max     = 10.0
         step    = 0.01
         format  = "{0:0.00}"
     }
     let initArrowThickness = {
-        value   = 2.0
+        value   = 3.0
         min     = 0.0
         max     = 10.0
-        step    = 0.1
-        format  = "{0:0.00}"
+        step    = 0.5
+        format  = "{0:0.0}"
     }
     let initPlaneSize = {
-        value   = 0.8
+        value   = 0.1
         min     = 0.0
         max     = 10.0
-        step    = 0.1
+        step    = 0.05
         format  = "{0:0.00}"
     }
     
