@@ -68,7 +68,7 @@ module DrawingApp =
                 //        let result = w.points |> DipAndStrike.calculateDipAndStrikeResults (up) (north)
                 //        Some result //more acc. by using segments as well?
                 //    | _ -> None 
-            let results = DrawingUtilities.Calculations.calculateAnnotationResults w up planet
+            let results = DrawingUtilities.Calculations.calculateAnnotationResults w up north planet
             Some { w with dnsResults = dns ; results = Some results }
         | None -> None
 
@@ -356,6 +356,8 @@ module DrawingApp =
         match y with
           | MAnnotations ann -> Some ann
           | _ -> None
+    
+   
 
     let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> * ISg<Drawing.Action>=
         // order is irrelevant for rendering. change list to set,

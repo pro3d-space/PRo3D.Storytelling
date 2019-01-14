@@ -147,13 +147,55 @@ module Gui =
     //                            ]
     //        }
     
+  //  let viewOpcPaths (model:MModel) = 
+  //      Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) (
+  //        alist {
+  //          for (folder,opclist) in model.opcPaths |> AMap.toASet |> ASet.toAList do
+  //            //yield Html.SemUi.accordion "blub" "boxes" true [
+  //            yield h3 [][text (Path.GetFileName folder)]
+  //            for opc in opclist do
+  //              yield div [clazz "ui inverted item"][
+  //                  i [clazz "ui middle aligned box icon"] []
+  //                  div [clazz "ui content"] [
+  //                    div [clazz "ui header tiny"] [text opc]                
+  //                  ]
+  //                ]
+  //            //]
+  //        }
+  //      )
+  
+  //let discoverOpcsView (model : MModel) =
+  //  require Html.semui (
+  //    body [style "width: 100%; height:100%; background: #252525; overflow-x: hidden; overflow-y: scroll"] [
+  //      div [clazz "ui inverted segment"] [
+  //          h1 [clazz "ui"][text "Discover Opcs"]
+  //          br []
+  //          button [ 
+  //            clazz "ui button tiny"
+  //            Dialogs.onChooseFiles SetPaths;
+  //            clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
+  //            text "Select Path"
+  //          ]
+  //         // Html.SemUi.accordion "Paths" "files" true [viewPaths model]
+                                
+  //         // button [clazz "ui button tiny"; onClick (fun _ -> Discover)] [text "DiscoverOpcs" ]                
+  
+  //          //Html.SemUi.accordion "Opcs" "boxes" true [viewOpcPaths model]
+  //          viewOpcPaths model
+  //      ]
+  //    ])
     let private importSurface (m:MModel) =
       [
          text "Import"
          i [clazz "dropdown icon"][] 
          div [ clazz "menu"] [
+             //div [ clazz "ui inverted item"; 
+             //  Dialogs.onChooseFiles ImportSurface;
+             //  clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
+             //  text "OPC"
+             //]
              div [ clazz "ui inverted item"; 
-               Dialogs.onChooseFiles ImportSurface;
+               Dialogs.onChooseFiles ImportDiscoveredSurfaces;
                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
                text "OPC"
              ]

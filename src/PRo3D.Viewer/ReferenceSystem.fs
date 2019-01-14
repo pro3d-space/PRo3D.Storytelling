@@ -24,6 +24,7 @@ module ReferenceSystemApp =
    
     type Action =
         | InferCoordSystem of V3d
+        | UpdateUpNorth    of V3d
         | SetUp            of Vector3d.Action
         | SetNorth         of Vector3d.Action
         | SetNOffset       of Numeric.Action
@@ -112,6 +113,8 @@ module ReferenceSystemApp =
             | InferCoordSystem p ->
                 let m' = updateCoordSystem p model.planet model
                 { m' with origin = p }, bigConfig
+            | UpdateUpNorth p ->
+                updateCoordSystem p model.planet model, bigConfig
             | SetUp up ->    
                 let up = Vector3d.update model.up up
                 let up = ReferenceSystem.setV3d up.value.Normalized

@@ -134,6 +134,37 @@ module DipAndStrike =
                 Some dns
             | _ -> None 
         
+    let recalculateDnSAzimuth (anno:Annotation) (up:V3d) (north : V3d) =
+
+        let points = anno.points |> PList.filter(fun x -> not x.IsNaN)
+        match anno.dnsResults with
+            | Some dns ->
+                match points.Count with 
+                    | x when x > 2 ->
+
+                        let v3dArray = points.AsList |> List.toArray // points.toArray not possible because of: int -> V3d[]
+                        let mutable plane = PlaneFitting.Fit(v3dArray)
+                        let horP = new Plane3d(up, V3d.Zero)
+
+                        ////correct plane orientation - check if normals point in same direction
+                        let height = horP.Height(plane.Normal)
+                        let planeNormal = 
+                          match height.Sign() with
+                          | -1 -> plane.Normal.Negated
+                          | _  -> plane.Normal
+
+                        plane.Normal <- planeNormal
+
+                        //strike
+                        let strike = up.Cross(planeNormal).Normalized
+                        //dip plane incline .. maximum dip angle
+                        let v = strike.Cross(up).Normalized
+
+                        Some { dns with dipAzimuth = computeAzimuth v north up; strikeAzimuth = computeAzimuth strike north up }
+                        
+                    | _ -> Some dns 
+            | _-> None
+
 
     let dipColor (dipAngle:IMod<float>) (min:IMod<float>) (max:IMod<float>) =
         adaptive {

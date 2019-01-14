@@ -319,12 +319,16 @@ module Mutable =
         let _avgAltitude = ResetMod.Create(__initial.avgAltitude)
         let _length = ResetMod.Create(__initial.length)
         let _wayLength = ResetMod.Create(__initial.wayLength)
+        let _bearing = ResetMod.Create(__initial.bearing)
+        let _slope = ResetMod.Create(__initial.slope)
         
         member x.height = _height :> IMod<_>
         member x.heightDelta = _heightDelta :> IMod<_>
         member x.avgAltitude = _avgAltitude :> IMod<_>
         member x.length = _length :> IMod<_>
         member x.wayLength = _wayLength :> IMod<_>
+        member x.bearing = _bearing :> IMod<_>
+        member x.slope = _slope :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.AnnotationResults) =
@@ -336,6 +340,8 @@ module Mutable =
                 ResetMod.Update(_avgAltitude,v.avgAltitude)
                 ResetMod.Update(_length,v.length)
                 ResetMod.Update(_wayLength,v.wayLength)
+                ResetMod.Update(_bearing,v.bearing)
+                ResetMod.Update(_slope,v.slope)
                 
         
         static member Create(__initial : PRo3D.AnnotationResults) : MAnnotationResults = MAnnotationResults(__initial)
@@ -381,6 +387,18 @@ module Mutable =
                     override x.Get(r) = r.wayLength
                     override x.Set(r,v) = { r with wayLength = v }
                     override x.Update(r,f) = { r with wayLength = f r.wayLength }
+                }
+            let bearing =
+                { new Lens<PRo3D.AnnotationResults, System.Double>() with
+                    override x.Get(r) = r.bearing
+                    override x.Set(r,v) = { r with bearing = v }
+                    override x.Update(r,f) = { r with bearing = f r.bearing }
+                }
+            let slope =
+                { new Lens<PRo3D.AnnotationResults, System.Double>() with
+                    override x.Get(r) = r.slope
+                    override x.Set(r,v) = { r with slope = v }
+                    override x.Update(r,f) = { r with slope = f r.slope }
                 }
     
     

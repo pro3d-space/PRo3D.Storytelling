@@ -227,6 +227,8 @@ type AnnotationResults = {
     avgAltitude : float
     length      : float
     wayLength   : float
+    bearing     : float
+    slope       : float
 }
 
 [<DomainType>]

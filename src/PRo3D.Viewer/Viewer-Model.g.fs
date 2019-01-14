@@ -23,6 +23,7 @@ module Mutable =
         let _viewPlans = PRo3d.Mutable.MViewPlanModel.Create(__initial.viewPlans)
         let _dockConfig = ResetMod.Create(__initial.dockConfig)
         let _closedPages = ResetMod.Create(__initial.closedPages)
+        let _firstImport = ResetMod.Create(__initial.firstImport)
         
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
@@ -34,6 +35,7 @@ module Mutable =
         member x.viewPlans = _viewPlans
         member x.dockConfig = _dockConfig :> IMod<_>
         member x.closedPages = _closedPages :> IMod<_>
+        member x.firstImport = _firstImport :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.Scene) =
@@ -50,6 +52,7 @@ module Mutable =
                 PRo3d.Mutable.MViewPlanModel.Update(_viewPlans, v.viewPlans)
                 ResetMod.Update(_dockConfig,v.dockConfig)
                 ResetMod.Update(_closedPages,v.closedPages)
+                ResetMod.Update(_firstImport,v.firstImport)
                 
         
         static member Create(__initial : PRo3D.Viewer.Scene) : MScene = MScene(__initial)
@@ -125,6 +128,12 @@ module Mutable =
                     override x.Get(r) = r.closedPages
                     override x.Set(r,v) = { r with closedPages = v }
                     override x.Update(r,f) = { r with closedPages = f r.closedPages }
+                }
+            let firstImport =
+                { new Lens<PRo3D.Viewer.Scene, System.Boolean>() with
+                    override x.Get(r) = r.firstImport
+                    override x.Set(r,v) = { r with firstImport = v }
+                    override x.Update(r,f) = { r with firstImport = f r.firstImport }
                 }
     
     

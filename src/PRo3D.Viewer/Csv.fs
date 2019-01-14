@@ -64,6 +64,8 @@ module Csv =
               avgAltitude = Double.NaN
               length      = Double.NaN
               wayLength   = Double.NaN
+              bearing     = Double.NaN
+              slope       = Double.NaN
             }
 
       let dnsResults = 

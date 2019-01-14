@@ -50,6 +50,8 @@ module AnnotationProperties =
         let alt      = Mod.bindOption model.results Double.NaN (fun a -> a.avgAltitude)
         let length   = Mod.bindOption model.results Double.NaN (fun a -> a.length)
         let wLength  = Mod.bindOption model.results Double.NaN (fun a -> a.wayLength)
+        let bearing  = Mod.bindOption model.results Double.NaN (fun a -> a.bearing)
+        let slope    = Mod.bindOption model.results Double.NaN (fun a -> a.slope)
 
         require GuiEx.semui (
             Html.table [                                            
@@ -67,6 +69,8 @@ module AnnotationProperties =
                 Html.row "Avg Altitude:" [Incremental.text (alt  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
                 Html.row "Length:"      [Incremental.text (length   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
                 Html.row "WayLength:"   [Incremental.text (wLength  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+                Html.row "Bearing:"     [Incremental.text (bearing   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+                Html.row "Slope:"       [Incremental.text (slope  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
             ]
 
         )
