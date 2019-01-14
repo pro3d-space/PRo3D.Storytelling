@@ -238,6 +238,8 @@ module Sg =
                                     |> List.toArray
                     | None -> [||])
 
+    
+
     let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
                             
     let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
@@ -448,6 +450,26 @@ module Shader =
   open Aardvark.UI
   open Aardvark.UI.Trafos
 
+  type SuperVertex = 
+        {
+            [<Position>] pos :  V4d
+            [<SourceVertexIndex>] i : int
+        }
+
+  let lines (t : Triangle<SuperVertex>) =
+        line {
+            yield t.P0
+            yield t.P1
+            restartStrip()
+            
+            yield t.P1
+            yield t.P2
+            restartStrip()
+
+            yield t.P2
+            yield t.P0
+            restartStrip()
+        }
   let private colormap =
         sampler2d {
             texture uniform?ColorMapTexture

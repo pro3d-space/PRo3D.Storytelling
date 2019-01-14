@@ -165,6 +165,10 @@ module DebugKdTreesX =
 module Files = 
        open System.IO
        open Aardvark.Prinziple
+
+       type DiscoverFolder = 
+          | OpcFolder of string
+          | Directory of string  
        
        /// <summary>
        /// checks if "path" is a valid opc folder containing "images", "patches", and patchhierarchy.xml
@@ -179,8 +183,13 @@ module Files =
        /// <summary>
        /// checks if "path" is a valid surface folder
        /// </summary>        
+       //let isSurfaceFolder (path : string) =
+       //    Directory.GetDirectories(path) |> Seq.forall isOpcFolder
        let isSurfaceFolder (path : string) =
-           Directory.GetDirectories(path) |> Seq.forall isOpcFolder
+            let subdirs = Directory.GetDirectories(path)
+            match subdirs.IsEmptyOrNull() with
+                | true -> false
+                | _ -> subdirs |> Seq.forall isOpcFolder
 
        let discover (p : string -> bool) path : list<string> =
          if Directory.Exists path then
@@ -227,6 +236,35 @@ module Files =
 
                opcDirs @ zipped
            else []
+
+       let toDiscoverFolder path = 
+        if path |> isOpcFolder || path |> isZippedOpcFolder then
+          OpcFolder path
+        else
+          Directory path
+
+       let tryDirectoryExists path = 
+        if Directory.Exists path then Some path else None
+
+       let rec superDiscovery (input : string) :  string * list<string> =
+        match input |> toDiscoverFolder with
+        | Directory path -> 
+          let opcs = 
+            path 
+              |> Directory.EnumerateDirectories 
+              |> Seq.toList 
+              |> List.map(fun x -> superDiscovery x |> snd) |> List.concat 
+          input, opcs
+        | OpcFolder p -> input,[p]
+
+       let rec superDiscoveryMultipleSurfaceFolder (input : string) : list<string> =
+        let isSurfFolder = input |> isSurfaceFolder
+        match isSurfFolder with
+            | true -> [input]
+            | _-> input 
+                    |> Directory.EnumerateDirectories 
+                    |> Seq.toList 
+                    |> List.map(fun x -> superDiscoveryMultipleSurfaceFolder x ) |> List.concat
 
        /// <summary>
        /// returns all valid OPCs in "path"

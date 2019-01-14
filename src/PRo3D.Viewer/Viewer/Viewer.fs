@@ -148,17 +148,22 @@ module ViewerApp =
         match head with
             | Some v ->
                 let fullBb = 
-                    sgSurfaces 
-                        |> List.map(fun x -> x.globalBB) 
-                        |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
-
-                let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
-                let (refSystem',_)= 
-                    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction  
-                //let (orSystem',_)= 
-                //    ReferenceSystemApp.update m.scene.config refConfig (m.scene.orientationSystem) refAction  
-                                                                
-                { m with scene = { m.scene with referenceSystem = refSystem' }} |> updateCameraUp |> lookAtBoundingBox v.globalBB //; orientationSystem = orSystem'
+                        sgSurfaces 
+                            |> List.map(fun x -> x.globalBB) 
+                            |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
+                // useful default viewpoint after 2nd import
+                match m.scene.firstImport with
+                  //| x when x > 1 -> { m with scene = { m.scene with referenceSystem = refSystem' }} 
+                  | true -> 
+                    let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
+                    let (refSystem',_)= 
+                        ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
+                    { m with scene = { m.scene with referenceSystem = refSystem'; firstImport = false }} |> updateCameraUp |> lookAtBoundingBox v.globalBB 
+                  | _-> 
+                    let refAction = ReferenceSystemApp.Action.UpdateUpNorth(fullBb.Center)
+                    let (refSystem',_)= 
+                        ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
+                    { m with scene = { m.scene with referenceSystem = refSystem' }}
             | None -> m
 
     let isGrabbed (model : Model) =
@@ -410,8 +415,25 @@ module ViewerApp =
                                 |> List.map (Sg.mk SurfaceType.SurfaceOPC)
                                 |> PList.ofList
 
-                        let m = Scene.import' runtime signature surfaces m
-                        updateSceneWithNewSurface m
+                        let m = Scene.import' runtime signature surfaces m 
+                        updateSceneWithNewSurface m 
+            | ImportDiscoveredSurfaces sl,_,_ -> 
+                match sl with
+                    | [] -> m
+                    | paths ->
+                        let selectedPaths = paths |> List.choose Files.tryDirectoryExists
+                        let surfacePaths = 
+                              selectedPaths
+                                |> List.map Files.superDiscoveryMultipleSurfaceFolder
+                                |> List.concat
+                        let surfaces = 
+                            surfacePaths 
+                                |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
+                                |> List.map (Sg.mk SurfaceType.SurfaceOPC)
+                                |> PList.ofList
+
+                        let m = Scene.import' runtime signature surfaces m 
+                        updateSceneWithNewSurface m 
             | ImportObject sl,_,_ -> 
                 match sl with
                     | [] -> m
@@ -430,8 +452,6 @@ module ViewerApp =
                 | path -> 
                   let p = path.[0]
 
-                  
-
                   //update groups
                   let imported, flat, lookup = AnnotationGroupsImporter.startImporter p m.scene.referenceSystem
 
@@ -444,7 +464,9 @@ module ViewerApp =
                       |> HMap.map(fun k v -> 
                         let a = v |> Leaf.toAnnotation
                         let a' = if a.geometry = Geometry.DnS then { a with showDns = true } else a                                                             
-                        a'|> Leaf.Annotations)                                  
+                        a'|> Leaf.Annotations)    
+                        
+                  let newflat = m.drawing.annotations.flat |> HMap.union flat
 
 
                   let newflat = m.drawing.annotations.flat |> HMap.union flat
@@ -700,6 +722,16 @@ module ViewerApp =
                
                 match a with 
                   | ReferenceSystemApp.Action.SetUp _ | ReferenceSystemApp.Action.SetPlanet _ -> updateCameraUp m
+                  | ReferenceSystemApp.Action.SetNOffset _ -> //update annotation results
+                        let flat = 
+                            m.drawing.annotations.flat 
+                                |> HMap.map(fun k v -> 
+                                let a = v |> Leaf.toAnnotation
+                                let results = DrawingUtilities.Calculations.recalcBearing a m.scene.referenceSystem.up.value m.scene.referenceSystem.northO  
+                                let dnsResults = DipAndStrike.recalculateDnSAzimuth a m.scene.referenceSystem.up.value m.scene.referenceSystem.northO
+                                let a' = { a with results = results; dnsResults = dnsResults }
+                                a'|> Leaf.Annotations) 
+                        m |> Lenses.set _flat flat
                   | _ -> m                
             | ConfigPropertiesMessage a,_,_ -> 
                 //Log.line "config message %A" a
@@ -824,6 +856,7 @@ module ViewerApp =
              |> Sg.cullMode (Mod.constant CullMode.None)
 
         let overlayed =
+
             let annos = 
               annotations
                     |> Sg.map DrawingMessage

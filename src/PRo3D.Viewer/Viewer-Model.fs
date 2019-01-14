@@ -64,6 +64,7 @@ type ViewerAction =
     | SetCameraAndFrustum       of CameraView * double * double        
     | SetCameraAndFrustum2      of CameraView * Frustum
     | ImportSurface             of list<string>
+    | ImportDiscoveredSurfaces  of list<string>
     | ImportObject              of list<string>
     | ImportAnnotationGroups    of list<string>
     | ImportSurfaceTrafo        of list<string>
@@ -121,6 +122,7 @@ type Scene = {
     viewPlans         : ViewPlanModel
     dockConfig        : DockConfig
     closedPages       : list<DockElement>
+    firstImport       : bool
 }
 
 [<DomainType>] 
@@ -281,7 +283,8 @@ module Viewer =
             bookmarksModel  = BookmarksModel.initial
             viewPlans       = ViewPlanModel.initial                                        
             dockConfig      = initialDockConfig                          
-            closedPages     = list.Empty                
+            closedPages     = list.Empty 
+            firstImport     = true
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing

@@ -30,6 +30,8 @@ open PRo3D.Groups
 open MBrace.FsPickler.Json   
 
 module Sg =                             
+  //open PRo3D.Surfaces.Mutable.SgSurfaceModule
+
   let discISg color size height trafo =
       Sg.cylinder 30 color size height              
         |> Sg.noEvents
@@ -151,7 +153,39 @@ module Sg =
           yield  endPoint
     }
 
-  let pickingLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking : bool) = 
+  let read a =
+        StencilMode(StencilOperationFunction.Keep, StencilOperationFunction.Keep, StencilOperationFunction.Keep, StencilCompareFunction.Greater, a, 0xffu)
+
+  let write a =
+        StencilMode(StencilOperationFunction.Replace, StencilOperationFunction.Replace, StencilOperationFunction.Keep, StencilCompareFunction.Greater, a, 0xffu)
+
+  let pass0 = RenderPass.main
+  let pass1 = RenderPass.after "outline" RenderPassOrder.Arbitrary pass0
+
+  //let mask (points : alist<V3d>) (v:int) (color:IMod<C4b>) (trafo : IMod<Trafo3d>) = 
+  //      let edges = Sg.edgeLines false points trafo 
+  //      edges
+  //          |> Aardvark.SceneGraph.SgPrimitives.Sg.lines color
+  //          |> Sg.noEvents
+  //          |> Sg.shader {
+  //                  do! Shader.stableTrafo
+  //                  do! DefaultSurfaces.vertexColor
+  //                  do! Shader.thickLine    
+  //              }                             
+  //          |> Sg.pass pass0
+  //          |> Sg.trafo trafo
+  //          |> Sg.stencilMode (Mod.constant (write v))
+  //          |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Stencil])
+  //          |> Sg.shader {
+  //                  do! DefaultSurfaces.trafo
+  //                  do! DefaultSurfaces.vertexColor
+  //                  do! DefaultSurfaces.simpleLighting
+  //              }
+
+ 
+              
+
+  let pickingLine (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking: bool) = 
     match (points |> AList.toArray).Length with
         | 0  -> Sg.empty //| 1
         |  _ ->
@@ -178,7 +212,8 @@ module Sg =
                         do! Shader.stableTrafo
                         do! DefaultSurfaces.vertexColor
                         do! Shader.thickLine    
-                    }                               
+                    }      
+                  //|> Sg.pass pass0
                   |> Sg.trafo trafo
                   |> Sg.uniform "LineWidth" width
                   |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
@@ -194,7 +229,148 @@ module Sg =
                     ]
     
             pline
-               
+
+  let outlineSize (width:IMod<float>) =
+    adaptive
+        {
+            let! w = width
+            return (w + 3.0)
+        }
+
+  let outlineLine (points : alist<V3d>) (v:int) (color:IMod<C4b>) (trafo : IMod<Trafo3d>) (width : IMod<float>) (id: IMod<Guid>) =
+        
+        let edges = Sg.edgeLines false points trafo
+        let sg = edges |> Aardvark.SceneGraph.SgPrimitives.Sg.lines color
+
+        let pickable = 
+            adaptive {
+                let! edg = edges
+                let! w = width
+                match edg.Length with
+                    | 0 -> let sphere = Sphere3d((points |> AList.toArray).[0], 1.0) // point
+                           return { shape = PickShape.Sphere sphere; trafo = Trafo3d.Identity } // line
+                    | _ -> return { shape = PickShape.Box (Box3d(points |> AList.toArray)); trafo = Trafo3d.Identity } 
+            }
+   
+        let regular =
+            sg
+            |> Sg.noEvents
+            |> Sg.pass pass0
+            |> Sg.shader {
+                do! Shader.stableTrafo
+                do! DefaultSurfaces.vertexColor
+                do! Shader.thickLine    
+            }      
+            //|> Sg.pass pass0
+            |> Sg.trafo trafo
+            |> Sg.uniform "LineWidth" width
+            |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+            |> Sg.pickable' pickable
+            |> Sg.noEvents
+            |> Sg.withEvents [
+                SceneEventKind.Down, (
+                    fun sceneHit ->
+                    if (true) then
+                        true, Seq.ofList[PickAnnotation (sceneHit, (id|> Mod.force))]
+                    else
+                        false, Seq.ofList[])
+            ]
+
+        //let regular =
+        //    sg
+        //    |> Sg.noEvents
+        //    |> Sg.pass pass0
+        //    |> Sg.shader {
+        //         do! Shader.stableTrafo
+        //         do! DefaultSurfaces.vertexColor
+        //         do! Shader.thickLine    
+        //     }                               
+        //     |> Sg.trafo trafo
+        //     |> Sg.uniform "LineWidth" width
+        //     |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+             
+        let mask =
+            sg
+            |> Sg.noEvents
+            |> Sg.pass pass0
+            |> Sg.stencilMode (Mod.constant (write v))
+            |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Stencil])
+            |> Sg.shader {
+                 do! Shader.stableTrafo
+                 do! DefaultSurfaces.vertexColor
+                 do! Shader.thickLine    
+             }                               
+             |> Sg.trafo trafo
+             |> Sg.uniform "LineWidth" width
+             |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+
+        let outl = 
+            sg
+            |> Sg.noEvents
+            |> Sg.trafo trafo
+            |> Sg.stencilMode (Mod.constant (read v))
+            |> Sg.depthTest (Mod.constant DepthTestMode.None)
+            |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Colors])
+            |> Sg.pass pass1
+            |> Sg.shader {
+                do! Shader.stableTrafo
+                do! DefaultSurfaces.thickLine
+                do! DefaultSurfaces.thickLineRoundCaps
+                do! DefaultSurfaces.constantColor C4f.VRVisGreen
+            }
+            |> Sg.uniform "LineWidth" (outlineSize width)
+            |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+       
+        Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents 
+
+  let outlinePoint (points : alist<V3d>) (v:int) (color:IMod<C4b>) (trafo : IMod<Trafo3d>) (width : IMod<float>) (id: IMod<Guid>) =
+    let p = 
+        points
+        |> AList.toMod
+        |> Mod.map( fun x -> x.AsArray.[0])
+        
+    let sg = Sg.mkDotISg color (Mod.constant 5.0) p
+    let sgo = Sg.mkDotISg color (outlineSize (Mod.constant 5.0)) p
+    let regular = 
+        sg
+         |> Sg.pass pass0
+         |> Sg.shader {
+                do! Shader.screenSpaceScale
+                do! Shader.stableTrafo
+                do! DefaultSurfaces.vertexColor
+            }
+    let mask = 
+        sg
+         |> Sg.pass pass0
+         |> Sg.stencilMode (Mod.constant (write v))
+         |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Stencil])
+         |> Sg.shader {
+               do! Shader.screenSpaceScale
+               do! Shader.stableTrafo
+               do! DefaultSurfaces.vertexColor
+            }
+    let outl = 
+        sgo
+         |> Sg.stencilMode (Mod.constant (read v))
+         |> Sg.depthTest (Mod.constant DepthTestMode.None)
+         |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Colors])
+         |> Sg.pass pass1
+         |> Sg.uniform "LineWidth" (Mod.constant 1.0)
+         |> Sg.shader {
+                do! Shader.screenSpaceScale
+                do! Shader.stableTrafo
+                do! Shader.lines
+                do! DefaultSurfaces.thickLine
+                do! DefaultSurfaces.thickLineRoundCaps
+                do! DefaultSurfaces.constantColor C4f.VRVisGreen
+            }
+    Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents //regular; mask; 
+
+  let outline (points : alist<V3d>) (v:int) (color:IMod<C4b>) (trafo : IMod<Trafo3d>) (width : IMod<float>) (id: IMod<Guid>) =
+        match (points |> AList.toArray).Length with
+        | 0  -> Sg.empty //
+        | 1 -> outlinePoint points v color trafo (Mod.constant 5.0) id
+        | _ -> outlineLine points v color trafo width id
 
   let drawWorkingAnnotation (anno : IMod<Option<MAnnotation>>)  = 
 
@@ -228,7 +404,6 @@ module Sg =
                              
       Sg.ofList [
           Sg.lines polyPoints color thickness trafo //polyline
-          //pickingLines polyPoints color thickness trafo id true
           //Sg.dots polyPoints (Mod.constant C4b.VRVisGreen) // debug sample points
           Sg.dots points color                     //support points
       ]         
@@ -247,7 +422,7 @@ module Sg =
         else return Sg.empty
     } |> ASet.ofModSingle
 
-  let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (view : IMod<CameraView>) (dots : IMod<bool>) =
+  let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (view : IMod<CameraView>) (dots : IMod<bool>) (picked:IMod<bool>) =
       let points = getPolylinePoints anno            
       let dots  = dots |> optional (Sg.dots anno.points c)
      
@@ -258,29 +433,23 @@ module Sg =
 
       let sgs = ASet.unionMany' [dots; texts]
 
+      
+      let pickingLines = 
+        aset
+            {
+                let! picked = picked
+                match picked with
+                    | true -> yield outline points 1 c anno.modelTrafo anno.thickness.value (anno.key |> Mod.constant)
+                    |_-> yield pickingLine points c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
+            } |> Sg.set
+
       Sg.ofList [
           //Sg.lines points c anno.thickness.value anno.modelTrafo
-          pickingLines points c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
+          pickingLines
           Sg.set sgs 
       ] |> Sg.onOff anno.visible
 
-  //let finishedPickingAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (view : IMod<CameraView>) (dots : IMod<bool>) =
-  //  let points = anno |> getPolylinePoints     
-  //  let dots  = dots |> optional (Sg.dots anno.points c)
-     
-  //  let texts = 
-  //      anno.text 
-  //          |> Mod.map (String.IsNullOrEmpty >> not) 
-  //          |> optional (drawText view conf anno)
-
-  //  let sgs = ASet.unionMany' [dots; texts]
-
-    
-
-  //  Sg.ofList [
-  //      Sg.cylinders points
-  //      Sg.set sgs 
-  //  ] |> Sg.onOff anno.visible
+ 
 
   let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =
      anno.showDns |> optional (drawDns anno conf cl cam) |> Sg.set |> Sg.onOff anno.visible

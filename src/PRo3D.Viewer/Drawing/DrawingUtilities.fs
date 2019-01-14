@@ -24,6 +24,8 @@ module DrawingUtilities =
                 avgAltitude = CooTransformation.getAltitude model.points.[0] upVec planet
                 length = 0.0
                 wayLength = 0.0
+                bearing = 0.0
+                slope = 0.0
                 }
 
         let getDistance (points:list<V3d>) = points
@@ -43,9 +45,9 @@ module DrawingUtilities =
                                                ] |> List.sum
                                                                
 
-        let calcResultsLine (model:Annotation) (upVec:V3d) (planet:Planet) =
+        let calcResultsLine (model:Annotation) (upVec:V3d) (northVec:V3d) (planet:Planet) =
             let count = model.points.Count
-            let dist = V3d.Distance(model.points.[0], model.points.[count-1]);
+            let dist = V3d.Distance(model.points.[0], model.points.[count-1])
             let way = match model.segments.Count with
                             | x when x > 0 -> getWay model.segments
                             |_ -> dist
@@ -57,14 +59,34 @@ module DrawingUtilities =
 
             let hcount = heights.Length
 
+            let line = new Line3d(model.points.[0], model.points.[count-1])
+            let bearing = DipAndStrike.bearing upVec northVec line.Direction.Normalized
+            let slope = DipAndStrike.pitch upVec line.Direction.Normalized
+
             {   height = (heights |> List.max) - (heights |> List.min)
                 heightDelta = Fun.Abs (heights.[hcount-1] - heights.[0])
                 avgAltitude = (heights |> List.average)
                 length = dist
                 wayLength = way
+                bearing = bearing
+                slope = slope
                 }
 
-        let calculateAnnotationResults (model:Annotation) (upVec:V3d) (planet:Planet) =
+        let calculateAnnotationResults (model:Annotation) (upVec:V3d) (northVec:V3d) (planet:Planet) =
             match model.points.Count with
-                | x when x > 1 -> calcResultsLine model upVec planet
+                | x when x > 1 -> calcResultsLine model upVec northVec planet
                 | _ -> calcResultsPoint model upVec planet
+
+
+        let recalcBearing (model:Annotation) (upVec:V3d) (northVec:V3d) = 
+            match model.results with 
+              | Some r ->
+                        let count = model.points.Count
+                        match count with
+                          | x when x > 1 ->
+                                    let line = new Line3d(model.points.[0], model.points.[count-1])
+                                    let bearing = DipAndStrike.bearing upVec northVec line.Direction.Normalized
+                                    Some {r with bearing = bearing }
+                          | _ -> Some r
+              | _-> None
+
