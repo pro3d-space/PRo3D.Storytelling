@@ -181,12 +181,6 @@ module BookmarksModel =
         bookmarks        = GroupsModel.initial
         }
 
-//[<DomainType>]
-//type SgGrouped = 
-//    | SgSurfaceOPC    of value : SgSurface
-//    | SgSurfaceOBJ    of value : SgSurfaceObj
-
-
 [<DomainType>]
 type SurfaceModel = {
     surfaces        : GroupsModel

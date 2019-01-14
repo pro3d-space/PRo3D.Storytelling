@@ -10,7 +10,6 @@ open Aardvark.UI
 
 module MeasurementsImporter = 
    
-
     let xname s = XName.Get(s)
 
     let thickness (a:XElement) = {
@@ -35,97 +34,101 @@ module MeasurementsImporter =
         }
 
     let getTrafo (t:XElement) = 
-        let strafo = t.Value.NestedBracketSplitLevelOne()
-                        |> Seq.map(fun x ->  M44d.Parse(x))
-                        |> List.ofSeq
-        let trafo = Trafo3d(strafo.[0], strafo.[1])
-        trafo
+        let strafo = 
+          t.Value.NestedBracketSplitLevelOne()
+            |> Seq.map M44d.Parse
+            |> List.ofSeq
 
+        Trafo3d(strafo.[0], strafo.[1])        
 
     let parsePointsLevelOne (points:XElement) = 
         points.Value.NestedBracketSplitLevelOne()
-            |> Seq.map (fun x -> V3d.Parse(x))
+            |> Seq.map V3d.Parse
             |> Seq.toArray
       
-
     let parsePointsLevelZero (points:XElement) = 
         points.Value.NestedBracketSplit(0) 
-            |> Seq.map (fun x -> V3d.Parse(x))
+            |> Seq.map V3d.Parse
             |> Seq.toArray
-       
-    
+           
     let getPoints (points:XElement) (aType:string) =
-        match points with
-            | null -> [||]
-            | _-> match aType with
-                    | "Exomars.Base.Geology.Point" ->  [| V3d.Parse(points.Value) |]
-                    | "Exomars.Base.Geology.Line"  ->  parsePointsLevelOne points
-                    | _ -> parsePointsLevelZero points
+      match (points,aType) with
+        | (null,_) -> Array.empty
+        | (_, "Exomars.Base.Geology.Point") -> points.Value |> V3d.Parse |> Array.singleton
+        | (_, "Exomars.Base.Geology.Line")  -> parsePointsLevelOne points
+        | (_,_) -> parsePointsLevelZero points
+            
       
     let segmentOfArray (points : array<_>) = 
-        if points.Length > 0 then 
-            Some { startPoint = points.[0]; endPoint = points.[points.Length - 1]; points = PList.ofArray points }
-        else None
+      if points.IsEmpty() then None
+      else
+        Some { startPoint = points.[0]; endPoint = points.[points.Length - 1]; points = PList.ofArray points }
                         
     let parseSegments (segments:XElement) = 
-        segments.Elements(xname "V3d_Array")
-            |> Seq.map (fun x -> x |> parsePointsLevelZero |> segmentOfArray)
-            |> Seq.toList
+      segments.Elements(xname "V3d_Array")
+        |> Seq.map (fun x -> x |> parsePointsLevelZero |> segmentOfArray)
+        |> Seq.toList
 
     let parseSegment (seg:XElement) = 
         parsePointsLevelZero seg |> segmentOfArray 
         
     let getSegments (m:XElement, aType:string) = 
-        let segments = 
-            match aType with
-                |"Exomars.Base.Geology.Line"  -> 
-                    let segment = m.Element(xname "Segment")
-                    match segment.FirstAttribute with
-                        | null -> []
-                        | _ -> [parseSegment segment]
-                | "Exomars.Base.Geology.Polyline"  | "Exomars.Base.Geology.DipAndStrike" -> 
-                    let segments = m.Element(xname "Segments")
-                    match segments with
-                        | null -> []
-                        | _ -> parseSegments segments
-                | _ -> []
-        List.choose id segments // drop all empty segments (semgents being None)
+      let segments = 
+        match aType with
+          |"Exomars.Base.Geology.Line" ->
+              let segment = m.Element(xname "Segment")
+              match segment.FirstAttribute with
+                  | null -> []
+                  | _ -> [parseSegment segment]
+          | "Exomars.Base.Geology.Polyline"  | "Exomars.Base.Geology.DipAndStrike" -> 
+              let segments = m.Element(xname "Segments")
+              match segments with
+                  | null -> []
+                  | _ -> parseSegments segments
+          | _ -> []
+      List.choose id segments // drop all empty segments (segments being None)
 
 
     let getGeometry (aType:string, closed:bool) = 
-        let geometry = if closed then Geometry.Polygon
-                        else match aType with
-                                |"Exomars.Base.Geology.Point"           -> Geometry.Point
-                                |"Exomars.Base.Geology.Line"            -> Geometry.Line
-                                |"Exomars.Base.Geology.Polyline"        -> Geometry.Polyline
-                                |"Exomars.Base.Geology.DipAndStrike"    -> Geometry.DnS
-                                |_ -> Geometry.Point
-        geometry
+      let geometry = 
+        if closed then 
+          Geometry.Polygon
+        else 
+          match aType with
+            |"Exomars.Base.Geology.Point"           -> Geometry.Point
+            |"Exomars.Base.Geology.Line"            -> Geometry.Line
+            |"Exomars.Base.Geology.Polyline"        -> Geometry.Polyline
+            |"Exomars.Base.Geology.DipAndStrike"    -> Geometry.DnS
+            |_ -> Geometry.Point
+      geometry
 
     let getAnnotation (t: Trafo3d) (m:XElement) = 
         let anType = (m.Attribute(xname "type").Value.ToString().Split ',').[0]
-        let closed = match m.Element(xname "Closed") with
-                        | null -> false
-                        | _ -> m.Element(xname "Closed").Value.ToBool()
+        let closed = 
+          match m.Element(xname "Closed") with
+            | null -> false
+            | _ -> m.Element(xname "Closed").Value.ToBool()
+
         let style = (getStyle (m.Element(xname "LineAttributes")))
         let color = new C4b(style.color.R, style.color.G, style.color.B)
-        let id = (m.Element(xname "Id")).Value |> Guid.Parse
+        let id    = (m.Element(xname "Id")).Value |> Guid.Parse
         let trafo = getTrafo (m.Element(xname "LocalToGlobal")) * t
+
         let points = 
-            getPoints (m.Element(xname "Points")) anType 
-                |> PList.ofArray 
-                |> PList.map (fun x -> trafo.Forward.TransformPos x)
+          getPoints (m.Element(xname "Points")) anType 
+            |> PList.ofArray 
+            |> PList.map trafo.Forward.TransformPos
 
         let segments = 
-            getSegments (m, anType) 
-                |> PList.ofList 
-                |> PList.map (
-                    fun s -> 
-                        let ps = s.points |> PList.map (fun x -> trafo.Forward.TransformPos x)
-                        let startPoint = s.startPoint |> trafo.Forward.TransformPos 
-                        let endPoint = s.endPoint  |> trafo.Forward.TransformPos 
-                        {s with startPoint = startPoint; endPoint = endPoint; points = ps}
-                )
+          getSegments(m, anType)
+            |> PList.ofList 
+            |> PList.map (
+                fun s -> 
+                    let points     = s.points     |> PList.map trafo.Forward.TransformPos
+                    let startPoint = s.startPoint |> trafo.Forward.TransformPos
+                    let endPoint   = s.endPoint   |> trafo.Forward.TransformPos
+                    {s with startPoint = startPoint; endPoint = endPoint; points = points}
+            )
 
         Log.line "TrafoImporter: Found %A in xml" id
 

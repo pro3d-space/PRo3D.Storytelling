@@ -142,6 +142,21 @@ module Gui =
     //                            ]
     //                        | None ->
     //                            div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
+    //                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
+    //                              text "Save"
+    //                            ]
+    //        }
+    //let save (m:MModel) = 
+    //    adaptive
+    //        {
+    //            let! path = m.scene.scenePath
+    //            return match path with
+    //                        | Some p ->
+    //                             div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
+    //                              text "Save"
+    //                            ]
+    //                        | None ->
+    //                            div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
     //                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
     //                              text "Save"
     //                            ]
@@ -218,6 +233,7 @@ module Gui =
                 div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][text "Save"]
               | None ->
                 div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
+                  //clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));")][
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
                   text "Save"
                 ]

@@ -132,7 +132,7 @@ module Surface =
     let computeIndices (size:V2i)(invalids : int[]) : int[] =
       CSharpUtils.IndexComputation.ComputeIndexArray(size,invalids)
     
-    let intersectKdTrees' = DebugKdTrees.intersectKdTrees computeIndices
+    let intersectKdTrees' = KdTrees.intersectKdTrees computeIndices
 
     let doKdTreeIntersection (m : SurfaceModel) (r : FastRay3d) cache : option<float * PRo3D.Surfaces.Surface> * hmap<_,_> = 
         let mutable cache = cache
@@ -400,7 +400,7 @@ module Surface =
     
     let mkColor (model : MGroupsModel) (s : MSurface) =
         isSelected model s 
-          |> Mod.bind (fun x -> if x then Mod.constant C4b.Blue else Mod.constant C4b.White)
+          |> Mod.bind (fun x -> if x then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White)
 
     let lastSelected (model : MGroupsModel) (s : MSurface) =
             let id = s.guid |> Mod.force

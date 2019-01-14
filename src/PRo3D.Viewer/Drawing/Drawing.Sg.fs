@@ -140,24 +140,18 @@ module Sg =
     } |> Sg.set
       
   let getPolylinePoints (a : MAnnotation) =
-      alist {                
-          let! hasSegments = 
-            a.segments 
-              |> AList.count 
-              |> Mod.map (fun x ->
-                Log.line "[Drawing] drawing poly with %A segments" x
-                x > 0)
-
-          if hasSegments then
-            for segment in a.segments do
-              let! startPoint = segment.startPoint
-              let! endPoint = segment.endPoint
-              yield  startPoint
-              yield! segment.points
-              yield  endPoint
-            else
-              yield! a.points
-      }
+    alist {                          
+      let! hasSegments = (a.segments |> AList.count) |> Mod.map(fun x -> x > 0)
+      if hasSegments |> not then
+          yield! a.points
+      else
+        for segment in a.segments do
+          let! startPoint = segment.startPoint
+          let! endPoint = segment.endPoint
+          yield  startPoint
+          yield! segment.points
+          yield  endPoint
+    }
 
   let read a =
         StencilMode(StencilOperationFunction.Keep, StencilOperationFunction.Keep, StencilOperationFunction.Keep, StencilCompareFunction.Greater, a, 0xffu)

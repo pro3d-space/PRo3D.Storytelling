@@ -102,6 +102,16 @@ module Groups =
 
         { model with flat = flat }
     
+    let updateNodeAt (p : list<Index>) (f : Node -> Node) (t : Node) = 
+        let rec go (p : list<Index>) (t : Node) =
+            match p with
+              | [] -> f t
+              | x::rest ->
+                    match PList.tryGet x t.subNodes with
+                      | Some c -> { t with subNodes = PList.set x (go rest c) t.subNodes } //potentially slow                              
+                      | None   -> t
+        go (List.rev p) t 
+
     let tryLoadGroups (path:string) =
       try
         Some (Serialization.loadAs<PRo3D.Groups.GroupsModel> path)
@@ -117,16 +127,6 @@ module Groups =
       with _ ->
         Log.error "[loadAnnotations:] couldn't load %s" path
         None        
-
-    let updateNodeAt (p : list<Index>) (f : Node -> Node) (t : Node) = 
-        let rec go (p : list<Index>) (t : Node) =
-            match p with
-              | [] -> f t
-              | x::rest ->
-                    match PList.tryGet x t.subNodes with
-                      | Some c -> { t with subNodes = PList.set x (go rest c) t.subNodes }                    //potentially slow                              
-                      | None   -> t
-        go (List.rev p) t 
     
     let updateActiveGroup (f : Node -> Node) (m : GroupsModel) =
         let root = updateNodeAt m.activeGroup.path f m.rootGroup        
@@ -149,7 +149,7 @@ module Groups =
               | _ -> t
         go (List.rev p) t 
         
-    let removeGroup (ag:Node) (id:Guid) =         
+    let removeGroup (ag:Node) (id:Guid) =
         ag.subNodes |> PList.filter (fun x -> x.key <> id)           
 
     // add one child to children of active group ... maybe move to active group
@@ -184,7 +184,6 @@ module Groups =
             cs |> PList.toList |> List.map(fun x -> (x.id,x))|> HMap.ofList
         
         { model with rootGroup = root'; flat = model.flat |> HMap.union cs }            
-
                
     let removeFromSelection id path model =
         { model with selectedLeaves = model.selectedLeaves |> HSet.remove( { id = id; path = path; name = "" } ) }
@@ -231,8 +230,8 @@ module Groups =
 
     let checkSelection model =
         model.selectedLeaves 
-            |> HSet.map( fun x -> if model.flat.ContainsKey x.id then Some x else None)
-            |> HSet.choose( fun x -> x)   
+            |> HSet.map(fun x -> if model.flat.ContainsKey x.id then Some x else None)
+            |> HSet.choose(fun x -> x)   
 
     let checkLastSelected model = 
         match model.singleSelectLeaf with
@@ -391,10 +390,9 @@ module Groups =
                 let leaves = 
                     getNode p model.rootGroup |> collectLeaves
 
-
                 let func = 
                     fun (x:Node) -> { x with visible = not x.visible }
-                let m' = {model with rootGroup   = updateNodeAt p func model.rootGroup }
+                let m' = {model with rootGroup = updateNodeAt p func model.rootGroup }
 
                 let f = (fun (k:Leaf) -> (k.setVisible (not k.visible)))
                 updateLeaves leaves f m'

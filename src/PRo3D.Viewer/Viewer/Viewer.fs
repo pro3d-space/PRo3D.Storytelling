@@ -468,6 +468,9 @@ module ViewerApp =
                         
                   let newflat = m.drawing.annotations.flat |> HMap.union flat
 
+
+                  let newflat = m.drawing.annotations.flat |> HMap.union flat
+
                   //let inline median input = 
                   //  let sorted = input |> Seq.toArray |> Array.sort
                   //  let m1,m2 = 
@@ -821,7 +824,7 @@ module ViewerApp =
                 let! state = model.navigationMode
                 match state with
                     | NavigationMode.FreeFly -> 
-                        yield! CameraController.extractAttributes model.camera Navigation.Action.FreeFlyAction
+                        yield! FreeFlyController.extractAttributes model.camera Navigation.Action.FreeFlyAction
                     | NavigationMode.ArcBall -> 
                         yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction
                     | _ -> failwith "Invalid NavigationMode"
@@ -833,10 +836,10 @@ module ViewerApp =
 
                 AttributeMap.ofList [
                  attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
-                 attribute "data-samples" "8"
+                 attribute "data-samples" "4"
                  attribute "useMapping" "true"
-                 //attribute "showFPS" "true"                  
-                 //attribute "data-renderalways" "true" 
+                 attribute "showFPS" "false"        
+                 attribute "data-renderalways" "false"
                  onKeyDown (KeyDown)
                  onKeyUp (KeyUp)                    
                 ] 
@@ -1113,7 +1116,7 @@ module ViewerApp =
         let nav =
           match m.scene.navigation.navigationMode with
             | NavigationMode.FreeFly -> 
-                CameraController.threads m.scene.navigation.camera
+                FreeFlyController.threads m.scene.navigation.camera
                   |> ThreadPool.map Navigation.FreeFlyAction |> ThreadPool.map NavigationMessage
             | NavigationMode.ArcBall ->
                 ArcBallController.threads m.scene.navigation.camera

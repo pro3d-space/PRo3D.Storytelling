@@ -232,14 +232,14 @@ module ViewerUtils =
                         |> Sg.uniform "lowerBound"     lowerB
                         |> Sg.uniform "upperBound"     upperB
                         |> Sg.uniform "MinMax"         rangeToMinMax
-                        //|> Sg.uniform "TriangleSize" (
-                        //        adaptive {
-                        //            let! s = surf
-                        //            let! maxAngle = s.triangleSize.value
-                        //            Log.warn "maxAngle: %A" maxAngle
-                        //            Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
-                        //            return maxAngle |> Double.radiansFromDegrees |> Math.Cos
-                        //        })
+                        |> Sg.uniform "TriangleSize" (
+                                adaptive {
+                                    let! s = surf
+                                    let! maxAngle = s.triangleSize.value
+                                    Log.warn "maxSize: %A" maxAngle
+                                    //Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
+                                    return maxAngle // |> Double.radiansFromDegrees |> Math.Cos
+                                })
                         |> Sg.uniform "useContrastS"  useContr
                         |> Sg.uniform "contrastS"     contr
                         |> Sg.uniform "useBrightnS"   useB
@@ -319,6 +319,29 @@ module ViewerUtils =
            return V4d(v.c.X, v.c.Y,v.c.Z, 1.0)           
         }
 
+    let triangleFilterX (input : Triangle<Vertex>) =
+        triangle {
+            let p0 = input.P0.wp.XYZ
+            let p1 = input.P1.wp.XYZ
+            let p2 = input.P2.wp.XYZ
+
+            let maxSize = uniform?TriangleSize
+
+            let a = (p1 - p0)
+            let b = (p2 - p1)
+            let c = (p0 - p2)
+
+            let alpha = a.Length < maxSize
+            let beta  = b.Length < maxSize
+            let gamma = c.Length < maxSize
+
+            let check = (alpha && beta && gamma)
+            if check then
+                yield input.P0 
+                yield input.P1
+                yield input.P2
+        }
+
     let renderCommands (sgGrouped:alist<amap<Guid,MSgSurface>>) overlayed discs (m:MModel) =
         let selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
         
@@ -353,7 +376,7 @@ module ViewerUtils =
                             PRo3D.Shader.mapGamma          |> toEffect                            
                             PRo3D.Shader.grayscale         |> toEffect
                             PRo3D.Shader.addColor          |> toEffect
-                            //Shader.triangleFilter          |> toEffect                            
+                            triangleFilterX              |> toEffect                            
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()

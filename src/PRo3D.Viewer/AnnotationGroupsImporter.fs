@@ -22,7 +22,7 @@ module AnnotationGroupsImporter =
     //                sg |> HSet.ofList |> HSet.collect flatten
     //            HSet.union (c |> HSet.ofList) sga
 
-    let rec getGroups (trafo:Trafo3d) up north (m:XElement) : (Node * hmap<Guid,Leaf> * hmap<Guid,string>) = 
+    let rec getGroups (trafo:Trafo3d) (fileName : string) up north (m:XElement) : (Node * hmap<Guid,Leaf> * hmap<Guid,string>) = 
       let name    = (m.Element(xname "Name")).Value.ToString()
       let visible = (m.Element(xname "IsVisible")).Value.ToBool()
                          
@@ -49,7 +49,7 @@ module AnnotationGroupsImporter =
       let subGroupsNFlatNLookup = 
         (m.Elements(xname "SubGroups")).Elements(xname "MeasurementGroup") 
           |> List.ofSeq 
-          |> List.map(fun x -> getGroups trafo up north x)     
+          |> List.map(fun x -> getGroups trafo fileName up north x)
       
       let flat' = 
         subGroupsNFlatNLookup 
@@ -76,7 +76,7 @@ module AnnotationGroupsImporter =
       let g = 
         {
           key      = Guid.NewGuid()
-          name     = name
+          name     = if name = "Measurements" then fileName + "_" + name else name
           leaves   = annotations |> List.map(fun x -> x.id) |> PList.ofList
           subNodes = nodes
           visible  = visible
@@ -111,6 +111,8 @@ module AnnotationGroupsImporter =
            | Some path-> readLine path |> Trafo3d.Parse                       
            | None -> Trafo3d.Identity
 
+        let fileName = path |> System.IO.Path.GetFileName
+
         let reader = XmlReader.Create path
         let root = reader.StreamElements("MeasurementGroups") 
         let xGroups = (root.Elements(xname "MeasurementGroup")).ToListOfT<XElement>()
@@ -118,7 +120,7 @@ module AnnotationGroupsImporter =
         let groupsNFlat = 
           xGroups 
             |> Seq.toList
-            |> List.map(getGroups t refSys.up.value refSys.north.value)
+            |> List.map(getGroups t fileName refSys.up.value refSys.north.value)
 
         let flat = 
           groupsNFlat 
@@ -127,21 +129,10 @@ module AnnotationGroupsImporter =
 
         let groups = 
           groupsNFlat |> List.map (fun (x,_,_) -> x) |> PList.ofList
-
         
         let lookup = 
           groupsNFlat 
             |> List.map (fun (_,_,x) -> x)
             |> List.fold (fun acc x -> HMap.union acc x) HMap.empty        
 
-        groups, flat, lookup
-
-
-    //type Action =
-    //    | ImportGroups    of string
-        
-    //let update (model : AnnotationGroupsImporterModel) (act : Action) =
-    //    match act with
-    //        | ImportGroups s         -> 
-    //            let groups, flat = startImporter s
-    //            { model with rootGroupI = groups ; flatI = flat  }
+        groups, flat, lookup    
