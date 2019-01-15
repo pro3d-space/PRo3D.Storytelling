@@ -204,15 +204,15 @@ module Gui =
          text "Import"
          i [clazz "dropdown icon"][] 
          div [ clazz "menu"] [
-             //div [ clazz "ui inverted item"; 
-             //  Dialogs.onChooseFiles ImportSurface;
-             //  clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-             //  text "OPC"
-             //]
+             div [ clazz "ui inverted item"; 
+               Dialogs.onChooseFiles ImportSurface;
+               clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
+               text "OPC"
+             ]
              div [ clazz "ui inverted item"; 
                Dialogs.onChooseFiles ImportDiscoveredSurfaces;
                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-               text "OPC"
+               text "OPC Rob"
              ]
              div [ clazz "ui inverted item"; 
                Dialogs.onChooseFiles ImportObject;

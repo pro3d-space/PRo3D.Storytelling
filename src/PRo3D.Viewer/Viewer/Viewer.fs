@@ -158,7 +158,9 @@ module ViewerApp =
                     let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
                     let (refSystem',_)= 
                         ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
-                    { m with scene = { m.scene with referenceSystem = refSystem'; firstImport = false }} |> updateCameraUp |> lookAtBoundingBox v.globalBB 
+                    let navigation' = 
+                        Navigation.update m.scene.config m.scene.referenceSystem navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick fullBb.Center))
+                    { m with scene = { m.scene with referenceSystem = refSystem'; navigation = navigation'; firstImport = false }} |> updateCameraUp |> lookAtBoundingBox v.globalBB 
                   | _-> 
                     let refAction = ReferenceSystemApp.Action.UpdateUpNorth(fullBb.Center)
                     let (refSystem',_)= 
