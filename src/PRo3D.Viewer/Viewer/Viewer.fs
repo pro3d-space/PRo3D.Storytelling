@@ -814,9 +814,12 @@ module ViewerApp =
                 let dockconfig = config {content(cont);appName "PRo3D"; useCachedConfig false }
                 { m with scene = { m.scene with dockConfig = dockconfig; closedPages = closedPages } }
             | UpdateUserFeedback s,_,_ ->   { m with scene = { m.scene with userFeedback = s } }
-            | StartImportMessaging sl,_,_ -> 
-                sl |> ImportDiscoveredSurfaces |> ViewerAction |> mailbox.Post
-                { m with scene = { m.scene with userFeedback = "Import OPCs..." } }
+            //| StartImportMessaging sl,_,_ -> 
+            //    sl |> ImportDiscoveredSurfaces |> ViewerAction |> mailbox.Post
+            //    { m with scene = { m.scene with userFeedback = "Import OPCs..." } }
+            | Logging (text,message),_,_ ->  
+              message |> MailboxAction.ViewerAction |> mailbox.Post
+              { m with scene = { m.scene with userFeedback = text } }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =

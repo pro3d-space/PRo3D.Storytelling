@@ -101,6 +101,7 @@ type ViewerAction =
     | ToggleOrientationCube
     | UpdateUserFeedback        of string
     | StartImportMessaging      of list<string>
+    | Logging                   of string * ViewerAction
 
 and MailboxState = {
   events  : list<MailboxAction>
