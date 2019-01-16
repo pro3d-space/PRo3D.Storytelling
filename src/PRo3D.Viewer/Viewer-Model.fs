@@ -99,6 +99,9 @@ type ViewerAction =
     | UpdateDockConfig          of DockConfig
     | AddPage                   of DockElement    
     | ToggleOrientationCube
+    | UpdateUserFeedback        of string
+    | StartImportMessaging      of list<string>
+
 and MailboxState = {
   events  : list<MailboxAction>
   update  : seq<ViewerAction> -> unit
@@ -107,7 +110,15 @@ and MailboxAction =
   | ViewerAction  of ViewerAction
   | InitMailboxState of MailboxState
   | DrawingAction of PRo3D.Drawing.Action
-  
+
+
+//[<DomainType>] 
+//type UserFeedback = {
+//    loadScene : string
+//    saveScene : string
+//    noText    : string
+//}
+
 [<DomainType>] 
 type Scene = {
     navigation        : NavigationModel
@@ -122,6 +133,7 @@ type Scene = {
     dockConfig        : DockConfig
     closedPages       : list<DockElement>
     firstImport       : bool
+    userFeedback      : string
 }
 
 [<DomainType>] 
@@ -148,10 +160,7 @@ type WayPoint = {
 type ViewerMode =
     | Standard
     | Instrument
-
-
-
-
+    
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module MailboxState = 
@@ -264,9 +273,15 @@ module Viewer =
           useCachedConfig false
       }
 
+    //let initFeedback = 
+    //     {  loadScene = "loading Scene..."
+    //        saveScene = "saveing Scene..."
+    //        loadOpcs  = "load opcs..."
+    //        noText    = ""
+    //     }
+
     let initial msgBox = {           
        // surfaces = HSet.empty
-        
         scene = 
           {
             navigation      = navInit
@@ -281,6 +296,7 @@ module Viewer =
             dockConfig      = initialDockConfig                          
             closedPages     = list.Empty 
             firstImport     = true
+            userFeedback    = ""
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing

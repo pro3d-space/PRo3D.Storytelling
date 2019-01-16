@@ -129,6 +129,20 @@ module Gui =
           ]
       ]                              
     ]
+
+  let textOverlaysUserFeedback (m : MScene)  = 
+    div [js "oncontextmenu" "event.preventDefault();"] [ 
+      let style' = "color: white; font-family:Consolas; font-size:40;"
+    
+      yield div [clazz "ui"; style "position: absolute; top: 300px; left: 250px; " ] [ //float:left
+          //arrowOverlay
+          yield table [] [
+              tr[][
+                  td[style style'][Incremental.text m.userFeedback]
+              ]
+          ]
+      ]                              
+    ]
   module TopMenu =
 
     //let save (m:MModel) = 
@@ -204,15 +218,15 @@ module Gui =
          text "Import"
          i [clazz "dropdown icon"][] 
          div [ clazz "menu"] [
+             //div [ clazz "ui inverted item"; 
+             //  Dialogs.onChooseFiles ImportSurface;
+             //  clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
+             //  text "OPC"
+             //]
              div [ clazz "ui inverted item"; 
-               Dialogs.onChooseFiles ImportSurface;
+               Dialogs.onChooseFiles  StartImportMessaging; //ImportDiscoveredSurfaces; // ImportSurfaceTest
                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
                text "OPC"
-             ]
-             div [ clazz "ui inverted item"; 
-               Dialogs.onChooseFiles ImportDiscoveredSurfaces;
-               clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-               text "OPC Rob"
              ]
              div [ clazz "ui inverted item"; 
                Dialogs.onChooseFiles ImportObject;

@@ -310,7 +310,7 @@ module ViewerApp =
                let ref = m.scene.referenceSystem
                let nav = Navigation.update c ref navConf m.scene.navigation msg               
 
-//               m.scene.navigation.camera.view.Location.ToString() |> NoAction |> ViewerAction |> mailbox.Post
+               //m.scene.navigation.camera.view.Location.ToString() |> NoAction |> ViewerAction |> mailbox.Post
 
                m 
                  |> Lenses.set _navigation nav
@@ -420,9 +420,11 @@ module ViewerApp =
                         let m = Scene.import' runtime signature surfaces m 
                         updateSceneWithNewSurface m 
             | ImportDiscoveredSurfaces sl,_,_ -> 
+                "" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match sl with
                     | [] -> m
                     | paths ->
+                        //"Import OPCs..." |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                         let selectedPaths = paths |> List.choose Files.tryDirectoryExists
                         let surfacePaths = 
                               selectedPaths
@@ -436,6 +438,7 @@ module ViewerApp =
 
                         let m = Scene.import' runtime signature surfaces m 
                         updateSceneWithNewSurface m 
+
             | ImportObject sl,_,_ -> 
                 match sl with
                     | [] -> m
@@ -583,6 +586,7 @@ module ViewerApp =
                     | false -> m
                 
             | SaveScene s, _,_ -> 
+                "" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match m.scene.scenePath with
                     | None ->                        
                         match s.IsEmptyOrNull() with
@@ -591,9 +595,11 @@ module ViewerApp =
                     | Some path -> 
                         saveSceneAndAnnotations path m                                     
             | SaveAs s,_,_ ->
+                "" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match s.IsEmptyOrNull() with
                     | true -> m
                     | _  -> saveSceneAndAnnotations s m
+                            
             | OpenScene sl,_,_ ->
                 match sl.Length < 1 with
                     | true -> m
@@ -632,8 +638,9 @@ module ViewerApp =
                 | (true, Aardvark.Application.Keys.S, Some path) -> 
                   { (saveSceneAndAnnotations path m) with ctrlFlag = false }   
                 | (true, Aardvark.Application.Keys.S, None) -> 
-                   Log.error "please use \"save\" in the menu to save the scene";
-                   { m with ctrlFlag = false }   // (saveSceneAndAnnotations p m)
+                   //Log.error "please use \"save\" in the menu to save the scene";
+                   { m with scene = {m.scene with userFeedback = "please use \"save\" in the menu to save the scene" }; ctrlFlag = false }
+                    // (saveSceneAndAnnotations p m)
                 |_-> m
                              
               let m =
@@ -806,6 +813,10 @@ module ViewerApp =
                 let cont = addDockElement m.scene.dockConfig.content de
                 let dockconfig = config {content(cont);appName "PRo3D"; useCachedConfig false }
                 { m with scene = { m.scene with dockConfig = dockconfig; closedPages = closedPages } }
+            | UpdateUserFeedback s,_,_ ->   { m with scene = { m.scene with userFeedback = s } }
+            | StartImportMessaging sl,_,_ -> 
+                sl |> ImportDiscoveredSurfaces |> ViewerAction |> mailbox.Post
+                { m with scene = { m.scene with userFeedback = "Import OPCs..." } }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -998,6 +1009,7 @@ module ViewerApp =
                         ]
                     }
                 )
+        
 
         let topMenuItems = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
@@ -1015,6 +1027,9 @@ module ViewerApp =
              Html.Layout.horizontal [
                Html.Layout.boxH [ scenepath ]
              ] 
+             //Html.Layout.horizontal [
+             //  Html.Layout.boxH [ Incremental.text (m.scene.userFeedback) ]
+             //] 
         ]        
 
         let topMenu =
@@ -1075,6 +1090,7 @@ module ViewerApp =
                       div [style "background:#000;"] [
                           control
                           Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
+                          Viewer.Gui.textOverlaysUserFeedback m.scene
                           dnsColorLegend
                           scalarsColorLegend ]
                   ]                

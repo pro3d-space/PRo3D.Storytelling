@@ -154,7 +154,7 @@ module Scene =
                 |> HMap.union m.scene.surfacesModel.sgSurfaces
                 |> Files.expandLazyKdTreePaths m.scene.scenePath surfaceMap
                 |> Lenses.set' (_surfaceModelLens |. SurfaceModel.Lens.sgSurfaces) m                                               
-                    
+         
         m.scene.surfacesModel 
           |> SurfaceModel.triggerSgGrouping 
           |> Lenses.set' _surfaceModelLens m
