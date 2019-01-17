@@ -204,15 +204,15 @@ module Gui =
          text "Import"
          i [clazz "dropdown icon"][] 
          div [ clazz "menu"] [
-             div [ clazz "ui inverted item"; 
-               Dialogs.onChooseFiles ImportSurface;
-               clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-               text "OPC"
-             ]
+         //    div [ clazz "ui inverted item"; 
+         //      Dialogs.onChooseFiles ImportSurface;
+         //      clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
+         //      text "OPC"
+         //    ]
              div [ clazz "ui inverted item"; 
                Dialogs.onChooseFiles ImportDiscoveredSurfaces;
                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-               text "OPC Rob"
+               text "OPC"
              ]
              div [ clazz "ui inverted item"; 
                Dialogs.onChooseFiles ImportObject;
@@ -348,6 +348,16 @@ module Gui =
                   | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
             
             model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
+
+            
+    let viewAnnotationResults (model :MModel) =
+            let view = (fun leaf ->
+                match leaf with
+                  | MAnnotations ann -> AnnotationProperties.viewResults ann
+                  | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
+            
+            model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
+
                
 
     let viewDipAndStrike (model:MModel) = 
@@ -399,6 +409,13 @@ module Gui =
                     | SelectedItem.Group -> annotationGroupProperties m
                     | _ -> viewAnnotationProperties m 
               )
+      let results = 
+          m.drawing.annotations.lastSelectedItem
+              |> Mod.bind (fun x -> 
+                  match x with 
+                    | SelectedItem.Group -> annotationGroupProperties m
+                    | _ -> viewAnnotationResults m 
+              )
       let buttons = 
           m.drawing.annotations.lastSelectedItem
               |> Mod.bind (fun x -> 
@@ -420,6 +437,10 @@ module Gui =
             Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
           ]     
           
+          GuiEx.accordion "Measurements" "Content" true [
+              Incremental.div AttributeMap.empty (AList.ofModSingle results)                                        
+          ]
+
           GuiEx.accordion "Dip&Strike" "Calculator" false [
               Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))] 
          

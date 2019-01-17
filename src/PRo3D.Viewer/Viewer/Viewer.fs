@@ -158,8 +158,7 @@ module ViewerApp =
                     let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
                     let (refSystem',_)= 
                         ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
-                    let navigation' = 
-                        Navigation.update m.scene.config m.scene.referenceSystem navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick fullBb.Center))
+                    let navigation' =  { m.scene.navigation with exploreCenter = fullBb.Center} 
                     { m with scene = { m.scene with referenceSystem = refSystem'; navigation = navigation'; firstImport = false }} |> updateCameraUp |> lookAtBoundingBox v.globalBB 
                   | _-> 
                     let refAction = ReferenceSystemApp.Action.UpdateUpNorth(fullBb.Center)
@@ -609,6 +608,8 @@ module ViewerApp =
                     |> loadRoverData
                     |> loadLastAnnotations  
             | NewScene,_,_ ->
+               
+                //let navigation' = { navigation with navigationMode = NavigationMode.FreeFly
                 let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox with recent = m.recent }
                 loadRoverData m'
             | KeyDown k, _, _ ->
