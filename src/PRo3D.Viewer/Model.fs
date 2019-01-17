@@ -460,10 +460,10 @@ module ViewConfigModel =
         format  = "{0:0.00}"
     }
     let initArrowLength = {
-        value   = 0.10
+        value   = 1.00
         min     = 0.00
         max     = 10.0
-        step    = 0.01
+        step    = 0.05
         format  = "{0:0.00}"
     }
     let initArrowThickness = {
@@ -474,7 +474,7 @@ module ViewConfigModel =
         format  = "{0:0.0}"
     }
     let initPlaneSize = {
-        value   = 0.1
+        value   = 0.5
         min     = 0.0
         max     = 10.0
         step    = 0.05

@@ -558,21 +558,22 @@ module ViewPlan =
             let near      = minnerConfig.getNearDistance   mbigConfig
 
             let viewPlans =
-                aset {
-                    for vp in model.viewPlans do 
-                       yield drawInitPositions vp cam
-                       let! showVectors = vp.isVisible
-                       match showVectors with
-                        | true -> yield drawVectors vp near length thickness cam
-                                  let! selected = model.selectedViewPlan
-                                  let! id = vp.id
-                                  let! selDrawing = 
-                                            match selected with
-                                                | Some s -> s.id |> Mod.map (fun g -> if g = id then (drawSelectionGeometry vp near length thickness cam model.roverModel) else Sg.ofList [])
-                                                | None -> Mod.constant (Sg.ofList [])
-                                  yield selDrawing
-                        | false -> yield Sg.ofList []
-                } |> Sg.set
+              aset {
+                for vp in model.viewPlans do 
+                 yield drawInitPositions vp cam
+                 let! showVectors = vp.isVisible
+                 if showVectors then
+                   yield drawVectors vp near length thickness cam
+                   let! selected = model.selectedViewPlan
+                   let! id = vp.id
+                   let! selDrawing = 
+                     match selected with
+                       | Some s -> s.id |> Mod.map (fun g -> if g = id then (drawSelectionGeometry vp near length thickness cam model.roverModel) else Sg.ofList [])
+                       | None -> Mod.constant (Sg.ofList [])
+                   yield selDrawing
+                 else
+                   yield Sg.ofList []
+              } |> Sg.set
                 
             Sg.ofList [
                 viewPlans

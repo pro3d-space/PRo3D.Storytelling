@@ -73,22 +73,17 @@ module Sg =
       match dns with
         | Some x -> 
           let center = anno.points |> AList.toMod |> Mod.map (fun list -> list.[PList.count list / 2])
-
-          //let color = 
-          //  DipAndStrike.dipColor x.dipAngle conf.minDipAngle conf.maxDipAngle
-
+          
           let color = FalseColorLegendApp.Draw.getColorDnS cl x.dipAngle
-                                                                                                              
-          let scale = 
-            conf.dnsPlaneSize 
-              |> Mod.bind(fun size -> 
-                anno.results 
-                  |> Mod.bind(fun y ->
-                    match y with
-                    | Some k -> k.length |> Mod.map(fun y -> (Math.Pow(y,1.0/3.0)) * size)
-                    | None -> Mod.constant 1.0))
+                                                                                                                        
+          let lengthFactor =             
+            anno.results 
+              |> Mod.bind(fun y ->
+                match y with
+                | Some k -> k.length |> Mod.map(fun y -> y / 3.0 )
+                | None -> Mod.constant 1.0)
                     
-          let discRadius = scale //Mod.map2 (*) scale screenSpaceScale
+          let discRadius = conf.dnsPlaneSize |> Mod.map2 (*) lengthFactor
           let posTrafo = center |> Mod.map Trafo3d.Translation
 
           // disc
@@ -97,8 +92,8 @@ module Sg =
 
           yield discISg color discRadius (discRadius |> Mod.map(fun d -> d * 0.01)) discTrafo
 
-          let lineLength = conf.arrowLength //discRadius |> Mod.map((*) 1.5)
-          let size = Sg.computeInvariantScale cam conf.nearPlane center lineLength (Mod.constant 60.0)
+          let lineLength = conf.arrowLength |> Mod.map2 (*) lengthFactor //discRadius |> Mod.map((*) 1.5)
+     //     let size = Sg.computeInvariantScale cam conf.nearPlane center lineLength (Mod.constant 60.0)
           
           let coneHeight = lineLength |> Mod.map((*) 0.2) //lineLength
           let coneRadius = coneHeight |> Mod.map((*) 0.3)
@@ -116,7 +111,7 @@ module Sg =
                 yield center' + dip.Normalized * lineLength'
             }
 
-          let p0 = center' + dip.Normalized * lineLength'
+//          let p0 = center' + dip.Normalized * lineLength'
           
           yield Sg.scaledLines dipLine color conf.arrowThickness posTrafo 
 

@@ -218,11 +218,11 @@ module UI =
                 
           let map = Groups.mkGroupAttributeMap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
              
-          let toggleIcon =
-              adaptive {
-                  let! toggle = group.visible
-                  return if toggle then "unhide icon" else "hide icon"
-              }
+          let toggleIcon = Mod.constant "unhide icon"
+              //adaptive {
+              //    let! toggle = group.visible
+              //    return if toggle then "unhide icon" else "hide icon"
+              //}
 
           let toggleMap = Groups.mkGroupAttributeMap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
           
