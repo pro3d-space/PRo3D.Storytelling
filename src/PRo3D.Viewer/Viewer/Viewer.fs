@@ -158,7 +158,8 @@ module ViewerApp =
                     let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
                     let (refSystem',_)= 
                         ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
-                    { m with scene = { m.scene with referenceSystem = refSystem'; firstImport = false }} |> updateCameraUp |> lookAtBoundingBox v.globalBB 
+                    let navigation' =  { m.scene.navigation with exploreCenter = fullBb.Center} 
+                    { m with scene = { m.scene with referenceSystem = refSystem'; navigation = navigation'; firstImport = false }} |> updateCameraUp |> lookAtBoundingBox v.globalBB 
                   | _-> 
                     let refAction = ReferenceSystemApp.Action.UpdateUpNorth(fullBb.Center)
                     let (refSystem',_)= 
@@ -568,7 +569,7 @@ module ViewerApp =
                      Log.error "[PickSurface] no hit of %s" name
                      m
                 Log.stop()
-                Log.error "done intersecting"
+                Log.line "done intersecting"
                 
                 result
             | PickObject (p,id), _ ,_ ->  
@@ -607,6 +608,8 @@ module ViewerApp =
                     |> loadRoverData
                     |> loadLastAnnotations  
             | NewScene,_,_ ->
+               
+                //let navigation' = { navigation with navigationMode = NavigationMode.FreeFly
                 let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox with recent = m.recent }
                 loadRoverData m'
             | KeyDown k, _, _ ->
@@ -840,8 +843,8 @@ module ViewerApp =
                  attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
                  attribute "data-samples" "4"
                  attribute "useMapping" "true"
-                 attribute "showFPS" "false"        
-                 attribute "data-renderalways" "false"
+                 //attribute "showFPS" "true"        
+                 //attribute "data-renderalways" "true"
                  onKeyDown (KeyDown)
                  onKeyUp (KeyUp)                    
                 ] 

@@ -282,7 +282,7 @@ module ViewerUtils =
                                fun sceneHit -> 
                                  let surfM = surf       |> Mod.force
                                  let name  = surfM.name |> Mod.force                                                  
-                                 Log.warn "spawing picksurface %s" name
+                                 //Log.warn "spawing picksurface %s" name
                                  true, Seq.ofList [PickSurface (sceneHit,name)])                         
                            ]
 

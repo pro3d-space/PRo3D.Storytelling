@@ -103,12 +103,12 @@ module DrawingModel =
         hoverPosition = None
         draw          = false  
         pick          = false
-        color         = { c = C4b.Yellow } 
+        color         = { c = C4b.DarkBlue } 
         thickness     = Annotation.thickn
 
         working     = None
-        projection  = Projection.Sky
-        geometry    = Geometry.Point
+        projection  = Projection.Linear
+        geometry    = Geometry.Polyline
         semantic    = Semantic.Horizon3
 
         annotations = GroupsModel.initial

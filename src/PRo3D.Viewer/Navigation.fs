@@ -29,14 +29,14 @@ module Navigation =
     let update<'a,'b> (bigConfigA : 'a) (bigConfigB : 'b) (smallConfig : smallConfig<'a,'b>) (model : NavigationModel) (act : Action) =
       match act with            
         | ArcBallAction a -> 
-          let model = 
+          let model =
               match a with 
                   | ArcBallController.Message.Pick a ->
                       { model with navigationMode =  NavigationMode.ArcBall; exploreCenter = a }
-                  | _ -> model
+                  | _ ->  { model with navigationMode =  NavigationMode.ArcBall } //model
           
           let cam = ArcBallController.update model.camera a
-          let cam = { cam with sensitivity = smallConfig.navigationSensitivity.Get(bigConfigA) } 
+          let cam = { cam with sensitivity = smallConfig.navigationSensitivity.Get(bigConfigA); orbitCenter = Some model.exploreCenter } 
           match cam.orbitCenter with
               | Some oc -> { model with camera = cam; exploreCenter = oc}
               | None -> { model with camera = cam }

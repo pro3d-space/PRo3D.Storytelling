@@ -343,7 +343,7 @@ module DrawingApp =
           if p.IsEmptyOrNull() |> not then Csv.Seq.write (p) csvTable
           model
         | PickAnnotation (hit, id), false, true -> 
-            Log.error "hit annotation %A" id
+            Log.line "hit annotation %A" id
             match (model.annotations.flat.TryFind id) with
                 | Some x -> {model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty x.id ""}
                 | None -> model
