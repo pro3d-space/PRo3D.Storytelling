@@ -608,8 +608,6 @@ module ViewerApp =
                     |> loadRoverData
                     |> loadLastAnnotations  
             | NewScene,_,_ ->
-               
-                //let navigation' = { navigation with navigationMode = NavigationMode.FreeFly
                 let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox with recent = m.recent }
                 loadRoverData m'
             | KeyDown k, _, _ ->
