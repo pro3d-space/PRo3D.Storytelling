@@ -12,6 +12,7 @@ open PRo3D.Base
 
 type MinervaAction =
   | PerformQueries
+  | FlyToProduct of V3d
 
 module App =
 
@@ -34,8 +35,8 @@ module App =
       match msg with
       | PerformQueries -> 
         let data = model.queries |> MinervaGeoJSON.loadMultiple
-
-        { model with data = data |> computeXYZFeatures}
+        { model with data = data } //|> computeXYZFeatures}
+      | FlyToProduct _ -> model
 
   let instrumentText (instr : Instrument) =
     match instr with
@@ -46,10 +47,15 @@ module App =
     | _ -> instr |> sprintf "unknown instrument number %A" |> failwith
     
 
-  let viewFeatures (instr : Instrument) (features : list<Feature>) = 
+  let viewFeatures (pos : IMod<V3d>)(instr : Instrument) (features : list<Feature>) = 
     [
       for f in features do                                            
-        let iconAttr = [clazz "ui map pin inverted middle aligned icon"]            
+        let iconAttr = 
+          [
+            clazz "ui map pin inverted middle aligned icon"; 
+            style (sprintf "color: %s" (f.instrument |> Model.instrumentColor |> Html.ofC4b))
+            onClick(fun _ -> FlyToProduct f.geometry.positions.Head)
+          ]            
         let headerAttr : AttributeMap<_> = [clazz "ui header small"] |> AttributeMap.ofList
                         
         let item =             
@@ -57,13 +63,38 @@ module App =
             i iconAttr []
             div [clazz "ui content"] [
               Incremental.div (headerAttr) (AList.single (instr |> instrumentText |> text))
-              div [clazz "ui description"] [text (f.id.ToString())] //[text (id.Replace('_',' '))]
+              div [clazz "ui description"] [
+                Incremental.text ( 
+                  pos 
+                    |> Mod.map(fun p -> 
+                      let dist = V3d.Distance(p,f.geometry.positions.Head) 
+                      if dist > 10000.0 then "far far away" else dist |> sprintf "%A m")
+                      )
+              ] //[text (id.Replace('_',' '))]
             ]            
           ]
         yield item 
     ]
 
-  let viewFeaturesGui (model :MModel) =
+  let accordion text' icon active content' =
+     let title = if active then "title active inverted" else "title inverted"
+     let content = if active then "content active" else "content"     
+                             
+     onBoot "$('#__ID__').accordion();" (
+         div [clazz "ui inverted segment"] [
+             div [clazz "ui inverted accordion fluid"] [
+                 div [clazz title; style "background-color: #282828"] [
+                         i [clazz ("dropdown icon")][]
+                         text text'                                
+                         div[style "float:right"][i [clazz (icon + " icon")][]]
+                         
+                 ]
+                 div [clazz content;  style "overflow-y : auto; "] content' //max-height: 35%
+             ]
+         ]
+     )
+
+  let viewFeaturesGui (pos : IMod<V3d>)(model :MModel) =
     
      let content =
         alist {                    
@@ -74,9 +105,11 @@ module App =
             let header = sprintf "%s (%d)" (instr |> instrumentText) group.Length
             yield div [clazz "ui inverted item"][
                 //i [clazz "ui folder inverted middle aligned icon"] []
-                div [clazz "ui header small"] [header |> text]
+            //    yield div [clazz "ui header small"] [header |> text]
                 //div [clazz "ui description"] ["description" |> text]
-                div [clazz "ui list"] (viewFeatures instr group)
+                yield accordion header "Content" false [
+                  div [clazz "ui list"] (viewFeatures pos instr group)
+                ]
               ]
         }
 
@@ -86,24 +119,34 @@ module App =
      ]
 
   let drawPoint color size (pos : IMod<V3d>) = 
-    Sg.sphere 2 color (Mod.constant 1.0)
+    Sg.sphere 4 color size
         |> Sg.noEvents
         |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
-        |> Sg.uniform "Size" size
-        |> Sg.uniform "WorldPos" pos
+        //|> Sg.uniform "PointSize" size
+        //|> Sg.uniform "WorldPos" pos
 
   let viewFeaturesSg (model : MModel) =
     model.data.features 
-      |> AList.map(fun x -> 
-        x.geometry.positions 
+      |> AList.map(fun f -> 
+        f.geometry.positions 
           |> List.map(fun y -> 
-            drawPoint (C4b.VRVisGreen |> Mod.constant) (1.5 |> Mod.constant) (y |> Mod.constant)) |> Sg.ofList
+            drawPoint (f.instrument |> Model.instrumentColor |> Mod.constant) (0.05 |> Mod.constant) (y |> Mod.constant)) |> Sg.ofList
       ) 
       |> AList.toASet 
       |> Sg.set
       |> Sg.effect [
         DefaultSurfaces.stableTrafo |> toEffect
         DefaultSurfaces.vertexColor |> toEffect
+     //   DefaultSurfaces.pointSprite |> toEffect
       ]
+
+  let start =
+    App.start {
+        unpersist = Unpersist.instance
+        threads   = fun _ -> ThreadPool.empty
+        view      = viewFeaturesGui (Mod.constant V3d.Zero)//localhost
+        update    = update
+        initial   = Initial.model
+    }
 
     

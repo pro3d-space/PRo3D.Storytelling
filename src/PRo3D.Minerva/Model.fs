@@ -64,7 +64,7 @@ type Instrument =
 type Geometry = 
   {
     typus       : Typus
-    coordinates : list<V2d>
+    coordinates : list<V3d>
     positions   : list<V3d>
   }
 
@@ -96,14 +96,22 @@ type Model =
 
 module Model = 
   let toInstrument (id : string) =
-    let instr = id.ToCharArray() |> Array.takeWhile(fun x -> x <> '_')
-    let instr = new string(instr)
-    match instr.ToLowerInvariant() with
+ //   let instr = id.ToCharArray() |> Array.takeWhile(fun x -> x <> '_')
+   // let instr = new string(instr)
+    match id.ToLowerInvariant() with
       | "mahli"       -> Instrument.MAHLI
       | "fronthazcam" -> Instrument.FrontHazcam        
       | "mastcam"     -> Instrument.Mastcam
       | "apxs"        -> Instrument.APXS
-      | _ -> instr |> sprintf "unknown instrument %A" |> failwith
+      | _ -> id |> sprintf "unknown instrument %A" |> failwith
+
+  let instrumentColor (instr : Instrument) =
+    match instr with 
+    | Instrument.MAHLI -> C4b(27,158,119)
+    | Instrument.FrontHazcam -> C4b(217,95,2)
+    | Instrument.Mastcam -> C4b(231,41,138)
+    | Instrument.APXS -> C4b(230,171,2)
+    | _ -> failwith "unknown instrument"
 
 module Initial = 
   let data = 

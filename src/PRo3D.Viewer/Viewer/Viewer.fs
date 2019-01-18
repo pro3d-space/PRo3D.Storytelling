@@ -215,6 +215,11 @@ module ViewerApp =
             else None
       }
 
+    let createAnimation pos forward (animationsOld: AnimationModel) : AnimationModel =                                    
+      animateFowardAndLocation pos forward 3.5 "ForwardAndLocation2s"
+        |> AnimationAction.PushAnimation 
+        |> AnimationApp.update animationsOld
+
     let rec getAllDockElements (dnc : DockNodeConfig) : (list<DockElement>) = 
         match dnc with
             | DockNodeConfig.Vertical (weight,children) -> let test = children |> List.map(fun x -> getAllDockElements x )
@@ -370,23 +375,16 @@ module ViewerApp =
                   | None -> m       
             | BookmarkMessage msg,_,_ ->  
                 let m', bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
-
+               
                 let animation = 
                   match msg with
                   | BookmarkAction.GroupsMessage k ->
                     match k with 
-                    | Groups.Action.UpdateCam _->
-                      let location = m'.scene.navigation.camera.view.Location
-                      let forward = m'.scene.navigation.camera.view.Forward
-
-                      //let locationMsg = CameraAnimations.animateLocation location 2.0 "flyto 2s"
-                      let animationMessage = 
-                        animateFowardAndLocation location forward 3.5 "ForwardAndLocation2s"
-                      let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                      //let fowardMsg = CameraAnimations.animateFoward foward 2.0 "turnAround 2s"
-                      //let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(fowardMsg))
-
-                      a'
+                    | Groups.Action.UpdateCam _->                      
+                        createAnimation 
+                          m'.scene.navigation.camera.view.Location
+                          m'.scene.navigation.camera.view.Forward
+                          m.animations                      
                     | _ -> m.animations
                   | _ -> m.animations
                 
@@ -808,7 +806,13 @@ module ViewerApp =
                 let dockconfig = config {content(cont);appName "PRo3D"; useCachedConfig false }
                 { m with scene = { m.scene with dockConfig = dockconfig; closedPages = closedPages } }
             | MinervaActions a,_,_ ->
-              { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }
+              match a with 
+              | Minerva.MinervaAction.FlyToProduct v -> 
+                 let currentView = m.scene.navigation.camera.view
+                 let newForward = (v - currentView.Location).Normalized
+                                    
+                 { m with animations = createAnimation v newForward m.animations }
+              | _ -> { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -1099,7 +1103,8 @@ module ViewerApp =
             | Some "viewplanner" -> 
                 require (myCss) (body bodyAttributes [viewPlannerUI])
             | Some "minerva" -> 
-               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui m.minervaModel |> UI.map MinervaActions])
+               let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
+               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])
             | None -> 
                 require (myCss) (
                   body [][                    

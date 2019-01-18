@@ -31,9 +31,9 @@ module MinervaGeoJSON =
       | "point"             -> Typus.Point
       | s -> s |> sprintf "[parseTypus] string %A unknown" |> failwith
 
-  let parseProperties (properties : JsonValue) : Properties = 
+  let parseProperties (ins : Instrument) (properties : JsonValue) : Properties = 
     let id = (properties?id).AsString()                
-    match id |> Model.toInstrument with
+    match ins with
         | Instrument.MAHLI ->          
           {
             MAHLI_Properties.id = id |> FeatureId
@@ -58,9 +58,13 @@ module MinervaGeoJSON =
           } |> Properties.APXS       
         | _ -> failwith "encountered invalid instrument from parsing"
 
-  let parseSingleCoord (c : array<float>) : V2d =
-    if c.Length <> 2 then failwith "invalid coordinate of size other than 2"
-    V2d(c.[1],c.[0])
+  let parseSingleCoord (c : array<float>) : V3d =
+    if c.Length <> 3 then failwith "invalid coordinate of size other than 3"
+    V3d(c.[1],c.[0],c.[2])
+
+  let parseSingleCoordXYZ (c : array<float>) : V3d =
+    if c.Length <> 3 then failwith "invalid coordinate of size other than 3"
+    V3d(c.[0],c.[1],c.[2])
 
   let parseCoordinates typus (coordinates : JsonValue) = 
     match typus with
@@ -70,34 +74,41 @@ module MinervaGeoJSON =
   let parseGeometry (geometry : JsonValue) : PRo3D.Minerva.Geometry = 
     let typus = geometry.GetProperty("type") |> parseTypus
     let coords = geometry?coordinates |> parseCoordinates typus |> List.singleton
+    
     {
       typus       = typus
       coordinates = coords
       positions   = List.empty
     }        
 
-  let parseFeature (feature : JsonValue) : Feature =
-    let prop = feature?properties |> parseProperties
+  let parseFeature (ins : Instrument) (feature : JsonValue) : Feature =
+    let prop = feature?properties |> parseProperties ins
     let (FeatureId s) = prop.id
+
+    let position = feature?properties?position.AsArray() |> Array.map(fun x -> x.AsFloat()) |> parseSingleCoordXYZ
+    let geometry = feature?geometry |> parseGeometry
+    Log.line "%A" position
 
     {
       id          = s
-      instrument  = s |> Model.toInstrument
+      instrument  = ins
       typus       = feature.GetProperty("type") |> parseTypus
-      boundingBox = feature?bbox |> parseBoundingBox
+      boundingBox = Box2d.Invalid//feature?bbox |> parseBoundingBox
       properties  = prop
-      geometry    = feature?geometry |> parseGeometry
+      geometry    = { geometry with positions = position |> List.singleton }
     } 
 
-  let parseFeatures (features : JsonValue) : list<Feature> =  
-    features.AsArray() |> List.ofArray |> List.map parseFeature
+  let parseFeatures (ins : Instrument) (features : JsonValue) : list<Feature> =  
+    features.AsArray() |> List.ofArray |> List.map (parseFeature ins)
         
   let parseRoot(root : JsonValue) : FeatureCollection =
+    let instrument = (root?id).AsString() |> Model.toInstrument
+
     {
-      name        = (root?name).AsString()
+      name        = (root?id).AsString()
       typus       = root.GetProperty("type") |> parseTypus    
       boundingBox = (root?bbox) |> parseBoundingBox
-      features    = (root?features) |> parseFeatures |> PList.ofList
+      features    = (root?features) |> parseFeatures instrument |> PList.ofList
     }
 
   let load (siteUrl:string) : FeatureCollection =     

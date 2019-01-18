@@ -56,7 +56,7 @@ module DipAndStrike =
       else
         let v3dArray = points.AsList |> List.toArray
         let mutable plane = PlaneFitting.Fit(v3dArray)
-       
+                
         let distances = 
           points 
             |> PList.toList

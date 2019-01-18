@@ -367,7 +367,7 @@ module DrawingApp =
         let annoSet = 
             model.annotations.flat 
                 |> AMap.chooseM(fun _ y -> y |> Mod.map toAnnotationOpt) 
-                |> AMap.toASet
+                |> AMap.toASet        
 
         let config : Sg.innerViewConfig = 
             {
