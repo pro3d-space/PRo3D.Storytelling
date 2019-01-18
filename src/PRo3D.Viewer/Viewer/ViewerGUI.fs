@@ -287,10 +287,10 @@ module Gui =
               
               div [ clazz "ui menu"] [
                   //div [ clazz "ui dropdown item"; style "width: 150px"] [] //spacer as workaround for tab overdraw
+                  div [ clazz "ui dropdown item"; style "width: 150px"] (importSurface m)                  
+
                   div [ clazz "ui dropdown item"] (scene m)
-              
-                  div [ clazz "ui dropdown item"] (importSurface m)                  
-              
+                            
                   DrawingApp.UI.annotationMenu  |> UI.map DrawingMessage;
                   
                   div[ clazz "ui item" ] [
