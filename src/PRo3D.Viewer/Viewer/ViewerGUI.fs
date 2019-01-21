@@ -224,7 +224,7 @@ module Gui =
              //  text "OPC"
              //]
              div [ clazz "ui inverted item"; 
-               Dialogs.onChooseFiles  StartImportMessaging; //ImportDiscoveredSurfaces; // ImportSurfaceTest
+               Dialogs.onChooseFiles  ImportDiscoveredSurfacesThreads; //StartImportMessaging; //ImportDiscoveredSurfaces; // ImportSurfaceTest
                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
                text "OPC"
              ]

@@ -48,7 +48,7 @@ type PropertyActions =
     | DrawingMessage    of Drawing.Action
     | AnnotationMessage of AnnotationProperties.Action
 
-type ViewerAction =                
+    type ViewerAction =                
     | DrawingMessage            of Drawing.Action
     | AnnotationGroupsMessageViewer   of Groups.Action
     | NavigationMessage         of Navigation.Action
@@ -65,6 +65,7 @@ type ViewerAction =
     | SetCameraAndFrustum2      of CameraView * Frustum
     | ImportSurface             of list<string>
     | ImportDiscoveredSurfaces  of list<string>
+    | ImportDiscoveredSurfacesThreads  of list<string>
     | ImportObject              of list<string>
     | ImportAnnotationGroups    of list<string>
     | ImportSurfaceTrafo        of list<string>
@@ -101,6 +102,8 @@ type ViewerAction =
     | ToggleOrientationCube
     | UpdateUserFeedback        of string
     | StartImportMessaging      of list<string>
+    | ThreadsDone               of string
+
 
 and MailboxState = {
   events  : list<MailboxAction>
@@ -134,6 +137,7 @@ type Scene = {
     closedPages       : list<DockElement>
     firstImport       : bool
     userFeedback      : string
+    feedbackThreads   : ThreadPool<ViewerAction> 
 }
 
 [<DomainType>] 
@@ -206,6 +210,8 @@ type Model = {
     [<TreatAsValue>]
     future : Option<Drawing.DrawingModel> 
 }
+
+
 
 module Viewer =
     open System.Threading
@@ -297,6 +303,7 @@ module Viewer =
             closedPages     = list.Empty 
             firstImport     = true
             userFeedback    = ""
+            feedbackThreads = ThreadPool.empty
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing

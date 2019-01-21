@@ -420,7 +420,7 @@ module ViewerApp =
                         let m = Scene.import' runtime signature surfaces m 
                         updateSceneWithNewSurface m 
             | ImportDiscoveredSurfaces sl,_,_ -> 
-                "" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
+                //"" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match sl with
                     | [] -> m
                     | paths ->
@@ -438,6 +438,19 @@ module ViewerApp =
 
                         let m = Scene.import' runtime signature surfaces m 
                         updateSceneWithNewSurface m 
+
+            | ImportDiscoveredSurfacesThreads sl,_,_ -> 
+                let id = System.Guid.NewGuid().ToString()
+                let worker =    
+                    proclist {
+                        yield UpdateUserFeedback ""
+                        yield UpdateUserFeedback "Import OPCs..."
+                        yield ImportDiscoveredSurfaces sl
+                        
+                        do! Proc.Sleep 5000
+                        yield ThreadsDone id
+                    }
+                { m with scene = { m.scene with feedbackThreads = ThreadPool.add id worker m.scene.feedbackThreads }}
 
             | ImportObject sl,_,_ -> 
                 match sl with
@@ -817,6 +830,8 @@ module ViewerApp =
             | StartImportMessaging sl,_,_ -> 
                 sl |> ImportDiscoveredSurfaces |> ViewerAction |> mailbox.Post
                 { m with scene = { m.scene with userFeedback = "Import OPCs..." } }
+            | ThreadsDone id,_,_ ->  
+                { m with scene = { m.scene with userFeedback = ""; feedbackThreads = ThreadPool.remove id m.scene.feedbackThreads} }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -1141,7 +1156,7 @@ module ViewerApp =
                   |> ThreadPool.map Navigation.ArcBallAction |> ThreadPool.map NavigationMessage
             | _ -> failwith "invalid nav mode"
          
-        unionMany [drawing; animation; nav]
+        unionMany [drawing; animation; nav; m.scene.feedbackThreads]
         
     let loadWaypoints m = 
       match Serialization.fileExists "./waypoints.wps" with
