@@ -52,7 +52,7 @@ module DrawingApp =
                     { a with segments = PList.append newSegment a.segments }
             | _ -> { a with points = a.points |> PList.append firstP }
 
-    let getFinishedAnnotation up north planet (model : DrawingModel) =
+    let getFinishedAnnotation up north planet (view:CameraView) (model : DrawingModel) =
       match model.working with
         | Some w ->  
             let w = 
@@ -69,13 +69,13 @@ module DrawingApp =
                 //        Some result //more acc. by using segments as well?
                 //    | _ -> None 
             let results = DrawingUtilities.Calculations.calculateAnnotationResults w up north planet
-            Some { w with dnsResults = dns ; results = Some results }
+            Some { w with dnsResults = dns ; results = Some results; view = view }
         | None -> None
 
-    let finishAndAppendAndSend up north planet (model : DrawingModel) (bc : BlockingCollection<string>) = 
+    let finishAndAppendAndSend up north planet (view:CameraView) (model : DrawingModel) (bc : BlockingCollection<string>) = 
       
       let groups = 
-        match getFinishedAnnotation up north planet model with
+        match getFinishedAnnotation up north planet view model with
           | Some a -> 
             let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
             bc.Add json
@@ -85,7 +85,7 @@ module DrawingApp =
       { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups }
     
     //adds new point to working state, if certain conditions are met the annotation finishes itself
-    let addPoint up north planet samplePoint p model surfaceName bc =
+    let addPoint up north planet samplePoint p view model surfaceName bc =
       let working, newSegment = 
         match model.working with
           | Some w ->     
@@ -135,9 +135,9 @@ module DrawingApp =
 
       match (working.geometry, (working.points |> PList.count)) with
           | Geometry.Point, 1 -> 
-              finishAndAppendAndSend up north planet model bc, None
+              finishAndAppendAndSend up north planet view model bc, None
           | Geometry.Line, 2 -> 
-              finishAndAppendAndSend up north planet model bc, None
+              finishAndAppendAndSend up north planet view model bc, None
           | _ -> 
               model, newSegment // returns current segment for async computations outside
 
@@ -229,7 +229,7 @@ module DrawingApp =
     let saveSceneAnnotations (scenePath:string) (model:DrawingModel) = 
         saveAnnotations (getAnnotationPath scenePath) model
 
-    let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (webSocket : BlockingCollection<string>) (model : DrawingModel) (act : Action) =
+    let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (webSocket : BlockingCollection<string>) (view: CameraView) (model : DrawingModel) (act : Action) =
       match (act, model.draw, model.pick) with
         | StartDrawing, _, false ->                     
                 { model with draw = true }
@@ -246,7 +246,7 @@ module DrawingApp =
                 let north = smallConfig.north.Get(bigConfig)
                 let planet = smallConfig.planet.Get(bigConfig)
 
-                let model, newSegment = addPoint up north planet hitFunction point model name webSocket
+                let model, newSegment = addPoint up north planet hitFunction point view model name webSocket
                 
                 match newSegment with
                     | None         -> model
@@ -264,7 +264,7 @@ module DrawingApp =
                 let north  = smallConfig.north.Get(bigConfig)
                 let planet = smallConfig.planet.Get(bigConfig)
 
-                (finishAndAppendAndSend up north planet model webSocket) |> stash
+                (finishAndAppendAndSend up north planet view model webSocket) |> stash
         | Exit, _, _ -> 
                 { model with hoverPosition = None }
         | SetSemantic mode, _, _ ->

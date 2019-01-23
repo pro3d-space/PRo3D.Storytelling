@@ -475,6 +475,7 @@ module Mutable =
         let _text = ResetMod.Create(__initial.text)
         let _textsize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.textsize)
         let _surfaceName = ResetMod.Create(__initial.surfaceName)
+        let _view = ResetMod.Create(__initial.view)
         
         member x.key = __current.Value.key
         member x.modelTrafo = _modelTrafo :> IMod<_>
@@ -492,6 +493,7 @@ module Mutable =
         member x.text = _text :> IMod<_>
         member x.textsize = _textsize
         member x.surfaceName = _surfaceName :> IMod<_>
+        member x.view = _view :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Annotation) =
@@ -513,6 +515,7 @@ module Mutable =
                 ResetMod.Update(_text,v.text)
                 Aardvark.UI.Mutable.MNumericInput.Update(_textsize, v.textsize)
                 ResetMod.Update(_surfaceName,v.surfaceName)
+                ResetMod.Update(_view,v.view)
                 
         
         static member Create(__initial : PRo3D.Annotation) : MAnnotation = MAnnotation(__initial)
@@ -624,6 +627,12 @@ module Mutable =
                     override x.Get(r) = r.surfaceName
                     override x.Set(r,v) = { r with surfaceName = v }
                     override x.Update(r,f) = { r with surfaceName = f r.surfaceName }
+                }
+            let view =
+                { new Lens<PRo3D.Annotation, Aardvark.Base.CameraView>() with
+                    override x.Get(r) = r.view
+                    override x.Set(r,v) = { r with view = v }
+                    override x.Update(r,f) = { r with view = f r.view }
                 }
     
     

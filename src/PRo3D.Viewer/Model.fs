@@ -263,6 +263,7 @@ type Annotation = {
     textsize    : NumericInput
 
     surfaceName : string
+    view        : CameraView
 }
 
 
@@ -316,6 +317,7 @@ module Annotation =
                   | Geometry.DnS -> true 
                   | _ -> false 
             surfaceName = surfName
+            view = FreeFlyController.initial.view
         }
 
     let initial =

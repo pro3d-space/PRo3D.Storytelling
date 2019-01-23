@@ -264,8 +264,9 @@ module ViewerApp =
                         | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = Projection.Linear } }   
                         | _ -> m
                 
+                let view = m.scene.navigation.camera.view
                 let msg = Drawing.Action.AddPointAdv(p, hitFunction, surf.name)
-                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing msg
+                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc view m.drawing msg
                 //Log.stop()
                 { m with drawing = drawing } |> stash
             | Interactions.PlaceCoordinateSystem -> 
@@ -333,11 +334,16 @@ module ViewerApp =
                     let _a = m |> Lenses.get _flat |> HMap.tryFind id |> Option.map Leaf.toAnnotation
                     match _a with 
                       | Some a ->                                                
-                          m |> lookAtBoundingBox (Box3d(a.points |> PList.toList))
+                          //m |> lookAtBoundingBox (Box3d(a.points |> PList.toList))
+                          let animationMessage = 
+                            animateFowardAndLocation a.view.Location a.view.Forward 2.0 "ForwardAndLocation2s"
+                          let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                          { m with  animations = a'}
                       | None -> m                    
                 | _ ->
+                    let view = m.scene.navigation.camera.view
                     let drawing = 
-                        DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing msg
+                        DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing msg
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
                     let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
@@ -637,8 +643,9 @@ module ViewerApp =
                              
               let m =
                 match m.interaction with
-                | Interactions.DrawAnnotation -> 
-                    let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing drawingAction } |> stash
+                | Interactions.DrawAnnotation ->
+                    let view = m.scene.navigation.camera.view
+                    let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing drawingAction } |> stash
                     match drawingAction with
                       | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
                       | _ -> m     
@@ -709,7 +716,8 @@ module ViewerApp =
                   | Aardvark.Application.Keys.LeftCtrl -> 
                     match m.interaction with
                         | Interactions.DrawAnnotation -> 
-                            DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopDrawing
+                            let view = m.scene.navigation.camera.view
+                            DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopDrawing
                         //| Interactions.PickAnnotation -> 
                         //    DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopPicking 
                         |_-> m.drawing
