@@ -83,14 +83,13 @@ module MinervaGeoJSON =
 
   let parseFeature (ins : Instrument) (feature : JsonValue) : Feature =
     let prop = feature?properties |> parseProperties ins
-    let (FeatureId s) = prop.id
-
+    
     let position = feature?properties?position.AsArray() |> Array.map(fun x -> x.AsFloat()) |> parseSingleCoordXYZ
     let geometry = feature?geometry |> parseGeometry
     Log.line "%A" position
 
     {
-      id          = s
+      id          = (feature?id).AsString()
       instrument  = ins
       typus       = feature.GetProperty("type") |> parseTypus
       boundingBox = Box2d.Invalid//feature?bbox |> parseBoundingBox

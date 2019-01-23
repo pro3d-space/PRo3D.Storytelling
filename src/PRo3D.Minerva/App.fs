@@ -64,12 +64,12 @@ module App =
             div [clazz "ui content"] [
               Incremental.div (headerAttr) (AList.single (instr |> instrumentText |> text))
               div [clazz "ui description"] [
+                text f.id
+                br []
                 Incremental.text ( 
                   pos 
-                    |> Mod.map(fun p -> 
-                      let dist = V3d.Distance(p,f.geometry.positions.Head) 
-                      if dist > 10000.0 then "far far away" else dist |> sprintf "%A m")
-                      )
+                    |> Mod.map(fun p ->  V3d.Distance(p,f.geometry.positions.Head) |> sprintf "%.2f m")
+                )
               ] //[text (id.Replace('_',' '))]
             ]            
           ]
