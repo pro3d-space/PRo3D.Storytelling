@@ -85,8 +85,7 @@ module MinervaGeoJSON =
     let prop = feature?properties |> parseProperties ins
     
     let position = feature?properties?position.AsArray() |> Array.map(fun x -> x.AsFloat()) |> parseSingleCoordXYZ
-    let geometry = feature?geometry |> parseGeometry
-    Log.line "%A" position
+    let geometry = feature?geometry |> parseGeometry    
 
     {
       id          = (feature?id).AsString()
@@ -99,7 +98,7 @@ module MinervaGeoJSON =
 
   let parseFeatures (ins : Instrument) (features : JsonValue) : list<Feature> =  
     features.AsArray() |> List.ofArray |> List.map (parseFeature ins)
-        
+    
   let parseRoot(root : JsonValue) : FeatureCollection =
     let instrument = (root?id).AsString() |> Model.toInstrument
 
@@ -121,14 +120,37 @@ module MinervaGeoJSON =
       features = collections |> Seq.map(fun x -> x.features) |> PList.concat
     }
 
-  let loadMultiple sites : FeatureCollection =     
+  let parseRootProperties (props : JsonValue) =         
+    {
+      totalCount   = (props?totalCount).AsInteger()
+      startIndex   = (props?startIndex).AsInteger()
+      itemsPerPage = (props?itemsPerPage).AsInteger()
+      published    = (props?published).AsDateTime()
+    }
+
+  let loadFromUrls sites = 
+    sites 
+      |> List.map JsonValue.AsyncLoad
+      |> Async.Parallel
+      |> Async.RunSynchronously 
+      |> Array.map parseRoot
+      |> combineFeatureCollections
+
+  let loadPaged (site:string) = 
+    let bla = JsonValue.Load site
+    let probs = bla?properties |> parseRootProperties
+    let pages =
+      [0 .. probs.itemsPerPage .. probs.totalCount]
+        |> List.map(fun index -> sprintf "%s?startIndex=%d&count=%d" site index probs.itemsPerPage)
+
+    pages |> loadFromUrls
+    
+
+  let loadMultiple (sites : list<string>) : FeatureCollection =     
     Log.startTimed "fetching data from sites"
     let result = 
-      sites 
-        |> List.map JsonValue.AsyncLoad
-        |> Async.Parallel
-        |> Async.RunSynchronously 
-        |> Array.map parseRoot
-        |> combineFeatureCollections
+      sites |> List.map(loadPaged) |> combineFeatureCollections
+    //let result = 
+    //  sites |> Load
     Log.stop()
     result

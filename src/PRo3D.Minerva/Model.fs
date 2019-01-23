@@ -78,6 +78,14 @@ type Feature =
     geometry    : Geometry
   }
 
+type RootProperties = 
+  {
+    totalCount   : int
+    startIndex   : int 
+    itemsPerPage : int    
+    published    : DateTime
+  }
+
 [<DomainType>]
 type FeatureCollection = 
   {
@@ -93,6 +101,34 @@ type Model =
     data : FeatureCollection
     queries  : list<string>
   }
+
+[<StructuredFormatDisplay("{AsString}"); Struct>]
+type Len(meter : float) =
+  member x.Angstrom       = meter * 10000000000.0
+  member x.Nanometer      = meter * 1000000000.0
+  member x.Micrometer     = meter * 1000000.0
+  member x.Millimeter     = meter * 1000.0
+  member x.Centimeter     = meter * 100.0
+  member x.Meter          = meter
+  member x.Kilometer      = meter / 1000.0
+  member x.Astronomic     = meter / 149597870700.0
+  member x.Lightyear      = meter / 9460730472580800.0
+  member x.Parsec         = meter / 30856775777948584.0
+
+  member private x.AsString = x.ToString()
+
+  override x.ToString() =
+      if x.Parsec > 0.5 then sprintf "%.3fpc" x.Parsec
+      elif x.Lightyear > 0.5 then sprintf "%.3fly" x.Lightyear
+      elif x.Astronomic > 0.5 then sprintf "%.3fau" x.Astronomic
+      elif x.Kilometer > 0.5 then sprintf "%.3fkm" x.Kilometer
+      elif x.Meter > 1.0 then sprintf "%.2fm" x.Meter
+      elif x.Centimeter > 1.0 then sprintf "%.2fcm" x.Centimeter
+      elif x.Millimeter > 1.0 then sprintf "%.0fmm" x.Millimeter
+      elif x.Micrometer > 1.0 then sprintf "%.0fµm" x.Micrometer
+      elif x.Nanometer > 1.0 then sprintf "%.0fµm" x.Nanometer
+      elif meter > 0.0 then sprintf "%.0f" x.Angstrom
+      else "0"
 
 module Model = 
   let toInstrument (id : string) =
@@ -126,7 +162,7 @@ module Initial =
   let sites = [
     @"http://minerva1.eox.at:8600/opensearch/collections/MAHLI/json/"
     @"http://minerva1.eox.at:8600/opensearch/collections/FrontHazcam/json/"
-    @"http://minerva1.eox.at:8600/opensearch/collections/Mastcam/json/"
+    @"http://minerva1.eox.at:8600/opensearch/collections/Mastcam/json/"    
     @"http://minerva1.eox.at:8600/opensearch/collections/APXS/json/"
   ]
 

@@ -31,11 +31,23 @@ module App =
 
     { features with features = a }
 
+  let writeLinesToFile path (contents : list<string>) =
+        System.IO.File.WriteAllLines(path, contents)
+
   let update (model : Model) (msg : MinervaAction) : Model =
       match msg with
       | PerformQueries -> 
         let data = model.queries |> MinervaGeoJSON.loadMultiple
-        { model with data = data } //|> computeXYZFeatures}
+        let pos = "[-2486641.16564715, 2289265.84573656, -276244.7871095]" |> V3d.Parse
+        
+        let features = 
+          data.features 
+            |> PList.filter(fun (x:Feature) -> V3d.Distance(pos, x.geometry.positions.Head) < 10000.0)
+            //|> PList.map(fun x -> sprintf "instr: %A id: %A position: %A" x.instrument x.id x.geometry.positions.Head)
+        //    |> PList.toList
+        //    |> writeLinesToFile ".\strangeProducts.txt"
+
+        { model with data = { data with features = features } } //|> computeXYZFeatures}
       | FlyToProduct _ -> model
 
   let instrumentText (instr : Instrument) =
@@ -64,12 +76,7 @@ module App =
             div [clazz "ui content"] [
               Incremental.div (headerAttr) (AList.single (instr |> instrumentText |> text))
               div [clazz "ui description"] [
-                text f.id
-                br []
-                Incremental.text ( 
-                  pos 
-                    |> Mod.map(fun p ->  V3d.Distance(p,f.geometry.positions.Head) |> sprintf "%.2f m")
-                )
+                text f.id                                                
               ] //[text (id.Replace('_',' '))]
             ]            
           ]

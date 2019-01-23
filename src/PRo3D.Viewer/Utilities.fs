@@ -30,6 +30,9 @@ module Serialization =
         let arr = File.ReadAllBytes(path)
         binarySerializer.UnPickle arr
 
+    let writeLinesToFile path (contents : list<string>) =
+        System.IO.File.WriteAllLines(path, contents)
+
     let writeToFile path (contents : string) =
         System.IO.File.WriteAllText(path, contents)
 
