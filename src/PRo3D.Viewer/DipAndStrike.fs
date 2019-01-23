@@ -23,7 +23,10 @@ module DipAndStrike =
         let coords = new V2d(eastWestPlane.Height(dir), northSouthPlane.Height(dir))
         let angle = Fun.Atan(coords.Y / coords.X).DegreesFromRadians().Abs()
 
-        match coords.X.Sign() with
+        if coords.X.IsNaN() then
+          Double.NaN
+        else
+          match coords.X.Sign() with
                 | -1 -> match coords.Y.Sign() with
                             | 1 -> 270.0 + angle
                             | _ -> 270.0 - angle 
