@@ -26,14 +26,16 @@ module Navigation =
             up                    : Lens<'b, V3d>
         }
 
-    let update<'a,'b> (bigConfigA : 'a) (bigConfigB : 'b) (smallConfig : smallConfig<'a,'b>) (model : NavigationModel) (act : Action) =
+    let update<'a,'b> (bigConfigA : 'a) (bigConfigB : 'b) (smallConfig : smallConfig<'a,'b>) (switchToArcball : bool) (model : NavigationModel) (act : Action) =
       match act with            
         | ArcBallAction a -> 
           let model = 
               match a with 
-                  | ArcBallController.Message.Pick a ->
-                      { model with navigationMode =  NavigationMode.ArcBall; exploreCenter = a }
-                  | _ -> model
+                  | ArcBallController.Message.Pick a when switchToArcball->
+                    { model with navigationMode = NavigationMode.ArcBall; exploreCenter = a }
+                  | ArcBallController.Message.Pick a -> 
+                    { model with exploreCenter = a }
+                  | _ -> model          
           
           let cam = ArcBallController.update model.camera a
           let cam = { cam with sensitivity = smallConfig.navigationSensitivity.Get(bigConfigA) } 

@@ -134,7 +134,7 @@ module Gui =
     div [js "oncontextmenu" "event.preventDefault();"] [ 
       let style' = "color: white; font-family:Consolas; font-size:40;"
     
-      yield div [clazz "ui"; style "position: absolute; top: 300px; left: 250px; " ] [ //float:left
+      yield div [clazz "ui"; style "position: absolute; top: 15px; right: 15px; float:right" ] [ //float:left
           //arrowOverlay
           yield table [] [
               tr[][

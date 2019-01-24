@@ -159,7 +159,7 @@ module ViewerApp =
                     let (refSystem',_)= 
                         ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
                     let navigation' = 
-                        Navigation.update m.scene.config m.scene.referenceSystem navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick fullBb.Center))
+                        Navigation.update m.scene.config m.scene.referenceSystem navConf false m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick fullBb.Center))
                     { m with scene = { m.scene with referenceSystem = refSystem'; navigation = navigation'; firstImport = false }} |> updateCameraUp |> lookAtBoundingBox v.globalBB 
                   | _-> 
                     let refAction = ReferenceSystemApp.Action.UpdateUpNorth(fullBb.Center)
@@ -285,7 +285,7 @@ module ViewerApp =
                 let c   = m.scene.config
                 let ref = m.scene.referenceSystem
                 let navigation' = 
-                    Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick p))
+                    Navigation.update c ref navConf true m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick p))
                 { m with scene = {m.scene with navigation = navigation'; } }
             | Interactions.PlaceRover ->
                 let ref = m.scene.referenceSystem 
@@ -308,7 +308,7 @@ module ViewerApp =
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
                let ref = m.scene.referenceSystem
-               let nav = Navigation.update c ref navConf m.scene.navigation msg               
+               let nav = Navigation.update c ref navConf true m.scene.navigation msg               
 
                //m.scene.navigation.camera.view.Location.ToString() |> NoAction |> ViewerAction |> mailbox.Post
 
@@ -444,7 +444,7 @@ module ViewerApp =
                 let worker =    
                     proclist {
                         yield UpdateUserFeedback ""
-                        yield UpdateUserFeedback "Import OPCs..."
+                        yield UpdateUserFeedback "Importing OPCs..."
                         yield ImportDiscoveredSurfaces sl
                         
                         do! Proc.Sleep 5000
