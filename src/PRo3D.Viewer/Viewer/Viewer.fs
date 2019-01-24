@@ -39,6 +39,28 @@ open Aardium
 //open Viewer.Mutable.ModelModule.Lens
 //open Mutable.AnnotationGroupModule.Lens
  
+type UserFeedback<'a> = {
+  id      : string
+  text    : string
+  timeout : int
+  msg     : 'a
+}
+
+module UserFeedback =
+
+  let createWorker (feedback : UserFeedback<'a>) =
+    proclist {
+      yield UpdateUserFeedback ""
+      yield UpdateUserFeedback feedback.text
+      yield feedback.msg
+      
+      do! Proc.Sleep feedback.timeout
+      yield ThreadsDone feedback.id
+    }
+
+  let queueFeedback fb m =
+    { m with scene = { m.scene with feedbackThreads = ThreadPool.add fb.id (fb |> createWorker) m.scene.feedbackThreads }}
+
 module ViewerApp =    
 
     type muh = {
@@ -285,7 +307,7 @@ module ViewerApp =
                 let c   = m.scene.config
                 let ref = m.scene.referenceSystem
                 let navigation' = 
-                    Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick p))
+                    Navigation.update c ref navConf true m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick p))
                 { m with scene = {m.scene with navigation = navigation'; } }
             | Interactions.PlaceRover ->
                 let ref = m.scene.referenceSystem 
@@ -308,9 +330,9 @@ module ViewerApp =
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
                let ref = m.scene.referenceSystem
-               let nav = Navigation.update c ref navConf m.scene.navigation msg               
+               let nav = Navigation.update c ref navConf true m.scene.navigation msg               
 
-//               m.scene.navigation.camera.view.Location.ToString() |> NoAction |> ViewerAction |> mailbox.Post
+               //m.scene.navigation.camera.view.Location.ToString() |> NoAction |> ViewerAction |> mailbox.Post
 
                m 
                  |> Lenses.set _navigation nav
@@ -425,9 +447,11 @@ module ViewerApp =
                         let m = Scene.import' runtime signature surfaces m 
                         updateSceneWithNewSurface m 
             | ImportDiscoveredSurfaces sl,_,_ -> 
+                //"" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match sl with
                     | [] -> m
                     | paths ->
+                        //"Import OPCs..." |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                         let selectedPaths = paths |> List.choose Files.tryDirectoryExists
                         let surfacePaths = 
                               selectedPaths
@@ -441,6 +465,18 @@ module ViewerApp =
 
                         let m = Scene.import' runtime signature surfaces m 
                         updateSceneWithNewSurface m 
+
+            | ImportDiscoveredSurfacesThreads sl,_,_ -> 
+                
+                let feedback = {
+                  id      = System.Guid.NewGuid().ToString()
+                  text    = "Importing OPCs..."
+                  timeout = 5000
+                  msg     = (ImportDiscoveredSurfaces sl)
+                }
+                
+                m |> UserFeedback.queueFeedback feedback
+
             | ImportObject sl,_,_ -> 
                 match sl with
                     | [] -> m
@@ -588,6 +624,7 @@ module ViewerApp =
                     | false -> m
                 
             | SaveScene s, _,_ -> 
+                "" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match m.scene.scenePath with
                     | None ->                        
                         match s.IsEmptyOrNull() with
@@ -596,9 +633,11 @@ module ViewerApp =
                     | Some path -> 
                         saveSceneAndAnnotations path m                                     
             | SaveAs s,_,_ ->
+                "" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match s.IsEmptyOrNull() with
                     | true -> m
                     | _  -> saveSceneAndAnnotations s m
+                            
             | OpenScene sl,_,_ ->
                 match sl.Length < 1 with
                     | true -> m
@@ -635,10 +674,25 @@ module ViewerApp =
               let m =
                 match (m.ctrlFlag, k, m.scene.scenePath) with
                 | (true, Aardvark.Application.Keys.S, Some path) -> 
-                  { (saveSceneAndAnnotations path m) with ctrlFlag = false }   
+                  let feedback = {
+                    id      = System.Guid.NewGuid().ToString()
+                    text    = "scene saved"
+                    timeout = 3000
+                    msg     = ViewerAction.NoAction ""
+                  }
+                  { (saveSceneAndAnnotations path m) with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
                 | (true, Aardvark.Application.Keys.S, None) -> 
-                   Log.error "please use \"save\" in the menu to save the scene";
-                   { m with ctrlFlag = false }   // (saveSceneAndAnnotations p m)
+                   //Log.error "please use \"save\" in the menu to save the scene";
+
+                  let feedback = {
+                    id      = System.Guid.NewGuid().ToString()
+                    text    = "please use \"save\" in the menu to save the scene"
+                    timeout = 3000
+                    msg     = ViewerAction.NoAction ""
+                  }
+                                  
+                  { m with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
+                    // (saveSceneAndAnnotations p m)
                 |_-> m
                              
               let m =
@@ -813,6 +867,15 @@ module ViewerApp =
                 let cont = addDockElement m.scene.dockConfig.content de
                 let dockconfig = config {content(cont);appName "PRo3D"; useCachedConfig false }
                 { m with scene = { m.scene with dockConfig = dockconfig; closedPages = closedPages } }
+            | UpdateUserFeedback s,_,_ ->   { m with scene = { m.scene with userFeedback = s } }
+            //| StartImportMessaging sl,_,_ -> 
+            //    sl |> ImportDiscoveredSurfaces |> ViewerAction |> mailbox.Post
+            //    { m with scene = { m.scene with userFeedback = "Import OPCs..." } }
+            | Logging (text,message),_,_ ->  
+              message |> MailboxAction.ViewerAction |> mailbox.Post
+              { m with scene = { m.scene with userFeedback = text } }
+            | ThreadsDone id,_,_ ->  
+              { m with scene = { m.scene with userFeedback = ""; feedbackThreads = ThreadPool.remove id m.scene.feedbackThreads} }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -1005,6 +1068,7 @@ module ViewerApp =
                         ]
                     }
                 )
+        
 
         let topMenuItems = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
@@ -1022,6 +1086,9 @@ module ViewerApp =
              Html.Layout.horizontal [
                Html.Layout.boxH [ scenepath ]
              ] 
+             //Html.Layout.horizontal [
+             //  Html.Layout.boxH [ Incremental.text (m.scene.userFeedback) ]
+             //] 
         ]        
 
         let topMenu =
@@ -1082,6 +1149,7 @@ module ViewerApp =
                       div [style "background:#000;"] [
                           control
                           Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
+                          Viewer.Gui.textOverlaysUserFeedback m.scene
                           dnsColorLegend
                           scalarsColorLegend ]
                   ]                
@@ -1132,7 +1200,7 @@ module ViewerApp =
                   |> ThreadPool.map Navigation.ArcBallAction |> ThreadPool.map NavigationMessage
             | _ -> failwith "invalid nav mode"
          
-        unionMany [drawing; animation; nav]
+        unionMany [drawing; animation; nav; m.scene.feedbackThreads]
         
     let loadWaypoints m = 
       match Serialization.fileExists "./waypoints.wps" with
