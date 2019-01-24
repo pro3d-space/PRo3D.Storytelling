@@ -92,6 +92,7 @@ type Surface = {
     surfaceType     : SurfaceType     
 
     colorCorrection : ColorCorrection
+    homePosition    : Option<CameraView>
     
 }
 

@@ -144,6 +144,7 @@ module Sg =
             surfaceType = stype
     
             colorCorrection = Init.initColorCorrection
+            homePosition = None
         }       
 
     /// creates a surface from opc folder path
@@ -174,6 +175,7 @@ module Sg =
             surfaceType = stype
     
             colorCorrection = Init.initColorCorrection
+            homePosition = None
         }       
     
     let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,KdTrees.Level0KdTree>) = 
@@ -216,3 +218,25 @@ module Sg =
           |> HMap.ofList       
     
       sgSurfaces
+    
+    let viewHomePosition (model:MSurfaceModel) =
+        let point = 
+            aset{
+                let! guid = model.surfaces.singleSelectLeaf
+            
+                match guid with
+                    | Some i -> 
+                        let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                        let! surf = leaf 
+                        let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
+                        let! hpos = x.homePosition
+                        match hpos with
+                            | Some p -> yield PRo3D.Sg.dots (AList.single p.Location) (Mod.constant C4b.Yellow)
+                            | None -> yield Aardvark.UI.Extensions.Sg.empty
+                    | None -> yield Aardvark.UI.Extensions.Sg.empty
+            }|> Aardvark.UI.``F# Sg``.Sg.set
+        Aardvark.UI.``F# Sg``.Sg.ofList [point]
+        
+            
+                                  
+

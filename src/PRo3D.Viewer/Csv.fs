@@ -46,6 +46,7 @@ module Csv =
 
         text          : string
         groupName     : string
+        surfaceName   : string
 
         x             : double
         y             : double
@@ -126,6 +127,7 @@ module Csv =
 
         text          = a.text;
         groupName     = lookUp |> HMap.find a.key
+        surfaceName   = a.surfaceName
 
         x             = c.X;
         y             = c.Y;

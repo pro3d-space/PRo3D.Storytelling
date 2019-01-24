@@ -297,7 +297,7 @@ module ViewerApp =
             //| Interactions.AlignPick -> 
             //    { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
             | Interactions.PlaceSurface -> 
-                { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
+                { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath m.scene.navigation.camera.view }}
            // | Interactions.PickAnnotation -> m
             | _ -> m
 
@@ -346,20 +346,28 @@ module ViewerApp =
                         DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing msg
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
-                    let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
+                    let view = m.scene.navigation.camera.view
+                    let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath view
                     let animation = 
                           match msg with
                             | SurfaceApp.Action.FlyToSurface id -> 
-                                let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
-                                match surf with
-                                    | Some s ->
-                                            let bb = s.globalBB
-                                            let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
-                                            let animationMessage = 
-                                                animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
-                                            let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                                            a'
-                                    | None -> m.animations
+                                let surface = m.scene.surfacesModel.surfaces.flat |> HMap.find id |> Leaf.toSurface 
+                                match surface.homePosition with
+                                    | Some hp ->
+                                        let animationMessage = 
+                                            animateFowardAndLocation hp.Location hp.Forward 2.0 "ForwardAndLocation2s"
+                                        AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                                    | None ->
+                                        let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
+                                        match surf with
+                                            | Some s ->
+                                                    let bb = s.globalBB
+                                                    let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
+                                                    let animationMessage = 
+                                                        animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                                                    let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                                                    a'
+                                            | None -> m.animations
                             | _-> m.animations
                            
                     { m with scene = { m.scene with surfacesModel = s}; animations = animation}
@@ -885,7 +893,10 @@ module ViewerApp =
                 |> Sg.map ReferenceSystemMessage  
 
             let exploreCenter =
-                Navigation.Sg.view m.scene.navigation            
+                Navigation.Sg.view m.scene.navigation 
+                
+            let homePosition =
+                Surfaces.Sg.viewHomePosition m.scene.surfacesModel
           
             
             //let controller = 
@@ -928,7 +939,7 @@ module ViewerApp =
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
                         
-            [annos; exploreCenter; refSystem; viewPlans] |> Sg.ofList // (*;orientationCube*)
+            [annos; exploreCenter; refSystem; viewPlans; homePosition] |> Sg.ofList // (*;orientationCube*)
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          

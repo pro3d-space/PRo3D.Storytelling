@@ -128,6 +128,7 @@ module Surface =
         | PlaceSurface              of V3d
         | ScalarsColorLegendMessage of FalseColorLegendApp.Action
         | ColorCorrectionMessage    of ColorCorrectionProperties.Action
+        | SetHomePosition           //of Guid*CameraView
 
     let computeIndices (size:V2i)(invalids : int[]) : int[] =
       CSharpUtils.IndexComputation.ComputeIndexArray(size,invalids)
@@ -250,14 +251,17 @@ module Surface =
       //this does only update surfaces ... not kdtrees or sgs !!!!             
       { model with surfaces = { model.surfaces with flat = flat' } }
 
-    let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
+    let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) (view:CameraView) = 
       match action with
         | SurfacePropertiesMessage msg ->                
             let m = 
               match model.surfaces.singleSelectLeaf with
                 | Some s -> 
-                  let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface                        
-                  let s' = SurfaceProperties.update surface msg
+                  let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface 
+                  let s' = 
+                      match msg with
+                        | SurfaceProperties.Action.SetHomePosition -> {surface with homePosition = Some view}
+                        | _ -> SurfaceProperties.update surface msg
                   model |> SurfaceModel.updateSingleSurface s'                        
                 | None -> model
             match msg with
