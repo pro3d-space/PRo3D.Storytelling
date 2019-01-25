@@ -126,7 +126,7 @@ module Csv =
         sumOfSquares = dnsResults.errorSos
 
         text          = a.text;
-        groupName     = lookUp |> HMap.find a.key
+        groupName     = lookUp |> HMap.tryFind a.key |> Option.defaultValue("")
         surfaceName   = a.surfaceName
 
         x             = c.X;
