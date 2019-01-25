@@ -381,7 +381,12 @@ module DrawingApp =
             |> ASet.map(fun (_,a) -> 
               let c = UI.mkColor model.annotations a
               let picked = UI.isSingleSelect model.annotations a
-              Sg.finishedAnnotation a c config view (a.geometry |> Mod.map(function | Geometry.Point -> true | _ -> false)) picked)
+              let showPoints = 
+                a.geometry 
+                  |> Mod.map(function | Geometry.Point | Geometry.DnS -> true | _ -> false)
+
+              Sg.finishedAnnotation a c config view showPoints picked
+              )
             |> Sg.set               
                             
         let overlay = 
@@ -391,7 +396,9 @@ module DrawingApp =
             Sg.drawWorkingAnnotation model.working
           ]
 
-        let depthTest = annoSet |> ASet.map(fun (_,a) -> Sg.finishedAnnotationDiscs a config model.colorLegend view) |> Sg.set
+        let depthTest = 
+          annoSet 
+            |> ASet.map(fun (_,a) -> Sg.finishedAnnotationDiscs a config model.colorLegend view) |> Sg.set
 
         (overlay, depthTest)
             

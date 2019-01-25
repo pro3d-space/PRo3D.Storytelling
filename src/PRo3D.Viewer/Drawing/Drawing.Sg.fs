@@ -30,6 +30,8 @@ open PRo3D.Groups
 open MBrace.FsPickler.Json   
 
 module Sg =                             
+  open PRo3D.DrawingUtilities
+
   //open PRo3D.Surfaces.Mutable.SgSurfaceModule
 
   let discISg color size height trafo =
@@ -75,13 +77,18 @@ module Sg =
           let center = anno.points |> AList.toMod |> Mod.map (fun list -> list.[PList.count list / 2])
           
           let color = FalseColorLegendApp.Draw.getColorDnS cl x.dipAngle
-                                                                                                                        
-          let lengthFactor =             
-            anno.results 
-              |> Mod.bind(fun y ->
-                match y with
-                | Some k -> k.length |> Mod.map(fun y -> y / 3.0 )
-                | None -> Mod.constant 1.0)
+               
+          let lengthFactor = 
+            anno.points 
+              |> AList.toMod 
+              |> Mod.map(fun x -> (x.AsList |> Calculations.getDistance) / 3.0)
+
+          //let lengthFactor =             
+          //  anno.results 
+          //    |> Mod.bind(fun y ->
+          //      match y with
+          //      | Some k -> k.length |> Mod.map(fun y -> y / 3.0 )
+          //      | None -> Mod.constant 1.0)
                     
           let discRadius = conf.dnsPlaneSize |> Mod.map2 (*) lengthFactor
           let posTrafo = center |> Mod.map Trafo3d.Translation
@@ -93,16 +100,13 @@ module Sg =
           yield discISg color discRadius (discRadius |> Mod.map(fun d -> d * 0.01)) discTrafo
 
           let lineLength = conf.arrowLength |> Mod.map2 (*) lengthFactor //discRadius |> Mod.map((*) 1.5)
-     //     let size = Sg.computeInvariantScale cam conf.nearPlane center lineLength (Mod.constant 60.0)
           
           let coneHeight = lineLength |> Mod.map((*) 0.2) //lineLength
           let coneRadius = coneHeight |> Mod.map((*) 0.3)
 
           // dip arrow       
-
           let! lineLength' = lineLength
           let! center'     = center
-          //let! size'       = size
 
           let! dip = x.dipDirection
           let dipLine = 
@@ -110,8 +114,6 @@ module Sg =
                 yield center'
                 yield center' + dip.Normalized * lineLength'
             }
-
-//          let p0 = center' + dip.Normalized * lineLength'
           
           yield Sg.scaledLines dipLine color conf.arrowThickness posTrafo 
 
@@ -284,7 +286,7 @@ module Sg =
         //     |> Sg.uniform "LineWidth" width
         //     |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
              
-        let mask =
+        let mask = //TODO LF ... remove duplicate code in outline point and outline line ... make reusable
             sg
             |> Sg.noEvents
             |> Sg.pass pass0
@@ -318,13 +320,15 @@ module Sg =
        
         Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents 
 
+  //TODO LF ... signature implies that multiple points can be outlined, but inside only the first is taken. ... also has 3 unused parameters
+  //always imagine somebody else will use your functions
   let outlinePoint (points : alist<V3d>) (v:int) (color:IMod<C4b>) (trafo : IMod<Trafo3d>) (width : IMod<float>) (id: IMod<Guid>) =
     let p = 
         points
         |> AList.toMod
         |> Mod.map( fun x -> x.AsArray.[0])
         
-    let sg = Sg.mkDotISg color (Mod.constant 5.0) p
+    let sg = Sg.mkDotISg color (Mod.constant 5.0) p //TODO LF ... why not use Sg.dots here
     let sgo = Sg.mkDotISg color (outlineSize (Mod.constant 5.0)) p
     let regular = 
         sg
@@ -361,10 +365,11 @@ module Sg =
             }
     Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents //regular; mask; 
 
+  //TODO LF ... make a nice enum/union type for v, what is v?  
   let outline (points : alist<V3d>) (v:int) (color:IMod<C4b>) (trafo : IMod<Trafo3d>) (width : IMod<float>) (id: IMod<Guid>) =
-        match (points |> AList.toArray).Length with
-        | 0  -> Sg.empty //
-        | 1 -> outlinePoint points v color trafo (Mod.constant 5.0) id
+        match (points |> AList.toArray).Length with //TODO LF ... very dangerous, should be IMod .. Alist is of variable length
+        | 0  -> Sg.empty 
+        | 1 -> outlinePoint points v color trafo (Mod.constant 5.0) id 
         | _ -> outlineLine points v color trafo width id
 
   let drawWorkingAnnotation (anno : IMod<Option<MAnnotation>>)  = 
@@ -433,11 +438,11 @@ module Sg =
         aset
             {
                 let! picked = picked
-                match picked with
+                match picked with //TODO LF ... if then else is okay for bools
                     | true -> yield outline points 1 c anno.modelTrafo anno.thickness.value (anno.key |> Mod.constant)
                     |_-> yield pickingLine points c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
             } |> Sg.set
-
+     
       Sg.ofList [
           //Sg.lines points c anno.thickness.value anno.modelTrafo
           pickingLines
