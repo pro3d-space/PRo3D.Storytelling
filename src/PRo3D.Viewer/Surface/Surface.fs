@@ -130,10 +130,9 @@ module Surface =
         | ColorCorrectionMessage    of ColorCorrectionProperties.Action
         | SetHomePosition           //of Guid*CameraView
 
-    let computeIndices (size:V2i)(invalids : int[]) : int[] =
-      CSharpUtils.IndexComputation.ComputeIndexArray(size,invalids)
     
-    let intersectKdTrees' = KdTrees.intersectKdTrees computeIndices
+    
+   // let intersectKdTrees' points triangleSize = KdTrees.intersectKdTrees (computeIndices triangleSize points) triangleSize
 
     let doKdTreeIntersection (m : SurfaceModel) (r : FastRay3d) cache : option<float * PRo3D.Surfaces.Surface> * hmap<_,_> = 
         let mutable cache = cache
@@ -171,7 +170,7 @@ module Surface =
                                     //Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                                             
                                     let ray = r.Ray.Transformed(surf.preTransform.Backward) |> FastRay3d  //combine pre and current transform                     
                                     let hit, c = 
-                                      kd |> intersectKdTrees' bb surf cache ray                     
+                                      kd |> DebugKdTreesX.intersectKdTrees bb surf cache ray
                                     cache <- c
                                     hit
                                     )

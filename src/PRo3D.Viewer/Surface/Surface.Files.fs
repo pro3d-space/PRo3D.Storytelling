@@ -25,7 +25,50 @@ module DebugKdTreesX =
     open MBrace.FsPickler
     open Aardvark.Geometry
     
-    let loadObjectSet (cache : hmap<string, ConcreteKdIntersectionTree>) (computeIndices) (lvl0Tree : Level0KdTree) =       
+    //let computeIndices (triangleSize : float) (points) (size:V2i)(invalids : int[])  : int[] =            
+    //  match triangleSize with
+    //  | x when x < Double.PositiveInfinity && x > 0.0000001  -> 
+    //    CSharpUtils.IndexComputation.ComputeIndices(size,invalids, points, x |> float32)
+    //  | _ -> CSharpUtils.IndexComputation.ComputeIndexArray(size,invalids)
+
+    let isNotOversized (size) (triangle:Triangle3d) =      
+      ((V3d.Distance(triangle.P0, triangle.P1) < size) && 
+        (V3d.Distance(triangle.P0, triangle.P2) < size) &&
+        (V3d.Distance(triangle.P1, triangle.P2) < size))
+
+    let getInvalidIndices3f (positions : V3f[]) =
+        positions |> List.ofArray |> List.mapi (fun i x -> if x.AnyNaN then Some i else None) |> List.choose id    
+
+    let loadTriangles (maxTriangleSize : float) (kd : LazyKdTree) =
+        
+        let positions = kd.objectSetPath |> Aara.fromFile<V3f>
+                
+        let invalidIndices = getInvalidIndices3f positions.Data |> List.toArray
+        let size = positions.Size.XY.ToV2i()
+        let indices = CSharpUtils.IndexComputation.ComputeIndexArray(size,invalidIndices);
+          //match maxTriangleSize with
+          //| x when x < Double.PositiveInfinity && x > 0.0000001  ->
+          //  CSharpUtils.IndexComputation.ComputeIndices(size,invalidIndices, positions.Data, x |> float32)
+          //| _ ->
+          //  CSharpUtils.IndexComputation.ComputeIndexArray(size,invalidIndices);
+        
+        Log.warn "num of inv_indices: %A" invalidIndices.Length
+        Log.warn "num of indices: %A" indices.Length
+               
+        let data = 
+            positions.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
+
+        let triangles =             
+          indices 
+            |> Seq.map(fun x -> data.[x])
+            |> Seq.chunkBySize 3
+            |> Seq.map(fun x -> Triangle3d(x))
+            |> Seq.filter(fun x -> (triangleIsNan x |> not)) |> Seq.toArray
+            |> TriangleSet
+    
+        triangles
+
+    let loadObjectSet (cache : hmap<string, ConcreteKdIntersectionTree>) (triangleSize) (lvl0Tree : Level0KdTree) =       
       
       match lvl0Tree with
         | InCoreKdTree kd -> 
@@ -43,8 +86,12 @@ module DebugKdTreesX =
               | None ->                                     
                 Log.line "cache miss %A- loading kdtree" kd.boundingBox
             
-                let mutable tree = KdTrees.loadKdtree kd.kdtreePath                                    
-                tree.KdIntersectionTree.ObjectSet <- (kd |> loadTriangles computeIndices)
+                let mutable tree = KdTrees.loadKdtree kd.kdtreePath      
+                let triangles = (kd |> loadTriangles triangleSize)
+
+                Log.warn "tree: %A; triangles: %A " kd.objectSetPath triangles.ObjectCount
+
+                tree.KdIntersectionTree.ObjectSet <- triangles
             
                 if(tree == null) then
                   Log.line "help"
@@ -56,17 +103,27 @@ module DebugKdTreesX =
                 tree, HMap.empty // (HMap.add key tree cache)
           kdTree, cache
 
-    let intersectKdTrees (computeIndices) bb (hitObject : 'a) (cache : hmap<string, ConcreteKdIntersectionTree>) (ray : FastRay3d) (kdTreeMap: hmap<Box3d, KdTrees.Level0KdTree>) = 
+    let getTriangle (set : TriangleSet) (index : int) : Triangle3d =
+      let pi = index * 3
+      let pl = set.Position3dList
+      Triangle3d(pl.[pi], pl.[pi+1], pl.[pi + 2])
 
-        let kdtree, c = kdTreeMap |> HMap.find bb |> loadObjectSet cache computeIndices
+    let intersectKdTrees bb (hitObject : PRo3D.Surfaces.Surface) (cache : hmap<string, ConcreteKdIntersectionTree>) (ray : FastRay3d) (kdTreeMap: hmap<Box3d, KdTrees.Level0KdTree>) = 
+
+        let kdtree, c = kdTreeMap |> HMap.find bb |> loadObjectSet cache hitObject.triangleSize.value
 
         let kdi = kdtree.KdIntersectionTree 
         let mutable hit = ObjectRayHit.MaxRange
-                
-        let objFilter a b = true
+                        
         try
-             // let hitFilter a b c d = false
-          if kdi.Intersect(ray, Func<_,_,_>(objFilter), null, 0.0, Double.MaxValue, &hit) then
+          let hitFilter = //true means being omitted
+            fun (a:IIntersectableObjectSet) (b:int) _ _ -> 
+            let triangles = a :?> TriangleSet
+            let tooBig = b |> getTriangle triangles |> isNotOversized hitObject.triangleSize.value |> not
+            if tooBig then Log.error ("hit large triangle") else ()
+            tooBig
+
+          if kdi.Intersect(ray, null, Func<IIntersectableObjectSet,int,int, RayHit3d,bool>(hitFilter), 0.0, Double.MaxValue, &hit) then
               //let point = ray.Ray.GetPointOnRay(hit.RayHit.T)
               Some (hit.RayHit.T, hitObject),c
           else            
