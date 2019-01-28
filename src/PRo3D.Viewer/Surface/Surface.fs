@@ -50,6 +50,7 @@ module Surface =
                 globalBB    = bb
                 sceneGraph  = sg
                 picking     = Picking.PickMesh meshes
+                transformation = Init.Transformations
             }
                  
         let createSgObjects runtime signature surfaces =        
@@ -128,7 +129,8 @@ module Surface =
         | PlaceSurface              of V3d
         | ScalarsColorLegendMessage of FalseColorLegendApp.Action
         | ColorCorrectionMessage    of ColorCorrectionProperties.Action
-        | SetHomePosition           //of Guid*CameraView
+        | SetHomePosition           
+        | TranslationMessage        of TranslantionApp.Action
 
     let computeIndices (size:V2i)(invalids : int[]) : int[] =
       CSharpUtils.IndexComputation.ComputeIndexArray(size,invalids)
@@ -378,6 +380,33 @@ module Surface =
                   let s' = { surface with colorCorrection = (ColorCorrectionProperties.update surface.colorCorrection msg) }
                   model |> SurfaceModel.updateSingleSurface s'                        
                 | None -> model
+            m
+        | TranslationMessage msg ->  
+           
+            let m = 
+                match model.surfaces.singleSelectLeaf with
+                    | Some id -> 
+                      match model.surfaces.flat.TryFind(id) with 
+                      | Some s -> 
+                         let sgs' = 
+                             model.sgSurfaces
+                             |> HMap.update id (fun x -> 
+                               match x with 
+                               | Some sg ->  
+                                let transformation = (TranslantionApp.update sg.transformation msg) 
+                                let trafo = transformation.trafo
+                                let trafo' = { sg.trafo with previewTrafo = sg.trafo.previewTrafo * trafo }
+                                //{ sg with trafo = trafo'; globalBB = (sg.globalBB.Transformed trafo'.previewTrafo); transformation = transformation }
+                                { sg with transformation = (TranslantionApp.update sg.transformation msg) }
+                               | None   -> failwith "surface not found")                             
+                         { model with sgSurfaces = sgs'} 
+                      | None -> model
+                    | None -> model
+              //match model.surfaces.singleSelectLeaf with
+              //  | Some s -> 
+              //    let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface
+              //    let s' = { surface with transformation = (TranslantionApp.update surface.transformation msg) }
+                 //model |> SurfaceModel.updateSingleSurface s            //  | None -> model
             m
         | _ -> model
 
@@ -644,6 +673,17 @@ module Surface =
             return (Groups.viewUI model.surfaces|> UI.map GroupsMessage)
         } 
 
+    let viewTranslationTools (model:MSurfaceModel) =
+        adaptive {
+            let! guid = model.surfaces.singleSelectLeaf
+            
+            match guid with
+                | Some i -> 
+                    let! sg = model.sgSurfaces |> AMap.find i 
+                    return TranslantionApp.UI.view sg.transformation |> UI.map TranslationMessage
+                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map TranslationMessage 
+        }                          
+
     let viewColorCorrectionTools (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
@@ -743,7 +783,10 @@ module Surface =
             yield GuiEx.accordion "Actions" "Asterisk" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
                 ]  
-                
+            yield GuiEx.accordion "Translation" "expand arrows alternate " false [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle(viewTranslationTools model))
+                ]  
+               
             yield GuiEx.accordion "Color Correction" "file image outline" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewColorCorrectionTools model))] 
 

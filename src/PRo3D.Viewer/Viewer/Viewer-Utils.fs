@@ -213,9 +213,11 @@ module ViewerUtils =
                 let! s = surf
                 let! sc = s.scaling.value
                 let! t = s.preTransform
+                //let! tr = surface.transformation.trafo
                 return (Trafo3d.Scale(sc) * t)
             }
-        
+
+       
         let test = 
             aset {
                 let sg =  

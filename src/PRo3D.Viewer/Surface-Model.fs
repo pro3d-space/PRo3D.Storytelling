@@ -14,6 +14,7 @@ open PRo3D
 open Aardvark.UI.Trafos
 open Aardvark.SceneGraph.IO.Loader
 open Aardvark.VRVis.Opc
+open PRo3D.ReferenceSystem
 
 
 [<DomainType>]
@@ -54,6 +55,19 @@ type AttributeLayer =
 //    attributeLayers : list<AttributeLayer>
 //}
 
+//[<DomainType>]
+//type Translation = { 
+//    useTranslationArrows  : bool
+//    translation     : V3dInput
+//}
+
+[<DomainType>]
+type Transformations = { 
+    useTranslationArrows  : bool
+    translation     : V3dInput
+    trafo           : Trafo3d
+}
+
 type SurfaceType = 
     | SurfaceOPC = 0
     | SurfaceOBJ = 1
@@ -93,6 +107,7 @@ type Surface = {
 
     colorCorrection : ColorCorrection
     homePosition    : Option<CameraView>
+    //transformation  : Transformations
     
 }
 
@@ -108,6 +123,7 @@ type SgSurface = {
     globalBB    : Box3d
     sceneGraph  : ISg
     picking     : Picking
+    transformation  : Transformations
 }
 
 module Init =
@@ -186,6 +202,26 @@ module Init =
         useColor     = false
         useGrayscale = false
     } 
+
+    let translationInput = {
+        value   = 100.0
+        min     = -10000000.0
+        max     = +10000000.0
+        step    = 100.0
+        format  = "{0:0}"
+    }
+
+    let initTranslation (v : V3d) = {
+        x = { translationInput with value = v.X }
+        y = { translationInput with value = v.Y }
+        z = { translationInput with value = v.Z }
+        value = v    
+    }
+    let Transformations = {
+        useTranslationArrows = false
+        translation  = initTranslation (V3d(1000.0))
+        trafo = Trafo3d.Identity
+    }
 
 
 
