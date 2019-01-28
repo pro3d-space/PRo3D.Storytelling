@@ -122,13 +122,12 @@ module Init =
 
     let triangleSize =
         {
-            value = 100.0
+            value = 1.0
             min = 0.0
             max = 100.0
             step = 0.01
             format = "{0:0.000}"
         }
-
 
     let priority = 
         {

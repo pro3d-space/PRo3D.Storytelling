@@ -431,6 +431,7 @@ type ViewConfigModel = {
     nearPlane               : NumericInput
     farPlane                : NumericInput
     navigationSensitivity   : NumericInput
+    importTriangleSize      : NumericInput
     arrowLength             : NumericInput
     arrowThickness          : NumericInput
     dnsPlaneSize            : NumericInput
@@ -482,6 +483,15 @@ module ViewConfigModel =
         step    = 0.05
         format  = "{0:0.00}"
     }
+
+    let initImportTriangleSize =
+        {
+            value = 1000.0
+            min = 0.0
+            max = 1000.0
+            step = 0.01
+            format = "{0:0.000}"
+        }
     
     let initial = {
         nearPlane = initNearPlane
@@ -491,7 +501,7 @@ module ViewConfigModel =
         arrowThickness = initArrowThickness
         dnsPlaneSize = initPlaneSize
         lodColoring = false
-        //planet = Planet.Mars
+        importTriangleSize = initImportTriangleSize        
         drawOrientationCube = false
     }
 

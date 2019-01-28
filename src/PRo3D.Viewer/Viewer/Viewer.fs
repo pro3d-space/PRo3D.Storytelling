@@ -443,13 +443,14 @@ module ViewerApp =
                 let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
                 { m with drawing = { m.drawing with colorLegend = cm } }
             | ImportSurface sl,_,_ -> 
+                
                 match sl with
                     | [] -> m
                     | paths ->
                         let surfaces = 
                             paths 
                                 |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
-                                |> List.map (Sg.mk SurfaceType.SurfaceOPC)
+                                |> List.map (Sg.mk SurfaceType.SurfaceOPC m.scene.config.importTriangleSize.value)
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m 
@@ -468,7 +469,7 @@ module ViewerApp =
                         let surfaces = 
                             surfacePaths 
                                 |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
-                                |> List.map (Sg.mk SurfaceType.SurfaceOPC)
+                                |> List.map (Sg.mk SurfaceType.SurfaceOPC m.scene.config.importTriangleSize.value)
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m 
@@ -492,7 +493,7 @@ module ViewerApp =
                         let p = paths.[0]
                         let objects = 
                             [p] 
-                                |> List.map (Sg.mk SurfaceType.SurfaceOBJ)
+                                |> List.map (Sg.mk SurfaceType.SurfaceOBJ m.scene.config.importTriangleSize.value)
                                 |> PList.ofList
 
                         let m = Scene.importObj runtime signature objects m

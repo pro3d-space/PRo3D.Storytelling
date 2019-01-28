@@ -113,42 +113,9 @@ module Sg =
             |> List.map(fun d -> d.tree |> QTree.getRoot)                  
             |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
             |> Box3d.ofSeq
-
-
+    
     /// creates a surface from opc folder path
-    let mk1 (stype:SurfaceType) (opcPaths:List<string>) (path:string)  =                 
-    
-        let test = IO.Directory.GetParent opcPaths.[0]
-        let names = opcPaths |> List.map ( fun x -> Path.GetFileName x)         
-        {
-            guid            = Guid.NewGuid()
-            name            = IO.Path.GetFileName path
-            importPath      = test.FullName
-            opcNames        = names
-            opcPaths        = opcPaths 
-            fillMode        = FillMode.Fill
-            cullMode        = CullMode.None
-            isVisible       = true
-            isActive        = true
-            relativePaths   = false
-            quality         = Init.quality
-            priority        = Init.priority
-            scaling         = Init.scaling
-            preTransform    = Trafo3d.Identity            
-            scalarLayers    = hmap.Empty //PList.empty
-            selectedScalar  = None
-            textureLayers   = PList.empty
-            selectedTexture = None            
-    
-            triangleSize = Init.triangleSize
-            surfaceType = stype
-    
-            colorCorrection = Init.initColorCorrection
-            homePosition = None
-        }       
-
-    /// creates a surface from opc folder path
-    let mk (stype:SurfaceType) path =                 
+    let mk (stype:SurfaceType) (maxTriangleSize : float) path =                 
     
         let names = Files.getOPCNames path                
         {
@@ -171,7 +138,7 @@ module Sg =
             textureLayers   = PList.empty
             selectedTexture = None            
     
-            triangleSize = Init.triangleSize
+            triangleSize = { Init.triangleSize with value = maxTriangleSize }
             surfaceType = stype
     
             colorCorrection = Init.initColorCorrection

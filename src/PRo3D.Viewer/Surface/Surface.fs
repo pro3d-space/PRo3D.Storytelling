@@ -129,11 +129,7 @@ module Surface =
         | ScalarsColorLegendMessage of FalseColorLegendApp.Action
         | ColorCorrectionMessage    of ColorCorrectionProperties.Action
         | SetHomePosition           //of Guid*CameraView
-
-    
-    
-   // let intersectKdTrees' points triangleSize = KdTrees.intersectKdTrees (computeIndices triangleSize points) triangleSize
-
+           
     let doKdTreeIntersection (m : SurfaceModel) (r : FastRay3d) cache : option<float * PRo3D.Surfaces.Surface> * hmap<_,_> = 
         let mutable cache = cache
         let activeSgSurfaces = 

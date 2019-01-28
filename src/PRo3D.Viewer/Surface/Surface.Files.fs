@@ -24,34 +24,18 @@ module DebugKdTreesX =
     open Aardvark.VRVis.Opc.KdTrees
     open MBrace.FsPickler
     open Aardvark.Geometry
-    
-    //let computeIndices (triangleSize : float) (points) (size:V2i)(invalids : int[])  : int[] =            
-    //  match triangleSize with
-    //  | x when x < Double.PositiveInfinity && x > 0.0000001  -> 
-    //    CSharpUtils.IndexComputation.ComputeIndices(size,invalids, points, x |> float32)
-    //  | _ -> CSharpUtils.IndexComputation.ComputeIndexArray(size,invalids)
-
-    let isNotOversized (size) (triangle:Triangle3d) =      
-      ((V3d.Distance(triangle.P0, triangle.P1) < size) && 
-        (V3d.Distance(triangle.P0, triangle.P2) < size) &&
-        (V3d.Distance(triangle.P1, triangle.P2) < size))
-
+   
     let getInvalidIndices3f (positions : V3f[]) =
         positions |> List.ofArray |> List.mapi (fun i x -> if x.AnyNaN then Some i else None) |> List.choose id    
 
-    let loadTriangles (maxTriangleSize : float) (kd : LazyKdTree) =
+    let loadTriangles (kd : LazyKdTree) =
         
         let positions = kd.objectSetPath |> Aara.fromFile<V3f>
                 
         let invalidIndices = getInvalidIndices3f positions.Data |> List.toArray
         let size = positions.Size.XY.ToV2i()
         let indices = CSharpUtils.IndexComputation.ComputeIndexArray(size,invalidIndices);
-          //match maxTriangleSize with
-          //| x when x < Double.PositiveInfinity && x > 0.0000001  ->
-          //  CSharpUtils.IndexComputation.ComputeIndices(size,invalidIndices, positions.Data, x |> float32)
-          //| _ ->
-          //  CSharpUtils.IndexComputation.ComputeIndexArray(size,invalidIndices);
-        
+                  
         Log.warn "num of inv_indices: %A" invalidIndices.Length
         Log.warn "num of indices: %A" indices.Length
                
@@ -68,8 +52,7 @@ module DebugKdTreesX =
     
         triangles
 
-    let loadObjectSet (cache : hmap<string, ConcreteKdIntersectionTree>) (triangleSize) (lvl0Tree : Level0KdTree) =       
-      
+    let loadObjectSet (cache : hmap<string, ConcreteKdIntersectionTree>) (lvl0Tree : Level0KdTree) =             
       match lvl0Tree with
         | InCoreKdTree kd -> 
           kd.kdTree, cache
@@ -80,27 +63,18 @@ module DebugKdTreesX =
             | None -> 
               let tree = cache |> HMap.tryFind (kd.boundingBox.ToString())
               match tree with
-              | Some t -> 
-                //Log.line "cache hit %A" kd.boundingBox
+              | Some t ->                 
                 t, cache
               | None ->                                     
                 Log.line "cache miss %A- loading kdtree" kd.boundingBox
             
                 let mutable tree = KdTrees.loadKdtree kd.kdtreePath      
-                let triangles = (kd |> loadTriangles triangleSize)
-
-                Log.warn "tree: %A; triangles: %A " kd.objectSetPath triangles.ObjectCount
-
+                let triangles = kd |> loadTriangles
+                
                 tree.KdIntersectionTree.ObjectSet <- triangles
-            
-                if(tree == null) then
-                  Log.line "help"
-
-                let key = tree.KdIntersectionTree.BoundingBox3d.ToString()
-                Log.line "%A" key
-                Log.line "%A" kd.boundingBox
-
-                tree, HMap.empty // (HMap.add key tree cache)
+                            
+                let key = tree.KdIntersectionTree.BoundingBox3d.ToString()                
+                tree, (HMap.add key tree cache)
           kdTree, cache
 
     let getTriangle (set : TriangleSet) (index : int) : Triangle3d =
@@ -108,9 +82,14 @@ module DebugKdTreesX =
       let pl = set.Position3dList
       Triangle3d(pl.[pi], pl.[pi+1], pl.[pi + 2])
 
+    let isNotOversized (size) (triangle:Triangle3d) =      
+      ((V3d.Distance(triangle.P0, triangle.P1) < size) && 
+       (V3d.Distance(triangle.P0, triangle.P2) < size) &&
+       (V3d.Distance(triangle.P1, triangle.P2) < size))
+
     let intersectKdTrees bb (hitObject : PRo3D.Surfaces.Surface) (cache : hmap<string, ConcreteKdIntersectionTree>) (ray : FastRay3d) (kdTreeMap: hmap<Box3d, KdTrees.Level0KdTree>) = 
 
-        let kdtree, c = kdTreeMap |> HMap.find bb |> loadObjectSet cache hitObject.triangleSize.value
+        let kdtree, c = kdTreeMap |> HMap.find bb |> loadObjectSet cache
 
         let kdi = kdtree.KdIntersectionTree 
         let mutable hit = ObjectRayHit.MaxRange
@@ -118,13 +97,10 @@ module DebugKdTreesX =
         try
           let hitFilter = //true means being omitted
             fun (a:IIntersectableObjectSet) (b:int) _ _ -> 
-            let triangles = a :?> TriangleSet
-            let tooBig = b |> getTriangle triangles |> isNotOversized hitObject.triangleSize.value |> not
-            if tooBig then Log.error ("hit large triangle") else ()
-            tooBig
+            let triangles = a :?> TriangleSet //TODO TO crashes if not encountering a triangleset
+            b |> getTriangle triangles |> isNotOversized hitObject.triangleSize.value |> not // = tooBig            
 
-          if kdi.Intersect(ray, null, Func<IIntersectableObjectSet,int,int, RayHit3d,bool>(hitFilter), 0.0, Double.MaxValue, &hit) then
-              //let point = ray.Ray.GetPointOnRay(hit.RayHit.T)
+          if kdi.Intersect(ray, null, Func<IIntersectableObjectSet,int,int, RayHit3d,bool>(hitFilter), 0.0, Double.MaxValue, &hit) then              
               Some (hit.RayHit.T, hitObject),c
           else            
               None,c
@@ -134,90 +110,90 @@ module DebugKdTreesX =
             Log.error "%A" e
             None,c
 
-    let loadKdTrees' (h : PatchHierarchy) (trafo:Trafo3d) (load : bool) (mode:ViewerModality) (b : BinarySerializer) : hmap<Box3d,Level0KdTree> =
+//    let loadKdTrees' (h : PatchHierarchy) (trafo:Trafo3d) (load : bool) (mode:ViewerModality) (b : BinarySerializer) : hmap<Box3d,Level0KdTree> =
                       
-          //ObjectBuilder
+//          //ObjectBuilder
   
-          let masterKdPath = 
-            mode |> ViewerModality.matchy
-              (h.kdTreeAggZero_FileAbsPath) 
-              (h.kdTreeAggZero2d_FileAbsPath)
+//          let masterKdPath = 
+//            mode |> ViewerModality.matchy
+//              (h.kdTreeAggZero_FileAbsPath) 
+//              (h.kdTreeAggZero2d_FileAbsPath)
   
-          let cacheFile = System.IO.Path.ChangeExtension(masterKdPath, ".cache")
+//          let cacheFile = System.IO.Path.ChangeExtension(masterKdPath, ".cache")
   
-          if System.IO.File.Exists(cacheFile) then
-              Log.line "Found lazy kdtree cache"
-              if load then
-                loadAs<list<Box3d*Level0KdTree>> cacheFile b |> HMap.ofList
-              else
-                HMap.empty
-          else
+//          if System.IO.File.Exists(cacheFile) then
+//              Log.line "Found lazy kdtree cache"
+//              if load then
+//                loadAs<list<Box3d*Level0KdTree>> cacheFile b |> HMap.ofList
+//              else
+//                HMap.empty
+//          else
               
-              Log.line "did not find lazy kdtree cache"
-              let patchInfos =
-                  h.tree |> QTree.getLeaves |> Seq.toList |> List.map(fun x -> x.info)
+//              Log.line "did not find lazy kdtree cache"
+//              let patchInfos =
+//                  h.tree |> QTree.getLeaves |> Seq.toList |> List.map(fun x -> x.info)
   
-              let kd0Paths = 
-                  patchInfos 
-                    |> List.map(fun x -> h.kdTree_FileAbsPath x.Name 0 mode) |> List.sort 
+//              let kd0Paths = 
+//                  patchInfos 
+//                    |> List.map(fun x -> h.kdTree_FileAbsPath x.Name 0 mode) |> List.sort 
   
-              let kd0PathsExist = 
-                  kd0Paths |> List.filter(System.IO.File.Exists) |> List.length > 0
+//              let kd0PathsExist = 
+//                  kd0Paths |> List.filter(System.IO.File.Exists) |> List.length > 0
           
-              match (System.IO.File.Exists(masterKdPath), kd0PathsExist) with
-                  | (true, false) -> 
-                       Log.line "Found master kdtree - loading incore"
-                       let tree = loadKdtree masterKdPath                     
-                       let kd = {
-                          kdTree = tree;
-                          boundingBox = tree.KdIntersectionTree.BoundingBox3d.Transformed(trafo)
-                       }
-                       HMap.add kd.boundingBox (InCoreKdTree kd) HMap.empty
-                  | (true, true) ->   
-                       Log.line "Found master kdtree and patch trees"
-                       Log.startTimed "building lazy kdtree cache"
+//              match (System.IO.File.Exists(masterKdPath), kd0PathsExist) with
+//                  | (true, false) -> 
+//                       Log.line "Found master kdtree - loading incore"
+//                       let tree = loadKdtree masterKdPath                     
+//                       let kd = {
+//                          kdTree = tree;
+//                          boundingBox = tree.KdIntersectionTree.BoundingBox3d.Transformed(trafo)
+//                       }
+//                       HMap.add kd.boundingBox (InCoreKdTree kd) HMap.empty
+//                  | (true, true) ->   
+//                       Log.line "Found master kdtree and patch trees"
+//                       Log.startTimed "building lazy kdtree cache"
                                
-                       let num = kd0Paths |> List.ofSeq |> List.length                     
+//                       let num = kd0Paths |> List.ofSeq |> List.length                     
   
-                       let bla = 
-                          kd0Paths
-                              |> List.zip patchInfos
-                              |> List.mapi(
-                                  fun i (info, kdPath) ->                                
-                                      let t = loadKdtree kdPath
-                                      let pos =
-                                        match mode with
-                                        | XYZ -> info.Positions
-                                        | SvBR -> info.Positions2d.Value
+//                       let bla = 
+//                          kd0Paths
+//                              |> List.zip patchInfos
+//                              |> List.mapi(
+//                                  fun i (info, kdPath) ->                                
+//                                      let t = loadKdtree kdPath
+//                                      let pos =
+//                                        match mode with
+//                                        | XYZ -> info.Positions
+//                                        | SvBR -> info.Positions2d.Value
   
-                                      let lazyTree : LazyKdTree = {
-                                          kdTree        = None
-                                          objectSetPath = h.opcPaths.Patches_DirAbsPath +/ info.Name +/ pos
-                                          kdtreePath    = kdPath
-                                          affine        = 
-                                            mode 
-                                              |> ViewerModality.matchy info.Local2Global info.Local2Global2d
-                                          boundingBox   = t.KdIntersectionTree.BoundingBox3d.Transformed(trafo)
-                                      }
-                                      Report.Progress(float i / float num)
+//                                      let lazyTree : LazyKdTree = {
+//                                          kdTree        = None
+//                                          objectSetPath = h.opcPaths.Patches_DirAbsPath +/ info.Name +/ pos
+//                                          kdtreePath    = kdPath
+//                                          affine        = 
+//                                            mode 
+//                                              |> ViewerModality.matchy info.Local2Global info.Local2Global2d
+//                                          boundingBox   = t.KdIntersectionTree.BoundingBox3d.Transformed(trafo)
+//                                      }
+//                                      Report.Progress(float i / float num)
   
-                                      (lazyTree.boundingBox, (LazyKdTree lazyTree))
-                              )                            
+//                                      (lazyTree.boundingBox, (LazyKdTree lazyTree))
+//                              )                            
                         
-                       Log.stop()
+//                       Log.stop()
                         
-                       bla |> save cacheFile b |> ignore
+//                       bla |> save cacheFile b |> ignore
                           
-                       if load then
-                         bla |> HMap.ofList
-                       else
-                         HMap.empty
-                  | _ ->
-                      Log.warn "Could not find level 0 kdtrees"
-                      HMap.empty
+//                       if load then
+//                         bla |> HMap.ofList
+//                       else
+//                         HMap.empty
+//                  | _ ->
+//                      Log.warn "Could not find level 0 kdtrees"
+//                      HMap.empty
       
-    let loadKdTrees (h : PatchHierarchy) (trafo:Trafo3d) (mode:ViewerModality) (b : BinarySerializer) : hmap<Box3d,Level0KdTree> =
-        loadKdTrees' (h) (trafo) (true) mode b
+//    let loadKdTrees (h : PatchHierarchy) (trafo:Trafo3d) (mode:ViewerModality) (b : BinarySerializer) : hmap<Box3d,Level0KdTree> =
+//        loadKdTrees' (h) (trafo) (true) mode b
   
 module Files = 
        open System.IO
