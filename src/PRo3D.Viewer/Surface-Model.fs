@@ -107,7 +107,7 @@ type Surface = {
 
     colorCorrection : ColorCorrection
     homePosition    : Option<CameraView>
-    //transformation  : Transformations
+    transformation  : Transformations
     
 }
 
@@ -123,7 +123,7 @@ type SgSurface = {
     globalBB    : Box3d
     sceneGraph  : ISg
     picking     : Picking
-    transformation  : Transformations
+    //transformation  : Transformations
 }
 
 module Init =
@@ -204,10 +204,10 @@ module Init =
     } 
 
     let translationInput = {
-        value   = 100.0
+        value   = 0.0
         min     = -10000000.0
         max     = +10000000.0
-        step    = 100.0
+        step    = 1.0
         format  = "{0:0}"
     }
 
@@ -219,7 +219,7 @@ module Init =
     }
     let Transformations = {
         useTranslationArrows = false
-        translation  = initTranslation (V3d(1000.0))
+        translation  = initTranslation (V3d.OOO)
         trafo = Trafo3d.Identity
     }
 

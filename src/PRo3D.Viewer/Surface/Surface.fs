@@ -50,7 +50,7 @@ module Surface =
                 globalBB    = bb
                 sceneGraph  = sg
                 picking     = Picking.PickMesh meshes
-                transformation = Init.Transformations
+                //transformation = Init.Transformations
             }
                  
         let createSgObjects runtime signature surfaces =        
@@ -130,7 +130,7 @@ module Surface =
         | ScalarsColorLegendMessage of FalseColorLegendApp.Action
         | ColorCorrectionMessage    of ColorCorrectionProperties.Action
         | SetHomePosition           
-        | TranslationMessage        of TranslantionApp.Action
+        | TranslationMessage        of TranslationApp.Action
 
     let computeIndices (size:V2i)(invalids : int[]) : int[] =
       CSharpUtils.IndexComputation.ComputeIndexArray(size,invalids)
@@ -384,29 +384,30 @@ module Surface =
         | TranslationMessage msg ->  
            
             let m = 
-                match model.surfaces.singleSelectLeaf with
-                    | Some id -> 
-                      match model.surfaces.flat.TryFind(id) with 
-                      | Some s -> 
-                         let sgs' = 
-                             model.sgSurfaces
-                             |> HMap.update id (fun x -> 
-                               match x with 
-                               | Some sg ->  
-                                let transformation = (TranslantionApp.update sg.transformation msg) 
-                                let trafo = transformation.trafo
-                                let trafo' = { sg.trafo with previewTrafo = sg.trafo.previewTrafo * trafo }
-                                //{ sg with trafo = trafo'; globalBB = (sg.globalBB.Transformed trafo'.previewTrafo); transformation = transformation }
-                                { sg with transformation = (TranslantionApp.update sg.transformation msg) }
-                               | None   -> failwith "surface not found")                             
-                         { model with sgSurfaces = sgs'} 
-                      | None -> model
-                    | None -> model
-              //match model.surfaces.singleSelectLeaf with
-              //  | Some s -> 
-              //    let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface
-              //    let s' = { surface with transformation = (TranslantionApp.update surface.transformation msg) }
-                 //model |> SurfaceModel.updateSingleSurface s            //  | None -> model
+                //match model.surfaces.singleSelectLeaf with
+                //    | Some id -> 
+                //      match model.surfaces.flat.TryFind(id) with 
+                //      | Some s -> 
+                //         let surface = s |> Leaf.toSurface
+                //         let s' = { surface with transformation = (TranslationApp.update surface.transformation msg) }
+                //         let sgs' = 
+                //             model.sgSurfaces
+                //             |> HMap.update id (fun x -> 
+                //               match x with 
+                //               | Some sg ->  
+                //                let trafo' = { sg.trafo with previewTrafo = sg.trafo.previewTrafo * s'.transformation.trafo }
+                //                { sg with trafo = trafo'; globalBB = (sg.globalBB.Transformed trafo'.previewTrafo) }
+                //               | None   -> failwith "surface not found")                             
+                //         let m' = { model with sgSurfaces = sgs'} 
+                //         m' |> SurfaceModel.updateSingleSurface s'
+                //      | None -> model
+                //    | None -> model
+              match model.surfaces.singleSelectLeaf with
+                | Some s -> 
+                  let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface
+                  let s' = { surface with transformation = (TranslationApp.update surface.transformation msg) }
+                  model |> SurfaceModel.updateSingleSurface s'            
+                | None -> model
             m
         | _ -> model
 
@@ -679,8 +680,12 @@ module Surface =
             
             match guid with
                 | Some i -> 
-                    let! sg = model.sgSurfaces |> AMap.find i 
-                    return TranslantionApp.UI.view sg.transformation |> UI.map TranslationMessage
+                    //let! sg = model.sgSurfaces |> AMap.find i 
+                    //return TranslationApp.UI.view sg.transformation |> UI.map TranslationMessage
+                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                    let! surf = leaf 
+                    let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
+                    return TranslationApp.UI.view x.transformation |> UI.map TranslationMessage
                 | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map TranslationMessage 
         }                          
 

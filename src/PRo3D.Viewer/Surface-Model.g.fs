@@ -272,6 +272,7 @@ module Mutable =
         let _surfaceType = ResetMod.Create(__initial.surfaceType)
         let _colorCorrection = MColorCorrection.Create(__initial.colorCorrection)
         let _homePosition = MOption.Create(__initial.homePosition)
+        let _transformation = MTransformations.Create(__initial.transformation)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
@@ -295,6 +296,7 @@ module Mutable =
         member x.surfaceType = _surfaceType :> IMod<_>
         member x.colorCorrection = _colorCorrection
         member x.homePosition = _homePosition :> IMod<_>
+        member x.transformation = _transformation
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.Surface) =
@@ -323,6 +325,7 @@ module Mutable =
                 ResetMod.Update(_surfaceType,v.surfaceType)
                 MColorCorrection.Update(_colorCorrection, v.colorCorrection)
                 MOption.Update(_homePosition, v.homePosition)
+                MTransformations.Update(_transformation, v.transformation)
                 
         
         static member Create(__initial : PRo3D.Surfaces.Surface) : MSurface = MSurface(__initial)
@@ -471,6 +474,12 @@ module Mutable =
                     override x.Set(r,v) = { r with homePosition = v }
                     override x.Update(r,f) = { r with homePosition = f r.homePosition }
                 }
+            let transformation =
+                { new Lens<PRo3D.Surfaces.Surface, PRo3D.Surfaces.Transformations>() with
+                    override x.Get(r) = r.transformation
+                    override x.Set(r,v) = { r with transformation = v }
+                    override x.Update(r,f) = { r with transformation = f r.transformation }
+                }
     
     
     type MSgSurface(__initial : PRo3D.Surfaces.SgSurface) =
@@ -480,14 +489,12 @@ module Mutable =
         let _globalBB = ResetMod.Create(__initial.globalBB)
         let _sceneGraph = ResetMod.Create(__initial.sceneGraph)
         let _picking = ResetMod.Create(__initial.picking)
-        let _transformation = MTransformations.Create(__initial.transformation)
         
         member x.surface = __current.Value.surface
         member x.trafo = _trafo
         member x.globalBB = _globalBB :> IMod<_>
         member x.sceneGraph = _sceneGraph :> IMod<_>
         member x.picking = _picking :> IMod<_>
-        member x.transformation = _transformation
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.SgSurface) =
@@ -498,7 +505,6 @@ module Mutable =
                 ResetMod.Update(_globalBB,v.globalBB)
                 ResetMod.Update(_sceneGraph,v.sceneGraph)
                 ResetMod.Update(_picking,v.picking)
-                MTransformations.Update(_transformation, v.transformation)
                 
         
         static member Create(__initial : PRo3D.Surfaces.SgSurface) : MSgSurface = MSgSurface(__initial)
@@ -544,10 +550,4 @@ module Mutable =
                     override x.Get(r) = r.picking
                     override x.Set(r,v) = { r with picking = v }
                     override x.Update(r,f) = { r with picking = f r.picking }
-                }
-            let transformation =
-                { new Lens<PRo3D.Surfaces.SgSurface, PRo3D.Surfaces.Transformations>() with
-                    override x.Get(r) = r.transformation
-                    override x.Set(r,v) = { r with transformation = v }
-                    override x.Update(r,f) = { r with transformation = f r.transformation }
                 }

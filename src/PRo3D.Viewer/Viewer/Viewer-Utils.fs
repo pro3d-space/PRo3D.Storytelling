@@ -217,6 +217,14 @@ module ViewerUtils =
                 return (Trafo3d.Scale(sc) * t)
             }
 
+        let test =
+           adaptive {
+                let! s = surf
+                let! t = s.preTransform
+                let! tr = s.transformation.trafo
+                return tr //(tr * t)
+            }
+
        
         let test = 
             aset {
@@ -224,6 +232,7 @@ module ViewerUtils =
                     surface.sceneGraph
                         |> Mod.map createSg
                         |> Sg.dynamic
+                        |> Sg.trafo test
                         |> Sg.uniform "selected"       isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
                         |> Sg.uniform "falseColors"    selectedScalar

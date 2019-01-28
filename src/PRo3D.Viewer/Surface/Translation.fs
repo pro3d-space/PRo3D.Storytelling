@@ -1,6 +1,6 @@
 ﻿namespace PRo3D
 
-module TranslantionApp =
+module TranslationApp =
     open Aardvark.Base
     open Aardvark.Application
     open Aardvark.UI

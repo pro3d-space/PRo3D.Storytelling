@@ -145,7 +145,7 @@ module Sg =
     
             colorCorrection = Init.initColorCorrection
             homePosition = None
-            //transformation = Init.Transformations
+            transformation = Init.Transformations
         }       
 
     /// creates a surface from opc folder path
@@ -177,7 +177,7 @@ module Sg =
     
             colorCorrection = Init.initColorCorrection
             homePosition = None
-            //transformation = Init.Transformations
+            transformation = Init.Transformations
         }       
     
     let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,KdTrees.Level0KdTree>) = 
@@ -191,7 +191,7 @@ module Sg =
                 globalBB   = bb
                 picking    = Picking.KdTree kd
                 trafo      = trafo
-                transformation = Init.Transformations
+                //transformation = Init.Transformations
             }
         sgSurface
     
