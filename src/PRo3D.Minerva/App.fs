@@ -99,7 +99,7 @@ module App =
                  div [clazz content;  style "overflow-y : auto; "] content' //max-height: 35%
              ]
          ]
-     )
+     )  
 
   let viewFeaturesGui (pos : IMod<V3d>)(model :MModel) =
     
@@ -147,11 +147,25 @@ module App =
      //   DefaultSurfaces.pointSprite |> toEffect
       ]
 
+  let myCss = [
+    { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
+    { kind = Stylesheet;  name = "semui-overrides"; url = "semui-overrides.css" }
+    { kind = Script;      name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
+  ]
+
+  //let bodyAttributes = [style "background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden;"]
+
+  let viewWrapped pos (model : MModel) =
+    require Html.semui (
+      body [style "width: 100%; height:100%; background: #252525; overflow-x: hidden; overflow-y: scroll"] [
+        div [clazz "ui inverted segment"] [viewFeaturesGui (pos)(model)]
+      ])
+
   let start =
     App.start {
         unpersist = Unpersist.instance
         threads   = fun _ -> ThreadPool.empty
-        view      = viewFeaturesGui (Mod.constant V3d.Zero)//localhost
+        view      = viewWrapped (Mod.constant V3d.Zero) //localhost
         update    = update
         initial   = Initial.model
     }
