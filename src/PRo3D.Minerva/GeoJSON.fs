@@ -87,6 +87,8 @@ module MinervaGeoJSON =
     let position = feature?properties?position.AsArray() |> Array.map(fun x -> x.AsFloat()) |> parseSingleCoordXYZ
     let geometry = feature?geometry |> parseGeometry    
 
+    let sol = (feature?properties?planet_day_number).AsInteger()
+
     {
       id          = (feature?id).AsString()
       instrument  = ins
@@ -94,6 +96,7 @@ module MinervaGeoJSON =
       boundingBox = Box2d.Invalid//feature?bbox |> parseBoundingBox
       properties  = prop
       geometry    = { geometry with positions = position |> List.singleton }
+      sol         = sol
     } 
 
   let parseFeatures (ins : Instrument) (features : JsonValue) : list<Feature> =  

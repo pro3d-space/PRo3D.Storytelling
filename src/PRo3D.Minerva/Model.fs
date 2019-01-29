@@ -76,6 +76,7 @@ type Feature =
     properties  : Properties
     boundingBox : Box2d
     geometry    : Geometry
+    sol         : int
   }
 
 type RootProperties = 

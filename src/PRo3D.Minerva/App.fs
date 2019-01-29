@@ -12,9 +12,11 @@ open PRo3D.Base
 
 type MinervaAction =
   | PerformQueries
+  | ConnectVisplore
   | FlyToProduct of V3d
 
 module App =
+  open System.Net.Sockets
 
   //coords  -4831.341805
 
@@ -34,20 +36,36 @@ module App =
   let writeLinesToFile path (contents : list<string>) =
         System.IO.File.WriteAllLines(path, contents)
 
+  let sendMessage2Visplore (address) (port) (message : string) =
+    let client = new TcpClient(address, port);
+    let data = System.Text.Encoding.ASCII.GetBytes(message)
+    let stream = client.GetStream()
+    stream.Write(data, 0, data.Length)
+    
+    printfn "Sending message: %A" message
+    
+    //let bytes = stream.Read(data, 0, data.Length);
+    //let responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
+    
+    //printfn "Receiving response: %A" responseData
+    
+    stream.Close()
+    client.Close()
+
   let update (model : Model) (msg : MinervaAction) : Model =
       match msg with
       | PerformQueries -> 
         let data = model.queries |> MinervaGeoJSON.loadMultiple
         let pos = "[-2486641.16564715, 2289265.84573656, -276244.7871095]" |> V3d.Parse
         
-        let features = 
-          data.features 
-            |> PList.filter(fun (x:Feature) -> V3d.Distance(pos, x.geometry.positions.Head) < 10000.0)
+        let features = data.features 
+           // |> PList.filter(fun (x:Feature) -> V3d.Distance(pos, x.geometry.positions.Head) < 10000.0)
             //|> PList.map(fun x -> sprintf "instr: %A id: %A position: %A" x.instrument x.id x.geometry.positions.Head)
         //    |> PList.toList
         //    |> writeLinesToFile ".\strangeProducts.txt"
 
         { model with data = { data with features = features } } //|> computeXYZFeatures}
+      | ConnectVisplore -> model
       | FlyToProduct _ -> model
 
   let instrumentText (instr : Instrument) =
@@ -76,7 +94,7 @@ module App =
             div [clazz "ui content"] [
               Incremental.div (headerAttr) (AList.single (instr |> instrumentText |> text))
               div [clazz "ui description"] [
-                text f.id                                                
+                f.sol |> sprintf "Sol: %A" |> text                               
               ] //[text (id.Replace('_',' '))]
             ]            
           ]
@@ -122,6 +140,7 @@ module App =
 
      div [clazz "ui inverted segment"] [
        button [clazz "ui button"; onClick (fun _ -> PerformQueries)][text "Load Minerva"]
+       button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect To Visplore"]
        Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) content  
      ]
 
