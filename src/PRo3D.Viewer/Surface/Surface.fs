@@ -489,10 +489,10 @@ module Surface =
                              yield i [clazz "folder icon"                                                
                                       onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "Open Folder"
 
-                             yield i [
-                               clazz "microchip icon"
-                               onClick (fun _ -> RebuildKdTrees key)
-                             ][] |> UI.wrapToolTip "process kdtrees"
+                             //yield i [
+                             //  clazz "microchip icon"
+                             //  onClick (fun _ -> RebuildKdTrees key)
+                             //][] |> UI.wrapToolTip "process kdtrees"
 
                              yield Incremental.i (absRelIcons) (AList.empty)
                              yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"

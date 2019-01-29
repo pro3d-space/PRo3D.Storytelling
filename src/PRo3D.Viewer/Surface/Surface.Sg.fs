@@ -198,7 +198,7 @@ module Sg =
                         let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
                         let! hpos = x.homePosition
                         match hpos with
-                            | Some p -> yield PRo3D.Sg.dots (AList.single p.Location) (Mod.constant C4b.Yellow)
+                            | Some p -> yield PRo3D.Sg.dots (AList.single p.Location) (Mod.constant 3.0) (Mod.constant C4b.Yellow)
                             | None -> yield Aardvark.UI.Extensions.Sg.empty
                     | None -> yield Aardvark.UI.Extensions.Sg.empty
             }|> Aardvark.UI.``F# Sg``.Sg.set

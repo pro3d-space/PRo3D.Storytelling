@@ -294,18 +294,18 @@ module Sg =
 
         Array.init (pos.Length / 3) get
          
-    let mkDotISg color size (pos : IMod<V3d>) = 
+    let mkDotISg color (size : IMod<float>) (pos : IMod<V3d>) = 
         Sg.sphere 2 color (Mod.constant 1.0)
             |> Sg.noEvents
             |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
             |> Sg.uniform "Size" size
             |> Sg.uniform "WorldPos" pos
         
-    let dots (points : alist<V3d>) (color : IMod<C4b>) =
+    let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
         aset {
             for p in points |> ASet.ofAList do
                // let scale = computeScale view (Mod.constant p) 5.0                               
-                yield mkDotISg color (Mod.constant 5.0) (Mod.constant p)
+                yield mkDotISg color (size) (Mod.constant p)
         } 
         |> Sg.set
         |> Sg.effect [

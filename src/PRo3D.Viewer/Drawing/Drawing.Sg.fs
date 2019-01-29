@@ -405,7 +405,7 @@ module Sg =
       Sg.ofList [
           Sg.lines polyPoints color thickness trafo //polyline
           //Sg.dots polyPoints (Mod.constant C4b.VRVisGreen) // debug sample points
-          Sg.dots points color                     //support points
+          Sg.dots points thickness color                     //support points
       ]         
   
   let drawText (view : IMod<CameraView>) conf (anno : MAnnotation) = 
@@ -422,9 +422,9 @@ module Sg =
         else return Sg.empty
     } |> ASet.ofModSingle
 
-  let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (view : IMod<CameraView>) (dots : IMod<bool>) (picked:IMod<bool>) =
+  let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (view : IMod<CameraView>) (showPoints : IMod<bool>) (picked:IMod<bool>) =
       let points = getPolylinePoints anno            
-      let dots  = dots |> optional (Sg.dots anno.points c)
+      let dots   = showPoints |> optional (Sg.dots anno.points (anno.thickness.value |> Mod.map(fun x -> x + 2.0)) c)
      
       let texts = 
         anno.text 

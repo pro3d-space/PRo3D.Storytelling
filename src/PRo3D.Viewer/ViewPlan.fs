@@ -365,12 +365,13 @@ module ViewPlan =
 
     module Sg =
                         
+        //TODO LF refactor: try without matching bools, without aset expressions, without direct index access
         let drawWorking (model:MViewPlanModel) =
             let point0 =
                 aset{
                 let! w = model.working
                 match w.IsEmpty with
-                    | false -> yield PRo3D.Sg.dots (AList.single w.[0]) (Mod.constant C4b.Green)
+                    | false -> yield PRo3D.Sg.dots (AList.single w.[0]) (Mod.constant 3.0) (Mod.constant C4b.Green)
                     | true -> ()
                 } |> Sg.set
 
@@ -378,9 +379,10 @@ module ViewPlan =
                 aset{
                 let! w = model.working
                 match w.IsEmpty with
-                    | false -> match w.Length > 1 with
-                                | true -> yield PRo3D.Sg.dots (AList.single w.[1]) (Mod.constant C4b.Yellow)
-                                | false -> ()
+                    | false -> 
+                      match w.Length > 1 with
+                        | true -> yield PRo3D.Sg.dots (AList.single w.[1]) (Mod.constant 3.0) (Mod.constant C4b.Yellow)
+                        | false -> ()
                     | true -> ()
                 } |> Sg.set
 
@@ -456,8 +458,8 @@ module ViewPlan =
                 } 
             let color = Mod.constant C4b.Red
             Sg.ofList [
-                    Sg.dots start color  
-                    Sg.dots endp color  
+                    Sg.dots start (Mod.constant 3.0) color  
+                    Sg.dots endp  (Mod.constant 3.0) color
                     PRo3D.Sg.lines axisLine color thickness trafo
                 ] 
         
@@ -466,7 +468,7 @@ module ViewPlan =
                 let! trafo = viewPlan.roverTrafo
                 for i in instruments do
                     let camPosTrans = 
-                        adaptive{
+                        adaptive{ //TODO LF refactor: don't need adaptive block if there is only 1 value. 1 value -> mod.map, 2 values -> mod.map2, more values -> adaptive
                             let! p = i.extrinsics.position
                             return trafo.Forward.TransformPos p
                             }
