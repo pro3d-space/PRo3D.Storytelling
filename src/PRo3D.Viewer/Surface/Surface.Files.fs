@@ -32,7 +32,8 @@ module DebugKdTreesX =
       vertices 
         |> Seq.map(fun x -> x.ToV3d())
         |> Seq.chunkBySize 3
-        |> Seq.map Triangle3d
+        |> Seq.filter(fun x -> x.Length = 3)
+        |> Seq.map(fun x -> Triangle3d x)
         |> Seq.filter(fun x -> (triangleIsNan x |> not)) |> Seq.toArray
         |> TriangleSet
 

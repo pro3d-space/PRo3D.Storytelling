@@ -40,8 +40,8 @@ module Surface =
                     KdIntersectionTree(t, 
                       KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical)                  
 
-                  let kd = {
-                    kdTree = tree;
+                  let kd : KdTrees.InCoreKdTree = {
+                    kdTree = tree.ToConcreteKdIntersectionTree();
                     boundingBox = tree.BoundingBox3d
                   }
                     
