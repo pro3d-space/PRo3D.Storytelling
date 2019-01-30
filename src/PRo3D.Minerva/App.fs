@@ -58,7 +58,7 @@ module App =
         let data = model.queries |> MinervaGeoJSON.loadMultiple
         let pos = "[-2486641.16564715, 2289265.84573656, -276244.7871095]" |> V3d.Parse
         
-        let features = data.features 
+        let features = data.features |> PList.sortBy(fun x -> x.sol)
            // |> PList.filter(fun (x:Feature) -> V3d.Distance(pos, x.geometry.positions.Head) < 10000.0)
             //|> PList.map(fun x -> sprintf "instr: %A id: %A position: %A" x.instrument x.id x.geometry.positions.Head)
         //    |> PList.toList
