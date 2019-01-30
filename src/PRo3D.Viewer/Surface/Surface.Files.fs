@@ -28,6 +28,22 @@ module DebugKdTreesX =
     let getInvalidIndices3f (positions : V3f[]) =
         positions |> List.ofArray |> List.mapi (fun i x -> if x.AnyNaN then Some i else None) |> List.choose id    
 
+    let getTriangleSet3f (vertices:V3f[]) =
+      vertices 
+        |> Seq.map(fun x -> x.ToV3d())
+        |> Seq.chunkBySize 3
+        |> Seq.map Triangle3d
+        |> Seq.filter(fun x -> (triangleIsNan x |> not)) |> Seq.toArray
+        |> TriangleSet
+
+    let getTriangleSet (indices : int[]) (vertices:V3d[]) = 
+      indices 
+        |> Seq.map(fun x -> vertices.[x])
+        |> Seq.chunkBySize 3
+        |> Seq.map(fun x -> Triangle3d(x))
+        |> Seq.filter(fun x -> (triangleIsNan x |> not)) |> Seq.toArray
+        |> TriangleSet
+
     let loadTriangles (kd : LazyKdTree) =
         
         let positions = kd.objectSetPath |> Aara.fromFile<V3f>
@@ -42,13 +58,13 @@ module DebugKdTreesX =
         let data = 
             positions.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
 
-        let triangles =             
-          indices 
-            |> Seq.map(fun x -> data.[x])
-            |> Seq.chunkBySize 3
-            |> Seq.map(fun x -> Triangle3d(x))
-            |> Seq.filter(fun x -> (triangleIsNan x |> not)) |> Seq.toArray
-            |> TriangleSet
+        let triangles = getTriangleSet indices data
+          //indices 
+          //  |> Seq.map(fun x -> data.[x])
+          //  |> Seq.chunkBySize 3
+          //  |> Seq.map(fun x -> Triangle3d(x))
+          //  |> Seq.filter(fun x -> (triangleIsNan x |> not)) |> Seq.toArray
+          //  |> TriangleSet
     
         triangles
 

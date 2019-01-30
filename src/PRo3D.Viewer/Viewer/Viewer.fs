@@ -487,19 +487,19 @@ module ViewerApp =
                 m |> UserFeedback.queueFeedback feedback
 
             | ImportObject sl,_,_ -> 
-                match sl with
-                    | [] -> m
-                    | paths ->
-                        let p = paths.[0]
-                        let objects = 
-                            [p] 
-                                |> List.map (Sg.mk SurfaceType.SurfaceOBJ m.scene.config.importTriangleSize.value)
-                                |> PList.ofList
-
-                        let m = Scene.importObj runtime signature objects m
-                        updateSceneWithNewSurface m    
+              match sl |> List.tryHead with
+              | Some path ->  
+                //TODO LF refactor ... Sg. should always return an ISg. Move mk to different module
+                let objects =                   
+                  path 
+                    |> Sg.mk SurfaceType.SurfaceOBJ m.scene.config.importTriangleSize.value
+                    |> PList.single                                
+                m 
+                  |> Scene.importObj runtime signature objects 
+                  |> updateSceneWithNewSurface
+              | None -> m              
             | ImportAnnotationGroups sl,_,_ ->
-              match sl with
+              match sl with //TODO LF refactor ... use try head as in ImportObject
                 | [] -> m   
                 | path -> 
                   let p = path.[0]
@@ -517,10 +517,7 @@ module ViewerApp =
                         let a = v |> Leaf.toAnnotation
                         let a' = if a.geometry = Geometry.DnS then { a with showDns = true } else a                                                             
                         a'|> Leaf.Annotations)    
-                        
-                  let newflat = m.drawing.annotations.flat |> HMap.union flat
-
-
+                                          
                   let newflat = m.drawing.annotations.flat |> HMap.union flat
 
                   //let inline median input = 
@@ -553,7 +550,7 @@ module ViewerApp =
                     |> Lenses.set _groups newGroups
                     |> Lenses.set _lookUp lookup
                     |> Lenses.set _flat newflat                
-            | ImportSurfaceTrafo sl,_,_ ->
+            | ImportSurfaceTrafo sl,_,_ ->  //TODO LF refactor use tryHead
               match sl with
                 | [] -> m 
                 | path :: _ ->
@@ -562,7 +559,7 @@ module ViewerApp =
                   s.surfaces.flat |> HMap.toList |> List.iter(fun (_,v) -> Log.warn "%A" (v |> Leaf.toSurface).preTransform)
                   m 
                     |> Lenses.set _surfaceModelLens s                                    
-            | ImportRoverPlacement sl,_,_ ->
+            | ImportRoverPlacement sl,_,_ ->  //TODO LF refactor use tryHead
               match sl with
                 | [] -> m 
                 | p -> 
@@ -626,14 +623,13 @@ module ViewerApp =
             | PickObject (p,id), _ ,_ ->  
                 match m.picking with
                     |true ->
-                          let hitF (p : V3d) = None
+                          let hitF _ = None
                           match (m.scene.surfacesModel.surfaces.flat.TryFind id) with
                             | Some x -> matchPickingInteraction sendQueue p hitF (x |> Leaf.toSurface) m 
                             | None -> m
                     | false -> m
                 
-            | SaveScene s, _,_ -> 
-                "" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
+            | SaveScene s, _,_ ->                 
                 match m.scene.scenePath with
                     | None ->                        
                         match s.IsEmptyOrNull() with
@@ -641,8 +637,7 @@ module ViewerApp =
                             | _ -> saveSceneAndAnnotations s m
                     | Some path -> 
                         saveSceneAndAnnotations path m                                     
-            | SaveAs s,_,_ ->
-                "" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
+            | SaveAs s,_,_ ->                
                 match s.IsEmptyOrNull() with
                     | true -> m
                     | _  -> saveSceneAndAnnotations s m
