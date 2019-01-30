@@ -161,10 +161,10 @@ module Initial =
 
           
   let sites = [
-    @"http://minerva1.eox.at:8600/opensearch/collections/MAHLI/json/"
-    @"http://minerva1.eox.at:8600/opensearch/collections/FrontHazcam/json/"
-    @"http://minerva1.eox.at:8600/opensearch/collections/Mastcam/json/"    
-    @"http://minerva1.eox.at:8600/opensearch/collections/APXS/json/"
+    @"https://minerva.eox.at/opensearch/collections/MAHLI/json/"
+    @"https://minerva.eox.at/opensearch/collections/FrontHazcam/json/"
+    @"https://minerva.eox.at/opensearch/collections/Mastcam/json/"    
+    @"https://minerva.eox.at/opensearch/collections/APXS/json/"
   ]
 
   let model = 

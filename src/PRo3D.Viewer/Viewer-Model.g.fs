@@ -24,6 +24,8 @@ module Mutable =
         let _dockConfig = ResetMod.Create(__initial.dockConfig)
         let _closedPages = ResetMod.Create(__initial.closedPages)
         let _firstImport = ResetMod.Create(__initial.firstImport)
+        let _userFeedback = ResetMod.Create(__initial.userFeedback)
+        let _feedbackThreads = ResetMod.Create(__initial.feedbackThreads)
         
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
@@ -36,6 +38,8 @@ module Mutable =
         member x.dockConfig = _dockConfig :> IMod<_>
         member x.closedPages = _closedPages :> IMod<_>
         member x.firstImport = _firstImport :> IMod<_>
+        member x.userFeedback = _userFeedback :> IMod<_>
+        member x.feedbackThreads = _feedbackThreads :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.Scene) =
@@ -53,6 +57,8 @@ module Mutable =
                 ResetMod.Update(_dockConfig,v.dockConfig)
                 ResetMod.Update(_closedPages,v.closedPages)
                 ResetMod.Update(_firstImport,v.firstImport)
+                ResetMod.Update(_userFeedback,v.userFeedback)
+                ResetMod.Update(_feedbackThreads,v.feedbackThreads)
                 
         
         static member Create(__initial : PRo3D.Viewer.Scene) : MScene = MScene(__initial)
@@ -134,6 +140,18 @@ module Mutable =
                     override x.Get(r) = r.firstImport
                     override x.Set(r,v) = { r with firstImport = v }
                     override x.Update(r,f) = { r with firstImport = f r.firstImport }
+                }
+            let userFeedback =
+                { new Lens<PRo3D.Viewer.Scene, System.String>() with
+                    override x.Get(r) = r.userFeedback
+                    override x.Set(r,v) = { r with userFeedback = v }
+                    override x.Update(r,f) = { r with userFeedback = f r.userFeedback }
+                }
+            let feedbackThreads =
+                { new Lens<PRo3D.Viewer.Scene, Aardvark.Base.Incremental.ThreadPool<PRo3D.Viewer.ViewerAction>>() with
+                    override x.Get(r) = r.feedbackThreads
+                    override x.Set(r,v) = { r with feedbackThreads = v }
+                    override x.Update(r,f) = { r with feedbackThreads = f r.feedbackThreads }
                 }
     
     

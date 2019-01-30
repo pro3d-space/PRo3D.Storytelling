@@ -108,7 +108,7 @@ module FalseColorLegendApp =
                          | _ -> 0
                 let pos' = 
                     match fcUpperBound < dipAngle with
-                        | true -> numOfRangeGaps
+                        | true -> numOfRangeGaps + 1
                         | _ -> pos
                      
                 let currColor = 

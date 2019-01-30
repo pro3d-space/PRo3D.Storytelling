@@ -39,6 +39,28 @@ open Aardium
 //open Viewer.Mutable.ModelModule.Lens
 //open Mutable.AnnotationGroupModule.Lens
  
+type UserFeedback<'a> = {
+  id      : string
+  text    : string
+  timeout : int
+  msg     : 'a
+}
+
+module UserFeedback =
+
+  let createWorker (feedback : UserFeedback<'a>) =
+    proclist {
+      yield UpdateUserFeedback ""
+      yield UpdateUserFeedback feedback.text
+      yield feedback.msg
+      
+      do! Proc.Sleep feedback.timeout
+      yield ThreadsDone feedback.id
+    }
+
+  let queueFeedback fb m =
+    { m with scene = { m.scene with feedbackThreads = ThreadPool.add fb.id (fb |> createWorker) m.scene.feedbackThreads }}
+
 module ViewerApp =    
 
     type muh = {
@@ -269,8 +291,9 @@ module ViewerApp =
                         | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = Projection.Linear } }   
                         | _ -> m
                 
+                let view = m.scene.navigation.camera.view
                 let msg = Drawing.Action.AddPointAdv(p, hitFunction, surf.name)
-                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc m.drawing msg
+                let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc view m.drawing msg
                 //Log.stop()
                 { m with drawing = drawing } |> stash
             | Interactions.PlaceCoordinateSystem -> 
@@ -289,7 +312,7 @@ module ViewerApp =
                 let c   = m.scene.config
                 let ref = m.scene.referenceSystem
                 let navigation' = 
-                    Navigation.update c ref navConf m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick p))
+                    Navigation.update c ref navConf true m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick p))
                 { m with scene = {m.scene with navigation = navigation'; } }
             | Interactions.PlaceRover ->
                 let ref = m.scene.referenceSystem 
@@ -301,7 +324,7 @@ module ViewerApp =
             //| Interactions.AlignPick -> 
             //    { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
             | Interactions.PlaceSurface -> 
-                { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath }}
+                { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath m.scene.navigation.camera.view }}
            // | Interactions.PickAnnotation -> m
             | _ -> m
 
@@ -312,9 +335,9 @@ module ViewerApp =
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
                let ref = m.scene.referenceSystem
-               let nav = Navigation.update c ref navConf m.scene.navigation msg               
+               let nav = Navigation.update c ref navConf true m.scene.navigation msg               
 
-//               m.scene.navigation.camera.view.Location.ToString() |> NoAction |> ViewerAction |> mailbox.Post
+               //m.scene.navigation.camera.view.Location.ToString() |> NoAction |> ViewerAction |> mailbox.Post
 
                m 
                  |> Lenses.set _navigation nav
@@ -338,17 +361,30 @@ module ViewerApp =
                     let _a = m |> Lenses.get _flat |> HMap.tryFind id |> Option.map Leaf.toAnnotation
                     match _a with 
                       | Some a ->                                                
-                          m |> lookAtBoundingBox (Box3d(a.points |> PList.toList))
+                          //m |> lookAtBoundingBox (Box3d(a.points |> PList.toList))
+                          let animationMessage = 
+                            animateFowardAndLocation a.view.Location a.view.Forward 2.0 "ForwardAndLocation2s"
+                          let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                          { m with  animations = a'}
                       | None -> m                    
                 | _ ->
+                    let view = m.scene.navigation.camera.view
                     let drawing = 
-                        DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing msg
+                        DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing msg
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
-                    let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath
+                    let view = m.scene.navigation.camera.view
+                    let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath view
                     let animation = 
                           match msg with
                             | SurfaceApp.Action.FlyToSurface id -> 
+                                let surface = m.scene.surfacesModel.surfaces.flat |> HMap.find id |> Leaf.toSurface 
+                                match surface.homePosition with
+                                    | Some hp ->
+                                        let animationMessage = 
+                                            animateFowardAndLocation hp.Location hp.Forward 2.0 "ForwardAndLocation2s"
+                                        AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                                    | None ->
                                 let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
                                 match surf with
                                     | Some s ->
@@ -405,21 +441,24 @@ module ViewerApp =
                 let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
                 { m with drawing = { m.drawing with colorLegend = cm } }
             | ImportSurface sl,_,_ -> 
+                
                 match sl with
                     | [] -> m
                     | paths ->
                         let surfaces = 
                             paths 
                                 |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
-                                |> List.map (Sg.mk SurfaceType.SurfaceOPC)
+                                |> List.map (Sg.mk SurfaceType.SurfaceOPC m.scene.config.importTriangleSize.value)
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m 
                         updateSceneWithNewSurface m 
             | ImportDiscoveredSurfaces sl,_,_ -> 
+                //"" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match sl with
                     | [] -> m
                     | paths ->
+                        //"Import OPCs..." |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                         let selectedPaths = paths |> List.choose Files.tryDirectoryExists
                         let surfacePaths = 
                               selectedPaths
@@ -428,11 +467,23 @@ module ViewerApp =
                         let surfaces = 
                             surfacePaths 
                                 |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
-                                |> List.map (Sg.mk SurfaceType.SurfaceOPC)
+                                |> List.map (Sg.mk SurfaceType.SurfaceOPC m.scene.config.importTriangleSize.value)
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m 
                         updateSceneWithNewSurface m 
+
+            | ImportDiscoveredSurfacesThreads sl,_,_ -> 
+                
+                let feedback = {
+                  id      = System.Guid.NewGuid().ToString()
+                  text    = "Importing OPCs..."
+                  timeout = 5000
+                  msg     = (ImportDiscoveredSurfaces sl)
+                }
+                
+                m |> UserFeedback.queueFeedback feedback
+
             | ImportObject sl,_,_ -> 
                 match sl with
                     | [] -> m
@@ -440,7 +491,7 @@ module ViewerApp =
                         let p = paths.[0]
                         let objects = 
                             [p] 
-                                |> List.map (Sg.mk SurfaceType.SurfaceOBJ)
+                                |> List.map (Sg.mk SurfaceType.SurfaceOBJ m.scene.config.importTriangleSize.value)
                                 |> PList.ofList
 
                         let m = Scene.importObj runtime signature objects m
@@ -580,6 +631,7 @@ module ViewerApp =
                     | false -> m
                 
             | SaveScene s, _,_ -> 
+                "" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match m.scene.scenePath with
                     | None ->                        
                         match s.IsEmptyOrNull() with
@@ -588,9 +640,11 @@ module ViewerApp =
                     | Some path -> 
                         saveSceneAndAnnotations path m                                     
             | SaveAs s,_,_ ->
+                "" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match s.IsEmptyOrNull() with
                     | true -> m
                     | _  -> saveSceneAndAnnotations s m
+                            
             | OpenScene sl,_,_ ->
                 match sl.Length < 1 with
                     | true -> m
@@ -606,8 +660,6 @@ module ViewerApp =
                     |> loadRoverData
                     |> loadLastAnnotations  
             | NewScene,_,_ ->
-               
-                //let navigation' = { navigation with navigationMode = NavigationMode.FreeFly
                 let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox with recent = m.recent }
                 loadRoverData m'
             | KeyDown k, _, _ ->
@@ -629,16 +681,32 @@ module ViewerApp =
               let m =
                 match (m.ctrlFlag, k, m.scene.scenePath) with
                 | (true, Aardvark.Application.Keys.S, Some path) -> 
-                  { (saveSceneAndAnnotations path m) with ctrlFlag = false }   
+                  let feedback = {
+                    id      = System.Guid.NewGuid().ToString()
+                    text    = "scene saved"
+                    timeout = 3000
+                    msg     = ViewerAction.NoAction ""
+                  }
+                  { (saveSceneAndAnnotations path m) with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
                 | (true, Aardvark.Application.Keys.S, None) -> 
-                   Log.error "please use \"save\" in the menu to save the scene";
-                   { m with ctrlFlag = false }   // (saveSceneAndAnnotations p m)
+                   //Log.error "please use \"save\" in the menu to save the scene";
+
+                  let feedback = {
+                    id      = System.Guid.NewGuid().ToString()
+                    text    = "please use \"save\" in the menu to save the scene"
+                    timeout = 3000
+                    msg     = ViewerAction.NoAction ""
+                  }
+                                  
+                  { m with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
+                    // (saveSceneAndAnnotations p m)
                 |_-> m
                              
               let m =
                 match m.interaction with
-                | Interactions.DrawAnnotation -> 
-                    let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing drawingAction } |> stash
+                | Interactions.DrawAnnotation ->
+                    let view = m.scene.navigation.camera.view
+                    let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing drawingAction } |> stash
                     match drawingAction with
                       | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
                       | _ -> m     
@@ -709,7 +777,8 @@ module ViewerApp =
                   | Aardvark.Application.Keys.LeftCtrl -> 
                     match m.interaction with
                         | Interactions.DrawAnnotation -> 
-                            DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopDrawing
+                            let view = m.scene.navigation.camera.view
+                            DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopDrawing
                         //| Interactions.PickAnnotation -> 
                         //    DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopPicking 
                         |_-> m.drawing
@@ -805,6 +874,15 @@ module ViewerApp =
                 let cont = addDockElement m.scene.dockConfig.content de
                 let dockconfig = config {content(cont);appName "PRo3D"; useCachedConfig false }
                 { m with scene = { m.scene with dockConfig = dockconfig; closedPages = closedPages } }
+            | UpdateUserFeedback s,_,_ ->   { m with scene = { m.scene with userFeedback = s } }
+            //| StartImportMessaging sl,_,_ -> 
+            //    sl |> ImportDiscoveredSurfaces |> ViewerAction |> mailbox.Post
+            //    { m with scene = { m.scene with userFeedback = "Import OPCs..." } }
+            | Logging (text,message),_,_ ->  
+              message |> MailboxAction.ViewerAction |> mailbox.Post
+              { m with scene = { m.scene with userFeedback = text } }
+            | ThreadsDone id,_,_ ->  
+              { m with scene = { m.scene with userFeedback = ""; feedbackThreads = ThreadPool.remove id m.scene.feedbackThreads} }
             | MinervaActions a,_,_ ->
               match a with 
               | Minerva.MinervaAction.FlyToProduct v -> 
@@ -847,10 +925,10 @@ module ViewerApp =
                  attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
                  attribute "data-samples" "4"
                  attribute "useMapping" "true"
-                 attribute "showFPS" "true"        
-                 attribute "data-renderalways" "true"
+              //   attribute "showFPS" "true"        
+              //   attribute "data-renderalways" "true"
                  onKeyDown (KeyDown)
-                 onKeyUp (KeyUp)                    
+                 onKeyUp (KeyUp)
                 ] 
             ]            
 
@@ -887,6 +965,9 @@ module ViewerApp =
             let exploreCenter =
                 Navigation.Sg.view m.scene.navigation            
           
+            let homePosition =
+                Surfaces.Sg.viewHomePosition m.scene.surfacesModel
+            
             
             //let controller = 
             //    adaptive {
@@ -931,7 +1012,7 @@ module ViewerApp =
             let minervaFeatures = 
               PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions
                         
-            [annos; exploreCenter; refSystem; viewPlans; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
+            [annos; exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
@@ -1008,6 +1089,7 @@ module ViewerApp =
                         ]
                     }
                 )
+        
 
         let topMenuItems = [
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
@@ -1025,6 +1107,9 @@ module ViewerApp =
              Html.Layout.horizontal [
                Html.Layout.boxH [ scenepath ]
              ] 
+             //Html.Layout.horizontal [
+             //  Html.Layout.boxH [ Incremental.text (m.scene.userFeedback) ]
+             //] 
         ]        
 
         let topMenu =
@@ -1085,6 +1170,7 @@ module ViewerApp =
                       div [style "background:#000;"] [
                           control
                           Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
+                          Viewer.Gui.textOverlaysUserFeedback m.scene
                           dnsColorLegend
                           scalarsColorLegend ]
                   ]                
@@ -1138,7 +1224,7 @@ module ViewerApp =
                   |> ThreadPool.map Navigation.ArcBallAction |> ThreadPool.map NavigationMessage
             | _ -> failwith "invalid nav mode"
          
-        unionMany [drawing; animation; nav]
+        unionMany [drawing; animation; nav; m.scene.feedbackThreads]
         
     let loadWaypoints m = 
       match Serialization.fileExists "./waypoints.wps" with

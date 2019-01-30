@@ -20,6 +20,7 @@ module ConfigProperties =
         | SetFarPlane               of Numeric.Action
         | SetNavigationSensitivity  of Numeric.Action
         | SetArrowLength            of Numeric.Action
+        | SetImportTriangleSize     of Numeric.Action
         | SetArrowThickness         of Numeric.Action
         | SetDnSPlaneSize           of Numeric.Action
         | ToggleLodColors
@@ -37,6 +38,8 @@ module ConfigProperties =
                 { model with navigationSensitivity = Numeric.update model.navigationSensitivity s }
             | SetArrowLength al ->
                 { model with arrowLength = Numeric.update model.arrowLength al }
+            | SetImportTriangleSize size ->
+                { model with importTriangleSize = Numeric.update model.importTriangleSize size }
             | SetArrowThickness at ->
                 { model with arrowThickness = Numeric.update model.arrowThickness at }
             | SetDnSPlaneSize s ->
@@ -51,7 +54,8 @@ module ConfigProperties =
             Html.table [      
                 Html.row "Near Plane:"              [Numeric.view' [InputBox] model.nearPlane             |> UI.map SetNearPlane ]               
                 Html.row "Far Plane:"               [Numeric.view' [InputBox] model.farPlane              |> UI.map SetFarPlane ]    
-                Html.row "Navigation Sensitivity:"  [Numeric.view' [Slider] model.navigationSensitivity |> UI.map SetNavigationSensitivity ]    
+                Html.row "Navigation Sensitivity:"  [Numeric.view' [Slider] model.navigationSensitivity   |> UI.map SetNavigationSensitivity ]    
+                Html.row "Import Triangle Size(m):" [Numeric.view' [InputBox] model.importTriangleSize    |> UI.map SetImportTriangleSize ] 
                 Html.row "Arrow Length:"            [Numeric.view' [InputBox] model.arrowLength           |> UI.map SetArrowLength ] 
                 Html.row "Arrow Thickness:"         [Numeric.view' [InputBox] model.arrowThickness        |> UI.map SetArrowThickness ]   
                 Html.row "D+S Plane Size:"          [Numeric.view' [InputBox] model.dnsPlaneSize          |> UI.map SetDnSPlaneSize ]   

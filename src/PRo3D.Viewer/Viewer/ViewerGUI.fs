@@ -130,6 +130,20 @@ module Gui =
           ]
       ]                              
     ]
+
+  let textOverlaysUserFeedback (m : MScene)  = 
+    div [js "oncontextmenu" "event.preventDefault();"] [ 
+      let style' = "color: white; font-family:Consolas; font-size:18;"
+    
+      yield div [clazz "ui"; style "text-align: right; width: 200px; position: absolute; top: 15px; right: 15px; float:right" ] [ //float:left
+          //arrowOverlay
+          yield table [] [
+              tr[][
+                  td[style style'][Incremental.text m.userFeedback]
+              ]
+          ]
+      ]                              
+    ]
   module TopMenu =
 
     //let save (m:MModel) = 
@@ -205,13 +219,14 @@ module Gui =
          text "Import"
          i [clazz "dropdown icon"][] 
          div [ clazz "menu"] [
-         //    div [ clazz "ui inverted item"; 
-         //      Dialogs.onChooseFiles ImportSurface;
-         //      clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-         //      text "OPC"
-         //    ]
+             //div [ clazz "ui inverted item"; 
+             //  Dialogs.onChooseFiles ImportSurface;
+             //  clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
+             //  text "OPC"
+             //]
              div [ clazz "ui inverted item"; 
-               Dialogs.onChooseFiles ImportDiscoveredSurfaces;
+               //Dialogs.onChooseFiles  (fun paths -> ("importing opcs...", ImportDiscoveredSurfaces paths) |> Logging); //ImportDiscoveredSurfaces; // ImportSurfaceTest
+               Dialogs.onChooseFiles  ImportDiscoveredSurfacesThreads; //StartImportMessaging; //ImportDiscoveredSurfaces; // ImportSurfaceTest
                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
                text "OPC"
              ]

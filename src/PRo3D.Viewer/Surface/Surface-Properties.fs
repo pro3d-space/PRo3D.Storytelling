@@ -29,6 +29,7 @@ module SurfaceProperties =
         | SetScaling     of Numeric.Action
         | SetScalarMap   of Option<ScalarLayer>
         | SetTexturesMap of Option<TextureLayer>
+        | SetHomePosition //of Guid //of Option<CameraView>
         //| SetContrast    of Numeric.Action
         //| UseContrast    of bool
         //| SetBrightness  of Numeric.Action
@@ -61,6 +62,7 @@ module SurfaceProperties =
                 { model with selectedScalar = a } |> Console.print
             | SetTexturesMap a ->                
                 { model with selectedTexture = a } |> Console.print
+            | SetHomePosition -> model
             
 
     let getTextures (layers : seq<AttributeLayer>) =
@@ -103,6 +105,7 @@ module SurfaceProperties =
           Html.row "Scalars:"     [UI.dropDown'' (model |> scalarLayerList)  model.selectedScalar   (fun x -> SetScalarMap (x |> Option.map(fun y -> y.Current |> Mod.force)))   (fun x -> x.label |> Mod.force)]
           Html.row "Textures:"    [UI.dropDown'' model.textureLayers model.selectedTexture  (fun x -> SetTexturesMap x) (fun x -> x.label)]
           Html.row "Cull Faces:"  [Html.SemUi.dropDown model.cullMode SetCullMode]
+          Html.row "Set Homeposition:"  [button [clazz "ui button tiny"; onClick (fun _ -> SetHomePosition )][]] //[text "DiscoverOpcs" ]  
         ]
       )
 

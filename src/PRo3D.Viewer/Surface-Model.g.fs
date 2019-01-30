@@ -216,6 +216,7 @@ module Mutable =
         let _selectedTexture = MOption.Create(__initial.selectedTexture)
         let _surfaceType = ResetMod.Create(__initial.surfaceType)
         let _colorCorrection = MColorCorrection.Create(__initial.colorCorrection)
+        let _homePosition = MOption.Create(__initial.homePosition)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
@@ -238,6 +239,7 @@ module Mutable =
         member x.selectedTexture = _selectedTexture :> IMod<_>
         member x.surfaceType = _surfaceType :> IMod<_>
         member x.colorCorrection = _colorCorrection
+        member x.homePosition = _homePosition :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.Surface) =
@@ -265,6 +267,7 @@ module Mutable =
                 MOption.Update(_selectedTexture, v.selectedTexture)
                 ResetMod.Update(_surfaceType,v.surfaceType)
                 MColorCorrection.Update(_colorCorrection, v.colorCorrection)
+                MOption.Update(_homePosition, v.homePosition)
                 
         
         static member Create(__initial : PRo3D.Surfaces.Surface) : MSurface = MSurface(__initial)
@@ -406,6 +409,12 @@ module Mutable =
                     override x.Get(r) = r.colorCorrection
                     override x.Set(r,v) = { r with colorCorrection = v }
                     override x.Update(r,f) = { r with colorCorrection = f r.colorCorrection }
+                }
+            let homePosition =
+                { new Lens<PRo3D.Surfaces.Surface, Microsoft.FSharp.Core.Option<Aardvark.Base.CameraView>>() with
+                    override x.Get(r) = r.homePosition
+                    override x.Set(r,v) = { r with homePosition = v }
+                    override x.Update(r,f) = { r with homePosition = f r.homePosition }
                 }
     
     

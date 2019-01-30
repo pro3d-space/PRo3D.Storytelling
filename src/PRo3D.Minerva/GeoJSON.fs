@@ -7,6 +7,7 @@ open FSharp.Data.JsonExtensions
 module MinervaGeoJSON =
   open FSharp.Data.Runtime
   open PRo3D.Base
+  open System.Net
 
   let shout s =
     Log.line "%A" s  
@@ -131,16 +132,24 @@ module MinervaGeoJSON =
       published    = (props?published).AsDateTime()
     }
 
+  let patchThroughWebClient (site : string) = 
+    let mutable client = new WebClient()
+    client.UseDefaultCredentials <- true       
+    let credentials = System.Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes("minerva:tai8Ies7"))   
+    client.Headers.[System.Net.HttpRequestHeader.Authorization] <- "Basic " + credentials   
+    client.DownloadString(site)
+
   let loadFromUrls sites = 
     sites 
-      |> List.map JsonValue.AsyncLoad
-      |> Async.Parallel
-      |> Async.RunSynchronously 
-      |> Array.map parseRoot
+      |> List.map(fun x -> x |> patchThroughWebClient |> JsonValue.Parse)
+      //|> Async.Parallel
+      //|> Async.RunSynchronously 
+      |> List.map parseRoot
       |> combineFeatureCollections
 
   let loadPaged (site:string) = 
-    let bla = JsonValue.Load site
+    
+    let bla = site |> patchThroughWebClient |> JsonValue.Parse
     let probs = bla?properties |> parseRootProperties
     let pages =
       [0 .. probs.itemsPerPage .. probs.totalCount]

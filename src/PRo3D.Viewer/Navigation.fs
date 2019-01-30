@@ -26,12 +26,12 @@ module Navigation =
             up                    : Lens<'b, V3d>
         }
 
-    let update<'a,'b> (bigConfigA : 'a) (bigConfigB : 'b) (smallConfig : smallConfig<'a,'b>) (model : NavigationModel) (act : Action) =
+    let update<'a,'b> (bigConfigA : 'a) (bigConfigB : 'b) (smallConfig : smallConfig<'a,'b>) (switchToArcball : bool) (model : NavigationModel) (act : Action) =
       match act with            
         | ArcBallAction a -> 
           let model =
               match a with 
-                  | ArcBallController.Message.Pick a ->
+                  | ArcBallController.Message.Pick a when switchToArcball->
                       { model with navigationMode =  NavigationMode.ArcBall; exploreCenter = a }
                   | _ ->  { model with navigationMode =  NavigationMode.ArcBall } //model
           
@@ -108,7 +108,7 @@ module Navigation =
             let point =
                 aset{
                 let! pos = model.exploreCenter
-                yield PRo3D.Sg.dots (AList.single pos) (Mod.constant C4b.Magenta)
+                yield PRo3D.Sg.dots (AList.single pos) (Mod.constant 3.0) (Mod.constant C4b.Magenta)
                 } |> Sg.set
             Sg.ofList [point]
            

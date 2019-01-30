@@ -475,6 +475,7 @@ module Mutable =
         let _text = ResetMod.Create(__initial.text)
         let _textsize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.textsize)
         let _surfaceName = ResetMod.Create(__initial.surfaceName)
+        let _view = ResetMod.Create(__initial.view)
         
         member x.key = __current.Value.key
         member x.modelTrafo = _modelTrafo :> IMod<_>
@@ -492,6 +493,7 @@ module Mutable =
         member x.text = _text :> IMod<_>
         member x.textsize = _textsize
         member x.surfaceName = _surfaceName :> IMod<_>
+        member x.view = _view :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Annotation) =
@@ -513,6 +515,7 @@ module Mutable =
                 ResetMod.Update(_text,v.text)
                 Aardvark.UI.Mutable.MNumericInput.Update(_textsize, v.textsize)
                 ResetMod.Update(_surfaceName,v.surfaceName)
+                ResetMod.Update(_view,v.view)
                 
         
         static member Create(__initial : PRo3D.Annotation) : MAnnotation = MAnnotation(__initial)
@@ -624,6 +627,12 @@ module Mutable =
                     override x.Get(r) = r.surfaceName
                     override x.Set(r,v) = { r with surfaceName = v }
                     override x.Update(r,f) = { r with surfaceName = f r.surfaceName }
+                }
+            let view =
+                { new Lens<PRo3D.Annotation, Aardvark.Base.CameraView>() with
+                    override x.Get(r) = r.view
+                    override x.Set(r,v) = { r with view = v }
+                    override x.Update(r,f) = { r with view = f r.view }
                 }
     
     
@@ -753,6 +762,7 @@ module Mutable =
         let _nearPlane = Aardvark.UI.Mutable.MNumericInput.Create(__initial.nearPlane)
         let _farPlane = Aardvark.UI.Mutable.MNumericInput.Create(__initial.farPlane)
         let _navigationSensitivity = Aardvark.UI.Mutable.MNumericInput.Create(__initial.navigationSensitivity)
+        let _importTriangleSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.importTriangleSize)
         let _arrowLength = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowLength)
         let _arrowThickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowThickness)
         let _dnsPlaneSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.dnsPlaneSize)
@@ -762,6 +772,7 @@ module Mutable =
         member x.nearPlane = _nearPlane
         member x.farPlane = _farPlane
         member x.navigationSensitivity = _navigationSensitivity
+        member x.importTriangleSize = _importTriangleSize
         member x.arrowLength = _arrowLength
         member x.arrowThickness = _arrowThickness
         member x.dnsPlaneSize = _dnsPlaneSize
@@ -776,6 +787,7 @@ module Mutable =
                 Aardvark.UI.Mutable.MNumericInput.Update(_nearPlane, v.nearPlane)
                 Aardvark.UI.Mutable.MNumericInput.Update(_farPlane, v.farPlane)
                 Aardvark.UI.Mutable.MNumericInput.Update(_navigationSensitivity, v.navigationSensitivity)
+                Aardvark.UI.Mutable.MNumericInput.Update(_importTriangleSize, v.importTriangleSize)
                 Aardvark.UI.Mutable.MNumericInput.Update(_arrowLength, v.arrowLength)
                 Aardvark.UI.Mutable.MNumericInput.Update(_arrowThickness, v.arrowThickness)
                 Aardvark.UI.Mutable.MNumericInput.Update(_dnsPlaneSize, v.dnsPlaneSize)
@@ -814,6 +826,12 @@ module Mutable =
                     override x.Get(r) = r.navigationSensitivity
                     override x.Set(r,v) = { r with navigationSensitivity = v }
                     override x.Update(r,f) = { r with navigationSensitivity = f r.navigationSensitivity }
+                }
+            let importTriangleSize =
+                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.importTriangleSize
+                    override x.Set(r,v) = { r with importTriangleSize = v }
+                    override x.Update(r,f) = { r with importTriangleSize = f r.importTriangleSize }
                 }
             let arrowLength =
                 { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with

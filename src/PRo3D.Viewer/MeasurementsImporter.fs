@@ -9,6 +9,7 @@ open Aardvark.UI
 
 
 module MeasurementsImporter = 
+    open Aardvark.UI.Primitives
    
     let xname s = XName.Get(s)
 
@@ -149,6 +150,7 @@ module MeasurementsImporter =
                 text = ""
                 textsize = textsize
                 surfaceName = ""
+                view = FreeFlyController.initial.view
         }
         an
         

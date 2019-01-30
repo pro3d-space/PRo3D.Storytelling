@@ -48,7 +48,7 @@ type PropertyActions =
     | DrawingMessage    of Drawing.Action
     | AnnotationMessage of AnnotationProperties.Action
 
-type ViewerAction =                
+    type ViewerAction =                
     | DrawingMessage            of Drawing.Action
     | AnnotationGroupsMessageViewer   of Groups.Action
     | NavigationMessage         of Navigation.Action
@@ -65,6 +65,7 @@ type ViewerAction =
     | SetCameraAndFrustum2      of CameraView * Frustum
     | ImportSurface             of list<string>
     | ImportDiscoveredSurfaces  of list<string>
+    | ImportDiscoveredSurfacesThreads  of list<string>
     | ImportObject              of list<string>
     | ImportAnnotationGroups    of list<string>
     | ImportSurfaceTrafo        of list<string>
@@ -100,6 +101,12 @@ type ViewerAction =
     | UpdateDockConfig          of DockConfig
     | AddPage                   of DockElement    
     | ToggleOrientationCube
+    | UpdateUserFeedback        of string
+    | StartImportMessaging      of list<string>
+    | Logging                   of string * ViewerAction
+    | ThreadsDone               of string
+
+
 and MailboxState = {
   events  : list<MailboxAction>
   update  : seq<ViewerAction> -> unit
@@ -108,7 +115,15 @@ and MailboxAction =
   | ViewerAction  of ViewerAction
   | InitMailboxState of MailboxState
   | DrawingAction of PRo3D.Drawing.Action
-  
+
+
+//[<DomainType>] 
+//type UserFeedback = {
+//    loadScene : string
+//    saveScene : string
+//    noText    : string
+//}
+
 [<DomainType>] 
 type Scene = {
     navigation        : NavigationModel
@@ -123,6 +138,8 @@ type Scene = {
     dockConfig        : DockConfig
     closedPages       : list<DockElement>
     firstImport       : bool
+    userFeedback      : string
+    feedbackThreads   : ThreadPool<ViewerAction> 
 }
 
 [<DomainType>] 
@@ -149,10 +166,7 @@ type WayPoint = {
 type ViewerMode =
     | Standard
     | Instrument
-
-
-
-
+    
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module MailboxState = 
@@ -200,6 +214,8 @@ type Model = {
     [<TreatAsValue>]
     future : Option<Drawing.DrawingModel> 
 }
+
+
 
 module Viewer =
     open System.Threading
@@ -268,9 +284,15 @@ module Viewer =
           useCachedConfig false
       }
 
+    //let initFeedback = 
+    //     {  loadScene = "loading Scene..."
+    //        saveScene = "saveing Scene..."
+    //        loadOpcs  = "load opcs..."
+    //        noText    = ""
+    //     }
+
     let initial msgBox = {           
        // surfaces = HSet.empty
-        
         scene = 
           {
             navigation      = navInit
@@ -285,6 +307,8 @@ module Viewer =
             dockConfig      = initialDockConfig                          
             closedPages     = list.Empty 
             firstImport     = true
+            userFeedback    = ""
+            feedbackThreads = ThreadPool.empty
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing

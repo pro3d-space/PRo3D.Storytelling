@@ -28,21 +28,25 @@ module DrawingUtilities =
                 slope = 0.0
                 }
 
-        let getDistance (points:list<V3d>) = points
-                                                |> List.pairwise
-                                                |> List.map (fun (a,b) -> V3d.Distance(a,b))
-                                                |> List.sum
+        let getDistance (points:list<V3d>) = 
+          points
+            |> List.pairwise
+            |> List.map (fun (a,b) -> V3d.Distance(a,b))
+            |> List.sum
 
-        let getSegmentDistance (s:Segment) = getDistance
-                                                [ yield s.startPoint ; 
-                                                   for p in s.points do
-                                                        yield p; 
-                                                  yield s.endPoint 
-                                                ] 
+        let getSegmentDistance (s:Segment) = 
+          getDistance
+            [ 
+              yield s.startPoint
+              for p in s.points do
+                 yield p
+              yield s.endPoint 
+            ] 
    
-        let getWay (segments:plist<Segment>) = [ for s in segments do
-                                                    yield getSegmentDistance s
-                                               ] |> List.sum
+        let getWay (segments:plist<Segment>) = 
+          [ for s in segments do
+               yield getSegmentDistance s
+          ] |> List.sum
                                                                
 
         let calcResultsLine (model:Annotation) (upVec:V3d) (northVec:V3d) (planet:Planet) =
@@ -77,16 +81,15 @@ module DrawingUtilities =
                 | x when x > 1 -> calcResultsLine model upVec northVec planet
                 | _ -> calcResultsPoint model upVec planet
 
-
         let recalcBearing (model:Annotation) (upVec:V3d) (northVec:V3d) = 
-            match model.results with 
-              | Some r ->
-                        let count = model.points.Count
-                        match count with
-                          | x when x > 1 ->
-                                    let line = new Line3d(model.points.[0], model.points.[count-1])
-                                    let bearing = DipAndStrike.bearing upVec northVec line.Direction.Normalized
-                                    Some {r with bearing = bearing }
-                          | _ -> Some r
-              | _-> None
+           match model.results with 
+             | Some r ->
+               let count = model.points.Count
+               match count with
+                 | x when x > 1 ->
+                   let line = new Line3d(model.points.[0], model.points.[count-1])
+                   let bearing = DipAndStrike.bearing upVec northVec line.Direction.Normalized
+                   Some {r with bearing = bearing }
+                 | _ -> Some r
+             | None -> None
 

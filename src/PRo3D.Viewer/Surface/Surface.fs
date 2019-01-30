@@ -128,12 +128,8 @@ module Surface =
         | PlaceSurface              of V3d
         | ScalarsColorLegendMessage of FalseColorLegendApp.Action
         | ColorCorrectionMessage    of ColorCorrectionProperties.Action
-
-    let computeIndices (size:V2i)(invalids : int[]) : int[] =
-      CSharpUtils.IndexComputation.ComputeIndexArray(size,invalids)
-    
-    let intersectKdTrees' = KdTrees.intersectKdTrees computeIndices
-
+        | SetHomePosition           //of Guid*CameraView
+           
     let doKdTreeIntersection (m : SurfaceModel) (r : FastRay3d) cache : option<float * PRo3D.Surfaces.Surface> * hmap<_,_> = 
         let mutable cache = cache
         let activeSgSurfaces = 
@@ -170,7 +166,7 @@ module Surface =
                                     //Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                                             
                                     let ray = r.Ray.Transformed(surf.preTransform.Backward) |> FastRay3d  //combine pre and current transform                     
                                     let hit, c = 
-                                      kd |> intersectKdTrees' bb surf cache ray                     
+                                      kd |> DebugKdTreesX.intersectKdTrees bb surf cache ray
                                     cache <- c
                                     hit
                                     )
@@ -250,14 +246,17 @@ module Surface =
       //this does only update surfaces ... not kdtrees or sgs !!!!             
       { model with surfaces = { model.surfaces with flat = flat' } }
 
-    let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) = 
+    let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) (view:CameraView) = 
       match action with
         | SurfacePropertiesMessage msg ->                
             let m = 
               match model.surfaces.singleSelectLeaf with
                 | Some s -> 
-                  let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface                        
-                  let s' = SurfaceProperties.update surface msg
+                  let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface 
+                  let s' = 
+                      match msg with
+                        | SurfaceProperties.Action.SetHomePosition -> {surface with homePosition = Some view}
+                        | _ -> SurfaceProperties.update surface msg
                   model |> SurfaceModel.updateSingleSurface s'                        
                 | None -> model
             match msg with
@@ -490,10 +489,10 @@ module Surface =
                              yield i [clazz "folder icon"                                                
                                       onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "Open Folder"
 
-                             yield i [
-                               clazz "microchip icon"
-                               onClick (fun _ -> RebuildKdTrees key)
-                             ][] |> UI.wrapToolTip "process kdtrees"
+                             //yield i [
+                             //  clazz "microchip icon"
+                             //  onClick (fun _ -> RebuildKdTrees key)
+                             //][] |> UI.wrapToolTip "process kdtrees"
 
                              yield Incremental.i (absRelIcons) (AList.empty)
                              yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
