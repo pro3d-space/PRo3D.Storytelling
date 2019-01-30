@@ -59,7 +59,7 @@ module ViewerUtils =
 
    
         
-    let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) =
+    let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) =
         
         let surf = lookUp (surface.surface) blarg
             //Mod.bind(fun x -> lookUp (x.surface) blarg )
@@ -217,22 +217,52 @@ module ViewerUtils =
                 return (Trafo3d.Scale(sc) * t)
             }
 
-        let test =
+        let tt = 
+             adaptive {
+                let! s = surf
+                return! s.preTransform
+            }
+
+        let translation =
            adaptive {
                 let! s = surf
-                let! t = s.preTransform
                 let! tr = s.transformation.trafo
                 return tr //(tr * t)
             }
+        let refSysTrafo =
+            adaptive {
+                let! north = refsys.northO
+                let! up = refsys.up.value
+                let east = north.Cross(up)
 
+                let! p = refsys.origin
+                let t = Trafo3d.Translation(p)
+                let rotx = Trafo3d.RotateInto(V3d.XAxis, east)
+                let roty = Trafo3d.RotateInto(V3d.YAxis, up)
+                let rotz = Trafo3d.RotateInto(V3d.ZAxis, north)
+                return(roty * rotz)
+            }
+        
+        let invTrafo = refSysTrafo |> Mod.map( fun x -> x.Inverse)
        
+        let mainTrafo =
+            adaptive {
+                let! p = refsys.origin
+                let tp = Trafo3d.Translation(p)
+                let! t = tt
+                let! rst = refSysTrafo
+                let! tr = translation
+                return(rst * tr * rst.Inverse)
+            }
         let test = 
             aset {
                 let sg =  
                     surface.sceneGraph
                         |> Mod.map createSg
                         |> Sg.dynamic
-                        |> Sg.trafo test
+                        |> Sg.trafo refSysTrafo
+                        |> Sg.trafo translation
+                        |> Sg.trafo  invTrafo
                         |> Sg.uniform "selected"       isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
                         |> Sg.uniform "falseColors"    selectedScalar
@@ -355,13 +385,13 @@ module ViewerUtils =
 
     let renderCommands (sgGrouped:alist<amap<Guid,MSgSurface>>) overlayed discs (m:MModel) =
         let selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
-        
+        let refSystem = m.scene.referenceSystem
         let grouped = 
             sgGrouped |> AList.map(
                 fun x -> ( x 
                     |> AMap.map(fun _ sf -> 
                         let bla = m.scene.surfacesModel.surfaces.flat
-                        viewSingleSurfaceSg sf bla m.frustum selected m.ctrlFlag sf.globalBB )
+                        viewSingleSurfaceSg sf bla m.frustum selected m.ctrlFlag sf.globalBB refSystem )
                     |> AMap.toASet 
                     |> ASet.map snd                     
                 )                

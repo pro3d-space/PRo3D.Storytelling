@@ -334,6 +334,39 @@ module ReferenceSystemApp =
                 fix       = Mod.constant false
             }
 
+            let styleX : MarkerStyle = {
+                position  = model.origin
+                direction = Mod.constant V3d.IOO
+                color     = Mod.constant C4b.Magenta
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant (Some "X")
+                fix       = Mod.constant false
+            }
+
+            let styleY : MarkerStyle = {
+                position  = model.origin
+                direction = Mod.constant V3d.OIO
+                color     = Mod.constant C4b.Cyan
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant (Some "Y")
+                fix       = Mod.constant false
+            }
+
+            let styleZ : MarkerStyle = {
+                position  = model.origin
+                direction = Mod.constant V3d.OOI
+                color     = Mod.constant C4b.Yellow
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant (Some "Z")
+                fix       = Mod.constant false
+            }
+
             //test
             //let n90 =
             //    adaptive {
@@ -363,7 +396,11 @@ module ReferenceSystemApp =
                 styleUp    |> directionMarker near cam  
                 styleNorth |> directionMarker near cam
                 //styleNorth90 |> directionMarker near cam
-                styleEast  |> directionMarker near cam                     
+                styleEast  |> directionMarker near cam  
+                
+                styleX  |> directionMarker near cam  
+                styleY  |> directionMarker near cam  
+                styleZ  |> directionMarker near cam  
             ]   |> Sg.onOff(model.isVisible)  
                 
 

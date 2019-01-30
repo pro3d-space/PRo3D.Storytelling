@@ -205,8 +205,8 @@ module Init =
 
     let translationInput = {
         value   = 0.0
-        min     = -1000.0
-        max     = +1000.0
+        min     = -400000.0
+        max     = +400000.0
         step    = 0.01
         format  = "{0:0.00}"
     }

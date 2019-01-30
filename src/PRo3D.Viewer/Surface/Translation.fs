@@ -79,7 +79,40 @@ module TranslationApp =
                 text      = Mod.constant None
                 fix       = Mod.constant false
             }
+
+            let styleX : ReferenceSystemApp.Sg.MarkerStyle = {
+                position  = position
+                direction = Mod.constant V3d.IOO
+                color     = Mod.constant C4b.Red
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant (Some "X")
+                fix       = Mod.constant false
+            }
+
+            let styleY : ReferenceSystemApp.Sg.MarkerStyle = {
+                position  = position
+                direction = Mod.constant V3d.OIO
+                color     = Mod.constant C4b.Green
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant (Some "Y")
+                fix       = Mod.constant false
+            }
             
+            let styleZ : ReferenceSystemApp.Sg.MarkerStyle = {
+                position  = position
+                direction = Mod.constant V3d.OIO
+                color     = Mod.constant C4b.Blue
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant (Some "Z")
+                fix       = Mod.constant false
+            }
+
             let sizeText = Sg.text cam near (Mod.constant 60.0) position (position |> Mod.map Trafo3d.Translation) refsys.selectedScale (Mod.constant 0.05)
 
             Sg.ofList [
@@ -87,7 +120,11 @@ module TranslationApp =
                 sizeText
                 styleUp    |> ReferenceSystemApp.Sg.directionMarker near cam  
                 styleNorth |> ReferenceSystemApp.Sg.directionMarker near cam
-                styleEast  |> ReferenceSystemApp.Sg.directionMarker near cam                     
+                styleEast  |> ReferenceSystemApp.Sg.directionMarker near cam 
+                
+                styleX    |> ReferenceSystemApp.Sg.directionMarker near cam  
+                styleY    |> ReferenceSystemApp.Sg.directionMarker near cam  
+                styleZ    |> ReferenceSystemApp.Sg.directionMarker near cam  
             ]   |> Sg.onOff(model.useTranslationArrows)  
                 
 
@@ -96,9 +133,9 @@ module TranslationApp =
 
         let viewV3dInput (model : MV3dInput) =  
             Html.table [                            
-                Html.row "north" [Numeric.view' [InputBox] model.x |> UI.map Vector3d.Action.SetX]
+                Html.row "up" [Numeric.view' [InputBox] model.x |> UI.map Vector3d.Action.SetX]
                 Html.row "east"  [Numeric.view' [InputBox] model.y |> UI.map Vector3d.Action.SetY]
-                Html.row "up"    [Numeric.view' [InputBox] model.z |> UI.map Vector3d.Action.SetZ]
+                Html.row "north"    [Numeric.view' [InputBox] model.z |> UI.map Vector3d.Action.SetZ]
             ]       
 
         let view (model:MTransformations) =
