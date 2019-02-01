@@ -81,8 +81,8 @@ module ViewerUtils =
                 return { shape = PickShape.Box bb; trafo = Trafo3d.Identity }
             }        
 
-        let globalToLocal = 
-            surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation -x.Center)
+        //let globalToLocal = 
+        //    surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation -x.Center)
             
         let selectedScalar =
             adaptive {
@@ -167,12 +167,13 @@ module ViewerUtils =
                 return b
             } 
 
-        let useB =
-           adaptive {
-                let! s = surf
-                let! ub = s.colorCorrection.useBrightn
-                return ub
-            } 
+        let useB = surf |> Mod.bind(fun x -> x.colorCorrection.useBrightn) //TODO LF 
+        //let useB =
+        //   adaptive {
+        //        let! s = surf
+        //        let! ub = s.colorCorrection.useBrightn
+        //        return ub
+        //    } 
 
         let gamma =
            adaptive {
@@ -237,32 +238,53 @@ module ViewerUtils =
 
                 let! p = refsys.origin
                 let t = Trafo3d.Translation(p)
-                let rotx = Trafo3d.RotateInto(V3d.XAxis, east)
-                let roty = Trafo3d.RotateInto(V3d.YAxis, up)
-                let rotz = Trafo3d.RotateInto(V3d.ZAxis, north)
+              //  let rotx = Trafo3d.RotateInto(V3d.XAxis, east)
+                let roty = Trafo3d.RotateInto(V3d.YAxis, up.Normalized)
+                let rotz = Trafo3d.RotateInto(V3d.ZAxis, north.Normalized)
                 return(roty * rotz)
             }
-        
-        let invTrafo = refSysTrafo |> Mod.map( fun x -> x.Inverse)
-       
-        let mainTrafo =
+
+        let refSysRotation =
             adaptive {
-                let! p = refsys.origin
-                let tp = Trafo3d.Translation(p)
-                let! t = tt
-                let! rst = refSysTrafo
-                let! tr = translation
-                return(rst * tr * rst.Inverse)
+                let! north = refsys.northO
+                let! up = refsys.up.value
+                let east = north.Normalized.Cross(up.Normalized)
+                
+                return Trafo3d.FromOrthoNormalBasis(north.Normalized,east,up.Normalized)       
             }
+
+        let refTranslation = 
+          adaptive {
+              let! p = refsys.origin
+              return Trafo3d.Translation(p)             
+          }
+        
+        //let invTrafo = refSysTrafo2 |> Mod.map( fun x -> x.Inverse)
+        let inv (t:IMod<Trafo3d>) = t |> Mod.map(fun x -> x.Inverse)
+
+
+        //let mainTrafo =
+        //    adaptive {
+        //        let! p = refsys.origin
+        //        let tp = Trafo3d.Translation(p)
+        //        let! t = tt
+        //        let! rst = refSysTrafo
+        //        let! tr = translation
+        //        return(rst * tr * rst.Inverse)
+        //    }
         let test = 
             aset {
                 let sg =  
                     surface.sceneGraph
                         |> Mod.map createSg
                         |> Sg.dynamic
-                        |> Sg.trafo refSysTrafo
+                        //|> Sg.trafo (tt |> inv)
+                        |> Sg.trafo (refTranslation)
+                        |> Sg.trafo (refSysRotation |> inv)
                         |> Sg.trafo translation
-                        |> Sg.trafo  invTrafo
+                        |> Sg.trafo refSysRotation
+                        |> Sg.trafo (refTranslation |> inv)
+                       // |> Sg.trafo tt
                         |> Sg.uniform "selected"       isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
                         |> Sg.uniform "falseColors"    selectedScalar
