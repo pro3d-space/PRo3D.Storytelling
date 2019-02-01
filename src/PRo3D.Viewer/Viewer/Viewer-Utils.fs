@@ -235,10 +235,8 @@ module ViewerUtils =
                         |> Sg.uniform "TriangleSize" (
                                 adaptive {
                                     let! s = surf
-                                    let! maxAngle = s.triangleSize.value
-                                    Log.warn "maxSize: %A" maxAngle
-                                    //Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
-                                    return maxAngle // |> Double.radiansFromDegrees |> Math.Cos
+                                    let! maxSize = s.triangleSize.value                                                                        
+                                    return maxSize
                                 })
                         |> Sg.uniform "useContrastS"  useContr
                         |> Sg.uniform "contrastS"     contr

@@ -33,12 +33,17 @@ module Surface =
               obj.meshes 
                 |> Array.map(fun x -> 
                   let pos = x.geometry.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
+
                 //  let indices = x.geometry.IndexArray |> unbox<int[]>
                   let t = DebugKdTreesX.getTriangleSet3f pos
                                     
+                  Log.startTimed "Building kdtrees for %s" (s.importPath |> Path.GetFileName)
                   let tree = 
                     KdIntersectionTree(t, 
                       KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical)                  
+                  Log.stop()
+
+                  //TODO TO ... save kdtree
 
                   let kd : KdTrees.InCoreKdTree = {
                     kdTree = tree.ToConcreteKdIntersectionTree();
