@@ -36,8 +36,8 @@ module DebugKdTreesX =
         let size = positions.Size.XY.ToV2i()
         let indices = CSharpUtils.IndexComputation.ComputeIndexArray(size,invalidIndices);
                   
-        Log.warn "num of inv_indices: %A" invalidIndices.Length
-        Log.warn "num of indices: %A" indices.Length
+       // Log.warn "num of inv_indices: %A" invalidIndices.Length
+       // Log.warn "num of indices: %A" indices.Length
                
         let data = 
             positions.Data |> Array.map (fun x ->  x.ToV3d() |> kd.affine.Forward.TransformPos)
@@ -61,7 +61,8 @@ module DebugKdTreesX =
             match kd.kdTree with
             | Some k -> k, cache
             | None -> 
-              let tree = cache |> HMap.tryFind (kd.boundingBox.ToString())
+              let key = (kd.boundingBox.ToString())
+              let tree = cache |> HMap.tryFind key
               match tree with
               | Some t ->                 
                 t, cache
@@ -71,9 +72,7 @@ module DebugKdTreesX =
                 let mutable tree = KdTrees.loadKdtree kd.kdtreePath      
                 let triangles = kd |> loadTriangles
                 
-                tree.KdIntersectionTree.ObjectSet <- triangles
-                            
-                let key = tree.KdIntersectionTree.BoundingBox3d.ToString()                
+                tree.KdIntersectionTree.ObjectSet <- triangles                                                            
                 tree, (HMap.add key tree cache)
           kdTree, cache
 
@@ -348,39 +347,39 @@ module Files =
            relativePath path 4
 
        let expandLazyKdTreePaths (scenePath : option<string>) (surfaces : hmap<Guid, PRo3D.Surfaces.Surface>) (sgSurfaces : hmap<Guid, SgSurface>) =
-          sgSurfaces 
-             |> HMap.map (fun _ s -> 
-                 match s.picking with
-                    | Picking.KdTree ks ->
-                        let surf = surfaces |> HMap.find s.surface
-                        let kd = 
-                            ks |> HMap.map (fun _ k -> 
-                                    match k with 
-                                        | KdTrees.Level0KdTree.LazyKdTree lk when surf.relativePaths && scenePath.IsSome -> // scene is portable                                        
-                                            let path = Path.Combine((Path.GetDirectoryName scenePath.Value),"Surfaces")
-                                            let kdTreeSub   = lk.kdtreePath    |> sceneRelativePath
-                                            let triangleSub = lk.objectSetPath |> sceneRelativePath
-                                         
-                                            KdTrees.LazyKdTree { 
-                                                lk with 
-                                                    kdtreePath    = Path.Combine(path, kdTreeSub)
-                                                    objectSetPath = Path.Combine(path, triangleSub)
-                                            }
-                                        | KdTrees.Level0KdTree.LazyKdTree lk -> // surfaces have absolute paths
-                 
-                                            let kdTreeSub   = lk.kdtreePath    |> surfaceRelativePath
-                                            let triangleSub = lk.objectSetPath |> surfaceRelativePath                                                                                
-                 
-                                            KdTrees.LazyKdTree {
-                                                lk with 
-                                                    kdtreePath    = Path.Combine(surf.importPath, kdTreeSub)
-                                                    objectSetPath = Path.Combine(surf.importPath, triangleSub)
-                                            }
-                                        | KdTrees.Level0KdTree.InCoreKdTree ik -> KdTrees.InCoreKdTree ik // kdtrees can be loaded as is
-                            )
-                        { s with picking = Picking.KdTree kd }
-                    | Picking.PickMesh ms -> s
-           )                
+         sgSurfaces 
+          |> HMap.map (fun _ s -> 
+            match s.picking with
+              | Picking.KdTree ks ->
+                let surf = surfaces |> HMap.find s.surface
+                let kd = 
+                  ks |> HMap.map (
+                    fun _ k -> 
+                      match k with 
+                      | KdTrees.Level0KdTree.LazyKdTree lk when surf.relativePaths && scenePath.IsSome -> // scene is portable                                        
+                        let path = Path.Combine((Path.GetDirectoryName scenePath.Value),"Surfaces")
+                        let kdTreeSub   = lk.kdtreePath    |> sceneRelativePath
+                        let triangleSub = lk.objectSetPath |> sceneRelativePath
+                       
+                        KdTrees.LazyKdTree { 
+                            lk with 
+                                kdtreePath    = Path.Combine(path, kdTreeSub)
+                                objectSetPath = Path.Combine(path, triangleSub)
+                        }
+                      | KdTrees.Level0KdTree.LazyKdTree lk -> // surfaces have absolute paths                      
+                        let kdTreeSub   = lk.kdtreePath    |> surfaceRelativePath
+                        let triangleSub = lk.objectSetPath |> surfaceRelativePath                                                                                
+                      
+                        KdTrees.LazyKdTree {
+                            lk with 
+                                kdtreePath    = Path.Combine(surf.importPath, kdTreeSub)
+                                objectSetPath = Path.Combine(surf.importPath, triangleSub)
+                        }
+                      | KdTrees.Level0KdTree.InCoreKdTree ik -> KdTrees.InCoreKdTree ik // kdtrees can be loaded as is
+                  )
+                { s with picking = Picking.KdTree kd }
+              | Picking.PickMesh ms -> s
+          )                
 
        let makeSurfaceRelative guid (surfaceModel : SurfaceModel) (scenePath : option<string>) =
            match scenePath with

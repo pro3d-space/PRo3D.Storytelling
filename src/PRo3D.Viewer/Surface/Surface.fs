@@ -155,7 +155,7 @@ module Surface =
                             |> List.filter(
                                 fun x -> 
                                    let mutable t = 0.0
-                                   let r' = r.Ray.Transformed(surf.preTransform.Backward) //combine pre and current transform
+                                   let r' = r.Ray //combine pre and current transform
                                    x.Intersects(r', &t)
                             )
                         //intersect corresponding kdtrees

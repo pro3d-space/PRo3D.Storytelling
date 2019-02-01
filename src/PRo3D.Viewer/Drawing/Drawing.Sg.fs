@@ -179,9 +179,7 @@ module Sg =
   //                  do! DefaultSurfaces.simpleLighting
   //              }
 
- 
-              
-
+               
   let pickingLine (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking: bool) = 
     match (points |> AList.toArray).Length with
         | 0  -> Sg.empty //| 1
@@ -434,23 +432,33 @@ module Sg =
       let sgs = ASet.unionMany' [dots; texts]
 
       
+      //let selectionColor = Mod.map2(fun x color -> if x then C4b.VRVisGreen else color) picked c
+
       let pickingLines = 
+        pickingLine points c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) false
+        //aset
+        //    {
+        //        let! picked = picked
+        //        match picked with //TODO LF ... if then else is okay for bools
+        //            | true -> yield outline points 1 c anno.modelTrafo anno.thickness.value (anno.key |> Mod.constant)
+        //            |_-> yield pickingLine points c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
+        //    } |> Sg.set
+           
+      let selectionGeometry = 
         aset
             {
                 let! picked = picked
-                match picked with //TODO LF ... if then else is okay for bools
-                    | true -> yield outline points 1 c anno.modelTrafo anno.thickness.value (anno.key |> Mod.constant)
-                    |_-> yield pickingLine points c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
+                if picked then
+                  yield outline points 1 c anno.modelTrafo anno.thickness.value (anno.key |> Mod.constant)                  
             } |> Sg.set
-     
+
       Sg.ofList [
           //Sg.lines points c anno.thickness.value anno.modelTrafo
+          selectionGeometry
           pickingLines
           Sg.set sgs 
       ] |> Sg.onOff anno.visible
-
  
-
   let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =
      anno.showDns |> optional (drawDns anno conf cl cam) |> Sg.set |> Sg.onOff anno.visible
         

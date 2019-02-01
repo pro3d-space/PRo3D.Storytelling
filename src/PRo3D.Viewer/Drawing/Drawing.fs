@@ -135,6 +135,7 @@ module DrawingApp =
 
       match (working.geometry, (working.points |> PList.count)) with
           | Geometry.Point, 1 -> 
+              Log.line "Picked single point at: %A" (working.points |> PList.tryHead).Value
               finishAndAppendAndSend up north planet view model bc, None
           | Geometry.Line, 2 -> 
               finishAndAppendAndSend up north planet view model bc, None
