@@ -166,7 +166,7 @@ module ReferenceSystemApp =
         let directionMarker (near:IMod<float>) (cam:IMod<CameraView>) (style : MarkerStyle) =
             aset{
                
-                let! dirs = style.direction
+                //let! dirs = style.direction
                 
                 let lineLengthScale = style.size                    
                 let scaledLength = 
@@ -184,13 +184,13 @@ module ReferenceSystemApp =
                 let posTrafo =
                     style.position |> Mod.map(fun d -> Trafo3d.Translation(d))
 
-                let coneTrafo = 
-                    Mod.map2(fun p s -> Trafo3d.RotateInto(V3d.ZAxis, dirs.Normalized) * Trafo3d.Translation(p + s)) style.position scaledLength
+                //let coneTrafo = 
+                //    Mod.map2(fun p s -> Trafo3d.RotateInto(V3d.ZAxis, dirs.Normalized) * Trafo3d.Translation(p + s)) style.position scaledLength
 
                 //let radius = length * 0.1
                 //let scale =  DrawingApp.Sg.computeInvariantScale cam p 5.0
-                let radius = lineLengthScale |> Mod.map(fun d -> d * 0.04)
-                let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
+                //let radius = lineLengthScale |> Mod.map(fun d -> d * 0.04)
+                //let coneSize = lineLengthScale |> Mod.map(fun d -> d * 0.3)
 
                 let nLabelPos = Mod.map2(fun l r -> l + r) style.position scaledLength
                 let nPosTrafo =
@@ -335,6 +335,39 @@ module ReferenceSystemApp =
                 fix       = Mod.constant false
             }
 
+            let styleX : MarkerStyle = {
+                position  = model.origin
+                direction = Mod.constant V3d.IOO
+                color     = Mod.constant C4b.Magenta
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant (Some "X")
+                fix       = Mod.constant false
+            }
+
+            let styleY : MarkerStyle = {
+                position  = model.origin
+                direction = Mod.constant V3d.OIO
+                color     = Mod.constant C4b.Cyan
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant (Some "Y")
+                fix       = Mod.constant false
+            }
+
+            let styleZ : MarkerStyle = {
+                position  = model.origin
+                direction = Mod.constant V3d.OOI
+                color     = Mod.constant C4b.Yellow
+                size      = size
+                thickness = thickness
+                hasArrow  = Mod.constant false
+                text      = Mod.constant (Some "Z")
+                fix       = Mod.constant false
+            }
+
             //test
             //let n90 =
             //    adaptive {
@@ -355,17 +388,42 @@ module ReferenceSystemApp =
             //    fix       = Mod.constant false
             //}
 
+            let refSysTrafo2 =
+              adaptive {
+                  let! north = model.northO
+                  let! up = model.up.value
+                  let east = north.Normalized.Cross(up.Normalized)
+                  
+                  return Trafo3d.FromOrthoNormalBasis(north.Normalized,east,up.Normalized)
+              }
+
             
             let sizeText = Sg.text cam near (Mod.constant 60.0) model.origin (model.origin |> Mod.map Trafo3d.Translation) model.selectedScale (Mod.constant 0.05)
 
-            Sg.ofList [
-                point model.origin (Mod.constant C4b.Red) cam
-                sizeText
-                styleUp    |> directionMarker near cam  
-                styleNorth |> directionMarker near cam
-                //styleNorth90 |> directionMarker near cam
-                styleEast  |> directionMarker near cam                     
-            ]   |> Sg.onOff(model.isVisible)  
+            let refsystem = 
+              Sg.ofList [
+                  point model.origin (Mod.constant C4b.Red) cam
+                  sizeText
+                  styleUp    |> directionMarker near cam  
+                  styleNorth |> directionMarker near cam
+                  //styleNorth90 |> directionMarker near cam
+                  styleEast  |> directionMarker near cam
+              ]
+            
+            let translation = styleX.position |> Mod.map Trafo3d.Translation
+            let inv (t:IMod<Trafo3d>) = t |> Mod.map(fun x -> x.Inverse)
+
+            let xyzSystem = 
+              Sg.ofList [                
+                styleX  |> directionMarker near cam  
+                styleY  |> directionMarker near cam  
+                styleZ  |> directionMarker near cam
+              ] 
+                //|> Sg.trafo (translation |> inv)
+                //|> Sg.trafo refSysTrafo2   
+                //|> Sg.trafo translation
+
+            [refsystem; xyzSystem] |> Sg.ofList |> Sg.onOff(model.isVisible)  
                 
 
     module UI =

@@ -192,6 +192,61 @@ module Mutable =
                 }
     
     
+    type MTransformations(__initial : PRo3D.Surfaces.Transformations) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Transformations> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.Transformations>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Transformations>
+        let _useTranslationArrows = ResetMod.Create(__initial.useTranslationArrows)
+        let _translation = Aardvark.UI.Mutable.MV3dInput.Create(__initial.translation)
+        let _trafo = ResetMod.Create(__initial.trafo)
+        
+        member x.useTranslationArrows = _useTranslationArrows :> IMod<_>
+        member x.translation = _translation
+        member x.trafo = _trafo :> IMod<_>
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3D.Surfaces.Transformations) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                ResetMod.Update(_useTranslationArrows,v.useTranslationArrows)
+                Aardvark.UI.Mutable.MV3dInput.Update(_translation, v.translation)
+                ResetMod.Update(_trafo,v.trafo)
+                
+        
+        static member Create(__initial : PRo3D.Surfaces.Transformations) : MTransformations = MTransformations(__initial)
+        static member Update(m : MTransformations, v : PRo3D.Surfaces.Transformations) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3D.Surfaces.Transformations> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module Transformations =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let useTranslationArrows =
+                { new Lens<PRo3D.Surfaces.Transformations, System.Boolean>() with
+                    override x.Get(r) = r.useTranslationArrows
+                    override x.Set(r,v) = { r with useTranslationArrows = v }
+                    override x.Update(r,f) = { r with useTranslationArrows = f r.useTranslationArrows }
+                }
+            let translation =
+                { new Lens<PRo3D.Surfaces.Transformations, Aardvark.UI.V3dInput>() with
+                    override x.Get(r) = r.translation
+                    override x.Set(r,v) = { r with translation = v }
+                    override x.Update(r,f) = { r with translation = f r.translation }
+                }
+            let trafo =
+                { new Lens<PRo3D.Surfaces.Transformations, Aardvark.Base.Trafo3d>() with
+                    override x.Get(r) = r.trafo
+                    override x.Set(r,v) = { r with trafo = v }
+                    override x.Update(r,f) = { r with trafo = f r.trafo }
+                }
+    
+    
     type MSurface(__initial : PRo3D.Surfaces.Surface) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Surface> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.Surface>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Surface>
@@ -217,6 +272,7 @@ module Mutable =
         let _surfaceType = ResetMod.Create(__initial.surfaceType)
         let _colorCorrection = MColorCorrection.Create(__initial.colorCorrection)
         let _homePosition = MOption.Create(__initial.homePosition)
+        let _transformation = MTransformations.Create(__initial.transformation)
         
         member x.guid = _guid :> IMod<_>
         member x.name = _name :> IMod<_>
@@ -240,6 +296,7 @@ module Mutable =
         member x.surfaceType = _surfaceType :> IMod<_>
         member x.colorCorrection = _colorCorrection
         member x.homePosition = _homePosition :> IMod<_>
+        member x.transformation = _transformation
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.Surface) =
@@ -268,6 +325,7 @@ module Mutable =
                 ResetMod.Update(_surfaceType,v.surfaceType)
                 MColorCorrection.Update(_colorCorrection, v.colorCorrection)
                 MOption.Update(_homePosition, v.homePosition)
+                MTransformations.Update(_transformation, v.transformation)
                 
         
         static member Create(__initial : PRo3D.Surfaces.Surface) : MSurface = MSurface(__initial)
@@ -415,6 +473,12 @@ module Mutable =
                     override x.Get(r) = r.homePosition
                     override x.Set(r,v) = { r with homePosition = v }
                     override x.Update(r,f) = { r with homePosition = f r.homePosition }
+                }
+            let transformation =
+                { new Lens<PRo3D.Surfaces.Surface, PRo3D.Surfaces.Transformations>() with
+                    override x.Get(r) = r.transformation
+                    override x.Set(r,v) = { r with transformation = v }
+                    override x.Update(r,f) = { r with transformation = f r.transformation }
                 }
     
     

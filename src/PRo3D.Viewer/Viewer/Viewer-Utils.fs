@@ -59,7 +59,7 @@ module ViewerUtils =
 
    
         
-    let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) =
+    let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) =
         
         let surf = lookUp (surface.surface) blarg
             //Mod.bind(fun x -> lookUp (x.surface) blarg )
@@ -81,8 +81,8 @@ module ViewerUtils =
                 return { shape = PickShape.Box bb; trafo = Trafo3d.Identity }
             }        
 
-        let globalToLocal = 
-            surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation -x.Center)
+        //let globalToLocal = 
+        //    surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation -x.Center)
             
         let selectedScalar =
             adaptive {
@@ -90,13 +90,13 @@ module ViewerUtils =
                 let! scalar = s.selectedScalar
                 return scalar.IsSome
             }
-        
-        let scalar =
+        let scalar1 =
            adaptive {
                 let! s = surf
                 let! scalar = s.selectedScalar
                 return scalar
             } 
+        let scalar = surf |> Mod.bind( fun x -> x.selectedScalar )
 
         // attribute false color mapping
         let interval = scalar |> Mod.bind ( fun x ->
@@ -146,82 +146,56 @@ module ViewerUtils =
                                 )
      
         // image correction
-        let contr =
-           adaptive {
-                let! s = surf
-                let! c = s.colorCorrection.contrast.value
-                return c
-            } 
-
-        let useContr =
-           adaptive {
-                let! s = surf
-                let! uc = s.colorCorrection.useContrast
-                return uc
-            } 
-
-        let bright =
-           adaptive {
-                let! s = surf
-                let! b = s.colorCorrection.brightness.value
-                return b
-            } 
-
-        let useB =
-           adaptive {
-                let! s = surf
-                let! ub = s.colorCorrection.useBrightn
-                return ub
-            } 
-
-        let gamma =
-           adaptive {
-                let! s = surf
-                let! g = s.colorCorrection.gamma.value
-                return g
-            } 
-
-        let useG =
-           adaptive {
-                let! s = surf
-                let! ug = s.colorCorrection.useGamma
-                return ug
-            } 
-
-        let useGray =
-           adaptive {
-                let! s = surf
-                let! ug = s.colorCorrection.useGrayscale
-                return ug
-            } 
-
-        let useColor =
-           adaptive {
-                let! s = surf
-                let! uc = s.colorCorrection.useColor
-                return uc
-            } 
-        let color =
-           adaptive {
-                let! s = surf
-                let! uc = s.colorCorrection.color.c
-                return uc
-            }
-
-        let trafo =
+        let contr = surf |> Mod.bind( fun x -> x.colorCorrection.contrast.value )
+        let useContr = surf |> Mod.bind( fun x -> x.colorCorrection.useContrast )
+        let bright = surf |> Mod.bind( fun x -> x.colorCorrection.brightness.value )
+        let useB = surf |> Mod.bind(fun x -> x.colorCorrection.useBrightn) 
+        let gamma = surf |> Mod.bind( fun x -> x.colorCorrection.gamma.value )
+        let useG = surf |> Mod.bind( fun x -> x.colorCorrection.useGamma )
+        let useGray = surf |> Mod.bind( fun x -> x.colorCorrection.useGrayscale )
+        let useColor = surf |> Mod.bind( fun x -> x.colorCorrection.useColor )
+        let color = surf |> Mod.bind( fun x -> x.colorCorrection.color.c )
+        
+        let scaleTrafo =
            adaptive {
                 let! s = surf
                 let! sc = s.scaling.value
                 let! t = s.preTransform
                 return (Trafo3d.Scale(sc) * t)
             }
+
+        // translation trafos
+        let preTransform = surf |> Mod.bind( fun x -> x.preTransform )
+        let translation = surf |> Mod.bind( fun x -> x.transformation.trafo )
+        let refSysRotation =
+            adaptive {
+                let! north = refsys.northO
+                let! up = refsys.up.value
+                let east = north.Normalized.Cross(up.Normalized)
+                
+                return Trafo3d.FromOrthoNormalBasis(north.Normalized,east,up.Normalized)       
+            }
+        let refTranslation = 
+          adaptive {
+              let! p = refsys.origin
+              return Trafo3d.Translation(p)             
+          }
         
+        let inv (t:IMod<Trafo3d>) = t |> Mod.map(fun x -> x.Inverse)
+
         let test = 
             aset {
                 let sg =  
                     surface.sceneGraph
                         |> Mod.map createSg
                         |> Sg.dynamic
+                        |> Sg.trafo (preTransform |> inv)
+                        |> Sg.trafo (refTranslation)
+                        |> Sg.trafo (refSysRotation |> inv)
+                        |> Sg.trafo translation
+                        |> Sg.trafo refSysRotation
+                        |> Sg.trafo (refTranslation |> inv)
+                        |> Sg.trafo preTransform
                         |> Sg.uniform "selected"       isSelected
                         |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
                         |> Sg.uniform "falseColors"    selectedScalar
@@ -301,7 +275,7 @@ module ViewerUtils =
                                     do! DefaultSurfaces.trafo
                                     do! DefaultSurfaces.constantColor C4f.White
                                 }
-                                |> Sg.trafo trafo //(surf |> Mod.bind(fun x -> x.preTransform)) 
+                                |> Sg.trafo scaleTrafo //(surf |> Mod.bind(fun x -> x.preTransform)) 
                                 |> Sg.depthTest (Mod.constant DepthTestMode.Never)
 
                     | Picking.KdTree kd -> yield sg
@@ -344,13 +318,13 @@ module ViewerUtils =
 
     let renderCommands (sgGrouped:alist<amap<Guid,MSgSurface>>) overlayed discs (m:MModel) =
         let selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
-        
+        let refSystem = m.scene.referenceSystem
         let grouped = 
             sgGrouped |> AList.map(
                 fun x -> ( x 
                     |> AMap.map(fun _ sf -> 
                         let bla = m.scene.surfacesModel.surfaces.flat
-                        viewSingleSurfaceSg sf bla m.frustum selected m.ctrlFlag sf.globalBB )
+                        viewSingleSurfaceSg sf bla m.frustum selected m.ctrlFlag sf.globalBB refSystem )
                     |> AMap.toASet 
                     |> ASet.map snd                     
                 )                

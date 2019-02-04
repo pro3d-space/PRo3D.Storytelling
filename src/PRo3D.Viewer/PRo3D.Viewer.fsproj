@@ -102,6 +102,7 @@
     <Compile Include="Navigation.fs" />
     <Compile Include="AlignmentModel.fs" />
     <Compile Include="AlignmentApp.fs" />
+    <Compile Include="Surface\Translation.fs" />
     <Compile Include="Surface\Surface-Properties.fs" />
     <Compile Include="Surface\Surface.Files.fs" />
     <Compile Include="Surface\Surface.Sg.fs" />
@@ -140,6 +141,7 @@
     <None Include="HueColorMap.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <Compile Include="Translation.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="CSharpUtils">
