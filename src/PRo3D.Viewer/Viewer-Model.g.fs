@@ -269,6 +269,7 @@ module Mutable =
         let _animations = Aardvark.UI.Animation.Mutable.MAnimationModel.Create(__initial.animations)
         let _messagingMailbox = ResetMod.Create(__initial.messagingMailbox)
         let _mailboxState = ResetMod.Create(__initial.mailboxState)
+        let _minervaModel = PRo3D.Minerva.Mutable.MModel.Create(__initial.minervaModel)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
         
@@ -291,6 +292,7 @@ module Mutable =
         member x.animations = _animations
         member x.messagingMailbox = _messagingMailbox :> IMod<_>
         member x.mailboxState = _mailboxState :> IMod<_>
+        member x.minervaModel = _minervaModel
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         
@@ -318,6 +320,7 @@ module Mutable =
                 Aardvark.UI.Animation.Mutable.MAnimationModel.Update(_animations, v.animations)
                 ResetMod.Update(_messagingMailbox,v.messagingMailbox)
                 ResetMod.Update(_mailboxState,v.mailboxState)
+                PRo3D.Minerva.Mutable.MModel.Update(_minervaModel, v.minervaModel)
                 _past.Update(v.past)
                 _future.Update(v.future)
                 
@@ -449,6 +452,12 @@ module Mutable =
                     override x.Get(r) = r.mailboxState
                     override x.Set(r,v) = { r with mailboxState = v }
                     override x.Update(r,f) = { r with mailboxState = f r.mailboxState }
+                }
+            let minervaModel =
+                { new Lens<PRo3D.Viewer.Model, PRo3D.Minerva.Model>() with
+                    override x.Get(r) = r.minervaModel
+                    override x.Set(r,v) = { r with minervaModel = v }
+                    override x.Update(r,f) = { r with minervaModel = f r.minervaModel }
                 }
             let past =
                 { new Lens<PRo3D.Viewer.Model, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with

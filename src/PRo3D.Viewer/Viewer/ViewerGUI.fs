@@ -30,6 +30,7 @@ open PRo3D.ReferenceSystem
 
 module Gui = 
   open PRo3d.Mutable
+  open PRo3D.Base
 
   let pitchAndBearing (r:MReferenceSystem) (view:IMod<CameraView>) =
           adaptive {

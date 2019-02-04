@@ -92,6 +92,7 @@ type PropertyActions =
     | Translate                 of string * TrafoController.Action
     | Rotate                    of string * TrafoController.Action
     | SurfaceActions            of SurfaceApp.Action
+    | MinervaActions            of PRo3D.Minerva.MinervaAction
     | AlignmentActions          of PRo3d.Align.AlignmentActions
     | SetTabMenu                of TabMenu
     | OpenSceneFileLocation     of string
@@ -204,6 +205,8 @@ type Model = {
 
     messagingMailbox : MessagingMailbox
     mailboxState     : MailboxState
+
+    minervaModel     : PRo3D.Minerva.Model
     
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
@@ -267,10 +270,11 @@ module Viewer =
                     {id = "surfaces"; title = Some " Surfaces "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "annotations"; title = Some " Annotations "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                   ]                          
-                  stack 0.5 None [
+                  stack 0.5 (Some "minerva") [
                     {id = "config"; title = Some " Config "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "bookmarks"; title = Some " Bookmarks"; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "viewplanner"; title = Some " ViewPlanner "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "minerva"; title = Some " Minerva "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                   ]
                 ]
               ]              
@@ -339,6 +343,8 @@ module Viewer =
            animation  = Animate.On
            cam        = CameraController.initial.view
          }
+
+        minervaModel = PRo3D.Minerva.Initial.model
         
         //instrumentCamera = { CameraController.initial with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }        
         //instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0

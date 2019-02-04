@@ -19,6 +19,7 @@ module ReferenceSystemApp =
 
     open PRo3D.ReferenceSystem
     open Aardvark.Base.MultimethodTest
+    open PRo3D.Base
 
     //open Aardvark.UI.ChoiceModule
    

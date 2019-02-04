@@ -4,6 +4,7 @@ open Aardvark.Base.Incremental
 open Aardvark.Base
 open Aardvark.UI
 open PRo3D
+open PRo3D.Base
 
 [<DomainType>]
 type ReferenceSystem = {    

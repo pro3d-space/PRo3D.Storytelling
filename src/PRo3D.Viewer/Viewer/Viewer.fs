@@ -237,6 +237,11 @@ module ViewerApp =
             else None
       }
 
+    let createAnimation pos forward (animationsOld: AnimationModel) : AnimationModel =                                    
+      animateFowardAndLocation pos forward 3.5 "ForwardAndLocation2s"
+        |> AnimationAction.PushAnimation 
+        |> AnimationApp.update animationsOld
+
     let rec getAllDockElements (dnc : DockNodeConfig) : (list<DockElement>) = 
         match dnc with
             | DockNodeConfig.Vertical (weight,children) -> let test = children |> List.map(fun x -> getAllDockElements x )
@@ -380,16 +385,16 @@ module ViewerApp =
                                             animateFowardAndLocation hp.Location hp.Forward 2.0 "ForwardAndLocation2s"
                                         AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                                     | None ->
-                                        let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
-                                        match surf with
-                                            | Some s ->
-                                                    let bb = s.globalBB
-                                                    let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
-                                                    let animationMessage = 
-                                                        animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
-                                                    let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                                                    a'
-                                            | None -> m.animations
+                                let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
+                                match surf with
+                                    | Some s ->
+                                            let bb = s.globalBB
+                                            let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
+                                            let animationMessage = 
+                                                animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                                            let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                                            a'
+                                    | None -> m.animations
                             | _-> m.animations
                            
                     { m with scene = { m.scene with surfacesModel = s}; animations = animation}
@@ -406,23 +411,16 @@ module ViewerApp =
                   | None -> m       
             | BookmarkMessage msg,_,_ ->  
                 let m', bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
-
+               
                 let animation = 
                   match msg with
                   | BookmarkAction.GroupsMessage k ->
                     match k with 
-                    | Groups.Action.UpdateCam _->
-                      let location = m'.scene.navigation.camera.view.Location
-                      let forward = m'.scene.navigation.camera.view.Forward
-
-                      //let locationMsg = CameraAnimations.animateLocation location 2.0 "flyto 2s"
-                      let animationMessage = 
-                        animateFowardAndLocation location forward 3.5 "ForwardAndLocation2s"
-                      let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                      //let fowardMsg = CameraAnimations.animateFoward foward 2.0 "turnAround 2s"
-                      //let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(fowardMsg))
-
-                      a'
+                    | Groups.Action.UpdateCam _->                      
+                        createAnimation 
+                          m'.scene.navigation.camera.view.Location
+                          m'.scene.navigation.camera.view.Forward
+                          m.animations                      
                     | _ -> m.animations
                   | _ -> m.animations
                 
@@ -885,6 +883,14 @@ module ViewerApp =
               { m with scene = { m.scene with userFeedback = text } }
             | ThreadsDone id,_,_ ->  
               { m with scene = { m.scene with userFeedback = ""; feedbackThreads = ThreadPool.remove id m.scene.feedbackThreads} }
+            | MinervaActions a,_,_ ->
+              match a with 
+              | Minerva.MinervaAction.FlyToProduct v -> 
+                 let currentView = m.scene.navigation.camera.view
+                 let newForward = (v - currentView.Location).Normalized
+                                    
+                 { m with animations = createAnimation v newForward m.animations }
+              | _ -> { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -919,10 +925,10 @@ module ViewerApp =
                  attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
                  attribute "data-samples" "4"
                  attribute "useMapping" "true"
-                 //attribute "showFPS" "true"        
-                 //attribute "data-renderalways" "true"
+              //   attribute "showFPS" "true"        
+              //   attribute "data-renderalways" "true"
                  onKeyDown (KeyDown)
-                 onKeyUp (KeyUp)                    
+                 onKeyUp (KeyUp)
                 ] 
             ]            
 
@@ -957,11 +963,11 @@ module ViewerApp =
                 |> Sg.map ReferenceSystemMessage  
 
             let exploreCenter =
-                Navigation.Sg.view m.scene.navigation 
-                
+                Navigation.Sg.view m.scene.navigation            
+          
             let homePosition =
                 Surfaces.Sg.viewHomePosition m.scene.surfacesModel
-          
+            
             
             //let controller = 
             //    adaptive {
@@ -1002,8 +1008,11 @@ module ViewerApp =
                     m.scene.viewPlans 
                     m.scene.navigation.camera.view
                 |> Sg.map ViewPlanMessage
+
+            let minervaFeatures = 
+              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions
                         
-            [annos; exploreCenter; refSystem; viewPlans; homePosition] |> Sg.ofList // (*;orientationCube*)
+            [annos; exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
@@ -1179,6 +1188,9 @@ module ViewerApp =
                 require (myCss) (body bodyAttributes [configUI])
             | Some "viewplanner" -> 
                 require (myCss) (body bodyAttributes [viewPlannerUI])
+            | Some "minerva" -> 
+               let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
+               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])
             | None -> 
                 require (myCss) (
                   body [][                    

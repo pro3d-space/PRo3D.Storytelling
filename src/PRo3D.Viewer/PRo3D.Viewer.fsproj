@@ -79,7 +79,6 @@
   <ItemGroup>
     <Compile Include="Config.fs" />
     <Compile Include="Model.fs" />
-    <Compile Include="CooTransformation.fs" />
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
     <Compile Include="ReferenceSystem-Model.fs" />
@@ -160,6 +159,16 @@
     <ProjectReference Include="..\DGMViewer\DGMViewer.fsproj">
       <Name>DGMViewer</Name>
       <Project>{70f513aa-7b23-40c3-8c6f-d8b75a83d2a0}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\PRo3D.Base\PRo3D.Base.fsproj">
+      <Name>PRo3D.Base</Name>
+      <Project>{e96acf20-d554-407d-bf77-f67a8f60fdb3}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\PRo3D.Minerva\PRo3D.Minerva.fsproj">
+      <Name>PRo3D.Minerva</Name>
+      <Project>{eeac5c2e-f7b2-47e7-903a-89df421ddd0c}</Project>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>

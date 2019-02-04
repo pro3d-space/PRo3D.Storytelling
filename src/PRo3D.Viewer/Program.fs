@@ -35,6 +35,7 @@ open Aardvark.VRVis.Opc
 
 open Aardium
 open System.Threading
+open PRo3D.Base
 
 [<DataContract>]
 type Calc =
@@ -177,13 +178,10 @@ let main argv =
         MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |>ignore
         ()
     
-
     if catchDomainErrors then
       AppDomain.CurrentDomain.UnhandledException.AddHandler(UnhandledExceptionEventHandler(domainError))
-
     
-
-    WebPart.startServerLocalhost 4321 [
+    WebPart.startServerLocalhost 54321 [
         MutableApp.toWebPart' runtime false mainApp
         path "/websocket" >=> handShake ws
         Reflection.assemblyWebPart typeof<EmbeddedRessource>.Assembly
@@ -214,7 +212,7 @@ let main argv =
               mainApp.update Guid.Empty (ViewerAction.SetCameraAndFrustum2 (v.view,frustum) |> Seq.singleton)
 
     let remoteApp = 
-        App.start (PRo3D.RemoteControlApp.app "http://localhost:4321" send)
+        App.start (PRo3D.RemoteControlApp.app "http://localhost:54321" send)
 
     let takeScreenshot (shot:Shot) =   
         let act = CaptureShot shot |> Seq.singleton
@@ -226,7 +224,7 @@ let main argv =
         remoteApp.update Guid.Empty act
         { result = shot.folder }
 
-    WebPart.startServerLocalhost 1234 [ 
+    WebPart.startServerLocalhost 12345 [ 
         MutableApp.toWebPart runtime (remoteApp)
         POST >=> path "/shots" >=> mapJson takeScreenshot
         POST >=> path "/platformshots" >=> mapJson takePlatformShot
@@ -236,7 +234,7 @@ let main argv =
     let titlestr = "PRo3D Viewer - " + viewerVersion + " - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH" + licenseText
 
     Aardium.run {
-        url "http://localhost:4321/"   //"http://localhost:4321/?page=main"
+        url "http://localhost:54321/"   //"http://localhost:4321/?page=main"
         width 1280
         height 800
         debug true

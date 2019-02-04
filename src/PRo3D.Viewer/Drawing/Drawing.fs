@@ -31,6 +31,8 @@ open PRo3D.Groups
 open MBrace.FsPickler.Json   
 
 module DrawingApp =
+    open PRo3D.Base
+
    // open Newtonsoft.Json
         
     let closePolyline (a:Annotation) = 
@@ -366,7 +368,7 @@ module DrawingApp =
         let annoSet = 
             model.annotations.flat 
                 |> AMap.chooseM(fun _ y -> y |> Mod.map toAnnotationOpt) 
-                |> AMap.toASet
+                |> AMap.toASet        
 
         let config : Sg.innerViewConfig = 
             {
