@@ -127,7 +127,7 @@
     <Compile Include="Program.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />
-    <EmbeddedResource Include="ressources\semui-overrides.css" />
+    <EmbeddedResource Include="resources\semui-overrides.css" />
     <Content Include="jscolor.min.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
