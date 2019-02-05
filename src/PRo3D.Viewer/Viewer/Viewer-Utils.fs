@@ -78,7 +78,9 @@ module ViewerUtils =
         let pickable = 
             adaptive {
                 let! bb = globalBB
-                return { shape = PickShape.Box bb; trafo = Trafo3d.Identity }
+                let! s = surf
+                let! t = s.transformation.trafo
+                return { shape = PickShape.Box (bb.Transformed(t)); trafo = Trafo3d.Identity }
             }        
 
         //let globalToLocal = 
@@ -89,13 +91,7 @@ module ViewerUtils =
                 let! s = surf
                 let! scalar = s.selectedScalar
                 return scalar.IsSome
-            }
-        let scalar1 =
-           adaptive {
-                let! s = surf
-                let! scalar = s.selectedScalar
-                return scalar
-            } 
+            }        
         let scalar = surf |> Mod.bind( fun x -> x.selectedScalar )
 
         // attribute false color mapping
@@ -123,38 +119,47 @@ module ViewerUtils =
                             | None   -> Mod.constant(1.0)
                         )
 
-        let upperC = scalar |> Mod.bind ( fun x ->
-                        match x with 
-                            | Some s -> s.colorLegend.upperColor.c |> Mod.map(fun x -> let t = x.ToC3f()
-                                                                                       let t1 = HSVf.FromC3f(t)
-                                                                                       let t2 = (float)t1.H
-                                                                                       t2 )
-                            | None   -> Mod.constant(1.0)
-                        )
+        let upperC = 
+          scalar 
+            |> Mod.bind (fun x ->
+               match x with 
+                 | Some s -> 
+                   s.colorLegend.upperColor.c 
+                     |> Mod.map(fun x -> 
+                       let t = x.ToC3f()
+                       let t1 = HSVf.FromC3f(t)
+                       let t2 = (float)t1.H
+                       t2)
+                 | None -> Mod.constant(1.0)
+               )
         let lowerC = 
           scalar 
             |> Mod.bind ( fun x ->
               match x with 
-                  | Some s -> s.colorLegend.lowerColor.c |> Mod.map(fun x -> ((float)(HSVf.FromC3f (x.ToC3f())).H))
-                  | None   -> Mod.constant(0.0)
+                | Some s -> 
+                  s.colorLegend.lowerColor.c 
+                    |> Mod.map(fun x -> ((float)(HSVf.FromC3f (x.ToC3f())).H))
+                | None   -> Mod.constant(0.0)
               )
 
-        let rangeToMinMax = scalar |> Mod.bind ( fun x -> 
-                                match x with 
-                                    | Some s -> s.definedRange |> Mod.map ( fun y -> V2d(y.Min, y.Max))
-                                    | None   -> Mod.constant(V2d(0.0,1.0))
-                                )
+        let rangeToMinMax = 
+          scalar 
+            |> Mod.bind (fun x ->
+              match x with 
+                  | Some s -> s.definedRange |> Mod.map(fun y -> V2d(y.Min, y.Max))
+                  | None   -> Mod.constant(V2d(0.0,1.0))
+              )
      
         // image correction
-        let contr = surf |> Mod.bind( fun x -> x.colorCorrection.contrast.value )
+        let contr    = surf |> Mod.bind( fun x -> x.colorCorrection.contrast.value )
         let useContr = surf |> Mod.bind( fun x -> x.colorCorrection.useContrast )
-        let bright = surf |> Mod.bind( fun x -> x.colorCorrection.brightness.value )
-        let useB = surf |> Mod.bind(fun x -> x.colorCorrection.useBrightn) 
-        let gamma = surf |> Mod.bind( fun x -> x.colorCorrection.gamma.value )
-        let useG = surf |> Mod.bind( fun x -> x.colorCorrection.useGamma )
-        let useGray = surf |> Mod.bind( fun x -> x.colorCorrection.useGrayscale )
+        let bright   = surf |> Mod.bind( fun x -> x.colorCorrection.brightness.value )
+        let useB     = surf |> Mod.bind( fun x -> x.colorCorrection.useBrightn) 
+        let gamma    = surf |> Mod.bind( fun x -> x.colorCorrection.gamma.value )
+        let useG     = surf |> Mod.bind( fun x -> x.colorCorrection.useGamma )
+        let useGray  = surf |> Mod.bind( fun x -> x.colorCorrection.useGrayscale )
         let useColor = surf |> Mod.bind( fun x -> x.colorCorrection.useColor )
-        let color = surf |> Mod.bind( fun x -> x.colorCorrection.color.c )
+        let color    = surf |> Mod.bind( fun x -> x.colorCorrection.color.c )
         
         let scaleTrafo =
            adaptive {
@@ -166,7 +171,7 @@ module ViewerUtils =
 
         // translation trafos
         let preTransform = surf |> Mod.bind( fun x -> x.preTransform )
-        let translation = surf |> Mod.bind( fun x -> x.transformation.trafo )
+        let translation  = surf |> Mod.bind( fun x -> x.transformation.trafo )
         let refSysRotation =
             adaptive {
                 let! north = refsys.northO
@@ -210,9 +215,8 @@ module ViewerUtils =
                                 adaptive {
                                     let! s = surf
                                     let! maxAngle = s.triangleSize.value
-                                    Log.warn "maxSize: %A" maxAngle
-                                    //Log.warn "maxAngleCos: %A" (maxAngle |> Double.radiansFromDegrees |> Math.Cos)
-                                    return maxAngle // |> Double.radiansFromDegrees |> Math.Cos
+                                    Log.warn "maxSize: %A" maxAngle                                    
+                                    return maxAngle
                                 })
                         |> Sg.uniform "useContrastS"  useContr
                         |> Sg.uniform "contrastS"     contr
@@ -256,30 +260,27 @@ module ViewerUtils =
                                fun sceneHit -> 
                                  let surfM = surf       |> Mod.force
                                  let name  = surfM.name |> Mod.force                                                  
-                                 //Log.warn "spawing picksurface %s" name
+                                 Log.warn "spawing picksurface %s" name
                                  true, Seq.ofList [PickSurface (sceneHit,name)])                         
                            ]
 
                 let! picking = surface.picking
                 match picking with
-                    | Picking.PickMesh pm ->
-                        yield sg
-                        yield
-                            pm
-                                |> Sg.requirePicking
-                                |> Sg.noEvents
-                                |> Sg.withEvents [
-                                    Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
-                                ]
-                                |> Sg.shader {
-                                    do! DefaultSurfaces.trafo
-                                    do! DefaultSurfaces.constantColor C4f.White
-                                }
-                                |> Sg.trafo scaleTrafo //(surf |> Mod.bind(fun x -> x.preTransform)) 
-                                |> Sg.depthTest (Mod.constant DepthTestMode.Never)
-
-                    | Picking.KdTree kd -> yield sg
-
+                | Picking.PickMesh pm ->
+                    yield sg
+                    yield pm
+                      |> Sg.requirePicking
+                      |> Sg.noEvents
+                      |> Sg.withEvents [
+                          Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
+                      ]
+                      |> Sg.shader {
+                          do! DefaultSurfaces.trafo
+                          do! DefaultSurfaces.constantColor C4f.White
+                      }
+                      |> Sg.trafo scaleTrafo //(surf |> Mod.bind(fun x -> x.preTransform)) 
+                      |> Sg.depthTest (Mod.constant DepthTestMode.Never)
+                | Picking.KdTree _ -> yield sg
             } |> Sg.set
         test
 
