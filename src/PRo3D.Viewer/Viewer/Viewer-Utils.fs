@@ -188,101 +188,113 @@ module ViewerUtils =
         
         let inv (t:IMod<Trafo3d>) = t |> Mod.map(fun x -> x.Inverse)
 
-        let test = 
-            aset {
-                let sg =  
-                    surface.sceneGraph
-                        |> Mod.map createSg
-                        |> Sg.dynamic
-                        |> Sg.trafo (preTransform |> inv)
-                        |> Sg.trafo (refTranslation)
-                        |> Sg.trafo (refSysRotation |> inv)
-                        |> Sg.trafo translation
-                        |> Sg.trafo refSysRotation
-                        |> Sg.trafo (refTranslation |> inv)
-                        |> Sg.trafo preTransform
-                        |> Sg.uniform "selected"       isSelected
-                        |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
-                        |> Sg.uniform "falseColors"    selectedScalar
-                        |> Sg.uniform "startC"         lowerC
-                        |> Sg.uniform "endC"           upperC
-                        |> Sg.uniform "interval"       interval
-                        |> Sg.uniform "inverted"       inverted
-                        |> Sg.uniform "lowerBound"     lowerB
-                        |> Sg.uniform "upperBound"     upperB
-                        |> Sg.uniform "MinMax"         rangeToMinMax
-                        |> Sg.uniform "TriangleSize" (
-                                adaptive {
-                                    let! s = surf
-                                    let! maxAngle = s.triangleSize.value
-                                    Log.warn "maxSize: %A" maxAngle                                    
-                                    return maxAngle
-                                })
-                        |> Sg.uniform "useContrastS"  useContr
-                        |> Sg.uniform "contrastS"     contr
-                        |> Sg.uniform "useBrightnS"   useB
-                        |> Sg.uniform "brightnessS"   bright
-                        |> Sg.uniform "useGammaS"     useG 
-                        |> Sg.uniform "gammaS"        gamma
-                        |> Sg.uniform "useGrayS"      useGray
-                        |> Sg.uniform "useColorS"     useColor
-                        |> Sg.uniform "colorS"        color
-                        |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
-                        |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
-                        |> Sg.LodParameters( 
-                            adaptive {
-                                let! s = surf
-                                let! frustum = frustum 
-                                let sizes = V2i(1024,768)
-                                let! quality = s.quality.value
-                                let! trafo = s.preTransform //combine pre and current transform
+        let pickBox = 
+          pickable 
+            |> Mod.map(fun k ->
+            match k.shape with
+            | PickShape.Box bb -> bb
+            | _ -> Box3d.Invalid)
 
-                                return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality); trafo = trafo }
-                            })   
-                        |> Sg.AttributeParameters(
-                            adaptive {
-                                let! s = surf
-                                let! texture = s.selectedTexture 
-                                let! scalar = s.selectedScalar
-
-                                let attr : AttributeParameters = 
-                                    {
-                                        selectedTexture = texture |> Option.map(fun x -> x.index)
-                                        selectedScalar  = scalar  |> Option.map(fun x -> x.index |> Mod.force)
-                                    }
-
-                                return attr
-                            })
-                        |> pickable' pickable
-                        |> Sg.noEvents 
-                        |> Sg.withEvents [
-                             SceneEventKind.Down, (
-                               fun sceneHit -> 
-                                 let surfM = surf       |> Mod.force
-                                 let name  = surfM.name |> Mod.force                                                  
-                                 Log.warn "spawing picksurface %s" name
-                                 true, Seq.ofList [PickSurface (sceneHit,name)])                         
-                           ]
-
-                let! picking = surface.picking
-                match picking with
-                | Picking.PickMesh pm ->
-                    yield sg
-                    yield pm
-                      |> Sg.requirePicking
-                      |> Sg.noEvents
-                      |> Sg.withEvents [
-                          Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
-                      ]
-                      |> Sg.shader {
-                          do! DefaultSurfaces.trafo
-                          do! DefaultSurfaces.constantColor C4f.White
-                      }
-                      |> Sg.trafo scaleTrafo //(surf |> Mod.bind(fun x -> x.preTransform)) 
-                      |> Sg.depthTest (Mod.constant DepthTestMode.Never)
-                | Picking.KdTree _ -> yield sg
-            } |> Sg.set
-        test
+        let test =             
+          surface.sceneGraph
+            |> Mod.map createSg
+            |> Sg.dynamic
+            |> Sg.trafo (preTransform |> inv)
+            |> Sg.trafo (refTranslation)
+            |> Sg.trafo (refSysRotation |> inv)
+            |> Sg.trafo translation
+            |> Sg.trafo refSysRotation
+            |> Sg.trafo (refTranslation |> inv)
+            |> Sg.trafo preTransform
+            |> Sg.uniform "selected"       isSelected
+            |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
+            |> Sg.uniform "falseColors"    selectedScalar
+            |> Sg.uniform "startC"         lowerC
+            |> Sg.uniform "endC"           upperC
+            |> Sg.uniform "interval"       interval
+            |> Sg.uniform "inverted"       inverted
+            |> Sg.uniform "lowerBound"     lowerB
+            |> Sg.uniform "upperBound"     upperB
+            |> Sg.uniform "MinMax"         rangeToMinMax
+            |> Sg.uniform "TriangleSize" (
+                    adaptive {
+                        let! s = surf
+                        let! maxAngle = s.triangleSize.value
+                        Log.warn "maxSize: %A" maxAngle                                    
+                        return maxAngle
+                    })
+            |> Sg.uniform "useContrastS"  useContr
+            |> Sg.uniform "contrastS"     contr
+            |> Sg.uniform "useBrightnS"   useB
+            |> Sg.uniform "brightnessS"   bright
+            |> Sg.uniform "useGammaS"     useG 
+            |> Sg.uniform "gammaS"        gamma
+            |> Sg.uniform "useGrayS"      useGray
+            |> Sg.uniform "useColorS"     useColor
+            |> Sg.uniform "colorS"        color
+            |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
+            |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
+            |> Sg.LodParameters( 
+                adaptive {
+                    let! s = surf
+                    let! frustum = frustum 
+                    let sizes = V2i(1024,768)
+                    let! quality = s.quality.value
+                    let! trafo = s.preTransform //combine pre and current transform
+            
+                    return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality); trafo = trafo }
+                })   
+            |> Sg.AttributeParameters(
+                adaptive {
+                    let! s = surf
+                    let! texture = s.selectedTexture 
+                    let! scalar = s.selectedScalar
+            
+                    let attr : AttributeParameters = 
+                        {
+                            selectedTexture = texture |> Option.map(fun x -> x.index)
+                            selectedScalar  = scalar  |> Option.map(fun x -> x.index |> Mod.force)
+                        }
+            
+                    return attr
+                })
+            |> pickable' pickable
+            |> Sg.noEvents 
+            |> Sg.withEvents [
+                 SceneEventKind.Down, (
+                   fun sceneHit -> 
+                     let surfM = surf       |> Mod.force
+                     let name  = surfM.name |> Mod.force                                                  
+                     Log.warn "spawing picksurface %s" name
+                     true, Seq.ofList [PickSurface (sceneHit,name)])                         
+               ]
+                
+                //let! picking = surface.picking
+                //match picking with
+                //| Picking.PickMesh pm ->
+                //    yield sg
+                //    yield pm
+                //      |> Sg.requirePicking
+                //      |> Sg.noEvents
+                //      |> Sg.withEvents [
+                //          Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
+                //      ]
+                //      |> Sg.shader {
+                //          do! DefaultSurfaces.trafo
+                //          do! DefaultSurfaces.constantColor C4f.White
+                //      }
+                //      |> Sg.trafo scaleTrafo //(surf |> Mod.bind(fun x -> x.preTransform)) 
+                //      |> Sg.depthTest (Mod.constant DepthTestMode.Never)
+                //| Picking.KdTree _ -> yield sg            
+        test 
+          |> Sg.andAlso (
+            (Sg.wireBox (C4b.VRVisGreen |> Mod.constant) pickBox) 
+              |> Sg.noEvents
+              |> Sg.effect [              
+                  Shader.stableTrafo |> toEffect 
+                  DefaultSurfaces.vertexColor |> toEffect
+                ]
+            )
 
     let frustum (m:MModel) =
         let near = m.scene.config.nearPlane.value

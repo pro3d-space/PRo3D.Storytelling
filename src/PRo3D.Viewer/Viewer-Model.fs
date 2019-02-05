@@ -313,7 +313,7 @@ module Viewer =
 
         drawing         = Drawing.DrawingModel.initialdrawing
         properties      = NoProperties
-        interaction     = Interactions.DrawAnnotation
+        interaction     = Interactions.PlaceCoordinateSystem
         picking         = false
         ctrlFlag        = false
 
