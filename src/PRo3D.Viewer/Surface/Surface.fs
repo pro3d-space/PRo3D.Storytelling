@@ -25,20 +25,39 @@ open PRo3D.Groups
 module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg                          
     module ObjectFiles =        
+        open Aardvark.Geometry
 
         let loadObject (s:PRo3D.Surfaces.Surface) : SgSurface =                        
             let obj = Loader.Assimp.load (s.importPath)            
-            let meshes = 
-                [
-                    for mesh in obj.meshes do
-                        yield mesh.geometry.Sg |> Sg.noEvents
-                ] |> Sg.ofList
+            let kdTrees = 
+              obj.meshes 
+                |> Array.map(fun x -> 
+                  let pos = x.geometry.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
+
+                //  let indices = x.geometry.IndexArray |> unbox<int[]>
+                  let t = DebugKdTreesX.getTriangleSet3f pos
+                                    
+                  Log.startTimed "Building kdtrees for %s" (s.importPath |> Path.GetFileName)
+                  let tree = 
+                    KdIntersectionTree(t, 
+                      KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical)                  
+                  Log.stop()
+
+                  //TODO TO ... save kdtree
+
+                  let kd : KdTrees.InCoreKdTree = {
+                    kdTree = tree.ToConcreteKdIntersectionTree();
+                    boundingBox = tree.BoundingBox3d
+                  }
+                    
+                  kd.boundingBox, (KdTrees.Level0KdTree.InCoreKdTree kd)
+                  ) |> HMap.ofArray
 
             let bb = obj.bounds
             let sg = 
                 obj
                 |> Sg.adapter
-                |> Sg.requirePicking
+              //  |> Sg.requirePicking
                 |> Sg.noEvents
                 |> Sg.scale 1.0
 
@@ -49,15 +68,15 @@ module Surface =
                 trafo       = trafo
                 globalBB    = bb
                 sceneGraph  = sg
-                picking     = Picking.PickMesh meshes
+                picking     = Picking.KdTree kdTrees //Picking.PickMesh meshes
                 //transformation = Init.Transformations
             }
                  
-        let createSgObjects runtime signature surfaces =        
+        let createSgObjects _ _ surfaces =
             let sghs =
                 surfaces
                     |> PList.toList
-                    |> List.map (fun d -> (loadObject d))
+              |> List.map loadObject
 
             let sgObjects =
                 sghs 
