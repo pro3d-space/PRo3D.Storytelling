@@ -34,7 +34,64 @@ module ViewerUtils =
     open Aardvark.SceneGraph.Opc.Shader
     open FShade
     
-    //open OpenCvSharp.XFeatures2D
+    module Transformations = 
+
+      let fullTrafo (surf : IMod<MSurface>) (refsys : MReferenceSystem) = 
+          adaptive {
+            let! s = surf
+
+            //legacy transformation from previous steps
+            let! preTrafo = s.preTransform  
+
+            //new orthonormal base x/y/z to north/east/up
+            let! north = refsys.northO
+            let! up    = refsys.up.value
+            let east   = north.Normalized.Cross(up.Normalized)
+                
+            let refSysRotation = 
+              Trafo3d.FromOrthoNormalBasis(north.Normalized, east, up.Normalized)                         
+
+            //pivot transformation to origin
+            let! p = refsys.origin
+            let originTranslation = Trafo3d.Translation(-p)
+            
+            //translation along north, east, up
+            let! trans = s.transformation.trafo
+
+            return 
+              preTrafo.Inverse * 
+              originTranslation.Inverse *
+              refSysRotation.Inverse * 
+              trans * 
+              refSysRotation * 
+              originTranslation * 
+              preTrafo            
+          }
+
+      let fullTrafo' (surf : Surface) (refsys : ReferenceSystem) = 
+            
+            let preTransform = surf.preTransform
+
+            let north = refsys.north.value.Normalized
+            let up = refsys.up.value.Normalized
+            let east   = north.Cross(up)
+                
+            let refSysRotation = 
+              Trafo3d.FromOrthoNormalBasis(north, east, up)
+
+            //pivot transformation to origin            
+            let originTranslation = Trafo3d.Translation(-refsys.origin)
+            
+            //translation along north, east, up            
+            let trans = surf.transformation.trafo
+            
+            preTransform.Inverse * 
+            originTranslation.Inverse *
+            refSysRotation.Inverse * 
+            trans *
+            refSysRotation * 
+            originTranslation * 
+            preTransform                      
     
     let colormap = 
         let config = { wantMipMaps = false; wantSrgb = false; wantCompressed = false }
@@ -75,14 +132,6 @@ module ViewerUtils =
             |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
             |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))         
                 
-        let pickable = 
-            adaptive {
-                let! bb = globalBB
-                let! s = surf
-                let! t = s.transformation.trafo
-                return { shape = PickShape.Box (bb.Transformed(t)); trafo = Trafo3d.Identity }
-            }        
-
         //let globalToLocal = 
         //    surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation -x.Center)
             
@@ -161,77 +210,54 @@ module ViewerUtils =
         let useColor = surf |> Mod.bind( fun x -> x.colorCorrection.useColor )
         let color    = surf |> Mod.bind( fun x -> x.colorCorrection.color.c )
         
-        let scaleTrafo =
-           adaptive {
-                let! s = surf
-                let! sc = s.scaling.value
-                let! t = s.preTransform
-                return (Trafo3d.Scale(sc) * t)
-            }
+        //let scaleTrafo =
+        //   adaptive {
+        //        let! s = surf
+        //        let! sc = s.scaling.value
+        //        let! t = s.preTransform
+        //        return (Trafo3d.Scale(sc) * t)
+        //    }      
 
-        // translation trafos
-        let preTransform = surf |> Mod.bind( fun x -> x.preTransform )
-        let translation  = surf |> Mod.bind( fun x -> x.transformation.trafo )
-        let refSysRotation =
-            adaptive {
-                let! north = refsys.northO
-                let! up = refsys.up.value
-                let east = north.Normalized.Cross(up.Normalized)
-                
-                return Trafo3d.FromOrthoNormalBasis(north.Normalized,east,up.Normalized)       
-            }
-        let refTranslation = 
-          adaptive {
-              let! p = refsys.origin
-              return Trafo3d.Translation(p)             
-          }
         
-        let inv (t:IMod<Trafo3d>) = t |> Mod.map(fun x -> x.Inverse)
+
+        let pickable = 
+          Mod.map2( fun (a:Box3d) (b:Trafo3d) -> 
+            { shape = PickShape.Box (a.Transformed(b)); trafo = Trafo3d.Identity }) globalBB (Transformations.fullTrafo surf refsys)
 
         let pickBox = 
           pickable 
             |> Mod.map(fun k ->
-            match k.shape with
-            | PickShape.Box bb -> bb
-            | _ -> Box3d.Invalid)
+              match k.shape with
+                | PickShape.Box bb -> bb
+                | _ -> Box3d.Invalid)
 
-        let test =             
+        let triangleFilter = surf |> Mod.bind(fun s -> s.triangleSize.value)
+
+        let test =             //TODO LF ... refactor ... split uniforms in different groups and move to nice functions
           surface.sceneGraph
             |> Mod.map createSg
             |> Sg.dynamic
-            |> Sg.trafo (preTransform |> inv)
-            |> Sg.trafo (refTranslation)
-            |> Sg.trafo (refSysRotation |> inv)
-            |> Sg.trafo translation
-            |> Sg.trafo refSysRotation
-            |> Sg.trafo (refTranslation |> inv)
-            |> Sg.trafo preTransform
+            |> Sg.trafo (Transformations.fullTrafo surf refsys)
             |> Sg.uniform "selected"       isSelected
             |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
             |> Sg.uniform "falseColors"    selectedScalar
-            |> Sg.uniform "startC"         lowerC
+            |> Sg.uniform "startC"         lowerC  //color mapping
             |> Sg.uniform "endC"           upperC
             |> Sg.uniform "interval"       interval
             |> Sg.uniform "inverted"       inverted
             |> Sg.uniform "lowerBound"     lowerB
             |> Sg.uniform "upperBound"     upperB
             |> Sg.uniform "MinMax"         rangeToMinMax
-            |> Sg.uniform "TriangleSize" (
-                    adaptive {
-                        let! s = surf
-                        let! maxAngle = s.triangleSize.value
-                        Log.warn "maxSize: %A" maxAngle                                    
-                        return maxAngle
-                    })
-            |> Sg.uniform "useContrastS"  useContr
-            |> Sg.uniform "contrastS"     contr
-            |> Sg.uniform "useBrightnS"   useB
-            |> Sg.uniform "brightnessS"   bright
-            |> Sg.uniform "useGammaS"     useG 
-            |> Sg.uniform "gammaS"        gamma
-            |> Sg.uniform "useGrayS"      useGray
-            |> Sg.uniform "useColorS"     useColor
-            |> Sg.uniform "colorS"        color
+            |> Sg.uniform "TriangleSize"   triangleFilter  //triangle filter
+            |> Sg.uniform "useContrastS"   useContr  //image correction
+            |> Sg.uniform "contrastS"      contr
+            |> Sg.uniform "useBrightnS"    useB
+            |> Sg.uniform "brightnessS"    bright
+            |> Sg.uniform "useGammaS"      useG 
+            |> Sg.uniform "gammaS"         gamma
+            |> Sg.uniform "useGrayS"       useGray
+            |> Sg.uniform "useColorS"      useColor
+            |> Sg.uniform "colorS"         color
             |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
             |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
             |> Sg.LodParameters( 
