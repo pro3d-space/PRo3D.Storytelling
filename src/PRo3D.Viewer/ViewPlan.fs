@@ -71,7 +71,7 @@ module ViewPlan =
         vps
         |> HSet.map (fun x -> if x.id = vp.id then vp else x)
     
-  
+    //TODO LF refactor formatting indentation ... whole file. Maximum column width 120.
     let updateViewPlanFromRover (roverModel:RoverModel) (vp:ViewPlanModel) =
         // update rover model
         let m = {vp with roverModel = roverModel}
@@ -83,7 +83,7 @@ module ViewPlan =
             | None -> m 
        
     let trafoFromTranslatedBase (position:V3d) (tilt:V3d) (forward:V3d) (right:V3d) : Trafo3d =  
-        let rotTrafo =
+        let rotTrafo =  //TODO LF refactor ... compare with Trafo fromOrthoNormalBase function
             new Trafo3d(
                 new M44d(
                     forward.X, right.X, tilt.X, 0.0,
@@ -100,15 +100,16 @@ module ViewPlan =
         )
         (rotTrafo * Trafo3d.Translation(position))
 
+    //TODO LF refactor ... use Math.sign. Checksign is also very ambigious function naming
     let checkSign (v1:V3d) (v2:V3d) =
         let sign = V3d.Dot(v2, v1)
         (sign <= 0.0)
 
-    let hitF (p : V3d) (dir:V3d) (cache : hmap<string, ConcreteKdIntersectionTree>)(surfaceModel:SurfaceModel) = 
+    let hitF (p : V3d) (dir:V3d) (refSystem : ReferenceSystem.ReferenceSystem) (cache : hmap<string, ConcreteKdIntersectionTree>)(surfaceModel:SurfaceModel) = 
         let mutable cache = cache
         let ray = FastRay3d(p, dir)  
                  
-        match SurfaceApp.doKdTreeIntersection surfaceModel ray cache with
+        match SurfaceApp.doKdTreeIntersection surfaceModel refSystem ray cache with
             | Some (t,surf), c -> ray.Ray.GetPointOnRay(t) |> Some
             | None, c -> None
        
@@ -121,11 +122,11 @@ module ViewPlan =
         trafoFromTranslatedBase position tilt forward right
 
         
-    let calculateSurfaceContactPoint (roverWheel:V3d) (cache : hmap<string, ConcreteKdIntersectionTree>) (trafo:Trafo3d) (surfaceModel:SurfaceModel) =
+    let calculateSurfaceContactPoint (roverWheel:V3d) (refSystem : ReferenceSystem.ReferenceSystem) (cache : hmap<string, ConcreteKdIntersectionTree>) (trafo:Trafo3d) (surfaceModel:SurfaceModel) =
         let tilt = trafo.Forward.UpperLeftM33().C2;
         let wheelT = trafo.Forward.TransformPos(roverWheel)
         let origin = wheelT + 5000.0 * tilt //move up ray origin
-        hitF origin (-tilt) cache surfaceModel
+        hitF origin (-tilt) refSystem cache surfaceModel
         //Some origin
        
     let nearestPoint (x:V3d) (plane:Plane3d) =
@@ -156,14 +157,14 @@ module ViewPlan =
         let initTrafo = initialPlacementTrafo working.[0] working.[1] ref.up.value
         
         let surfaceIntersectionPoints = // ray casting for surface intersection with rover wheels
-            rover.wheelPositions 
-                |> List.map(fun x -> calculateSurfaceContactPoint x kdTree initTrafo surfaceModel) 
-                |> List.choose(fun x -> x)
+          rover.wheelPositions 
+            |> List.choose(fun x -> calculateSurfaceContactPoint x ref kdTree initTrafo surfaceModel)                 
 
         let placementTrafo = //initTrafo
-            match (surfaceIntersectionPoints.Length > 2) with
-                | true -> calculateRoverPlacement working surfaceIntersectionPoints ref.up.value
-                | _ -> initTrafo
+          if (surfaceIntersectionPoints.Length > 2) then
+            calculateRoverPlacement working surfaceIntersectionPoints ref.up.value
+          else
+            initTrafo
         
         let angle = 
             {

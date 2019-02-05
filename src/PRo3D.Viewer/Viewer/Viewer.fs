@@ -578,10 +578,13 @@ module ViewerApp =
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
                 m
-            | PickSurface (p,name), _ ,true ->
+            | PickSurface (p,name), _ ,true ->              
               let fray = p.globalRay.Ray
               let r = fray.Ray
               let rayHash = r.GetHashCode()
+              //let surf = 
+              //let superTrafo = ViewerUtils.Transformations.fullTrafo' 
+
               if rayHash = lastHash then
                 m
               else                                
@@ -598,14 +601,14 @@ module ViewerApp =
                               FastRay3d(p + (up * 5000.0), -up)  
                           | _ -> Log.error "projection started without proj mode"; FastRay3d()
                   
-                  match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) ray cache with
+                  match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) m.scene.referenceSystem ray cache with
                       | Some (t,surf), c ->                             
                           cache <- c; ray.Ray.GetPointOnRay t |> Some
                       | None, c ->
                           cache <- c; None
                                   
                 let result = 
-                  match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) fray cache with
+                  match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) m.scene.referenceSystem fray cache with
                    | Some (t,surf), c ->                         
                      cache <- c
                      let hit = r.GetPointOnRay(t)

@@ -56,7 +56,7 @@ module Sg =
         let kdTreesPerHierarchy =
             [| for h in patchHierarchies do
                 if createKdTrees then   
-                    let kdMap = KdTrees.loadKdTrees h preTransform ViewerModality.XYZ Serialization.binarySerializer
+                    let kdMap = KdTrees.loadKdTrees h Trafo3d.Identity ViewerModality.XYZ Serialization.binarySerializer
 
                     yield kdMap
                 else 

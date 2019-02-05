@@ -131,8 +131,8 @@ module Surface =
         | ColorCorrectionMessage    of ColorCorrectionProperties.Action
         | SetHomePosition           
         | TranslationMessage        of TranslationApp.Action
-           
-    let doKdTreeIntersection (m : SurfaceModel) (r : FastRay3d) cache : option<float * PRo3D.Surfaces.Surface> * hmap<_,_> = 
+        
+    let doKdTreeIntersection (m : SurfaceModel) (refSys : PRo3D.ReferenceSystem.ReferenceSystem) (r : FastRay3d) cache : option<float * PRo3D.Surfaces.Surface> * hmap<_,_> = 
         let mutable cache = cache
         let activeSgSurfaces = 
           m.surfaces.flat
@@ -149,7 +149,8 @@ module Surface =
                  match p with
                     | Picking.KdTree kd ->
                       if kd.IsEmpty then Log.error "no kdtree loaded for %s" surf.name; None
-                      else                        
+                      else                    
+                        let superTrafo = PRo3D.Transformations.fullTrafo' surf refSys
                         //get bbs that are hit
                         let hitBoxes =
                           kd  
@@ -158,17 +159,18 @@ module Surface =
                                 fun x -> 
                                    let mutable t = 0.0
                                    let r' = r.Ray //combine pre and current transform
-                                   x.Intersects(r', &t)
+                                   x.Transformed(surf.preTransform.Forward * superTrafo.Forward).Intersects(r', &t)
                             )
                         //intersect corresponding kdtrees
                         let closestHit =
                           hitBoxes
                             |> List.choose(
-                                fun bb -> 
+                                fun key -> 
                                     //Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                                             
-                                    let ray = r.Ray.Transformed(surf.preTransform.Backward) |> FastRay3d  //combine pre and current transform                     
+                                    //let ray = r.Ray.Transformed(surf.preTransform.Backward) |> FastRay3d  //combine pre and current transform                     
+                                    let ray = r.Ray.Transformed(superTrafo.Backward * surf.preTransform.Backward) |> FastRay3d
                                     let hit, c = 
-                                      kd |> DebugKdTreesX.intersectKdTrees bb surf cache ray
+                                      kd |> DebugKdTreesX.intersectKdTrees key surf cache ray
                                     cache <- c
                                     hit
                                     )
@@ -185,6 +187,9 @@ module Surface =
             //|> List.tryPick(fun d -> Some d)
 
         hits, cache
+
+    //let doKdTreeIntersection (m : SurfaceModel) (r : FastRay3d) cache : option<float * PRo3D.Surfaces.Surface> * hmap<_,_> = 
+    //  doKdTreeIntersection' m Trafo3d.Identity r cache 
 
     let updateTrafo (trafo:SurfaceTrafo) (surfaces:hmap<string,PRo3D.Surfaces.Surface>) (model:SurfaceModel) =                                
       match surfaces.TryFind(trafo.id) with

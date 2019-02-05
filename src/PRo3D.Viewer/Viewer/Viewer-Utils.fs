@@ -33,66 +33,7 @@ open Aardvark.UI.Animation
 module ViewerUtils =    
     open Aardvark.SceneGraph.Opc.Shader
     open FShade
-    
-    module Transformations = 
-
-      let fullTrafo (surf : IMod<MSurface>) (refsys : MReferenceSystem) = 
-          adaptive {
-            let! s = surf
-
-            //legacy transformation from previous steps
-            let! preTrafo = s.preTransform  
-
-            //new orthonormal base x/y/z to north/east/up
-            let! north = refsys.northO
-            let! up    = refsys.up.value
-            let east   = north.Normalized.Cross(up.Normalized)
-                
-            let refSysRotation = 
-              Trafo3d.FromOrthoNormalBasis(north.Normalized, east, up.Normalized)                         
-
-            //pivot transformation to origin
-            let! p = refsys.origin
-            let originTranslation = Trafo3d.Translation(-p)
-            
-            //translation along north, east, up
-            let! trans = s.transformation.trafo
-
-            return 
-              preTrafo.Inverse * 
-              originTranslation.Inverse *
-              refSysRotation.Inverse * 
-              trans * 
-              refSysRotation * 
-              originTranslation * 
-              preTrafo            
-          }
-
-      let fullTrafo' (surf : Surface) (refsys : ReferenceSystem) = 
-            
-            let preTransform = surf.preTransform
-
-            let north = refsys.north.value.Normalized
-            let up = refsys.up.value.Normalized
-            let east   = north.Cross(up)
-                
-            let refSysRotation = 
-              Trafo3d.FromOrthoNormalBasis(north, east, up)
-
-            //pivot transformation to origin            
-            let originTranslation = Trafo3d.Translation(-refsys.origin)
-            
-            //translation along north, east, up            
-            let trans = surf.transformation.trafo
-            
-            preTransform.Inverse * 
-            originTranslation.Inverse *
-            refSysRotation.Inverse * 
-            trans *
-            refSysRotation * 
-            originTranslation * 
-            preTransform                      
-    
+                          
     let colormap = 
         let config = { wantMipMaps = false; wantSrgb = false; wantCompressed = false }
         FileTexture("HueColorMap.png",config) :> ITexture
@@ -233,7 +174,7 @@ module ViewerUtils =
 
         let triangleFilter = surf |> Mod.bind(fun s -> s.triangleSize.value)
 
-        let test =             //TODO LF ... refactor ... split uniforms in different groups and move to nice functions
+        let test =             //TODO LF refactor ... split uniforms in different groups and move to nice functions
           surface.sceneGraph
             |> Mod.map createSg
             |> Sg.dynamic

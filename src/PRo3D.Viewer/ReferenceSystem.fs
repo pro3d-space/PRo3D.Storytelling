@@ -423,7 +423,7 @@ module ReferenceSystemApp =
                 //|> Sg.trafo refSysTrafo2   
                 //|> Sg.trafo translation
 
-            [refsystem; xyzSystem] |> Sg.ofList |> Sg.onOff(model.isVisible)  
+            [refsystem] |> Sg.ofList |> Sg.onOff(model.isVisible)  
                 
 
     module UI =
