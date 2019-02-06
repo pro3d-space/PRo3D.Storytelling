@@ -121,7 +121,7 @@ module Mutable =
                     override x.Update(r,f) = { r with selectedScale = f r.selectedScale }
                 }
             let planet =
-                { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, PRo3D.Base.Planet>() with
+                { new Lens<PRo3D.ReferenceSystem.ReferenceSystem, System.Object>() with
                     override x.Get(r) = r.planet
                     override x.Set(r,v) = { r with planet = v }
                     override x.Update(r,f) = { r with planet = f r.planet }
