@@ -32,25 +32,34 @@ module Surface =
             let kdTrees = 
               obj.meshes 
                 |> Array.map(fun x -> 
-                  let pos = x.geometry.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
+                  let kdTreePath = Path.ChangeExtension(s.importPath,".aakd")
+                  
+                  let tree' = 
+                    if File.Exists(kdTreePath) |> not then
+                      let pos = x.geometry.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
+                      
+                      //let indices = x.geometry.IndexArray |> unbox<int[]> potential problem with indices
+                      let t = DebugKdTreesX.getTriangleSet3f pos
+                                        
+                      Log.startTimed "Building kdtrees for %s" (s.importPath |> Path.GetFileName)
+                      let tree = 
+                        KdIntersectionTree(t, 
+                          KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical)                  
+                      Log.stop()
+                                            
 
-                //  let indices = x.geometry.IndexArray |> unbox<int[]>
-                  let t = DebugKdTreesX.getTriangleSet3f pos
-                                    
-                  Log.startTimed "Building kdtrees for %s" (s.importPath |> Path.GetFileName)
-                  let tree = 
-                    KdIntersectionTree(t, 
-                      KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical)                  
-                  Log.stop()
+                      let kd : KdTrees.InCoreKdTree = {
+                        kdTree = tree.ToConcreteKdIntersectionTree();
+                        boundingBox = tree.BoundingBox3d
+                      }
 
-                  //TODO TO ... save kdtree
+                      kd //|> PRo3D.Serialization.save kdTreePath // Serialization crashes, maybe use texture converter
+                    else
+                      PRo3D.Serialization.loadAs<KdTrees.InCoreKdTree> kdTreePath
 
-                  let kd : KdTrees.InCoreKdTree = {
-                    kdTree = tree.ToConcreteKdIntersectionTree();
-                    boundingBox = tree.BoundingBox3d
-                  }
+                  
                     
-                  kd.boundingBox, (KdTrees.Level0KdTree.InCoreKdTree kd)
+                  tree'.boundingBox, (KdTrees.Level0KdTree.InCoreKdTree tree')
                   ) |> HMap.ofArray
 
             let bb = obj.bounds
