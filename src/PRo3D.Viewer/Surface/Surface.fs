@@ -196,7 +196,7 @@ module Surface =
                                 fun key -> 
                                     //Log.line "intersection: %s; pr: %f" surf.name surf.priority.value                                                             
                                     //let ray = r.Ray.Transformed(surf.preTransform.Backward) |> FastRay3d  //combine pre and current transform                     
-                                    let ray = r.Ray.Transformed(superTrafo.Backward * surf.preTransform.Backward) |> FastRay3d
+                                    let ray = r.Ray.Transformed(surf.preTransform.Backward * superTrafo.Backward) |> FastRay3d
                                     let hit, c = 
                                       kd |> DebugKdTreesX.intersectKdTrees key surf cache ray
                                     cache <- c
