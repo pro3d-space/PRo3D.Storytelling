@@ -191,7 +191,7 @@ type Model = {
     waypoints        : plist<WayPoint>
     frustum          : Frustum
     overlayFrustum   : Frustum
-    aspect           : double
+    aspect           : double    
                      
     trafoKind        : TrafoKind
     trafoMode        : TrafoMode

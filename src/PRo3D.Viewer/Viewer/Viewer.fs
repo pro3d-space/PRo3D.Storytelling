@@ -773,19 +773,18 @@ module ViewerApp =
                     | _ -> m
 
               { m with scene = { m.scene with config = c' }}                                       
-            | KeyUp k, _,_ ->
-                let d =
-                  match k with
+            | KeyUp k, _,_ ->               
+                match k with
                   | Aardvark.Application.Keys.LeftCtrl -> 
                     match m.interaction with
                         | Interactions.DrawAnnotation -> 
                             let view = m.scene.navigation.camera.view
-                            DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopDrawing
+                            let d = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopDrawing
                         //| Interactions.PickAnnotation -> 
                         //    DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopPicking 
-                        |_-> m.drawing
-                  | _ -> m.drawing                
-                { m with drawing = d; picking = false } |> stash
+                            { m with drawing = d; ctrlFlag = false; picking = false }
+                        |_-> { m with ctrlFlag = false; picking = false }
+                  | _ -> m                                  
             | SetInteraction t,_,_ -> { m with interaction = t }
             | ReferenceSystemMessage a,_,_ ->                                
                 let refsystem',_ = ReferenceSystemApp.update m.scene.config refConfig m.scene.referenceSystem a
@@ -1062,53 +1061,71 @@ module ViewerApp =
               | Interactions.PlaceCoordinateSystem -> 
                 return Html.Layout.horizontal [
                     Html.Layout.boxH [ Html.SemUi.dropDown' m.scene.referenceSystem.scaleChart m.scene.referenceSystem.selectedScale ReferenceSystemApp.Action.SetScale id ]
-                    Html.Layout.boxH [ i [clazz "large Unhide icon"][] ]
-                    Html.Layout.boxH [ GuiEx.iconCheckBox m.scene.referenceSystem.isVisible ReferenceSystemApp.Action.ToggleVisible  ]                        
+                    //Html.Layout.boxH [ i [clazz "unhide icon"][] ]
+                    Html.Layout.boxH [ GuiEx.iconToggle m.scene.referenceSystem.isVisible "unhide icon" "hide icon" ReferenceSystemApp.Action.ToggleVisible  ]                        
                     ] |> UI.map ReferenceSystemMessage
               | _ -> 
                 return div[][]
           }
         
         let style' = "color: white; font-family:Consolas;"
-        let scenepath = 
-            Incremental.div (AttributeMap.Empty) (   
-                    alist {
-                        let! scenePath = m.scene.scenePath 
-                        let icon = 
-                          match scenePath with
-                            | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
-                            | None -> div[][]  
-                                
-                        let scenePath   = Mod.bindOption m.scene.scenePath "" (fun sp -> Mod.constant sp)
-                        yield  div [] [ 
-                          //Html.Layout.boxH [ text "Scene Path:" ]
-                          Html.Layout.boxH [ 
-                            Incremental.text (scenePath 
-                                |> Mod.map(fun x -> 
-                                    if x.IsEmpty() then "*new scene" else Path.GetFileName x))  
-                          ]
-                          Html.Layout.boxH [ icon ]
-                        ]
-                    }
-                )
+        let scenepath = //TODO LF refactor ... not incremental div or alist needed here, try to write with standard div
+          Incremental.div (AttributeMap.Empty) (   
+            alist {
+              let! scenePath = m.scene.scenePath 
+              let icon = 
+                match scenePath with
+                  | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
+                  | None -> div[][]  
+                      
+              let scenePath   = Mod.bindOption m.scene.scenePath "" (fun sp -> Mod.constant sp)
+              yield  div [] [ 
+                //Html.Layout.boxH [ text "Scene Path:" ]
+                Html.Layout.boxH [ icon ]
+                Html.Layout.boxH [ 
+                  Incremental.text (scenePath 
+                      |> Mod.map(fun x -> 
+                          if x.IsEmpty() then "*new scene" else Path.GetFileName x))  
+                ]
+              ]
+            }
+          )
         
+        let interactionText (i : Interactions) =
+          match i with 
+            | Interactions.PickExploreCenter     -> "CTRL+click to place arcball center"
+            | Interactions.PlaceCoordinateSystem -> "CTRL+click to place coordinate cross"
+            | Interactions.DrawAnnotation        -> "CTRL+click to pick point on surface"
+            | Interactions.PlaceRover            -> "CTRL+click to (1) place rover and (2) pick lookat"
+            | Interactions.TrafoControls         -> "not implemented"
+            | Interactions.PlaceSurface          -> "not implemented"
+            | _ -> ""
 
-        let topMenuItems = [
+
+        let topMenuItems = [             
              Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
           
              Html.Layout.horizontal [
-                Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
-                Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                
-             ]                        
-             Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
+               Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
+               Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                                         
+               Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
+               Html.Layout.boxH [ 
+                 div[style "font-style:italic; width:100%; text-align:right"] [
+                   Incremental.text (m.interaction |> Mod.map interactionText)
+                 ]]
+             ]
           
              Html.Layout.horizontal [
                Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
                Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
              ] 
              Html.Layout.horizontal [
-               Html.Layout.boxH [ scenepath ]
+               scenepath
              ] 
+             //[ Html.Layout.finish ]
+             //Html.Layout.horizontal [
+             //  Html.Layout.boxH [ Incremental.text (m.interaction |> Mod.map interactionText) ]
+             //] 
              //Html.Layout.horizontal [
              //  Html.Layout.boxH [ Incremental.text (m.scene.userFeedback) ]
              //] 
@@ -1123,7 +1140,7 @@ module ViewerApp =
                                            
         let dnsColorLegend =
           FalseColorLegendApp.Draw.createColorLegendDnS m.drawing.colorLegend (V2d(100.0, 200.0))
-
+                
         let scalarsColorLegend =
             let attr = 
               AttributeMap.ofList[ 

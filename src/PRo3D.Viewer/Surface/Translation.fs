@@ -26,37 +26,21 @@ module Transformations =
     adaptive {
       let! s = surf
   
-      //legacy transformation from previous steps
-      let! preTrafo = s.preTransform  
-  
-      //new orthonormal base x/y/z to north/east/up
       let! north = refsys.northO
       let! up    = refsys.up.value
       let east   = north.Normalized.Cross(up.Normalized)
           
       let refSysRotation = 
         Trafo3d.FromOrthoNormalBasis(north.Normalized, east, up.Normalized)                         
-  
-      //pivot transformation to origin
-      let! p = refsys.origin
-      let originTranslation = Trafo3d.Translation(-p)
-      
-      //translation along north, east, up
+        
       let! trans = s.transformation.trafo
   
-      return 
-        preTrafo.Inverse * 
-        originTranslation.Inverse *
-        refSysRotation.Inverse * 
-        trans * 
-        refSysRotation * 
-        originTranslation * 
-        preTrafo            
+      return  refSysRotation.Inverse * trans * refSysRotation
     }
   
   let fullTrafo' (surf : Surface) (refsys : ReferenceSystem) = 
     
-    let preTransform = surf.preTransform
+   // let preTransform = surf.preTransform
     
     let north = refsys.north.value.Normalized
     let up = refsys.up.value.Normalized
@@ -66,18 +50,18 @@ module Transformations =
       Trafo3d.FromOrthoNormalBasis(north, east, up)
     
     //pivot transformation to origin            
-    let originTranslation = Trafo3d.Translation(-refsys.origin)
+   // let originTranslation = Trafo3d.Translation(-refsys.origin)
     
     //translation along north, east, up            
     let trans = surf.transformation.trafo
-    
-    preTransform.Inverse * 
-    originTranslation.Inverse *
-    refSysRotation.Inverse * 
-    trans *
-    refSysRotation * 
-    originTranslation * 
-    preTransform       
+    refSysRotation.Inverse * trans * refSysRotation
+    //preTransform.Inverse * 
+    //originTranslation.Inverse *
+    //refSysRotation.Inverse * 
+    //trans *
+    //refSysRotation * 
+    //originTranslation * 
+    //preTransform       
 
 module TranslationApp =
     
