@@ -26,32 +26,16 @@ module Transformations =
     adaptive {
       let! s = surf
   
-      //legacy transformation from previous steps
-      //let! preTrafo = s.preTransform  
-  
-      ////pivot transformation to origin
-      //let! p = refsys.origin
-      //let originTranslation = Trafo3d.Translation(-p)
-
-      //new orthonormal base x/y/z to north/east/up
       let! north = refsys.northO
       let! up    = refsys.up.value
       let east   = north.Normalized.Cross(up.Normalized)
           
       let refSysRotation = 
         Trafo3d.FromOrthoNormalBasis(north.Normalized, east, up.Normalized)                         
-  
-      //translation along north, east, up
+        
       let! trans = s.transformation.trafo
   
       return  refSysRotation.Inverse * trans * refSysRotation
-        //preTrafo.Inverse * 
-        //originTranslation.Inverse *
-        //refSysRotation.Inverse * 
-        //trans * 
-        //refSysRotation * 
-        //originTranslation * 
-        //preTrafo            
     }
   
   let fullTrafo' (surf : Surface) (refsys : ReferenceSystem) = 
