@@ -381,20 +381,24 @@ module ViewerApp =
                                 let surface = m.scene.surfacesModel.surfaces.flat |> HMap.find id |> Leaf.toSurface 
                                 match surface.homePosition with
                                     | Some hp ->
+                                        let pos = surface.transformation.trafo.Forward.TransformPos(hp.Location)
+                                        let forward = surface.transformation.trafo.Forward.TransformPos(hp.Forward)
                                         let animationMessage = 
-                                            animateFowardAndLocation hp.Location hp.Forward 2.0 "ForwardAndLocation2s"
+                                            animateFowardAndLocation pos forward 2.0 "ForwardAndLocation2s"
                                         AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                                     | None ->
-                                let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
-                                match surf with
-                                    | Some s ->
-                                            let bb = s.globalBB
-                                            let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
-                                            let animationMessage = 
-                                                animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
-                                            let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                                            a'
-                                    | None -> m.animations
+                                        let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
+                                        match surf with
+                                            | Some s ->
+                                                    let bb = s.globalBB
+                                                    let pos = surface.transformation.trafo.Forward.TransformPos(bb.Max)
+                                                    let forward = surface.transformation.trafo.Forward.TransformPos(bb.Center)
+                                                    let view = CameraView.lookAt pos forward m.scene.referenceSystem.up.value    
+                                                    let animationMessage = 
+                                                        animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                                                    let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                                                    a'
+                                            | None -> m.animations
                             | _-> m.animations
                            
                     { m with scene = { m.scene with surfacesModel = s}; animations = animation}

@@ -424,7 +424,8 @@ module Surface =
               match model.surfaces.singleSelectLeaf with
                 | Some s -> 
                   let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface
-                  let s' = { surface with transformation = (TranslationApp.update surface.transformation msg) }
+                  let transformation' = (TranslationApp.update surface.transformation msg)
+                  let s' = { surface with transformation = transformation' }
                   model |> SurfaceModel.updateSingleSurface s'            
                 | None -> model
             m
