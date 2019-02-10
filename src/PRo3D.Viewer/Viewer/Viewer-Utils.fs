@@ -254,14 +254,14 @@ module ViewerUtils =
                 //      |> Sg.depthTest (Mod.constant DepthTestMode.Never)
                 //| Picking.KdTree _ -> yield sg            
         test 
-          //|> Sg.andAlso (
-          //  (Sg.wireBox (C4b.VRVisGreen |> Mod.constant) pickBox) 
-          //    |> Sg.noEvents
-          //    |> Sg.effect [              
-          //        Shader.stableTrafo |> toEffect 
-          //        DefaultSurfaces.vertexColor |> toEffect
-          //      ]
-          //  )
+          |> Sg.andAlso (
+            (Sg.wireBox (C4b.VRVisGreen |> Mod.constant) pickBox) 
+              |> Sg.noEvents
+              |> Sg.effect [              
+                  Shader.stableTrafo |> toEffect 
+                  DefaultSurfaces.vertexColor |> toEffect
+                ]
+            )
 
     let frustum (m:MModel) =
         let near = m.scene.config.nearPlane.value

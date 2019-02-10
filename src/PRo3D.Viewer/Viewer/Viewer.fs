@@ -33,6 +33,7 @@ open PRo3D.Viewer
 open PRo3D.Drawing
 open PRo3D.Groups
 open PRo3D.OrientationCube
+open PRo3D.Correlations
 
 open Aardium
 
@@ -76,6 +77,7 @@ module ViewerApp =
     open PRo3d.Align
     open Aardvark.Rendering.GL.OpenGl.Pointers
     open Aardvark.UI.Animation
+    open CorrelationDrawing
                  
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
@@ -268,7 +270,6 @@ module ViewerApp =
                                    
                    List.append m.scene.closedPages test 
                    
-
     let addDockElement (dnc : DockNodeConfig) (de:DockElement) = 
         match dnc with
             | DockNodeConfig.Vertical (weight,children) -> let add = List.append children [(Stack(weight, None, [de]))]
@@ -278,7 +279,6 @@ module ViewerApp =
             | DockNodeConfig.Stack (weight,activeId,children) -> Stack(weight, activeId, List.append [de] children)
             | DockNodeConfig.Element element ->  Stack(0.2, None, List.append [de] [element]) 
 
-    
     let saveSceneAndAnnotations (path:string) (m:Model) = 
         let s' = { m.scene with scenePath = Some path}
         let drawing = DrawingApp.saveSceneAnnotations path m.drawing
@@ -288,7 +288,7 @@ module ViewerApp =
          match m.interaction with
             | Interactions.DrawAnnotation -> 
                 let m = match surf.surfaceType with
-                        | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = Projection.Linear } }   
+                        | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = PRo3D.Projection.Linear } }   
                         | _ -> m
                 
                 let view = m.scene.navigation.camera.view
@@ -328,9 +328,16 @@ module ViewerApp =
            // | Interactions.PickAnnotation -> m
             | _ -> m
 
-    let mutable lastHash = -1
     
-    let update (runtime : IRuntime) (signature: IFramebufferSignature) (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) (m : Model) (msg : ViewerAction) =        
+
+    let mutable lastHash = -1    
+
+    let update 
+      (runtime : IRuntime) 
+      (signature: IFramebufferSignature) 
+      (sendQueue : BlockingCollection<string>) 
+      (mailbox : MessagingMailbox) 
+      (m : Model) (msg : ViewerAction) =        
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
@@ -590,10 +597,10 @@ module ViewerApp =
                   
                   let ray =
                       match m.drawing.projection with
-                          | Projection.Viewpoint -> 
+                          | PRo3D.Projection.Viewpoint -> 
                               let dir = (p-camLocation).Normalized
                               FastRay3d(camLocation, dir)  
-                          | Projection.Sky -> 
+                          | PRo3D.Projection.Sky -> 
                               let up = m.scene.referenceSystem.up.value
                               FastRay3d(p + (up * 5000.0), -up)  
                           | _ -> Log.error "projection started without proj mode"; FastRay3d()
@@ -888,7 +895,10 @@ module ViewerApp =
                                     
                  { m with animations = createAnimation v newForward m.animations }
               | _ -> { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }
-            | _ -> m       
+            | CorrelationMessage a,_,_ ->
+              let corr' = CorrelationPanelsApp.update m.correlationPlot a
+              { m with correlationPlot = corr' }
+            | _ -> m
                                    
     let mkBrushISg color size trafo : ISg<Message> =
       Sg.sphere 5 color size 
@@ -899,8 +909,7 @@ module ViewerApp =
         }
         |> Sg.noEvents
         |> Sg.trafo(trafo)
-   
-   
+      
     let view (m : MModel) = //(localhost: string)
         
         let renderControlAttributes (model : MNavigationModel)  =            
@@ -1206,6 +1215,10 @@ module ViewerApp =
             | Some "minerva" -> 
                let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
                require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])
+            | Some "corr_mappings" ->
+              CorrelationPanelsApp.viewMappings m.correlationPlot |> UI.map CorrelationMessage
+            | Some "corr_semantics" ->
+              CorrelationPanelsApp.viewSemantics m.correlationPlot |> UI.map CorrelationMessage
             | None -> 
                 require (myCss) (
                   body [][                    

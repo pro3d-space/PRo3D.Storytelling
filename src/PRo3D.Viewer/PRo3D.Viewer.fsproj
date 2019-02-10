@@ -120,6 +120,7 @@
     <Compile Include="AnnotationGroupsImporter.fs" />
     <Compile Include="SurfaceTrafoImporter.fs" />
     <Compile Include="RoverPlacementImporter.fs" />
+    <Compile Include="CorrelationPanels\CorrelationPanelsApp.fs" />
     <Compile Include="Viewer\Viewer-Utils.fs" />
     <Compile Include="Viewer\ViewerGUI.fs" />
     <Compile Include="Viewer\Viewer.fs" />
@@ -158,6 +159,11 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\CorrelationPanels\src\correlationPanels\correlationPanels.fsproj">
+      <Name>correlationPanels</Name>
+      <Project>{60e57386-b581-4246-935f-4868c61761c5}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\DGMViewer\DGMViewer.fsproj">
       <Name>DGMViewer</Name>
       <Project>{70f513aa-7b23-40c3-8c6f-d8b75a83d2a0}</Project>

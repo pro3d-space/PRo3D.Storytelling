@@ -128,6 +128,7 @@ module ReferenceSystemApp =
             | SetNOffset o ->
                 let noffset = Numeric.update model.noffset o
                 let no = Rot3d(model.up.value, model.noffset.value |> Double.radiansFromDegrees).TransformDir(model.north.value) //updateVectorInDegree model.up.value model.north.value model.origin model.noffset.value 
+
                 { model with noffset = noffset; northO = no }, bigConfig 
             | ToggleVisible   -> 
                 { model with isVisible = not model.isVisible}, bigConfig
