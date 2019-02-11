@@ -135,7 +135,6 @@ module Scene =
               |> List.map snd 
               |> PList.ofList         
 
-        let allSurfaces = existingSurfaces |> PList.append' surfaces //????
         let sChildren = surfaces |> PList.map Leaf.Surfaces
 
         let m = 
@@ -146,9 +145,10 @@ module Scene =
         let surfaceMap = 
             (m.scene.surfacesModel.surfaces.flat |> Leaf.toSurfaces)
 
+        let allSurfaces = existingSurfaces |> PList.append' surfaces //????
         //handle sg surfaces
         let m = 
-            allSurfaces
+            surfaces
                 |> PList.filter (fun s -> s.surfaceType = SurfaceType.SurfaceOPC)
                 |> Sg.createSgSurfaces runtime signature
                 |> HMap.union m.scene.surfacesModel.sgSurfaces

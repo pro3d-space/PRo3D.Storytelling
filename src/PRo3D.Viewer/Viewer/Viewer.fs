@@ -165,29 +165,28 @@ module ViewerApp =
     let mutable cache = hmap.Empty
 
     let updateSceneWithNewSurface (m:Model) =
-        let sgSurfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
-        let head = sgSurfaces |> List.tryHead
-        match head with
-            | Some v ->
-                let fullBb = 
-                        sgSurfaces 
-                            |> List.map(fun x -> x.globalBB) 
-                            |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
-                // useful default viewpoint after 2nd import
-                match m.scene.firstImport with
-                  //| x when x > 1 -> { m with scene = { m.scene with referenceSystem = refSystem' }} 
-                  | true -> 
-                    let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
-                    let (refSystem',_)= 
-                        ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
-                    let navigation' =  { m.scene.navigation with exploreCenter = fullBb.Center} 
-                    { m with scene = { m.scene with referenceSystem = refSystem'; navigation = navigation'; firstImport = false }} |> updateCameraUp |> lookAtBoundingBox v.globalBB 
-                  | _-> 
-                    let refAction = ReferenceSystemApp.Action.UpdateUpNorth(fullBb.Center)
-                    let (refSystem',_)= 
-                        ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
-                    { m with scene = { m.scene with referenceSystem = refSystem' }}
-            | None -> m
+      let sgSurfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
+      let head = sgSurfaces |> List.tryHead
+      match head with
+      | Some v ->
+          let fullBb = 
+                  sgSurfaces 
+                      |> List.map(fun x -> x.globalBB) 
+                      |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
+          // useful default viewpoint after 2nd import
+          match m.scene.firstImport with //TODO LF refactor, don't use a flag, just check if surfaces has been empty before                  
+            | true -> 
+              let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
+              let (refSystem',_)= 
+                  ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
+              let navigation' =  { m.scene.navigation with exploreCenter = fullBb.Center} 
+              { m with scene = { m.scene with referenceSystem = refSystem'; navigation = navigation'; firstImport = false }} |> updateCameraUp |> lookAtBoundingBox v.globalBB 
+            | _-> m
+              //let refAction = ReferenceSystemApp.Action.UpdateUpNorth(fullBb.Center)
+              //let (refSystem',_)= 
+              //    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
+              //{ m with scene = { m.scene with referenceSystem = refSystem' }}
+      | None -> m
 
     let isGrabbed (model : Model) =
         let sel = _selectedSurface.Get(model) |> Option.bind(fun x -> _sgSurfaces.Get(model).TryFind x)
@@ -783,27 +782,29 @@ module ViewerApp =
                   | _ -> m                                  
             | SetInteraction t,_,_ -> { m with interaction = t }
             | ReferenceSystemMessage a,_,_ ->                                
-                let refsystem',_ = ReferenceSystemApp.update m.scene.config refConfig m.scene.referenceSystem a
-                let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
-                //let m = (Model.Lens.scene |. Scene.Lens.orientationSystem).Set(m, refsystem')
-               
-                match a with 
-                  | ReferenceSystemApp.Action.SetUp _ | ReferenceSystemApp.Action.SetPlanet _ -> updateCameraUp m
-                  | ReferenceSystemApp.Action.SetNOffset _ -> //update annotation results
-                        let flat = 
-                            m.drawing.annotations.flat 
-                                |> HMap.map(fun k v -> 
-                                let a = v |> Leaf.toAnnotation
-                                let results = DrawingUtilities.Calculations.recalcBearing a m.scene.referenceSystem.up.value m.scene.referenceSystem.northO  
-                                let dnsResults = DipAndStrike.recalculateDnSAzimuth a m.scene.referenceSystem.up.value m.scene.referenceSystem.northO
-                                let a' = { a with results = results; dnsResults = dnsResults }
-                                a'|> Leaf.Annotations) 
-                        m |> Lenses.set _flat flat
-                  | _ -> m                
+              let refsystem',_ = ReferenceSystemApp.update m.scene.config refConfig m.scene.referenceSystem a                
+              let _refSystem = (Model.Lens.scene |. Scene.Lens.referenceSystem)
+              let m' = m |> Lenses.set _refSystem refsystem'
+                                         
+              match a with 
+                | ReferenceSystemApp.Action.SetUp _ | ReferenceSystemApp.Action.SetPlanet _ ->
+                    m' |> updateCameraUp
+                | ReferenceSystemApp.Action.SetNOffset _ -> //update annotation results
+                  let flat = 
+                    m'.drawing.annotations.flat 
+                      |> HMap.map(fun _ v ->
+                        let a = v |> Leaf.toAnnotation
+                        let results    = DrawingUtilities.Calculations.recalcBearing a refsystem'.up.value refsystem'.northO  
+                        let dnsResults = DipAndStrike.recalculateDnSAzimuth a refsystem'.up.value refsystem'.northO
+                        { a with results = results; dnsResults = dnsResults } |> Leaf.Annotations)
+                  m' 
+                    |> Lenses.set _flat flat                     
+                | _ -> 
+                  m'
             | ConfigPropertiesMessage a,_,_ -> 
                 //Log.line "config message %A" a
                 let c' = ConfigProperties.update m.scene.config a
-                let m = (Model.Lens.scene |. Scene.Lens.config).Set(m,c')               
+                let m = (Model.Lens.scene |. Scene.Lens.config).Set(m,c')
                 
                 match a with                   
                   | ConfigProperties.Action.SetNearPlane _ | ConfigProperties.Action.SetFarPlane _ ->

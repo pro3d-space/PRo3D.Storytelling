@@ -406,12 +406,19 @@ module Sg =
           Sg.dots points thickness color                     //support points
       ]         
   
-  let drawText (view : IMod<CameraView>) conf (anno : MAnnotation) = 
-      let points = anno.points |> AList.toMod
-      let pos = 
-          points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
+  let drawText' (view : IMod<CameraView>) conf (text:IMod<string>)(anno : MAnnotation) = 
+    let points = anno.points |> AList.toMod
+    let pos = 
+        points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
 
-      Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo anno.text anno.textsize.value
+    Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo text anno.textsize.value
+
+  let drawText (view : IMod<CameraView>) conf (anno : MAnnotation) = 
+    let points = anno.points |> AList.toMod
+    let pos = 
+        points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
+
+    Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo anno.text anno.textsize.value
 
   let optional (sg : ISg<_>) (m : IMod<bool>) : aset<ISg<_>> =
     adaptive {
@@ -420,16 +427,30 @@ module Sg =
         else return Sg.empty
     } |> ASet.ofModSingle
 
-  let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) (view : IMod<CameraView>) (showPoints : IMod<bool>) (picked:IMod<bool>) =
+  let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) 
+    (view : IMod<CameraView>) (showPoints : IMod<bool>) (picked:IMod<bool>) =
       let points = getPolylinePoints anno            
       let dots   = showPoints |> optional (Sg.dots anno.points (anno.thickness.value |> Mod.map(fun x -> x + 2.0)) c)
      
+      let azimuth =
+        adaptive { 
+          let! results = anno.dnsResults 
+          let! x = 
+            match results with
+            | Some r -> r.dipAzimuth
+            | None -> Mod.constant Double.NaN
+
+          return x
+        }
+
+      let azimuthText = (drawText' view conf (azimuth |> Mod.map(fun x -> sprintf "%.2f" x)) anno)
+        
       let texts = 
         anno.text 
           |> Mod.map (String.IsNullOrEmpty >> not) 
           |> optional (drawText view conf anno)
 
-      let sgs = ASet.unionMany' [dots; texts]
+      let sgs = ASet.unionMany' [dots; texts ]
 
       
       //let selectionColor = Mod.map2(fun x color -> if x then C4b.VRVisGreen else color) picked c
@@ -455,6 +476,7 @@ module Sg =
       Sg.ofList [
           //Sg.lines points c anno.thickness.value anno.modelTrafo
           selectionGeometry
+          //azimuthText
           pickingLines
           Sg.set sgs 
       ] |> Sg.onOff anno.visible
