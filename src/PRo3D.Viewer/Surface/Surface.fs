@@ -281,7 +281,7 @@ module Surface =
       //this does only update surfaces ... not kdtrees or sgs !!!!             
       { model with surfaces = { model.surfaces with flat = flat' } }
 
-    let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) (view:CameraView) = 
+    let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) (view:CameraView) (refSys : PRo3D.ReferenceSystem.ReferenceSystem) = 
       match action with
         | SurfacePropertiesMessage msg ->                
             let m = 
@@ -435,6 +435,30 @@ module Surface =
                   let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface
                   let transformation' = (TranslationApp.update surface.transformation msg)
                   let s' = { surface with transformation = transformation' }
+                  //let homePosition = 
+                  //  match surface.homePosition with
+                  //    | Some hp ->
+                  //        let superTrafo = PRo3D.Transformations.fullTrafo' s' refSys
+                  //        let trafo' = superTrafo.Forward
+                  //        let pos = trafo'.TransformPos(hp.Location)
+                  //        let forward = trafo'.TransformDir(hp.Forward)
+                  //        let up = trafo'.TransformDir(hp.Up)
+                  //        Some ( hp
+                  //                 |> CameraView.withLocation pos
+                  //                 |> CameraView.withForward forward )//(CameraView.lookAt pos forward hp.Up)
+                  //    | None -> surface.homePosition
+                  //let s'' = { s' with homePosition = homePosition }
+                  
+                 
+                  //let sgs' = 
+                  //      model.sgSurfaces
+                  //      |> HMap.update s (fun x -> 
+                  //          match x with 
+                  //          | Some sg ->  
+                  //              let trafo' = { sg.trafo with previewTrafo = sg.trafo.previewTrafo * s'.transformation.trafo }
+                  //              { sg with trafo = trafo'; globalBB = (sg.globalBB.Transformed trafo'.previewTrafo) }
+                  //          | None   -> failwith "surface not found") 
+                  //let m' = { model with sgSurfaces = sgs'} 
                   model |> SurfaceModel.updateSingleSurface s'            
                 | None -> model
             m

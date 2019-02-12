@@ -330,16 +330,18 @@ module DrawingApp =
             m
         | ColorLegendMessage msg,_, _ -> 
             { model with colorLegend = FalseColorLegendApp.update model.colorLegend msg }
-        | FlyToAnnotation msg, _, _ ->
+        | FlyToAnnotation msg, _, _ ->               
             model
         | SaveCSV p, _, _ -> 
+          
+          let lookups = Groups.updateGroupsLookup model.annotations
           let annotations =
             model.annotations.flat
               |> Leaf.toAnnotations
               |> HMap.toList 
               |> List.map snd
-              |> List.map (Csv.exportAnnotation model.annotations.groupsLookup)                  
-                  
+              |> List.map (Csv.exportAnnotation lookups)                  
+          
           let csvTable = Csv.Seq.csv "," true id annotations
           if p.IsEmptyOrNull() |> not then Csv.Seq.write (p) csvTable
           model

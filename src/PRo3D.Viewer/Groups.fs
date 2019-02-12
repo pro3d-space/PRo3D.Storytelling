@@ -112,6 +112,17 @@ module Groups =
                       | None   -> t
         go (List.rev p) t 
 
+    let updateGroupsLookup (m:GroupsModel) =
+        let rec go (n:Node) =
+            let looks = n.leaves |> PList.map( fun x -> (x, n.name))
+            let subs = 
+                n.subNodes |> PList.collect(fun x -> go x)
+            PList.concat [looks; subs]
+
+        (go m.rootGroup)
+          |> PList.toList
+          |> HMap.ofList
+
     let tryLoadGroups (path:string) =
       try
         Some (Serialization.loadAs<PRo3D.Groups.GroupsModel> path)
