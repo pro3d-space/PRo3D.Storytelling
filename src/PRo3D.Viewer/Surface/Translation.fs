@@ -42,7 +42,7 @@ module Transformations =
     
    // let preTransform = surf.preTransform
     
-    let north = refsys.north.value.Normalized
+    let north = refsys.northO.Normalized
     let up = refsys.up.value.Normalized
     let east   = north.Cross(up)
         

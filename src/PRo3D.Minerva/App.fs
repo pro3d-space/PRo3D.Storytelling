@@ -17,6 +17,7 @@ type MinervaAction =
 
 module App =
   open System.Net.Sockets
+  open Aardvark.SceneGraph.Opc
 
   //coords  -4831.341805
 
@@ -74,6 +75,10 @@ module App =
     | Instrument.FrontHazcam -> "FrontHazcam"
     | Instrument.Mastcam     -> "Mastcam"
     | Instrument.APXS        -> "APXS"
+    | Instrument.FrontHazcamR -> "FrontHazcamR"
+    | Instrument.FrontHazcamL -> "FrontHazcamL"
+    | Instrument.MastcamR -> "MastcamR"    
+    | Instrument.MastcamL -> "MastcamL"
     | _ -> instr |> sprintf "unknown instrument number %A" |> failwith
     
 
@@ -151,12 +156,32 @@ module App =
         //|> Sg.uniform "PointSize" size
         //|> Sg.uniform "WorldPos" pos
 
+  let mkDotISg color (size : IMod<float>) (pos : IMod<V3d>) = 
+        Sg.sphere 2 color (Mod.constant 1.0)
+            |> Sg.noEvents
+            |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
+            |> Sg.uniform "Size" size
+            |> Sg.uniform "WorldPos" pos
+
+  let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) = //TODO TO refactor, put into base prj
+    aset {
+        for p in points |> ASet.ofAList do
+           // let scale = computeScale view (Mod.constant p) 5.0                               
+            yield mkDotISg color (size) (Mod.constant p)
+    } 
+    |> Sg.set
+    |> Sg.effect [
+        toEffect <| Shader.screenSpaceScale
+        toEffect <| Shader.stableTrafo
+        toEffect <| DefaultSurfaces.vertexColor          
+    ]
+
   let viewFeaturesSg (model : MModel) =
     model.data.features 
       |> AList.map(fun f -> 
-        f.geometry.positions 
-          |> List.map(fun y -> 
-            drawPoint (f.instrument |> Model.instrumentColor |> Mod.constant) (0.05 |> Mod.constant) (y |> Mod.constant)) |> Sg.ofList
+        dots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
+          //|> List.map(fun y -> 
+          //  drawPoint (f.instrument |> Model.instrumentColor |> Mod.constant) (0.05 |> Mod.constant) (y |> Mod.constant)) |> Sg.ofList
       ) 
       |> AList.toASet 
       |> Sg.set

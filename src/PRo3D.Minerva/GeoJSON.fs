@@ -41,13 +41,13 @@ module MinervaGeoJSON =
             beginTime = (properties?begin_time).AsDateTime()
             endTime = (properties?end_time).AsDateTime()
           } |> Properties.MAHLI
-        | Instrument.FrontHazcam ->
+        | Instrument.FrontHazcam | Instrument.FrontHazcamL | Instrument.FrontHazcamR ->
           {
             FrontHazcam_Properties.id = id |> FeatureId
             beginTime = (properties?begin_time).AsDateTime()
             endTime = (properties?end_time).AsDateTime()
           } |> Properties.FrontHazcam
-        | Instrument.Mastcam ->
+        | Instrument.Mastcam | Instrument.MastcamL | Instrument.MastcamR ->
           {
             Mastcam_Properties.id = id |> FeatureId
             beginTime = (properties?begin_time).AsDateTime()
