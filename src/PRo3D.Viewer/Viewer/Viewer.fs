@@ -148,6 +148,7 @@ module ViewerApp =
             getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
             getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
             getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
+            getOffset          = fun (x:MViewConfigModel) -> x.offset.value
         }
 
     let navConf : Navigation.smallConfig<ViewConfigModel, ReferenceSystem> =
@@ -969,40 +970,7 @@ module ViewerApp =
           
             let homePosition =
                 Surfaces.Sg.viewHomePosition m.scene.surfacesModel
-            
-            
-            //let controller = 
-            //    adaptive {
-            //        let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
-            //        let! kind = m.trafoKind
-            //        match selected with
-            //          | Some c ->                           
-
-            //              let! sgo = m.scene.surfacesModel.sgSurfaces |> AMap.tryFind c
-                          
-            //              match sgo with 
-            //                  | Some sg ->
-            //                        let! trafo = sg.trafo
-            //                        match kind with
-            //                        | TrafoKind.Translate ->                                               
-            //                            return TranslateController.viewController (fun t -> Translate("", t)) m.scene.navigation.camera.view sg.trafo
-            //                        | TrafoKind.Rotate ->
-            //                            return RotationController.viewController (fun t -> Rotate("", t)) m.scene.navigation.camera.view sg.trafo
-            //                        | _ -> return Sg.empty
-            //                  | None -> 
-            //                    Log.warn "selected surface does not exist"
-            //                    return Sg.empty                                 
-            //          | None -> return Sg.empty
-                    
-            //    } |> Sg.dynamic
-
-            //let orientationCube = 
-            //    OrientationCube.Sg.view
-            //        m.scene.navigation.camera.view
-            //        m.scene.config 
-            //        m.scene.referenceSystem
-               
-            
+                                 
             let viewPlans =
                 ViewPlan.Sg.view 
                     m.scene.config 

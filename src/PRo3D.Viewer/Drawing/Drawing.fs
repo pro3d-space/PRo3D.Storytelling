@@ -209,6 +209,7 @@ module DrawingApp =
             getArrowThickness  : 'ma -> IMod<float>
             getArrowLength     : 'ma -> IMod<float>
             getDnsPlaneSize    : 'ma -> IMod<float>
+            getOffset          : 'ma -> IMod<float>
         }
    
     let saveAnnotations (path:string) (model:DrawingModel) = 
@@ -379,6 +380,7 @@ module DrawingApp =
                 arrowLength    = msmallConfig.getArrowLength    mbigConfig
                 arrowThickness = msmallConfig.getArrowThickness mbigConfig
                 dnsPlaneSize   = msmallConfig.getDnsPlaneSize   mbigConfig
+                offset         = msmallConfig.getOffset         mbigConfig
             }
        
         let annotations =              
@@ -398,7 +400,7 @@ module DrawingApp =
           Sg.ofList [
            // brush model.hoverPosition; 
             annotations
-            Sg.drawWorkingAnnotation model.working
+            Sg.drawWorkingAnnotation config.offset model.working
           ]
 
         let depthTest = 

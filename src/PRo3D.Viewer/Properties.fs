@@ -23,6 +23,7 @@ module ConfigProperties =
         | SetImportTriangleSize     of Numeric.Action
         | SetArrowThickness         of Numeric.Action
         | SetDnSPlaneSize           of Numeric.Action
+        | SetOffset                 of Numeric.Action
         | ToggleLodColors
         | ToggleOrientationCube     
         
@@ -31,6 +32,8 @@ module ConfigProperties =
         match act with
             | SetNearPlane s ->
                 { model with nearPlane = Numeric.update model.nearPlane s }
+            | SetOffset s ->
+                { model with offset = Numeric.update model.offset s }
             | SetFarPlane s ->
                 { model with farPlane = Numeric.update model.farPlane s }
             | SetNavigationSensitivity s ->
@@ -59,6 +62,7 @@ module ConfigProperties =
                 Html.row "Arrow Length:"            [Numeric.view' [InputBox] model.arrowLength           |> UI.map SetArrowLength ] 
                 Html.row "Arrow Thickness:"         [Numeric.view' [InputBox] model.arrowThickness        |> UI.map SetArrowThickness ]   
                 Html.row "D+S Plane Size:"          [Numeric.view' [InputBox] model.dnsPlaneSize          |> UI.map SetDnSPlaneSize ]   
+                Html.row "Offset:"                  [Numeric.view' [InputBox] model.offset          |> UI.map SetOffset ]   
                 Html.row "Lod colors:"              [GuiEx.iconCheckBox model.lodColoring ToggleLodColors]
                 Html.row "Orientation Cube: "       [GuiEx.iconCheckBox model.drawOrientationCube ToggleOrientationCube]
             ]

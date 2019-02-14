@@ -67,6 +67,7 @@ module Sg =
           arrowThickness  : IMod<float>
           arrowLength     : IMod<float>
           dnsPlaneSize    : IMod<float>
+          offset          : IMod<float>
       }
 
   let drawDns (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =                         
@@ -180,7 +181,7 @@ module Sg =
   //              }
 
                
-  let pickingLine (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking: bool) = 
+  let pickingLine (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking: bool) = 
     match (points |> AList.toArray).Length with
         | 0  -> Sg.empty //| 1
         |  _ ->
@@ -211,7 +212,7 @@ module Sg =
                   //|> Sg.pass pass0
                   |> Sg.trafo trafo
                   |> Sg.uniform "LineWidth" width
-                  |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+                  |> Sg.uniform "DepthOffset" offset
            //       |> Sg.pickable' pickable
                   |> Sg.noEvents
                   |> Sg.withEvents [
@@ -259,7 +260,7 @@ module Sg =
             //|> Sg.pass pass0
             |> Sg.trafo trafo
             |> Sg.uniform "LineWidth" width
-            |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+            |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
             |> Sg.pickable' pickable
             |> Sg.noEvents
             |> Sg.withEvents [
@@ -297,7 +298,7 @@ module Sg =
              }                               
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+             |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
 
         let outl = 
             sg
@@ -314,7 +315,7 @@ module Sg =
                 do! DefaultSurfaces.constantColor C4f.VRVisGreen
             }
             |> Sg.uniform "LineWidth" (outlineSize width)
-            |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+            |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
        
         Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents 
 
@@ -370,7 +371,7 @@ module Sg =
         | 1 -> outlinePoint points v color trafo (Mod.constant 5.0) id 
         | _ -> outlineLine points v color trafo width id
 
-  let drawWorkingAnnotation (anno : IMod<Option<MAnnotation>>)  = 
+  let drawWorkingAnnotation (offset : IMod<float>) (anno : IMod<Option<MAnnotation>>)  = 
 
       let polyPoints =
           alist {
@@ -401,7 +402,7 @@ module Sg =
       let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)
                              
       Sg.ofList [
-          Sg.lines polyPoints color thickness trafo //polyline
+          Sg.lines polyPoints offset color thickness trafo //polyline
           //Sg.dots polyPoints (Mod.constant C4b.VRVisGreen) // debug sample points
           Sg.dots points thickness color                     //support points
       ]         
@@ -456,7 +457,7 @@ module Sg =
       //let selectionColor = Mod.map2(fun x color -> if x then C4b.VRVisGreen else color) picked c
 
       let pickingLines = 
-        pickingLine points c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) false
+        pickingLine points conf.offset c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) false
         //aset
         //    {
         //        let! picked = picked

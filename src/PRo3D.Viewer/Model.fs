@@ -425,6 +425,7 @@ type ViewConfigModel = {
     arrowLength             : NumericInput
     arrowThickness          : NumericInput
     dnsPlaneSize            : NumericInput
+    offset                  : NumericInput
     lodColoring             : bool
     drawOrientationCube     : bool
     }
@@ -482,17 +483,27 @@ module ViewConfigModel =
             step = 0.01
             format = "{0:0.000}"
         }
+
+    let depthOffset =
+      {
+         min = -500.0
+         max = 500.0
+         value = 0.001
+         step = 0.001
+         format = "{0:0.000}"
+      }
     
     let initial = {
-        nearPlane = initNearPlane
-        farPlane = initFarPlane
+        nearPlane           = initNearPlane
+        farPlane            = initFarPlane
         navigationSensitivity = initNavSens
-        arrowLength = initArrowLength
-        arrowThickness = initArrowThickness
-        dnsPlaneSize = initPlaneSize
-        lodColoring = false
-        importTriangleSize = initImportTriangleSize        
+        arrowLength         = initArrowLength
+        arrowThickness      = initArrowThickness
+        dnsPlaneSize        = initPlaneSize
+        lodColoring         = false
+        importTriangleSize  = initImportTriangleSize        
         drawOrientationCube = false
+        offset = depthOffset
     }
 
 

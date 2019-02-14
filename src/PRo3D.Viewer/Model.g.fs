@@ -766,6 +766,7 @@ module Mutable =
         let _arrowLength = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowLength)
         let _arrowThickness = Aardvark.UI.Mutable.MNumericInput.Create(__initial.arrowThickness)
         let _dnsPlaneSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.dnsPlaneSize)
+        let _offset = Aardvark.UI.Mutable.MNumericInput.Create(__initial.offset)
         let _lodColoring = ResetMod.Create(__initial.lodColoring)
         let _drawOrientationCube = ResetMod.Create(__initial.drawOrientationCube)
         
@@ -776,6 +777,7 @@ module Mutable =
         member x.arrowLength = _arrowLength
         member x.arrowThickness = _arrowThickness
         member x.dnsPlaneSize = _dnsPlaneSize
+        member x.offset = _offset
         member x.lodColoring = _lodColoring :> IMod<_>
         member x.drawOrientationCube = _drawOrientationCube :> IMod<_>
         
@@ -791,6 +793,7 @@ module Mutable =
                 Aardvark.UI.Mutable.MNumericInput.Update(_arrowLength, v.arrowLength)
                 Aardvark.UI.Mutable.MNumericInput.Update(_arrowThickness, v.arrowThickness)
                 Aardvark.UI.Mutable.MNumericInput.Update(_dnsPlaneSize, v.dnsPlaneSize)
+                Aardvark.UI.Mutable.MNumericInput.Update(_offset, v.offset)
                 ResetMod.Update(_lodColoring,v.lodColoring)
                 ResetMod.Update(_drawOrientationCube,v.drawOrientationCube)
                 
@@ -850,6 +853,12 @@ module Mutable =
                     override x.Get(r) = r.dnsPlaneSize
                     override x.Set(r,v) = { r with dnsPlaneSize = v }
                     override x.Update(r,f) = { r with dnsPlaneSize = f r.dnsPlaneSize }
+                }
+            let offset =
+                { new Lens<PRo3D.ViewConfigModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.offset
+                    override x.Set(r,v) = { r with offset = v }
+                    override x.Update(r,f) = { r with offset = f r.offset }
                 }
             let lodColoring =
                 { new Lens<PRo3D.ViewConfigModel, System.Boolean>() with
