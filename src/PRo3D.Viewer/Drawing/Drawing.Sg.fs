@@ -207,12 +207,12 @@ module Sg =
                   |> Sg.shader {
                         do! Shader.stableTrafo
                         do! DefaultSurfaces.vertexColor
-                        do! Shader.thickLine    
+                        do! Shader.thickLine2    
                     }      
                   //|> Sg.pass pass0
                   |> Sg.trafo trafo
                   |> Sg.uniform "LineWidth" width
-                  |> Sg.uniform "DepthOffset" offset
+                  |> Sg.uniform "depthOffset" offset
            //       |> Sg.pickable' pickable
                   |> Sg.noEvents
                   |> Sg.withEvents [

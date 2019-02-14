@@ -674,7 +674,7 @@ module Shader =
          let pp1 = line.P1.pos
          let middle = (pp0 + pp1) / 2.0
          let viewVec = ((middle.XYZ - uniform.CameraLocation).Normalized)
-         let viewVec = V4d(viewVec.X, viewVec.Y, viewVec.Z, 1.0)
+         let viewVec = uniform.ProjTrafoInv * V4d(viewVec.X, viewVec.Y, viewVec.Z, 1.0)
 
          let pp0 = pp0 + viewVec * offset
          let pp1 = pp1 + viewVec * offset
