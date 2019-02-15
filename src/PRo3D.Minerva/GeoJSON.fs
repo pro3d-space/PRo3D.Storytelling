@@ -57,6 +57,10 @@ module MinervaGeoJSON =
           {
             APXS_Properties.id = id |> FeatureId
           } |> Properties.APXS       
+        | Instrument.NotImplemented ->
+          {
+            APXS_Properties.id = id |> FeatureId
+          } |> Properties.APXS       
         | _ -> failwith "encountered invalid instrument from parsing"
 
   let parseSingleCoord (c : array<float>) : V3d =
@@ -82,8 +86,9 @@ module MinervaGeoJSON =
       positions   = List.empty
     }        
 
-  let parseFeature (ins : Instrument) (feature : JsonValue) : Feature =
-    let prop = feature?properties |> parseProperties ins
+  let parseFeature (feature : JsonValue) : Feature =
+    let instrument = (feature?properties?instrument_id).AsString() |> Model.toInstrument
+    let prop = feature?properties |> parseProperties instrument
     
     let position = feature?properties?position.AsArray() |> Array.map(fun x -> x.AsFloat()) |> parseSingleCoordXYZ
     let geometry = feature?geometry |> parseGeometry    
@@ -92,7 +97,7 @@ module MinervaGeoJSON =
 
     {
       id          = (feature?id).AsString()
-      instrument  = ins
+      instrument  = instrument
       typus       = feature.GetProperty("type") |> parseTypus
       boundingBox = Box2d.Invalid//feature?bbox |> parseBoundingBox
       properties  = prop
@@ -100,17 +105,17 @@ module MinervaGeoJSON =
       sol         = sol
     } 
 
-  let parseFeatures (ins : Instrument) (features : JsonValue) : list<Feature> =  
-    features.AsArray() |> List.ofArray |> List.map (parseFeature ins)
+  let parseFeatures (features : JsonValue) : list<Feature> =  
+    features.AsArray() |> List.ofArray |> List.map (parseFeature)
     
   let parseRoot(root : JsonValue) : FeatureCollection =
-    let instrument = (root?id).AsString() |> Model.toInstrument
+    //let instrument = (root?id).AsString() |> Model.toInstrument
 
     {
       name        = (root?id).AsString()
       typus       = root.GetProperty("type") |> parseTypus    
       boundingBox = (root?bbox) |> parseBoundingBox
-      features    = (root?features) |> parseFeatures instrument |> PList.ofList
+      features    = (root?features) |> parseFeatures |> PList.ofList
     }
 
   let load (siteUrl:string) : FeatureCollection =     
@@ -132,28 +137,29 @@ module MinervaGeoJSON =
       published    = (props?published).AsDateTime()
     }
 
-  let patchThroughWebClient (site : string) = 
+  let patchThroughWebClient (cql : string) (site : string)  = 
     let mutable client = new WebClient()
     client.UseDefaultCredentials <- true       
     let credentials = System.Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes("minerva:tai8Ies7"))   
     client.Headers.[System.Net.HttpRequestHeader.Authorization] <- "Basic " + credentials   
+    //client.QueryString <- cql Namevalue
     client.DownloadString(site)
 
   let loadFromUrls sites = 
     sites 
-      |> List.map(fun x -> x |> patchThroughWebClient |> JsonValue.Parse)
+      |> List.map(fun x -> x |> patchThroughWebClient "" |> JsonValue.Parse)
       //|> Async.Parallel
       //|> Async.RunSynchronously 
       |> List.map parseRoot
       |> combineFeatureCollections
 
-  let loadPaged (site:string) = 
+  let loadPaged (site:string) (cql : string) = 
     
-    let bla = site |> patchThroughWebClient |> JsonValue.Parse
+    let bla = (site + "?" + cql) |> patchThroughWebClient |> JsonValue.Parse
     let probs = bla?properties |> parseRootProperties
     let pages =
       [0 .. probs.itemsPerPage .. probs.totalCount]
-        |> List.map(fun index -> sprintf "%s?startIndex=%d&count=%d" site index probs.itemsPerPage)
+        |> List.map(fun index -> sprintf "%s?startIndex=%d&count=%d&%s" site index probs.itemsPerPage cql)
 
     pages |> loadFromUrls
     
@@ -161,7 +167,7 @@ module MinervaGeoJSON =
   let loadMultiple (sites : list<string>) : FeatureCollection =     
     Log.startTimed "fetching data from sites"
     let result = 
-      sites |> List.map(loadPaged) |> combineFeatureCollections
+      sites |> List.map(fun a -> loadPaged a "") |> combineFeatureCollections
     //let result = 
     //  sites |> Load
     Log.stop()

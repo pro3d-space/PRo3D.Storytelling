@@ -79,9 +79,12 @@ module Mutable =
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.Model> = Aardvark.Base.Incremental.EqModRef<PRo3D.Minerva.Model>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.Model>
         let _data = MFeatureCollection.Create(__initial.data)
         let _queries = ResetMod.Create(__initial.queries)
+        let _vplMessages = ResetMod.Create(__initial.vplMessages)
         
         member x.data = _data
         member x.queries = _queries :> IMod<_>
+        member x.comm = __current.Value.comm
+        member x.vplMessages = _vplMessages :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.Model) =
@@ -90,6 +93,7 @@ module Mutable =
                 
                 MFeatureCollection.Update(_data, v.data)
                 ResetMod.Update(_queries,v.queries)
+                ResetMod.Update(_vplMessages,v.vplMessages)
                 
         
         static member Create(__initial : PRo3D.Minerva.Model) : MModel = MModel(__initial)
@@ -117,4 +121,16 @@ module Mutable =
                     override x.Get(r) = r.queries
                     override x.Set(r,v) = { r with queries = v }
                     override x.Update(r,f) = { r with queries = f r.queries }
+                }
+            let comm =
+                { new Lens<PRo3D.Minerva.Model, Microsoft.FSharp.Core.Option<PRo3D.Minerva.Communication.Communicator.Communicator>>() with
+                    override x.Get(r) = r.comm
+                    override x.Set(r,v) = { r with comm = v }
+                    override x.Update(r,f) = { r with comm = f r.comm }
+                }
+            let vplMessages =
+                { new Lens<PRo3D.Minerva.Model, Aardvark.Base.Incremental.ThreadPool<PRo3D.Minerva.MinervaAction>>() with
+                    override x.Get(r) = r.vplMessages
+                    override x.Set(r,v) = { r with vplMessages = v }
+                    override x.Update(r,f) = { r with vplMessages = f r.vplMessages }
                 }

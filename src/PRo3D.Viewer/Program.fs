@@ -146,16 +146,16 @@ let main argv =
     use sendQueue = new BlockingCollection<string>()    
         
     let ws (webSocket : WebSocket) (context: HttpContext) =
-        socket {
-            let mutable loop = true
-
-            while loop do
-                let str = sendQueue.Take()
-                Log.warn "taking item from bc"
-                let s = ByteSegment(System.Text.Encoding.UTF8.GetBytes str)
-                
-                do! webSocket.send Text s true
-        }        
+      socket {
+        let mutable loop = true
+        
+        while loop do
+          let str = sendQueue.Take()
+          Log.warn "taking item from bc"
+          let s = ByteSegment(System.Text.Encoding.UTF8.GetBytes str)
+          
+          do! webSocket.send Text s true
+      }        
 
     PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
         
@@ -175,7 +175,7 @@ let main argv =
     let domainError (sender:obj) (args:UnhandledExceptionEventArgs) =
         let e = args.ExceptionObject :?> Exception;
         Log.error "%A" e
-        MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |>ignore
+        MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |> ignore
         ()
     
     if catchDomainErrors then

@@ -9,15 +9,14 @@ open Aardvark.Base.Incremental
 open Aardvark.Base.Rendering
 
 open PRo3D.Base
+open PRo3D.Minerva.Communication
 
-type MinervaAction =
-  | PerformQueries
-  | ConnectVisplore
-  | FlyToProduct of V3d
+
 
 module App =
   open System.Net.Sockets
   open Aardvark.SceneGraph.Opc
+  open System.Threading  
 
   //coords  -4831.341805
 
@@ -53,21 +52,74 @@ module App =
     stream.Close()
     client.Close()
 
-  let update (model : Model) (msg : MinervaAction) : Model =
+  //https://minerva.eox.at/opensearch/collections/all/json/?cql=(identifier%20IN%20(%271092ML0047930090500286E01_DRCX%27))
+  //271092ML0047930090500286E01_DRCX
+  //1092MR0047900090600628I01_DRCX
+  //https://minerva.eox.at/opensearch/collections/all/json/?cql=(identifier%20IN%20(%271092ML0047930090500286E01_DRCX%27,%271092MR0047900090600628I01_DRCX%27))
+
+  let idTestList = [ "271092ML0047930090500286E01_DRCX"; "1092MR0047900090600628I01_DRCX"]
+
+  let getIdQuerySite (ids:list<string>) = 
+    let groupString = ids |> String.concat("%27,%27") 
+    let cql = @"cql=(identifier%20IN%20(%27" + groupString + "%27))"
+    
+    (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
+
+  let update (mb : MailboxProcessor<MailboxAction>) (model : Model) (msg : MinervaAction) : Model =
       match msg with
       | PerformQueries -> 
-        let data = model.queries |> MinervaGeoJSON.loadMultiple
-        let pos = "[-2486641.16564715, 2289265.84573656, -276244.7871095]" |> V3d.Parse
-        
-        let features = data.features |> PList.sortBy(fun x -> x.sol)
-           // |> PList.filter(fun (x:Feature) -> V3d.Distance(pos, x.geometry.positions.Head) < 10000.0)
-            //|> PList.map(fun x -> sprintf "instr: %A id: %A position: %A" x.instrument x.id x.geometry.positions.Head)
-        //    |> PList.toList
-        //    |> writeLinesToFile ".\strangeProducts.txt"
+        try
+          //let data = model.queries |> MinervaGeoJSON.loadMultiple        
+          let data = idTestList |> getIdQuerySite |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
+          //let features = data.features |> PList.sortBy(fun x -> x.sol)           
+          
+          { model with data = data } //{ data with features = features } } //|> computeXYZFeatures}
+        with e ->
+          Log.error "%A" e.Message
+          model
+      | PerformIdQuery idList ->
+        Log.startTimed "fetching %d entries by ids" idList.Length
+        let data = idList |> getIdQuerySite |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
+        Log.stop()
 
-        { model with data = { data with features = features } } //|> computeXYZFeatures}
-      | ConnectVisplore -> model
-      | FlyToProduct _ -> model
+        { model with data = data }
+      | ConnectVisplore -> 
+        if model.vplMessages.store.IsEmpty then
+
+          //let evaluateCommand (cmd : PRo3D.Minerva.Communication.JsonNetworkCommand.CommandData) : string =
+          //  match cmd.name with
+          //  | "MinervaReplaceSelection" ->
+          //     // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
+          //     cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand
+          //     cmd.para.messageID
+          //  | _ -> sprintf "dont know %A" cmd
+
+          let createWorker () =
+             proclist {
+               let comm = new Communicator.Communicator()
+               comm.Start(fun cmd ->
+                 match cmd.name with
+                 | "MinervaReplaceSelection" ->
+                    // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
+                   // cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand 
+                    match cmd.data.ids with 
+                    | Some ids -> ids |> Array.toList |> PerformIdQuery |> MailboxAction.MiniAction |> mb.Post
+                    | None -> ()
+                    
+                    cmd.para.messageID
+                 | _ -> sprintf "dont know %A" cmd               
+               )             
+               do! Proc.Sleep (60 * 100000)      
+               yield FlyToProduct V3d.Zero
+             }
+          //comm.Start()
+          //Thread.Sleep(60 * 100000)
+          //comm.Close()        
+          { model with vplMessages = ThreadPool.add "vpl server" (createWorker()) model.vplMessages }
+        else
+          model
+      | FlyToProduct _ ->         
+        model
 
   let instrumentText (instr : Instrument) =
     match instr with
@@ -77,11 +129,11 @@ module App =
     | Instrument.APXS        -> "APXS"
     | Instrument.FrontHazcamR -> "FrontHazcamR"
     | Instrument.FrontHazcamL -> "FrontHazcamL"
-    | Instrument.MastcamR -> "MastcamR"    
-    | Instrument.MastcamL -> "MastcamL"
+    | Instrument.MastcamR     -> "MastcamR"    
+    | Instrument.MastcamL     -> "MastcamL"
+    | Instrument.NotImplemented -> "not impl. yet"
     | _ -> instr |> sprintf "unknown instrument number %A" |> failwith
     
-
   let viewFeatures (pos : IMod<V3d>)(instr : Instrument) (features : list<Feature>) = 
     [
       for f in features do                                            
@@ -205,12 +257,39 @@ module App =
         div [clazz "ui inverted segment"] [viewFeaturesGui (pos)(model)]
       ])
 
-  let start =
+  let threads (m : Model) = m.vplMessages
+
+  let processMailboxAction (state:MailboxState) (cancelTokenSrc:CancellationTokenSource) (inbox:MessagingMailbox) (action : MailboxAction) =
+      match action with
+      | MailboxAction.InitMailboxState s ->     
+        s
+      | MailboxAction.MiniAction a ->        
+        a |> Seq.singleton |> state.update 
+        state      
+        
+
+  let messagingMailbox (cancelTokenSrc:CancellationTokenSource) (inbox:MessagingMailbox) =
+        let rec messageLoop state = async {
+            let! msg = inbox.Receive()
+            
+            let newState =
+                try msg |> processMailboxAction state cancelTokenSrc inbox
+                with
+                | e ->
+                    Log.line "ViewerMgmt Error: Dropping msg (Exception:  %O)" e
+                    state
+            
+            return! messageLoop newState
+        }
+        messageLoop MailboxState.empty
+ 
+  let start mailbox =
+    
     App.start {
         unpersist = Unpersist.instance
-        threads   = fun _ -> ThreadPool.empty
+        threads   = fun m -> m.vplMessages
         view      = viewWrapped (Mod.constant V3d.Zero) //localhost
-        update    = update
+        update    = update mailbox
         initial   = Initial.model
     }
 

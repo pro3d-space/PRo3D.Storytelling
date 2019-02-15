@@ -8,6 +8,7 @@ open Aardvark.UI
 open FSharp.Data
 open FSharp.Data.JsonExtensions
 open Aardvark.Application
+open PRo3D.Minerva.Communication
 
 type FeatureId = FeatureId of string
 
@@ -64,6 +65,7 @@ type Instrument =
   | FrontHazcamL = 5
   | MastcamR     = 6
   | MastcamL     = 7
+  | NotImplemented     = 8
 
 type Geometry = 
   {
@@ -100,11 +102,40 @@ type FeatureCollection =
     features    : plist<Feature>
   }
 
+type MinervaAction =
+  | PerformQueries
+  | PerformIdQuery of list<string>
+  | ConnectVisplore
+  | FlyToProduct of V3d
+
+
+type MessagingMailbox = MailboxProcessor<MailboxAction>
+
+and MailboxState = {
+  events  : list<MailboxAction>
+  update  : seq<MinervaAction> -> unit
+}
+and MailboxAction =
+  | MiniAction  of MinervaAction
+  | InitMailboxState of MailboxState  
+
+module MailboxState = 
+  let empty = 
+    {
+      events = list.Empty
+      update = fun _ -> ()
+    }
+
 [<DomainType>]
 type Model = 
   {
-    data : FeatureCollection
+    data     : FeatureCollection
     queries  : list<string>
+
+    [<NonIncremental>]
+    comm     : option<Communicator.Communicator>
+
+    vplMessages : ThreadPool<MinervaAction>
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
@@ -140,14 +171,14 @@ module Model =
  //   let instr = id.ToCharArray() |> Array.takeWhile(fun x -> x <> '_')
    // let instr = new string(instr)
     match id.ToLowerInvariant() with
-      | "mahli"       -> Instrument.MAHLI
-      | "fronthazcam" -> Instrument.FrontHazcam        
-      | "mastcam"     -> Instrument.Mastcam
-      | "apxs"        -> Instrument.APXS
-      | "fronthazcam-right" -> Instrument.FrontHazcamR
-      | "fronthazcam-left"  -> Instrument.FrontHazcamL
-      | "mastcam-right"     -> Instrument.MastcamR
-      | "mastcam-left"      -> Instrument.MastcamL
+      | "mahli"        -> Instrument.MAHLI
+      | "apxs"         -> Instrument.APXS
+      | "fhaz_left_b"  -> Instrument.FrontHazcamL    
+      | "fhaz_right_b" -> Instrument.FrontHazcamR    
+      | "mast_left"    -> Instrument.MastcamR
+      | "mast_right"   -> Instrument.MastcamL
+      | "chemcam_libs" -> Instrument.NotImplemented
+      | "chemcam_rmi"  -> Instrument.NotImplemented      
       | _ -> id |> sprintf "unknown instrument %A" |> failwith
 
   let instrumentColor (instr : Instrument) =
@@ -160,6 +191,7 @@ module Model =
     | Instrument.FrontHazcamL -> C4b(166,206,227)
     | Instrument.MastcamR -> C4b(227,26,28)
     | Instrument.MastcamL -> C4b(251,154,153)
+    | Instrument.NotImplemented -> C4b(0,0,0)
     | _ -> failwith "unknown instrument"
 
 module Initial = 
@@ -170,19 +202,21 @@ module Initial =
       typus       = Typus.Feature
       features    = PList.empty
     }
-
           
   let sites = [
-    @"https://minerva.eox.at/opensearch/collections/MAHLI/json/"
-    @"https://minerva.eox.at/opensearch/collections/FrontHazcam-Right/json/"
-    @"https://minerva.eox.at/opensearch/collections/FrontHazcam-Left/json/"
-    @"https://minerva.eox.at/opensearch/collections/Mastcam-Right/json/"    
-    @"https://minerva.eox.at/opensearch/collections/Mastcam-Left/json/"
-    @"https://minerva.eox.at/opensearch/collections/APXS/json/"
+    //@"https://minerva.eox.at/opensearch/collections/MAHLI/json/"
+    //@"https://minerva.eox.at/opensearch/collections/FrontHazcam-Right/json/"
+    //@"https://minerva.eox.at/opensearch/collections/FrontHazcam-Left/json/"
+    //@"https://minerva.eox.at/opensearch/collections/Mastcam-Right/json/"    
+    //@"https://minerva.eox.at/opensearch/collections/Mastcam-Left/json/"
+    //@"https://minerva.eox.at/opensearch/collections/APXS/json/"
+    @"https://minerva.eox.at/opensearch/collections/all/json/"
   ]
 
   let model = 
     {
       data = data
       queries = sites
+      comm = None
+      vplMessages = ThreadPool.Empty
     }
