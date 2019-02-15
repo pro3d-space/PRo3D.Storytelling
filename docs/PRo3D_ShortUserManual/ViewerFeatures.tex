@@ -5,12 +5,12 @@
 
 \begin{figure}[h]
     	\centering
-    		\includegraphics[width=1\textwidth]{pics/featureMenu.png}
-    	\caption[Viewer Features]{There are menu tabs (right) for each feature in the viewer.}
+    		\includegraphics[width=1\textwidth]{pics/SurfacesAI.png}
+    	\caption[Viewer Features]{There are pages (right) for each feature in the viewer.}
     	\label{fig:featureMenu}
    \end{figure}
 	
-The feature tabs show a list of the respective features, the properties of the selected feature from this list and some actions for this feature.
+The feature pages show a list of the respective features, the properties of the selected feature from this list and some actions for this feature.
 For surfaces, annotations and bookmarks it is possible to group them, as described in Section~\ref{sec:grouping}.
 %----------------------------------------------------------------------------------------
 %	SubSection: Surfaces
@@ -18,37 +18,62 @@ For surfaces, annotations and bookmarks it is possible to group them, as describ
 \subsection{Surfaces}
 \label{sec:surfaces}
 
-\begin{figure}[h]
-    	\centering
-    		\includegraphics[width=0.5\textwidth]{pics/SurfacesAI.png}
-    	\caption[Viewer Features Surfaces]{The surfaces tab.}
-    	\label{fig:surfaces}
-   \end{figure}
-
 The listing shows all surfaces in the scene. You can classify them in any group and subgroup layers, described in Section~\ref{sec:grouping}.
-You can select a surface by clicking on the surface's name. Then you can see the surface's properties in the properties panel and use the actions in the actions panel. 
+You can select a surface by clicking on the surface's name, which turns its color to green. Then you can see the surface's properties in the properties panel and use the actions in the actions panel. 
 It is also possible to select multiple surfaces by clicking the square icon in front of each surface. The selected surfaces have a green square in the list. The multiselection is used to move one ore more surfaces from one group to the active group.
 Under the surface's name is a little menu:
 \begin{itemize}
 	\item \textit{FlyTo}: A click on the button triggers a FlyTo animation.
-	\item \textit{portable}: This creates a folder hierarchy as used in the old viewer version. A scene file is created and the surfaces are copied to the surface folder.
 	\item \textit{openFolder}: Opens the folder where the scene file resides.	
+	\item \textit{Cloud}: Creates new kd-tree files.	
+	%\item \textit{portable}: This creates a folder hierarchy as used in the old viewer version. A scene file is created and the surfaces are
+  %copied to the surface folder.
+	\item \textit{Toggle Visible}: Toggles the surface visible/invisible.	
+	\item \textit{Toggle IsActice}: You can only pick on active surfaces (explore center, annotations, ...).
+	
 \end{itemize}
 
-In the surface properties panel are some adjustments possible:
+For each selected surface there are several panels as shown in Figure~\ref{fig:featureMenu} A to E. 
+
+In the surface properties panel (Figure~\ref{fig:featureMenu} A) are some adjustments possible:
 \begin{itemize}
 	\item \textit{Name}: The surface's name. You can change it in the text field and press ``enter''.
 	\item \textit{Visible}: The surface is visible (checked) or not (unchecked).
+	\item \textit{Active}: The surface is active (checked) or not (unchecked). You can only pick on active surfaces.
 	\item \textit{Priority}:  Often multiple surfaces are available for a certain area on the planet surface. These surfaces represent the same piece of ground and typically overlap. This parameter allows to assign a priority to a surface to tell the graphics card which surface should be rendered in front. Lower numbers mean a higher priority in rendering, with 0 being the highest priority. You can also give the highest priority surface a ranking of, for instance, 0.1 (= 10cm) to make annotations more visible. The priority can be dynamically changed via the surface properties so you can try out what works best.
 	\item \textit{Quality}: 
-	\item \textit{TriangleSize}:
+	\item \textit{TriangleFilter}: Excludes triangles with edges bigger than the entered value.
+	\item \textit{Scale}: 
 	\item \textit{FillMode}: You can switch between solid/ wireframe/ point rendering of the geometry.
 	\item \textit{Scalars}:
 	\item \textit{Textures}:
 	\item \textit{Cull Faces}:
+	\item \textit{Set Homeposition}: You set a new camera position for FlyTo.
 \end{itemize}
 
-The surfaces actions are described in Section~\ref{sec:leafActions}.
+The surfaces actions (Figure~\ref{fig:featureMenu} B) are described in Section~\ref{sec:leafActions}.
+
+\begin{figure}[h]
+    	\centering
+    		\includegraphics[width=1\textwidth]{pics/SurfaceTranslation.png}
+    	\caption[Surface Translation]{Translation of the selected surface along the axes of the coordinate system.}
+    	\label{fig:surfaceTranslation}
+   \end{figure}
+	
+You can translate the surface along the north-, east and up axis of the coordinate system, described in Section~\ref{sec:placeCS}.  The Translation panel is shown in Figure~\ref{fig:featureMenu} B and Figure~\ref{fig:surfaceTranslation}.
+
+\begin{center}
+\colorbox{red}{\parbox{1.0\textwidth}{NOTE: Translation is only implemented for surfaces. Annotations, Rovers, the Coordinate System, ... will NOT move with the surface. You have to translate the surface first!}}
+\end{center}
+
+\begin{figure}[h]
+    	\centering
+    		\includegraphics[width=1\textwidth]{pics/SurfaceColorCorrection.png}
+    	\caption[Surface Color Correction]{Translation of the selected surface along the axes of the coordinate system.}
+    	\label{fig:surfaceColorCorrection}
+   \end{figure}
+
+You can apply different color correction filter to the selected surface	(Figure~\ref{fig:surfaceColorCorrection}).
 %----------------------------------------------------------------------------------------
 %	SubSection: Annotations
 %----------------------------------------------------------------------------------------

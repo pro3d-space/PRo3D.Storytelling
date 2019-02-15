@@ -88,12 +88,13 @@ module DrawingApp =
     
     //adds new point to working state, if certain conditions are met the annotation finishes itself
     let addPoint up north planet samplePoint p view model surfaceName bc =
+      
       let working, newSegment = 
         match model.working with
           | Some w ->     
             let annotation = { w with points = w.points |> PList.append p }
             Log.line "working contains %d points" annotation.points.Count
-
+            
             //fetch current drawing segment (projected, polyline or polygon)
             let result = 
               match w.projection with
@@ -132,7 +133,12 @@ module DrawingApp =
                 (Annotation.make model.projection model.geometry model.color model.thickness surfaceName)
                     with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
             }, None
-
+      
+      //let text = 
+      //      match model.geometry with
+      //          | Geometry.Point -> "x:" + p.X.ToString() + ", y:" + p.Y.ToString() + ", z:" + p.Z.ToString()
+      //          | _ -> ""
+      //let working' = { working with text = text }
       let model = { model with working = Some working }
 
       match (working.geometry, (working.points |> PList.count)) with

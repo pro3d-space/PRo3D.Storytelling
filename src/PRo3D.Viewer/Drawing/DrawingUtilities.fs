@@ -5,6 +5,7 @@ module DrawingUtilities =
     open Aardvark.Base
     open Aardvark.Application
     open Aardvark.UI
+    open System
     
     open PRo3D
     
@@ -27,6 +28,7 @@ module DrawingUtilities =
                 bearing = 0.0
                 slope = 0.0
                 }
+        
 
         let getDistance (points:list<V3d>) = 
           points
