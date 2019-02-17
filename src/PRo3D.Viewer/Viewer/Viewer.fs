@@ -670,18 +670,22 @@ module ViewerApp =
             | KeyDown k, _, _ ->
               let drawingAction =
                 match k with
-                  | Aardvark.Application.Keys.Enter       -> Drawing.Action.Finish                                                               
-                  | Aardvark.Application.Keys.LeftCtrl    -> Drawing.Action.StartDrawing
-                  | Aardvark.Application.Keys.D0          -> Drawing.Action.SetSemantic Semantic.Horizon0
-                  | Aardvark.Application.Keys.D1          -> Drawing.Action.SetSemantic Semantic.Horizon1
-                  | Aardvark.Application.Keys.D2          -> Drawing.Action.SetSemantic Semantic.Horizon2
-                  | Aardvark.Application.Keys.D3          -> Drawing.Action.SetSemantic Semantic.Horizon3       
-                  | _                                     -> Drawing.Action.Nop
+                  | Aardvark.Application.Keys.Enter    -> Drawing.Action.Finish                                                               
+                  | Aardvark.Application.Keys.LeftCtrl -> 
+                    match m.interaction with 
+                    | Interactions.DrawAnnotation -> Drawing.Action.StartDrawing
+                    | Interactions.PickAnnotation -> Drawing.Action.StartPicking
+                    | _ -> Drawing.Action.Nop
+                  | Aardvark.Application.Keys.D0 -> Drawing.Action.SetSemantic Semantic.Horizon0
+                  | Aardvark.Application.Keys.D1 -> Drawing.Action.SetSemantic Semantic.Horizon1
+                  | Aardvark.Application.Keys.D2 -> Drawing.Action.SetSemantic Semantic.Horizon2
+                  | Aardvark.Application.Keys.D3 -> Drawing.Action.SetSemantic Semantic.Horizon3       
+                  | _  -> Drawing.Action.Nop
 
               let m =
                 match k with 
-                  | Aardvark.Application.Keys.LeftCtrl -> { m with picking = true; ctrlFlag = true }
-                  |_                                   -> { m with picking = false;}
+                  | Aardvark.Application.Keys.LeftCtrl -> { m with ctrlFlag = true }
+                  | _ -> m
 
               let m =
                 match (m.ctrlFlag, k, m.scene.scenePath) with
@@ -709,35 +713,12 @@ module ViewerApp =
                              
               let m =
                 match m.interaction with
-                | Interactions.DrawAnnotation ->
+                | Interactions.DrawAnnotation | Interactions.PickAnnotation ->
                     let view = m.scene.navigation.camera.view
                     let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing drawingAction } |> stash
                     match drawingAction with
                       | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
-                      | _ -> m     
-                //| Interactions.PickAnnotation -> 
-                //    match m.picking with
-                //        | true -> { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StartPicking } |> stash
-                //        | false -> m
-                    
-                   
-                //| Interactions.AlignPick -> 
-                //    match k with
-                //     | Aardvark.Application.Keys.Enter -> 
-                //        let m = { m with alignment = AlignmentApp.update m.alignment PRo3d.Align.AlignmentActions.Finish }
-
-                //        match (m.alignment.resultTrafo, m.alignment.alignment)with
-                //          | Some t, Some al ->                             
-                //            let f = (fun x -> 
-                //                let s = x |> Leaf.toSurface
-                //                { s with preTransform = t} |> Leaf.Surfaces)
-
-                //            let g = Groups.updateLeaf al.blue f m.scene.surfacesModel.surfaces
-                //            { m.scene.surfacesModel with surfaces = g }
-                //              |> SurfaceModel.triggerSgGrouping
-                //              |> Lenses.set' _surfacesModel m
-                //          | _ -> m
-                //     | _ -> m
+                      | _ -> m                     
                 | _ -> m
                                                   
 
