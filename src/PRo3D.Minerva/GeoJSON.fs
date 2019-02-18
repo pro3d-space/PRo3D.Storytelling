@@ -155,7 +155,7 @@ module MinervaGeoJSON =
 
   let loadPaged (site:string) (cql : string) = 
     
-    let bla = (site + "?" + cql) |> patchThroughWebClient |> JsonValue.Parse
+    let bla = (site + "?" + cql) |> patchThroughWebClient cql |> JsonValue.Parse
     let probs = bla?properties |> parseRootProperties
     let pages =
       [0 .. probs.itemsPerPage .. probs.totalCount]
