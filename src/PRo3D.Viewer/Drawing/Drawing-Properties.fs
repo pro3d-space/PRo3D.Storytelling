@@ -26,8 +26,8 @@ module AnnotationProperties =
             match points.Length with
               | 1 -> 0.0
               | _ -> let v = points.[0] - points.[points.Length - 1]
-                     //Math.Sqrt(v.LengthSquared + (v * up.Normalized).LengthSquared)
-                     Math.Sqrt(Math.Pow(v.Length, 2.0) + Math.Pow((v * up.Normalized).Length, 2.0))
+                     Math.Sqrt(v.LengthSquared - (v * up.Normalized).LengthSquared)
+                    // Math.Sqrt(Math.Pow(v.Length, 2.0) + Math.Pow((v * up.Normalized).Length, 2.0))
 
     let verticalDistance (points:list<V3d>) (up:V3d) = 
         match points.Length with

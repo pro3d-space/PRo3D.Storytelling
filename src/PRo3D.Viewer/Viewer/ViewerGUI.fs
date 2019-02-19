@@ -281,11 +281,20 @@ module Gui =
                     Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
                         aset {
                             let! recentScenes = m.recent.recentScenes
-                            for s in recentScenes do
+                            //let sortedList = recentScenes |> List.sortBy( fun sh -> sh.writeDate.DayOfYear ) |> List.sortBy( fun sh -> sh.writeDate.Year )
+                            let smallList = match recentScenes.Length > 10 with
+                                              | true -> recentScenes.[0..9] |>  List.toArray
+                                              | _-> recentScenes |> List.toArray
+                            for s in smallList do
                                  yield a [clazz "item inverted";
                                           onClick (fun _ -> LoadScene s.path)] [
                                     span [style "color:black"] [Incremental.text (Mod.constant s.name)]
                                  ]
+                            //smallList 
+                            //        |> AList.map(fun x -> yield a [clazz "item inverted";
+                            //                                        onClick (fun _ -> LoadScene x.path)] [
+                            //                                        span [style "color:black"] [Incremental.text (Mod.constant x.name)]])
+                                    
                         } |> AList.ofASet
                     )
                 ] 
