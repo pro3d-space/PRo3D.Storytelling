@@ -194,4 +194,21 @@ type saveAnnotations = {
     colorLegend : FalseColorsModel
 }
 
+//[<DomainType>]
+//type Grouping<'a> = {
+//  root                 : Node
+//  flat                 : hmap<Guid,'a>
+//  activeGroup          : TreeSelection
+//  activeChild          : TreeSelection  
+//  groupsLookup         : hmap<Guid,string>
+//  lastSelectedItem     : SelectedItem
+//  selectedLeaves       : hset<TreeSelection> 
+//  singleSelectLeaf     : option<Guid>
+//}
+
+//type SaveAnnotations = {
+//    annotations: Grouping<Annotation>
+//    colorLegend : FalseColorsModel
+//}
+
     //FsPickler.RegisterPicklerFactory (fun _ -> surfaceModelPickler)

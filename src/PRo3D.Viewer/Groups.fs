@@ -12,15 +12,11 @@ open Aardvark.VRVis.Opc
 open System
 
 open PRo3D
-//open PRo3D.Surfaces
-
 
 module Groups =    
     open Aardvark.Base.Geometry.BvhTree   
     open Aardvark.Base.HSet
-
-    //open Aardvark.UI.Static.Svg
-   
+       
     type Action =
         | ActiveGroup           of Guid*list<Index>*string
         | ToggleExpand          of list<Index>
@@ -43,8 +39,7 @@ module Groups =
         | Nop
         
     let loadAnnotationGroups (path:string) =
-        Serialization.loadAs<PRo3D.Groups.GroupsModel> path               
-        //Serialization.loadJsonAs<PRo3D.Groups.GroupsModel> path               
+        Serialization.loadAs<PRo3D.Groups.GroupsModel> path                       
         
     let getNode (path : list<Index>) (root : Node) : Node =
         let rec goDeeper (p : list<Index>) (node : Node) =
@@ -266,7 +261,6 @@ module Groups =
                      activeChild = treeSelection; 
                      lastSelectedItem = SelectedItem.Child }
         
-
     let update (model : GroupsModel) (action : Action) =
         printfn "action: %A" action
         match action with
@@ -416,7 +410,6 @@ module Groups =
             | UpdateCam id -> model
             | _ -> model
     
-
     let mkColor (activeId : Guid) (groupId : Guid) = 
         if activeId = groupId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
     
@@ -513,11 +506,8 @@ module Groups =
             )
 
     let showNothing : DomNode<Action> = 
-        require GuiEx.semui (div [][]
-                )
-
-        //let lift   = fun (a:Groups.Action) -> (GroupsMessage a)
-
+        require GuiEx.semui (div [][])
+        
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module SurfaceModel =
     open MBrace.FsPickler
@@ -529,13 +519,7 @@ module SurfaceModel =
 
     let withSgSurfaces sgSurfaces m =
         { m with sgSurfaces = sgSurfaces }
-
-    //let withSgSurfaceObjs sgSurfaceObjs m =
-    //    { m with sgSurfaceObjs = sgSurfaceObjs }
-
-    //let withSgSurfacesAndSgSurfaceObjs sgSurfaces sgSurfaceObjs m =
-    //    { m with sgSurfaces = sgSurfaces; sgSurfaceObjs = sgSurfaceObjs }
-
+    
     let initSurfaceGroups group flat selected = 
         let surfaces = GroupsModel.initial
         { surfaces with rootGroup = group; singleSelectLeaf = selected; flat = flat }
@@ -549,57 +533,15 @@ module SurfaceModel =
             sgGrouped   = plist.Empty
             kdTreeCache = hmap.Empty
         }
-
-    //let makeSgObj b t sg mesh = 
-    //    {
-    //        surface = Guid.NewGuid()
-    //        trafo = t
-    //        globalBB = b
-    //        sceneGraph = sg
-    //        pickMesh  = mesh
-    //    }
-
-    //let objPickler : Pickler<SgSurfaceObj> =
-    //    Pickler.product makeSgObj
-    //    ^+ Pickler.field (fun (s:SgSurfaceObj) -> s.globalBB)     Pickler.auto<Box3d>
-    //    ^+ Pickler.field (fun (s:SgSurfaceObj) -> s.trafo)        Pickler.auto<Transformation>
-    //    ^+ Pickler.field (fun (s:SgSurfaceObj) -> s.sceneGraph)   Pickler.auto<ISg>
-    //    ^. Pickler.field (fun (s:SgSurfaceObj) -> s.pickMesh)     Pickler.auto<ISg>
-    
-    //let makeSgOpc b t sg kdt = 
-    //    {
-    //        surface = Guid.NewGuid()
-    //        trafo = t
-    //        globalBB = b
-    //        sceneGraph = sg
-    //        kdTree  = kdt
-    //    }
-
-    //let opcPickler : Pickler<SgSurfaceOpc> =
-    //    Pickler.product makeSgOpc
-    //    ^+ Pickler.field (fun (s:SgSurfaceOpc) -> s.globalBB)     Pickler.auto<Box3d>
-    //    ^+ Pickler.field (fun (s:SgSurfaceOpc) -> s.trafo)        Pickler.auto<Transformation>
-    //    ^+ Pickler.field (fun (s:SgSurfaceOpc) -> s.sceneGraph)   Pickler.auto<ISg>
-    //    ^. Pickler.field (fun (s:SgSurfaceOpc) -> s.kdTree)       Pickler.auto<hmap<Box3d,KdTrees.Level0KdTree>>
-
-    //let sgSurfacePickler : Pickler<SgSurfaces> =
-    //    Pickler.sum (fun x k1 k2->
-    //        match x with
-    //            | SgSurfaceOPC k -> k1 k
-    //            | SgSurfaceOBJ k -> k2 k)
-    //    ^+ Pickler.case SgSurfaceOPC opcPickler
-    //    ^. Pickler.case SgSurfaceOBJ objPickler
-
+   
     let surfaceModelPickler : Pickler<SurfaceModel> =
         Pickler.product initSurfaceModel
-        ^+ Pickler.field (fun s -> s.surfaces.rootGroup)             Pickler.auto<Node> //Surface
-        ^+ Pickler.field (fun s -> s.surfaces.flat)                  Pickler.auto<hmap<Guid,Leaf>> //Surface
-        ^. Pickler.field (fun s -> s.surfaces.singleSelectLeaf)      Pickler.auto<option<Guid>> //Pickler.auto<option<Surface>>
-        //^. Pickler.field (fun s -> s.sgSurfaces)                     Pickler.auto<hmap<Guid,SgSurfaces>> 
+        ^+ Pickler.field (fun s -> s.surfaces.rootGroup)             Pickler.auto<Node>
+        ^+ Pickler.field (fun s -> s.surfaces.flat)                  Pickler.auto<hmap<Guid,Leaf>>
+        ^. Pickler.field (fun s -> s.surfaces.singleSelectLeaf)      Pickler.auto<option<Guid>>
 
-    let initial = initSurfaceModel Group.initRoot hmap.Empty None //hmap.Empty
+    let initial = initSurfaceModel Group.initRoot hmap.Empty None
     
-
     let getSurface model guid =
         model.surfaces.flat |> HMap.tryFind guid        
 
@@ -621,26 +563,9 @@ module SurfaceModel =
         let surfaces' = 
             Groups.replaceLeaf (Leaf.Surfaces s') model.surfaces      
 
-        { model with surfaces = surfaces' } // sgSurfaces = sgSurfaces'; sgGrouped = group' }
+        { model with surfaces = surfaces' }
 
     let updateSingleSurface' (model:SurfaceModel) (s':PRo3D.Surfaces.Surface) =
       updateSingleSurface s' model
-
-    //let updateSurfaces model (surfaces' : plist<PRo3D.Surfaces.Surface>) =
-    //    let sgSurfaces' =
-    //        surfaces' 
-    //            |> PList.toList
-    //            |> List.map (
-    //                fun x -> 
-    //                    let update = 
-    //                        (fun (d : Option<SgSurface>) ->
-    //                            match d with 
-    //                                | Some k -> Some { k with surface = x }
-    //                                | None -> None)
-
-    //                    HMap.alter x.guid update model.sgSurfaces ) 
-    //            |> List.fold (fun a b -> HMap.union a b) HMap.empty
-
-    //    { model with sgSurfaces = sgSurfaces' }
 
 
