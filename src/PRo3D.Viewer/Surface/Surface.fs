@@ -433,7 +433,8 @@ module Surface =
               match model.surfaces.singleSelectLeaf with
                 | Some s -> 
                   let surface = model.surfaces.flat |> HMap.find s |> Leaf.toSurface
-                  let transformation' = (TranslationApp.update surface.transformation msg)
+                  let t =  { surface.transformation with pivot = refSys.origin }
+                  let transformation' = (TranslationApp.update t msg)
                   let s' = { surface with transformation = transformation' }
                   //let homePosition = 
                   //  match surface.homePosition with
@@ -841,7 +842,7 @@ module Surface =
             yield GuiEx.accordion "Actions" "Asterisk" false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
                 ]  
-            yield GuiEx.accordion "Translation" "expand arrows alternate " false [
+            yield GuiEx.accordion "Transformation" "expand arrows alternate " false [
                     Incremental.div AttributeMap.empty (AList.ofModSingle(viewTranslationTools model))
                 ]  
                 

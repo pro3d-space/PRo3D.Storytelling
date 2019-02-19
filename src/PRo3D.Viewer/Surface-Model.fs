@@ -64,8 +64,10 @@ type AttributeLayer =
 [<DomainType>]
 type Transformations = { 
     useTranslationArrows  : bool
-    translation     : V3dInput
-    trafo           : Trafo3d
+    translation           : V3dInput
+    yaw                   : NumericInput
+    trafo                 : Trafo3d
+    pivot                 : V3d
 }
 
 type SurfaceType = 
@@ -210,6 +212,14 @@ module Init =
         format  = "{0:0.00}"
     }
 
+    let yaw = {
+        value   = 0.0
+        min     = -180.0
+        max     = +180.0
+        step    = 0.01
+        format  = "{0:0.00}"
+    }
+
     let initTranslation (v : V3d) = {
         x = { translationInput with value = v.X }
         y = { translationInput with value = v.Y }
@@ -220,6 +230,8 @@ module Init =
         useTranslationArrows = false
         translation  = initTranslation (V3d.OOO)
         trafo = Trafo3d.Identity
+        yaw = yaw
+        pivot = V3d.Zero
     }
 
 
