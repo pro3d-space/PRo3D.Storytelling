@@ -125,7 +125,7 @@ module MailboxState =
       events = list.Empty
       update = fun _ -> ()
     }
-
+  
 [<DomainType>]
 type Model = 
   {
@@ -136,6 +136,9 @@ type Model =
     comm     : option<Communicator.Communicator>
 
     vplMessages : ThreadPool<MinervaAction>
+
+    minervaMessagingMailbox : MessagingMailbox
+    minervaMailboxState     : MailboxState
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
@@ -213,10 +216,13 @@ module Initial =
     @"https://minerva.eox.at/opensearch/collections/all/json/"
   ]
 
-  let model = 
+  let model mailbox = 
     {
       data = data
       queries = sites
       comm = None
       vplMessages = ThreadPool.Empty
+
+      minervaMailboxState = MailboxState.empty
+      minervaMessagingMailbox = mailbox
     }

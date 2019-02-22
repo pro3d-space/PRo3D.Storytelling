@@ -60,12 +60,12 @@ module App =
   let idTestList = [ "271092ML0047930090500286E01_DRCX"; "1092MR0047900090600628I01_DRCX"]
 
   let getIdQuerySite (ids:list<string>) = 
-    let groupString = ids |> String.concat("%27,%27") 
-    let cql = @"cql=(identifier%20IN%20(%27" + groupString + "%27))"
+    let groupString = ids |> String.concat("','")
+    let cql = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
     
     (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
 
-  let update (mb : MailboxProcessor<MailboxAction>) (model : Model) (msg : MinervaAction) : Model =
+  let update (model : Model) (msg : MinervaAction) : Model =
       match msg with
       | PerformQueries -> 
         try
@@ -103,7 +103,7 @@ module App =
                     // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
                    // cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand 
                     match cmd.data.ids with 
-                    | Some ids -> ids |> Array.toList |> PerformIdQuery |> MailboxAction.MiniAction |> mb.Post
+                    | Some ids -> ids |> Array.toList |> PerformIdQuery |> MailboxAction.MiniAction |> model.minervaMessagingMailbox.Post
                     | None -> ()
                     
                     cmd.para.messageID
@@ -289,8 +289,8 @@ module App =
         unpersist = Unpersist.instance
         threads   = fun m -> m.vplMessages
         view      = viewWrapped (Mod.constant V3d.Zero) //localhost
-        update    = update mailbox
-        initial   = Initial.model
+        update    = update
+        initial   = Initial.model mailbox
     }
 
     

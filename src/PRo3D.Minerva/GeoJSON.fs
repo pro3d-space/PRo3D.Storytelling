@@ -8,6 +8,8 @@ module MinervaGeoJSON =
   open FSharp.Data.Runtime
   open PRo3D.Base
   open System.Net
+  open System.Collections.Specialized
+  open System.Text
 
   let shout s =
     Log.line "%A" s  
@@ -114,7 +116,7 @@ module MinervaGeoJSON =
     {
       name        = (root?id).AsString()
       typus       = root.GetProperty("type") |> parseTypus    
-      boundingBox = (root?bbox) |> parseBoundingBox
+      boundingBox = Box2d.Invalid//(root?bbox) |> parseBoundingBox
       features    = (root?features) |> parseFeatures |> PList.ofList
     }
 
@@ -137,29 +139,44 @@ module MinervaGeoJSON =
       published    = (props?published).AsDateTime()
     }
 
-  let patchThroughWebClient (cql : string) (site : string)  = 
-    let mutable client = new WebClient()
+  type QueryDict = hmap<string,string>
+
+  let toNameValue (nvPairs : QueryDict) =
+    let mutable nv = new NameValueCollection()
+    for (n,v) in nvPairs do nv.Add(n,v)
+    nv    
+
+  let patchThroughWebClient (nv : QueryDict) (site : string)  = 
+    let mutable client = new WebClient()    
     client.UseDefaultCredentials <- true       
     let credentials = System.Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes("minerva:tai8Ies7"))   
     client.Headers.[System.Net.HttpRequestHeader.Authorization] <- "Basic " + credentials   
-    //client.QueryString <- cql Namevalue
-    client.DownloadString(site)
+    //client.QueryString <- nv |> toNameValue    
+    let response = client.UploadValues(site, nv |> toNameValue)
+    let responseString = Encoding.Default.GetString(response)
+    responseString
+    //client.DownloadString(site)
 
-  let loadFromUrls sites = 
+  let loadFromUrls (sites : list<string * QueryDict>) = 
     sites 
-      |> List.map(fun x -> x |> patchThroughWebClient "" |> JsonValue.Parse)
+      |> List.map(fun (x,nv) -> x |> patchThroughWebClient nv |> JsonValue.Parse)
       //|> Async.Parallel
       //|> Async.RunSynchronously 
       |> List.map parseRoot
       |> combineFeatureCollections
 
-  let loadPaged (site:string) (cql : string) = 
     
-    let bla = (site + "?" + cql) |> patchThroughWebClient cql |> JsonValue.Parse
+  let loadPaged (site:string) (cql : QueryDict) = 
+    
+    let bla = site |> patchThroughWebClient HMap.empty |> JsonValue.Parse
     let probs = bla?properties |> parseRootProperties
     let pages =
       [0 .. probs.itemsPerPage .. probs.totalCount]
-        |> List.map(fun index -> sprintf "%s?startIndex=%d&count=%d&%s" site index probs.itemsPerPage cql)
+        |> List.map(fun index -> 
+          //sprintf "%s?startIndex=%d&count=%d&%s" site index probs.itemsPerPage cql
+            let nv = [("startIndex",index.ToString()); ("count",probs.itemsPerPage.ToString())] |> HMap.ofList
+            site, (HMap.union nv cql)
+          )
 
     pages |> loadFromUrls
     
@@ -167,7 +184,7 @@ module MinervaGeoJSON =
   let loadMultiple (sites : list<string>) : FeatureCollection =     
     Log.startTimed "fetching data from sites"
     let result = 
-      sites |> List.map(fun a -> loadPaged a "") |> combineFeatureCollections
+      sites |> List.map(fun a -> loadPaged a QueryDict.Empty) |> combineFeatureCollections
     //let result = 
     //  sites |> Load
     Log.stop()

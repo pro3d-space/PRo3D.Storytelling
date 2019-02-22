@@ -76,6 +76,7 @@ module ViewerApp =
     open PRo3d.Align
     open Aardvark.Rendering.GL.OpenGl.Pointers
     open Aardvark.UI.Animation
+    open System.Threading
                  
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
@@ -329,7 +330,7 @@ module ViewerApp =
 
     let mutable lastHash = -1
     
-    let update (runtime : IRuntime) (signature: IFramebufferSignature) (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) (m : Model) (msg : ViewerAction) =        
+    let update (runtime : IRuntime) (signature: IFramebufferSignature) (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) (m : Model) (msg : ViewerAction) =                
         match msg, m.interaction, m.picking with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
@@ -661,7 +662,7 @@ module ViewerApp =
                     |> loadRoverData
                     |> loadLastAnnotations  
             | NewScene,_,_ ->
-                let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox with recent = m.recent }
+                let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox m.minervaModel.minervaMessagingMailbox with recent = m.recent }
                 loadRoverData m'
             | KeyDown k, _, _ ->
               let drawingAction =
@@ -892,7 +893,12 @@ module ViewerApp =
                  let newForward = (v - currentView.Location).Normalized
                                     
                  { m with animations = createAnimation v newForward m.animations }
-              | _ -> { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }
+              | _ ->                
+                
+               //MailboxAction.ViewerAction
+               //ViewerAction.MinervaActions
+               //a |> ViewerAction.MinervaActions |> MailboxAction.ViewerAction
+               { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -1253,10 +1259,10 @@ module ViewerApp =
           { m with waypoints = wp }
         | None -> m
     
-    let start (runtime: IRuntime) (signature: IFramebufferSignature) messagingMailbox sendQueue =
+    let start (runtime: IRuntime) (signature: IFramebufferSignature) messagingMailbox minervaBox sendQueue =
 
         let m = 
-            PRo3D.Viewer.Viewer.initial messagingMailbox 
+            PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox
               |> Scene.loadLastScene runtime signature
               |> loadRoverData
               |> loadLastAnnotations

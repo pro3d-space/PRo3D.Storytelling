@@ -80,11 +80,15 @@ module Mutable =
         let _data = MFeatureCollection.Create(__initial.data)
         let _queries = ResetMod.Create(__initial.queries)
         let _vplMessages = ResetMod.Create(__initial.vplMessages)
+        let _minervaMessagingMailbox = ResetMod.Create(__initial.minervaMessagingMailbox)
+        let _minervaMailboxState = ResetMod.Create(__initial.minervaMailboxState)
         
         member x.data = _data
         member x.queries = _queries :> IMod<_>
         member x.comm = __current.Value.comm
         member x.vplMessages = _vplMessages :> IMod<_>
+        member x.minervaMessagingMailbox = _minervaMessagingMailbox :> IMod<_>
+        member x.minervaMailboxState = _minervaMailboxState :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.Model) =
@@ -94,6 +98,8 @@ module Mutable =
                 MFeatureCollection.Update(_data, v.data)
                 ResetMod.Update(_queries,v.queries)
                 ResetMod.Update(_vplMessages,v.vplMessages)
+                ResetMod.Update(_minervaMessagingMailbox,v.minervaMessagingMailbox)
+                ResetMod.Update(_minervaMailboxState,v.minervaMailboxState)
                 
         
         static member Create(__initial : PRo3D.Minerva.Model) : MModel = MModel(__initial)
@@ -133,4 +139,16 @@ module Mutable =
                     override x.Get(r) = r.vplMessages
                     override x.Set(r,v) = { r with vplMessages = v }
                     override x.Update(r,f) = { r with vplMessages = f r.vplMessages }
+                }
+            let minervaMessagingMailbox =
+                { new Lens<PRo3D.Minerva.Model, Microsoft.FSharp.Control.MailboxProcessor<PRo3D.Minerva.MailboxAction>>() with
+                    override x.Get(r) = r.minervaMessagingMailbox
+                    override x.Set(r,v) = { r with minervaMessagingMailbox = v }
+                    override x.Update(r,f) = { r with minervaMessagingMailbox = f r.minervaMessagingMailbox }
+                }
+            let minervaMailboxState =
+                { new Lens<PRo3D.Minerva.Model, PRo3D.Minerva.MailboxState>() with
+                    override x.Get(r) = r.minervaMailboxState
+                    override x.Set(r,v) = { r with minervaMailboxState = v }
+                    override x.Update(r,f) = { r with minervaMailboxState = f r.minervaMailboxState }
                 }

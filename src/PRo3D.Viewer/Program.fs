@@ -162,13 +162,18 @@ let main argv =
     // main app
     //use form = new Form(Width = 1280, Height = 800)
     let cts = new CancellationTokenSource()
-    let messagingMailbox = MailboxProcessor.Start(Viewer.messagingMailbox cts, cts.Token)    
+    let messagingMailbox = MailboxProcessor.Start(Viewer.initMessageLoop cts, cts.Token)    
+
+    let minervaMailbox = MailboxProcessor.Start(PRo3D.Minerva.App.messagingMailbox cts, cts.Token) 
 
     let mainApp = 
-        PRo3D.ViewerApp.start runtime signature messagingMailbox sendQueue
+        PRo3D.ViewerApp.start runtime signature messagingMailbox minervaMailbox sendQueue
 
     let s = { MailboxState.empty with update = mainApp.update Guid.Empty }
     MailboxAction.InitMailboxState s |> messagingMailbox.Post
+    
+    let s2 = { PRo3D.Minerva.MailboxState.empty with update = mainApp.update Guid.Empty }
+    PRo3D.Minerva.MailboxAction.InitMailboxState s2 |> minervaMailbox.Post
     
     CooTransformation.initCooTrafo () // should be a function not a value
     
