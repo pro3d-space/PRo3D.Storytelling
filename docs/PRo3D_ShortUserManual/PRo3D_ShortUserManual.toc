@@ -10,7 +10,7 @@
 \contentsline {subsubsection}{\numberline {3.1.1}FreeFly}{9}{subsubsection.3.1.1}
 \contentsline {subsubsection}{\numberline {3.1.2}ArcBall}{9}{subsubsection.3.1.2}
 \contentsline {subsection}{\numberline {3.2}Place Coordinate System}{10}{subsection.3.2}
-\contentsline {subsection}{\numberline {3.3}Draw Annotation}{10}{subsection.3.3}
+\contentsline {subsection}{\numberline {3.3}Draw Annotation}{11}{subsection.3.3}
 \contentsline {section}{\numberline {4}Viewer Features}{14}{section.4}
 \contentsline {subsection}{\numberline {4.1}Surfaces}{14}{subsection.4.1}
 \contentsline {subsection}{\numberline {4.2}Annotations}{16}{subsection.4.2}
@@ -19,10 +19,10 @@
 \contentsline {subsubsection}{\numberline {4.2.3}Annotations Properties}{17}{subsubsection.4.2.3}
 \contentsline {subsubsection}{\numberline {4.2.4}Import Annotations from old viewer versions}{18}{subsubsection.4.2.4}
 \contentsline {subsection}{\numberline {4.3}Bookmarks}{18}{subsection.4.3}
-\contentsline {subsection}{\numberline {4.4}Viewer Configuration}{19}{subsection.4.4}
+\contentsline {subsection}{\numberline {4.4}Viewer Configuration}{18}{subsection.4.4}
 \contentsline {subsubsection}{\numberline {4.4.1}ViewerConfig}{19}{subsubsection.4.4.1}
-\contentsline {subsubsection}{\numberline {4.4.2}Coordinate System}{20}{subsubsection.4.4.2}
-\contentsline {subsubsection}{\numberline {4.4.3}Camera}{20}{subsubsection.4.4.3}
-\contentsline {subsection}{\numberline {4.5}Grouping}{20}{subsection.4.5}
-\contentsline {subsubsection}{\numberline {4.5.1}Group Actions}{21}{subsubsection.4.5.1}
-\contentsline {subsubsection}{\numberline {4.5.2}Leaf Actions}{21}{subsubsection.4.5.2}
+\contentsline {subsubsection}{\numberline {4.4.2}Coordinate System}{19}{subsubsection.4.4.2}
+\contentsline {subsubsection}{\numberline {4.4.3}Camera}{19}{subsubsection.4.4.3}
+\contentsline {subsection}{\numberline {4.5}Grouping}{19}{subsection.4.5}
+\contentsline {subsubsection}{\numberline {4.5.1}Group Actions}{20}{subsubsection.4.5.1}
+\contentsline {subsubsection}{\numberline {4.5.2}Leaf Actions}{20}{subsubsection.4.5.2}

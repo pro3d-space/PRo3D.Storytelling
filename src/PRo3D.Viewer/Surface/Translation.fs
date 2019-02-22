@@ -22,47 +22,32 @@ open Aardvark.Base.MultimethodTest
 
 module Transformations = 
 
+  let fullTrafo' (surf : Surface) (refsys : ReferenceSystem) = 
+  
+    let north = refsys.northO.Normalized
+    let up = refsys.up.value.Normalized
+    let east   = north.Cross(up)
+          
+    let refSysRotation = 
+      Trafo3d.FromOrthoNormalBasis(north, east, up)        
+        
+    //translation along north, east, up            
+    let trans = surf.transformation.translation.value |> Trafo3d.Translation
+    let rot = Trafo3d.Rotation(up, surf.transformation.yaw.value.RadiansFromDegrees())
+
+    let originTrafo = -surf.transformation.pivot |> Trafo3d.Translation
+
+    originTrafo * rot * originTrafo.Inverse * refSysRotation.Inverse * trans * refSysRotation
+
   let fullTrafo (surf : IMod<MSurface>) (refsys : MReferenceSystem) = 
     adaptive {
       let! s = surf
-  
-      let! north = refsys.northO
-      let! up    = refsys.up.value
-      let east   = north.Normalized.Cross(up.Normalized)
-          
-      let refSysRotation = 
-        Trafo3d.FromOrthoNormalBasis(north.Normalized, east, up.Normalized)                         
-        
-      let! trans = s.transformation.trafo
-  
-      return  refSysRotation.Inverse * trans * refSysRotation
-    }
-  
-  let fullTrafo' (surf : Surface) (refsys : ReferenceSystem) = 
-    
-   // let preTransform = surf.preTransform
-    
-    let north = refsys.northO //.value.Normalized
-    let up = refsys.up.value.Normalized
-    let east   = north.Cross(up)
-        
-    let refSysRotation = 
-      Trafo3d.FromOrthoNormalBasis(north, east, up)
-    
-    //pivot transformation to origin            
-   // let originTranslation = Trafo3d.Translation(-refsys.origin)
-    
-    //translation along north, east, up            
-    let trans = surf.transformation.trafo
-    refSysRotation.Inverse * trans * refSysRotation
-    //preTransform.Inverse * 
-    //originTranslation.Inverse *
-    //refSysRotation.Inverse * 
-    //trans *
-    //refSysRotation * 
-    //originTranslation * 
-    //preTransform       
+      let! s = s.Current
+      let! rSys = refsys.Current
 
+      return fullTrafo' s rSys
+    }
+        
 module TranslationApp =
     
 
@@ -70,6 +55,7 @@ module TranslationApp =
    
     type Action =
         | SetTranslation   of Vector3d.Action
+        | SetYaw           of Numeric.Action
         | ToggleVisible
     
 
@@ -77,7 +63,10 @@ module TranslationApp =
         match act with
             | SetTranslation t ->    
                 let t' = Vector3d.update model.translation t
-                { model with translation =  t'; trafo = Trafo3d.Translation t'.value}
+                { model with translation =  t' } // trafo = Trafo3d.Translation t'.value}
+            | SetYaw a ->    
+                let yaw = Numeric.update model.yaw a
+                { model with yaw = yaw }
             | ToggleVisible   -> 
                 { model with useTranslationArrows = not model.useTranslationArrows}
 
@@ -96,6 +85,7 @@ module TranslationApp =
             require GuiEx.semui (
                 Html.table [  
                     //Html.row "Visible:" [GuiEx.iconCheckBox model.useTranslationArrows ToggleVisible ]
-                    Html.row "Translation:"      [viewV3dInput model.translation |> UI.map SetTranslation ]
+                    Html.row "Translation (m):" [viewV3dInput model.translation |> UI.map SetTranslation ]
+                    Html.row "Yaw (deg):" [Numeric.view' [InputBox] model.yaw |> UI.map SetYaw]
                 ]
             )

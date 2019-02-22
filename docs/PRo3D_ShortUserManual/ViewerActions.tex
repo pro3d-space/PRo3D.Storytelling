@@ -25,7 +25,7 @@ The ``PickExploreCenter'' action concerns the \textbf{ArcBall} navigation mode. 
 
 \begin{figure}[h]
     	\centering
-    		\includegraphics[width=1\textwidth]{pics/exploreCenter.png}
+    		\includegraphics[width=1\textwidth]{pics/exploreCenterAI.png}
     	\caption[ExploreCenter]{ArcBall navigation. Explore center is set with CTRL + LMB and indicated by a pink dot.}
     	\label{fig:exploreCenter}
    \end{figure}
@@ -53,9 +53,9 @@ When the viewer is in ArcBall mode the camera can be rotated around the explore 
    \end{figure}
 	
 To set the coordinate system pick ``PlaceCoordinateSystem'' in the actions drop down menu, select a unit of measurement and press CTRL+LMB to pick a point on the surface. This marks the position as shown in Figure~\ref{fig:coordinateSystem}.
-Initially the Up Vector's (blue) direction is set in the positive z-direction and the North Vector's (red) in the positive y-direction. But you can manipulate them manually for different data. The Up- and the North Vector are used for the projection measurements. The north vector is further relevant for bearing measurements and the rover placement in the View Planner.
+Initially the up vector's (blue) direction is set in the positive z-direction and the north vector's (red) in the positive y-direction. You can manipulate the north vector manually for different data. The surface can be translated along the three directions of the coordinate system, as described in Section~\ref{sec:surfaces}. The up- and the north vector are used for the projection measurements. The north vector is further relevant for bearing measurements and the rover placement in the View Planner.
 %(see Section~\ref{sec:viewPlanner})
-The values for Position, Up- and North Vector are shown in the Viewer Configuration described in Section~\ref{sec:config}.
+The value for manipulating the north vector is shown in the Viewer Configuration described in Section~\ref{sec:config}.
 %----------------------------------------------------------------------------------------
 %	SubSection: Draw Annotation
 %----------------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ The values for Position, Up- and North Vector are shown in the Viewer Configurat
 
 \begin{figure}[h]
     	\centering
-    		\includegraphics[width=1\textwidth]{pics/drawAnnotationsAI2.png}
+    		\includegraphics[width=1\textwidth]{pics/drawAnnotationsAI.png}
     	\caption[Draw Annotations]{Annotation settings: \textbf{A}: set viewer action to ``DrawAnnotation. \textbf{B}: select annotation mode. \textbf{C}: select projection. \textbf{D}: choose color and thickness. }
     	\label{fig:drawAnnotations}
    \end{figure}

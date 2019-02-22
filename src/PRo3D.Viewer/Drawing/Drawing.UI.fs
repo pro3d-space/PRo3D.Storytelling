@@ -48,7 +48,7 @@ module UI =
             model.selectedLeaves
                 |> ASet.map(fun x -> x.id = a.key)
                 |> ASet.contains true
-                |> Mod.bind (function x -> if x then Mod.constant C4b.Blue else a.color.c)
+                |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
         color
         //adaptive
         //    {
@@ -64,7 +64,7 @@ module UI =
         model.selectedLeaves
                 |> ASet.map(fun x -> x.id = a.key)
                 |> ASet.contains true
-                |> Mod.bind (function x -> if x then Mod.constant C4b.Blue else a.color.c)
+                |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
 
       let isSingleSelect (model : MGroupsModel) (a : MAnnotation) =
           model.singleSelectLeaf |> Mod.map( fun x -> 

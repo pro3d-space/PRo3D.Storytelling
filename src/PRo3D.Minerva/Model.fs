@@ -56,10 +56,14 @@ type Properties =
     | APXS        k -> k.id
 
 type Instrument = 
-  | MAHLI       = 0
-  | FrontHazcam = 1
-  | Mastcam     = 2
-  | APXS        = 3
+  | MAHLI        = 0
+  | FrontHazcam  = 1
+  | Mastcam      = 2
+  | APXS         = 3
+  | FrontHazcamR = 4
+  | FrontHazcamL = 5
+  | MastcamR     = 6
+  | MastcamL     = 7
 
 type Geometry = 
   {
@@ -140,14 +144,22 @@ module Model =
       | "fronthazcam" -> Instrument.FrontHazcam        
       | "mastcam"     -> Instrument.Mastcam
       | "apxs"        -> Instrument.APXS
+      | "fronthazcam-right" -> Instrument.FrontHazcamR
+      | "fronthazcam-left"  -> Instrument.FrontHazcamL
+      | "mastcam-right"     -> Instrument.MastcamR
+      | "mastcam-left"      -> Instrument.MastcamL
       | _ -> id |> sprintf "unknown instrument %A" |> failwith
 
   let instrumentColor (instr : Instrument) =
     match instr with 
     | Instrument.MAHLI -> C4b(27,158,119)
-    | Instrument.FrontHazcam -> C4b(217,95,2)
-    | Instrument.Mastcam -> C4b(231,41,138)
+    | Instrument.FrontHazcam -> C4b(255,255,255)
+    | Instrument.Mastcam -> C4b(255,255,255)
     | Instrument.APXS -> C4b(230,171,2)
+    | Instrument.FrontHazcamR -> C4b(31,120,180)
+    | Instrument.FrontHazcamL -> C4b(166,206,227)
+    | Instrument.MastcamR -> C4b(227,26,28)
+    | Instrument.MastcamL -> C4b(251,154,153)
     | _ -> failwith "unknown instrument"
 
 module Initial = 
@@ -162,8 +174,10 @@ module Initial =
           
   let sites = [
     @"https://minerva.eox.at/opensearch/collections/MAHLI/json/"
-    @"https://minerva.eox.at/opensearch/collections/FrontHazcam/json/"
-    @"https://minerva.eox.at/opensearch/collections/Mastcam/json/"    
+    @"https://minerva.eox.at/opensearch/collections/FrontHazcam-Right/json/"
+    @"https://minerva.eox.at/opensearch/collections/FrontHazcam-Left/json/"
+    @"https://minerva.eox.at/opensearch/collections/Mastcam-Right/json/"    
+    @"https://minerva.eox.at/opensearch/collections/Mastcam-Left/json/"
     @"https://minerva.eox.at/opensearch/collections/APXS/json/"
   ]
 

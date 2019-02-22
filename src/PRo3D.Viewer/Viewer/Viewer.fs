@@ -139,7 +139,7 @@ module ViewerApp =
     let drawingConfig : DrawingApp.SmallConfig<ReferenceSystem> =
         { 
             up     = (ReferenceSystem.Lens.up     |. V3dInput.Lens.value)
-            north  = (ReferenceSystem.Lens.north  |. V3dInput.Lens.value)
+            north  = (ReferenceSystem.Lens.northO) //  |. V3dInput.Lens.value)
             planet = (ReferenceSystem.Lens.planet)
         }
 
@@ -167,29 +167,28 @@ module ViewerApp =
     let mutable cache = hmap.Empty
 
     let updateSceneWithNewSurface (m:Model) =
-        let sgSurfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
-        let head = sgSurfaces |> List.tryHead
-        match head with
-            | Some v ->
-                let fullBb = 
-                        sgSurfaces 
-                            |> List.map(fun x -> x.globalBB) 
-                            |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
-                // useful default viewpoint after 2nd import
-                match m.scene.firstImport with
-                  //| x when x > 1 -> { m with scene = { m.scene with referenceSystem = refSystem' }} 
-                  | true -> 
-                    let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
-                    let (refSystem',_)= 
-                        ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
-                    let navigation' =  { m.scene.navigation with exploreCenter = fullBb.Center} 
-                    { m with scene = { m.scene with referenceSystem = refSystem'; navigation = navigation'; firstImport = false }} |> updateCameraUp |> lookAtBoundingBox v.globalBB 
-                  | _-> 
-                    let refAction = ReferenceSystemApp.Action.UpdateUpNorth(fullBb.Center)
-                    let (refSystem',_)= 
-                        ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
-                    { m with scene = { m.scene with referenceSystem = refSystem' }}
-            | None -> m
+      let sgSurfaces = m.scene.surfacesModel.sgSurfaces |> HMap.toList |> List.map snd
+      let head = sgSurfaces |> List.tryHead
+      match head with
+      | Some v ->
+          let fullBb = 
+                  sgSurfaces 
+                      |> List.map(fun x -> x.globalBB) 
+                      |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
+          // useful default viewpoint after 2nd import
+          match m.scene.firstImport with //TODO LF refactor, don't use a flag, just check if surfaces has been empty before                  
+            | true -> 
+              let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
+              let (refSystem',_)= 
+                  ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
+              let navigation' =  { m.scene.navigation with exploreCenter = fullBb.Center} 
+              { m with scene = { m.scene with referenceSystem = refSystem'; navigation = navigation'; firstImport = false }} |> updateCameraUp |> lookAtBoundingBox v.globalBB 
+            | _-> m
+              //let refAction = ReferenceSystemApp.Action.UpdateUpNorth(fullBb.Center)
+              //let (refSystem',_)= 
+              //    ReferenceSystemApp.update m.scene.config refConfig (m.scene.referenceSystem) refAction 
+              //{ m with scene = { m.scene with referenceSystem = refSystem' }}
+      | None -> m
 
     let isGrabbed (model : Model) =
         let sel = _selectedSurface.Get(model) |> Option.bind(fun x -> _sgSurfaces.Get(model).TryFind x)
@@ -324,7 +323,7 @@ module ViewerApp =
             //| Interactions.AlignPick -> 
             //    { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
             | Interactions.PlaceSurface -> 
-                { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath m.scene.navigation.camera.view }}
+                { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath m.scene.navigation.camera.view  m.scene.referenceSystem}}
            // | Interactions.PickAnnotation -> m
             | _ -> m
 
@@ -382,27 +381,31 @@ module ViewerApp =
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
                     let view = m.scene.navigation.camera.view
-                    let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath view
+                    let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath view m.scene.referenceSystem
                     let animation = 
                           match msg with
                             | SurfaceApp.Action.FlyToSurface id -> 
                                 let surface = m.scene.surfacesModel.surfaces.flat |> HMap.find id |> Leaf.toSurface 
+                                let superTrafo = PRo3D.Transformations.fullTrafo' surface m.scene.referenceSystem
                                 match surface.homePosition with
                                     | Some hp ->
+                                        //let trafo' = surface.preTransform.Forward * superTrafo.Forward
+                                        //let pos = trafo'.TransformPos(hp.Location)
+                                        //let forward = trafo'.TransformDir(hp.Forward)
                                         let animationMessage = 
                                             animateFowardAndLocation hp.Location hp.Forward 2.0 "ForwardAndLocation2s"
                                         AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                                     | None ->
-                                let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
-                                match surf with
-                                    | Some s ->
-                                            let bb = s.globalBB
-                                            let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
-                                            let animationMessage = 
-                                                animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
-                                            let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                                            a'
-                                    | None -> m.animations
+                                        let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
+                                        match surf with
+                                            | Some s ->
+                                                    let bb = s.globalBB.Transformed(surface.preTransform.Forward * superTrafo.Forward)
+                                                    let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
+                                                    let animationMessage = 
+                                                        animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                                                    let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                                                    a'
+                                            | None -> m.animations
                             | _-> m.animations
                            
                     { m with scene = { m.scene with surfacesModel = s}; animations = animation}
@@ -782,27 +785,29 @@ module ViewerApp =
                   | _ -> m                                  
             | SetInteraction t,_,_ -> { m with interaction = t }
             | ReferenceSystemMessage a,_,_ ->                                
-                let refsystem',_ = ReferenceSystemApp.update m.scene.config refConfig m.scene.referenceSystem a
-                let m = (Model.Lens.scene |. Scene.Lens.referenceSystem).Set(m, refsystem')
-                //let m = (Model.Lens.scene |. Scene.Lens.orientationSystem).Set(m, refsystem')
-               
-                match a with 
-                  | ReferenceSystemApp.Action.SetUp _ | ReferenceSystemApp.Action.SetPlanet _ -> updateCameraUp m
-                  | ReferenceSystemApp.Action.SetNOffset _ -> //update annotation results
-                        let flat = 
-                            m.drawing.annotations.flat 
-                                |> HMap.map(fun k v -> 
-                                let a = v |> Leaf.toAnnotation
-                                let results = DrawingUtilities.Calculations.recalcBearing a m.scene.referenceSystem.up.value m.scene.referenceSystem.northO  
-                                let dnsResults = DipAndStrike.recalculateDnSAzimuth a m.scene.referenceSystem.up.value m.scene.referenceSystem.northO
-                                let a' = { a with results = results; dnsResults = dnsResults }
-                                a'|> Leaf.Annotations) 
-                        m |> Lenses.set _flat flat
-                  | _ -> m                
+              let refsystem',_ = ReferenceSystemApp.update m.scene.config refConfig m.scene.referenceSystem a                
+              let _refSystem = (Model.Lens.scene |. Scene.Lens.referenceSystem)
+              let m' = m |> Lenses.set _refSystem refsystem'
+                                         
+              match a with 
+                | ReferenceSystemApp.Action.SetUp _ | ReferenceSystemApp.Action.SetPlanet _ ->
+                    m' |> updateCameraUp
+                | ReferenceSystemApp.Action.SetNOffset _ -> //update annotation results
+                  let flat = 
+                    m'.drawing.annotations.flat 
+                      |> HMap.map(fun _ v ->
+                        let a = v |> Leaf.toAnnotation
+                        let results    = DrawingUtilities.Calculations.recalcBearing a refsystem'.up.value refsystem'.northO  
+                        let dnsResults = DipAndStrike.recalculateDnSAzimuth a refsystem'.up.value refsystem'.northO
+                        { a with results = results; dnsResults = dnsResults } |> Leaf.Annotations)
+                  m' 
+                    |> Lenses.set _flat flat                     
+                | _ -> 
+                  m'
             | ConfigPropertiesMessage a,_,_ -> 
                 //Log.line "config message %A" a
                 let c' = ConfigProperties.update m.scene.config a
-                let m = (Model.Lens.scene |. Scene.Lens.config).Set(m,c')               
+                let m = (Model.Lens.scene |. Scene.Lens.config).Set(m,c')
                 
                 match a with                   
                   | ConfigProperties.Action.SetNearPlane _ | ConfigProperties.Action.SetFarPlane _ ->
