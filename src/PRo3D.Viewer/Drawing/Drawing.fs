@@ -343,11 +343,25 @@ module DrawingApp =
           let csvTable = Csv.Seq.csv "," true id annotations
           if p.IsEmptyOrNull() |> not then Csv.Seq.write (p) csvTable
           model
-        | PickAnnotation (hit, id), false, true -> 
-            Log.line "hit annotation %A" id
+        | PickAnnotation (hit, id), false, true ->             
             match (model.annotations.flat.TryFind id) with
-                | Some x -> {model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty x.id ""}
-                | None -> model
+                | Some (Leaf.Annotations ann) ->                   
+                  match ann.geometry with
+                  | Geometry.Line | Geometry.Point when ann.projection = Projection.Linear -> //picking shapes are fine for these
+                    { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
+                  | _ -> 
+                    Log.startTimed "PolyAnnotationPicking"
+                    let mutable hit2 = RayHit3d.MaxRange
+                    let r = hit.globalRay.Ray.Ray
+                    let result = 
+                      ann.points |> PList.toArray |> Sg.cylinders 0.05 |> Array.tryFind(fun x -> r.HitsCylinder(x, 0.0, 100.0, &hit2))
+                    match result with
+                    | Some _ -> 
+                      Log.line "hit %A" ann.key
+                      Log.stop()
+                      { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
+                    | None ->Log.stop(); model                    
+                | _ -> model
         | _ -> model
 
     

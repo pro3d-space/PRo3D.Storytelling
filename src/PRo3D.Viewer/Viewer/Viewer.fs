@@ -338,7 +338,8 @@ module ViewerApp =
       (sendQueue : BlockingCollection<string>) 
       (mailbox : MessagingMailbox) 
       (m : Model) (msg : ViewerAction) =        
-        match msg, m.interaction, m.picking with
+        //Log.line "[Viewer_update] %A inter:%A pick:%A" msg m.interaction m.picking
+        match msg, m.interaction, m.ctrlFlag with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
                let ref = m.scene.referenceSystem
@@ -756,7 +757,15 @@ module ViewerApp =
                       { m with waypoints = waypoints }                                                                                  
                     | _ -> m
 
-              { m with scene = { m.scene with config = c' }}                                       
+              let interaction' = 
+                match k with
+                | Aardvark.Application.Keys.F1 -> Interactions.PickExploreCenter
+                | Aardvark.Application.Keys.F2 -> Interactions.DrawAnnotation
+                | Aardvark.Application.Keys.F3 -> Interactions.PickAnnotation
+                | Aardvark.Application.Keys.F4 -> Interactions.PlaceCoordinateSystem
+                | _ -> m.interaction
+
+              { m with scene = { m.scene with config = c' }; interaction = interaction'}                               
             | KeyUp k, _,_ ->               
                 match k with
                   | Aardvark.Application.Keys.LeftCtrl -> 
@@ -764,8 +773,10 @@ module ViewerApp =
                         | Interactions.DrawAnnotation -> 
                             let view = m.scene.navigation.camera.view
                             let d = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopDrawing
-                        //| Interactions.PickAnnotation -> 
-                        //    DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopPicking 
+                            { m with drawing = d; ctrlFlag = false; picking = false }
+                        | Interactions.PickAnnotation -> 
+                            let view = m.scene.navigation.camera.view
+                            let d = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopPicking 
                             { m with drawing = d; ctrlFlag = false; picking = false }
                         |_-> { m with ctrlFlag = false; picking = false }
                   | _ -> m                                  

@@ -283,8 +283,8 @@ module Sg =
              |> Sg.uniform "LineWidth" width
              |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
 
-    let cylinders positions = 
-        positions |> Array.pairwise |> Array.map(fun (a,b) -> Line3d(a,b)) |> Array.map (fun x -> Cylinder3d(x, 0.02))    
+    let cylinders width positions = 
+        positions |> Array.pairwise |> Array.map(fun (a,b) -> Line3d(a,b)) |> Array.map (fun x -> Cylinder3d(x, width))
 
     let pickable' (pick :IMod<Pickable>) (sg: ISg) =
         Sg.PickableApplicator (pick, Mod.constant sg)
