@@ -206,8 +206,8 @@ module Init =
 
     let translationInput = {
         value   = 0.0
-        min     = -400000.0
-        max     = +400000.0
+        min     = Double.MinValue
+        max     = Double.MaxValue
         step    = 0.01
         format  = "{0:0.00}"
     }
