@@ -385,7 +385,13 @@ module ViewerApp =
                           { m with  animations = a'}
                       | None -> m                    
                 | Drawing.PickAnnotation (hit,id) when m.interaction = Interactions.DrawLog && m.ctrlFlag ->
-                  sprintf "%A %A" hit.globalPosition id |> logScreen 1000 m
+                  //sprintf "%A %A" hit.globalPosition id |> logScreen 1000 m
+                  match DrawingApp.intersectAnnotation hit id m.drawing.annotations.flat with
+                  | Some (anno, rayHit) ->
+
+                    let cp = CorrelationPanelsApp.update m.correlationPlot (CorrelationPanelsMessage.AddSelectedPoint(anno.key, rayHit.Point))
+                    { m with correlationPlot = cp }
+                  | None -> m
                 | _ ->
                     let view = m.scene.navigation.camera.view
                     let drawing = 
@@ -1028,7 +1034,9 @@ module ViewerApp =
             let minervaFeatures = 
               PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions
                         
-            [annos; exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
+            let logs = PRo3D.Correlations.CorrelationPanelsApp.viewWorkingLog m.correlationPlot
+
+            [logs; annos; exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
@@ -1228,7 +1236,7 @@ module ViewerApp =
             | Some "corr_mappings" ->
               CorrelationPanelsApp.viewMappings m.correlationPlot.cpModel |> UI.map CorrelationMessage
             | Some "corr_semantics" ->
-              CorrelationPanelsApp.viewSemantics m.correlationPlot.cpModel |> UI.map CorrelationMessage
+              CorrelationPanelsApp.viewSemantics m.correlationPlot |> UI.map CorrelationMessage
             | None -> 
                 require (myCss) (
                   body [][                    

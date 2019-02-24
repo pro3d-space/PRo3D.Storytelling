@@ -13,11 +13,11 @@ module Mutable =
     type MCorrelationPanelsAppModel(__initial : PRo3D.Correlations.CorrelationPanelsAppModel) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Correlations.CorrelationPanelsAppModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Correlations.CorrelationPanelsAppModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Correlations.CorrelationPanelsAppModel>
-        let _selectedPoints = MList.Create(__initial.selectedPoints)
+        let _selectedPoints = MMap.Create(__initial.selectedPoints)
         let _annotations = MMap.Create(__initial.annotations, (fun v -> CorrelationDrawing.Mutable.MAnnotation.Create(v)), (fun (m,v) -> CorrelationDrawing.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
         let _cpModel = CorrelationDrawing.Mutable.MCorrelationPlotModel.Create(__initial.cpModel)
         
-        member x.selectedPoints = _selectedPoints :> alist<_>
+        member x.selectedPoints = _selectedPoints :> amap<_,_>
         member x.annotations = _annotations :> amap<_,_>
         member x.cpModel = _cpModel
         
@@ -26,7 +26,7 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
-                MList.Update(_selectedPoints, v.selectedPoints)
+                MMap.Update(_selectedPoints, v.selectedPoints)
                 MMap.Update(_annotations, v.annotations)
                 CorrelationDrawing.Mutable.MCorrelationPlotModel.Update(_cpModel, v.cpModel)
                 
@@ -46,7 +46,7 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let selectedPoints =
-                { new Lens<PRo3D.Correlations.CorrelationPanelsAppModel, Aardvark.Base.plist<PRo3D.Correlations.LogPoint>>() with
+                { new Lens<PRo3D.Correlations.CorrelationPanelsAppModel, Aardvark.Base.hmap<System.Guid,Aardvark.Base.V3d>>() with
                     override x.Get(r) = r.selectedPoints
                     override x.Set(r,v) = { r with selectedPoints = v }
                     override x.Update(r,f) = { r with selectedPoints = f r.selectedPoints }

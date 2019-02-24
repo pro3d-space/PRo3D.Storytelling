@@ -238,6 +238,20 @@ module DrawingApp =
     let saveSceneAnnotations (scenePath:string) (model:DrawingModel) = 
         saveAnnotations (getAnnotationPath scenePath) model
 
+    let intersectAnnotation (hit : SceneHit) id (flat : hmap<Guid,Leaf>) =
+      match (flat.TryFind id) with
+        | Some (Leaf.Annotations ann) ->                            
+          let mutable hit2 = RayHit3d.MaxRange
+          let r = hit.globalRay.Ray.Ray
+          
+          ann.points 
+              |> PList.toArray 
+              |> Sg.cylinders 0.05 
+              |> Array.tryFind(fun x -> r.HitsCylinder(x, 0.0, 100.0, &hit2))
+              |> Option.map(fun _ -> (ann, hit2))
+          
+        | _ -> None
+
     let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (webSocket : BlockingCollection<string>) (view: CameraView) (model : DrawingModel) (act : Action) =
       match (act, model.draw, model.pick) with
         | StartDrawing, _, false ->                     
@@ -362,10 +376,14 @@ module DrawingApp =
                     let mutable hit2 = RayHit3d.MaxRange
                     let r = hit.globalRay.Ray.Ray
                     let result = 
-                      ann.points |> PList.toArray |> Sg.cylinders 0.05 |> Array.tryFind(fun x -> r.HitsCylinder(x, 0.0, 100.0, &hit2))
+                      ann.points 
+                        |> PList.toArray 
+                        |> Sg.cylinders 0.05 
+                        |> Array.tryFind(fun x -> r.HitsCylinder(x, 0.0, 100.0, &hit2))
+
                     match result with
                     | Some _ -> 
-                      Log.line "hit %A" ann.key
+                      Log.line "hit %A at %A" ann.key hit2.Point
                       Log.stop()
                       { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
                     | None ->Log.stop(); model                    

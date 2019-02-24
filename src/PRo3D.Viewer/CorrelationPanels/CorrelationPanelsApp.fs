@@ -3,16 +3,22 @@
 open System
 
 open Aardvark.Base
+open Aardvark.Base.Rendering
 open Aardvark.Base.Incremental
+open Aardvark.Rendering
 open Aardvark.Application
+open Aardvark.SceneGraph
+open Aardvark.SceneGraph.Opc
 open Aardvark.UI
 open Aardvark.UI.Primitives
 
-open CorrelationDrawing
 open UIPlus
+open PRo3D
 open PRo3D.Viewer
+open CorrelationDrawing
 
 module CorrelationPanelsApp =
+
   let _colourMapApp   = CorrelationPlotModel.Lens.correlationPlot |. CorrelationPlot.Lens.colourMapApp
   let _semantics      = CorrelationPlotModel.Lens.correlationPlot |. CorrelationPlot.Lens.semanticApp
   let _selectedPoints = CorrelationPlotModel.Lens.correlationPlot |. CorrelationPlot.Lens.selectedPoints
@@ -27,12 +33,13 @@ module CorrelationPanelsApp =
       //TODO get annotation list ...annotationId * annotation
       //m.correlationPlot.selectedPoints
       
-      let cp = 
-        CorrelationPlotApp.update' HMap.empty m.cpModel a 
-          |> Lenses.set _selectedPoints (m.selectedPoints |> convertSelectedPoints)
+      //let cp = 
+      //  CorrelationPlotApp.update' HMap.empty m.cpModel a 
+      //    |> Lenses.set _selectedPoints (m.selectedPoints |> convertSelectedPoints)
 
-      { m with cpModel = cp }
+      //{ m with cpModel = cp }
       
+      m
     | SemanticAppMessage a ->
       let updSemApp = SemanticApp.update m.cpModel.semanticApp a
       let cp = { m.cpModel with semanticApp = updSemApp } |> Lenses.set _semantics updSemApp //TODO TO refactor double setting
@@ -42,7 +49,8 @@ module CorrelationPanelsApp =
       let cp = m.cpModel |> Lenses.set _colourMapApp colors'
       { m with cpModel = cp }
     | AddSelectedPoint (id,p) ->
-      { m with selectedPoints = m.selectedPoints |> PList.prepend { annoId = id; position = p} }
+      Log.warn "log drawing: %A" p
+      { m with selectedPoints = HMap.add id p m.selectedPoints }
    
   let view (m : MCorrelationPlotModel) : DomNode<CorrelationPanelsMessage> = div [] []
 
@@ -60,9 +68,33 @@ module CorrelationPanelsApp =
       ]
     )
 
-  let viewSemantics (m : MCorrelationPlotModel) =
-    SemanticApp.View.expertGUI m.semanticApp |> UI.map CorrelationPanelsMessage.SemanticAppMessage
+  let viewSemantics (m : MCorrelationPanelsAppModel) =
+    SemanticApp.View.expertGUI m.cpModel.semanticApp |> UI.map CorrelationPanelsMessage.SemanticAppMessage
 
-  let viewWorkingLog (m : MCorrelationPlotModel) =
-    Sg.empty
-                
+  let viewWorkingLog (m : MCorrelationPanelsAppModel) =
+    let points = 
+      m.selectedPoints 
+        |> AMap.toASet |> ASet.map snd |> ASet.toAList
+    
+    //[
+    //  Sg.lines points (Mod.constant C4b.DarkCyan) (Mod.constant 0.1) (Mod.constant Trafo3d.Identity)
+    //  Sg.dots points (Mod.constant 0.1) (Mod.constant C4b.DarkCyan)
+    //] |> Sg.ofList         
+    
+    
+    
+    points 
+      |> AList.map(fun x -> Sg.mkDotISg (Mod.constant C4b.DarkCyan) (Mod.constant 10.0) (Mod.constant x)) 
+      |> AList.toASet 
+      |> Sg.set
+      |> Sg.noEvents
+      |> Sg.effect [
+            toEffect <| Shader.screenSpaceScale
+            toEffect <| Shader.stableTrafo
+            toEffect <| DefaultSurfaces.vertexColor          
+        ]
+      |> Sg.andAlso(
+        Sg.lines points (Mod.constant C4b.DarkCyan) (Mod.constant 8.0) (Mod.constant Trafo3d.Identity)
+      )
+
+

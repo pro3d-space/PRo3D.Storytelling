@@ -12,14 +12,14 @@ type LogPoint = {
 
 [<DomainType>]
 type CorrelationPanelsAppModel = {
-  selectedPoints : plist<LogPoint>
+  selectedPoints : hmap<Guid, V3d>
   annotations    : hmap<AnnotationId, Annotation>
   cpModel        : CorrelationPlotModel
 }
 
 module CorrelationPanelsAppModel =
   let initial = {
-    selectedPoints = PList.empty
+    selectedPoints = HMap.empty
     annotations    = HMap.empty
     cpModel        = CorrelationPlotApp.initial
   }
