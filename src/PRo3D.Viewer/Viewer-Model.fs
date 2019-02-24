@@ -19,12 +19,12 @@ open PRo3D
 open PRo3d
 open PRo3D.Surfaces
 open PRo3D.Navigation2
-//open PRo3D.BookmarksX
 open PRo3D.Groups
 open PRo3D.ReferenceSystem
 open PRo3d.Align
 open CorrelationDrawing
 open UIPlus
+open PRo3D.Correlations
 
 type TabMenu = 
     | Surfaces    = 0
@@ -41,6 +41,7 @@ type Interactions =
     | TrafoControls         = 4
     | PlaceSurface          = 5
     | PickAnnotation        = 6
+    | DrawLog               = 7
     //| AlignPick             = 5
 
 type BookmarkAction =
@@ -51,6 +52,7 @@ type CorrelationPanelsMessage =
   | CorrPlotMessage               of CorrelationPlotApp.Action
   | SemanticAppMessage            of SemanticApp.Action
   | ColourMapMessage              of ColourMap.Action
+  | AddSelectedPoint              of Guid * V3d
 
 type PropertyActions =
     | DrawingMessage    of Drawing.Action
@@ -218,7 +220,7 @@ type Model = {
     minervaModel     : PRo3D.Minerva.Model
     
     //correlation panels
-    correlationPlot  : CorrelationPlotModel
+    correlationPlot  : CorrelationPanelsAppModel
 
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
@@ -327,7 +329,7 @@ module Viewer =
 
         drawing         = Drawing.DrawingModel.initialdrawing
         properties      = NoProperties
-        interaction     = Interactions.PlaceCoordinateSystem
+        interaction     = Interactions.DrawLog
         picking         = false
         ctrlFlag        = false
 
@@ -364,5 +366,5 @@ module Viewer =
         //instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
         viewerMode = ViewerMode.Standard        
 
-        correlationPlot = CorrelationPlotApp.initial
+        correlationPlot = CorrelationPanelsAppModel.initial
     }

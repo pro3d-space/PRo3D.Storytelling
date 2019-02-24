@@ -13,25 +13,36 @@ open UIPlus
 open PRo3D.Viewer
 
 module CorrelationPanelsApp =
-  let _colourMapApp = CorrelationPlotModel.Lens.correlationPlot |. CorrelationPlot.Lens.colourMapApp
-  let _semantics    = CorrelationPlotModel.Lens.correlationPlot |. CorrelationPlot.Lens.semanticApp
+  let _colourMapApp   = CorrelationPlotModel.Lens.correlationPlot |. CorrelationPlot.Lens.colourMapApp
+  let _semantics      = CorrelationPlotModel.Lens.correlationPlot |. CorrelationPlot.Lens.semanticApp
   let _selectedPoints = CorrelationPlotModel.Lens.correlationPlot |. CorrelationPlot.Lens.selectedPoints
   
-  let update (m : CorrelationPlotModel) (msg : CorrelationPanelsMessage) : CorrelationPlotModel =
+  let convertSelectedPoints (points : plist<LogPoint>) : hmap<AnnotationId, V3d> =
+    HMap.empty
+
+  let update (m : CorrelationPanelsAppModel) (msg : CorrelationPanelsMessage) : CorrelationPanelsAppModel =
     match msg with
     | CorrPlotMessage a -> 
       //TODO get selected poitns ...annotationId * v3d 
       //TODO get annotation list ...annotationId * annotation
+      //m.correlationPlot.selectedPoints
+      
+      let cp = 
+        CorrelationPlotApp.update' HMap.empty m.cpModel a 
+          |> Lenses.set _selectedPoints (m.selectedPoints |> convertSelectedPoints)
 
-      let sel = HMap.empty //AnnotationApp.getSelectedPoints' model.annotationApp
-      CorrelationPlotApp.update' HMap.empty m a |> Lenses.set _selectedPoints sel
+      { m with cpModel = cp }
       
     | SemanticAppMessage a ->
-      let updSemApp = SemanticApp.update m.semanticApp a
-      { m with semanticApp = updSemApp } |> Lenses.set _semantics updSemApp //TODO TO refactor double setting
+      let updSemApp = SemanticApp.update m.cpModel.semanticApp a
+      let cp = { m.cpModel with semanticApp = updSemApp } |> Lenses.set _semantics updSemApp //TODO TO refactor double setting
+      { m with cpModel = cp }
     | ColourMapMessage a ->
-      let colors' = ColourMap.update m.correlationPlot.colourMapApp a
-      m |> Lenses.set _colourMapApp colors'
+      let colors' = ColourMap.update m.cpModel.correlationPlot.colourMapApp a      
+      let cp = m.cpModel |> Lenses.set _colourMapApp colors'
+      { m with cpModel = cp }
+    | AddSelectedPoint (id,p) ->
+      { m with selectedPoints = m.selectedPoints |> PList.prepend { annoId = id; position = p} }
    
   let view (m : MCorrelationPlotModel) : DomNode<CorrelationPanelsMessage> = div [] []
 
@@ -51,4 +62,7 @@ module CorrelationPanelsApp =
 
   let viewSemantics (m : MCorrelationPlotModel) =
     SemanticApp.View.expertGUI m.semanticApp |> UI.map CorrelationPanelsMessage.SemanticAppMessage
+
+  let viewWorkingLog (m : MCorrelationPlotModel) =
+    Sg.empty
                 

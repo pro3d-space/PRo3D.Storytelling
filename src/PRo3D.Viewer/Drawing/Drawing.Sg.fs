@@ -263,7 +263,7 @@ module Sg =
             |> Sg.trafo trafo
             |> Sg.uniform "LineWidth" width
             |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
-            |> Sg.pickable' pickable
+         //   |> Sg.pickable' pickable
             |> Sg.noEvents
             |> Sg.withEvents [
                 SceneEventKind.Down, (

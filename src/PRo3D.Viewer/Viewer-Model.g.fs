@@ -270,7 +270,7 @@ module Mutable =
         let _messagingMailbox = ResetMod.Create(__initial.messagingMailbox)
         let _mailboxState = ResetMod.Create(__initial.mailboxState)
         let _minervaModel = PRo3D.Minerva.Mutable.MModel.Create(__initial.minervaModel)
-        let _correlationPlot = CorrelationDrawing.Mutable.MCorrelationPlotModel.Create(__initial.correlationPlot)
+        let _correlationPlot = PRo3D.Correlations.Mutable.MCorrelationPanelsAppModel.Create(__initial.correlationPlot)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
         
@@ -323,7 +323,7 @@ module Mutable =
                 ResetMod.Update(_messagingMailbox,v.messagingMailbox)
                 ResetMod.Update(_mailboxState,v.mailboxState)
                 PRo3D.Minerva.Mutable.MModel.Update(_minervaModel, v.minervaModel)
-                CorrelationDrawing.Mutable.MCorrelationPlotModel.Update(_correlationPlot, v.correlationPlot)
+                PRo3D.Correlations.Mutable.MCorrelationPanelsAppModel.Update(_correlationPlot, v.correlationPlot)
                 _past.Update(v.past)
                 _future.Update(v.future)
                 
@@ -463,7 +463,7 @@ module Mutable =
                     override x.Update(r,f) = { r with minervaModel = f r.minervaModel }
                 }
             let correlationPlot =
-                { new Lens<PRo3D.Viewer.Model, CorrelationDrawing.CorrelationPlotModel>() with
+                { new Lens<PRo3D.Viewer.Model, PRo3D.Correlations.CorrelationPanelsAppModel>() with
                     override x.Get(r) = r.correlationPlot
                     override x.Set(r,v) = { r with correlationPlot = v }
                     override x.Update(r,f) = { r with correlationPlot = f r.correlationPlot }

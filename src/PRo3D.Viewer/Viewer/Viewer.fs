@@ -119,6 +119,16 @@ module ViewerApp =
                 m |> lookAtBoundingBox bb
             | None -> m
 
+    let logScreen timeout m text = 
+      let feedback = 
+        {
+          id      = System.Guid.NewGuid().ToString()
+          text    = text
+          timeout = timeout
+          msg     = ViewerAction.NoAction ""
+        }
+      m |> UserFeedback.queueFeedback feedback
+
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
        
@@ -374,6 +384,8 @@ module ViewerApp =
                           let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                           { m with  animations = a'}
                       | None -> m                    
+                | Drawing.PickAnnotation (hit,id) when m.interaction = Interactions.DrawLog && m.ctrlFlag ->
+                  sprintf "%A %A" hit.globalPosition id |> logScreen 1000 m
                 | _ ->
                     let view = m.scene.navigation.camera.view
                     let drawing = 
@@ -766,6 +778,7 @@ module ViewerApp =
                 | Aardvark.Application.Keys.F2 -> Interactions.DrawAnnotation
                 | Aardvark.Application.Keys.F3 -> Interactions.PickAnnotation
                 | Aardvark.Application.Keys.F4 -> Interactions.PlaceCoordinateSystem
+                | Aardvark.Application.Keys.F6 -> Interactions.DrawLog
                 | _ -> m.interaction
 
               { m with scene = { m.scene with config = c' }; interaction = interaction'}                               
@@ -1213,9 +1226,9 @@ module ViewerApp =
                let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
                require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])
             | Some "corr_mappings" ->
-              CorrelationPanelsApp.viewMappings m.correlationPlot |> UI.map CorrelationMessage
+              CorrelationPanelsApp.viewMappings m.correlationPlot.cpModel |> UI.map CorrelationMessage
             | Some "corr_semantics" ->
-              CorrelationPanelsApp.viewSemantics m.correlationPlot |> UI.map CorrelationMessage
+              CorrelationPanelsApp.viewSemantics m.correlationPlot.cpModel |> UI.map CorrelationMessage
             | None -> 
                 require (myCss) (
                   body [][                    
