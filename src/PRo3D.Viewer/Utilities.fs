@@ -259,6 +259,15 @@ module Sg =
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
              |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+    
+    let lines' (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) =
+      let trafo = 
+        points 
+          |> AList.toMod 
+          |> Mod.map(fun x -> (PList.tryHead x) |> Option.defaultValue V3d.Zero) 
+          |> Mod.map (Trafo3d.Translation)        
+        
+      lines points color width trafo
                         
     let scaledLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
         let edges = edgeLines false points trafo     

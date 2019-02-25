@@ -18,6 +18,8 @@ open PRo3D.Viewer
 open CorrelationDrawing
 
 module CorrelationPanelsApp =
+  open PRo3D
+  open PRo3D.Base
 
   let _colourMapApp   = CorrelationPlotModel.Lens.correlationPlot |. CorrelationPlot.Lens.colourMapApp
   let _semantics      = CorrelationPlotModel.Lens.correlationPlot |. CorrelationPlot.Lens.semanticApp
@@ -75,16 +77,19 @@ module CorrelationPanelsApp =
     let points = 
       m.selectedPoints 
         |> AMap.toASet |> ASet.map snd |> ASet.toAList
-    
-    //[
-    //  Sg.lines points (Mod.constant C4b.DarkCyan) (Mod.constant 0.1) (Mod.constant Trafo3d.Identity)
-    //  Sg.dots points (Mod.constant 0.1) (Mod.constant C4b.DarkCyan)
-    //] |> Sg.ofList         
-    
-    
+        
+    let points' = 
+      points 
+        |> AList.toMod 
+        |> Mod.map (fun x -> x |> PList.sortBy (fun y -> CooTransformation.getAltitude y V3d.Zero Planet.Mars))
+        |> AList.ofMod
+
+    let linesSg = Sg.lines' points' (Mod.constant C4b.DarkMagenta) (Mod.constant 5.0)
+
+    //CooTransformation.getAltitude x V3d.Zero Planet.Mars)
     
     points 
-      |> AList.map(fun x -> Sg.mkDotISg (Mod.constant C4b.DarkCyan) (Mod.constant 10.0) (Mod.constant x)) 
+      |> AList.map(fun x -> Sg.mkDotISg (Mod.constant C4b.DarkMagenta) (Mod.constant 8.0) (Mod.constant x)) 
       |> AList.toASet 
       |> Sg.set
       |> Sg.noEvents
@@ -93,8 +98,6 @@ module CorrelationPanelsApp =
             toEffect <| Shader.stableTrafo
             toEffect <| DefaultSurfaces.vertexColor          
         ]
-      |> Sg.andAlso(
-        Sg.lines points (Mod.constant C4b.DarkCyan) (Mod.constant 8.0) (Mod.constant Trafo3d.Identity)
-      )
+      |> Sg.andAlso linesSg              
 
 
