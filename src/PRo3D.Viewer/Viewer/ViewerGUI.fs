@@ -279,7 +279,7 @@ module Gui =
      
                 div [clazz "ui flowing popup bottom left transition hidden"] [
                     Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
-                        aset {
+                        alist {
                             let! recentScenes = m.recent.recentScenes
                             //let sortedList = recentScenes |> List.sortBy( fun sh -> sh.writeDate.DayOfYear ) |> List.sortBy( fun sh -> sh.writeDate.Year )
                             let smallList = match recentScenes.Length > 10 with
@@ -290,12 +290,8 @@ module Gui =
                                           onClick (fun _ -> LoadScene s.path)] [
                                     span [style "color:black"] [Incremental.text (Mod.constant s.name)]
                                  ]
-                            //smallList 
-                            //        |> AList.map(fun x -> yield a [clazz "item inverted";
-                            //                                        onClick (fun _ -> LoadScene x.path)] [
-                            //                                        span [style "color:black"] [Incremental.text (Mod.constant x.name)]])
-                                    
-                        } |> AList.ofASet
+                            
+                        } 
                     )
                 ] 
             ] 
@@ -325,14 +321,14 @@ module Gui =
               
                       div [clazz "ui flowing popup bottom left transition hidden"] [
                           Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
-                              aset {
+                              alist {
                                   let! closedP = m.scene.closedPages
                                   for cp in closedP do
                                        yield a [clazz "item inverted";
                                                 onClick (fun _ -> AddPage cp)] [
                                           span [style "color:black"] [Incremental.text (cp.id |> Mod.constant)]
                                        ]
-                              } |> AList.ofASet
+                              } 
                           )
                       ]
                   ]
