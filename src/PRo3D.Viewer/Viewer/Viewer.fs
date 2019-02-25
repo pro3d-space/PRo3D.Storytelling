@@ -33,7 +33,6 @@ open PRo3D.Viewer
 open PRo3D.Drawing
 open PRo3D.Groups
 open PRo3D.OrientationCube
-open PRo3D.Correlations
 
 open Aardium
 
@@ -76,8 +75,7 @@ module ViewerApp =
     open Aardvark.SceneGraph.SgFSharp.Sg
     open PRo3d.Align
     open Aardvark.Rendering.GL.OpenGl.Pointers
-    open Aardvark.UI.Animation
-    open CorrelationDrawing
+    open Aardvark.UI.Animation    
                  
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
@@ -383,15 +381,7 @@ module ViewerApp =
                             animateFowardAndLocation a.view.Location a.view.Forward 2.0 "ForwardAndLocation2s"
                           let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                           { m with  animations = a'}
-                      | None -> m                    
-                | Drawing.PickAnnotation (hit,id) when m.interaction = Interactions.DrawLog && m.ctrlFlag ->
-                  //sprintf "%A %A" hit.globalPosition id |> logScreen 1000 m
-                  match DrawingApp.intersectAnnotation hit id m.drawing.annotations.flat with
-                  | Some (anno, rayHit) ->
-
-                    let cp = CorrelationPanelsApp.update m.correlationPlot (CorrelationPanelsMessage.AddSelectedPoint(anno.key, rayHit.Point))
-                    { m with correlationPlot = cp }
-                  | None -> m
+                      | None -> m               
                 | _ ->
                     let view = m.scene.navigation.camera.view
                     let drawing = 
@@ -910,10 +900,7 @@ module ViewerApp =
                  let newForward = (v - currentView.Location).Normalized
                                     
                  { m with animations = createAnimation v newForward m.animations }
-              | _ -> { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }
-            | CorrelationMessage a,_,_ ->
-              let corr' = CorrelationPanelsApp.update m.correlationPlot a
-              { m with correlationPlot = corr' }
+              | _ -> { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }            
             | _ -> m
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -1032,11 +1019,9 @@ module ViewerApp =
                 |> Sg.map ViewPlanMessage
 
             let minervaFeatures = 
-              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions
-                        
-            let logs = PRo3D.Correlations.CorrelationPanelsApp.viewWorkingLog m.correlationPlot
+              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions                                    
 
-            [logs; annos; exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
+            [annos; exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
@@ -1232,11 +1217,7 @@ module ViewerApp =
                 require (myCss) (body bodyAttributes [viewPlannerUI])
             | Some "minerva" -> 
                let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
-               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])
-            | Some "corr_mappings" ->
-              CorrelationPanelsApp.viewMappings m.correlationPlot.cpModel |> UI.map CorrelationMessage
-            | Some "corr_semantics" ->
-              CorrelationPanelsApp.viewSemantics m.correlationPlot |> UI.map CorrelationMessage
+               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])            
             | None -> 
                 require (myCss) (
                   body [][                    

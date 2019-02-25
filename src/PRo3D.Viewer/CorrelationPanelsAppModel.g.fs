@@ -14,12 +14,12 @@ module Mutable =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Correlations.CorrelationPanelsAppModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Correlations.CorrelationPanelsAppModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Correlations.CorrelationPanelsAppModel>
         let _selectedPoints = MMap.Create(__initial.selectedPoints)
-        let _annotations = MMap.Create(__initial.annotations, (fun v -> CorrelationDrawing.Mutable.MAnnotation.Create(v)), (fun (m,v) -> CorrelationDrawing.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
-        let _cpModel = CorrelationDrawing.Mutable.MCorrelationPlotModel.Create(__initial.cpModel)
+        let _annotations = ResetMod.Create(__initial.annotations)
+        let _cpModel = ResetMod.Create(__initial.cpModel)
         
         member x.selectedPoints = _selectedPoints :> amap<_,_>
-        member x.annotations = _annotations :> amap<_,_>
-        member x.cpModel = _cpModel
+        member x.annotations = _annotations :> IMod<_>
+        member x.cpModel = _cpModel :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Correlations.CorrelationPanelsAppModel) =
@@ -27,8 +27,8 @@ module Mutable =
                 __current.Value <- v
                 
                 MMap.Update(_selectedPoints, v.selectedPoints)
-                MMap.Update(_annotations, v.annotations)
-                CorrelationDrawing.Mutable.MCorrelationPlotModel.Update(_cpModel, v.cpModel)
+                ResetMod.Update(_annotations,v.annotations)
+                ResetMod.Update(_cpModel,v.cpModel)
                 
         
         static member Create(__initial : PRo3D.Correlations.CorrelationPanelsAppModel) : MCorrelationPanelsAppModel = MCorrelationPanelsAppModel(__initial)
@@ -52,13 +52,13 @@ module Mutable =
                     override x.Update(r,f) = { r with selectedPoints = f r.selectedPoints }
                 }
             let annotations =
-                { new Lens<PRo3D.Correlations.CorrelationPanelsAppModel, Aardvark.Base.hmap<CorrelationDrawing.AnnotationId,CorrelationDrawing.Annotation>>() with
+                { new Lens<PRo3D.Correlations.CorrelationPanelsAppModel, System.Object>() with
                     override x.Get(r) = r.annotations
                     override x.Set(r,v) = { r with annotations = v }
                     override x.Update(r,f) = { r with annotations = f r.annotations }
                 }
             let cpModel =
-                { new Lens<PRo3D.Correlations.CorrelationPanelsAppModel, CorrelationDrawing.CorrelationPlotModel>() with
+                { new Lens<PRo3D.Correlations.CorrelationPanelsAppModel, System.Object>() with
                     override x.Get(r) = r.cpModel
                     override x.Set(r,v) = { r with cpModel = v }
                     override x.Update(r,f) = { r with cpModel = f r.cpModel }

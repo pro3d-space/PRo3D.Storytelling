@@ -22,9 +22,6 @@ open PRo3D.Navigation2
 open PRo3D.Groups
 open PRo3D.ReferenceSystem
 open PRo3d.Align
-open CorrelationDrawing
-open UIPlus
-open PRo3D.Correlations
 
 type TabMenu = 
     | Surfaces    = 0
@@ -47,12 +44,6 @@ type Interactions =
 type BookmarkAction =
   | AddBookmark 
   | GroupsMessage   of Groups.Action
-
-type CorrelationPanelsMessage = 
-  | CorrPlotMessage               of CorrelationPlotApp.Action
-  | SemanticAppMessage            of SemanticApp.Action
-  | ColourMapMessage              of ColourMap.Action
-  | AddSelectedPoint              of Guid * V3d
 
 type PropertyActions =
     | DrawingMessage    of Drawing.Action
@@ -114,8 +105,7 @@ type ViewerAction =
     | UpdateUserFeedback        of string
     | StartImportMessaging      of list<string>
     | Logging                   of string * ViewerAction
-    | ThreadsDone               of string
-    | CorrelationMessage        of CorrelationPanelsMessage
+    | ThreadsDone               of string    
 
 
 and MailboxState = {
@@ -218,10 +208,7 @@ type Model = {
     mailboxState     : MailboxState
 
     minervaModel     : PRo3D.Minerva.Model
-    
-    //correlation panels
-    correlationPlot  : CorrelationPanelsAppModel
-
+            
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
 
@@ -364,7 +351,5 @@ module Viewer =
         
         //instrumentCamera = { CameraController.initial with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }        
         //instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
-        viewerMode = ViewerMode.Standard        
-
-        correlationPlot = CorrelationPanelsAppModel.initial
+        viewerMode = ViewerMode.Standard                
     }
