@@ -11,17 +11,20 @@ open Aardvark.SceneGraph
 open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis
 
+open Aardvark.Base.Frustum
+open Aardvark.UI.Trafos
+open Aardvark.UI.Animation
+
 open PRo3D
 open PRo3d
 open PRo3D.Surfaces
 open PRo3D.Navigation2
-//open PRo3D.BookmarksX
 open PRo3D.Groups
 open PRo3D.ReferenceSystem
-open Aardvark.Base.Frustum
-open Aardvark.UI.Trafos
 open PRo3d.Align
-open Aardvark.UI.Animation
+open CorrelationDrawing
+open UIPlus
+open PRo3D.Correlations
 
 type TabMenu = 
     | Surfaces    = 0
@@ -37,18 +40,25 @@ type Interactions =
     | PlaceRover            = 3
     | TrafoControls         = 4
     | PlaceSurface          = 5
-   // | PickAnnotation        = 6
+    | PickAnnotation        = 6
+    | DrawLog               = 7
     //| AlignPick             = 5
 
 type BookmarkAction =
   | AddBookmark 
   | GroupsMessage   of Groups.Action
 
+type CorrelationPanelsMessage = 
+  | CorrPlotMessage               of CorrelationPlotApp.Action
+  | SemanticAppMessage            of SemanticApp.Action
+  | ColourMapMessage              of ColourMap.Action
+  | AddSelectedPoint              of Guid * V3d
+
 type PropertyActions =
     | DrawingMessage    of Drawing.Action
     | AnnotationMessage of AnnotationProperties.Action
 
-    type ViewerAction =                
+type ViewerAction =                
     | DrawingMessage            of Drawing.Action
     | AnnotationGroupsMessageViewer   of Groups.Action
     | NavigationMessage         of Navigation.Action
@@ -105,6 +115,7 @@ type PropertyActions =
     | StartImportMessaging      of list<string>
     | Logging                   of string * ViewerAction
     | ThreadsDone               of string
+    | CorrelationMessage        of CorrelationPanelsMessage
 
 
 and MailboxState = {
@@ -208,6 +219,9 @@ type Model = {
 
     minervaModel     : PRo3D.Minerva.Model
     
+    //correlation panels
+    correlationPlot  : CorrelationPanelsAppModel
+
     [<TreatAsValue>]
     past : Option<Drawing.DrawingModel> 
 
@@ -272,8 +286,10 @@ module Viewer =
                   ]                          
                   stack 0.5 (Some "config") [
                     {id = "config"; title = Some " Config "; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                    {id = "bookmarks"; title = Some " Bookmarks"; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                    {id = "viewplanner"; title = Some " ViewPlanner "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                 //   {id = "bookmarks"; title = Some " Bookmarks"; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                 //   {id = "viewplanner"; title = Some " ViewPlanner "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "corr_mappings"; title = Some " RockTypes "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "corr_semantics"; title = Some " Semantics "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                    // {id = "minerva"; title = Some " Minerva "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                   ]
                 ]
@@ -313,7 +329,7 @@ module Viewer =
 
         drawing         = Drawing.DrawingModel.initialdrawing
         properties      = NoProperties
-        interaction     = Interactions.PlaceCoordinateSystem
+        interaction     = Interactions.DrawLog
         picking         = false
         ctrlFlag        = false
 
@@ -349,4 +365,6 @@ module Viewer =
         //instrumentCamera = { CameraController.initial with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }        
         //instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
         viewerMode = ViewerMode.Standard        
+
+        correlationPlot = CorrelationPanelsAppModel.initial
     }

@@ -33,6 +33,7 @@ open PRo3D.Viewer
 open PRo3D.Drawing
 open PRo3D.Groups
 open PRo3D.OrientationCube
+open PRo3D.Correlations
 
 open Aardium
 
@@ -76,6 +77,7 @@ module ViewerApp =
     open PRo3d.Align
     open Aardvark.Rendering.GL.OpenGl.Pointers
     open Aardvark.UI.Animation
+    open CorrelationDrawing
                  
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
@@ -116,6 +118,16 @@ module ViewerApp =
                 let bb = s.globalBB
                 m |> lookAtBoundingBox bb
             | None -> m
+
+    let logScreen timeout m text = 
+      let feedback = 
+        {
+          id      = System.Guid.NewGuid().ToString()
+          text    = text
+          timeout = timeout
+          msg     = ViewerAction.NoAction ""
+        }
+      m |> UserFeedback.queueFeedback feedback
 
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
@@ -267,7 +279,6 @@ module ViewerApp =
                                    
                    List.append m.scene.closedPages test 
                    
-
     let addDockElement (dnc : DockNodeConfig) (de:DockElement) = 
         match dnc with
             | DockNodeConfig.Vertical (weight,children) -> let add = List.append children [(Stack(weight, None, [de]))]
@@ -277,7 +288,6 @@ module ViewerApp =
             | DockNodeConfig.Stack (weight,activeId,children) -> Stack(weight, activeId, List.append [de] children)
             | DockNodeConfig.Element element ->  Stack(0.2, None, List.append [de] [element]) 
 
-    
     let saveSceneAndAnnotations (path:string) (m:Model) = 
         let s' = { m.scene with scenePath = Some path}
         let drawing = DrawingApp.saveSceneAnnotations path m.drawing
@@ -287,7 +297,7 @@ module ViewerApp =
          match m.interaction with
             | Interactions.DrawAnnotation -> 
                 let m = match surf.surfaceType with
-                        | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = Projection.Linear } }   
+                        | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = PRo3D.Projection.Linear } }   
                         | _ -> m
                 
                 let view = m.scene.navigation.camera.view
@@ -327,10 +337,18 @@ module ViewerApp =
            // | Interactions.PickAnnotation -> m
             | _ -> m
 
-    let mutable lastHash = -1
     
-    let update (runtime : IRuntime) (signature: IFramebufferSignature) (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) (m : Model) (msg : ViewerAction) =        
-        match msg, m.interaction, m.picking with
+
+    let mutable lastHash = -1    
+
+    let update 
+      (runtime : IRuntime) 
+      (signature: IFramebufferSignature) 
+      (sendQueue : BlockingCollection<string>) 
+      (mailbox : MessagingMailbox) 
+      (m : Model) (msg : ViewerAction) =        
+        //Log.line "[Viewer_update] %A inter:%A pick:%A" msg m.interaction m.picking
+        match msg, m.interaction, m.ctrlFlag with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
                let ref = m.scene.referenceSystem
@@ -366,6 +384,14 @@ module ViewerApp =
                           let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                           { m with  animations = a'}
                       | None -> m                    
+                | Drawing.PickAnnotation (hit,id) when m.interaction = Interactions.DrawLog && m.ctrlFlag ->
+                  //sprintf "%A %A" hit.globalPosition id |> logScreen 1000 m
+                  match DrawingApp.intersectAnnotation hit id m.drawing.annotations.flat with
+                  | Some (anno, rayHit) ->
+
+                    let cp = CorrelationPanelsApp.update m.correlationPlot (CorrelationPanelsMessage.AddSelectedPoint(anno.key, rayHit.Point))
+                    { m with correlationPlot = cp }
+                  | None -> m
                 | _ ->
                     let view = m.scene.navigation.camera.view
                     let drawing = 
@@ -593,10 +619,10 @@ module ViewerApp =
                   
                   let ray =
                       match m.drawing.projection with
-                          | Projection.Viewpoint -> 
+                          | PRo3D.Projection.Viewpoint -> 
                               let dir = (p-camLocation).Normalized
                               FastRay3d(camLocation, dir)  
-                          | Projection.Sky -> 
+                          | PRo3D.Projection.Sky -> 
                               let up = m.scene.referenceSystem.up.value
                               FastRay3d(p + (up * 5000.0), -up)  
                           | _ -> Log.error "projection started without proj mode"; FastRay3d()
@@ -666,18 +692,22 @@ module ViewerApp =
             | KeyDown k, _, _ ->
               let drawingAction =
                 match k with
-                  | Aardvark.Application.Keys.Enter       -> Drawing.Action.Finish                                                               
-                  | Aardvark.Application.Keys.LeftCtrl    -> Drawing.Action.StartDrawing
-                  | Aardvark.Application.Keys.D0          -> Drawing.Action.SetSemantic Semantic.Horizon0
-                  | Aardvark.Application.Keys.D1          -> Drawing.Action.SetSemantic Semantic.Horizon1
-                  | Aardvark.Application.Keys.D2          -> Drawing.Action.SetSemantic Semantic.Horizon2
-                  | Aardvark.Application.Keys.D3          -> Drawing.Action.SetSemantic Semantic.Horizon3       
-                  | _                                     -> Drawing.Action.Nop
+                  | Aardvark.Application.Keys.Enter    -> Drawing.Action.Finish                                                               
+                  | Aardvark.Application.Keys.LeftCtrl -> 
+                    match m.interaction with 
+                    | Interactions.DrawAnnotation -> Drawing.Action.StartDrawing
+                    | Interactions.PickAnnotation -> Drawing.Action.StartPicking
+                    | _ -> Drawing.Action.Nop
+                  | Aardvark.Application.Keys.D0 -> Drawing.Action.SetSemantic Semantic.Horizon0
+                  | Aardvark.Application.Keys.D1 -> Drawing.Action.SetSemantic Semantic.Horizon1
+                  | Aardvark.Application.Keys.D2 -> Drawing.Action.SetSemantic Semantic.Horizon2
+                  | Aardvark.Application.Keys.D3 -> Drawing.Action.SetSemantic Semantic.Horizon3       
+                  | _  -> Drawing.Action.Nop
 
               let m =
                 match k with 
-                  | Aardvark.Application.Keys.LeftCtrl -> { m with picking = true; ctrlFlag = true }
-                  |_                                   -> { m with picking = false;}
+                  | Aardvark.Application.Keys.LeftCtrl -> { m with ctrlFlag = true }
+                  | _ -> m
 
               let m =
                 match (m.ctrlFlag, k, m.scene.scenePath) with
@@ -705,35 +735,12 @@ module ViewerApp =
                              
               let m =
                 match m.interaction with
-                | Interactions.DrawAnnotation ->
+                | Interactions.DrawAnnotation | Interactions.PickAnnotation ->
                     let view = m.scene.navigation.camera.view
                     let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing drawingAction } |> stash
                     match drawingAction with
                       | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
-                      | _ -> m     
-                //| Interactions.PickAnnotation -> 
-                //    match m.picking with
-                //        | true -> { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StartPicking } |> stash
-                //        | false -> m
-                    
-                   
-                //| Interactions.AlignPick -> 
-                //    match k with
-                //     | Aardvark.Application.Keys.Enter -> 
-                //        let m = { m with alignment = AlignmentApp.update m.alignment PRo3d.Align.AlignmentActions.Finish }
-
-                //        match (m.alignment.resultTrafo, m.alignment.alignment)with
-                //          | Some t, Some al ->                             
-                //            let f = (fun x -> 
-                //                let s = x |> Leaf.toSurface
-                //                { s with preTransform = t} |> Leaf.Surfaces)
-
-                //            let g = Groups.updateLeaf al.blue f m.scene.surfacesModel.surfaces
-                //            { m.scene.surfacesModel with surfaces = g }
-                //              |> SurfaceModel.triggerSgGrouping
-                //              |> Lenses.set' _surfacesModel m
-                //          | _ -> m
-                //     | _ -> m
+                      | _ -> m                     
                 | _ -> m
                                                   
 
@@ -771,7 +778,16 @@ module ViewerApp =
                       { m with waypoints = waypoints }                                                                                  
                     | _ -> m
 
-              { m with scene = { m.scene with config = c' }}                                       
+              let interaction' = 
+                match k with
+                | Aardvark.Application.Keys.F1 -> Interactions.PickExploreCenter
+                | Aardvark.Application.Keys.F2 -> Interactions.DrawAnnotation
+                | Aardvark.Application.Keys.F3 -> Interactions.PickAnnotation
+                | Aardvark.Application.Keys.F4 -> Interactions.PlaceCoordinateSystem
+                | Aardvark.Application.Keys.F6 -> Interactions.DrawLog
+                | _ -> m.interaction
+
+              { m with scene = { m.scene with config = c' }; interaction = interaction'}                               
             | KeyUp k, _,_ ->               
                 match k with
                   | Aardvark.Application.Keys.LeftCtrl -> 
@@ -779,8 +795,10 @@ module ViewerApp =
                         | Interactions.DrawAnnotation -> 
                             let view = m.scene.navigation.camera.view
                             let d = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopDrawing
-                        //| Interactions.PickAnnotation -> 
-                        //    DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopPicking 
+                            { m with drawing = d; ctrlFlag = false; picking = false }
+                        | Interactions.PickAnnotation -> 
+                            let view = m.scene.navigation.camera.view
+                            let d = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopPicking 
                             { m with drawing = d; ctrlFlag = false; picking = false }
                         |_-> { m with ctrlFlag = false; picking = false }
                   | _ -> m                                  
@@ -893,7 +911,10 @@ module ViewerApp =
                                     
                  { m with animations = createAnimation v newForward m.animations }
               | _ -> { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }
-            | _ -> m       
+            | CorrelationMessage a,_,_ ->
+              let corr' = CorrelationPanelsApp.update m.correlationPlot a
+              { m with correlationPlot = corr' }
+            | _ -> m
                                    
     let mkBrushISg color size trafo : ISg<Message> =
       Sg.sphere 5 color size 
@@ -904,8 +925,7 @@ module ViewerApp =
         }
         |> Sg.noEvents
         |> Sg.trafo(trafo)
-   
-   
+      
     let view (m : MModel) = //(localhost: string)
         
         let renderControlAttributes (model : MNavigationModel)  =            
@@ -1014,7 +1034,9 @@ module ViewerApp =
             let minervaFeatures = 
               PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions
                         
-            [annos; exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
+            let logs = PRo3D.Correlations.CorrelationPanelsApp.viewWorkingLog m.correlationPlot
+
+            [logs; annos; exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
@@ -1211,6 +1233,10 @@ module ViewerApp =
             | Some "minerva" -> 
                let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
                require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])
+            | Some "corr_mappings" ->
+              CorrelationPanelsApp.viewMappings m.correlationPlot.cpModel |> UI.map CorrelationMessage
+            | Some "corr_semantics" ->
+              CorrelationPanelsApp.viewSemantics m.correlationPlot |> UI.map CorrelationMessage
             | None -> 
                 require (myCss) (
                   body [][                    

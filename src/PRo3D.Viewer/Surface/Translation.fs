@@ -23,14 +23,14 @@ open Aardvark.Base.MultimethodTest
 module Transformations = 
 
   let fullTrafo' (surf : Surface) (refsys : ReferenceSystem) = 
-           
+  
     let north = refsys.northO.Normalized
     let up = refsys.up.value.Normalized
     let east   = north.Cross(up)
-        
+          
     let refSysRotation = 
       Trafo3d.FromOrthoNormalBasis(north, east, up)        
-    
+        
     //translation along north, east, up            
     let trans = surf.transformation.translation.value |> Trafo3d.Translation
     let rot = Trafo3d.Rotation(up, surf.transformation.yaw.value.RadiansFromDegrees())
@@ -47,26 +47,7 @@ module Transformations =
 
       return fullTrafo' s rSys
     }
-    //adaptive {
-    //  let! s = surf
-  
-    //  let! north = refsys.northO
-    //  let! up    = refsys.up.value
-    //  let east   = north.Normalized.Cross(up.Normalized)
-          
-    //  let refSysRotation = 
-    //    Trafo3d.FromOrthoNormalBasis(north.Normalized, east, up.Normalized)                         
         
-    //  let! trans = s.transformation.translation.value
-    //  let trans = trans |> Trafo3d.Translation
-
-    //  let! rot = s.transformation.yaw.value
-    //  let rot = Trafo3d.Rotation(up, rot)
-  
-    //  return rot //* refSysRotation.Inverse * rot * refSysRotation
-    //}
-  
-
 module TranslationApp =
     
 
