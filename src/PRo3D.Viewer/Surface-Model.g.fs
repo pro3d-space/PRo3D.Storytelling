@@ -197,11 +197,15 @@ module Mutable =
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Transformations> = Aardvark.Base.Incremental.EqModRef<PRo3D.Surfaces.Transformations>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Surfaces.Transformations>
         let _useTranslationArrows = ResetMod.Create(__initial.useTranslationArrows)
         let _translation = Aardvark.UI.Mutable.MV3dInput.Create(__initial.translation)
+        let _yaw = Aardvark.UI.Mutable.MNumericInput.Create(__initial.yaw)
         let _trafo = ResetMod.Create(__initial.trafo)
+        let _pivot = ResetMod.Create(__initial.pivot)
         
         member x.useTranslationArrows = _useTranslationArrows :> IMod<_>
         member x.translation = _translation
+        member x.yaw = _yaw
         member x.trafo = _trafo :> IMod<_>
+        member x.pivot = _pivot :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Surfaces.Transformations) =
@@ -210,7 +214,9 @@ module Mutable =
                 
                 ResetMod.Update(_useTranslationArrows,v.useTranslationArrows)
                 Aardvark.UI.Mutable.MV3dInput.Update(_translation, v.translation)
+                Aardvark.UI.Mutable.MNumericInput.Update(_yaw, v.yaw)
                 ResetMod.Update(_trafo,v.trafo)
+                ResetMod.Update(_pivot,v.pivot)
                 
         
         static member Create(__initial : PRo3D.Surfaces.Transformations) : MTransformations = MTransformations(__initial)
@@ -239,11 +245,23 @@ module Mutable =
                     override x.Set(r,v) = { r with translation = v }
                     override x.Update(r,f) = { r with translation = f r.translation }
                 }
+            let yaw =
+                { new Lens<PRo3D.Surfaces.Transformations, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.yaw
+                    override x.Set(r,v) = { r with yaw = v }
+                    override x.Update(r,f) = { r with yaw = f r.yaw }
+                }
             let trafo =
                 { new Lens<PRo3D.Surfaces.Transformations, Aardvark.Base.Trafo3d>() with
                     override x.Get(r) = r.trafo
                     override x.Set(r,v) = { r with trafo = v }
                     override x.Update(r,f) = { r with trafo = f r.trafo }
+                }
+            let pivot =
+                { new Lens<PRo3D.Surfaces.Transformations, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.pivot
+                    override x.Set(r,v) = { r with pivot = v }
+                    override x.Update(r,f) = { r with pivot = f r.pivot }
                 }
     
     
