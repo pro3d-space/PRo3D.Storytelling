@@ -275,7 +275,15 @@ module DrawingApp =
                     | None         -> model
                     | Some segment -> addNewSegment hitFunction model segment
                 |> stash
-
+        | RemoveLastPoint, _, _ -> 
+          //let annotation = { w with points = w.points |> PList.append p }
+          // { annotation with segments = PList.append newSegment annotation.segments }
+          
+          match model.working with
+            | Some w when w.points.Count > 0->
+              { model with working = Some { w with points = w.points |> PList.removeAt (w.points.Count - 1) }}
+            | Some _ -> { model with working = None }
+            | None -> model
         | SetSegment(segmentIndex,segment), _, _ ->
             match model.working with
                 | None -> model
@@ -334,8 +342,10 @@ module DrawingApp =
             | None -> model
         | Send, _, _ ->                                                      
             model
+        | ClearWorking,_ , _->
+            { model with working = None }
         | Clear,_ , _->
-            { model with annotations = GroupsModel.initial }
+          { model with annotations = GroupsModel.initial }
         | Nop, _, _ -> model                   
         | Undo, _, _ -> 
             match model.past with

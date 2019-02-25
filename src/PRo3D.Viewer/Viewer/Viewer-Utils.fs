@@ -40,7 +40,6 @@ module ViewerUtils =
 
     let pickable' (pick :IMod<Pickable>) (sg: ISg) =
         Sg.PickableApplicator (pick, Mod.constant sg)
-
     
     let toModSurface (leaf : IMod<MLeaf>) = 
          adaptive {
@@ -54,12 +53,10 @@ module ViewerUtils =
         let entry = table |> AMap.find guid
 
         entry |> Mod.bind(fun x -> x |> toModSurface)
-
-   
+           
+    let viewSingleSurfaceSg (surface : MSgSurface) (surfaceTable : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) =
         
-    let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) =
-        
-        let surf = lookUp (surface.surface) blarg
+        let surf = lookUp (surface.surface) surfaceTable
             //Mod.bind(fun x -> lookUp (x.surface) blarg )
 
         let isSelected = Mod.map(fun x ->
@@ -72,10 +69,7 @@ module ViewerUtils =
             |> Sg.noEvents 
             |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
             |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))         
-                
-        //let globalToLocal = 
-        //    surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation -x.Center)
-            
+                                    
         let selectedScalar =
             adaptive {
                 let! s = surf
@@ -151,16 +145,14 @@ module ViewerUtils =
         let useColor = surf |> Mod.bind( fun x -> x.colorCorrection.useColor )
         let color    = surf |> Mod.bind( fun x -> x.colorCorrection.color.c )
         
-        //let scaleTrafo =
+        //let scaleTrafo = //needs to be included into full trafo via Transformations
         //   adaptive {
         //        let! s = surf
         //        let! sc = s.scaling.value
         //        let! t = s.preTransform
         //        return (Trafo3d.Scale(sc) * t)
         //    }      
-
         
-
         let pickable = 
           Mod.map2( fun (a:Box3d) (b:Trafo3d) -> 
             { shape = PickShape.Box (a.Transformed(b)); trafo = Trafo3d.Identity }) globalBB (Transformations.fullTrafo surf refsys)
@@ -174,8 +166,8 @@ module ViewerUtils =
 
         let triangleFilter = surf |> Mod.bind(fun s -> s.triangleSize.value)
 
-        let test =             //TODO LF refactor ... split uniforms in different groups and move to nice functions
-          surface.sceneGraph
+                     //TODO LF refactor ... split uniforms in different groups and move to nice functions
+        surface.sceneGraph
             |> Mod.map createSg
             |> Sg.dynamic
             |> Sg.trafo (Transformations.fullTrafo surf refsys)
@@ -234,33 +226,14 @@ module ViewerUtils =
                      let name  = surfM.name |> Mod.force                                                  
                      Log.warn "spawning picksurface %s" name
                      true, Seq.ofList [PickSurface (sceneHit,name)])                         
-               ]
-                
-                //let! picking = surface.picking
-                //match picking with
-                //| Picking.PickMesh pm ->
-                //    yield sg
-                //    yield pm
-                //      |> Sg.requirePicking
-                //      |> Sg.noEvents
-                //      |> Sg.withEvents [
-                //          Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
-                //      ]
-                //      |> Sg.shader {
-                //          do! DefaultSurfaces.trafo
-                //          do! DefaultSurfaces.constantColor C4f.White
-                //      }
-                //      |> Sg.trafo scaleTrafo //(surf |> Mod.bind(fun x -> x.preTransform)) 
-                //      |> Sg.depthTest (Mod.constant DepthTestMode.Never)
-                //| Picking.KdTree _ -> yield sg            
-        test 
+               ]                                               
           |> Sg.andAlso (
             (Sg.wireBox (C4b.VRVisGreen |> Mod.constant) pickBox) 
               |> Sg.noEvents
               |> Sg.effect [              
                   Shader.stableTrafo |> toEffect 
                   DefaultSurfaces.vertexColor |> toEffect
-                ]
+                ] |> Sg.onOff (Mod.constant false)
             )
 
     let frustum (m:MModel) =

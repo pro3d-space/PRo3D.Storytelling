@@ -682,7 +682,9 @@ module ViewerApp =
             | KeyDown k, _, _ ->
               let drawingAction =
                 match k with
-                  | Aardvark.Application.Keys.Enter    -> Drawing.Action.Finish                                                               
+                  | Aardvark.Application.Keys.Enter    -> Drawing.Action.Finish
+                  | Aardvark.Application.Keys.Back     -> Drawing.Action.RemoveLastPoint
+                  | Aardvark.Application.Keys.Escape   -> Drawing.Action.ClearWorking
                   | Aardvark.Application.Keys.LeftCtrl -> 
                     match m.interaction with 
                     | Interactions.DrawAnnotation -> Drawing.Action.StartDrawing
