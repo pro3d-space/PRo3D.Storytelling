@@ -776,7 +776,7 @@ module ViewerApp =
                 | Aardvark.Application.Keys.F2 -> Interactions.DrawAnnotation
                 | Aardvark.Application.Keys.F3 -> Interactions.PickAnnotation
                 | Aardvark.Application.Keys.F4 -> Interactions.PlaceCoordinateSystem
-                | Aardvark.Application.Keys.F6 -> Interactions.DrawLog
+                //| Aardvark.Application.Keys.F6 -> Interactions.DrawLog
                 | _ -> m.interaction
 
               { m with scene = { m.scene with config = c' }; interaction = interaction'}                               

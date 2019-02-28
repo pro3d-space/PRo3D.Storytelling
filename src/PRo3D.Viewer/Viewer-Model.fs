@@ -38,7 +38,7 @@ type Interactions =
     | TrafoControls         = 4
     | PlaceSurface          = 5
     | PickAnnotation        = 6
-    | DrawLog               = 7
+    //| DrawLog               = 7
     //| AlignPick             = 5
 
 type BookmarkAction =
@@ -316,7 +316,7 @@ module Viewer =
 
         drawing         = Drawing.DrawingModel.initialdrawing
         properties      = NoProperties
-        interaction     = Interactions.DrawLog
+        interaction     = Interactions.PlaceCoordinateSystem
         picking         = false
         ctrlFlag        = false
 
