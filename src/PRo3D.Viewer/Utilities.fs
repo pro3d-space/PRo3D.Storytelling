@@ -245,7 +245,7 @@ module Sg =
 
     let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
                             
-    let lines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
+    let lines (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
         
         let edges = edgeLines false points trafo     
         edges
@@ -258,16 +258,16 @@ module Sg =
              }                               
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+             |> Sg.uniform "DepthOffset" offset
     
-    let lines' (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) =
+    let lines' (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) =
       let trafo = 
         points 
           |> AList.toMod 
           |> Mod.map(fun x -> (PList.tryHead x) |> Option.defaultValue V3d.Zero) 
           |> Mod.map (Trafo3d.Translation)        
         
-      lines points color width trafo
+      lines points offset color width trafo
                         
     let scaledLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
         let edges = edgeLines false points trafo     
@@ -290,7 +290,7 @@ module Sg =
              }                               
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+             |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
 
     let cylinders width positions = 
         positions |> Array.pairwise |> Array.map(fun (a,b) -> Line3d(a,b)) |> Array.map (fun x -> Cylinder3d(x, width))
@@ -455,12 +455,20 @@ module Lenses =
     let update (lens : Lens<'s,'a>) (f : 'a->'a) (s:'s) : 's = lens.Update(s,f)
 
 module Shader =
-  open FShade
+  
   open Aardvark.SceneGraph.Opc.Shader
+  
+  open Aardvark.Base
+  open Aardvark.Base.Incremental
+  open Aardvark.Base.Rendering
   open Aardvark.SceneGraph
   open Aardvark.Rendering
   open Aardvark.UI
   open Aardvark.UI.Trafos
+  open Aardvark.UI.Primitives
+  open PRo3D
+  open FShade
+
 
   type SuperVertex = 
         {
@@ -586,7 +594,6 @@ module Shader =
                 (startColor + (hStepSize * ((float)(pos1))))
         currColorH
             
-
   let falseColorLegend2 (v : Vertex) =
       fragment {    
 
@@ -599,7 +606,6 @@ module Shader =
               return v.c
       }
       
-  
   [<ReflectedDefinition>]
   let myTrunc (value : float) =
     clamp 0.0 255.0 value
@@ -665,6 +671,50 @@ module Shader =
         else
             return v.c
     }
+
+  let thickLine2 (line : Line<ThickLineVertex>) =
+     triangle {
+         let offset : float = uniform?depthOffset
+         let t = uniform.LineWidth                                 
+                      
+         let sizeF = V3d(float uniform.ViewportSize.X, float uniform.ViewportSize.Y, 1.0)
+         
+         let pp0 = line.P0.pos
+         let pp1 = line.P1.pos
+         let middle = (pp0 + pp1) / 2.0
+         let viewVec = ((middle.XYZ - uniform.CameraLocation).Normalized)
+         let viewVec = uniform.ProjTrafoInv * V4d(viewVec.X, viewVec.Y, viewVec.Z, 1.0)
+
+         let pp0 = pp0 + viewVec * offset
+         let pp1 = pp1 + viewVec * offset
+                                         
+         //clipping
+         let pp0 = if pp0.Z < 0.0 then (Lerp pp1 pp0 (pp1.Z / (pp1.Z - pp0.Z))) else pp0
+         let pp1 = if pp1.Z < 0.0 then (Lerp pp0 pp1 (pp0.Z / (pp0.Z - pp1.Z))) else pp1            
+                 
+         let p0 = pp0.XYZ / pp0.W
+         let p1 = pp1.XYZ / pp1.W
+                    
+         let fwp = (p1.XYZ - p0.XYZ) * sizeF
+    
+         let fw = V3d(fwp.XY * 2.0, 0.0) |> Vec.normalize
+         let r = V3d(-fw.Y, fw.X, 0.0) / sizeF
+         let d = fw / sizeF
+
+        // let k = (d.Normalized |> Vec.cross r.Normalized).Normalized * offset      
+
+         let p00 = p0.XYZ - r * t - d * t //+ k
+         let p10 = p0.XYZ + r * t - d * t //+ k
+         let p11 = p1.XYZ + r * t + d * t //+ k
+         let p01 = p1.XYZ - r * t + d * t //+ k
+    
+         let rel = t / (Vec.length fwp)
+    
+         yield { line.P0 with pos = V4d(p00, 1.0); lc = V2d(-1.0, -rel); w = rel }
+         yield { line.P0 with pos = V4d(p10, 1.0); lc = V2d( 1.0, -rel); w = rel }
+         yield { line.P1 with pos = V4d(p01, 1.0); lc = V2d(-1.0, 1.0 + rel); w = rel }
+         yield { line.P1 with pos = V4d(p11, 1.0); lc = V2d( 1.0, 1.0 + rel); w = rel }
+     }
 
 module PRo3DNumeric = 
     open Aardvark.Base.Incremental

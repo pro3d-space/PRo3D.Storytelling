@@ -158,6 +158,7 @@ module ViewerApp =
             getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
             getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
             getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
+            getOffset          = fun (x:MViewConfigModel) -> Mod.constant(0.001)//x.offset.value
         }
 
     let navConf : Navigation.smallConfig<ViewConfigModel, ReferenceSystem> =
@@ -251,14 +252,17 @@ module ViewerApp =
         |> AnimationAction.PushAnimation 
         |> AnimationApp.update animationsOld
 
+    //TODO refactor ... move docking manipulation somewhere else... check what works and what doesn't
     let rec getAllDockElements (dnc : DockNodeConfig) : (list<DockElement>) = 
-        match dnc with
-            | DockNodeConfig.Vertical (weight,children) -> let test = children |> List.map(fun x -> getAllDockElements x )
-                                                           test |> List.concat  
-            | DockNodeConfig.Horizontal (weight,children) -> let test = children |> List.map(fun x -> getAllDockElements x )
-                                                             test |> List.concat 
-            | DockNodeConfig.Stack (weight,activeId,children) -> children 
-            | DockNodeConfig.Element element -> [element] 
+      match dnc with
+        | DockNodeConfig.Vertical (weight,children) -> 
+          let test = children |> List.map(fun x -> getAllDockElements x )
+          test |> List.concat  
+        | DockNodeConfig.Horizontal (weight,children) -> 
+          let test = children |> List.map(fun x -> getAllDockElements x )
+          test |> List.concat 
+        | DockNodeConfig.Stack (weight,activeId,children) -> children 
+        | DockNodeConfig.Element element -> [element] 
     
     let updateClosedPages (m : Model) (dncUpdated : DockNodeConfig) =
         let de = getAllDockElements m.scene.dockConfig.content
@@ -323,7 +327,7 @@ module ViewerApp =
                 { m with scene = {m.scene with navigation = navigation'; } }
             | Interactions.PlaceRover ->
                 let ref = m.scene.referenceSystem 
-                let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
+                let _, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
                 let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
                 match m.scene.viewPlans.working.IsEmpty with
                     | true -> m' 
@@ -340,10 +344,8 @@ module ViewerApp =
     let mutable lastHash = -1    
 
     let update 
-      (runtime : IRuntime) 
-      (signature: IFramebufferSignature) 
-      (sendQueue : BlockingCollection<string>) 
-      (mailbox : MessagingMailbox) 
+      (runtime : IRuntime) (signature: IFramebufferSignature) 
+      (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) 
       (m : Model) (msg : ViewerAction) =        
         //Log.line "[Viewer_update] %A inter:%A pick:%A" msg m.interaction m.picking
         match msg, m.interaction, m.ctrlFlag with
@@ -388,35 +390,35 @@ module ViewerApp =
                         DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing msg
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
-                    let view = m.scene.navigation.camera.view
-                    let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath view m.scene.referenceSystem
-                    let animation = 
-                          match msg with
-                            | SurfaceApp.Action.FlyToSurface id -> 
-                                let surface = m.scene.surfacesModel.surfaces.flat |> HMap.find id |> Leaf.toSurface 
-                                let superTrafo = PRo3D.Transformations.fullTrafo' surface m.scene.referenceSystem
-                                match surface.homePosition with
-                                    | Some hp ->
-                                        //let trafo' = surface.preTransform.Forward * superTrafo.Forward
-                                        //let pos = trafo'.TransformPos(hp.Location)
-                                        //let forward = trafo'.TransformDir(hp.Forward)
-                                        let animationMessage = 
-                                            animateFowardAndLocation hp.Location hp.Forward 2.0 "ForwardAndLocation2s"
-                                        AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                                    | None ->
-                                        let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
-                                        match surf with
-                                            | Some s ->
-                                                    let bb = s.globalBB.Transformed(surface.preTransform.Forward * superTrafo.Forward)
-                                                    let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
-                                                    let animationMessage = 
-                                                        animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
-                                                    let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                                                    a'
-                                            | None -> m.animations
-                            | _-> m.animations
-                           
-                    { m with scene = { m.scene with surfacesModel = s}; animations = animation}
+              let view = m.scene.navigation.camera.view
+              let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath view m.scene.referenceSystem
+              let animation = 
+                match msg with
+                | SurfaceApp.Action.FlyToSurface id -> 
+                  let surface = m.scene.surfacesModel.surfaces.flat |> HMap.find id |> Leaf.toSurface 
+                  let superTrafo = PRo3D.Transformations.fullTrafo' surface m.scene.referenceSystem
+                  match surface.homePosition with
+                  | Some hp ->
+                    //let trafo' = surface.preTransform.Forward * superTrafo.Forward
+                    //let pos = trafo'.TransformPos(hp.Location)
+                    //let forward = trafo'.TransformDir(hp.Forward)
+                    let animationMessage = 
+                        animateFowardAndLocation hp.Location hp.Forward 2.0 "ForwardAndLocation2s"
+                    AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                  | None ->
+                    let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
+                    match surf with
+                    | Some s ->
+                      let bb = s.globalBB.Transformed(surface.preTransform.Forward * superTrafo.Forward)
+                      let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
+                      let animationMessage = 
+                          animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                      let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                      a'
+                    | None -> m.animations
+                | _-> m.animations
+                     
+              { m with scene = { m.scene with surfacesModel = s}; animations = animation}
             | AnnotationMessage msg,_,_ ->                
                 match m.drawing.annotations.singleSelectLeaf with
                   | Some selected ->                             
@@ -459,19 +461,17 @@ module ViewerApp =
             | DnSColorLegendMessage msg,_,_ ->
                 let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
                 { m with drawing = { m.drawing with colorLegend = cm } }
-            | ImportSurface sl,_,_ -> 
-                
+            | ImportSurface sl,_,_ ->                 
                 match sl with
-                    | [] -> m
-                    | paths ->
-                        let surfaces = 
-                            paths 
-                                |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
-                                |> List.map (Sg.mk SurfaceType.SurfaceOPC m.scene.config.importTriangleSize.value)
-                                |> PList.ofList
-
-                        let m = Scene.import' runtime signature surfaces m 
-                        updateSceneWithNewSurface m 
+                | [] -> m
+                | paths ->
+                    let surfaces = 
+                        paths 
+                            |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
+                            |> List.map (Sg.mk SurfaceType.SurfaceOPC m.scene.config.importTriangleSize.value)
+                            |> PList.ofList
+                    let m = Scene.import' runtime signature surfaces m 
+                    updateSceneWithNewSurface m 
             | ImportDiscoveredSurfaces sl,_,_ -> 
                 //"" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match sl with
@@ -978,40 +978,7 @@ module ViewerApp =
           
             let homePosition =
                 Surfaces.Sg.viewHomePosition m.scene.surfacesModel
-            
-            
-            //let controller = 
-            //    adaptive {
-            //        let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
-            //        let! kind = m.trafoKind
-            //        match selected with
-            //          | Some c ->                           
-
-            //              let! sgo = m.scene.surfacesModel.sgSurfaces |> AMap.tryFind c
-                          
-            //              match sgo with 
-            //                  | Some sg ->
-            //                        let! trafo = sg.trafo
-            //                        match kind with
-            //                        | TrafoKind.Translate ->                                               
-            //                            return TranslateController.viewController (fun t -> Translate("", t)) m.scene.navigation.camera.view sg.trafo
-            //                        | TrafoKind.Rotate ->
-            //                            return RotationController.viewController (fun t -> Rotate("", t)) m.scene.navigation.camera.view sg.trafo
-            //                        | _ -> return Sg.empty
-            //                  | None -> 
-            //                    Log.warn "selected surface does not exist"
-            //                    return Sg.empty                                 
-            //          | None -> return Sg.empty
-                    
-            //    } |> Sg.dynamic
-
-            //let orientationCube = 
-            //    OrientationCube.Sg.view
-            //        m.scene.navigation.camera.view
-            //        m.scene.config 
-            //        m.scene.referenceSystem
-               
-            
+                                 
             let viewPlans =
                 ViewPlan.Sg.view 
                     m.scene.config 
