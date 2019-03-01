@@ -105,10 +105,6 @@ module Navigation =
 
     module Sg =
         let view (model:MNavigationModel) =
-            let point =
-                aset{
-                let! pos = model.exploreCenter
-                yield PRo3D.Sg.dots (AList.single pos) (Mod.constant 3.0) (Mod.constant C4b.Magenta)
-                } |> Sg.set
+            let point = PRo3D.Sg.dot model.exploreCenter (Mod.constant 3.0) (Mod.constant C4b.Magenta)
             Sg.ofList [point]
            

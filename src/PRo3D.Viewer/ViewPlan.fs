@@ -64,48 +64,36 @@ module ViewPlan =
                     | _-> let srid, sr = rovs.[0]
                           Some sr
       
-            { model with roverModel = { model.roverModel with rovers = rovsHm; platforms = plats; selectedRover = selected } }
+            { model with roverModel = { model.roverModel with rovers = rovsHm; 
+                                                              platforms = plats; 
+                                                              selectedRover = selected }}
         | _ -> model
 
     let updateViewPlans (vp:ViewPlan) (vps:hset<ViewPlan>) =
         vps
         |> HSet.map (fun x -> if x.id = vp.id then vp else x)
     
-    //TODO LF refactor formatting indentation ... whole file. Maximum column width 120.
     let updateViewPlanFromRover (roverModel:RoverModel) (vp:ViewPlanModel) =
         // update rover model
         let m = {vp with roverModel = roverModel}
         // update selected view plan and viewplans
         match vp.selectedViewPlan with
             | Some v -> match roverModel.selectedRover with
-                            | Some r -> { m with selectedViewPlan = Some { v with rover = r };  viewPlans = updateViewPlans v vp.viewPlans } //{ v with rover = r }
+                            | Some r -> { m with selectedViewPlan = Some { v with rover = r };  
+                                                 viewPlans = updateViewPlans v vp.viewPlans } //{ v with rover = r }
                             | None -> { m with viewPlans = updateViewPlans v vp.viewPlans } 
             | None -> m 
        
     let trafoFromTranslatedBase (position:V3d) (tilt:V3d) (forward:V3d) (right:V3d) : Trafo3d =  
-        let rotTrafo =  //TODO LF refactor ... compare with Trafo fromOrthoNormalBase function
-            new Trafo3d(
-                new M44d(
-                    forward.X, right.X, tilt.X, 0.0,
-                    forward.Y, right.Y, tilt.Y, 0.0,
-                    forward.Z, right.Z, tilt.Z, 0.0,
-                    0.0,     0.0,  0.0,    1.0
-                ),
-                new M44d(
-                    forward.X, forward.Y, forward.Z, 0.0,
-                    right.X, right.Y, right.Z, 0.0,
-                    tilt.X, tilt.Y, tilt.Z, 0.0,
-                    0.0,     0.0,     0.0,     1.0
-                )
-        )
-        (rotTrafo * Trafo3d.Translation(position))
+        let rotTrafo =  Trafo3d.FromOrthoNormalBasis( forward.Normalized, right.Normalized, tilt.Normalized )
+        (rotTrafo * Trafo3d.Translation(position)) 
 
-    //TODO LF refactor ... use Math.sign. Checksign is also very ambigious function naming
-    let checkSign (v1:V3d) (v2:V3d) =
+    let getPlaneNormalSign (v1:V3d) (v2:V3d) =
         let sign = V3d.Dot(v2, v1)
         (sign <= 0.0)
 
-    let hitF (p : V3d) (dir:V3d) (refSystem : ReferenceSystem.ReferenceSystem) (cache : hmap<string, ConcreteKdIntersectionTree>)(surfaceModel:SurfaceModel) = 
+    let hitF (p : V3d) (dir:V3d) (refSystem : ReferenceSystem.ReferenceSystem) 
+             (cache : hmap<string, ConcreteKdIntersectionTree>)(surfaceModel:SurfaceModel) = 
         let mutable cache = cache
         let ray = FastRay3d(p, dir)  
                  
@@ -122,7 +110,9 @@ module ViewPlan =
         trafoFromTranslatedBase position tilt forward right
 
         
-    let calculateSurfaceContactPoint (roverWheel:V3d) (refSystem : ReferenceSystem.ReferenceSystem) (cache : hmap<string, ConcreteKdIntersectionTree>) (trafo:Trafo3d) (surfaceModel:SurfaceModel) =
+    let calculateSurfaceContactPoint (roverWheel:V3d) (refSystem : ReferenceSystem.ReferenceSystem) 
+                                     (cache : hmap<string, ConcreteKdIntersectionTree>) (trafo:Trafo3d)
+                                     (surfaceModel:SurfaceModel) =
         let tilt = trafo.Forward.UpperLeftM33().C2;
         let wheelT = trafo.Forward.TransformPos(roverWheel)
         let origin = wheelT + 5000.0 * tilt //move up ray origin
@@ -146,14 +136,15 @@ module ViewPlan =
         let newRightVec = rightVecLine.Direction.Normalized
         let newTiltVec = V3d.Cross(forward, newRightVec).Normalized
 
-        match checkSign up newTiltVec with
+        match getPlaneNormalSign up newTiltVec with
         | true -> let newTilt = newTiltVec.Negated
                   let newRight = newRightVec.Negated
                   trafoFromTranslatedBase working.[0] newTilt forward newRight
         | false -> trafoFromTranslatedBase working.[0] newTiltVec forward newRightVec
         
 
-    let createViewPlan (working:list<V3d>) (rover:Rover) (ref:ReferenceSystem) (camState:CameraControllerState) (kdTree:hmap<string, ConcreteKdIntersectionTree>) (surfaceModel:SurfaceModel) =
+    let createViewPlan (working:list<V3d>) (rover:Rover) (ref:ReferenceSystem) (camState:CameraControllerState) 
+                       (kdTree:hmap<string, ConcreteKdIntersectionTree>) (surfaceModel:SurfaceModel) =
         let initTrafo = initialPlacementTrafo working.[0] working.[1] ref.up.value
         
         let surfaceIntersectionPoints = // ray casting for surface intersection with rover wheels
@@ -191,10 +182,16 @@ module ViewPlan =
             }
         newViewPlan
 
-    let createViewPlanFromFile (data:hmap<string,string>) (model:ViewPlanModel) (rover:Rover) (ref:ReferenceSystem) (camState:CameraControllerState) =
-        let pos = V3d((data |> HMap.find "X").ToFloat(), (data |> HMap.find "Y").ToFloat(), (data |> HMap.find "Z").ToFloat())
+    let createViewPlanFromFile (data:hmap<string,string>) (model:ViewPlanModel) (rover:Rover)
+                               (ref:ReferenceSystem) (camState:CameraControllerState) =
+        let pos = V3d((data |> HMap.find "X").ToFloat(), 
+                      (data |> HMap.find "Y").ToFloat(), 
+                      (data |> HMap.find "Z").ToFloat())
         
-        let posQ = V4d((data |> HMap.find "qX").ToFloat(), (data |> HMap.find "qY").ToFloat(), (data |> HMap.find "qZ").ToFloat(), (data |> HMap.find "qW").ToFloat())
+        let posQ = V4d((data |> HMap.find "qX").ToFloat(), 
+                       (data |> HMap.find "qY").ToFloat(), 
+                       (data |> HMap.find "qZ").ToFloat(), 
+                       (data |> HMap.find "qW").ToFloat())
         let rot = Rot3d(posQ.W,posQ.X, posQ.Y,posQ.Z)
         let forward = rot.TransformDir(ref.north.value) //ref.north.value
         let forward' = pos + forward
@@ -222,7 +219,8 @@ module ViewPlan =
             selectedAxis = None
             currentAngle = angle
             }
-        { model with viewPlans = HSet.add newViewPlan model.viewPlans; working = List.Empty; selectedViewPlan = Some newViewPlan }
+        { model with viewPlans = HSet.add newViewPlan model.viewPlans; 
+                     working = List.Empty; selectedViewPlan = Some newViewPlan }
 
     let removeViewPlan (vps:hset<ViewPlan>) (id:Guid) = 
         vps |> HSet.filter (fun x -> x.id <> id)   
@@ -251,23 +249,27 @@ module ViewPlan =
                     | Some i -> Some (r.instruments |> HMap.find i.id)
                     |_-> None
         let vp' = { vp with rover = r; selectedInstrument = i }  
-        let m'= { model with selectedViewPlan = Some vp'; viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then vp' else x) }
+        let m'= { model with selectedViewPlan = Some vp'; 
+                             viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then vp' else x) }
         let m'' = updateInstrumentCam vp' m'
         { m'' with roverModel = roverModel }
 
     //let update (model : ViewPlanModel) (camState:CameraControllerState) (action : Action) =
-    let update (model : ViewPlanModel) (action : Action) (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*ViewPlanModel) = 
+    let update (model : ViewPlanModel) (action : Action)
+               (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*ViewPlanModel) = 
         printfn "action: %A" action
         match action with
             | AddPoint (p,ref,kdTree,surfaceModel) ->
                 match model.roverModel.selectedRover with
-                    | Some r -> match model.working.IsEmpty with
-                                    | true -> outerModel, {model with working = [p]} // first point (position)
-                                    | false -> // second point (lookAt)
-                                        let w = List.append model.working [p]
-                                        let navigation = (navigation.Get outerModel)
-                                        let wp = createViewPlan w r ref navigation.camera kdTree surfaceModel
-                                        outerModel, { model with viewPlans = HSet.add wp model.viewPlans; working = List.Empty; selectedViewPlan = Some wp }
+                    | Some r -> 
+                        match model.working.IsEmpty with
+                            | true -> outerModel, {model with working = [p]} // first point (position)
+                            | false -> // second point (lookAt)
+                                let w = List.append model.working [p]
+                                let navigation = (navigation.Get outerModel)
+                                let wp = createViewPlan w r ref navigation.camera kdTree surfaceModel
+                                outerModel, { model with viewPlans = HSet.add wp model.viewPlans; 
+                                                         working = List.Empty; selectedViewPlan = Some wp }
                     | None -> outerModel, model
             | SelectViewPlan id ->
                 let vp = model.viewPlans |> Seq.tryFind(fun x -> x.id = id)
@@ -287,52 +289,57 @@ module ViewPlan =
                                (newOuterModel, model)
                     | _ -> (outerModel,model) 
             | IsVisible id -> 
-                outerModel, { model with viewPlans = model.viewPlans 
-                                                        |> HSet.map(fun x -> if x.id = id then 
-                                                                                { x with isVisible = not x.isVisible } 
-                                                                                else x) }
+                outerModel, { model with viewPlans = 
+                                         model.viewPlans 
+                                            |> HSet.map(fun x -> if x.id = id then 
+                                                                    { x with isVisible = not x.isVisible } 
+                                                                    else x) }
             | RemoveViewPlan id ->
                 let vp' = match  model.selectedViewPlan with
                             | Some v -> if v.id = id then None else Some v
                             | _ -> None
                 let vps = removeViewPlan model.viewPlans id
                 outerModel, { model with viewPlans = vps; selectedViewPlan = vp' }
-            | SelectInstrument i -> match model.selectedViewPlan with
-                                        | Some vp -> let newVp = { vp with selectedInstrument = i }
-                                                     let m' = updateInstrumentCam newVp model
-                                                     outerModel, { m' with selectedViewPlan = Some newVp; 
-                                                                        viewPlans = model.viewPlans 
-                                                                                        |> HSet.map(fun x -> if x.id = vp.id then 
-                                                                                                                newVp 
-                                                                                                                else x) }
-                                        | None -> outerModel, model                                                     
-            | SelectAxis a       -> match model.selectedViewPlan with
-                                        | Some vp -> let newVp = { vp with selectedAxis = a }
-                                                     outerModel, { model with selectedViewPlan = Some newVp; 
-                                                                            viewPlans = model.viewPlans 
-                                                                                            |> HSet.map(fun x -> if x.id = vp.id then
-                                                                                                                    newVp 
-                                                                                                                    else x) }
-                                        | None -> outerModel, model    
-            | ChangeAngle (id,a) ->  match model.selectedViewPlan with
-                                        | Some vp -> match vp.rover.axes.TryFind id with
-                                                        | Some ax -> 
-                                                            let angle = PRo3DNumeric.update ax.angle a
-                                                            let ax' = { ax with angle = angle } 
-                                                            let vp' = { vp with rover = {vp.rover with axes = (vp.rover.axes 
-                                                                                                                |> HMap.update id (fun _ -> ax')) };
-                                                                                                                currentAngle = angle }
-                                                            let roverModel' = RoverApp.updateAnglePlatform { roverId = vp'.rover.id ;
-                                                                                                                axisId = ax'.id ; 
-                                                                                                                angle = ax'.angle.value } 
-                                                                                                                model.roverModel
+            | SelectInstrument i -> 
+                match model.selectedViewPlan with
+                    | Some vp -> let newVp = { vp with selectedInstrument = i }
+                                 let m' = updateInstrumentCam newVp model
+                                 outerModel, { m' with selectedViewPlan = Some newVp; 
+                                                    viewPlans = model.viewPlans 
+                                                                    |> HSet.map(fun x -> if x.id = vp.id then 
+                                                                                            newVp 
+                                                                                            else x) }
+                    | None -> outerModel, model                                                     
+            | SelectAxis a       -> 
+                match model.selectedViewPlan with
+                    | Some vp -> let newVp = { vp with selectedAxis = a }
+                                 outerModel, { model with selectedViewPlan = Some newVp; 
+                                                        viewPlans = model.viewPlans 
+                                                                        |> HSet.map(fun x -> if x.id = vp.id then
+                                                                                                newVp 
+                                                                                                else x) }
+                    | None -> outerModel, model    
+            | ChangeAngle (id,a) -> 
+                match model.selectedViewPlan with
+                    | Some vp -> 
+                        match vp.rover.axes.TryFind id with
+                            | Some ax -> 
+                                let angle = PRo3DNumeric.update ax.angle a
+                                let ax' = { ax with angle = angle } 
+                                let vp' = { vp with rover = {vp.rover with axes = (vp.rover.axes 
+                                                                                    |> HMap.update id (fun _ -> ax')) };
+                                                                                    currentAngle = angle }
+                                let roverModel' = RoverApp.updateAnglePlatform { roverId = vp'.rover.id ;
+                                                                                    axisId = ax'.id ; 
+                                                                                    angle = ax'.angle.value } 
+                                                                                    model.roverModel
                                  
-                                                            let m' = updateRovers model roverModel' vp'
+                                let m' = updateRovers model roverModel' vp'
                                                             
-                                                            outerModel, m'
-                                                        | None -> outerModel, model
+                                outerModel, m'
+                            | None -> outerModel, model
                                       
-                                        | None -> outerModel, model        
+                    | None -> outerModel, model        
             | ChangeFocal (id, f) ->
                 match model.selectedViewPlan with
                     | Some vp -> 
@@ -345,7 +352,8 @@ module ViewPlan =
                                     match x with
                                         | Some _ -> inst'
                                         | None   -> failwith "instrument not found")
-                            let vp' = {vp with rover = {vp.rover with instruments = instruments'}; selectedInstrument = Some inst'}
+                            let vp' = {vp with rover = {vp.rover with instruments = instruments'}; 
+                                                       selectedInstrument = Some inst'}
                             let roverModel' = RoverApp.updateFocusPlatform { roverId = vp'.rover.id ; 
                                                                              instrumentId = inst'.id ; 
                                                                              focal = inst'.focal.value } 
@@ -353,40 +361,33 @@ module ViewPlan =
                             outerModel, updateRovers model roverModel' vp'
                         | None -> outerModel, model                                       
                     | None -> outerModel, model 
-            | SetVPName t -> match model.selectedViewPlan with
-                                | Some vp -> let vp' = {vp with name = t}
-                                             outerModel, {model with selectedViewPlan = Some vp';
-                                                                     viewPlans = model.viewPlans 
-                                                                                    |> HSet.map(fun x -> if x.id = vp.id then
-                                                                                                            vp' 
-                                                                                                            else x) }              
-                                | _ -> outerModel, model
+            | SetVPName t -> 
+                match model.selectedViewPlan with
+                    | Some vp -> let vp' = {vp with name = t}
+                                 outerModel, {model with selectedViewPlan = Some vp';
+                                                            viewPlans = model.viewPlans 
+                                                                        |> HSet.map(fun x -> if x.id = vp.id then
+                                                                                                vp' 
+                                                                                                else x) }              
+                    | _ -> outerModel, model
                 
             //| _ -> model
 
-    module Sg =
-                        
-        //TODO LF refactor: try without matching bools, without aset expressions, without direct index access
+    module Sg =     
         let drawWorking (model:MViewPlanModel) =
             let point0 =
-                aset{
-                let! w = model.working
-                match w.IsEmpty with
-                    | false -> yield PRo3D.Sg.dots (AList.single w.[0]) (Mod.constant 3.0) (Mod.constant C4b.Green)
-                    | true -> ()
-                } |> Sg.set
-
+                Mod.map( fun w -> match w |> List.tryHead with
+                                            | Some p -> 
+                                                PRo3D.Sg.dot (Mod.constant p) (Mod.constant 3.0) (Mod.constant C4b.Green)
+                                            | None -> Sg.empty
+                        ) model.working |> Mod.toASet |> Sg.set
+              
             let point1 =
-                aset{
-                let! w = model.working
-                match w.IsEmpty with
-                    | false -> 
-                      match w.Length > 1 with
-                        | true -> yield PRo3D.Sg.dots (AList.single w.[1]) (Mod.constant 3.0) (Mod.constant C4b.Yellow)
-                        | false -> ()
-                    | true -> ()
-                } |> Sg.set
-
+                Mod.map( fun w -> match w |> List.tryLast with
+                                            | Some p -> 
+                                                PRo3D.Sg.dot (Mod.constant p) (Mod.constant 3.0) (Mod.constant C4b.Green)
+                                            | None -> Sg.empty
+                        ) model.working |> Mod.toASet |> Sg.set
             Sg.ofList [point0;point1]
         
         let drawInitPositions (viewPlan : MViewPlan) (cam:IMod<CameraView>)=
@@ -395,23 +396,12 @@ module ViewPlan =
                     ReferenceSystemApp.Sg.point viewPlan.lookAt (Mod.constant C4b.Yellow) cam // lookAt pos
                     ]
 
-        let drawVectors (viewPlan : MViewPlan)(near:IMod<float>) (length:IMod<float>) (thickness:IMod<float>) (cam:IMod<CameraView>) =
+        let drawVectors (viewPlan : MViewPlan)(near:IMod<float>) (length:IMod<float>) 
+                        (thickness:IMod<float>) (cam:IMod<CameraView>) =
 
-            let lookAtVec = 
-                adaptive {
-                    let! trafo = viewPlan.roverTrafo
-                    return (trafo.Forward.UpperLeftM33().C0)
-                }
-            let rightVec = 
-                adaptive {
-                    let! trafo = viewPlan.roverTrafo
-                    return (trafo.Forward.UpperLeftM33().C1)
-                }
-            let tiltVec = 
-                adaptive {
-                    let! trafo = viewPlan.roverTrafo
-                    return (trafo.Forward.UpperLeftM33().C2)
-                }
+            let lookAtVec =  Mod.map(fun (t:Trafo3d) -> t.Forward.UpperLeftM33().C0) viewPlan.roverTrafo
+            let rightVec = Mod.map(fun (t:Trafo3d) -> t.Forward.UpperLeftM33().C1) viewPlan.roverTrafo
+            let tiltVec = Mod.map(fun (t:Trafo3d) -> t.Forward.UpperLeftM33().C2) viewPlan.roverTrafo
 
             //let size = Sg.computeInvariantScale cam near viewPlan.position length (Mod.constant 60.0)
 
@@ -437,18 +427,8 @@ module ViewPlan =
                 ] |> Sg.onOff viewPlan.isVisible
         
         let drawAxis (axis:MAxis) (cam:IMod<CameraView>) (thickness:IMod<float>) (trafo:IMod<Trafo3d>) =
-            let start = 
-                alist{
-                    let! s = axis.startPoint
-                    let! trafo = trafo
-                    yield trafo.Forward.TransformPos s
-                    }
-            let endp = 
-                alist{
-                    let! e = axis.endPoint
-                    let! trafo = trafo
-                    yield trafo.Forward.TransformPos e
-                    }
+            let start = Mod.map2( fun (t:Trafo3d) p -> t.Forward.TransformPos p) trafo axis.startPoint
+            let endp = Mod.map2( fun (t:Trafo3d) p -> t.Forward.TransformPos p) trafo axis.endPoint
             let axisLine = 
                 alist {
                     let! s = axis.startPoint
@@ -459,31 +439,24 @@ module ViewPlan =
                 } 
             let color = Mod.constant C4b.Red
             Sg.ofList [
-                    Sg.dots start (Mod.constant 3.0) color  
-                    Sg.dots endp  (Mod.constant 3.0) color
+                    Sg.dot start (Mod.constant 3.0) color  
+                    Sg.dot endp  (Mod.constant 3.0) color
                     PRo3D.Sg.lines axisLine color thickness trafo
                 ] 
         
-        let drawInstruments (instruments:alist<MInstrument>) (viewPlan:MViewPlan) (near:IMod<float>) (length:IMod<float>) (thickness:IMod<float>) (cam:IMod<CameraView>) =
+        let drawInstruments (instruments:alist<MInstrument>) (viewPlan:MViewPlan) (near:IMod<float>)
+                            (length:IMod<float>) (thickness:IMod<float>) (cam:IMod<CameraView>) =
             alist {
                 let! trafo = viewPlan.roverTrafo
+
                 for i in instruments do
-                    let camPosTrans = 
-                        adaptive{ //TODO LF refactor: don't need adaptive block if there is only 1 value. 1 value -> mod.map, 2 values -> mod.map2, more values -> adaptive
-                            let! p = i.extrinsics.position
-                            return trafo.Forward.TransformPos p
-                            }
-                    let camLookAtTrans = 
-                        adaptive{
-                            let! p = i.extrinsics.camLookAt
-                            return trafo.Forward.TransformDir p
-                            }
-                    let camUpTrans = 
-                        adaptive{
-                            let! p = i.extrinsics.camUp
-                            return trafo.Forward.TransformDir p
-                            }
+
+                    let camPosTrans = Mod.map(fun p -> trafo.Forward.TransformPos p) i.extrinsics.position
+                    let camLookAtTrans = Mod.map(fun p -> trafo.Forward.TransformDir p) i.extrinsics.camLookAt
+                    let camUpTrans = Mod.map(fun p -> trafo.Forward.TransformDir p) i.extrinsics.camUp
+
                     let! selInst = viewPlan.selectedInstrument
+
                     match selInst with
                         | Some s -> 
                             let! sid = s.id
@@ -533,7 +506,8 @@ module ViewPlan =
                             ReferenceSystemApp.Sg.point wheelPos (Mod.constant C4b.White) cam ]   
                 }
                 
-        let drawSelectionGeometry (vp:MViewPlan) (near:IMod<float>) (length:IMod<float>) (thickness:IMod<float>) (cam:IMod<CameraView>) (roverM:MRoverModel)= 
+        let drawSelectionGeometry (vp:MViewPlan) (near:IMod<float>) (length:IMod<float>) 
+                                  (thickness:IMod<float>) (cam:IMod<CameraView>) (roverM:MRoverModel)= 
             let wheels = drawWheels vp cam
                             |> ASet.ofAList 
                             |> Sg.set
@@ -554,7 +528,8 @@ module ViewPlan =
                 sgInstruments
             ]         
 
-        let view<'ma> (mbigConfig : 'ma) (minnerConfig : ReferenceSystemApp.MInnerConfig<'ma>) (model:MViewPlanModel) (cam:IMod<CameraView>) : ISg<Action> =
+        let view<'ma> (mbigConfig : 'ma) (minnerConfig : ReferenceSystemApp.MInnerConfig<'ma>)
+                      (model:MViewPlanModel) (cam:IMod<CameraView>) : ISg<Action> =
                        
             let length    = minnerConfig.getArrowLength    mbigConfig
             let thickness = minnerConfig.getArrowThickness mbigConfig
@@ -571,7 +546,11 @@ module ViewPlan =
                    let! id = vp.id
                    let! selDrawing = 
                      match selected with
-                       | Some s -> s.id |> Mod.map (fun g -> if g = id then (drawSelectionGeometry vp near length thickness cam model.roverModel) else Sg.ofList [])
+                       | Some s -> 
+                        s.id 
+                          |> Mod.map (fun g -> if g = id then 
+                                                (drawSelectionGeometry vp near length thickness cam model.roverModel) 
+                                               else Sg.ofList [])
                        | None -> Mod.constant (Sg.ofList [])
                    yield selDrawing
                  else
@@ -623,11 +602,8 @@ module ViewPlan =
                                                                  
                         let bgc = color |> Html.ofC4b |> sprintf "color: %s"
 
-                        let toggleIcon =
-                            adaptive {
-                                let! toggle = vp.isVisible
-                                return if toggle then "unhide icon" else "hide icon"
-                            }
+                        let toggleIcon = 
+                            Mod.map( fun toggle -> if toggle then "unhide icon" else "hide icon") vp.isVisible
 
                         let toggleMap = 
                             amap {
@@ -687,7 +663,9 @@ module ViewPlan =
         //    UI.dropDown'' (r.instruments |> RoverApp.mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )   
         
         let instrumentsDd (r:MRover) (m : MViewPlan) = 
-            UI.dropDown'' (r.instruments |> RoverApp.mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )   
+            UI.dropDown'' (r.instruments |> RoverApp.mapTolist) 
+                           m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) 
+                                                (fun x -> (x.id |> Mod.force) )   
 
         let viewAxesList (r : MRover) (m : MViewPlan) =
             alist {
@@ -733,7 +711,10 @@ module ViewPlan =
         let viewSelectRover (m : MRoverModel) : DomNode<RoverApp.Action> =
             Html.Layout.horizontal [
                 Html.Layout.boxH [ i [clazz "large Rocket icon"][] ]
-                Html.Layout.boxH [ UI.dropDown'' (RoverApp.roversList m)  m.selectedRover (fun x -> RoverApp.Action.SelectRover (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) ) ]                
+                Html.Layout.boxH [ UI.dropDown'' (RoverApp.roversList m)  
+                                                  m.selectedRover
+                                                  (fun x -> RoverApp.Action.SelectRover (x |> Option.map(fun y -> y.Current |> Mod.force))) 
+                                                  (fun x -> (x.id |> Mod.force) ) ]                
             ]
 
 

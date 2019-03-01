@@ -302,7 +302,29 @@ module Sg =
             |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
             |> Sg.uniform "Size" size
             |> Sg.uniform "WorldPos" pos
-        
+
+    let dot (point : IMod<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
+        let isgDot = mkDotISg color size point
+        isgDot
+        |> Sg.effect [
+            toEffect <| Shader.screenSpaceScale
+            toEffect <| Shader.stableTrafo
+            toEffect <| DefaultSurfaces.vertexColor          
+        ]
+
+    let indexedGeometryDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
+        let colors = Mod.map(fun c -> [|c|]) color
+        Sg.draw IndexedGeometryMode.PointList
+         |> Sg.vertexAttribute DefaultSemantic.Positions (Mod.constant (points |> AList.toArray))
+         |> Sg.vertexAttribute DefaultSemantic.Colors colors
+         |> Sg.effect [
+            toEffect Shader.stableTrafo
+            toEffect DefaultSurfaces.vertexColor
+            toEffect DefaultSurfaces.pointSprite
+         ]
+         |> Sg.uniform "PointSize" size
+    
+    
     let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
         aset {
             for p in points |> ASet.ofAList do
@@ -316,6 +338,18 @@ module Sg =
             toEffect <| DefaultSurfaces.vertexColor          
         ]
 
+    let getDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) =
+        aset {
+            let! geometry = geometry
+            match geometry with
+              | Geometry.Point -> match points|> AList.toList |> List.tryHead with
+                                    | Some p -> yield dot (Mod.constant p) size color
+                                    | _-> yield Sg.empty
+              |_-> yield indexedGeometryDots points size color    
+        } |> Sg.set
+
+        
+        
     ///probably move to a shader
     let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) =
         let right = up.Cross forw

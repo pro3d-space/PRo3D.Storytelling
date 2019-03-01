@@ -213,11 +213,8 @@ module ReferenceSystemApp =
             } |> Sg.set 
 
            
-        let point (pos:IMod<V3d>) (color:IMod<C4b>) (cam:IMod<CameraView>) = //TODO LF this can be done directly with a mod.map
-            aset{
-                let! pos = pos
-                yield Sg.dots (AList.single pos) (Mod.constant 3.0) color //TODO LF there is also a method for drawing a single dot.
-            } |> Sg.set
+        let point (pos:IMod<V3d>) (color:IMod<C4b>) (cam:IMod<CameraView>) = 
+            Sg.dot pos (Mod.constant 3.0) color
 
 //["1km";"100m";"10m";"1m";"10cm";"1cm";"1mm";"0.1mm"] 
         let scaleToSize (a:string) =

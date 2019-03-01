@@ -23,7 +23,40 @@ open PRo3D.Groups
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
-    open Aardvark.SceneGraph.SgFSharp.Sg                          
+    open Aardvark.SceneGraph.SgFSharp.Sg   
+    
+    /// creates a surface from opc folder path
+    let mk (stype:SurfaceType) (maxTriangleSize : float) path =                 
+    
+        let names = Files.getOPCNames path                
+        {
+            guid            = Guid.NewGuid()
+            name            = IO.Path.GetFileName path
+            importPath      = path
+            opcNames        = names
+            opcPaths        = names |> Files.expandNamesToPaths path
+            fillMode        = FillMode.Fill
+            cullMode        = CullMode.None
+            isVisible       = true
+            isActive        = true
+            relativePaths   = false
+            quality         = Init.quality
+            priority        = Init.priority
+            scaling         = Init.scaling
+            preTransform    = Trafo3d.Identity            
+            scalarLayers    = hmap.Empty //PList.empty
+            selectedScalar  = None
+            textureLayers   = PList.empty
+            selectedTexture = None            
+    
+            triangleSize = { Init.triangleSize with value = maxTriangleSize }
+            surfaceType = stype
+    
+            colorCorrection = Init.initColorCorrection
+            homePosition = None
+            transformation = Init.Transformations
+        }       
+
     module ObjectFiles =        
         open Aardvark.Geometry
 
@@ -93,6 +126,7 @@ module Surface =
                   |> HMap.ofList       
 
             sgObjects
+
 
     module SurfaceAttributes = 
         open System.Xml

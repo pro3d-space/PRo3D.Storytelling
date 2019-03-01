@@ -128,6 +128,7 @@ type SgSurface = {
     //transformation  : Transformations
 }
 
+
 module Init =
     let quality = 
             {
@@ -233,6 +234,4 @@ module Init =
         yaw = yaw
         pivot = V3d.Zero
     }
-
-
-
+    

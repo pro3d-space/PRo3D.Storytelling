@@ -174,7 +174,7 @@ module ViewerApp =
                       |> List.map(fun x -> x.globalBB) 
                       |> List.fold(fun a b -> Box3d.extendBy a b) v.globalBB
           // useful default viewpoint after 2nd import
-          match m.scene.firstImport with //TODO LF refactor, don't use a flag, just check if surfaces has been empty before                  
+          match m.scene.firstImport with                  
             | true -> 
               let refAction = ReferenceSystemApp.Action.InferCoordSystem(fullBb.Center)
               let (refSystem',_)= 
@@ -451,7 +451,7 @@ module ViewerApp =
                         let surfaces = 
                             paths 
                                 |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
-                                |> List.map (Sg.mk SurfaceType.SurfaceOPC m.scene.config.importTriangleSize.value)
+                                |> List.map (Surface.mk SurfaceType.SurfaceOPC m.scene.config.importTriangleSize.value)
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m 
@@ -470,7 +470,7 @@ module ViewerApp =
                         let surfaces = 
                             surfacePaths 
                                 |> List.filter (fun x -> Files.isSurfaceFolder x || Files.isZippedOpcFolder x)
-                                |> List.map (Sg.mk SurfaceType.SurfaceOPC m.scene.config.importTriangleSize.value)
+                                |> List.map (Surface.mk SurfaceType.SurfaceOPC m.scene.config.importTriangleSize.value)
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m 
@@ -490,23 +490,19 @@ module ViewerApp =
             | ImportObject sl,_,_ -> 
               match sl |> List.tryHead with
               | Some path ->  
-                //TODO LF refactor ... Sg. should always return an ISg. Move mk to different module
                 let objects =                   
                   path 
-                    |> Sg.mk SurfaceType.SurfaceOBJ m.scene.config.importTriangleSize.value
+                    |> Surface.mk SurfaceType.SurfaceOBJ m.scene.config.importTriangleSize.value
                     |> PList.single                                
                 m 
                   |> Scene.importObj runtime signature objects 
                   |> updateSceneWithNewSurface
               | None -> m              
             | ImportAnnotationGroups sl,_,_ ->
-              match sl with //TODO LF refactor ... use try head as in ImportObject
-                | [] -> m   
-                | path -> 
-                  let p = path.[0]
-
+              match sl |> List.tryHead with
+                | Some path -> 
                   //update groups
-                  let imported, flat, lookup = AnnotationGroupsImporter.startImporter p m.scene.referenceSystem
+                  let imported, flat, lookup = AnnotationGroupsImporter.startImporter path m.scene.referenceSystem
 
                   let newGroups = 
                       m.drawing.annotations.rootGroup.subNodes
@@ -550,26 +546,26 @@ module ViewerApp =
                   m 
                     |> Lenses.set _groups newGroups
                     |> Lenses.set _lookUp lookup
-                    |> Lenses.set _flat newflat                
-            | ImportSurfaceTrafo sl,_,_ ->  //TODO LF refactor use tryHead
-              match sl with
-                | [] -> m 
-                | path :: _ ->
+                    |> Lenses.set _flat newflat          
+                | None -> m
+            | ImportSurfaceTrafo sl,_,_ ->  
+              match sl |> List.tryHead with
+                | Some path ->
                   let imported = SurfaceTrafoImporter.startImporter path |> PList.toList                  
                   let s = Surfaces.SurfaceApp.updateSurfaceTrafos imported m.scene.surfacesModel
                   s.surfaces.flat |> HMap.toList |> List.iter(fun (_,v) -> Log.warn "%A" (v |> Leaf.toSurface).preTransform)
                   m 
-                    |> Lenses.set _surfaceModelLens s                                    
-            | ImportRoverPlacement sl,_,_ ->  //TODO LF refactor use tryHead
-              match sl with
-                | [] -> m 
-                | p -> 
-                  let path = p.[0]
+                    |> Lenses.set _surfaceModelLens s  
+                | None -> m
+            | ImportRoverPlacement sl,_,_ ->  
+              match sl |> List.tryHead with
+                | Some path -> 
                   let importedData = RoverPlacementImporter.startRPImporter path 
                   match m.scene.viewPlans.roverModel.selectedRover with
                     | Some r -> let vp = ViewPlan.createViewPlanFromFile importedData m.scene.viewPlans r m.scene.referenceSystem m.scene.navigation.camera
                                 { m with scene = { m.scene with viewPlans = vp}} 
                     | None -> Log.error "no rover selected"; m
+                | None -> m
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
             | QuickLoad2,_,_ ->                                
@@ -1070,8 +1066,8 @@ module ViewerApp =
           }
         
         let style' = "color: white; font-family:Consolas;"
-        let scenepath = //TODO LF refactor ... not incremental div or alist needed here, try to write with standard div
-          Incremental.div (AttributeMap.Empty) (   
+        let scenepath = 
+          Incremental.div (AttributeMap.Empty) (
             alist {
               let! scenePath = m.scene.scenePath 
               let icon = 
@@ -1090,7 +1086,9 @@ module ViewerApp =
                 ]
               ]
             }
+
           )
+          
         
         let interactionText (i : Interactions) =
           match i with 

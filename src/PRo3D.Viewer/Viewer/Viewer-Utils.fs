@@ -56,26 +56,30 @@ module ViewerUtils =
         entry |> Mod.bind(fun x -> x |> toModSurface)
 
    
+    let addImageCorrectionParameters (surf:IMod<MSurface>)  (isg:ISg<'a>) =
         
-    let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) =
-        
-        let surf = lookUp (surface.surface) blarg
-            //Mod.bind(fun x -> lookUp (x.surface) blarg )
+        let contr    = surf |> Mod.bind( fun x -> x.colorCorrection.contrast.value )
+        let useContr = surf |> Mod.bind( fun x -> x.colorCorrection.useContrast )
+        let bright   = surf |> Mod.bind( fun x -> x.colorCorrection.brightness.value )
+        let useB     = surf |> Mod.bind( fun x -> x.colorCorrection.useBrightn) 
+        let gamma    = surf |> Mod.bind( fun x -> x.colorCorrection.gamma.value )
+        let useG     = surf |> Mod.bind( fun x -> x.colorCorrection.useGamma )
+        let useGray  = surf |> Mod.bind( fun x -> x.colorCorrection.useGrayscale )
+        let useColor = surf |> Mod.bind( fun x -> x.colorCorrection.useColor )
+        let color    = surf |> Mod.bind( fun x -> x.colorCorrection.color.c )
 
-        let isSelected = Mod.map(fun x ->
-          match x with
-            | Some id -> id = surface.surface
-            | None -> false) selectedId 
+        isg
+            |> Sg.uniform "useContrastS"   useContr  //image correction
+            |> Sg.uniform "contrastS"      contr
+            |> Sg.uniform "useBrightnS"    useB
+            |> Sg.uniform "brightnessS"    bright
+            |> Sg.uniform "useGammaS"      useG 
+            |> Sg.uniform "gammaS"         gamma
+            |> Sg.uniform "useGrayS"       useGray
+            |> Sg.uniform "useColorS"      useColor
+            |> Sg.uniform "colorS"         color
 
-        let createSg (sg : ISg) =
-            sg 
-            |> Sg.noEvents 
-            |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
-            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))         
-                
-        //let globalToLocal = 
-        //    surface.globalBB |> Mod.map(fun x -> Trafo3d.Translation -x.Center)
-            
+    let addAttributeFalsecolorMappingParameters (surf:IMod<MSurface>)  (isg:ISg<'a>) =
         let selectedScalar =
             adaptive {
                 let! s = surf
@@ -84,7 +88,6 @@ module ViewerUtils =
             }        
         let scalar = surf |> Mod.bind( fun x -> x.selectedScalar )
 
-        // attribute false color mapping
         let interval = scalar |> Mod.bind ( fun x ->
                         match x with 
                             | Some s -> s.colorLegend.interval.value
@@ -139,27 +142,58 @@ module ViewerUtils =
                   | Some s -> s.definedRange |> Mod.map(fun y -> V2d(y.Min, y.Max))
                   | None   -> Mod.constant(V2d(0.0,1.0))
               )
-     
-        // image correction
-        let contr    = surf |> Mod.bind( fun x -> x.colorCorrection.contrast.value )
-        let useContr = surf |> Mod.bind( fun x -> x.colorCorrection.useContrast )
-        let bright   = surf |> Mod.bind( fun x -> x.colorCorrection.brightness.value )
-        let useB     = surf |> Mod.bind( fun x -> x.colorCorrection.useBrightn) 
-        let gamma    = surf |> Mod.bind( fun x -> x.colorCorrection.gamma.value )
-        let useG     = surf |> Mod.bind( fun x -> x.colorCorrection.useGamma )
-        let useGray  = surf |> Mod.bind( fun x -> x.colorCorrection.useGrayscale )
-        let useColor = surf |> Mod.bind( fun x -> x.colorCorrection.useColor )
-        let color    = surf |> Mod.bind( fun x -> x.colorCorrection.color.c )
-        
-        //let scaleTrafo =
-        //   adaptive {
-        //        let! s = surf
-        //        let! sc = s.scaling.value
-        //        let! t = s.preTransform
-        //        return (Trafo3d.Scale(sc) * t)
-        //    }      
+        isg
+            |> Sg.uniform "falseColors"    selectedScalar
+            |> Sg.uniform "startC"         lowerC  
+            |> Sg.uniform "endC"           upperC
+            |> Sg.uniform "interval"       interval
+            |> Sg.uniform "inverted"       inverted
+            |> Sg.uniform "lowerBound"     lowerB
+            |> Sg.uniform "upperBound"     upperB
+            |> Sg.uniform "MinMax"         rangeToMinMax
+            |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
 
+    let getLodParameters (surf:IMod<MSurface>) (frustum : IMod<Frustum>) =
+        adaptive {
+            let! s = surf
+            let! frustum = frustum 
+            let sizes = V2i(1024,768)
+            let! quality = s.quality.value
+            let! trafo = s.preTransform //combine pre and current transform
+            
+            return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality); trafo = trafo }
+        }
+    
+    let attributeParameters (surf:IMod<MSurface>) =
+         adaptive {
+            let! s = surf
+            let! texture = s.selectedTexture 
+            let! scalar = s.selectedScalar
+            
+            let attr : AttributeParameters = 
+                {
+                    selectedTexture = texture |> Option.map(fun x -> x.index)
+                    selectedScalar  = scalar  |> Option.map(fun x -> x.index |> Mod.force)
+                }
+            
+            return attr
+        }
+
+    let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) =
         
+        let surf = lookUp (surface.surface) blarg
+            //Mod.bind(fun x -> lookUp (x.surface) blarg )
+
+        let isSelected = Mod.map(fun x ->
+          match x with
+            | Some id -> id = surface.surface
+            | None -> false) selectedId 
+
+        let createSg (sg : ISg) =
+            sg 
+            |> Sg.noEvents 
+            |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
+            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))        
 
         let pickable = 
           Mod.map2( fun (a:Box3d) (b:Trafo3d) -> 
@@ -174,57 +208,20 @@ module ViewerUtils =
 
         let triangleFilter = surf |> Mod.bind(fun s -> s.triangleSize.value)
 
-        let test =             //TODO LF refactor ... split uniforms in different groups and move to nice functions
+
+        let test =             
           surface.sceneGraph
             |> Mod.map createSg
             |> Sg.dynamic
             |> Sg.trafo (Transformations.fullTrafo surf refsys)
             |> Sg.uniform "selected"       isSelected
-            |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))   
-            |> Sg.uniform "falseColors"    selectedScalar
-            |> Sg.uniform "startC"         lowerC  //color mapping
-            |> Sg.uniform "endC"           upperC
-            |> Sg.uniform "interval"       interval
-            |> Sg.uniform "inverted"       inverted
-            |> Sg.uniform "lowerBound"     lowerB
-            |> Sg.uniform "upperBound"     upperB
-            |> Sg.uniform "MinMax"         rangeToMinMax
+            |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
+            |> addAttributeFalsecolorMappingParameters surf
             |> Sg.uniform "TriangleSize"   triangleFilter  //triangle filter
-            |> Sg.uniform "useContrastS"   useContr  //image correction
-            |> Sg.uniform "contrastS"      contr
-            |> Sg.uniform "useBrightnS"    useB
-            |> Sg.uniform "brightnessS"    bright
-            |> Sg.uniform "useGammaS"      useG 
-            |> Sg.uniform "gammaS"         gamma
-            |> Sg.uniform "useGrayS"       useGray
-            |> Sg.uniform "useColorS"      useColor
-            |> Sg.uniform "colorS"         color
-            |> Sg.texture (Sym.ofString "ColorMapTexture") (Mod.constant colormap)
+            |> addImageCorrectionParameters surf
             |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
-            |> Sg.LodParameters( 
-                adaptive {
-                    let! s = surf
-                    let! frustum = frustum 
-                    let sizes = V2i(1024,768)
-                    let! quality = s.quality.value
-                    let! trafo = s.preTransform //combine pre and current transform
-            
-                    return { frustum = frustum; size = sizes; factor = Math.Pow(Math.E, quality); trafo = trafo }
-                })   
-            |> Sg.AttributeParameters(
-                adaptive {
-                    let! s = surf
-                    let! texture = s.selectedTexture 
-                    let! scalar = s.selectedScalar
-            
-                    let attr : AttributeParameters = 
-                        {
-                            selectedTexture = texture |> Option.map(fun x -> x.index)
-                            selectedScalar  = scalar  |> Option.map(fun x -> x.index |> Mod.force)
-                        }
-            
-                    return attr
-                })
+            |> Sg.LodParameters( getLodParameters surf frustum )
+            |> Sg.AttributeParameters( attributeParameters surf )
             |> pickable' pickable
             |> Sg.noEvents 
             |> Sg.withEvents [

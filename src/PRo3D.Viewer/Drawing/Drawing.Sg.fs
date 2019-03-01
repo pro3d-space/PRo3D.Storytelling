@@ -195,6 +195,7 @@ module Sg =
             //            | 1 -> 
             //              let e = edg.[0]
             //              let cylinder = Cylinder3d(e.P0, e.P1, 0.1)
+            //              let cylinder = Cylinder3d(e.P0, e.P1, 0.1)
             //              return { shape = PickShape.Cylinder cylinder; trafo = Trafo3d.Identity }
             //            | _ -> return { shape = PickShape.Box (Box3d(points |> AList.toArray)); trafo = Trafo3d.Identity } 
            //     }
@@ -318,17 +319,16 @@ module Sg =
        
         Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents 
 
-  //TODO LF ... signature implies that multiple points can be outlined, but inside only the first is taken. ... also has 3 unused parameters
-  //always imagine somebody else will use your functions
-  let outlinePoint (points : alist<V3d>) (v:int) (color:IMod<C4b>) (trafo : IMod<Trafo3d>) (width : IMod<float>) (id: IMod<Guid>) =
-    let p = 
-        points
-        |> AList.toMod
-        |> Mod.map( fun x -> x.AsArray.[0])
+  
+  let outlinePoint (points : alist<V3d>) (v:int) (color:IMod<C4b>) =
+    //let p = 
+    //    points
+    //    |> AList.toMod
+    //    |> Mod.map( fun x -> x.AsArray.[0])
         
-    let sg = Sg.mkDotISg color (Mod.constant 5.0) p //TODO LF ... why not use Sg.dots here
-    let sgo = Sg.mkDotISg color (outlineSize (Mod.constant 5.0)) p
-    let regular = 
+    let sg = Sg.dots points (Mod.constant 5.0) color //Sg.mkDotISg color (Mod.constant 5.0) p 
+    let sgo = Sg.dots points (outlineSize (Mod.constant 5.0)) (Mod.constant C4b.VRVisGreen) //Sg.mkDotISg color (outlineSize (Mod.constant 5.0)) p
+    let regulars = 
         sg
          |> Sg.pass pass0
          |> Sg.shader {
@@ -336,7 +336,7 @@ module Sg =
                 do! Shader.stableTrafo
                 do! DefaultSurfaces.vertexColor
             }
-    let mask = 
+    let masks = 
         sg
          |> Sg.pass pass0
          |> Sg.stencilMode (Mod.constant (write v))
@@ -346,7 +346,8 @@ module Sg =
                do! Shader.stableTrafo
                do! DefaultSurfaces.vertexColor
             }
-    let outl = 
+
+    let outls = 
         sgo
          |> Sg.stencilMode (Mod.constant (read v))
          |> Sg.depthTest (Mod.constant DepthTestMode.None)
@@ -361,14 +362,17 @@ module Sg =
                 do! DefaultSurfaces.thickLineRoundCaps
                 do! DefaultSurfaces.constantColor C4f.VRVisGreen
             }
-    Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents //regular; mask; 
+    Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regulars; masks; outls] |> Sg.noEvents //regular; mask; 
 
   //TODO LF ... make a nice enum/union type for v, what is v?  
   let outline (points : alist<V3d>) (v:int) (color:IMod<C4b>) (trafo : IMod<Trafo3d>) (width : IMod<float>) (id: IMod<Guid>) =
-        match (points |> AList.toArray).Length with //TODO LF ... very dangerous, should be IMod .. Alist is of variable length
-        | 0  -> Sg.empty 
-        | 1 -> outlinePoint points v color trafo (Mod.constant 5.0) id 
-        | _ -> outlineLine points v color trafo width id
+    aset{
+        let! length = points |> AList.count
+        match length with 
+        | 0  -> yield Sg.empty 
+        | 1 -> yield outlinePoint points v color 
+        | _ -> yield outlineLine points v color trafo width id
+    } |> Sg.set
 
   let drawWorkingAnnotation (anno : IMod<Option<MAnnotation>>)  = 
 
@@ -430,7 +434,7 @@ module Sg =
   let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) 
     (view : IMod<CameraView>) (showPoints : IMod<bool>) (picked:IMod<bool>) =
       let points = getPolylinePoints anno            
-      let dots   = showPoints |> optional (Sg.dots anno.points (anno.thickness.value |> Mod.map(fun x -> x + 2.0)) c)
+      let dots   = showPoints |> optional (Sg.getDotsIsg anno.points (anno.thickness.value |> Mod.map(fun x -> x + 2.0)) c anno.geometry)
      
       let azimuth =
         adaptive { 

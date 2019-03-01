@@ -115,36 +115,36 @@ module Sg =
             |> Box3d.ofSeq
     
     /// creates a surface from opc folder path
-    let mk (stype:SurfaceType) (maxTriangleSize : float) path =                 
+    //let mk (stype:SurfaceType) (maxTriangleSize : float) path =                 
     
-        let names = Files.getOPCNames path                
-        {
-            guid            = Guid.NewGuid()
-            name            = IO.Path.GetFileName path
-            importPath      = path
-            opcNames        = names
-            opcPaths        = names |> Files.expandNamesToPaths path
-            fillMode        = FillMode.Fill
-            cullMode        = CullMode.None
-            isVisible       = true
-            isActive        = true
-            relativePaths   = false
-            quality         = Init.quality
-            priority        = Init.priority
-            scaling         = Init.scaling
-            preTransform    = Trafo3d.Identity            
-            scalarLayers    = hmap.Empty //PList.empty
-            selectedScalar  = None
-            textureLayers   = PList.empty
-            selectedTexture = None            
+    //    let names = Files.getOPCNames path                
+    //    {
+    //        guid            = Guid.NewGuid()
+    //        name            = IO.Path.GetFileName path
+    //        importPath      = path
+    //        opcNames        = names
+    //        opcPaths        = names |> Files.expandNamesToPaths path
+    //        fillMode        = FillMode.Fill
+    //        cullMode        = CullMode.None
+    //        isVisible       = true
+    //        isActive        = true
+    //        relativePaths   = false
+    //        quality         = Init.quality
+    //        priority        = Init.priority
+    //        scaling         = Init.scaling
+    //        preTransform    = Trafo3d.Identity            
+    //        scalarLayers    = hmap.Empty //PList.empty
+    //        selectedScalar  = None
+    //        textureLayers   = PList.empty
+    //        selectedTexture = None            
     
-            triangleSize = { Init.triangleSize with value = maxTriangleSize }
-            surfaceType = stype
+    //        triangleSize = { Init.triangleSize with value = maxTriangleSize }
+    //        surfaceType = stype
     
-            colorCorrection = Init.initColorCorrection
-            homePosition = None
-            transformation = Init.Transformations
-        }       
+    //        colorCorrection = Init.initColorCorrection
+    //        homePosition = None
+    //        transformation = Init.Transformations
+    //    }       
     
     let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,KdTrees.Level0KdTree>) = 
     
@@ -200,7 +200,7 @@ module Sg =
                         let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
                         let! hpos = x.homePosition
                         match hpos with
-                            | Some p -> yield PRo3D.Sg.dots (AList.single p.Location) (Mod.constant 3.0) (Mod.constant C4b.Yellow)
+                            | Some p -> yield PRo3D.Sg.dot (Mod.constant p.Location) (Mod.constant 3.0) (Mod.constant C4b.Yellow)
                             | None -> yield Aardvark.UI.Extensions.Sg.empty
                     | None -> yield Aardvark.UI.Extensions.Sg.empty
             }|> Aardvark.UI.``F# Sg``.Sg.set
