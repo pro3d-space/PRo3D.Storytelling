@@ -40,7 +40,6 @@ module ViewerUtils =
 
     let pickable' (pick :IMod<Pickable>) (sg: ISg) =
         Sg.PickableApplicator (pick, Mod.constant sg)
-
     
     let toModSurface (leaf : IMod<MLeaf>) = 
          adaptive {
@@ -54,10 +53,10 @@ module ViewerUtils =
         let entry = table |> AMap.find guid
 
         entry |> Mod.bind(fun x -> x |> toModSurface)
-
-   
+    
     let addImageCorrectionParameters (surf:IMod<MSurface>)  (isg:ISg<'a>) =
         
+            //Mod.bind(fun x -> lookUp (x.surface) blarg )
         let contr    = surf |> Mod.bind( fun x -> x.colorCorrection.contrast.value )
         let useContr = surf |> Mod.bind( fun x -> x.colorCorrection.useContrast )
         let bright   = surf |> Mod.bind( fun x -> x.colorCorrection.brightness.value )
@@ -79,7 +78,11 @@ module ViewerUtils =
             |> Sg.uniform "useColorS"      useColor
             |> Sg.uniform "colorS"         color
 
+   // let viewSingleSurfaceSg (surface : MSgSurface) (surfaceTable : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) =
+    
+
     let addAttributeFalsecolorMappingParameters (surf:IMod<MSurface>)  (isg:ISg<'a>) =
+            
         let selectedScalar =
             adaptive {
                 let! s = surf
@@ -229,36 +232,19 @@ module ViewerUtils =
                    fun sceneHit -> 
                      let surfM = surf       |> Mod.force
                      let name  = surfM.name |> Mod.force                                                  
-                     Log.warn "spawing picksurface %s" name
+                     Log.warn "spawning picksurface %s" name
                      true, Seq.ofList [PickSurface (sceneHit,name)])                         
-               ]
-                
-                //let! picking = surface.picking
-                //match picking with
-                //| Picking.PickMesh pm ->
-                //    yield sg
-                //    yield pm
-                //      |> Sg.requirePicking
-                //      |> Sg.noEvents
-                //      |> Sg.withEvents [
-                //          Sg.onMouseDown ( fun b v -> PickObject (v, surface.surface) )
-                //      ]
-                //      |> Sg.shader {
-                //          do! DefaultSurfaces.trafo
-                //          do! DefaultSurfaces.constantColor C4f.White
-                //      }
-                //      |> Sg.trafo scaleTrafo //(surf |> Mod.bind(fun x -> x.preTransform)) 
-                //      |> Sg.depthTest (Mod.constant DepthTestMode.Never)
-                //| Picking.KdTree _ -> yield sg            
-        test 
-          //|> Sg.andAlso (
-          //  (Sg.wireBox (C4b.VRVisGreen |> Mod.constant) pickBox) 
-          //    |> Sg.noEvents
-          //    |> Sg.effect [              
-          //        Shader.stableTrafo |> toEffect 
-          //        DefaultSurfaces.vertexColor |> toEffect
-          //      ]
-          //  )
+               ]                                               
+          |> Sg.andAlso (
+            (Sg.wireBox (C4b.VRVisGreen |> Mod.constant) pickBox) 
+              |> Sg.noEvents
+              |> Sg.effect [              
+                  Shader.stableTrafo |> toEffect 
+                  DefaultSurfaces.vertexColor |> toEffect
+                ] |> Sg.onOff (Mod.constant false)
+            )
+
+        test
 
     let frustum (m:MModel) =
         let near = m.scene.config.nearPlane.value
@@ -337,8 +323,9 @@ module ViewerUtils =
 
                 if i = c then
                   yield RenderCommand.SceneGraph discs
+                  yield RenderCommand.SceneGraph overlayed
 
                 yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
             
-            yield RenderCommand.SceneGraph overlayed
+           // yield RenderCommand.SceneGraph overlayed
         }  

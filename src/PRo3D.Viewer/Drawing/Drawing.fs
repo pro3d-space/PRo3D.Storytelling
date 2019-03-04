@@ -215,6 +215,7 @@ module DrawingApp =
             getArrowThickness  : 'ma -> IMod<float>
             getArrowLength     : 'ma -> IMod<float>
             getDnsPlaneSize    : 'ma -> IMod<float>
+            getOffset          : 'ma -> IMod<float>
         }
    
     let saveAnnotations (path:string) (model:DrawingModel) = 
@@ -237,6 +238,20 @@ module DrawingApp =
 
     let saveSceneAnnotations (scenePath:string) (model:DrawingModel) = 
         saveAnnotations (getAnnotationPath scenePath) model
+
+    let intersectAnnotation (hit : SceneHit) id (flat : hmap<Guid,Leaf>) =
+      match (flat.TryFind id) with
+        | Some (Leaf.Annotations ann) ->                            
+          let mutable hit2 = RayHit3d.MaxRange
+          let r = hit.globalRay.Ray.Ray
+          
+          ann.points 
+              |> PList.toArray 
+              |> Sg.cylinders 0.05 
+              |> Array.tryFind(fun x -> r.HitsCylinder(x, 0.0, 100.0, &hit2))
+              |> Option.map(fun _ -> (ann, hit2))
+          
+        | _ -> None
 
     let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (webSocket : BlockingCollection<string>) (view: CameraView) (model : DrawingModel) (act : Action) =
       match (act, model.draw, model.pick) with
@@ -261,7 +276,15 @@ module DrawingApp =
                     | None         -> model
                     | Some segment -> addNewSegment hitFunction model segment
                 |> stash
-
+        | RemoveLastPoint, _, _ -> 
+          //let annotation = { w with points = w.points |> PList.append p }
+          // { annotation with segments = PList.append newSegment annotation.segments }
+          
+          match model.working with
+            | Some w when w.points.Count > 0->
+              { model with working = Some { w with points = w.points |> PList.removeAt (w.points.Count - 1) }}
+            | Some _ -> { model with working = None }
+            | None -> model
         | SetSegment(segmentIndex,segment), _, _ ->
             match model.working with
                 | None -> model
@@ -320,8 +343,10 @@ module DrawingApp =
             | None -> model
         | Send, _, _ ->                                                      
             model
+        | ClearWorking,_ , _->
+            { model with working = None }
         | Clear,_ , _->
-            { model with annotations = GroupsModel.initial }
+          { model with annotations = GroupsModel.initial }
         | Nop, _, _ -> model                   
         | Undo, _, _ -> 
             match model.past with
@@ -351,11 +376,29 @@ module DrawingApp =
           let csvTable = Csv.Seq.csv "," true id annotations
           if p.IsEmptyOrNull() |> not then Csv.Seq.write (p) csvTable
           model
-        | PickAnnotation (hit, id), false, true -> 
-            Log.line "hit annotation %A" id
+        | PickAnnotation (hit, id), false, true ->             
             match (model.annotations.flat.TryFind id) with
-                | Some x -> {model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty x.id ""}
-                | None -> model
+                | Some (Leaf.Annotations ann) ->                   
+                  match ann.geometry with
+                  | Geometry.Line | Geometry.Point when ann.projection = Projection.Linear -> //picking shapes are fine for these
+                    { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
+                  | _ -> 
+                    Log.startTimed "PolyAnnotationPicking"
+                    let mutable hit2 = RayHit3d.MaxRange
+                    let r = hit.globalRay.Ray.Ray
+                    let result = 
+                      ann.points 
+                        |> PList.toArray 
+                        |> Sg.cylinders 0.05 
+                        |> Array.tryFind(fun x -> r.HitsCylinder(x, 0.0, 100.0, &hit2))
+
+                    match result with
+                    | Some _ -> 
+                      Log.line "hit %A at %A" ann.key hit2.Point
+                      Log.stop()
+                      { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
+                    | None ->Log.stop(); model                    
+                | _ -> model
         | _ -> model
 
     
@@ -385,6 +428,7 @@ module DrawingApp =
                 arrowLength    = msmallConfig.getArrowLength    mbigConfig
                 arrowThickness = msmallConfig.getArrowThickness mbigConfig
                 dnsPlaneSize   = msmallConfig.getDnsPlaneSize   mbigConfig
+                offset         = msmallConfig.getOffset         mbigConfig
             }
        
         let annotations =              
@@ -404,7 +448,7 @@ module DrawingApp =
           Sg.ofList [
            // brush model.hoverPosition; 
             annotations
-            Sg.drawWorkingAnnotation model.working
+            Sg.drawWorkingAnnotation config.offset model.working
           ]
 
         let depthTest = 

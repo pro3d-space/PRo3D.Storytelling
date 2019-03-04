@@ -67,6 +67,7 @@ module Sg =
           arrowThickness  : IMod<float>
           arrowLength     : IMod<float>
           dnsPlaneSize    : IMod<float>
+          offset          : IMod<float>
       }
 
   let drawDns (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =                         
@@ -180,25 +181,25 @@ module Sg =
   //              }
 
                
-  let pickingLine (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking: bool) = 
+  let pickingLine (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking: bool) = 
     match (points |> AList.toArray).Length with
         | 0  -> Sg.empty //| 1
         |  _ ->
             let edges = Sg.edgeLines false points trafo 
-            //let pickable = 
-            //    adaptive {
-            //        let! edg = edges
-            //        let! w = width
-            //        match edg.Length with
-            //            | 0 -> let sphere = Sphere3d((points |> AList.toArray).[0], 0.1) // point
-            //                   return { shape = PickShape.Sphere sphere; trafo = Trafo3d.Identity } // line
-            //            | 1 -> 
-            //              let e = edg.[0]
-            //              let cylinder = Cylinder3d(e.P0, e.P1, 0.1)
-            //              let cylinder = Cylinder3d(e.P0, e.P1, 0.1)
-            //              return { shape = PickShape.Cylinder cylinder; trafo = Trafo3d.Identity }
-            //            | _ -> return { shape = PickShape.Box (Box3d(points |> AList.toArray)); trafo = Trafo3d.Identity } 
-           //     }
+            let pickable = 
+                adaptive {
+                    let! edg = edges
+                    let! t = trafo
+                    let! w = width
+                    match edg.Length with
+                        | 0 -> let sphere = Sphere3d((points |> AList.toArray).[0], 0.1) // point
+                               return { shape = PickShape.Sphere sphere; trafo = Trafo3d.Identity } // line
+                        | 1 -> 
+                          let e = edg.[0]
+                          let cylinder = Cylinder3d(e.P0, e.P1, 0.1)
+                          return { shape = PickShape.Cylinder cylinder; trafo = t }
+                        | _ -> return { shape = PickShape.Box (Box3d(points |> AList.toArray)); trafo = Trafo3d.Identity } 
+                }
    
             let pline =
                 edges
@@ -207,19 +208,21 @@ module Sg =
                   |> Sg.shader {
                         do! Shader.stableTrafo
                         do! DefaultSurfaces.vertexColor
-                        do! Shader.thickLine    
+                        do! Shader.thickLine2    
                     }      
                   //|> Sg.pass pass0
                   |> Sg.trafo trafo
                   |> Sg.uniform "LineWidth" width
-                  |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
-           //       |> Sg.pickable' pickable
+                  |> Sg.uniform "depthOffset" offset
+                  |> Sg.pickable' pickable
                   |> Sg.noEvents
                   |> Sg.withEvents [
                         SceneEventKind.Down, (
                             fun sceneHit ->
                             if (picking) then
-                                true, Seq.ofList[PickAnnotation (sceneHit, (id|> Mod.force))]
+                                let id = id|> Mod.force
+                                Log.warn "[AnnotationPicking] picked %A" id
+                                true, Seq.ofList[PickAnnotation (sceneHit, (id))]
                             else
                                 false, Seq.ofList[])
                     ]
@@ -260,8 +263,8 @@ module Sg =
             //|> Sg.pass pass0
             |> Sg.trafo trafo
             |> Sg.uniform "LineWidth" width
-            |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
-            |> Sg.pickable' pickable
+            |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
+         //   |> Sg.pickable' pickable
             |> Sg.noEvents
             |> Sg.withEvents [
                 SceneEventKind.Down, (
@@ -298,7 +301,7 @@ module Sg =
              }                               
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+             |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
 
         let outl = 
             sg
@@ -315,7 +318,7 @@ module Sg =
                 do! DefaultSurfaces.constantColor C4f.VRVisGreen
             }
             |> Sg.uniform "LineWidth" (outlineSize width)
-            |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
+            |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
        
         Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents 
 
@@ -374,7 +377,7 @@ module Sg =
         | _ -> yield outlineLine points v color trafo width id
     } |> Sg.set
 
-  let drawWorkingAnnotation (anno : IMod<Option<MAnnotation>>)  = 
+  let drawWorkingAnnotation (offset : IMod<float>) (anno : IMod<Option<MAnnotation>>)  = 
 
       let polyPoints =
           alist {
@@ -405,7 +408,7 @@ module Sg =
       let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)
                              
       Sg.ofList [
-          Sg.lines polyPoints color thickness trafo //polyline
+          Sg.lines polyPoints offset color thickness trafo //polyline
           //Sg.dots polyPoints (Mod.constant C4b.VRVisGreen) // debug sample points
           Sg.dots points thickness color                     //support points
       ]         
@@ -460,7 +463,7 @@ module Sg =
       //let selectionColor = Mod.map2(fun x color -> if x then C4b.VRVisGreen else color) picked c
 
       let pickingLines = 
-        pickingLine points c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) false
+        pickingLine points conf.offset c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
         //aset
         //    {
         //        let! picked = picked

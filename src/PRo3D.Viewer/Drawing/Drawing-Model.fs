@@ -15,38 +15,40 @@ open PRo3D
 open PRo3D.Groups
 
 type Action =
-        | SetSemantic      of Semantic
-        | ChangeColor      of ColorPicker.Action
-        | ChangeThickness  of Numeric.Action
-        | SetGeometry      of Geometry
-        | SetProjection    of Projection
-        | SetExportPath    of string
-        | Move             of V3d
-        | Exit            
-        | StartDrawing            
-        | StopDrawing   
-        | StartPicking            
-        | StopPicking  
-        | AddPointAdv      of V3d * (V3d -> Option<V3d>) * string
-        | SetSegment       of int * Segment
-        | Finish                
-        | Undo
-        | Redo
-        | FlyToAnnotation  of Guid
-        //| RemoveAnnotation        of list<Index>*Guid       
-        | Send
-        | Export
-        | Save                  of string
-        | Load                  of list<string>
-        | QuickLoad
-        | Clear
-        | Nop
-        | UpVectorChanged         of V3d
-        | NorthVectorChanged      of V3d
-        | GroupsMessage   of Groups.Action
-        | ColorLegendMessage   of FalseColorLegendApp.Action
-        | SaveCSV               of string
-        | PickAnnotation        of SceneHit * Guid
+  | SetSemantic         of Semantic
+  | ChangeColor         of ColorPicker.Action
+  | ChangeThickness     of Numeric.Action
+  | SetGeometry         of Geometry
+  | SetProjection       of Projection
+  | SetExportPath       of string
+  | Move                of V3d
+  | Exit            
+  | StartDrawing            
+  | StopDrawing   
+  | StartPicking            
+  | StopPicking  
+  | AddPointAdv         of V3d * (V3d -> Option<V3d>) * string
+  | RemoveLastPoint  
+  | ClearWorking
+  | Clear
+  | SetSegment          of int * Segment
+  | Finish                
+  | Undo
+  | Redo
+  | FlyToAnnotation     of Guid
+  //| RemoveAnnotation        of list<Index>*Guid       
+  | Send
+  | Export
+  | Save                of string
+  | Load                of list<string>
+  | QuickLoad
+  | Nop
+  | UpVectorChanged     of V3d
+  | NorthVectorChanged  of V3d
+  | GroupsMessage       of Groups.Action
+  | ColorLegendMessage  of FalseColorLegendApp.Action
+  | SaveCSV             of string
+  | PickAnnotation      of SceneHit * Guid
 
 [<DomainType>]
 type DrawingModel = {
@@ -80,14 +82,7 @@ type DrawingModel = {
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
 module DrawingModel =
-    //let tryGet (m:DrawingModel) key = 
-    //        m.annotations |> Seq.tryFind(fun x -> x.key = key)
-
-    //let update (m : DrawingModel) (ann : Annotation) = 
-    //    m.annotations.AsList 
-    //        |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
-    //        |> PList.ofList
-
+    
     let tryGet (ans:plist<Annotation>) key = 
             ans |> Seq.tryFind(fun x -> x.key = key)
 

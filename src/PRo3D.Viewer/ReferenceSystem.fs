@@ -131,6 +131,7 @@ module ReferenceSystemApp =
                   Rot3d(model.up.value, noffset.value |> Double.radiansFromDegrees)
                     .TransformDir(model.north.value) |> Vec.normalize                
 
+
                 { model with noffset = noffset; northO = no }, bigConfig 
             | ToggleVisible   -> 
                 { model with isVisible = not model.isVisible}, bigConfig
@@ -207,7 +208,7 @@ module ReferenceSystemApp =
                           | Some text -> Sg.text cam near (Mod.constant 60.0) nLabelPos nPosTrafo (Mod.constant text) (Mod.constant 0.05)
                           | None -> Sg.empty)
 
-                yield PRo3D.Sg.lines al style.color style.thickness posTrafo
+                yield PRo3D.Sg.lines al (Mod.constant 0.0)style.color style.thickness posTrafo
                 yield label |> Sg.dynamic                                   
                  
             } |> Sg.set 
@@ -285,10 +286,10 @@ module ReferenceSystemApp =
             Sg.ofList [
                 point model.origin (Mod.constant C4b.Red) cam
                 //sizeText
-                PRo3D.Sg.lines upV (Mod.constant C4b.Blue) thickness posTrafo 
+                PRo3D.Sg.lines upV (Mod.constant 0.0)(Mod.constant C4b.Blue) thickness posTrafo 
                 styleUp |> directionMarker near cam 
-                PRo3D.Sg.lines northV (Mod.constant C4b.Red) thickness posTrafo 
-                PRo3D.Sg.lines eastV (Mod.constant C4b.Green) thickness posTrafo
+                PRo3D.Sg.lines northV (Mod.constant 0.0)(Mod.constant C4b.Red) thickness posTrafo 
+                PRo3D.Sg.lines eastV (Mod.constant 0.0)(Mod.constant C4b.Green) thickness posTrafo
                 label                     
             ]   |> Sg.onOff(model.isVisible)       
 

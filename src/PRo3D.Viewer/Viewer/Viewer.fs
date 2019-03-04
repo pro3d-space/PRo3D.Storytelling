@@ -75,7 +75,7 @@ module ViewerApp =
     open Aardvark.SceneGraph.SgFSharp.Sg
     open PRo3d.Align
     open Aardvark.Rendering.GL.OpenGl.Pointers
-    open Aardvark.UI.Animation
+    open Aardvark.UI.Animation    
                  
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
@@ -117,6 +117,16 @@ module ViewerApp =
                 m |> lookAtBoundingBox bb
             | None -> m
 
+    let logScreen timeout m text = 
+      let feedback = 
+        {
+          id      = System.Guid.NewGuid().ToString()
+          text    = text
+          timeout = timeout
+          msg     = ViewerAction.NoAction ""
+        }
+      m |> UserFeedback.queueFeedback feedback
+
     let stash (model : Model) =
         { model with past = Some model.drawing; future = None }
        
@@ -148,6 +158,7 @@ module ViewerApp =
             getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
             getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
             getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
+            getOffset          = fun (x:MViewConfigModel) -> Mod.constant(0.001)//x.offset.value
         }
 
     let navConf : Navigation.smallConfig<ViewConfigModel, ReferenceSystem> =
@@ -241,14 +252,17 @@ module ViewerApp =
         |> AnimationAction.PushAnimation 
         |> AnimationApp.update animationsOld
 
+    //TODO refactor ... move docking manipulation somewhere else... check what works and what doesn't
     let rec getAllDockElements (dnc : DockNodeConfig) : (list<DockElement>) = 
-        match dnc with
-            | DockNodeConfig.Vertical (weight,children) -> let test = children |> List.map(fun x -> getAllDockElements x )
-                                                           test |> List.concat  
-            | DockNodeConfig.Horizontal (weight,children) -> let test = children |> List.map(fun x -> getAllDockElements x )
-                                                             test |> List.concat 
-            | DockNodeConfig.Stack (weight,activeId,children) -> children 
-            | DockNodeConfig.Element element -> [element] 
+      match dnc with
+        | DockNodeConfig.Vertical (weight,children) -> 
+          let test = children |> List.map(fun x -> getAllDockElements x )
+          test |> List.concat  
+        | DockNodeConfig.Horizontal (weight,children) -> 
+          let test = children |> List.map(fun x -> getAllDockElements x )
+          test |> List.concat 
+        | DockNodeConfig.Stack (weight,activeId,children) -> children 
+        | DockNodeConfig.Element element -> [element] 
     
     let updateClosedPages (m : Model) (dncUpdated : DockNodeConfig) =
         let de = getAllDockElements m.scene.dockConfig.content
@@ -267,7 +281,6 @@ module ViewerApp =
                                    
                    List.append m.scene.closedPages test 
                    
-
     let addDockElement (dnc : DockNodeConfig) (de:DockElement) = 
         match dnc with
             | DockNodeConfig.Vertical (weight,children) -> let add = List.append children [(Stack(weight, None, [de]))]
@@ -277,7 +290,6 @@ module ViewerApp =
             | DockNodeConfig.Stack (weight,activeId,children) -> Stack(weight, activeId, List.append [de] children)
             | DockNodeConfig.Element element ->  Stack(0.2, None, List.append [de] [element]) 
 
-    
     let saveSceneAndAnnotations (path:string) (m:Model) = 
         let s' = { m.scene with scenePath = Some path}
         let drawing = DrawingApp.saveSceneAnnotations path m.drawing
@@ -287,7 +299,7 @@ module ViewerApp =
          match m.interaction with
             | Interactions.DrawAnnotation -> 
                 let m = match surf.surfaceType with
-                        | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = Projection.Linear } }   
+                        | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = PRo3D.Projection.Linear } }   
                         | _ -> m
                 
                 let view = m.scene.navigation.camera.view
@@ -315,7 +327,7 @@ module ViewerApp =
                 { m with scene = {m.scene with navigation = navigation'; } }
             | Interactions.PlaceRover ->
                 let ref = m.scene.referenceSystem 
-                let model, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
+                let _, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
                 let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
                 match m.scene.viewPlans.working.IsEmpty with
                     | true -> m' 
@@ -327,10 +339,16 @@ module ViewerApp =
            // | Interactions.PickAnnotation -> m
             | _ -> m
 
-    let mutable lastHash = -1
     
-    let update (runtime : IRuntime) (signature: IFramebufferSignature) (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) (m : Model) (msg : ViewerAction) =        
-        match msg, m.interaction, m.picking with
+
+    let mutable lastHash = -1    
+
+    let update 
+      (runtime : IRuntime) (signature: IFramebufferSignature) 
+      (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) 
+      (m : Model) (msg : ViewerAction) =        
+        //Log.line "[Viewer_update] %A inter:%A pick:%A" msg m.interaction m.picking
+        match msg, m.interaction, m.ctrlFlag with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
                let c   = m.scene.config
                let ref = m.scene.referenceSystem
@@ -365,42 +383,42 @@ module ViewerApp =
                             animateFowardAndLocation a.view.Location a.view.Forward 2.0 "ForwardAndLocation2s"
                           let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                           { m with  animations = a'}
-                      | None -> m                    
+                      | None -> m               
                 | _ ->
                     let view = m.scene.navigation.camera.view
                     let drawing = 
                         DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing msg
                     { m with drawing = drawing; } |> stash
             | SurfaceActions msg,_,_ ->
-                    let view = m.scene.navigation.camera.view
-                    let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath view m.scene.referenceSystem
-                    let animation = 
-                          match msg with
-                            | SurfaceApp.Action.FlyToSurface id -> 
-                                let surface = m.scene.surfacesModel.surfaces.flat |> HMap.find id |> Leaf.toSurface 
-                                let superTrafo = PRo3D.Transformations.fullTrafo' surface m.scene.referenceSystem
-                                match surface.homePosition with
-                                    | Some hp ->
-                                        //let trafo' = surface.preTransform.Forward * superTrafo.Forward
-                                        //let pos = trafo'.TransformPos(hp.Location)
-                                        //let forward = trafo'.TransformDir(hp.Forward)
-                                        let animationMessage = 
-                                            animateFowardAndLocation hp.Location hp.Forward 2.0 "ForwardAndLocation2s"
-                                        AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                                    | None ->
-                                        let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
-                                        match surf with
-                                            | Some s ->
-                                                    let bb = s.globalBB.Transformed(surface.preTransform.Forward * superTrafo.Forward)
-                                                    let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
-                                                    let animationMessage = 
-                                                        animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
-                                                    let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
-                                                    a'
-                                            | None -> m.animations
-                            | _-> m.animations
-                           
-                    { m with scene = { m.scene with surfacesModel = s}; animations = animation}
+              let view = m.scene.navigation.camera.view
+              let s = SurfaceApp.update m.scene.surfacesModel msg m.scene.scenePath view m.scene.referenceSystem
+              let animation = 
+                match msg with
+                | SurfaceApp.Action.FlyToSurface id -> 
+                  let surface = m.scene.surfacesModel.surfaces.flat |> HMap.find id |> Leaf.toSurface 
+                  let superTrafo = PRo3D.Transformations.fullTrafo' surface m.scene.referenceSystem
+                  match surface.homePosition with
+                  | Some hp ->
+                    //let trafo' = surface.preTransform.Forward * superTrafo.Forward
+                    //let pos = trafo'.TransformPos(hp.Location)
+                    //let forward = trafo'.TransformDir(hp.Forward)
+                    let animationMessage = 
+                        animateFowardAndLocation hp.Location hp.Forward 2.0 "ForwardAndLocation2s"
+                    AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                  | None ->
+                    let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
+                    match surf with
+                    | Some s ->
+                      let bb = s.globalBB.Transformed(surface.preTransform.Forward * superTrafo.Forward)
+                      let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
+                      let animationMessage = 
+                          animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                      let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
+                      a'
+                    | None -> m.animations
+                | _-> m.animations
+                     
+              { m with scene = { m.scene with surfacesModel = s}; animations = animation}
             | AnnotationMessage msg,_,_ ->                
                 match m.drawing.annotations.singleSelectLeaf with
                   | Some selected ->                             
@@ -443,8 +461,7 @@ module ViewerApp =
             | DnSColorLegendMessage msg,_,_ ->
                 let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
                 { m with drawing = { m.drawing with colorLegend = cm } }
-            | ImportSurface sl,_,_ -> 
-                
+            | ImportSurface sl,_,_ ->                 
                 match sl with
                     | [] -> m
                     | paths ->
@@ -589,10 +606,10 @@ module ViewerApp =
                   
                   let ray =
                       match m.drawing.projection with
-                          | Projection.Viewpoint -> 
+                          | PRo3D.Projection.Viewpoint -> 
                               let dir = (p-camLocation).Normalized
                               FastRay3d(camLocation, dir)  
-                          | Projection.Sky -> 
+                          | PRo3D.Projection.Sky -> 
                               let up = m.scene.referenceSystem.up.value
                               FastRay3d(p + (up * 5000.0), -up)  
                           | _ -> Log.error "projection started without proj mode"; FastRay3d()
@@ -662,18 +679,24 @@ module ViewerApp =
             | KeyDown k, _, _ ->
               let drawingAction =
                 match k with
-                  | Aardvark.Application.Keys.Enter       -> Drawing.Action.Finish                                                               
-                  | Aardvark.Application.Keys.LeftCtrl    -> Drawing.Action.StartDrawing
-                  | Aardvark.Application.Keys.D0          -> Drawing.Action.SetSemantic Semantic.Horizon0
-                  | Aardvark.Application.Keys.D1          -> Drawing.Action.SetSemantic Semantic.Horizon1
-                  | Aardvark.Application.Keys.D2          -> Drawing.Action.SetSemantic Semantic.Horizon2
-                  | Aardvark.Application.Keys.D3          -> Drawing.Action.SetSemantic Semantic.Horizon3       
-                  | _                                     -> Drawing.Action.Nop
+                  | Aardvark.Application.Keys.Enter    -> Drawing.Action.Finish
+                  | Aardvark.Application.Keys.Back     -> Drawing.Action.RemoveLastPoint
+                  | Aardvark.Application.Keys.Escape   -> Drawing.Action.ClearWorking
+                  | Aardvark.Application.Keys.LeftCtrl -> 
+                    match m.interaction with 
+                    | Interactions.DrawAnnotation -> Drawing.Action.StartDrawing
+                    | Interactions.PickAnnotation -> Drawing.Action.StartPicking
+                    | _ -> Drawing.Action.Nop
+                  | Aardvark.Application.Keys.D0 -> Drawing.Action.SetSemantic Semantic.Horizon0
+                  | Aardvark.Application.Keys.D1 -> Drawing.Action.SetSemantic Semantic.Horizon1
+                  | Aardvark.Application.Keys.D2 -> Drawing.Action.SetSemantic Semantic.Horizon2
+                  | Aardvark.Application.Keys.D3 -> Drawing.Action.SetSemantic Semantic.Horizon3       
+                  | _  -> Drawing.Action.Nop
 
               let m =
                 match k with 
-                  | Aardvark.Application.Keys.LeftCtrl -> { m with picking = true; ctrlFlag = true }
-                  |_                                   -> { m with picking = false;}
+                  | Aardvark.Application.Keys.LeftCtrl -> { m with ctrlFlag = true }
+                  | _ -> m
 
               let m =
                 match (m.ctrlFlag, k, m.scene.scenePath) with
@@ -701,35 +724,12 @@ module ViewerApp =
                              
               let m =
                 match m.interaction with
-                | Interactions.DrawAnnotation ->
+                | Interactions.DrawAnnotation | Interactions.PickAnnotation ->
                     let view = m.scene.navigation.camera.view
                     let m = { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing drawingAction } |> stash
                     match drawingAction with
                       | Drawing.Action.Finish -> { m with tabMenu = TabMenu.Annotations }
-                      | _ -> m     
-                //| Interactions.PickAnnotation -> 
-                //    match m.picking with
-                //        | true -> { m with drawing = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StartPicking } |> stash
-                //        | false -> m
-                    
-                   
-                //| Interactions.AlignPick -> 
-                //    match k with
-                //     | Aardvark.Application.Keys.Enter -> 
-                //        let m = { m with alignment = AlignmentApp.update m.alignment PRo3d.Align.AlignmentActions.Finish }
-
-                //        match (m.alignment.resultTrafo, m.alignment.alignment)with
-                //          | Some t, Some al ->                             
-                //            let f = (fun x -> 
-                //                let s = x |> Leaf.toSurface
-                //                { s with preTransform = t} |> Leaf.Surfaces)
-
-                //            let g = Groups.updateLeaf al.blue f m.scene.surfacesModel.surfaces
-                //            { m.scene.surfacesModel with surfaces = g }
-                //              |> SurfaceModel.triggerSgGrouping
-                //              |> Lenses.set' _surfacesModel m
-                //          | _ -> m
-                //     | _ -> m
+                      | _ -> m                     
                 | _ -> m
                                                   
 
@@ -767,7 +767,16 @@ module ViewerApp =
                       { m with waypoints = waypoints }                                                                                  
                     | _ -> m
 
-              { m with scene = { m.scene with config = c' }}                                       
+              let interaction' = 
+                match k with
+                | Aardvark.Application.Keys.F1 -> Interactions.PickExploreCenter
+                | Aardvark.Application.Keys.F2 -> Interactions.DrawAnnotation
+                | Aardvark.Application.Keys.F3 -> Interactions.PickAnnotation
+                | Aardvark.Application.Keys.F4 -> Interactions.PlaceCoordinateSystem
+                //| Aardvark.Application.Keys.F6 -> Interactions.DrawLog
+                | _ -> m.interaction
+
+              { m with scene = { m.scene with config = c' }; interaction = interaction'}                               
             | KeyUp k, _,_ ->               
                 match k with
                   | Aardvark.Application.Keys.LeftCtrl -> 
@@ -775,8 +784,10 @@ module ViewerApp =
                         | Interactions.DrawAnnotation -> 
                             let view = m.scene.navigation.camera.view
                             let d = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopDrawing
-                        //| Interactions.PickAnnotation -> 
-                        //    DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue m.drawing Drawing.Action.StopPicking 
+                            { m with drawing = d; ctrlFlag = false; picking = false }
+                        | Interactions.PickAnnotation -> 
+                            let view = m.scene.navigation.camera.view
+                            let d = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopPicking 
                             { m with drawing = d; ctrlFlag = false; picking = false }
                         |_-> { m with ctrlFlag = false; picking = false }
                   | _ -> m                                  
@@ -888,8 +899,8 @@ module ViewerApp =
                  let newForward = (v - currentView.Location).Normalized
                                     
                  { m with animations = createAnimation v newForward m.animations }
-              | _ -> { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }
-            | _ -> m       
+              | _ -> { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }            
+            | _ -> m
                                    
     let mkBrushISg color size trafo : ISg<Message> =
       Sg.sphere 5 color size 
@@ -900,8 +911,7 @@ module ViewerApp =
         }
         |> Sg.noEvents
         |> Sg.trafo(trafo)
-   
-   
+      
     let view (m : MModel) = //(localhost: string)
         
         let renderControlAttributes (model : MNavigationModel)  =            
@@ -965,40 +975,7 @@ module ViewerApp =
           
             let homePosition =
                 Surfaces.Sg.viewHomePosition m.scene.surfacesModel
-            
-            
-            //let controller = 
-            //    adaptive {
-            //        let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
-            //        let! kind = m.trafoKind
-            //        match selected with
-            //          | Some c ->                           
-
-            //              let! sgo = m.scene.surfacesModel.sgSurfaces |> AMap.tryFind c
-                          
-            //              match sgo with 
-            //                  | Some sg ->
-            //                        let! trafo = sg.trafo
-            //                        match kind with
-            //                        | TrafoKind.Translate ->                                               
-            //                            return TranslateController.viewController (fun t -> Translate("", t)) m.scene.navigation.camera.view sg.trafo
-            //                        | TrafoKind.Rotate ->
-            //                            return RotationController.viewController (fun t -> Rotate("", t)) m.scene.navigation.camera.view sg.trafo
-            //                        | _ -> return Sg.empty
-            //                  | None -> 
-            //                    Log.warn "selected surface does not exist"
-            //                    return Sg.empty                                 
-            //          | None -> return Sg.empty
-                    
-            //    } |> Sg.dynamic
-
-            //let orientationCube = 
-            //    OrientationCube.Sg.view
-            //        m.scene.navigation.camera.view
-            //        m.scene.config 
-            //        m.scene.referenceSystem
-               
-            
+                                 
             let viewPlans =
                 ViewPlan.Sg.view 
                     m.scene.config 
@@ -1008,8 +985,8 @@ module ViewerApp =
                 |> Sg.map ViewPlanMessage
 
             let minervaFeatures = 
-              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions
-                        
+              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions                                    
+
             [annos; exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
@@ -1208,7 +1185,7 @@ module ViewerApp =
                 require (myCss) (body bodyAttributes [viewPlannerUI])
             | Some "minerva" -> 
                let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
-               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])
+               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])            
             | None -> 
                 require (myCss) (
                   body [][                    

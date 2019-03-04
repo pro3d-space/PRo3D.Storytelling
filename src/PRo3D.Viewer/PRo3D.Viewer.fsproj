@@ -141,7 +141,6 @@
     <None Include="HueColorMap.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <Compile Include="Translation.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="CSharpUtils">

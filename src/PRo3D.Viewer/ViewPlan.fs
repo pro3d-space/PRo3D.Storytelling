@@ -441,7 +441,7 @@ module ViewPlan =
             Sg.ofList [
                     Sg.dot start (Mod.constant 3.0) color  
                     Sg.dot endp  (Mod.constant 3.0) color
-                    PRo3D.Sg.lines axisLine color thickness trafo
+                    PRo3D.Sg.lines axisLine (Mod.constant 0.0) color thickness trafo
                 ] 
         
         let drawInstruments (instruments:alist<MInstrument>) (viewPlan:MViewPlan) (near:IMod<float>)
