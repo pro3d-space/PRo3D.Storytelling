@@ -1250,7 +1250,9 @@ module ViewerApp =
                   |> ThreadPool.map Navigation.ArcBallAction |> ThreadPool.map NavigationMessage
             | _ -> failwith "invalid nav mode"
          
-        unionMany [drawing; animation; nav; m.scene.feedbackThreads]
+        let minerva = PRo3D.Minerva.App.threads m.minervaModel |> ThreadPool.map MinervaActions
+
+        unionMany [drawing; animation; nav; m.scene.feedbackThreads; minerva]
         
     let loadWaypoints m = 
       match Serialization.fileExists "./waypoints.wps" with

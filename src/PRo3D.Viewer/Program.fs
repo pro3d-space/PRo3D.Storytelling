@@ -172,8 +172,8 @@ let main argv =
     let s = { MailboxState.empty with update = mainApp.update Guid.Empty }
     MailboxAction.InitMailboxState s |> messagingMailbox.Post
     
-    let s2 = { PRo3D.Minerva.MailboxState.empty with update = mainApp.update Guid.Empty }
-    PRo3D.Minerva.MailboxAction.InitMailboxState s2 |> minervaMailbox.Post
+    //let s2 = { PRo3D.Minerva.MailboxState.empty with update = mainApp.update Guid.Empty }
+    //PRo3D.Minerva.MailboxAction.InitMailboxState s2 |> minervaMailbox.Post
     
     CooTransformation.initCooTrafo () // should be a function not a value
     

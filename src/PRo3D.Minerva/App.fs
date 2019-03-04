@@ -11,7 +11,47 @@ open Aardvark.Base.Rendering
 open PRo3D.Base
 open PRo3D.Minerva.Communication
 
+[<AutoOpen>]
+module MissingInBase = 
+    type ProcListBuilder with   
+        member x.While(predicate : unit -> bool, body : ProcList<'m,unit>) : ProcList<'m,unit> =
+            proclist {
+                let p = predicate()
+                if p then 
+                    yield! body
+                    yield! x.While(predicate,body)
+                else ()
+            }
 
+type HarriSchirchWrongBlockingCollection<'a>() =
+    let sema = new System.Threading.SemaphoreSlim(0)
+    let l = obj()
+    let queue = System.Collections.Generic.Queue<'a>()
+    let mutable finished = false
+
+    member x.TakeAsync() =
+        async {
+            do! sema.WaitAsync() |> Async.AwaitTask
+            if finished then return None
+            else
+                return 
+                    lock l (fun _ -> 
+                        queue.Dequeue() |> Some
+                    )
+        }
+
+    member x.Enqueue(v) =
+        lock l (fun _ -> 
+            queue.Enqueue(v)
+        )
+        sema.Release() |> ignore
+
+    member x.CompleteAdding() =
+        finished <- true
+        sema.Release()
+
+    member x.IsCompleted = finished
+        
 
 module App =
   open System.Net.Sockets
@@ -93,24 +133,39 @@ module App =
           //     cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand
           //     cmd.para.messageID
           //  | _ -> sprintf "dont know %A" cmd
-
+          Log.line "[Minerva] connecting to visplore"
           let createWorker () =
              proclist {
+               let bc = new HarriSchirchWrongBlockingCollection<_>()
                let comm = new Communicator.Communicator()
                comm.Start(fun cmd ->
                  match cmd.name with
                  | "MinervaReplaceSelection" ->
+                    Log.line "[Minerva] received vpl message"
                     // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
                    // cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand 
                     match cmd.data.ids with 
-                    | Some ids -> ids |> Array.toList |> PerformIdQuery |> MailboxAction.MiniAction |> model.minervaMessagingMailbox.Post
+                    | Some ids -> 
+                        let action = ids |> Array.toList |> PerformIdQuery 
+                        bc.Enqueue action
+                        ///|> MailboxAction.MiniAction |> model.minervaMessagingMailbox.Post
                     | None -> ()
                     
                     cmd.para.messageID
+                 | "Shutdown" -> 
+                    //bc.CompleteAdding()
+                    "todo"
                  | _ -> sprintf "dont know %A" cmd               
-               )             
-               do! Proc.Sleep (60 * 100000)      
+               )
+               while not bc.IsCompleted do
+                 let! action = bc.TakeAsync()
+                 Log.line "[Minerva] take async"
+                 match action with
+                    | Some a -> yield a
+                    | None -> ()
                yield FlyToProduct V3d.Zero
+
+               comm.Close()
              }
           //comm.Start()
           //Thread.Sleep(60 * 100000)
