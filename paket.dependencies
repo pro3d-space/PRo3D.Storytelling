@@ -3,15 +3,15 @@ framework: netstandard2.0, net471, netcoreapp2.0
 source https://api.nuget.org/v3/index.json
 source https://vrvis.myget.org/F/aardvark/auth/11394d4d-4fe9-44ec-87c8-f3e98909f975/api/v3/index.json
 
-nuget Aardvark.Base.Rendering              ~> 4.6.3
-nuget Aardvark.Application.WinForms.GL     ~> 4.6.3
-nuget Aardvark.Application.WinForms.Vulkan ~> 4.6.3
-nuget Aardvark.SceneGraph                  ~> 4.6.3
-nuget Aardvark.SceneGraph.IO               ~> 4.6.3
-nuget Aardvark.SceneGraph.Opc              ~> 4.6.3
-nuget Aardvark.Rendering.Text              ~> 4.6.3
-nuget Aardvark.Rendering.Vulkan            ~> 4.6.3
-nuget Aardvark.Rendering.GL                ~> 4.6.3
+nuget Aardvark.Base.Rendering              ~> 4.7.11
+nuget Aardvark.Application.WinForms.GL     ~> 4.7.11
+nuget Aardvark.Application.WinForms.Vulkan ~> 4.7.11
+nuget Aardvark.SceneGraph                  ~> 4.7.11
+nuget Aardvark.SceneGraph.IO               ~> 4.7.11
+nuget Aardvark.SceneGraph.Opc              ~> 4.7.11
+nuget Aardvark.Rendering.Text              ~> 4.7.11
+nuget Aardvark.Rendering.Vulkan            ~> 4.7.11
+nuget Aardvark.Rendering.GL                ~> 4.7.11
 
 nuget Unofficial.OpenTK                  ~> 3.0.16
 
