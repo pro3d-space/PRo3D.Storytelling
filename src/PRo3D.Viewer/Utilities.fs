@@ -321,18 +321,19 @@ module Sg =
             toEffect <| DefaultSurfaces.vertexColor          
         ]
 
-    let indexedGeometryDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
-        let colors = Mod.map(fun c -> [|c|]) color
-        Sg.draw IndexedGeometryMode.PointList
-         |> Sg.vertexAttribute DefaultSemantic.Positions (Mod.constant (points |> AList.toArray))
-         |> Sg.vertexAttribute DefaultSemantic.Colors colors
-         |> Sg.effect [
-            toEffect Shader.stableTrafo
-            toEffect DefaultSurfaces.vertexColor
-            toEffect DefaultSurfaces.pointSprite
-         ]
-         |> Sg.uniform "PointSize" size
-    
+    let indexedGeometryDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =       
+      let points' = points |> AList.toMod |> Mod.map(fun x -> x |> PList.toArray)
+      let colors = points' |> Mod.map2(fun c x -> Array.create x.Length c) color
+      
+      Sg.draw IndexedGeometryMode.PointList
+       |> Sg.vertexAttribute DefaultSemantic.Positions points'         
+       |> Sg.vertexAttribute DefaultSemantic.Colors colors
+       |> Sg.effect [
+          toEffect Shader.stableTrafo
+          toEffect DefaultSurfaces.vertexColor
+          toEffect DefaultSurfaces.pointSprite
+       ]
+       |> Sg.uniform "PointSize" size
     
     let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
         aset {
@@ -354,7 +355,7 @@ module Sg =
               | Geometry.Point -> match points|> AList.toList |> List.tryHead with
                                     | Some p -> yield dot (Mod.constant p) size color
                                     | _-> yield Sg.empty
-              |_-> yield indexedGeometryDots points size color    
+              |_-> yield dots points size color    
         } |> Sg.set
 
         

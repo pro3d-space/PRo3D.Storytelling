@@ -967,19 +967,24 @@ module ViewerApp =
     let viewRenderView (m : MModel) = 
         let annotations, discs = DrawingApp.view m.scene.config mdrawingConfig m.scene.navigation.camera.view m.drawing
             
-        let discs = 
-           discs
-             |> Sg.map DrawingMessage
-             |> Sg.fillMode (Mod.constant FillMode.Fill)
-             |> Sg.cullMode (Mod.constant CullMode.None)
+        let annotationSg = 
+           let ds =
+             discs
+               |> Sg.map DrawingMessage
+               |> Sg.fillMode (Mod.constant FillMode.Fill)
+               |> Sg.cullMode (Mod.constant CullMode.None)
+
+           let annos = 
+             annotations
+               |> Sg.map DrawingMessage
+               |> Sg.fillMode (Mod.constant FillMode.Fill)
+               |> Sg.cullMode (Mod.constant CullMode.None)
+
+           Sg.ofList[ds;annos]
 
         let overlayed =
 
-            let annos = 
-              annotations
-                    |> Sg.map DrawingMessage
-                    |> Sg.fillMode (Mod.constant FillMode.Fill)
-                    |> Sg.cullMode (Mod.constant CullMode.None)
+            
             
             //let alignment = 
             //    AlignmentApp.view m.alignment m.scene.navigation.camera.view
@@ -1012,9 +1017,9 @@ module ViewerApp =
             let minervaFeatures = 
               PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions                                    
 
-            [annos; exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
+            [exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
 
-        let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
+        let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed annotationSg m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
         DomNode.RenderControl((renderControlAttributes m), cam, cmds, None)
 
