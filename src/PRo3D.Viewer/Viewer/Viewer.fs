@@ -337,6 +337,10 @@ module ViewerApp =
             | Interactions.PlaceSurface -> 
                 { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath m.scene.navigation.camera.view  m.scene.referenceSystem}}
            // | Interactions.PickAnnotation -> m
+            | Interactions.PickSurface -> 
+                let action = SurfaceApp.Action.GroupsMessage(Groups.Action.SingleSelectLeaf(list.Empty, surf.guid, ""))
+                let surfaceModel' = SurfaceApp.update m.scene.surfacesModel action m.scene.scenePath m.scene.navigation.camera.view m.scene.referenceSystem
+                { m with scene = { m.scene with surfacesModel = surfaceModel' }}
             | _ -> m
 
     
@@ -911,10 +915,9 @@ module ViewerApp =
         }
         |> Sg.noEvents
         |> Sg.trafo(trafo)
-      
-    let view (m : MModel) = //(localhost: string)
-        
-        let renderControlAttributes (model : MNavigationModel)  =            
+    
+    let renderControlAttributes (m : MModel) = 
+        let renderControlAtts (model : MNavigationModel)  =            
             amap {
                 let! state = model.navigationMode
                 match state with
@@ -923,23 +926,45 @@ module ViewerApp =
                     | NavigationMode.ArcBall -> 
                         yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction
                     | _ -> failwith "Invalid NavigationMode"
-            } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)       
+            } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)   
+        AttributeMap.unionMany [
+            renderControlAtts m.scene.navigation
 
-        let att = 
-            AttributeMap.unionMany [
-                renderControlAttributes m.scene.navigation
+            AttributeMap.ofList [
+                attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
+                attribute "data-samples" "4"
+                attribute "useMapping" "true"
+            //   attribute "showFPS" "true"        
+            //   attribute "data-renderalways" "true"
+                onKeyDown (KeyDown)
+                onKeyUp (KeyUp)
+            ] 
+        ]            
 
-                AttributeMap.ofList [
-                 attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
-                 attribute "data-samples" "4"
-                 attribute "useMapping" "true"
-              //   attribute "showFPS" "true"        
-              //   attribute "data-renderalways" "true"
-                 onKeyDown (KeyDown)
-                 onKeyUp (KeyUp)
-                ] 
-            ]            
+    let viewInstrumentView (m : MModel) = 
+        let annotationsI, discsI = DrawingApp.view m.scene.config mdrawingConfig m.scene.viewPlans.instrumentCam.view m.drawing
 
+        let ioverlayed =
+            let annos = 
+              annotationsI
+                    |> Sg.map DrawingMessage
+                    |> Sg.fillMode (Mod.constant FillMode.Fill)
+                    |> Sg.cullMode (Mod.constant CullMode.None)
+
+            [annos] |> Sg.ofList
+
+        let discsInst = 
+           discsI
+             |> Sg.map DrawingMessage
+             |> Sg.fillMode (Mod.constant FillMode.Fill)
+             |> Sg.cullMode (Mod.constant CullMode.None)
+
+        // instrument view control
+        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped ioverlayed discsInst m // m.scene.surfacesModel.sgGrouped overlayed discs m
+        let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
+        DomNode.RenderControl((renderControlAttributes m), icam, icmds, None) //AttributeMap.Empty
+
+    let viewRenderView (m : MModel) = 
         let annotations, discs = DrawingApp.view m.scene.config mdrawingConfig m.scene.navigation.camera.view m.drawing
             
         let discs = 
@@ -991,171 +1016,24 @@ module ViewerApp =
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed discs m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
-        let control = DomNode.RenderControl(att, cam, cmds, None)
-                                                                                         
-        let config (model:MModel) = 
-          ConfigProperties.view model.scene.config 
-            |> UI.map ConfigPropertiesMessage 
-            |> Mod.constant
-          
-        let configUI =
-          div[][
-            GuiEx.accordion "ViewerConfig" "Settings" true [
-                 Incremental.div AttributeMap.empty (AList.ofModSingle (config m))
-            ]
-            GuiEx.accordion "Coordinate System" "Map Signs" false [
-                ReferenceSystemApp.UI.view m.scene.referenceSystem m.scene.navigation.camera |> UI.map ReferenceSystemMessage
-            ]
-            GuiEx.accordion "Camera" "Camera Retro" false [
-                CameraProperties.view m.scene.navigation.camera
-            ]
-          ]          
-                
-        let viewPlanProperties (model:MModel) =
-            model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage 
+        DomNode.RenderControl((renderControlAttributes m), cam, cmds, None)
 
-        let viewPlannerUI =             
-          div [][
-            GuiEx.accordion "ViewPlans" "Write" true [
-              ViewPlan.UI.viewViewPlans m.scene.viewPlans |> UI.map ViewPlanMessage
-            ]
-            GuiEx.accordion "Properties" "Content" true [
-              Incremental.div AttributeMap.empty (viewPlanProperties m |> AList.ofModSingle)
-            ]
-          ]                
-      
-        let dynamicTop =
-          adaptive {
-            let! interaction = m.interaction
-            match interaction with
-              | Interactions.DrawAnnotation -> 
-                return DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
-              | Interactions.PlaceRover ->
-                return ViewPlan.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
-              | Interactions.PlaceCoordinateSystem -> 
-                return Html.Layout.horizontal [
-                    Html.Layout.boxH [ Html.SemUi.dropDown' m.scene.referenceSystem.scaleChart m.scene.referenceSystem.selectedScale ReferenceSystemApp.Action.SetScale id ]
-                    //Html.Layout.boxH [ i [clazz "unhide icon"][] ]
-                    Html.Layout.boxH [ GuiEx.iconToggle m.scene.referenceSystem.isVisible "unhide icon" "hide icon" ReferenceSystemApp.Action.ToggleVisible  ]                        
-                    ] |> UI.map ReferenceSystemMessage
-              | _ -> 
-                return div[][]
-          }
-        
-        let style' = "color: white; font-family:Consolas;"
-        let scenepath = 
-          Incremental.div (AttributeMap.Empty) (
-            alist {
-              let! scenePath = m.scene.scenePath 
-              let icon = 
-                match scenePath with
-                  | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
-                  | None -> div[][]  
-                      
-              let scenePath   = Mod.bindOption m.scene.scenePath "" (fun sp -> Mod.constant sp)
-              yield  div [] [ 
-                //Html.Layout.boxH [ text "Scene Path:" ]
-                Html.Layout.boxH [ icon ]
-                Html.Layout.boxH [ 
-                  Incremental.text (scenePath 
-                      |> Mod.map(fun x -> 
-                          if x.IsEmpty() then "*new scene" else Path.GetFileName x))  
-                ]
-              ]
-            }
-
-          )
-          
-        
-        let interactionText (i : Interactions) =
-          match i with 
-            | Interactions.PickExploreCenter     -> "CTRL+click to place arcball center"
-            | Interactions.PlaceCoordinateSystem -> "CTRL+click to place coordinate cross"
-            | Interactions.DrawAnnotation        -> "CTRL+click to pick point on surface"
-            | Interactions.PlaceRover            -> "CTRL+click to (1) place rover and (2) pick lookat"
-            | Interactions.TrafoControls         -> "not implemented"
-            | Interactions.PlaceSurface          -> "not implemented"
-            | _ -> ""
-
-
-        let topMenuItems = [             
-             Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
-          
-             Html.Layout.horizontal [
-               Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
-               Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                                         
-               Incremental.div  AttributeMap.empty (AList.ofModSingle dynamicTop)
-               Html.Layout.boxH [ 
-                 div[style "font-style:italic; width:100%; text-align:right"] [
-                   Incremental.text (m.interaction |> Mod.map interactionText)
-                 ]]
-             ]
-          
-             Html.Layout.horizontal [
-               Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
-               Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
-             ] 
-             Html.Layout.horizontal [
-               scenepath
-             ] 
-             //[ Html.Layout.finish ]
-             //Html.Layout.horizontal [
-             //  Html.Layout.boxH [ Incremental.text (m.interaction |> Mod.map interactionText) ]
-             //] 
-             //Html.Layout.horizontal [
-             //  Html.Layout.boxH [ Incremental.text (m.scene.userFeedback) ]
-             //] 
-        ]        
-
-        let topMenu =
-            div[clazz "ui menu"; style "padding:0; margin:0; border:0"] [
-                yield Gui.TopMenu.menu m
-                for t in topMenuItems do
-                    yield div [clazz "item topmenu"] [t]
-            ]
-                                           
-        let dnsColorLegend =
-          FalseColorLegendApp.Draw.createColorLegendDnS m.drawing.colorLegend (V2d(100.0, 200.0))
-                
-        let scalarsColorLegend =
-            let attr = 
-              AttributeMap.ofList[ 
-                "display"               => "block"; 
-                "width"                 => "90px"; 
-                "height"                => "75%"; //100%
-                "preserveAspectRatio"   => "xMidYMid meet"; 
-                "style"                 => "position:absolute; right: 5px; top: 25%"
-              ]
-            Incremental.Svg.svg attr (SurfaceApp.showColorLegend m.scene.surfacesModel)                        
-                        
+    let view (m : MModel) = //(localhost: string)
+       
         let myCss = [
           { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
           { kind = Stylesheet;  name = "semui-overrides"; url = "semui-overrides.css" }
           { kind = Script;      name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
         ]
         
-        let ioverlayed =
-            let annos = 
-              annotations
-                    |> Sg.map DrawingMessage
-                    |> Sg.fillMode (Mod.constant FillMode.Fill)
-                    |> Sg.cullMode (Mod.constant CullMode.None)
-            [annos] |> Sg.ofList
-
-        // instrument view control
-        let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped ioverlayed discs m // m.scene.surfacesModel.sgGrouped overlayed discs m
-        let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
-        let icontrol = DomNode.RenderControl(att, icam, icmds, None) //AttributeMap.Empty
-                       
-                                 
         let bodyAttributes = [style "background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden;"] //overflow-y : visible
 
         page (fun request -> 
           match Map.tryFind "page" request.queryParams with
             | Some "instrumentview" ->
                 require (myCss) (
-                  body [style "background: #1B1C1E; height:100%; width:100%"] [ 
-                        icontrol 
+                  body [style "background: #1B1C1E"] [ //; height:100%; width:100%
+                        viewInstrumentView m 
                         Viewer.Gui.textOverlaysInstrumentView m.scene.viewPlans
                   ]
                 )
@@ -1163,11 +1041,11 @@ module ViewerApp =
                 require (myCss) (
                   body [ style "background: #1B1C1E; height:100%; width:100%"] [
                       div [style "background:#000;"] [
-                          control
+                          viewRenderView m
                           Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
                           Viewer.Gui.textOverlaysUserFeedback m.scene
-                          dnsColorLegend
-                          scalarsColorLegend ]
+                          Viewer.Gui.dnsColorLegend m
+                          Viewer.Gui.scalarsColorLegend m]
                   ]                
                 )
             | Some "surfaces" -> 
@@ -1180,16 +1058,16 @@ module ViewerApp =
             | Some "bookmarks" -> 
                 require (myCss) (body bodyAttributes [Gui.Bookmarks.bookmarkUI m])
             | Some "config" -> 
-                require (myCss) (body bodyAttributes [configUI])
+                require (myCss) (body bodyAttributes [Gui.Config.configUI m])
             | Some "viewplanner" -> 
-                require (myCss) (body bodyAttributes [viewPlannerUI])
+                require (myCss) (body bodyAttributes [Gui.ViewPlanner.viewPlannerUI m])
             | Some "minerva" -> 
                let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
                require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])            
             | None -> 
                 require (myCss) (
                   body [][                    
-                    topMenu
+                    Gui.TopMenu.getTopMenu m
                     div[clazz "dockingMainDings"] [
                       m.scene.dockConfig
                         |> docking [                                           

@@ -38,6 +38,7 @@ type Interactions =
     | TrafoControls         = 4
     | PlaceSurface          = 5
     | PickAnnotation        = 6
+    | PickSurface           = 7
     //| DrawLog               = 7
     //| AlignPick             = 5
 
@@ -274,7 +275,7 @@ module Viewer =
                   stack 0.5 (Some "config") [
                     {id = "config"; title = Some " Config "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                  //   {id = "bookmarks"; title = Some " Bookmarks"; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                 //   {id = "viewplanner"; title = Some " ViewPlanner "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "viewplanner"; title = Some " ViewPlanner "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "corr_mappings"; title = Some " RockTypes "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "corr_semantics"; title = Some " Semantics "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                    // {id = "minerva"; title = Some " Minerva "; weight = 0.4; deleteInvisible = None; isCloseable = None }

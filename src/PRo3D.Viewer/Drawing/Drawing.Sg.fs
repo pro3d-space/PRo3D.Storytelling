@@ -288,7 +288,7 @@ module Sg =
         //     |> Sg.uniform "LineWidth" width
         //     |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
              
-        let mask = //TODO LF refactor ... remove duplicate code in outline point and outline line ... make reusable
+        let mask = 
             sg
             |> Sg.noEvents
             |> Sg.pass pass0

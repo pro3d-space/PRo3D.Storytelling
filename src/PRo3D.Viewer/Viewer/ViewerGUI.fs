@@ -27,6 +27,7 @@ open System.IO
 open PRo3D
 open PRo3D.Groups
 open PRo3D.ReferenceSystem
+open PRo3D.Surfaces
 
 module Gui = 
   open PRo3d.Mutable
@@ -40,6 +41,22 @@ module Gui =
 
             return (DipAndStrike.pitch up v.Forward, DipAndStrike.bearing up north v.Forward)
           }
+
+  let dnsColorLegend (m:MModel) =
+          FalseColorLegendApp.Draw.createColorLegendDnS m.drawing.colorLegend (V2d(100.0, 200.0))
+                
+  let scalarsColorLegend (m:MModel) =
+        let attr = 
+            AttributeMap.ofList[ 
+                "display"               => "block"; 
+                "width"                 => "90px"; 
+                "height"                => "75%"; //100%
+                "preserveAspectRatio"   => "xMidYMid meet"; 
+                "style"                 => "position:absolute; right: 5px; top: 25%"
+            ]
+        Incremental.Svg.svg attr (SurfaceApp.showColorLegend m.scene.surfacesModel)   
+        
+  
 
   let textOverlays (m : MReferenceSystem) (cv : IMod<CameraView>) = 
     div [js "oncontextmenu" "event.preventDefault();"] [ 
@@ -359,6 +376,96 @@ module Gui =
           )
         ]
       ]
+    
+    let dynamicTop (m:MModel) =
+          adaptive {
+            let! interaction = m.interaction
+            match interaction with
+              | Interactions.DrawAnnotation -> 
+                return DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
+              | Interactions.PlaceRover ->
+                return ViewPlan.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
+              | Interactions.PlaceCoordinateSystem -> 
+                return Html.Layout.horizontal [
+                    Html.Layout.boxH [ Html.SemUi.dropDown' m.scene.referenceSystem.scaleChart m.scene.referenceSystem.selectedScale ReferenceSystemApp.Action.SetScale id ]
+                    //Html.Layout.boxH [ i [clazz "unhide icon"][] ]
+                    Html.Layout.boxH [ GuiEx.iconToggle m.scene.referenceSystem.isVisible "unhide icon" "hide icon" ReferenceSystemApp.Action.ToggleVisible  ]                        
+                    ] |> UI.map ReferenceSystemMessage
+              | _ -> 
+                return div[][]
+          }
+        
+    let style' = "color: white; font-family:Consolas;"
+    let scenepath (m:MModel) = 
+        Incremental.div (AttributeMap.Empty) (
+            alist {
+                let! scenePath = m.scene.scenePath 
+                let icon = 
+                    match scenePath with
+                        | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
+                        | None -> div[][]  
+                      
+                let scenePath   = Mod.bindOption m.scene.scenePath "" (fun sp -> Mod.constant sp)
+                yield  div [] [ 
+                //Html.Layout.boxH [ text "Scene Path:" ]
+                    Html.Layout.boxH [ icon ]
+                    Html.Layout.boxH [ 
+                        Incremental.text (scenePath 
+                            |> Mod.map(fun x -> 
+                                if x.IsEmpty() then "*new scene" else Path.GetFileName x))  
+                    ]
+                ]
+            }
+
+    )
+        
+    let interactionText (i : Interactions) =
+        match i with 
+        | Interactions.PickExploreCenter     -> "CTRL+click to place arcball center"
+        | Interactions.PlaceCoordinateSystem -> "CTRL+click to place coordinate cross"
+        | Interactions.DrawAnnotation        -> "CTRL+click to pick point on surface"
+        | Interactions.PlaceRover            -> "CTRL+click to (1) place rover and (2) pick lookat"
+        | Interactions.TrafoControls         -> "not implemented"
+        | Interactions.PlaceSurface          -> "CTRL+click to place surface"
+        | _ -> ""
+
+    let topMenuItems (m:MModel) = [ 
+        
+        Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
+          
+        Html.Layout.horizontal [
+            Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
+            Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                                         
+            Incremental.div  AttributeMap.empty (AList.ofModSingle (dynamicTop m))
+            Html.Layout.boxH [ 
+                div[style "font-style:italic; width:100%; text-align:right"] [
+                    Incremental.text (m.interaction |> Mod.map interactionText)
+                ]]
+        ]
+          
+        Html.Layout.horizontal [
+            Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
+            Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
+        ] 
+        Html.Layout.horizontal [
+            scenepath m
+        ] 
+        //[ Html.Layout.finish ]
+        //Html.Layout.horizontal [
+        //  Html.Layout.boxH [ Incremental.text (m.interaction |> Mod.map interactionText) ]
+        //] 
+        //Html.Layout.horizontal [
+        //  Html.Layout.boxH [ Incremental.text (m.scene.userFeedback) ]
+        //] 
+    ]        
+
+    let getTopMenu (m:MModel) =
+        div[clazz "ui menu"; style "padding:0; margin:0; border:0"] [
+            yield (menu m)
+            for t in (topMenuItems m) do
+                yield div [clazz "item topmenu"] [t]
+        ]
+
 
   module Annotations =
     
@@ -468,7 +575,38 @@ module Gui =
           GuiEx.accordion "Dip&Strike ColorLegend" "paint brush" false [
               Incremental.div AttributeMap.empty (AList.ofModSingle(viewDnSColorLegendUI m))] 
           ]    
+  module Config =
+    let config (model:MModel) = 
+          ConfigProperties.view model.scene.config 
+            |> UI.map ConfigPropertiesMessage 
+            |> Mod.constant
+          
+    let configUI (m:MModel) =
+        div[][
+            GuiEx.accordion "ViewerConfig" "Settings" true [
+                    Incremental.div AttributeMap.empty (AList.ofModSingle (config m))
+            ]
+            GuiEx.accordion "Coordinate System" "Map Signs" false [
+                ReferenceSystemApp.UI.view m.scene.referenceSystem m.scene.navigation.camera |> UI.map ReferenceSystemMessage
+            ]
+            GuiEx.accordion "Camera" "Camera Retro" false [
+                CameraProperties.view m.scene.navigation.camera
+            ]
+        ] 
+        
+  module ViewPlanner = 
+    let viewPlanProperties (model:MModel) =
+            model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage 
 
+    let viewPlannerUI (m:MModel) =             
+        div [][
+            GuiEx.accordion "ViewPlans" "Write" true [
+                ViewPlan.UI.viewViewPlans m.scene.viewPlans |> UI.map ViewPlanMessage
+            ]
+            GuiEx.accordion "Properties" "Content" true [
+                Incremental.div AttributeMap.empty (viewPlanProperties m |> AList.ofModSingle)
+            ]
+        ]                
   module Bookmarks =
     let bookmarkGroupProperties (model:MModel) =                                       
           Groups.viewUI model.scene.bookmarksModel.bookmarks 

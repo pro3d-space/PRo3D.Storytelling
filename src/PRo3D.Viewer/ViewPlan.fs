@@ -236,7 +236,9 @@ module ViewPlan =
             | Some i -> let ex = transformExtrinsics vp i.extrinsics
                         let frust = model.instrumentFrustum
                         let hfov = i.intrinsics.horizontalFieldOfView
-                        let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far 1.0
+                        let resh = float(i.intrinsics.horizontalResolution)
+                        let resv = float(i.intrinsics.verticalResolution)
+                        let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far (resh/resv)
                         {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt ex.position (ex.position + ex.camLookAt) ex.camUp };
                                     instrumentFrustum = ifrustum} //CameraController.initial
                         //{ model with instrumentCam = cam } 
