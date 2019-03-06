@@ -211,13 +211,18 @@ module ViewerUtils =
 
         let triangleFilter = surf |> Mod.bind(fun s -> s.triangleSize.value)
 
+        let bla : SamplerStateDescription -> SamplerStateDescription = 
+          (fun x -> 
+            x.Filter <- new TextureFilter(TextureFilterMode.Linear, TextureFilterMode.Point, TextureFilterMode.Linear, true ); 
+            x)
 
         let test =             
           surface.sceneGraph
             |> Mod.map createSg
             |> Sg.dynamic
             |> Sg.trafo (Transformations.fullTrafo surf refsys)
-            |> Sg.uniform "selected"       isSelected
+            |> Sg.modifySamplerState (DefaultSemantic.DiffuseColorTexture)(Mod.constant(bla))
+            |> Sg.uniform "selected"      (Mod.constant false) // isSelected
             |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
             |> addAttributeFalsecolorMappingParameters surf
             |> Sg.uniform "TriangleSize"   triangleFilter  //triangle filter
