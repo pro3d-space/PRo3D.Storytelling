@@ -181,7 +181,7 @@ module Sg =
   //              }
 
                
-  let pickingLine (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking: bool) = 
+  let pickableLine (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking: bool) = 
     match (points |> AList.toArray).Length with
         | 0  -> Sg.empty //| 1
         |  _ ->
@@ -208,7 +208,7 @@ module Sg =
                   |> Sg.shader {
                         do! Shader.stableTrafo
                         do! DefaultSurfaces.vertexColor
-                        do! Shader.thickLine2    
+                        do! Shader.thickLine2
                     }      
                   //|> Sg.pass pass0
                   |> Sg.trafo trafo
@@ -463,7 +463,7 @@ module Sg =
       //let selectionColor = Mod.map2(fun x color -> if x then C4b.VRVisGreen else color) picked c
 
       let pickingLines = 
-        pickingLine points conf.offset c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
+        pickableLine points conf.offset c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
         //aset
         //    {
         //        let! picked = picked
