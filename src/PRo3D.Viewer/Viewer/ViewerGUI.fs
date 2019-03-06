@@ -424,9 +424,11 @@ module Gui =
         | Interactions.PickExploreCenter     -> "CTRL+click to place arcball center"
         | Interactions.PlaceCoordinateSystem -> "CTRL+click to place coordinate cross"
         | Interactions.DrawAnnotation        -> "CTRL+click to pick point on surface"
+        | Interactions.PickAnnotation        -> "CTRL+click on annotation to select"
+        | Interactions.PickSurface           -> "CTRL+click on surface to select"
         | Interactions.PlaceRover            -> "CTRL+click to (1) place rover and (2) pick lookat"
         | Interactions.TrafoControls         -> "not implemented"
-        | Interactions.PlaceSurface          -> "CTRL+click to place surface"
+        | Interactions.PlaceSurface          -> "not implemented"
         | _ -> ""
 
     let topMenuItems (m:MModel) = [ 
