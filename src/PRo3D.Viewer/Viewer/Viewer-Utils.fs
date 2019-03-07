@@ -196,7 +196,7 @@ module ViewerUtils =
             sg 
             |> Sg.noEvents 
             |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
-            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))        
+            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))
 
         let pickable = 
           Mod.map2( fun (a:Box3d) (b:Trafo3d) -> 
