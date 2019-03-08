@@ -37,6 +37,7 @@ open Aardium
 open System.Threading
 open PRo3D.Base
 
+
 [<DataContract>]
 type Calc =
    { 
@@ -108,11 +109,16 @@ let checkLicense () =
   | false -> 
     licenseText <- " - " + lic.userName + ", " + lic.institution + ", " + validateAKey.DaysLeft.ToString() + " days left"
 
+
+
 [<EntryPoint;STAThread>]
 let main argv = 
     //Xilium.CefGlue.ChromiumUtilities.unpackCef()
     //Chromium.init argv
     
+    PRo3D.Versioned.Testing.writeStuff()
+    Console.ReadLine() |> ignore
+
     System.Threading.ThreadPool.SetMinThreads(12, 12) |> ignore
 
     Ag.initialize()
