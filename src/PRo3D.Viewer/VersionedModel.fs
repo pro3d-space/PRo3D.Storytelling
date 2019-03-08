@@ -176,6 +176,7 @@ module ViewConfigModel' =
         let! (lodColoring : bool)         = Json.read "lodColoring"
         let! importTriangleSize           = Json.readWith Ext.fromJson<NumericInput,Ext> "importTriangleSize"
         let! (drawOrientationCube : bool) = Json.read "drawOrientationCube"                        
+        let! depthoffset           = Json.readWith Ext.fromJson<NumericInput,Ext> "depthOffset"
     
         //return initial
     
@@ -190,21 +191,21 @@ module ViewConfigModel' =
             lodColoring           = lodColoring
             importTriangleSize    = importTriangleSize      
             drawOrientationCube   = drawOrientationCube
+            offset = depthoffset
         }
       }
-
    
-
 type ViewConfigModel' with 
   static member FromJson(_ : ViewConfigModel') = 
     json {
         let! v = Json.read "version"
         match v with
-            | 0 -> return! ViewConfigModel'.V0.read            
+            | 0 -> return! ViewConfigModel'.V0.read
+            | 1 -> return! ViewConfigModel'.V1.read
     }
   static member ToJson (x : ViewConfigModel') =
          json {
-             do! Json.write "drawOrientationCube" x.drawOrientationCube                
+             do! Json.write "drawOrientationCube" x.drawOrientationCube                       
              do! Json.writeWith (Ext.toJson<NumericInput,Ext>) "importTriangleSize" x.importTriangleSize
              do! Json.write "lodColoring" x.lodColoring
              do! Json.writeWith (Ext.toJson<NumericInput,Ext>) "dnsPlaneSize" x.dnsPlaneSize
@@ -213,6 +214,7 @@ type ViewConfigModel' with
              do! Json.writeWith (Ext.toJson<NumericInput,Ext>) "navigationSensitivity" x.navigationSensitivity
              do! Json.writeWith (Ext.toJson<NumericInput,Ext>) "farPlane" x.farPlane
              do! Json.writeWith (Ext.toJson<NumericInput,Ext>) "nearPlane" x.nearPlane
+             do! Json.writeWith (Ext.toJson<NumericInput,Ext>) "offset" x.offset
              do! Json.write "version" x.version
          }
 
@@ -228,9 +230,9 @@ module Testing =
 
     let v0Path = ".\configtest_v0.json"
 
-    let result = oldconfig |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty 
-    Log.line "writing configjson v%A to %A: \n %A" oldconfig.version v0Path result
-    result |> writeToFile v0Path
+    //let result = oldconfig |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty 
+    //Log.line "writing configjson v%A to %A: \n %A" oldconfig.version v0Path result
+    //result |> writeToFile v0Path
 
     let (v0config : ViewConfigModel') = v0Path |> readFromFile |> Json.parse |> Json.deserialize
 

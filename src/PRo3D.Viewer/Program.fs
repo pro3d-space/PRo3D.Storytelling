@@ -114,10 +114,7 @@ let checkLicense () =
 [<EntryPoint;STAThread>]
 let main argv = 
     //Xilium.CefGlue.ChromiumUtilities.unpackCef()
-    //Chromium.init argv
-    
-    PRo3D.Versioned.Testing.writeStuff()
-    Console.ReadLine() |> ignore
+    //Chromium.init argv        
 
     System.Threading.ThreadPool.SetMinThreads(12, 12) |> ignore
 
