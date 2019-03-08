@@ -60,8 +60,6 @@ module Option =
           | true  -> Some v
           | false -> None
 
-
-
 type Points = list<V3d>
 
 type Projection = Linear = 0 | Viewpoint = 1 | Sky = 2
@@ -117,7 +115,6 @@ type FalseColorsShaderParams = {
     //rParams  : V4d // (lb, ub, step, numOfRG)
 }
 
-
 module FalseColorsModel = 
     let dnSInterv  = {
         value   = 5.0
@@ -151,7 +148,6 @@ module FalseColorsModel =
             lowerColor      = { c = C4b.Blue }
             upperColor      = { c = C4b.Red }
         }
-
    
     let scalarsInterv  = {
         value   = 5.0

@@ -78,8 +78,9 @@
   -->
   <ItemGroup>
     <Compile Include="Config.fs" />
-    <Compile Include="Model.fs" />
-    <Compile Include="VersionedModel.fs" />
+    <Compile Include="Models\ChironExt.fs" />
+    <Compile Include="Models\Model.fs" />
+    <Compile Include="Models\VersionedModel.fs" />
     <Compile Include="Utilities.fs" />
     <Compile Include="GuiEx.fs" />
     <Compile Include="ReferenceSystem-Model.fs" />

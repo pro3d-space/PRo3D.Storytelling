@@ -10,79 +10,152 @@ open Chiron
 
 #nowarn "0686"
 
-[<AutoOpen>]
-module ChironPrimitives =      
-  type NumericInput
-    with 
-      static member FromJson(_ : NumericInput) = 
-        json {
-            let! value  = Json.read "value"
-            let! min    = Json.read "min"
-            let! max    = Json.read "max"
-            let! step   = Json.read "step"
-            let! format = Json.read "format"
-      
-            return {
-                value   = value
-                min     = min
-                max     = max
-                step    = step
-                format  = format
-            }
+[<DomainType>]
+type Statistics' = {
+  version      : int
+  average      : float
+  min          : float
+  max          : float
+  stdev        : float
+  sumOfSquares : float
+}
+
+module Statistics' =
+  let current = 0
+  //conversion
+  let convert (old : Statistics) : Statistics' =
+    failwith "convert non-versioned in versioned form"
+
+  //initial
+  let initial = 
+     {
+        version = current
+        average      = Double.NaN
+        min          = Double.NaN
+        max          = Double.NaN
+        stdev        = Double.NaN
+        sumOfSquares = Double.NaN
+      }
+  //version modules
+  module V0 =
+    let read = 
+      json {
+        let! average      = Json.read "average"
+        let! min          = Json.read "min"
+        let! max          = Json.read "max"
+        let! stdev        = Json.read "stdev"
+        let! sumOfSquares = Json.read "sumOfSquares"        
+
+        return {
+          version      = current
+          average      = average
+          min          = min         
+          max          = max         
+          stdev        = stdev       
+          sumOfSquares = sumOfSquares       
         }
-      static member ToJson (x : NumericInput) =
-        json {
-            do! Json.write "value"  x.value
-            do! Json.write "min"    x.min
-            do! Json.write "max"    x.max
-            do! Json.write "step"   x.step
-            do! Json.write "format" x.format
-          }
+      }
+  
+  type Statistics' with 
+    static member FromJson(_ : Statistics') = 
+      json {
+          let! v = Json.read "version"
+          match v with            
+            | 0 -> return! V0.read 
+            | _ -> return! v |> sprintf "don't know version %A  of Statistics" |> Json.error
+      }
+    static member ToJson (x : Statistics') =
+      json {
+          do! Json.write "sumOfSquares" x.sumOfSquares            
+          do! Json.write "stdev" x.stdev            
+          do! Json.write "max" x.max            
+          do! Json.write "min" x.min                                 
+          do! Json.write "average" x.average             
+          do! Json.write "version" x.version
+      }
 
-type Ext = Ext
- 
-type Ext with
-     static member FromJson1 (ext : Ext, v : NumericInput) = 
-         json {
-             let! value  = Json.read "value"
-             let! min    = Json.read "min"
-             let! max    = Json.read "max"
-             let! step   = Json.read "step"
-             let! format = Json.read "format"
-     
-             return {
-                 value   = value
-                 min     = min
-                 max     = max
-                 step    = step
-                 format  = format
-             }
-         }
-     static member ToJson1 (ext : Ext, v : NumericInput) = 
-       json {
-         do! Json.write "value"  v.value
-         do! Json.write "min"    v.min
-         do! Json.write "max"    v.max
-         do! Json.write "step"   v.step
-         do! Json.write "format" v.format
-       }
-       
-     static member FromJson1 (ext : Ext, v : int) = 
-           json {       
-               return 1
-           }
-module Ext =
-  let inline fromJsonDefaults (a: ^a, _: ^b) =
-    ((^a or ^b or ^e) : (static member FromJson1: ^e * ^a -> ^a Json)(Unchecked.defaultof<_>,a))
+[<DomainType>]
+type DipAndStrikeResults' = {
+    version         : int
+    plane           : Plane3d
+    dipAngle        : float
+    dipDirection    : V3d
+    strikeDirection : V3d
+    dipAzimuth      : float
+    strikeAzimuth   : float
+    centerOfMass    : V3d
+    error           : Statistics
+}
 
-  let inline fromJson x =
-    fst (fromJsonDefaults (Unchecked.defaultof<'a>, FromJsonDefaults) x)
+module DipAndStrikeResults' =
+  let current = 0
+  //conversion
+  let convert (old : DipAndStrikeResults) : DipAndStrikeResults' =
+    failwith ""
 
-  let inline toJsonDefaults (a: ^a, _: ^b) =
-    ((^a or ^b or ^e) : (static member ToJson1: ^e * ^a -> unit Json)(Unchecked.defaultof<_>,a))
+  //initial
+  //version modules
 
-  let inline toJson (x: 'a) =
-    snd (toJsonDefaults (x, ToJsonDefaults) (Object (Map.empty)))
+[<DomainType>]
+type AnnotationResults' = {
+    version     : int
+    height      : float
+    heightDelta : float
+    avgAltitude : float
+    length      : float
+    wayLength   : float
+    bearing     : float
+    slope       : float
+}
+
+module AnnotationResults' =
+  let current = 0
+  //conversion
+  let convert (old : AnnotationResults) : AnnotationResults' =
+    failwith ""
+
+  //initial
+  //version modules
+
+[<DomainType>]
+type Annotation' = {
+  version     : int
+
+  [<PrimaryKey; NonIncremental>]
+  key         : Guid
+
+  modelTrafo  : Trafo3d
+
+  geometry    : Geometry
+  projection  : Projection
+  semantic    : Semantic
+
+  points      : plist<V3d>
+  segments    : plist<Segment>
+
+  color       : ColorInput
+  thickness   : NumericInput
+
+  results     : Option<AnnotationResults>
+  dnsResults  : Option<DipAndStrikeResults>
+
+  visible     : bool
+  showDns     : bool
+  text        : string
+  textsize    : NumericInput
+
+  surfaceName : string
+  view        : CameraView
+}
+
+module Annotation' =
+  let current = 0
+  //conversion
+  let convert (old : Annotation) : Annotation' =
+    failwith ""
+
+  //initial
+  //version modules
 
 [<DomainType>]
 type ViewConfigModel' = {
@@ -163,7 +236,6 @@ module ViewConfigModel' =
             offset                = PRo3D.ViewConfigModel.depthOffset               
         }
       }
-
   module V1 =
     let read = 
       json {
@@ -202,6 +274,7 @@ type ViewConfigModel' with
         match v with
             | 0 -> return! ViewConfigModel'.V0.read
             | 1 -> return! ViewConfigModel'.V1.read
+            | _ -> return! v |> sprintf "don't know version %A  of ViewConfigModel" |> Json.error
     }
   static member ToJson (x : ViewConfigModel') =
          json {
