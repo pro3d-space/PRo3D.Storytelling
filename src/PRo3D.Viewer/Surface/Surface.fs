@@ -135,8 +135,7 @@ module Surface =
                    
                          
  module SurfaceApp =
-    open System.Diagnostics
-    open Aardvark.Rendering.GL.Compiler
+    open System.Diagnostics    
 
     open PRo3DCompability    
     open Aardvark.VRVis

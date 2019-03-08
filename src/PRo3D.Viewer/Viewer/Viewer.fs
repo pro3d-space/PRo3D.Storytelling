@@ -815,7 +815,8 @@ module ViewerApp =
                   | ConfigProperties.Action.SetNearPlane _ | ConfigProperties.Action.SetFarPlane _ ->
                     let fov = m.frustum |> Frustum.horizontalFieldOfViewInDegrees
                     let asp = m.frustum |> Frustum.aspect
-                    let f' = Frustum.perspective fov c'.nearPlane.value c'.farPlane.value asp
+                    let f' = Frustum.perspective fov c'.nearPlane.value c'.farPlane.value asp                    
+
                     { m with frustum = f' }
                   | _ -> m
             | SetMode d,_,_ -> 
@@ -895,10 +896,23 @@ module ViewerApp =
                  { m with animations = createAnimation v newForward m.animations }
               | _ ->                
                 
+               let minerva' = PRo3D.Minerva.App.update m.minervaModel a 
+
+               let viewProj = m.scene.navigation.camera.view.ViewTrafo
+               let points = 
+                 minerva'.data.features 
+                   |> PList.toList 
+                   |> List.map(fun feat -> feat.geometry.positions) 
+                   |> List.concat
+                   |> List.map(fun p -> viewProj.Forward.TransformPos p)
+               
+               points |> Log.line "trafo points minerva %A" 
+               
+
                //MailboxAction.ViewerAction
                //ViewerAction.MinervaActions
                //a |> ViewerAction.MinervaActions |> MailboxAction.ViewerAction
-               { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }
+               { m with minervaModel = minerva' }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
