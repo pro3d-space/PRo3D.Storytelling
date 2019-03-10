@@ -78,6 +78,11 @@
   -->
   <ItemGroup>
     <Compile Include="Config.fs" />
+    <Compile Include="Extensions\Lens.fs" />
+    <Compile Include="Extensions\PList.fs" />
+    <Compile Include="Extensions\Tags.fs" />
+    <Compile Include="Extensions\ThreadPool.fs" />
+    <Compile Include="Extensions\CameraAnimations.fs" />    
     <Compile Include="Models\ChironExt.fs" />
     <Compile Include="Models\Model.fs" />
     <Compile Include="Models\VersionedModel.fs" />
@@ -125,6 +130,34 @@
     <Compile Include="Viewer\Viewer-Utils.fs" />
     <Compile Include="Viewer\ViewerGUI.fs" />
     <Compile Include="Viewer\Viewer.fs" />
+    <EmbeddedResource Include="Storytelling\Annotations.css" />
+    <EmbeddedResource Include="Storytelling\Annotations.js" />
+    <EmbeddedResource Include="Storytelling\Menu.css" />
+    <EmbeddedResource Include="Storytelling\Overlay.css" />
+    <EmbeddedResource Include="Storytelling\Provenance.css" />
+    <EmbeddedResource Include="Storytelling\Provenance.js" />
+    <EmbeddedResource Include="Storytelling\Storyboard.css" />
+    <EmbeddedResource Include="Storytelling\Storyboard.js" />
+    <Compile Include="Storytelling\Decision.fs" />
+    <Compile Include="Storytelling\ZTree.fs" />
+    <Compile Include="Storytelling\AppModel.fs" />
+    <Compile Include="Storytelling\Reduced.fs" />
+    <Compile Include="Storytelling\AnnotationModel.fs" />
+    <Compile Include="Storytelling\AnnotationApp.fs" />
+    <Compile Include="Storytelling\ProvenanceModel.fs" />
+    <Compile Include="Storytelling\ThumbnailModel.fs" />
+    <Compile Include="Storytelling\AnimationModel.fs" />
+    <Compile Include="Storytelling\ViewModel.fs" />
+    <Compile Include="Storytelling\PreviewModel.fs" />
+    <Compile Include="Storytelling\StoryModel.fs" />
+    <Compile Include="Storytelling\ProvenanceApp.fs" />
+    <Compile Include="Storytelling\Model.fs" />
+    <Compile Include="Storytelling\AnimationApp.fs" />
+    <Compile Include="Storytelling\ViewApp.fs" />
+    <Compile Include="Storytelling\PreviewApp.fs" />
+    <Compile Include="Storytelling\ThumbnailApp.fs" />
+    <Compile Include="Storytelling\StoryApp.fs" />
+    <Compile Include="Storytelling\App.fs" />
     <Compile Include="RemoteControlModel.fs" />
     <Compile Include="RemoteControlApp.fs" />
     <Compile Include="Program.fs" />

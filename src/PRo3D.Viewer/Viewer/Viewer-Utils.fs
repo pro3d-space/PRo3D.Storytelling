@@ -233,13 +233,18 @@ module ViewerUtils =
             |> pickable' pickable
             |> Sg.noEvents 
             |> Sg.withEvents [
-                 SceneEventKind.Down, (
-                   fun sceneHit -> 
-                     let surfM = surf       |> Mod.force
-                     let name  = surfM.name |> Mod.force                                                  
-                     Log.warn "spawning picksurface %s" name
-                     true, Seq.ofList [PickSurface (sceneHit,name)])                         
-               ]                                               
+                SceneEventKind.Down, (
+                    fun sceneHit -> 
+                        let surfM = surf       |> Mod.force
+                        let name  = surfM.name |> Mod.force                                                  
+                        Log.warn "spawning picksurface %s" name
+                        true, Seq.ofList [PickSurface (sceneHit,name)]
+                )
+
+                SceneEventKind.Move, (
+                    fun sceneHit -> true, Seq.ofList [HoverSurface sceneHit]
+                )
+            ]                                              
           |> Sg.andAlso (
             (Sg.wireBox (C4b.VRVisGreen |> Mod.constant) pickBox) 
               |> Sg.noEvents

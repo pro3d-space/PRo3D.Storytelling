@@ -79,6 +79,7 @@ type ViewerAction =
     | QuickLoad2
     | DeleteLast
     | AddSg                     of ISg
+    | HoverSurface              of SceneHit    
     | PickSurface               of SceneHit*string
     | PickObject                of V3d*Guid
     | SaveScene                 of string
@@ -126,6 +127,14 @@ and MailboxAction =
 //    noText    : string
 //}
 
+// Used for targeting story annotations; if enabled the scene
+// is picked on hover, saving the result in lastHit
+[<DomainType>]
+type Targeting = {
+    enabled : bool
+    lastHit : V3d
+}
+
 [<DomainType>] 
 type Scene = {
     navigation        : NavigationModel
@@ -142,6 +151,7 @@ type Scene = {
     firstImport       : bool
     userFeedback      : string
     feedbackThreads   : ThreadPool<ViewerAction> 
+    targeting         : Targeting
 }
 
 [<DomainType>] 
@@ -259,34 +269,38 @@ module Viewer =
     let sceneElm = {id = "scene"; title = (Some "Scene"); weight = 0.4; deleteInvisible = None; isCloseable = None }
     
     let initialDockConfig = 
-      config {
-          content (                        
-              horizontal 1.0 [                                                        
-                stack 0.7 None [
-                    {id = "render"; title = Some " Main View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
-                    {id = "instrumentview"; title = Some " Instrument View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
-                ]                            
-                vertical 0.3 [
-                  stack 0.5 None [
-                    //{id = "scene"; title = Some "Scene"; weight = 0.4; deleteInvisible = None }
-                    {id = "surfaces"; title = Some " Surfaces "; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                    {id = "annotations"; title = Some " Annotations "; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                  ]                          
-                  stack 0.5 (Some "config") [
-                    {id = "config"; title = Some " Config "; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                 //   {id = "bookmarks"; title = Some " Bookmarks"; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                    {id = "viewplanner"; title = Some " ViewPlanner "; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                    {id = "corr_mappings"; title = Some " RockTypes "; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                    {id = "corr_semantics"; title = Some " Semantics "; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                   // {id = "minerva"; title = Some " Minerva "; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                  ]
+        config {
+            content (
+                vertical 1.0 [
+                    horizontal 5.0 [                                                        
+                        stack 0.7 None [
+                            {id = "render"; title = Some " Main View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
+                            {id = "instrumentview"; title = Some " Instrument View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
+                        ]                            
+                        vertical 0.3 [
+                            stack 0.5 None [
+                            //{id = "scene"; title = Some "Scene"; weight = 0.4; deleteInvisible = None }
+                            {id = "surfaces"; title = Some " Surfaces "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                            {id = "annotations"; title = Some " Annotations "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                            ]                          
+                            stack 0.5 (Some "config") [
+                            {id = "config"; title = Some " Config "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                            //   {id = "bookmarks"; title = Some " Bookmarks"; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                            {id = "viewplanner"; title = Some " ViewPlanner "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                            {id = "corr_mappings"; title = Some " RockTypes "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                            {id = "corr_semantics"; title = Some " Semantics "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                            // {id = "minerva"; title = Some " Minerva "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                            ]
+                        ]
+                    ]
+
+                    element { id "provenance"; title "History"; isCloseable true; weight 1 }
+                    element { id "storyboard"; title "Storyboard"; isCloseable true; weight 1.25 }
                 ]
-              ]              
-          //  ]
-          )
-          appName "PRo3D"
-          useCachedConfig false
-      }
+            )
+            appName "PRo3D"
+            useCachedConfig false
+        }
 
     //let initFeedback = 
     //     {  loadScene = "loading Scene..."
@@ -313,6 +327,7 @@ module Viewer =
             firstImport     = true
             userFeedback    = ""
             feedbackThreads = ThreadPool.empty
+            targeting       = { enabled = false; lastHit = V3d.Zero }
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing

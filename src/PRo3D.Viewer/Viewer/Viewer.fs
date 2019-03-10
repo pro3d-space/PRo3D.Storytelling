@@ -595,6 +595,15 @@ module ViewerApp =
             | DeleteLast,_,_ -> 
                 File.Delete("./last") |> ignore
                 m
+            | HoverSurface p, _, _  when m.scene.targeting.enabled ->
+                // TODO: Use cache?
+                let r = p.globalRay.Ray
+
+                match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) m.scene.referenceSystem r cache with
+                    | Some (t, _), _ ->
+                        m |> Lens.set (Model.Lens.scene |. Scene.Lens.targeting |. Targeting.Lens.lastHit) (r.Ray.GetPointOnRay t)
+                    | None, _ ->
+                        m                
             | PickSurface (p,name), _ ,true ->              
               let fray = p.globalRay.Ray
               let r = fray.Ray
@@ -1023,7 +1032,7 @@ module ViewerApp =
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
         DomNode.RenderControl((renderControlAttributes m), cam, cmds, None)
 
-    let view (m : MModel) = //(localhost: string)
+    let view (queryParams : string option) (showOverlays : IMod<bool>) (m : MModel) = //(localhost: string)
        
         let myCss = [
           { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
@@ -1033,8 +1042,7 @@ module ViewerApp =
         
         let bodyAttributes = [style "background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden;"] //overflow-y : visible
 
-        page (fun request -> 
-          match Map.tryFind "page" request.queryParams with
+        match queryParams with
             | Some "instrumentview" ->
                 require (myCss) (
                   body [style "background: #1B1C1E"] [ //; height:100%; width:100%
@@ -1044,14 +1052,20 @@ module ViewerApp =
                 )
             | Some "render" -> 
                 require (myCss) (
-                  body [ style "background: #1B1C1E; height:100%; width:100%"] [
-                      div [style "background:#000;"] [
-                          viewRenderView m
-                          Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
-                          Viewer.Gui.textOverlaysUserFeedback m.scene
-                          Viewer.Gui.dnsColorLegend m
-                          Viewer.Gui.scalarsColorLegend m]
-                  ]                
+                    div [style "background:#000;"] [
+                        viewRenderView m
+
+                        Incremental.div AttributeMap.empty <| alist {
+                            let! show = showOverlays
+                            if show then
+                                yield! AList.ofList [
+                                    Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
+                                    Viewer.Gui.textOverlaysUserFeedback m.scene
+                                    Viewer.Gui.dnsColorLegend m
+                                    Viewer.Gui.scalarsColorLegend m
+                                ]
+                        }
+                    ]
                 )
             | Some "surfaces" -> 
                 require (myCss) (
@@ -1069,19 +1083,11 @@ module ViewerApp =
             | Some "minerva" -> 
                let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
                require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])            
-            | None -> 
-                require (myCss) (
-                  body [][                    
+            | None ->
+                require (myCss) (                  
                     Gui.TopMenu.getTopMenu m
-                    div[clazz "dockingMainDings"] [
-                      m.scene.dockConfig
-                        |> docking [                                           
-                           style "width:100%; height:100%; background:#F00"
-                           onLayoutChanged UpdateDockConfig ]
-                    ]
-                  ]
                 )
-            | _ -> body[][])                                            
+            | _ -> body[][]                                            
                    
     let threadPool (m : Model) =
         let unionMany xs = List.fold ThreadPool.union ThreadPool.empty xs
@@ -1111,18 +1117,8 @@ module ViewerApp =
           { m with waypoints = wp }
         | None -> m
     
-    let start (runtime: IRuntime) (signature: IFramebufferSignature) messagingMailbox sendQueue =
-
-        let m = 
-            PRo3D.Viewer.Viewer.initial messagingMailbox 
+    let initial (runtime: IRuntime) (signature: IFramebufferSignature) messagingMailbox =
+        PRo3D.Viewer.Viewer.initial messagingMailbox 
               |> Scene.loadLastScene runtime signature
               |> loadRoverData
               |> loadLastAnnotations
-       
-        App.start {
-            unpersist = Unpersist.instance
-            threads   = threadPool
-            view      = view //localhost
-            update    = update runtime signature sendQueue messagingMailbox
-            initial   = m
-        }

@@ -10,6 +10,52 @@ module Mutable =
 
     
     
+    type MTargeting(__initial : PRo3D.Viewer.Targeting) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Targeting> = Aardvark.Base.Incremental.EqModRef<PRo3D.Viewer.Targeting>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Targeting>
+        let _enabled = ResetMod.Create(__initial.enabled)
+        let _lastHit = ResetMod.Create(__initial.lastHit)
+        
+        member x.enabled = _enabled :> IMod<_>
+        member x.lastHit = _lastHit :> IMod<_>
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3D.Viewer.Targeting) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                ResetMod.Update(_enabled,v.enabled)
+                ResetMod.Update(_lastHit,v.lastHit)
+                
+        
+        static member Create(__initial : PRo3D.Viewer.Targeting) : MTargeting = MTargeting(__initial)
+        static member Update(m : MTargeting, v : PRo3D.Viewer.Targeting) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3D.Viewer.Targeting> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module Targeting =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let enabled =
+                { new Lens<PRo3D.Viewer.Targeting, System.Boolean>() with
+                    override x.Get(r) = r.enabled
+                    override x.Set(r,v) = { r with enabled = v }
+                    override x.Update(r,f) = { r with enabled = f r.enabled }
+                }
+            let lastHit =
+                { new Lens<PRo3D.Viewer.Targeting, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.lastHit
+                    override x.Set(r,v) = { r with lastHit = v }
+                    override x.Update(r,f) = { r with lastHit = f r.lastHit }
+                }
+    
+    
     type MScene(__initial : PRo3D.Viewer.Scene) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Scene> = Aardvark.Base.Incremental.EqModRef<PRo3D.Viewer.Scene>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Scene>
@@ -26,6 +72,7 @@ module Mutable =
         let _firstImport = ResetMod.Create(__initial.firstImport)
         let _userFeedback = ResetMod.Create(__initial.userFeedback)
         let _feedbackThreads = ResetMod.Create(__initial.feedbackThreads)
+        let _targeting = MTargeting.Create(__initial.targeting)
         
         member x.navigation = _navigation
         member x.interaction = _interaction :> IMod<_>
@@ -40,6 +87,7 @@ module Mutable =
         member x.firstImport = _firstImport :> IMod<_>
         member x.userFeedback = _userFeedback :> IMod<_>
         member x.feedbackThreads = _feedbackThreads :> IMod<_>
+        member x.targeting = _targeting
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.Scene) =
@@ -59,6 +107,7 @@ module Mutable =
                 ResetMod.Update(_firstImport,v.firstImport)
                 ResetMod.Update(_userFeedback,v.userFeedback)
                 ResetMod.Update(_feedbackThreads,v.feedbackThreads)
+                MTargeting.Update(_targeting, v.targeting)
                 
         
         static member Create(__initial : PRo3D.Viewer.Scene) : MScene = MScene(__initial)
@@ -152,6 +201,12 @@ module Mutable =
                     override x.Get(r) = r.feedbackThreads
                     override x.Set(r,v) = { r with feedbackThreads = v }
                     override x.Update(r,f) = { r with feedbackThreads = f r.feedbackThreads }
+                }
+            let targeting =
+                { new Lens<PRo3D.Viewer.Scene, PRo3D.Viewer.Targeting>() with
+                    override x.Get(r) = r.targeting
+                    override x.Set(r,v) = { r with targeting = v }
+                    override x.Update(r,f) = { r with targeting = f r.targeting }
                 }
     
     

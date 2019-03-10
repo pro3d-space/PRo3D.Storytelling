@@ -37,6 +37,7 @@ open Aardium
 open System.Threading
 open PRo3D.Base
 
+open Model
 
 [<DataContract>]
 type Calc =
@@ -168,9 +169,9 @@ let main argv =
     let messagingMailbox = MailboxProcessor.Start(Viewer.messagingMailbox cts, cts.Token)    
 
     let mainApp = 
-        PRo3D.ViewerApp.start runtime signature messagingMailbox sendQueue
+        TopLevelApp.start runtime signature messagingMailbox sendQueue
 
-    let s = { MailboxState.empty with update = mainApp.update Guid.Empty }
+    let s = { MailboxState.empty with update = fun a -> mainApp.update Guid.Empty (a |> Seq.map AppAction) }
     MailboxAction.InitMailboxState s |> messagingMailbox.Post
     
     CooTransformation.initCooTrafo () // should be a function not a value
@@ -201,7 +202,7 @@ let main argv =
     let send msg =
         match msg with
           | RemoteAction.SetCameraView cv ->
-              mainApp.update Guid.Empty (ViewerAction.SetCamera cv |> Seq.singleton)
+              mainApp.update Guid.Empty (ViewerAction.SetCamera cv |> AppAction |> Seq.singleton)
           | RemoteAction.SetView v ->                                
               Log.line "Setting View %A" v
               let frustum = Frustum.perspective v.fovH v.near v.far (float v.resolution.X / float v.resolution.Y)
@@ -212,7 +213,7 @@ let main argv =
                       top    = frustum.top    - v.principalPoint.Y
                       bottom = frustum.bottom - v.principalPoint.Y
                   }
-              mainApp.update Guid.Empty (ViewerAction.SetCameraAndFrustum2 (v.view,frustum) |> Seq.singleton)
+              mainApp.update Guid.Empty (ViewerAction.SetCameraAndFrustum2 (v.view,frustum) |> AppAction |> Seq.singleton)
 
     let remoteApp = 
         App.start (PRo3D.RemoteControlApp.app "http://localhost:54321" send)
