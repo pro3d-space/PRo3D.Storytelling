@@ -116,7 +116,9 @@ and MailboxState = {
 and MailboxAction =
   | ViewerAction  of ViewerAction
   | InitMailboxState of MailboxState
+  | InitMinervaBox of PRo3D.Minerva.MailboxState
   | DrawingAction of PRo3D.Drawing.Action
+ // | MinervaMbAction of PRo3D.Minerva.MailboxAction
 
 
 //[<DomainType>] 
@@ -207,7 +209,7 @@ type Model = {
 
     messagingMailbox : MessagingMailbox
     mailboxState     : MailboxState
-
+    
     minervaModel     : PRo3D.Minerva.Model
             
     [<TreatAsValue>]
@@ -234,7 +236,7 @@ module Viewer =
         state
         
 
-    let messagingMailbox (cancelTokenSrc:CancellationTokenSource) (inbox:MessagingMailbox) =
+    let initMessageLoop (cancelTokenSrc:CancellationTokenSource) (inbox:MessagingMailbox) =
         let rec messageLoop state = async {
             let! msg = inbox.Receive()
             
@@ -278,7 +280,7 @@ module Viewer =
                     {id = "viewplanner"; title = Some " ViewPlanner "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "corr_mappings"; title = Some " RockTypes "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "corr_semantics"; title = Some " Semantics "; weight = 0.4; deleteInvisible = None; isCloseable = None }
-                   // {id = "minerva"; title = Some " Minerva "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "minerva"; title = Some " Minerva "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                   ]
                 ]
               ]              
@@ -295,7 +297,7 @@ module Viewer =
     //        noText    = ""
     //     }
 
-    let initial msgBox = {           
+    let initial msgBox msgBox2 = {           
        // surfaces = HSet.empty
         scene = 
           {
@@ -348,7 +350,7 @@ module Viewer =
            cam        = CameraController.initial.view
          }
 
-        minervaModel = PRo3D.Minerva.Initial.model
+        minervaModel = PRo3D.Minerva.Initial.model msgBox2
         
         //instrumentCamera = { CameraController.initial with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }        
         //instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0

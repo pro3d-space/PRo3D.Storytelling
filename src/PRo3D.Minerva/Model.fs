@@ -8,6 +8,7 @@ open Aardvark.UI
 open FSharp.Data
 open FSharp.Data.JsonExtensions
 open Aardvark.Application
+open PRo3D.Minerva.Communication
 
 type FeatureId = FeatureId of string
 
@@ -38,6 +39,11 @@ type Mastcam_Properties =
     endTime   : DateTime
   }
 
+type ChemCam_Properties =
+  {
+    id        : FeatureId    
+  }
+
 type APXS_Properties =
   {
     id        : FeatureId
@@ -48,22 +54,27 @@ type Properties =
   | FrontHazcam of FrontHazcam_Properties
   | Mastcam     of Mastcam_Properties
   | APXS        of APXS_Properties
+  | ChemCam     of ChemCam_Properties
   member this.id =
     match this with
     | MAHLI       k -> k.id
     | FrontHazcam k -> k.id
     | Mastcam     k -> k.id
     | APXS        k -> k.id
+    | ChemCam     k -> k.id
 
 type Instrument = 
-  | MAHLI        = 0
-  | FrontHazcam  = 1
-  | Mastcam      = 2
-  | APXS         = 3
-  | FrontHazcamR = 4
-  | FrontHazcamL = 5
-  | MastcamR     = 6
-  | MastcamL     = 7
+  | MAHLI          =  0
+  | FrontHazcam    =  1
+  | Mastcam        =  2
+  | APXS           =  3
+  | FrontHazcamR   =  4
+  | FrontHazcamL   =  5
+  | MastcamR       =  6
+  | MastcamL       =  7
+  | ChemLib        =  8
+  | ChemRmi        =  9
+  | NotImplemented = 10
 
 type Geometry = 
   {
@@ -100,11 +111,43 @@ type FeatureCollection =
     features    : plist<Feature>
   }
 
+type MinervaAction =
+  | PerformQueries
+  | PerformIdQuery of list<string>
+  | ConnectVisplore
+  | FlyToProduct of V3d
+
+
+type MessagingMailbox = MailboxProcessor<MailboxAction>
+
+and MailboxState = {
+  events  : list<MailboxAction>
+  update  : seq<MinervaAction> -> unit
+}
+and MailboxAction =
+  | MiniAction  of MinervaAction
+  | InitMailboxState of MailboxState  
+
+module MailboxState = 
+  let empty = 
+    {
+      events = list.Empty
+      update = fun _ -> ()
+    }
+  
 [<DomainType>]
 type Model = 
   {
-    data : FeatureCollection
+    data     : FeatureCollection
     queries  : list<string>
+
+    [<NonIncremental>]
+    comm     : option<Communicator.Communicator>
+
+    vplMessages : ThreadPool<MinervaAction>
+
+    minervaMessagingMailbox : MessagingMailbox
+    minervaMailboxState     : MailboxState
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
@@ -140,14 +183,14 @@ module Model =
  //   let instr = id.ToCharArray() |> Array.takeWhile(fun x -> x <> '_')
    // let instr = new string(instr)
     match id.ToLowerInvariant() with
-      | "mahli"       -> Instrument.MAHLI
-      | "fronthazcam" -> Instrument.FrontHazcam        
-      | "mastcam"     -> Instrument.Mastcam
-      | "apxs"        -> Instrument.APXS
-      | "fronthazcam-right" -> Instrument.FrontHazcamR
-      | "fronthazcam-left"  -> Instrument.FrontHazcamL
-      | "mastcam-right"     -> Instrument.MastcamR
-      | "mastcam-left"      -> Instrument.MastcamL
+      | "mahli"        -> Instrument.MAHLI
+      | "apxs"         -> Instrument.APXS
+      | "fhaz_left_b"  -> Instrument.FrontHazcamL    
+      | "fhaz_right_b" -> Instrument.FrontHazcamR    
+      | "mast_left"    -> Instrument.MastcamR
+      | "mast_right"   -> Instrument.MastcamL
+      | "chemcam_libs" -> Instrument.ChemLib
+      | "chemcam_rmi"  -> Instrument.ChemRmi      
       | _ -> id |> sprintf "unknown instrument %A" |> failwith
 
   let instrumentColor (instr : Instrument) =
@@ -160,6 +203,9 @@ module Model =
     | Instrument.FrontHazcamL -> C4b(166,206,227)
     | Instrument.MastcamR -> C4b(227,26,28)
     | Instrument.MastcamL -> C4b(251,154,153)
+    | Instrument.ChemRmi  -> C4b(173,221,142)
+    | Instrument.ChemLib  -> C4b(49,163,84)
+    | Instrument.NotImplemented -> C4b(0,0,0)
     | _ -> failwith "unknown instrument"
 
 module Initial = 
@@ -170,19 +216,24 @@ module Initial =
       typus       = Typus.Feature
       features    = PList.empty
     }
-
           
   let sites = [
-    @"https://minerva.eox.at/opensearch/collections/MAHLI/json/"
-    @"https://minerva.eox.at/opensearch/collections/FrontHazcam-Right/json/"
-    @"https://minerva.eox.at/opensearch/collections/FrontHazcam-Left/json/"
-    @"https://minerva.eox.at/opensearch/collections/Mastcam-Right/json/"    
-    @"https://minerva.eox.at/opensearch/collections/Mastcam-Left/json/"
-    @"https://minerva.eox.at/opensearch/collections/APXS/json/"
+    //@"https://minerva.eox.at/opensearch/collections/MAHLI/json/"
+    //@"https://minerva.eox.at/opensearch/collections/FrontHazcam-Right/json/"
+    //@"https://minerva.eox.at/opensearch/collections/FrontHazcam-Left/json/"
+    //@"https://minerva.eox.at/opensearch/collections/Mastcam-Right/json/"    
+    //@"https://minerva.eox.at/opensearch/collections/Mastcam-Left/json/"
+    //@"https://minerva.eox.at/opensearch/collections/APXS/json/"
+    @"https://minerva.eox.at/opensearch/collections/all/json/"
   ]
 
-  let model = 
+  let model mailbox = 
     {
       data = data
       queries = sites
+      comm = None
+      vplMessages = ThreadPool.Empty
+
+      minervaMailboxState = MailboxState.empty
+      minervaMessagingMailbox = mailbox
     }

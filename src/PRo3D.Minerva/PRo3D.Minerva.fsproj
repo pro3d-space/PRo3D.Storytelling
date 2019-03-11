@@ -68,10 +68,14 @@
     <Compile Include="AssemblyInfo.fs" />
     <None Include="App.config" />
     <None Include="paket.references" />
+    <Compile Include="Communication/JsonNetworkCmd.fs" />
+    <Compile Include="Communication/Server.fs" />
+    <Compile Include="Communication/Client.fs" />
+    <Compile Include="Communication/NetworkCommunication.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="GeoJSON.fs" />
     <Compile Include="App.fs" />
-    <Compile Include="C:\_work\PRo3D\src\PRo3D.Minerva\Program.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

@@ -76,6 +76,7 @@ module ViewerApp =
     open PRo3d.Align
     open Aardvark.Rendering.GL.OpenGl.Pointers
     open Aardvark.UI.Animation    
+    open System.Threading
                  
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
@@ -678,7 +679,7 @@ module ViewerApp =
                     |> loadRoverData
                     |> loadLastAnnotations  
             | NewScene,_,_ ->
-                let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox with recent = m.recent }
+                let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox m.minervaModel.minervaMessagingMailbox with recent = m.recent }
                 loadRoverData m'
             | KeyDown k, _, _ ->
               let drawingAction =
@@ -825,7 +826,8 @@ module ViewerApp =
                   | ConfigProperties.Action.SetNearPlane _ | ConfigProperties.Action.SetFarPlane _ ->
                     let fov = m.frustum |> Frustum.horizontalFieldOfViewInDegrees
                     let asp = m.frustum |> Frustum.aspect
-                    let f' = Frustum.perspective fov c'.nearPlane.value c'.farPlane.value asp
+                    let f' = Frustum.perspective fov c'.nearPlane.value c'.farPlane.value asp                    
+
                     { m with frustum = f' }
                   | _ -> m
             | SetMode d,_,_ -> 
@@ -903,8 +905,26 @@ module ViewerApp =
                  let newForward = (v - currentView.Location).Normalized
                                     
                  { m with animations = createAnimation v newForward m.animations }
-              | _ -> { m with minervaModel = PRo3D.Minerva.App.update m.minervaModel a }            
-            | _ -> m
+              | _ ->                
+                
+               let minerva' = PRo3D.Minerva.App.update m.minervaModel a 
+
+               let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
+               let points = 
+                 minerva'.data.features 
+                   |> PList.toList 
+                   |> List.map(fun feat -> feat.geometry.positions) 
+                   |> List.concat
+                   |> List.map(fun p -> viewProj.Forward.TransformPosProj p)
+               
+               points |> Log.line "trafo points minerva %A" 
+               
+
+               //MailboxAction.ViewerAction
+               //ViewerAction.MinervaActions
+               //a |> ViewerAction.MinervaActions |> MailboxAction.ViewerAction
+               { m with minervaModel = minerva' }
+            | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
       Sg.sphere 5 color size 
@@ -1102,7 +1122,9 @@ module ViewerApp =
                   |> ThreadPool.map Navigation.ArcBallAction |> ThreadPool.map NavigationMessage
             | _ -> failwith "invalid nav mode"
          
-        unionMany [drawing; animation; nav; m.scene.feedbackThreads]
+        let minerva = PRo3D.Minerva.App.threads m.minervaModel |> ThreadPool.map MinervaActions
+
+        unionMany [drawing; animation; nav; m.scene.feedbackThreads; minerva]
         
     let loadWaypoints m = 
       match Serialization.fileExists "./waypoints.wps" with
@@ -1111,10 +1133,10 @@ module ViewerApp =
           { m with waypoints = wp }
         | None -> m
     
-    let start (runtime: IRuntime) (signature: IFramebufferSignature) messagingMailbox sendQueue =
+    let start (runtime: IRuntime) (signature: IFramebufferSignature) messagingMailbox minervaBox sendQueue =
 
         let m = 
-            PRo3D.Viewer.Viewer.initial messagingMailbox 
+            PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox
               |> Scene.loadLastScene runtime signature
               |> loadRoverData
               |> loadLastAnnotations
