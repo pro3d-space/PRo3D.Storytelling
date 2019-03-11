@@ -59,10 +59,18 @@ module MinervaGeoJSON =
           {
             APXS_Properties.id = id |> FeatureId
           } |> Properties.APXS       
+        | Instrument.ChemLib ->
+          {
+            ChemCam_Properties.id = id |> FeatureId           
+          } |> Properties.ChemCam       
+        | Instrument.ChemRmi ->
+          {
+            ChemCam_Properties.id = id |> FeatureId            
+          } |> Properties.ChemCam       
         | Instrument.NotImplemented ->
           {
             APXS_Properties.id = id |> FeatureId
-          } |> Properties.APXS       
+          } |> Properties.APXS               
         | _ -> failwith "encountered invalid instrument from parsing"
 
   let parseSingleCoord (c : array<float>) : V3d =

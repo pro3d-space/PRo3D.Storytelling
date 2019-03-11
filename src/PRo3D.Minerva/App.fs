@@ -103,7 +103,8 @@ module App =
     let groupString = ids |> String.concat("','")
     let cql = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
     
-    (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
+
+    (@"https://minerva.eox.at/opensearch/collections/all/json/", HMap.empty)
 
   let update (model : Model) (msg : MinervaAction) : Model =
       match msg with
@@ -178,16 +179,18 @@ module App =
 
   let instrumentText (instr : Instrument) =
     match instr with
-    | Instrument.MAHLI       -> "MAHLI"
-    | Instrument.FrontHazcam -> "FrontHazcam"
-    | Instrument.Mastcam     -> "Mastcam"
-    | Instrument.APXS        -> "APXS"
+    | Instrument.MAHLI        -> "MAHLI"
+    | Instrument.FrontHazcam  -> "FrontHazcam"
+    | Instrument.Mastcam      -> "Mastcam"
+    | Instrument.APXS         -> "APXS"
     | Instrument.FrontHazcamR -> "FrontHazcamR"
     | Instrument.FrontHazcamL -> "FrontHazcamL"
     | Instrument.MastcamR     -> "MastcamR"    
     | Instrument.MastcamL     -> "MastcamL"
+    | Instrument.ChemLib      -> "ChemLib"    
+    | Instrument.ChemRmi      -> "ChemRmi"
     | Instrument.NotImplemented -> "not impl. yet"
-    | _ -> instr |> sprintf "unknown instrument number %A" |> failwith
+    | _ -> instr |> sprintf "unknown instrument identifier %A" |> failwith
     
   let viewFeatures (pos : IMod<V3d>)(instr : Instrument) (features : list<Feature>) = 
     [

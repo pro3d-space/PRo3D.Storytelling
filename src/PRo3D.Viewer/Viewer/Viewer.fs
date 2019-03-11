@@ -898,13 +898,13 @@ module ViewerApp =
                 
                let minerva' = PRo3D.Minerva.App.update m.minervaModel a 
 
-               let viewProj = m.scene.navigation.camera.view.ViewTrafo
+               let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
                let points = 
                  minerva'.data.features 
                    |> PList.toList 
                    |> List.map(fun feat -> feat.geometry.positions) 
                    |> List.concat
-                   |> List.map(fun p -> viewProj.Forward.TransformPos p)
+                   |> List.map(fun p -> viewProj.Forward.TransformPosProj p)
                
                points |> Log.line "trafo points minerva %A" 
                

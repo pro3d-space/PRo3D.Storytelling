@@ -39,6 +39,11 @@ type Mastcam_Properties =
     endTime   : DateTime
   }
 
+type ChemCam_Properties =
+  {
+    id        : FeatureId    
+  }
+
 type APXS_Properties =
   {
     id        : FeatureId
@@ -49,23 +54,27 @@ type Properties =
   | FrontHazcam of FrontHazcam_Properties
   | Mastcam     of Mastcam_Properties
   | APXS        of APXS_Properties
+  | ChemCam     of ChemCam_Properties
   member this.id =
     match this with
     | MAHLI       k -> k.id
     | FrontHazcam k -> k.id
     | Mastcam     k -> k.id
     | APXS        k -> k.id
+    | ChemCam     k -> k.id
 
 type Instrument = 
-  | MAHLI        = 0
-  | FrontHazcam  = 1
-  | Mastcam      = 2
-  | APXS         = 3
-  | FrontHazcamR = 4
-  | FrontHazcamL = 5
-  | MastcamR     = 6
-  | MastcamL     = 7
-  | NotImplemented     = 8
+  | MAHLI          =  0
+  | FrontHazcam    =  1
+  | Mastcam        =  2
+  | APXS           =  3
+  | FrontHazcamR   =  4
+  | FrontHazcamL   =  5
+  | MastcamR       =  6
+  | MastcamL       =  7
+  | ChemLib        =  8
+  | ChemRmi        =  9
+  | NotImplemented = 10
 
 type Geometry = 
   {
@@ -180,8 +189,8 @@ module Model =
       | "fhaz_right_b" -> Instrument.FrontHazcamR    
       | "mast_left"    -> Instrument.MastcamR
       | "mast_right"   -> Instrument.MastcamL
-      | "chemcam_libs" -> Instrument.NotImplemented
-      | "chemcam_rmi"  -> Instrument.NotImplemented      
+      | "chemcam_libs" -> Instrument.ChemLib
+      | "chemcam_rmi"  -> Instrument.ChemRmi      
       | _ -> id |> sprintf "unknown instrument %A" |> failwith
 
   let instrumentColor (instr : Instrument) =
@@ -194,6 +203,8 @@ module Model =
     | Instrument.FrontHazcamL -> C4b(166,206,227)
     | Instrument.MastcamR -> C4b(227,26,28)
     | Instrument.MastcamL -> C4b(251,154,153)
+    | Instrument.ChemRmi  -> C4b(173,221,142)
+    | Instrument.ChemLib  -> C4b(49,163,84)
     | Instrument.NotImplemented -> C4b(0,0,0)
     | _ -> failwith "unknown instrument"
 
