@@ -162,16 +162,17 @@ let main argv =
       }        
 
     PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
-        
+    let startEmpty = (argv |> Array.contains "-empty")
+
     // main app
     //use form = new Form(Width = 1280, Height = 800)
     let cts = new CancellationTokenSource()
     let messagingMailbox = MailboxProcessor.Start(Viewer.initMessageLoop cts, cts.Token)    
 
-    let minervaMailbox = MailboxProcessor.Start(PRo3D.Minerva.App.messagingMailbox cts, cts.Token) 
+    let minervaMailbox = MailboxProcessor.Start(PRo3D.Minerva.App.messagingMailbox cts, cts.Token)
 
     let mainApp = 
-        PRo3D.ViewerApp.start runtime signature messagingMailbox minervaMailbox sendQueue
+        PRo3D.ViewerApp.start runtime signature startEmpty messagingMailbox minervaMailbox sendQueue
 
     let s = { MailboxState.empty with update = mainApp.update Guid.Empty }
     MailboxAction.InitMailboxState s |> messagingMailbox.Post

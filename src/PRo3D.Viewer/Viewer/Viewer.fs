@@ -909,23 +909,26 @@ module ViewerApp =
                  { m with animations = createAnimation v newForward m.animations }
               | _ ->                
                 
-               let minerva' = PRo3D.Minerva.App.update m.minervaModel a 
-
-               let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
-               let points = 
-                 minerva'.data.features 
-                   |> PList.toList 
-                   |> List.map(fun feat -> feat.geometry.positions) 
-                   |> List.concat
-                   |> List.map(fun p -> viewProj.Forward.TransformPosProj p)
-               
-               points |> Log.line "trafo points minerva %A" 
-               
-
-               //MailboxAction.ViewerAction
-               //ViewerAction.MinervaActions
-               //a |> ViewerAction.MinervaActions |> MailboxAction.ViewerAction
-               { m with minervaModel = minerva' }
+                 let minerva' = PRo3D.Minerva.App.update m.minervaModel a 
+                 
+                 let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
+                 let points = 
+                   minerva'.data.features 
+                     |> PList.toList 
+                     |> List.map(fun feat -> (feat.id, feat.geometry.positions.[0]))
+                     //|> List.concat
+                     |> List.map(fun (id,p) -> {| id = id; pos = viewProj.Forward.TransformPosProj p |} )
+                 
+                // points |> Log.line "trafo points minerva %A"
+                                  
+                 points 
+                     |> List.map(fun x -> sprintf "%s,%f,%f" x.id x.pos.X x.pos.Y) 
+                     |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates2.csv"
+                                                    
+                 //MailboxAction.ViewerAction
+                 //ViewerAction.MinervaActions
+                 //a |> ViewerAction.MinervaActions |> MailboxAction.ViewerAction
+                 { m with minervaModel = minerva' }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -945,7 +948,7 @@ module ViewerApp =
                 match state with
                     | NavigationMode.FreeFly -> 
                         yield! FreeFlyController.extractAttributes model.camera Navigation.Action.FreeFlyAction
-                    | NavigationMode.ArcBall -> 
+                    | NavigationMode.ArcBall ->                         
                         yield! ArcBallController.extractAttributes model.camera Navigation.Action.ArcBallAction
                     | _ -> failwith "Invalid NavigationMode"
             } |> AttributeMap.ofAMap |> AttributeMap.mapAttributes (AttributeValue.map NavigationMessage)   
@@ -959,7 +962,7 @@ module ViewerApp =
             //   attribute "showFPS" "true"        
             //   attribute "data-renderalways" "true"
                 onKeyDown (KeyDown)
-                onKeyUp (KeyUp)
+                onKeyUp (KeyUp)                
             ] 
         ]            
 
@@ -1076,9 +1079,9 @@ module ViewerApp =
         let instrumentViewAttributes =
                 amap {
                     let! hor, vert = ViewPlan.getInstrumentResolution m.scene.viewPlans
-                    let height = "height:" + (vert).ToString() + ";" ///uint32(2)
-                    let width = "width:" + (hor).ToString() + ";" ///uint32(2)
-                    yield style ("background: #1B1C1E;" + height + width + "overflow-y:scroll; overflow-x:hidden;")
+                    let height = "height:" + (vert/uint32(2)).ToString() + ";" ///uint32(2)
+                    let width = "width:" + (hor/uint32(2)).ToString() + ";" ///uint32(2)
+                    yield style ("background: #1B1C1E;" + height + width)
                     yield Events.onClick (fun _ -> SwitchViewerMode ViewerMode.Instrument)
                 } |> AttributeMap.ofAMap
 
@@ -1086,7 +1089,7 @@ module ViewerApp =
           match Map.tryFind "page" request.queryParams with
             | Some "instrumentview" ->
                 require (myCss) (
-                    body [ style "background: #1B1C1E; width:100%; padding-bottom:56.25%;"] [
+                    body [ style "background: #1B1C1E; width:100%; height:100%; overflow-y:auto; overflow-x:auto;"] [
                       Incremental.div instrumentViewAttributes (
                         alist {
                             yield viewInstrumentView m 
@@ -1165,14 +1168,17 @@ module ViewerApp =
           { m with waypoints = wp }
         | None -> m
     
-    let start (runtime: IRuntime) (signature: IFramebufferSignature) messagingMailbox minervaBox sendQueue =
+    let start (runtime: IRuntime) (signature: IFramebufferSignature)(startEmpty : bool) messagingMailbox minervaBox sendQueue =
 
         let m = 
+          if startEmpty |> not then
             PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox
               |> Scene.loadLastScene runtime signature
               |> loadRoverData
               |> loadLastAnnotations
-       
+          else
+            PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> loadRoverData
+
         App.start {
             unpersist = Unpersist.instance
             threads   = threadPool
