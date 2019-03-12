@@ -53,6 +53,8 @@ nuget SharpZipLib  ~> 0.86.0
 nuget WindowsAPICodePack-Core
 nuget WindowsAPICodePack-ShellExtensions
 
+nuget Chiron ~> 6.3.1
+
 
 group Build
 framework: net45

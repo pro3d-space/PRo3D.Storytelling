@@ -196,7 +196,7 @@ module ViewerUtils =
             sg 
             |> Sg.noEvents 
             |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
-            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))        
+            |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))
 
         let pickable = 
           Mod.map2( fun (a:Box3d) (b:Trafo3d) -> 
@@ -220,13 +220,19 @@ module ViewerUtils =
                 return (t * fullTrafo ) // * Trafo3d.Scale(sc))
             }
 
+        let bla : SamplerStateDescription -> SamplerStateDescription = 
+          (fun x -> 
+            x.Filter <- new TextureFilter(TextureFilterMode.Linear, TextureFilterMode.Point, TextureFilterMode.Linear, true ); 
+            x)
+
 
         let test =             
           surface.sceneGraph
             |> Mod.map createSg
             |> Sg.dynamic
             |> Sg.trafo trafo //(Transformations.fullTrafo surf refsys)
-            |> Sg.uniform "selected"       isSelected
+            |> Sg.modifySamplerState (DefaultSemantic.DiffuseColorTexture)(Mod.constant(bla))
+            |> Sg.uniform "selected"      (Mod.constant false) // isSelected
             |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
             |> addAttributeFalsecolorMappingParameters surf
             |> Sg.uniform "TriangleSize"   triangleFilter  //triangle filter

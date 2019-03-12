@@ -1,5 +1,7 @@
 ﻿namespace PRo3D
 
+
+
 open System
 open Aardvark.Base
 open Aardvark.Base.Incremental
@@ -13,6 +15,9 @@ open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis
 open Aardvark.Base.Rendering
 open Aardvark.Base.CameraView
+
+open Chiron
+
 type NavigationMode = FreeFly = 0 | ArcBall = 1
 type InteractionMode = PickOrbitCenter = 0 | Draw = 1 | PlaceObject = 2
 
@@ -54,8 +59,6 @@ module Option =
         match b with 
           | true  -> Some v
           | false -> None
-
-
 
 type Points = list<V3d>
 
@@ -112,7 +115,6 @@ type FalseColorsShaderParams = {
     //rParams  : V4d // (lb, ub, step, numOfRG)
 }
 
-
 module FalseColorsModel = 
     let dnSInterv  = {
         value   = 5.0
@@ -146,7 +148,6 @@ module FalseColorsModel =
             lowerColor      = { c = C4b.Blue }
             upperColor      = { c = C4b.Red }
         }
-
    
     let scalarsInterv  = {
         value   = 5.0
@@ -416,7 +417,7 @@ type SurfaceTrafoImporterModel = {
     trafos : plist<SurfaceTrafo>
 }
 
-[<DomainType>]
+[<DomainType;Obsolete>]
 type ViewConfigModel = {
     nearPlane               : NumericInput
     farPlane                : NumericInput

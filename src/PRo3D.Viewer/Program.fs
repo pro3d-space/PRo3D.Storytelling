@@ -37,6 +37,7 @@ open Aardium
 open System.Threading
 open PRo3D.Base
 
+
 [<DataContract>]
 type Calc =
    { 
@@ -62,7 +63,7 @@ type License = {
   institution : string
 }
 
-let viewerVersion       = "2.9.3-prerelease1"
+let viewerVersion       = "2.9.4-prerelease1"
 let mutable licenseText = ""
 let catchDomainErrors   = false
 let licenseCheck        = false
@@ -108,11 +109,13 @@ let checkLicense () =
   | false -> 
     licenseText <- " - " + lic.userName + ", " + lic.institution + ", " + validateAKey.DaysLeft.ToString() + " days left"
 
+
+
 [<EntryPoint;STAThread>]
 let main argv = 
     //Xilium.CefGlue.ChromiumUtilities.unpackCef()
-    //Chromium.init argv
-    
+    //Chromium.init argv        
+
     System.Threading.ThreadPool.SetMinThreads(12, 12) |> ignore
 
     Ag.initialize()
@@ -147,36 +150,41 @@ let main argv =
     use sendQueue = new BlockingCollection<string>()    
         
     let ws (webSocket : WebSocket) (context: HttpContext) =
-        socket {
-            let mutable loop = true
-
-            while loop do
-                let str = sendQueue.Take()
-                Log.warn "taking item from bc"
-                let s = ByteSegment(System.Text.Encoding.UTF8.GetBytes str)
-                
-                do! webSocket.send Text s true
-        }        
+      socket {
+        let mutable loop = true
+        
+        while loop do
+          let str = sendQueue.Take()
+          Log.warn "taking item from bc"
+          let s = ByteSegment(System.Text.Encoding.UTF8.GetBytes str)
+          
+          do! webSocket.send Text s true
+      }        
 
     PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
         
     // main app
     //use form = new Form(Width = 1280, Height = 800)
     let cts = new CancellationTokenSource()
-    let messagingMailbox = MailboxProcessor.Start(Viewer.messagingMailbox cts, cts.Token)    
+    let messagingMailbox = MailboxProcessor.Start(Viewer.initMessageLoop cts, cts.Token)    
+
+    let minervaMailbox = MailboxProcessor.Start(PRo3D.Minerva.App.messagingMailbox cts, cts.Token) 
 
     let mainApp = 
-        PRo3D.ViewerApp.start runtime signature messagingMailbox sendQueue
+        PRo3D.ViewerApp.start runtime signature messagingMailbox minervaMailbox sendQueue
 
     let s = { MailboxState.empty with update = mainApp.update Guid.Empty }
     MailboxAction.InitMailboxState s |> messagingMailbox.Post
+    
+    //let s2 = { PRo3D.Minerva.MailboxState.empty with update = mainApp.update Guid.Empty }
+    //PRo3D.Minerva.MailboxAction.InitMailboxState s2 |> minervaMailbox.Post
     
     CooTransformation.initCooTrafo () // should be a function not a value
     
     let domainError (sender:obj) (args:UnhandledExceptionEventArgs) =
         let e = args.ExceptionObject :?> Exception;
         Log.error "%A" e
-        MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |>ignore
+        MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |> ignore
         ()
     
     if catchDomainErrors then

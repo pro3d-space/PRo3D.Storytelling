@@ -36,6 +36,9 @@ module Serialization =
     let writeToFile path (contents : string) =
         System.IO.File.WriteAllText(path, contents)
 
+    let readFromFile path =
+        System.IO.File.ReadAllText(path)
+
     let saveJson path (d : 'a) =    
         let json =  jsonSerializer.PickleToString d
         writeToFile path json
