@@ -37,7 +37,9 @@ module Transformations =
 
     let originTrafo = -surf.transformation.pivot |> Trafo3d.Translation
 
-    originTrafo * rot * originTrafo.Inverse * refSysRotation.Inverse * trans * refSysRotation
+    //originTrafo * rot * originTrafo.Inverse * refSysRotation.Inverse * trans * refSysRotation
+
+    Trafo3d.Identity
 
   let fullTrafo (surf : IMod<MSurface>) (refsys : MReferenceSystem) = 
     adaptive {

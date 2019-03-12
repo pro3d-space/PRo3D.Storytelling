@@ -87,14 +87,9 @@ module Sg =
                 ViewerModality.XYZ
                 (PatchLod.toRoseTree h.tree)
             sg) 
-          |> Sg.ofList
-        
-
-        let lodVisEnabled = Mod.init false
-        
-        let sg = g |> Sg.transform preTransform
-                                
-        sg, patchHierarchies, kdTrees
+          |> Sg.ofList                
+                                                
+        g, patchHierarchies, kdTrees
     
     let assertInvalidBB (bb:Box3d) = 
         if(bb.IsInvalid) then 
