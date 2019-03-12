@@ -296,18 +296,21 @@ module ViewerApp =
         { m with scene = Serialization.save path s'; drawing = drawing } |> Model.stashAndSaveRecent path
 
     let matchPickingInteraction (bc : BlockingCollection<string>) (p:V3d) (hitFunction:(V3d-> V3d option)) (surf:Surface) (m:Model) = 
-         match m.interaction with
-            | Interactions.DrawAnnotation -> 
+         match m.interaction, m.viewerMode with
+            | Interactions.DrawAnnotation, _ -> 
                 let m = match surf.surfaceType with
                         | SurfaceType.SurfaceOBJ -> { m with drawing = { m.drawing with projection = PRo3D.Projection.Linear } }   
                         | _ -> m
                 
-                let view = m.scene.navigation.camera.view
+                let view = match m.viewerMode with 
+                            | ViewerMode.Standard -> m.scene.navigation.camera.view
+                            | ViewerMode.Instrument -> m.scene.viewPlans.instrumentCam.view
+
                 let msg = Drawing.Action.AddPointAdv(p, hitFunction, surf.name)
                 let drawing = DrawingApp.update m.scene.referenceSystem drawingConfig bc view m.drawing msg
                 //Log.stop()
                 { m with drawing = drawing } |> stash
-            | Interactions.PlaceCoordinateSystem -> 
+            | Interactions.PlaceCoordinateSystem, ViewerMode.Standard -> 
                           
                 let refAction = ReferenceSystemApp.Action.InferCoordSystem(p)
                 let (refSystem',_)= 
@@ -319,13 +322,13 @@ module ViewerApp =
                           
                 //update camera upvector
                 updateCameraUp m
-            | Interactions.PickExploreCenter ->
+            | Interactions.PickExploreCenter, ViewerMode.Standard ->
                 let c   = m.scene.config
                 let ref = m.scene.referenceSystem
                 let navigation' = 
                     Navigation.update c ref navConf true m.scene.navigation (Navigation.Action.ArcBallAction(ArcBallController.Message.Pick p))
                 { m with scene = {m.scene with navigation = navigation'; } }
-            | Interactions.PlaceRover ->
+            | Interactions.PlaceRover, ViewerMode.Standard ->
                 let ref = m.scene.referenceSystem 
                 let _, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
                 let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
@@ -334,10 +337,10 @@ module ViewerApp =
                     | false -> { m' with tabMenu = TabMenu.Viewplanner }
             //| Interactions.AlignPick -> 
             //    { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
-            | Interactions.PlaceSurface -> 
+            | Interactions.PlaceSurface, ViewerMode.Standard -> 
                 { m with scene = { m.scene with surfacesModel = SurfaceApp.update m.scene.surfacesModel (SurfaceApp.Action.PlaceSurface(p)) m.scene.scenePath m.scene.navigation.camera.view  m.scene.referenceSystem}}
            // | Interactions.PickAnnotation -> m
-            | Interactions.PickSurface -> 
+            | Interactions.PickSurface, ViewerMode.Standard -> 
                 let action = SurfaceApp.Action.GroupsMessage(Groups.Action.SingleSelectLeaf(list.Empty, surf.guid, ""))
                 let surfaceModel' = SurfaceApp.update m.scene.surfacesModel action m.scene.scenePath m.scene.navigation.camera.view m.scene.referenceSystem
                 { m with scene = { m.scene with surfacesModel = surfaceModel' }}
@@ -389,7 +392,9 @@ module ViewerApp =
                           { m with  animations = a'}
                       | None -> m               
                 | _ ->
-                    let view = m.scene.navigation.camera.view
+                    let view = match m.viewerMode with 
+                                | ViewerMode.Standard -> m.scene.navigation.camera.view
+                                | ViewerMode.Instrument -> m.scene.viewPlans.instrumentCam.view
                     let drawing = 
                         DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing msg
                     { m with drawing = drawing; } |> stash
@@ -865,11 +870,8 @@ module ViewerApp =
                  //  | None -> m
             | SetTabMenu tab,_,_ ->
                 { m with tabMenu = tab }
-            | SwitchViewerMode _,_,_ -> 
-                match m.viewerMode with
-                    | ViewerMode.Standard -> { m with viewerMode = ViewerMode.Instrument }
-                    | ViewerMode.Instrument -> { m with viewerMode = ViewerMode.Standard }
-
+            | SwitchViewerMode  vm ,_,_ -> 
+                { m with viewerMode = vm }
             | OpenSceneFileLocation p,_,_ ->                
                 let argument = sprintf "/select, \"%s\"" p
                 Process.Start("explorer.exe", argument) |> ignore
@@ -941,6 +943,17 @@ module ViewerApp =
             ] 
         ]            
 
+    let instrumentControlAttributes (m : MModel) = 
+        AttributeMap.unionMany [
+            AttributeMap.ofList [
+                attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
+                attribute "data-samples" "4"
+                attribute "useMapping" "true"
+                onKeyDown (KeyDown)
+                onKeyUp (KeyUp)
+            ] 
+        ]            
+
     let viewInstrumentView (m : MModel) = 
         let annotationsI, discsI = DrawingApp.view m.scene.config mdrawingConfig m.scene.viewPlans.instrumentCam.view m.drawing
 
@@ -961,8 +974,8 @@ module ViewerApp =
 
         // instrument view control
         let icmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped ioverlayed discsInst m // m.scene.surfacesModel.sgGrouped overlayed discs m
-        let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum   
-        DomNode.RenderControl((renderControlAttributes m), icam, icmds, None) //AttributeMap.Empty
+        let icam     = Mod.map2 Camera.create m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum
+        DomNode.RenderControl((instrumentControlAttributes m), icam, icmds, None) //AttributeMap.Empty
 
     let viewRenderView (m : MModel) = 
         let annotations, discs = DrawingApp.view m.scene.config mdrawingConfig m.scene.navigation.camera.view m.drawing
@@ -1032,19 +1045,38 @@ module ViewerApp =
         ]
         
         let bodyAttributes = [style "background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden;"] //overflow-y : visible
+        let renderViewAttributes = [style "background: #1B1C1E; height:100%; width:100%"
+                                    Events.onClick (fun _ -> SwitchViewerMode ViewerMode.Standard)]
+        //let renderViewAttributes =
+        //    amap {
+        //        yield style "background: #1B1C1E; height:100%; width:100%"
+        //        yield onClick (fun _ -> SwitchViewerMode ViewerMode.Standard)
+        //    } |> AttributeMap.ofAMap
+       
+        let instrumentViewAttributes =
+                amap {
+                    let! hor, vert = ViewPlan.getInstrumentResolution m.scene.viewPlans
+                    let height = "height:" + (vert).ToString() + ";" ///uint32(2)
+                    let width = "width:" + (hor).ToString() + ";" ///uint32(2)
+                    yield style ("background: #1B1C1E;" + height + width + "overflow-y:scroll; overflow-x:hidden;")
+                    yield Events.onClick (fun _ -> SwitchViewerMode ViewerMode.Instrument)
+                } |> AttributeMap.ofAMap
 
         page (fun request -> 
           match Map.tryFind "page" request.queryParams with
             | Some "instrumentview" ->
                 require (myCss) (
-                  body [style "background: #1B1C1E"] [ //; height:100%; width:100%
-                        viewInstrumentView m 
-                        Viewer.Gui.textOverlaysInstrumentView m.scene.viewPlans
-                  ]
+                    body [ style "background: #1B1C1E; width:100%; padding-bottom:56.25%;"] [
+                      Incremental.div instrumentViewAttributes (
+                        alist {
+                            yield viewInstrumentView m 
+                            yield Viewer.Gui.textOverlaysInstrumentView m.scene.viewPlans
+                        } )
+                    ]
                 )
             | Some "render" -> 
                 require (myCss) (
-                  body [ style "background: #1B1C1E; height:100%; width:100%"] [
+                  body renderViewAttributes [ //[ style "background: #1B1C1E; height:100%; width:100%"] [
                       div [style "background:#000;"] [
                           viewRenderView m
                           Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view

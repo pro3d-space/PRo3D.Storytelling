@@ -42,6 +42,12 @@ type Interactions =
     //| DrawLog               = 7
     //| AlignPick             = 5
 
+type ViewerMode =
+    | Standard
+    | Instrument
+    
+
+
 type BookmarkAction =
   | AddBookmark 
   | GroupsMessage   of Groups.Action
@@ -72,7 +78,7 @@ type ViewerAction =
     | ImportAnnotationGroups    of list<string>
     | ImportSurfaceTrafo        of list<string>
     | ImportRoverPlacement      of list<string>
-    | SwitchViewerMode
+    | SwitchViewerMode          of ViewerMode
     | DnSProperties             of PropertyActions
     | ConfigPropertiesMessage   of ConfigProperties.Action
     | QuickLoad1
@@ -165,10 +171,6 @@ type WayPoint = {
     cv   : CameraView
 }
 
-type ViewerMode =
-    | Standard
-    | Instrument
-    
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module MailboxState = 

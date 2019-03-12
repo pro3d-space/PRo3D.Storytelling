@@ -24,6 +24,7 @@ open PRo3D.Groups
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg   
+    open System.Diagnostics 
     
     /// creates a surface from opc folder path
     let mk (stype:SurfaceType) (maxTriangleSize : float) path =                 
@@ -56,42 +57,54 @@ module Surface =
             homePosition = None
             transformation = Init.Transformations
         }       
+   
 
     module ObjectFiles =        
         open Aardvark.Geometry
 
         let loadObject (s:PRo3D.Surfaces.Surface) : SgSurface =                        
-            let obj = Loader.Assimp.load (s.importPath)            
+            let obj = Loader.Assimp.load (s.importPath)  
+            let mutable count = 0
             let kdTrees = 
               obj.meshes 
-                |> Array.map(fun x -> 
-                  let kdTreePath = Path.ChangeExtension(s.importPath,".aakd")
-                  
+                |> Array.map(fun x ->
+                  let dir = Path.GetDirectoryName(s.importPath)
+                  let filename = Path.GetFileNameWithoutExtension(s.importPath) + count.ToString() + ".aakd"
+                  let kdTreePath = dir + "\\" + filename //Path.ChangeExtension(s.importPath, name)
+                  count <- count + 1
                   let tree' = 
                     if File.Exists(kdTreePath) |> not then
-                      let pos = x.geometry.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
+                        
+                          let pos = x.geometry.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
                       
-                      //let indices = x.geometry.IndexArray |> unbox<int[]> potential problem with indices
-                      let t = DebugKdTreesX.getTriangleSet3f pos
+                          //let indices = x.geometry.IndexArray |> unbox<int[]> potential problem with indices
+                          let t = DebugKdTreesX.getTriangleSet3f pos
                                         
-                      Log.startTimed "Building kdtrees for %s" (s.importPath |> Path.GetFileName)
-                      let tree = 
-                        KdIntersectionTree(t, 
-                          KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical)                  
-                      Log.stop()
+                          Log.startTimed "Building kdtrees for %s" (s.importPath |> Path.GetFileName)
+                          let tree = 
+                            KdIntersectionTree(t, 
+                              KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical) //|> PRo3D.Serialization.save kdTreePath                  
+                          Log.stop()
                                             
 
-                      let kd : KdTrees.InCoreKdTree = {
-                        kdTree = tree.ToConcreteKdIntersectionTree();
-                        boundingBox = tree.BoundingBox3d
-                      }
-
-                      kd //|> PRo3D.Serialization.save kdTreePath // Serialization crashes, maybe use texture converter
+                          let kd : KdTrees.InCoreKdTree = {
+                            kdTree = tree.ToConcreteKdIntersectionTree();
+                            boundingBox = tree.BoundingBox3d
+                          }
+                        
+                          
+                          kd // |> PRo3D.Serialization.save kdTreePath // Serialization crashes, maybe use texture converter
                     else
-                      PRo3D.Serialization.loadAs<KdTrees.InCoreKdTree> kdTreePath
+                        PRo3D.Serialization.loadAs<KdTrees.InCoreKdTree> kdTreePath
+                      //let t = PRo3D.Serialization.loadAs<KdTrees.Level0KdTree> kdTreePath
+                      //match t with
+                      //  | KdTrees.Level0KdTree.InCoreKdTree kd -> kd
+                      //  | _ -> failwith "wrong type"
+
+                      
 
                   
-                    
+                  
                   tree'.boundingBox, (KdTrees.Level0KdTree.InCoreKdTree tree')
                   ) |> HMap.ofArray
 
@@ -314,6 +327,7 @@ module Surface =
       //this does only update surfaces ... not kdtrees or sgs !!!!             
       { model with surfaces = { model.surfaces with flat = flat' } }
 
+   
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) (view:CameraView) (refSys : PRo3D.ReferenceSystem.ReferenceSystem) = 
       match action with
         | SurfacePropertiesMessage msg ->                
@@ -400,23 +414,24 @@ module Surface =
               | Some s -> 
                  let trans = Trafo3d.Translation(p)
                  let s = s |> Leaf.toSurface
-                 let f = (fun _ -> { s with preTransform = trans  } |> Leaf.Surfaces)
+                 let f = (fun _ -> { s with preTransform = Trafo3d.Translation(p)  } |> Leaf.Surfaces)
                  let g = Groups.updateLeaf s.guid f model.surfaces
                  
                  let sgs' = 
                      model.sgSurfaces
                      |> HMap.update id (fun x -> 
                        match x with 
-                       | Some sg ->    //let pose = Pose.translate p // bb.Center
-                         let pose = { sg.trafo.pose with position = sg.trafo.pose.position + p }
+                       | Some sg ->    
+                         let pose = Pose.translate p // bb.Center
+                         //let pose = { sg.trafo.pose with position = sg.trafo.pose.position + p }
 
                          let trafo' = { 
                            TrafoController.initial with 
                              pose = pose
-                             previewTrafo = trans
+                             previewTrafo = Trafo3d.Translation(p)
                              mode = TrafoMode.Local 
                          }
-                         { sg with trafo = trafo'; globalBB = (sg.globalBB.Transformed trafo'.previewTrafo) }
+                         { sg with trafo = trafo'; globalBB = (sg.globalBB.Transformed trafo'.previewTrafo) } // (Trafo3d.Translation(p))) }  //
                        | None   -> failwith "surface not found")                             
                  { model with surfaces = g; sgSurfaces = sgs'} 
               | None -> model
@@ -611,10 +626,10 @@ module Surface =
                              yield i [clazz "folder icon"                                                
                                       onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "Open Folder"
 
-                             //yield i [
-                             //  clazz "microchip icon"
-                             //  onClick (fun _ -> RebuildKdTrees key)
-                             //][] |> UI.wrapToolTip "process kdtrees"
+                             yield i [
+                               clazz "microchip icon"
+                               onClick (fun _ -> RebuildKdTrees key)
+                             ][] |> UI.wrapToolTip "process kdtrees"
 
                              yield Incremental.i (absRelIcons) (AList.empty)
                              yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"

@@ -130,6 +130,7 @@ let main argv =
         
     Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.surfaceModelPickler)
     Serialization.registry.RegisterFactory (fun _ -> KdTrees.level0KdTreePickler)
+    Serialization.registry.RegisterFactory (fun _ -> Surfaces.Init.incorePickler)
         
     if licenseCheck then
       checkLicense()

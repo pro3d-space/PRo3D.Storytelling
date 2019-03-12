@@ -211,12 +211,21 @@ module ViewerUtils =
 
         let triangleFilter = surf |> Mod.bind(fun s -> s.triangleSize.value)
 
+        let trafo =
+           adaptive {
+                let! fullTrafo = Transformations.fullTrafo surf refsys
+                let! s = surf
+                let! sc = s.scaling.value
+                let! t = s.preTransform
+                return (t * fullTrafo ) // * Trafo3d.Scale(sc))
+            }
+
 
         let test =             
           surface.sceneGraph
             |> Mod.map createSg
             |> Sg.dynamic
-            |> Sg.trafo (Transformations.fullTrafo surf refsys)
+            |> Sg.trafo trafo //(Transformations.fullTrafo surf refsys)
             |> Sg.uniform "selected"       isSelected
             |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
             |> addAttributeFalsecolorMappingParameters surf

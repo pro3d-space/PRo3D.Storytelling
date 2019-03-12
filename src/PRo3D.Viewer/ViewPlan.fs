@@ -83,6 +83,21 @@ module ViewPlan =
                                                  viewPlans = updateViewPlans v vp.viewPlans } //{ v with rover = r }
                             | None -> { m with viewPlans = updateViewPlans v vp.viewPlans } 
             | None -> m 
+
+    let getInstrumentResolution (vp:MViewPlanModel) =
+        adaptive {
+            let! selected = vp.selectedViewPlan
+            match selected with
+                | Some v -> let! selectedI = v.selectedInstrument
+                            match selectedI with
+                                | Some i -> let! intrinsics = i.intrinsics
+                                            let horRes = intrinsics.horizontalResolution
+                                            let vertRes = intrinsics.verticalResolution
+                                            return (horRes, vertRes)
+                                | None -> return (uint32(1024), uint32(1024))
+                | None -> return (uint32(1024), uint32(1024)) 
+        } 
+        
        
     let trafoFromTranslatedBase (position:V3d) (tilt:V3d) (forward:V3d) (right:V3d) : Trafo3d =  
         let rotTrafo =  Trafo3d.FromOrthoNormalBasis( forward.Normalized, right.Normalized, tilt.Normalized )
