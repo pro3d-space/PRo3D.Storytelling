@@ -911,19 +911,19 @@ module ViewerApp =
                 
                  let minerva' = PRo3D.Minerva.App.update m.minervaModel a 
                  
-                 let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
-                 let points = 
-                   minerva'.data.features 
-                     |> PList.toList 
-                     |> List.map(fun feat -> (feat.id, feat.geometry.positions.[0]))
-                     //|> List.concat
-                     |> List.map(fun (id,p) -> {| id = id; pos = viewProj.Forward.TransformPosProj p |} )
+                // let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
+                // let points = 
+                //   minerva'.data.features 
+                //     |> PList.toList 
+                //     |> List.map(fun feat -> (feat.id, feat.geometry.positions.[0]))
+                //     //|> List.concat
+                //     |> List.map(fun (id,p) -> {| id = id; pos = viewProj.Forward.TransformPosProj p |} )
                  
-                // points |> Log.line "trafo points minerva %A"
+                //// points |> Log.line "trafo points minerva %A"
                                   
-                 points 
-                     |> List.map(fun x -> sprintf "%s,%f,%f" x.id x.pos.X x.pos.Y) 
-                     |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates2.csv"
+                // points 
+                //     |> List.map(fun x -> sprintf "%s,%f,%f" x.id x.pos.X x.pos.Y) 
+                //     |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates2.csv"
                                                     
                  //MailboxAction.ViewerAction
                  //ViewerAction.MinervaActions
