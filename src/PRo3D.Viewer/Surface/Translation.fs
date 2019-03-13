@@ -29,7 +29,7 @@ module Transformations =
     let east   = north.Cross(up)
           
     let refSysRotation = 
-      Trafo3d.FromOrthoNormalBasis(north, east, up)        
+      Trafo3d.FromOrthoNormalBasis(north, east, up)
         
     //translation along north, east, up            
     let trans = surf.transformation.translation.value |> Trafo3d.Translation
@@ -37,9 +37,7 @@ module Transformations =
 
     let originTrafo = -surf.transformation.pivot |> Trafo3d.Translation
 
-    //originTrafo * rot * originTrafo.Inverse * refSysRotation.Inverse * trans * refSysRotation
-
-    Trafo3d.Identity
+    originTrafo * rot * originTrafo.Inverse * refSysRotation.Inverse * trans * refSysRotation    
 
   let fullTrafo (surf : IMod<MSurface>) (refsys : MReferenceSystem) = 
     adaptive {
