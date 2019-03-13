@@ -19,35 +19,19 @@ type Statistics' = {
   stdev        : float
   sumOfSquares : float
 }
-
-module Statistics' =
-  let current = 0
-  //conversion
-  let convert (old : Statistics) : Statistics' =
-    failwith "convert non-versioned in versioned form"
-
-  //initial
-  let initial = 
-     {
-        version = current
-        average      = Double.NaN
-        min          = Double.NaN
-        max          = Double.NaN
-        stdev        = Double.NaN
-        sumOfSquares = Double.NaN
-      }
-  //version modules
-  module V0 =
-    let read = 
+with 
+  //version modules  
+  static member current = 0
+  static member private readV0 = 
       json {
         let! average      = Json.read "average"
         let! min          = Json.read "min"
         let! max          = Json.read "max"
         let! stdev        = Json.read "stdev"
-        let! sumOfSquares = Json.read "sumOfSquares"        
-
+        let! sumOfSquares = Json.read "sumOfSquares"
+  
         return {
-          version      = current
+          version      = Statistics'.current
           average      = average
           min          = min         
           max          = max         
@@ -55,25 +39,48 @@ module Statistics' =
           sumOfSquares = sumOfSquares       
         }
       }
-  
-  type Statistics' with 
-    static member FromJson(_ : Statistics') = 
-      json {
-          let! v = Json.read "version"
-          match v with            
-            | 0 -> return! V0.read 
-            | _ -> return! v |> sprintf "don't know version %A  of Statistics" |> Json.error
-      }
-    static member ToJson (x : Statistics') =
-      json {
-          do! Json.write "sumOfSquares" x.sumOfSquares            
-          do! Json.write "stdev" x.stdev            
-          do! Json.write "max" x.max            
-          do! Json.write "min" x.min                                 
-          do! Json.write "average" x.average             
-          do! Json.write "version" x.version
-      }
 
+  static member FromJson(_ : Statistics') = 
+    json {
+        let! v = Json.read "version"
+        match v with            
+          | 0 -> return! Statistics'.readV0
+          | _ -> return! v |> sprintf "don't know version %A  of Statistics" |> Json.error
+    }
+  static member ToJson (x : Statistics') =
+    json {          
+        do! Json.write "sumOfSquares" x.sumOfSquares            
+        do! Json.write "stdev" x.stdev            
+        do! Json.write "max" x.max            
+        do! Json.write "min" x.min                                 
+        do! Json.write "average" x.average             
+        do! Json.write "version" x.version
+    }
+
+module Statistics' =
+  let current = 0
+  //conversion
+  let convert (old : Statistics) : Statistics' =
+    {
+      version      = current
+      average      = old.average     
+      min          = old.min         
+      max          = old.max         
+      stdev        = old.stdev       
+      sumOfSquares = old.sumOfSquares
+    }
+
+  //initial
+  let initial = 
+     {
+        version      = current
+        average      = Double.NaN
+        min          = Double.NaN
+        max          = Double.NaN
+        stdev        = Double.NaN
+        sumOfSquares = Double.NaN
+      }
+    
 [<DomainType>]
 type DipAndStrikeResults' = {
     version         : int
@@ -84,17 +91,65 @@ type DipAndStrikeResults' = {
     dipAzimuth      : float
     strikeAzimuth   : float
     centerOfMass    : V3d
-    error           : Statistics
+    error           : Statistics'
 }
 
 module DipAndStrikeResults' =
   let current = 0
   //conversion
   let convert (old : DipAndStrikeResults) : DipAndStrikeResults' =
-    failwith ""
+    {
+        version         = current
+        plane           = old.plane          
+        dipAngle        = old.dipAngle       
+        dipDirection    = old.dipDirection   
+        strikeDirection = old.strikeDirection
+        dipAzimuth      = old.dipAzimuth     
+        strikeAzimuth   = old.strikeAzimuth  
+        centerOfMass    = old.centerOfMass   
+        error           = old.error |> Statistics'.convert
+    }
 
   //initial
+  let initial = 
+    {
+        version         = current
+        plane           = Plane3d.Invalid      
+        dipAngle        = Double.NaN  
+        dipDirection    = V3d.NaN
+        strikeDirection = V3d.NaN
+        dipAzimuth      = Double.NaN  
+        strikeAzimuth   = Double.NaN  
+        centerOfMass    = V3d.NaN  
+        error           = Statistics'.initial     
+    }
   //version modules
+  module rec V0 =      
+      let read = 
+        json {
+          return initial
+        }
+
+  type DipAndStrikeResults' with 
+    static member FromJson(_ : DipAndStrikeResults') = 
+      json {
+          let! v = Json.read "version"
+          match v with            
+            | 0 -> return! V0.read 
+            | _ -> return! v |> sprintf "don't know version %A  of Statistics" |> Json.error
+      }
+    static member ToJson (x : DipAndStrikeResults') =
+      json {
+          do! Json.write "version"          x.version                    
+          do! Json.write "plane"            (x.plane.ToString())
+          do! Json.write "dipAngle"         x.dipAngle          
+          do! Json.write "dipDirection"     (x.dipDirection.ToString())
+          do! Json.write "strikeDirection"  (x.strikeDirection.ToString())        
+          do! Json.write "dipAzimuth"       x.dipAzimuth     
+          do! Json.write "strikeAzimuth"    x.strikeAzimuth  
+          do! Json.write "centerOfMass"     (x.centerOfMass.ToString())
+          do! Json.write "error"            x.error
+      }
 
 [<DomainType>]
 type AnnotationResults' = {
@@ -112,7 +167,16 @@ module AnnotationResults' =
   let current = 0
   //conversion
   let convert (old : AnnotationResults) : AnnotationResults' =
-    failwith ""
+    {
+        version     = current
+        height      = old.height
+        heightDelta = old.heightDelta
+        avgAltitude = old.avgAltitude
+        length      = old.length
+        wayLength   = old.wayLength
+        bearing     = old.bearing
+        slope       = old.slope
+    }
 
   //initial
   //version modules
