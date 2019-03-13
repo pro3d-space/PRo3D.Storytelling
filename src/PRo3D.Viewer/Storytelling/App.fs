@@ -31,7 +31,7 @@ module private Helpers =
     let ignoreMessage (a : AppAction) (model : Model) =
         Model.isAnimating model ||
         Model.isPreview model ||
-        (model.story.presentation && not (Message.isCamera a))
+        (model.story.presentation && not (OMessage.isCamera a))
 
 [<AutoOpen>]
 module private Events =
@@ -94,11 +94,24 @@ let update (runtime : IRuntime) (signature: IFramebufferSignature)
             | AppAction a when not <| ignoreMessage a model ->
                 let s = ViewerApp.update runtime signature sendQueue mailbox model.inner.current a
 
-                let next = State.create s
-                let current = Provenance.state model.provenance
-                let msg = Message.create current next a
+                // Find all possibly relevant messages that were processed
+                let messages = s.drawing.processedMessages
+                                    |> List.map DrawingMessage
+                                    |> fun t -> a :: t
+                                    |> List.filter OMessage.isRelevant
 
-                let p = model.provenance |> ProvenanceApp.update model.story (Update (next, msg))
+
+                let p =
+                    match messages with
+                        | [] -> 
+                            model.provenance
+
+                        | x::_ ->
+                            let next = State.create s
+                            let current = Provenance.state model.provenance
+                            let msg = Message.create current next x
+
+                            model.provenance |> ProvenanceApp.update model.story (Update (next, msg))
             
                 model |> Lens.set (Model.Lens.inner |. InnerModel.Lens.current) s
                       |> Lens.set Model.Lens.provenance p

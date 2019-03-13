@@ -41,6 +41,7 @@ module Mutable =
         member x.annotations = _annotations
         member x.exportPath = _exportPath :> IMod<_>
         member x.pendingIntersections = _pendingIntersections :> IMod<_>
+        member x.processedMessages = __current.Value.processedMessages
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         member x.colorLegend = _colorLegend
@@ -152,6 +153,12 @@ module Mutable =
                     override x.Get(r) = r.pendingIntersections
                     override x.Set(r,v) = { r with pendingIntersections = v }
                     override x.Update(r,f) = { r with pendingIntersections = f r.pendingIntersections }
+                }
+            let processedMessages =
+                { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Collections.List<PRo3D.Drawing.Action>>() with
+                    override x.Get(r) = r.processedMessages
+                    override x.Set(r,v) = { r with processedMessages = v }
+                    override x.Update(r,f) = { r with processedMessages = f r.processedMessages }
                 }
             let past =
                 { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.Option<PRo3D.Drawing.DrawingModel>>() with

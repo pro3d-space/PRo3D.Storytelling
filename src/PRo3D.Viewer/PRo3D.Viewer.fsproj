@@ -80,9 +80,10 @@
     <Compile Include="Config.fs" />
     <Compile Include="Extensions\Lens.fs" />
     <Compile Include="Extensions\PList.fs" />
+    <Compile Include="Extensions\HMap.fs" />
     <Compile Include="Extensions\Tags.fs" />
     <Compile Include="Extensions\ThreadPool.fs" />
-    <Compile Include="Extensions\CameraAnimations.fs" />    
+    <Compile Include="Extensions\CameraAnimations.fs" />
     <Compile Include="Models\ChironExt.fs" />
     <Compile Include="Models\Model.fs" />
     <Compile Include="Models\VersionedModel.fs" />

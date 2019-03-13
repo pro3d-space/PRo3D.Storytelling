@@ -67,7 +67,12 @@ type DrawingModel = {
     annotations: GroupsModel 
     exportPath : Option<string>
 
-    pendingIntersections : ThreadPool<Action>    
+    pendingIntersections : ThreadPool<Action>
+
+    // Keeps track of all the messages processed by DrawingApp.update
+    // This includes also manual calls by the Viewer app in response to key strokes
+    [<NonIncremental>]
+    processedMessages : Action list
 
     [<TreatAsValue>]
     past : Option<DrawingModel> 
@@ -109,6 +114,8 @@ module DrawingModel =
         exportPath  = Some @"."
         
         pendingIntersections    = ThreadPool.empty            
+
+        processedMessages = []
 
         past    = None
         future  = None

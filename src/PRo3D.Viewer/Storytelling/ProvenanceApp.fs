@@ -38,12 +38,9 @@ module private Helpers =
                         Undecided tree
             ) 
 
-        let checkChildren (state : State) (msg : Message) (input : Decision<Node ztree>) =
+        let checkChildren (state : State) (input : Decision<Node ztree>) =
             input |> Decision.map (fun tree ->
-                let c =
-                    tree |> ZTree.filterChildren (fun n ->
-                        (n.state = state) && (n.message = Some msg)
-                    )
+                let c = tree |> ZTree.filterChildren (fun n -> n.state = state)
             
                 if List.length c > 1 then
                     Log.warn "Multiple identical children in provenance graph."
@@ -59,7 +56,8 @@ module private Helpers =
 
                 let coal = 
                     node |> Node.message
-                         |> Option.contains msg
+                         |> Option.map (fun m -> m = msg && Message.coalesce m)
+                         |> Option.defaultValue false
                          |> (&&) (story |> Story.isNodeReferenced node true |> not)
                          |> (&&) (ZTree.isLeaf tree)                
 
@@ -75,7 +73,9 @@ module private Helpers =
             input |> Decision.map (fun tree ->
                 let c =
                     tree |> ZTree.filterChildren (fun n ->
-                                (n.message = Some msg) && (story |> Story.isNodeReferenced n true |> not)
+                                Message.coalesce msg &&
+                                n.message = Some msg && 
+                                story |> Story.isNodeReferenced n true |> not
                             )
                             |> List.filter ZTree.isLeaf
 
@@ -122,9 +122,9 @@ let rec update (story : Story) (msg : ProvenanceAction) (p : Provenance) =
                     |> Rules.checkMessage msg
                     |> Rules.checkStateChanged next
                     |> Rules.checkParent next
-                    |> Rules.checkChildren next msg
+                    |> Rules.checkChildren next
                     |> Rules.coalesceWithCurrent story next msg
-                    |> Rules.coalesceWithChild story next msg
+                    //|> Rules.coalesceWithChild story next msg
                     |> Rules.appendNew next msg
                     |> Decision.get
 

@@ -350,7 +350,11 @@ module ViewerApp =
     let update 
       (runtime : IRuntime) (signature: IFramebufferSignature) 
       (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) 
-      (m : Model) (msg : ViewerAction) =        
+      (m : Model) (msg : ViewerAction) =
+
+        // Reset saved messages
+        let m = m |> Lens.set (Model.Lens.drawing |. DrawingModel.Lens.processedMessages) []
+
         //Log.line "[Viewer_update] %A inter:%A pick:%A" msg m.interaction m.picking
         match msg, m.interaction, m.ctrlFlag with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              

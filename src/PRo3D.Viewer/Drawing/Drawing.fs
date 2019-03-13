@@ -253,7 +253,10 @@ module DrawingApp =
           
         | _ -> None
 
-    let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (webSocket : BlockingCollection<string>) (view: CameraView) (model : DrawingModel) (act : Action) =
+    let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (webSocket : BlockingCollection<string>) (view: CameraView) (model : DrawingModel) (act : Action) =      
+      // Save message
+      let model = model |> Lens.update DrawingModel.Lens.processedMessages (fun l -> act::l)
+      
       match (act, model.draw, model.pick) with
         | StartDrawing, _, false ->                     
                 { model with draw = true }
