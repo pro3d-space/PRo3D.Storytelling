@@ -334,10 +334,10 @@ module ViewerUtils =
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
                         //|> Sg.pass RenderPass.main
 
-                yield RenderCommand.SceneGraph sg                    
+                yield RenderCommand.SceneGraph sg
 
-                if i = c then
-                  yield RenderCommand.SceneGraph depthTested           
+                //if i = c then //now gets rendered multiple times
+                yield RenderCommand.SceneGraph depthTested // assign priorities globally, or for each anno and make sets
 
                 yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
             
