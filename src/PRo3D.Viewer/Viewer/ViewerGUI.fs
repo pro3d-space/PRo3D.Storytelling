@@ -61,7 +61,6 @@ module Gui =
   let textOverlays (m : MReferenceSystem) (cv : IMod<CameraView>) = 
     div [js "oncontextmenu" "event.preventDefault();"] [ 
       let planet = m.planet |> Mod.map(fun x -> sprintf "%s" (x.ToString()))  
-    
       
       let pnb = pitchAndBearing m cv
     
@@ -82,8 +81,7 @@ module Gui =
       let lat = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.latitude).ToString("0.00")))
       //let alt = spericalc |> Mod.map(fun x -> sprintf "%s m" ((x.altitude).ToString("0.00")))
       let alt2 = alt2 |> Mod.map(fun x -> sprintf "%s m" ((x).ToString("0.00")))
-                           
-      
+                                 
       let style' = "color: white; font-family:Consolas;"
     
       yield div [clazz "ui"; style "position: absolute; top: 15px; left: 15px; float:left" ] [

@@ -113,6 +113,7 @@ type ViewerAction =
     | StartImportMessaging      of list<string>
     | Logging                   of string * ViewerAction
     | ThreadsDone               of string    
+    | OnResize                  of V2i
 
 
 and MailboxState = {

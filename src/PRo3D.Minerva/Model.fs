@@ -113,6 +113,8 @@ type FeatureCollection =
 
 type MinervaAction =
   | PerformQueries
+  | Reset
+  | WriteScreenCoordsDebug
   | PerformIdQuery of list<string>
   | ConnectVisplore
   | FlyToProduct of V3d

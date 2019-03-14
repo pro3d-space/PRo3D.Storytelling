@@ -108,11 +108,16 @@ module App =
 
   let update (model : Model) (msg : MinervaAction) : Model =
       match msg with
+      | Reset ->
+        { model with data = Initial.data }
+      | WriteScreenCoordsDebug -> model
       | PerformQueries -> 
         try
           //let data = model.queries |> MinervaGeoJSON.loadMultiple        
+          Log.startTimed "[Minerva] Fetching full dataset from Server"
           let data = idTestList |> getIdQuerySite |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
           //let features = data.features |> PList.sortBy(fun x -> x.sol)           
+          Log.stop()
           
           { model with data = data } //{ data with features = features } } //|> computeXYZFeatures}
         with e ->
@@ -254,8 +259,10 @@ module App =
         }
 
      div [clazz "ui inverted segment"] [
-       button [clazz "ui button"; onClick (fun _ -> PerformQueries)][text "Load Minerva"]
-       button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect To Visplore"]
+       button [clazz "ui button"; onClick (fun _ -> PerformQueries)][text "Load"]
+       button [clazz "ui button"; onClick (fun _ -> Reset)][text "Clear"]
+       button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Export"]
+       button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
        Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) content  
      ]
 

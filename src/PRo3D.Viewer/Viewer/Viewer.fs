@@ -907,28 +907,30 @@ module ViewerApp =
                  let newForward = (v - currentView.Location).Normalized
                                     
                  { m with animations = createAnimation v newForward m.animations }
+              | Minerva.WriteScreenCoordsDebug -> 
+                let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
+                let points = 
+                  m.minervaModel.data.features
+                    |> PList.toList 
+                    |> List.map(fun feat -> (feat.id, feat.geometry.positions.[0]))                    
+                    |> List.map(fun (id,p) ->  (id, ((viewProj.Forward.TransformPosProj p) + V3d.One) * 0.5))
+                
+               // points |> Log.line "trafo points minerva %A"                                 
+                Log.line "[Viewer] writing minerva screespace coords"
+                points 
+                    |> List.map(fun (id,v) -> sprintf "%s,%f,%f" id v.X v.Y) 
+                    |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates.csv"
+                m
               | _ ->                
                 
-                 let minerva' = PRo3D.Minerva.App.update m.minervaModel a 
-                 
-                // let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
-                // let points = 
-                //   minerva'.data.features 
-                //     |> PList.toList 
-                //     |> List.map(fun feat -> (feat.id, feat.geometry.positions.[0]))
-                //     //|> List.concat
-                //     |> List.map(fun (id,p) -> {| id = id; pos = viewProj.Forward.TransformPosProj p |} )
-                 
-                //// points |> Log.line "trafo points minerva %A"
-                                  
-                // points 
-                //     |> List.map(fun x -> sprintf "%s,%f,%f" x.id x.pos.X x.pos.Y) 
-                //     |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates2.csv"
-                                                    
+                 let minerva' = PRo3D.Minerva.App.update m.minervaModel a                                                                                       
                  //MailboxAction.ViewerAction
                  //ViewerAction.MinervaActions
                  //a |> ViewerAction.MinervaActions |> MailboxAction.ViewerAction
                  { m with minervaModel = minerva' }
+            | OnResize a,_,_ ->              
+              Log.line "[RenderControl Resized] %A" a
+              { m with frustum = m.frustum |> Frustum.withAspect(float a.X / float a.Y) }
             | _ -> m       
                                    
     let mkBrushISg color size trafo : ISg<Message> =
@@ -941,6 +943,8 @@ module ViewerApp =
         |> Sg.noEvents
         |> Sg.trafo(trafo)
     
+    
+
     let renderControlAttributes (m : MModel) = 
         let renderControlAtts (model : MNavigationModel)  =            
             amap {
@@ -962,7 +966,8 @@ module ViewerApp =
             //   attribute "showFPS" "true"        
             //   attribute "data-renderalways" "true"
                 onKeyDown (KeyDown)
-                onKeyUp (KeyUp)                
+                onKeyUp   (KeyUp)        
+              //  onResize  (OnResize)
             ] 
         ]            
 
@@ -1068,8 +1073,19 @@ module ViewerApp =
         ]
         
         let bodyAttributes = [style "background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden;"] //overflow-y : visible
-        let renderViewAttributes = [style "background: #1B1C1E; height:100%; width:100%"
-                                    Events.onClick (fun _ -> SwitchViewerMode ViewerMode.Standard)]
+
+        let onResize (cb : V2i -> 'msg) =
+            onEvent "onresize" ["{ X: $(document).width(), Y: $(document).height()  }"] (List.head >> Pickler.json.UnPickleOfString >> cb)
+
+        let onFocus (cb : V2i -> 'msg) =
+            onEvent "onfocus" ["{ X: $(document).width(), Y: $(document).height()  }"] (List.head >> Pickler.json.UnPickleOfString >> cb)
+
+        let renderViewAttributes = [ 
+            style "background: #1B1C1E; height:100%; width:100%"
+            Events.onClick (fun _ -> SwitchViewerMode ViewerMode.Standard)            
+            onResize OnResize     
+            onFocus OnResize
+          ]
         //let renderViewAttributes =
         //    amap {
         //        yield style "background: #1B1C1E; height:100%; width:100%"
@@ -1102,7 +1118,7 @@ module ViewerApp =
                   body renderViewAttributes [ //[ style "background: #1B1C1E; height:100%; width:100%"] [
                       div [style "background:#000;"] [
                           viewRenderView m
-                          Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
+                          //Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
                           Viewer.Gui.textOverlaysUserFeedback m.scene
                           Viewer.Gui.dnsColorLegend m
                           Viewer.Gui.scalarsColorLegend m]

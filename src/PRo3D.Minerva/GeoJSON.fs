@@ -182,6 +182,7 @@ module MinervaGeoJSON =
       [0 .. probs.itemsPerPage .. probs.totalCount]
         |> List.map(fun index -> 
           //sprintf "%s?startIndex=%d&count=%d&%s" site index probs.itemsPerPage cql
+            Report.Progress(float index / float probs.totalCount)
             let nv = [("startIndex",index.ToString()); ("count",probs.itemsPerPage.ToString())] |> HMap.ofList
             site, (HMap.union nv cql)
           )
