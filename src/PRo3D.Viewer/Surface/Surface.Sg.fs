@@ -92,7 +92,7 @@ module Sg =
 
         let lodVisEnabled = Mod.init false
         
-        let sg = g |> Sg.transform preTransform
+        let sg = g //|> Sg.transform preTransform
                                 
         sg, patchHierarchies, kdTrees
     

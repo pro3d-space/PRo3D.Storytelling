@@ -46,7 +46,7 @@ module private Helpers =
     // Creates a thumbnail by taking a screenshot
     let create () =
         use wc = new WebClient ()
-        wc.DownloadData (sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=8" baseAddress controlId.Value size.X size.Y)
+        wc.DownloadData (sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress controlId.Value size.X size.Y)
             |> ByteArray
 
 // Empty thumbnail
