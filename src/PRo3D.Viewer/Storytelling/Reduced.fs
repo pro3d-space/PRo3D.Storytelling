@@ -45,13 +45,28 @@ type Message =
             | GroupAction       -> "G"
             | Unknown           -> ""
 
+// We want to compare the raw content of lists with the (=) operator; plist contains
+// indices that might change by removing and adding elements, while the elements themselves remain
+// the same (i think thats the case???).
+[<CustomEquality; NoComparison>]
+type rlist<'a when 'a : equality> =
+    { inner : 'a plist }
+
+    override x.GetHashCode () =
+        x.inner |> PList.toList |> hash
+
+    override x.Equals y =
+        match y with 
+            | :? rlist<'a> as y -> PList.toList x.inner = PList.toList y.inner
+            | _ -> false
+
 type OSegment = Segment
 
 [<DomainType>]
 type Segment = {
     startPoint  : V3d
     endPoint    : V3d
-    points      : V3d list 
+    points      : V3d rlist 
 }
 
 type OAnnotation = Annotation
@@ -67,8 +82,8 @@ type Annotation = {
     projection  : Projection
     semantic    : Semantic
 
-    points      : V3d list
-    segments    : Segment list 
+    points      : V3d rlist
+    segments    : Segment rlist 
     color       : ColorInput
     thickness   : NumericInput
     results     : AnnotationResults option
@@ -89,8 +104,8 @@ type OAnnotationGroup = Node
 type AnnotationGroupState = {
     key         : Guid
     name        : string
-    leaves      : Guid list
-    subNodes    : AnnotationGroup list
+    leaves      : Guid rlist
+    subNodes    : AnnotationGroup rlist
     visible     : bool
 }
 
@@ -190,13 +205,13 @@ module Segment =
     let create (s : OSegment) = { 
         startPoint = s.startPoint
         endPoint = s.endPoint
-        points = s.points |> PList.toList
+        points = { inner = s.points }
     }
 
     let restore (s : Segment) : OSegment = {
         startPoint = s.startPoint
         endPoint = s.endPoint
-        points = s.points |> PList.ofList
+        points = s.points.inner
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -208,8 +223,8 @@ module Annotation =
         geometry    = a.geometry
         projection  = a.projection
         semantic    = a.semantic
-        points      = a.points |> PList.toList
-        segments    = a.segments |> PList.toList |> List.map Segment.create
+        points      = { inner = a.points }
+        segments    = { inner = a.segments |> PList.map Segment.create }
         color       = a.color
         thickness   = a.thickness
         results     = a.results
@@ -228,8 +243,8 @@ module Annotation =
         geometry    = a.geometry
         projection  = a.projection
         semantic    = a.semantic
-        points      = a.points |> PList.ofList
-        segments    = a.segments |> List.map Segment.restore |> PList.ofList
+        points      = a.points.inner
+        segments    = a.segments.inner |> PList.map Segment.restore
         color       = a.color
         thickness   = a.thickness
         results     = a.results
@@ -249,8 +264,8 @@ module AnnotationGroup =
         let s = {
             key         = g.key
             name        = g.name
-            leaves      = g.leaves |> PList.toList
-            subNodes    = g.subNodes |> PList.toList |> List.map (create a)
+            leaves      = { inner = g.leaves }
+            subNodes    = { inner = g.subNodes |> PList.map (create a) }
             visible     = g.visible
         }
         
@@ -262,8 +277,8 @@ module AnnotationGroup =
     let rec restore (g : AnnotationGroup) : OAnnotationGroup = {
         key         = g.state.key
         name        = g.state.name
-        leaves      = g.state.leaves |> PList.ofList
-        subNodes    = g.state.subNodes |> List.map restore |> PList.ofList
+        leaves      = g.state.leaves.inner
+        subNodes    = g.state.subNodes.inner |> PList.map restore
         visible     = g.state.visible
         expanded    = g.expanded
     }
@@ -289,9 +304,11 @@ module Annotations =
             
         let groups =
             let rec get (g : AnnotationGroup) : Guid hset =  
-                g.state.subNodes |> List.map get
-                                 |> fun xs -> HSet.ofList [g.state.key] :: xs
-                                 |> HSet.unionMany
+                g.state.subNodes.inner
+                    |> PList.map get
+                    |> PList.toList
+                    |> fun xs -> HSet.ofList [g.state.key] :: xs
+                    |> HSet.unionMany
         
             get a.root
 
