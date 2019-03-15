@@ -11,14 +11,14 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=578
+NormalPos.right=954
+NormalPos.bottom=563
 Class=LaTeXView
 Document=PRo3D_ShortUserManual.tex
 
 [Frame0_View0,0]
-TopLine=107
-Cursor=4950
+TopLine=59
+Cursor=2915
 
 [Frame1]
 Flags=0
@@ -29,13 +29,13 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=578
+NormalPos.right=954
+NormalPos.bottom=563
 Class=LaTeXView
 Document=Start.tex
 
 [Frame1_View0,0]
-TopLine=22
+TopLine=23
 Cursor=2011
 
 [Frame2]
@@ -47,13 +47,13 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=578
+NormalPos.right=954
+NormalPos.bottom=563
 Class=LaTeXView
 Document=ViewerFeatures.tex
 
 [Frame2_View0,0]
-TopLine=264
+TopLine=303
 Cursor=16235
 
 [Frame3]
@@ -65,13 +65,13 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=578
+NormalPos.right=954
+NormalPos.bottom=563
 Class=LaTeXView
 Document=ViewerActions.tex
 
 [Frame3_View0,0]
-TopLine=49
+TopLine=62
 Cursor=9483
 
 [Frame4]
@@ -83,14 +83,14 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=578
+NormalPos.right=954
+NormalPos.bottom=563
 Class=LaTeXView
 Document=Introduction.tex
 
 [Frame4_View0,0]
-TopLine=33
-Cursor=4413
+TopLine=16
+Cursor=1460
 
 [Frame5]
 Flags=0
@@ -101,16 +101,16 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=578
+NormalPos.right=954
+NormalPos.bottom=563
 Class=LaTeXView
-Document=..\..\..\..\..\..\Program Files (x86)\MiKTeX 2.9\tex\latex\koma-script\scrpage2.sty
+Document=..\..\..\..\Users\ortner\AppData\Local\Programs\MiKTeX 2.9\tex\latex\koma-script\scrpage2.sty
 
 [Frame5_View0,0]
-TopLine=922
-Cursor=33366
+TopLine=928
+Cursor=33626
 
 [SessionInfo]
 FrameCount=6
-ActiveFrame=0
+ActiveFrame=4
 

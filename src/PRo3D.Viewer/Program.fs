@@ -65,15 +65,15 @@ type License = {
 
 let viewerVersion       = "2.9.4-prerelease4"
 let mutable licenseText = ""
-let catchDomainErrors   = true
-let licenseCheck        = true
+let catchDomainErrors   = false
+let licenseCheck        = false
 let doBuildLicense      = false
 let licPath             = @".\license\pro3d.lic"
 
 let buildLicense(time) = 
   
-  let userName    = "Kristen Paris"
-  let institution = "ASU"
+  let userName    = "Isa Barbarisi"  
+  let institution = "ESAC"
 
   let mutable createAKey = new SKGL.Generate()
   createAKey.secretPhase <- (userName + institution + viewerVersion).GetHashCode().ToString()
