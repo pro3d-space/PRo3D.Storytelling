@@ -49,7 +49,7 @@ module RemoteControlApp =
                 | x::[] -> x
                 | _ -> failwith "doent know"
         let screenshot =            
-            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=8" baseAddress clientStatistic.name width height
+            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress clientStatistic.name width height
         Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
 
         match System.IO.Directory.Exists folder with
