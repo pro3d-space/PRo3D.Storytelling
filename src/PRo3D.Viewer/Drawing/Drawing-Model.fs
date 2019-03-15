@@ -31,6 +31,8 @@ type Action =
   | RemoveLastPoint  
   | ClearWorking
   | Clear
+  | SaveVersioned
+  | LoadVersioned
   | SetSegment          of int * Segment
   | Finish                
   | Undo

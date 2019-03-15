@@ -15,31 +15,36 @@ open Aardvark.SceneGraph.Opc
 
 [<DomainType>]
 type Leaf = 
-    | Annotations of value : Annotation
-    | Surfaces    of value : Surface
-    | Bookmarks   of value : Bookmark
+    | Annotations  of value : Annotation
+    | Surfaces     of value : Surface
+    | Bookmarks    of value : Bookmark
+    | Annotations' of value : PRo3D.Versioned.Annotation' // added case
     with     
       member x.id =
         match x with
           | Annotations a -> a.key
           | Surfaces    s -> s.guid
           | Bookmarks   b -> b.key
+          | Annotations' a -> a.key
 
       member x.visible =
         match x with
           | Annotations a -> a.visible
           | Surfaces    s -> s.isVisible
           | Bookmarks   b -> true
+          | Annotations' a -> a.visible
 
       member x.setVisible (v:bool) =
         match x with
-          | Annotations a -> Leaf.Annotations { a with visible = v }
-          | Surfaces    s -> Leaf.Surfaces    { s with isVisible = v }
+          | Annotations  a -> Leaf.Annotations { a with visible = v }
+          | Annotations' a -> Leaf.Annotations' { a with visible = v }
+          | Surfaces     s -> Leaf.Surfaces    { s with isVisible = v }
           | Bookmarks   _ -> x
 
        member x.active =
         match x with
           | Annotations a -> false
+          | Annotations' a -> false
           | Surfaces    s -> s.isActive
           | Bookmarks   b -> false
                 
@@ -126,14 +131,14 @@ module Leaf =
 
     let toAnnotation leaf =
         match leaf with 
-          | Leaf.Annotations a -> a
+          | Leaf.Annotations' a -> a
           | _ -> failwith "wrong type"
 
     let toAnnotations annotations =
         annotations
             |> HMap.choose(fun _ x -> 
                 match x with
-                | Leaf.Annotations s -> Some s
+                | Leaf.Annotations' s -> Some s
                 | _ -> None )
 
     let childrenToAnnotations annos =

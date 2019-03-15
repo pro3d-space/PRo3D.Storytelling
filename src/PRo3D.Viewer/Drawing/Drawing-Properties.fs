@@ -5,6 +5,7 @@ open System
 open Aardvark.UI
 open Aardvark.Base.Incremental
 open PRo3D.Groups
+open PRo3D.Versioned
 
 
 module AnnotationProperties = 
@@ -35,7 +36,7 @@ module AnnotationProperties =
             | _ -> let v = points.[0] - points.[points.Length - 1]
                    (v * up.Normalized).Length
             
-    let update (model : Annotation) (act : Action) =
+    let update (model : Annotation') (act : Action) =
         match act with
             | SetGeometry mode ->
                 { model with geometry = mode }

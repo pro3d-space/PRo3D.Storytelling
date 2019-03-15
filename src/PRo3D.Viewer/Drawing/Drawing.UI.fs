@@ -86,7 +86,13 @@ module UI =
                   ]
                   div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveCSV;
                       clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")][
-                          text "Save .csv"
+                          text "Export as csv"
+                  ]
+                  div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveVersioned)][
+                      text "Save versioned"
+                  ]
+                  div [ clazz "ui inverted item"; onMouseClick (fun _ -> LoadVersioned)][
+                      text "Load versioned"
                   ]
               ]
           ]                    
@@ -288,7 +294,7 @@ module UI =
           
       let toMAnnotation (leaf : MLeaf) =
         match leaf with 
-        | MAnnotations a -> a
+        | MAnnotations' a -> a
         | _ -> failwith "wrong type"
 
       let viewAnnotationGroups (model:MDrawingModel) = 

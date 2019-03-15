@@ -434,7 +434,7 @@ module ViewerApp =
                   | Some selected ->                             
                       let f = (fun x ->
                           let a = x |> Leaf.toAnnotation
-                          AnnotationProperties.update a msg |> Leaf.Annotations)
+                          AnnotationProperties.update a msg |> Leaf.Annotations')
                             
                       m.drawing.annotations
                         |> Groups.updateLeaf selected f

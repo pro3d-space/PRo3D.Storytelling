@@ -1,5 +1,7 @@
 ﻿namespace PRo3D
 
+open PRo3D.Versioned
+
 module Csv =
     
     open System.IO
@@ -53,13 +55,14 @@ module Csv =
         z             : double
     }
 
-    let exportAnnotation (lookUp) (a:Annotation) =
+    let exportAnnotation (lookUp) (a:Annotation') =
       
       let results = 
         match a.results with
           | Some r -> r
           | None ->  
             { 
+              version = AnnotationResults'.current
               height      = Double.NaN
               heightDelta = Double.NaN
               avgAltitude = Double.NaN

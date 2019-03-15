@@ -29,6 +29,8 @@ open PRo3D.Drawing
 open PRo3D.DrawingApp
 open PRo3D.Groups
 open MBrace.FsPickler.Json   
+open PRo3D.Versioned
+open Chiron
 
 module DrawingApp =
     open PRo3D.Base
@@ -398,11 +400,37 @@ module DrawingApp =
                       Log.stop()
                       { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
                     | None ->Log.stop(); model                    
-                | _ -> model
-        | _ -> model
+                | _ -> model        
+        | SaveVersioned, _,_ ->
+          let path = "./annotations.json"
+          let pathgGrouping = "./annotations.grouping"
+          
+          Log.line "[Drawing] Writing annotations"
+          model.annotations.flat 
+              |> HMap.toList 
+              |> List.map(fun (_,b) -> b |> Leaf.toAnnotation) // |> Annotation'.convert)
+              |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty |> IO.writeToFile path
+          
+          Log.line "[Drawing] Writing grouping"
+          let annotations' = { model.annotations with flat = HMap.empty } |> Serialization.save pathgGrouping
 
-    
-                                
+          { model with annotations = annotations' }
+          //model
+        | LoadVersioned, _,_ ->
+          let path = "./annotations.json"
+          let pathgGrouping = "./annotations.grouping"
+
+          Log.line "[Drawing] Reading annotations"
+          let (annos : list<Annotation'>) = path |> IO.readFromFile |> Json.parse |> Json.deserialize
+          let annos = annos |> List.map(fun x -> (x.key,x |> Leaf.Annotations')) |> HMap.ofList
+          
+          Log.line "[Drawing] Reading grouping"
+          let grouping = Serialization.loadAs<GroupsModel> pathgGrouping
+          let grouping = { grouping with flat = annos }
+
+          { model with annotations = grouping }
+        | _ -> model
+                                    
     let threads (m : DrawingModel) = m.pendingIntersections
     
     let toAnnotationOpt = 
@@ -410,9 +438,7 @@ module DrawingApp =
         match y with
           | MAnnotations ann -> Some ann
           | _ -> None
-    
-   
-
+       
     let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> * ISg<Drawing.Action> =
         // order is irrelevant for rendering. change list to set,
         // since set provides more degrees of freedom for the compiler           

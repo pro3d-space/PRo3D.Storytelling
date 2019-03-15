@@ -352,6 +352,8 @@ with
       do! Json.writeWith (Ext.toJson<NumericInput,Ext>) "thickness" x.thickness
       do! Json.write "results"       x.results
       do! Json.write "dnsResults"    x.dnsResults
+      do! Json.write "visible"    x.visible
+      do! Json.write "showDns"    x.showDns
       do! Json.write "text"    x.text
       do! Json.writeWith (Ext.toJson<NumericInput,Ext>) "textsize" x.textsize
       do! Json.write "surfaceName"    x.surfaceName
@@ -545,12 +547,12 @@ type ViewConfigModel' with
              do! Json.write "version" x.version
          }
 
-module Testing = 
+module IO = 
   let writeToFile path (contents : string) =
       System.IO.File.WriteAllText(path, contents)
 
   let readFromFile path =
-      System.IO.File.ReadAllText(path)
+      System.IO.File.ReadAllText(path)  
 
   let writeStuff() =
     let oldconfig = ViewConfigModel.initial |> ViewConfigModel'.convert
