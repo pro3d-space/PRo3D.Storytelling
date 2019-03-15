@@ -32,6 +32,7 @@ type Message =
     | AddAnnotation
     | EditAnnotation
     | DeleteAnnotation
+    | LoadAnnotations
     | GroupAction
     | Unknown 
 
@@ -40,6 +41,7 @@ type Message =
             | AddAnnotation     -> "A"
             | EditAnnotation    -> "E"
             | DeleteAnnotation  -> "D"
+            | LoadAnnotations   -> "L"
             | GroupAction       -> "G"
             | Unknown           -> ""
 
@@ -141,18 +143,23 @@ module Message =
         let c1 = HMap.count f1
         let c2 = HMap.count f2
 
-        if c2 > c1 then
-            AddAnnotation                   // One or more annotations were added
-        else if c2 < c1 then
-            DeleteAnnotation                // One or more annotations were deleted
-        else
-            if f1 <> f2 then
-                EditAnnotation              // The map of annotations changed, i.e. at least one annotation was edited
-            else
-                if current <> next then
-                    GroupAction             // The annotations remained unchanged, so the grouping must have changed
+        match msg with
+            | ImportAnnotationGroups _
+            | DrawingMessage (Load _) ->
+                LoadAnnotations
+            | _ ->
+                if c2 > c1 then
+                    AddAnnotation                   // One or more annotations were added
+                else if c2 < c1 then
+                    DeleteAnnotation                // One or more annotations were deleted
                 else
-                    Unknown                 // No relevant changes detected
+                    if f1 <> f2 then
+                        EditAnnotation              // The map of annotations changed, i.e. at least one annotation was edited
+                    else
+                        if current <> next then
+                            GroupAction             // The annotations remained unchanged, so the grouping must have changed
+                        else
+                            Unknown                 // No relevant changes detected
 
     // Returns if two messages of the given type can be coalesced; i.e. can
     // an existing node with the same message be modified instead of adding a new node
@@ -166,7 +173,8 @@ module OMessage =
     let isRelevant = function
         | DrawingMessage _
         | AnnotationMessage _ 
-        | AnnotationGroupsMessageViewer _ -> true
+        | AnnotationGroupsMessageViewer _ 
+        | ImportAnnotationGroups _ -> true
         | _ -> false
 
     let isCamera = function
