@@ -36,7 +36,19 @@ module ViewPlan =
         | ChangeAngle      of string * PRo3DNumeric.Action
         | ChangeFocal      of string * Numeric.Action
         | SetVPName        of string
-             
+    
+    
+    let updateFootprint (roverId:string) (vp:ViewPlan) (instrument:Instrument) =
+        let intr = instrument.intrinsics
+        let extr = instrument.extrinsics
+
+        let res = V2i((int)intr.horizontalResolution, (int)intr.verticalResolution)
+        let image = PixImage<byte>(Col.Format.RGB,res).ToPixImage(Col.Format.RGB)
+        let tex = PixTexture2d(PixImageMipMap [| image |], true) :> ITexture
+
+
+        failwith "footprint"
+
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =      
       match path with
         | Some _ ->
@@ -375,6 +387,7 @@ module ViewPlan =
                                                                              instrumentId = inst'.id ; 
                                                                              focal = inst'.focal.value } 
                                                                              model.roverModel
+                                                                             
                             outerModel, updateRovers model roverModel' vp'
                         | None -> outerModel, model                                       
                     | None -> outerModel, model 

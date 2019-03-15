@@ -467,7 +467,7 @@ module ViewerApp =
                 //let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
                 //{ m with scene = { m.scene with viewPlans = viewPlanModel}}  
                 let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation m
-                { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }}  
+                { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }} 
             | DnSColorLegendMessage msg,_,_ ->
                 let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
                 { m with drawing = { m.drawing with colorLegend = cm } }

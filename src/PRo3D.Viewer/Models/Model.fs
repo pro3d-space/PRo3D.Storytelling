@@ -74,6 +74,11 @@ type Semantic =
     | GrainSize = 6 
     | None = 7
 
+type ViewerMode =
+    | Standard
+    | Instrument
+    
+
 [<DomainType>]
 type Statistics = {
   average      : float

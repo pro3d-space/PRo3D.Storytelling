@@ -241,6 +241,7 @@ module Sg =
         let edges = Sg.edgeLines false points trafo
         let sg = edges |> Aardvark.SceneGraph.SgPrimitives.Sg.lines color
 
+
         let pickable = 
             adaptive {
                 let! edg = edges
@@ -323,14 +324,14 @@ module Sg =
         Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents 
 
   
-  let outlinePoint (points : alist<V3d>) (v:int) (color:IMod<C4b>) =
+  let outlinePoint (points : alist<V3d>) (v:int) (color:IMod<C4b>) (width : IMod<float>) =
     //let p = 
     //    points
     //    |> AList.toMod
     //    |> Mod.map( fun x -> x.AsArray.[0])
         
-    let sg = Sg.dots points (Mod.constant 5.0) color //Sg.mkDotISg color (Mod.constant 5.0) p 
-    let sgo = Sg.dots points (outlineSize (Mod.constant 5.0)) (Mod.constant C4b.VRVisGreen) //Sg.mkDotISg color (outlineSize (Mod.constant 5.0)) p
+    let sg = Sg.dots points width color //Sg.mkDotISg color (Mod.constant 5.0) p 
+    let sgo = Sg.dots points (outlineSize width) (Mod.constant C4b.VRVisGreen) //Sg.mkDotISg color (outlineSize (Mod.constant 5.0)) p
     let regulars = 
         sg
          |> Sg.pass pass0
@@ -356,7 +357,7 @@ module Sg =
          |> Sg.depthTest (Mod.constant DepthTestMode.None)
          |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Colors])
          |> Sg.pass pass1
-         |> Sg.uniform "LineWidth" (Mod.constant 1.0)
+         |> Sg.uniform "LineWidth" (outlineSize width)
          |> Sg.shader {
                 do! Shader.screenSpaceScale
                 do! Shader.stableTrafo
@@ -373,7 +374,7 @@ module Sg =
         let! length = points |> AList.count
         match length with 
         | 0  -> yield Sg.empty 
-        | 1 -> yield outlinePoint points v color 
+        | 1 -> yield outlinePoint points v color width
         | _ -> yield outlineLine points v color trafo width id
     } |> Sg.set
 
@@ -435,9 +436,9 @@ module Sg =
     } |> ASet.ofModSingle
 
   let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) 
-    (view : IMod<CameraView>) (showPoints : IMod<bool>) (picked:IMod<bool>) =
-      let points = getPolylinePoints anno            
-      let dots   = showPoints |> optional (Sg.getDotsIsg anno.points (anno.thickness.value |> Mod.map(fun x -> x + 2.0)) c anno.geometry)
+    (view : IMod<CameraView>) (showPoints : IMod<bool>) (picked:IMod<bool>)  =
+      let points = getPolylinePoints anno      
+      let dots   = showPoints |> optional (Sg.getDotsIsg anno.points (anno.thickness.value |> Mod.map(fun x -> x+2.0)) c anno.geometry)
      
       let azimuth =
         adaptive { 

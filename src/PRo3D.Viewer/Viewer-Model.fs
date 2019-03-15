@@ -42,9 +42,9 @@ type Interactions =
     //| DrawLog               = 7
     //| AlignPick             = 5
 
-type ViewerMode =
-    | Standard
-    | Instrument
+//type ViewerMode =
+//    | Standard
+//    | Instrument
     
 
 

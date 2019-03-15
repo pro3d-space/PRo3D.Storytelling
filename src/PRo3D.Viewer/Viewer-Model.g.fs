@@ -430,7 +430,7 @@ module Mutable =
                     override x.Update(r,f) = { r with tabMenu = f r.tabMenu }
                 }
             let viewerMode =
-                { new Lens<PRo3D.Viewer.Model, PRo3D.Viewer.ViewerMode>() with
+                { new Lens<PRo3D.Viewer.Model, PRo3D.ViewerMode>() with
                     override x.Get(r) = r.viewerMode
                     override x.Set(r,v) = { r with viewerMode = v }
                     override x.Update(r,f) = { r with viewerMode = f r.viewerMode }
