@@ -413,7 +413,7 @@ module DrawingApp =
     
    
 
-    let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> * ISg<Drawing.Action>=
+    let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> * ISg<Drawing.Action> =
         // order is irrelevant for rendering. change list to set,
         // since set provides more degrees of freedom for the compiler           
         let annoSet = 
@@ -439,7 +439,7 @@ module DrawingApp =
               let showPoints = 
                 a.geometry 
                   |> Mod.map(function | Geometry.Point | Geometry.DnS -> true | _ -> false)
-
+              
               Sg.finishedAnnotation a c config view showPoints picked
               )
             |> Sg.set               

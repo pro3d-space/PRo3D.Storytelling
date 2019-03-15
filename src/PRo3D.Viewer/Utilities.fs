@@ -340,8 +340,7 @@ module Sg =
     
     let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
         aset {
-            for p in points |> ASet.ofAList do
-               // let scale = computeScale view (Mod.constant p) 5.0                               
+            for p in points |> ASet.ofAList do                        
                 yield mkDotISg color (size) (Mod.constant p)
         } 
         |> Sg.set
@@ -351,6 +350,19 @@ module Sg =
             toEffect <| DefaultSurfaces.vertexColor          
         ]
 
+    let scaledDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (view : IMod<CameraView>) (near : IMod<float>) (hfov : IMod<float>) =
+        aset {
+            for p in points |> ASet.ofAList do   
+                let scaledSize = 
+                        computeInvariantScale view near (Mod.constant p) size hfov //(Mod.constant 0.05)
+                yield mkDotISg color scaledSize (Mod.constant p)
+        } 
+        |> Sg.set
+        |> Sg.effect [
+            toEffect <| Shader.screenSpaceScale
+            toEffect <| Shader.stableTrafo
+            toEffect <| DefaultSurfaces.vertexColor          
+        ]
     let getDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) =
         aset {
             let! geometry = geometry
@@ -359,6 +371,20 @@ module Sg =
                                     | Some p -> yield dot (Mod.constant p) size color
                                     | _-> yield Sg.empty
               |_-> yield dots points size color    
+        } |> Sg.set
+
+    let getScaledDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) (view : IMod<CameraView>) (near : IMod<float>) (hfov : IMod<float>) =
+        aset {
+            
+            let! geometry = geometry
+            match geometry with
+              | Geometry.Point -> match points|> AList.toList |> List.tryHead with
+                                    | Some p -> 
+                                        let scaledSize = 
+                                            computeInvariantScale view near (Mod.constant p) size hfov 
+                                        yield dot (Mod.constant p) scaledSize color
+                                    | _-> yield Sg.empty
+              |_-> yield scaledDots points size color view near hfov 
         } |> Sg.set
 
         
@@ -754,6 +780,26 @@ module Shader =
          yield { line.P1 with pos = V4d(p11, 1.0); lc = V2d( 1.0, 1.0 + rel); w = rel }
      }
 
+  let private footprintmap =
+        sampler2d {
+            texture uniform?FootPrintTexture
+            filter Filter.MinMagMipLinear
+            addressU WrapMode.Wrap
+            addressV WrapMode.Wrap
+  }
+
+  let footPrint (v : Vertex) =
+      fragment {           
+          if uniform?falseColors then
+              let range : V2d = uniform?MinMax
+              let norm = V2d((v.scalar - range.X)/ (range.Y - range.X), 0.5)
+
+              let c = colormap.Sample(norm).XYZ
+
+              return v.c * V4d(c.X, c.Y, c.Z, 1.0)
+          else
+              return v.c
+      }
 module PRo3DNumeric = 
     open Aardvark.Base.Incremental
     open Aardvark.UI

@@ -467,7 +467,7 @@ module ViewerApp =
                 //let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
                 //{ m with scene = { m.scene with viewPlans = viewPlanModel}}  
                 let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation m
-                { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }}  
+                { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }} 
             | DnSColorLegendMessage msg,_,_ ->
                 let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
                 { m with drawing = { m.drawing with colorLegend = cm } }
@@ -1076,8 +1076,8 @@ module ViewerApp =
         let instrumentViewAttributes =
                 amap {
                     let! hor, vert = ViewPlan.getInstrumentResolution m.scene.viewPlans
-                    let height = "height:" + (vert).ToString() + ";" ///uint32(2)
-                    let width = "width:" + (hor).ToString() + ";" ///uint32(2)
+                    let height = "height:" + (vert/uint32(2)).ToString() + ";" ///uint32(2)
+                    let width = "width:" + (hor/uint32(2)).ToString() + ";" ///uint32(2)
                     yield style ("background: #1B1C1E;" + height + width + "overflow-y:scroll; overflow-x:hidden;")
                     yield Events.onClick (fun _ -> SwitchViewerMode ViewerMode.Instrument)
                 } |> AttributeMap.ofAMap
