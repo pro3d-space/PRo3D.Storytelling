@@ -232,7 +232,7 @@ module ViewerUtils =
             |> Sg.dynamic
             |> Sg.trafo trafo //(Transformations.fullTrafo surf refsys)
             |> Sg.modifySamplerState (DefaultSemantic.DiffuseColorTexture)(Mod.constant(bla))
-            |> Sg.uniform "selected"      (Mod.constant false) // isSelected
+            |> Sg.uniform "selected"      (isSelected) // isSelected
             |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
             |> addAttributeFalsecolorMappingParameters surf
             |> Sg.uniform "TriangleSize"   triangleFilter  //triangle filter
