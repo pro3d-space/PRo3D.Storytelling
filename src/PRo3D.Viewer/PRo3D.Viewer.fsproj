@@ -43,8 +43,7 @@
     <DocumentationFile>
     </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
-    <StartArguments>
-    </StartArguments>
+    <StartArguments>-empty</StartArguments>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
@@ -78,6 +77,7 @@
   -->
   <ItemGroup>
     <Compile Include="Config.fs" />
+    <Compile Include="Serialization.fs" />
     <Compile Include="Models\ChironExt.fs" />
     <Compile Include="Models\Model.fs" />
     <Compile Include="Models\VersionedModel.fs" />
