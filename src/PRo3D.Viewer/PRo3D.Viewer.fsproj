@@ -152,10 +152,12 @@
     <Compile Include="Storytelling\PreviewModel.fs" />
     <Compile Include="Storytelling\StoryModel.fs" />
     <Compile Include="Storytelling\ProvenanceApp.fs" />
+    <Compile Include="Storytelling\SessionModel.fs" />
     <Compile Include="Storytelling\Model.fs" />
     <Compile Include="Storytelling\AnimationApp.fs" />
     <Compile Include="Storytelling\ViewApp.fs" />
     <Compile Include="Storytelling\PreviewApp.fs" />
+    <Compile Include="Storytelling\SessionApp.fs" />
     <Compile Include="Storytelling\ThumbnailApp.fs" />
     <Compile Include="Storytelling\StoryApp.fs" />
     <Compile Include="Storytelling\App.fs" />

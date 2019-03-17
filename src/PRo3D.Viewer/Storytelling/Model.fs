@@ -10,6 +10,7 @@ open Provenance.Reduced
 open Story
 open View
 open Preview
+open Session
 open Animation
 
 type Action =
@@ -20,6 +21,7 @@ type Action =
     | NodeClick             of NodeId
     | ViewAction            of ViewAction
     | PreviewAction         of PreviewAction
+    | SessionAction         of SessionAction
     | KeyDown               of Keys
     | KeyUp                 of Keys
     | RenderControlResized  of V2i

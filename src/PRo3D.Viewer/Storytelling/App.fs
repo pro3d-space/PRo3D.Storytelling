@@ -91,6 +91,11 @@ let update (runtime : IRuntime) (signature: IFramebufferSignature)
             | StoryAction a ->
                 model |> StoryApp.update a
 
+            | SessionAction a ->
+                model |> SessionApp.update a
+                      |> ViewApp.update Set
+                      |> StoryApp.update UpdateFrame
+
             | AppAction a when not <| ignoreMessage a model ->
                 let s = ViewerApp.update runtime signature sendQueue mailbox model.inner.current a
 
@@ -228,6 +233,8 @@ let view (model : MModel) =
                         if not p then
                             yield model.inner.output |> ViewerApp.view None (Mod.constant true)
                                                      |> UI.map AppAction
+
+                            yield SessionApp.view |> UI.map SessionAction
                     }
 
                     model.dockConfig |> docking [
