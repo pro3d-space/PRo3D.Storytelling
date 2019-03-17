@@ -9,6 +9,12 @@ module CameraAnimationsExtensions =
     module CameraAnimations =
 
         let interpolate (destination : CameraView) (duration : RelativeTime) (name : string) =
+
+            let getRot3d (x : V3d) (y : V3d) (z : V3d) : Rot3d =
+                let t = Trafo3d.FromBasis (x, y, z, V3d.Zero)
+                let t = t.GetOrthoNormalOrientation ()
+                Rot3d.FromM33d (t.Forward.UpperLeftM33 ())
+
             {
                 (CameraAnimations.initial name) with
                     sample = fun (localTime, _) (state : CameraView) -> // given the state and t since start of the animation, compute a state and the cameraview
@@ -18,8 +24,8 @@ module CameraAnimationsExtensions =
                             let vec      = destination.Location - state.Location
                             let location' = state.Location + vec * t
 
-                            let a = Rot3d.FromFrame (state.Right, state.Up, state.Backward)
-                            let b = Rot3d.FromFrame (destination.Right, destination.Up, destination.Backward)
+                            let a = getRot3d state.Right state.Up state.Backward
+                            let b = getRot3d destination.Right destination.Up destination.Backward
                             let orientation = (a, b, t) |> Ipol.SlerpShortest |> M44d.Rotation
 
                             let forward' = -orientation.C2.XYZ
