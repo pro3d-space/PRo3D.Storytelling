@@ -250,6 +250,9 @@ module AnnotationResults' =
         slope       = Double.NaN
     }  
 
+type SemanticId = SemanticId of string
+type SemanticType = Metric = 0 | Angular = 1 | Hierarchical = 2 | Undefined = 3
+
 [<DomainType>]
 type Annotation' = {
   version     : int
@@ -279,9 +282,12 @@ type Annotation' = {
 
   surfaceName : string
   view        : CameraView
+
+  semanticId   : SemanticId
+  semanticType : SemanticType
 }
 with 
-  static member current = 0
+  static member current = 1
   static member private readV0 =
     json {
       let! key          = Json.read "key"
@@ -330,6 +336,63 @@ with
         textsize    = textSize         
         surfaceName = surfaceName
         view        = cameraView 
+        semanticId   = SemanticId ""
+        semanticType = SemanticType.Undefined
+      }
+    }
+  static member private readV1 =
+    json {
+      let! key          = Json.read "key"
+      let! modelTrafo   = Json.read "modelTrafo" //|> Trafo3d.Parse
+      let! geometry     = Json.read "geometry"
+      let! projection   = Json.read "projection"
+      let! semantic     = Json.read "semantic"
+
+      let! points   = Json.read "points"
+      let! segments = Json.read "segments"
+
+      let! color        = Json.readWith Ext.fromJson<ColorInput,Ext> "color"
+      let! thickness    = Json.readWith Ext.fromJson<NumericInput,Ext> "thickness"
+
+      let! results      = Json.read "results"
+      let! dnsResults   = Json.read "dnsResults"
+
+      let! visible  = Json.read "visible"
+      let! showDns  = Json.read "showDns"
+      let! text     = Json.read "text"
+      let! textSize = Json.readWith Ext.fromJson<NumericInput,Ext> "textsize"
+
+      let! surfaceName = Json.read "surfaceName"
+
+      let! (cameraView : list<string>) = Json.read "view"
+      
+      let cameraView = cameraView |> List.map V3d.Parse
+      let cameraView = CameraView(cameraView.[0],cameraView.[1],cameraView.[2],cameraView.[3], cameraView.[4])
+
+      let! semanticId    = Json.read "semanticId"
+      let! semanticType  = Json.read "semanticType"
+
+      return {
+        version     = Annotation'.current
+        key         = key           |> Guid.Parse
+        modelTrafo  = modelTrafo    |> Trafo3d.Parse        
+        geometry    = geometry      |> enum<Geometry>
+        projection  = projection    |> enum<Projection>
+        semantic    = semantic      |> enum<Semantic>
+        points      = points        |> Serialization.jsonSerializer.UnPickleOfString
+        segments    = segments      |> Serialization.jsonSerializer.UnPickleOfString
+        color       = color
+        thickness   = thickness      
+        results     = results    
+        dnsResults  = dnsResults         
+        visible     = visible 
+        showDns     = showDns   
+        text        = text      
+        textsize    = textSize         
+        surfaceName = surfaceName
+        view        = cameraView 
+        semanticId   = semanticId |> SemanticId
+        semanticType = semanticType |> enum<SemanticType>
       }
     }
   static member FromJson(_:Annotation') = 
@@ -337,6 +400,7 @@ with
       let! v = Json.read "version"
       match v with 
       | 0 -> return! Annotation'.readV0
+      | 1 -> return! Annotation'.readV1
       | _ -> return! v |> sprintf "don't know version %A of Annotation" |> Json.error
     }
 
@@ -362,10 +426,13 @@ with
 
       let camView = [x.view.Sky; x.view.Location; x.view.Forward; x.view.Up ; x.view.Right] |> List.map(fun x -> x.ToString())      
       do! Json.write "view" camView
+      do! Json.write "semanticId" (x.semanticId.ToString())
+      do! Json.write "semanticType" (x.semanticType |> int)
+      
     }
 
 module Annotation' =
-  let current = 0
+  
   //conversion
   let convert (old : Annotation) : Annotation' =
    {
@@ -387,6 +454,8 @@ module Annotation' =
       textsize    = old.textsize    
       surfaceName = old.surfaceName 
       view        = old.view
+      semanticId   = SemanticId ""
+      semanticType = SemanticType.Undefined
    }
 
   let thickn = {
@@ -452,6 +521,8 @@ module Annotation' =
       textsize    = initial_old.textsize    
       surfaceName = initial_old.surfaceName 
       view        = initial_old.view
+      semanticId   = SemanticId ""
+      semanticType = SemanticType.Undefined
    }
     
   let thickness = [1.0; 2.0; 3.0; 4.0; 5.0; 1.0; 1.0]
@@ -480,9 +551,9 @@ module Annotation' =
               | _ -> false 
         surfaceName = surfName
         view = FreeFlyController.initial.view
+        semanticId   = SemanticId ""
+        semanticType = SemanticType.Undefined
       }
-      
-  
 
   //initial
   //version modules
