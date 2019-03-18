@@ -117,43 +117,9 @@ module Groups =
 
         (go m.rootGroup)
           |> PList.toList
-          |> HMap.ofList
-
-    let tryLoadGroups (path:string) =
-      try
-        Some (Serialization.loadAs<PRo3D.Groups.GroupsModel> path)
-        //Some (Serialization.loadJsonAs<PRo3D.Groups.GroupsModel> path)
-      with _ ->
-        Log.error "[loadGroups:] couldn't load %s" path
-        None     
+          |> HMap.ofList    
         
-    let tryLoadAnnotations (path:string) =
-      try
-        let annotationGroups = (Serialization.loadAs<PRo3D.Groups.saveAnnotations> path)
-
-        let flat' = 
-          annotationGroups.annotations.flat 
-            |> HMap.map(fun _ v -> 
-              match v with 
-                | Leaf.Annotations a ->
-                  Log.warn "encountered legacy annotations; converting to v%d" Annotation'.current
-                  a |> Annotation'.convert |> Leaf.Annotations' 
-                | Leaf.Annotations' a -> 
-                  if a.version < Annotation'.current then
-                    Log.warn "encountered versioned annotations of v%d; updating to v%d" a.version Annotation'.current
-                  elif a.version > Annotation'.current then
-                    Log.error "version mixup - not supported encountered v%d; current v%A" a.version Annotation'.current
-
-                  a |> Leaf.Annotations'
-                | _ -> v)
-
-        let blarg = { annotationGroups.annotations with flat = flat' }
-
-        Some { annotationGroups with annotations = blarg }
-        //Some (Serialization.loadJsonAs<PRo3D.Groups.saveAnnotations> path)
-      with _ ->
-        Log.error "[loadAnnotations:] couldn't load %s" path
-        None        
+     
     
     let updateActiveGroup (f : Node -> Node) (m : GroupsModel) =
         let root = updateNodeAt m.activeGroup.path f m.rootGroup        

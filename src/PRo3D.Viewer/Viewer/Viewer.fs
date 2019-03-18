@@ -205,27 +205,7 @@ module ViewerApp =
         match sel with
           | Some s -> s.trafo.grabbed.IsSome
           | None -> false   
-          
-    let loadRoverData (m:Model) =
-        let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
-        { m with scene = { m.scene with viewPlans = vps } }
-
-    let loadLastAnnotations (m:Model) = 
-          match  m.scene.scenePath with
-            | Some p -> let ap = DrawingApp.getAnnotationPath p
-                        let groups = Groups.tryLoadAnnotations ap 
-                        match groups with          
-                            | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; colorLegend = g.colorLegend } }
-                            | None -> m
-            |None -> m
-          //match Serialization.fileExists "./lastmeasure" with
-          //  | Some path ->                       
-          //    let groups = Groups.tryLoadAnnotations path 
-          //    match groups with          
-          //      | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; colorLegend = g.colorLegend } }
-          //      | None -> m
-          //  | None -> m
-
+                        
     let animateFowardAndLocation (pos : V3d) (dir : V3d) (duration : RelativeTime) (name : string) = 
       {
         (CameraAnimations.initial name) with 
@@ -291,10 +271,7 @@ module ViewerApp =
             | DockNodeConfig.Stack (weight,activeId,children) -> Stack(weight, activeId, List.append [de] children)
             | DockNodeConfig.Element element ->  Stack(0.2, None, List.append [de] [element]) 
 
-    let saveSceneAndAnnotations (path:string) (m:Model) = 
-        let s' = { m.scene with scenePath = Some path}
-        let drawing = DrawingApp.saveSceneAnnotations path m.drawing
-        { m with scene = Serialization.save path s'; drawing = drawing } |> Model.stashAndSaveRecent path
+    
 
     let matchPickingInteraction (bc : BlockingCollection<string>) (p:V3d) (hitFunction:(V3d-> V3d option)) (surf:Surface) (m:Model) = 
          match m.interaction, m.viewerMode with
@@ -345,9 +322,7 @@ module ViewerApp =
                 let action = SurfaceApp.Action.GroupsMessage(Groups.Action.SingleSelectLeaf(list.Empty, surf.guid, ""))
                 let surfaceModel' = SurfaceApp.update m.scene.surfacesModel action m.scene.scenePath m.scene.navigation.camera.view m.scene.referenceSystem
                 { m with scene = { m.scene with surfacesModel = surfaceModel' }}
-            | _ -> m
-
-    
+            | _ -> m    
 
     let mutable lastHash = -1    
 
@@ -657,35 +632,18 @@ module ViewerApp =
                     | false -> m
                 
             | SaveScene s, _,_ ->                 
-                match m.scene.scenePath with
-                    | None ->                        
-                        match s.IsEmptyOrNull() with
-                            | true -> m
-                            | _ -> saveSceneAndAnnotations s m
-                    | Some path -> 
-                        saveSceneAndAnnotations path m                                     
-            | SaveAs s,_,_ ->                
-                match s.IsEmptyOrNull() with
-                    | true -> m
-                    | _  -> saveSceneAndAnnotations s m
-                            
-            | OpenScene sl,_,_ ->
-                match sl.Length < 1 with
-                    | true -> m
-                    | false -> 
-                        let path = sl.[0]
-                        Scene.loadScene path m runtime signature 
-                            |> Model.stashAndSaveRecent path
-                            |> loadRoverData
-                            |> loadLastAnnotations  
+              let target = match m.scene.scenePath with | Some path -> path | None -> s
+              m |> ViewerUtils.IO.saveSceneAndAnnotations target
+            | SaveAs s,_,_ ->
+              ViewerUtils.IO.saveSceneAndAnnotations s m
             | LoadScene path,_,_ ->
                 Scene.loadScene path m runtime signature 
                     |> Model.stashAndSaveRecent path
-                    |> loadRoverData
-                    |> loadLastAnnotations  
+                    |> ViewerUtils.IO.loadRoverData
+                    |> ViewerUtils.IO.loadLastAnnotations  
             | NewScene,_,_ ->
-                let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox m.minervaModel.minervaMessagingMailbox with recent = m.recent }
-                loadRoverData m'
+                let initialModel = Viewer.initial m.messagingMailbox m.minervaModel.minervaMessagingMailbox
+                { initialModel with recent = m.recent } |> ViewerUtils.IO.loadRoverData
             | KeyDown k, _, _ ->
               let drawingAction =
                 match k with
@@ -717,7 +675,7 @@ module ViewerApp =
                     timeout = 3000
                     msg     = ViewerAction.NoAction ""
                   }
-                  { (saveSceneAndAnnotations path m) with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
+                  { (ViewerUtils.IO.saveSceneAndAnnotations path m) with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
                 | (true, Aardvark.Application.Keys.S, None) -> 
                    //Log.error "please use \"save\" in the menu to save the scene";
 
@@ -1174,10 +1132,10 @@ module ViewerApp =
           if startEmpty |> not then
             PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox
               |> Scene.loadLastScene runtime signature
-              |> loadRoverData
-              |> loadLastAnnotations
+              |> ViewerUtils.IO.loadRoverData
+              |> ViewerUtils.IO.loadLastAnnotations
           else
-            PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> loadRoverData
+            PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> ViewerUtils.IO.loadRoverData
 
         App.start {
             unpersist = Unpersist.instance

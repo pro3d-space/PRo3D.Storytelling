@@ -73,15 +73,15 @@ module UI =
                 | Some selected -> selected = a.key
                 | None -> false )
 
-      let annotationMenu = 
+      let annotationMenu = //todo move to viewer io gui
           div [ clazz "ui dropdown item"] [
               text "Annotations"
               i [clazz "dropdown icon"][] 
               div [ clazz "menu"] [                    
-                  div [ clazz "ui inverted item"; Dialogs.onChooseFiles Load;
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));" )][
-                          text "Load"
-                  ]
+                  //div [ clazz "ui inverted item"; Dialogs.onChooseFiles Load;
+                  //clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));" )][
+                  //        text "Load"
+                  //]
                   div [ clazz "ui inverted item"; onMouseClick (fun _ -> Clear)][
                           text "Clear List"
                   ]
@@ -89,34 +89,15 @@ module UI =
                       clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")][
                           text "Export as csv"
                   ]
-                  div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveVersioned)][
-                      text "Save versioned"
-                  ]
-                  div [ clazz "ui inverted item"; onMouseClick (fun _ -> LoadVersioned)][
-                      text "Load versioned"
-                  ]
+                  //div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveVersioned)][
+                  //    text "Save versioned"
+                  //]
+                  //div [ clazz "ui inverted item"; onMouseClick (fun _ -> LoadVersioned)][
+                  //    text "Load versioned"
+                  //]
               ]
           ]                    
-
-      let viewAnnotationImportExport (m:MDrawingModel) =
-         div [clazz "ui buttons inverted"] [
-                              
-              button [clazz "ui icon button"; Dialogs.onSaveFile Save;
-                      clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements'}]}));")] [
-                  i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
-                              
-              button [clazz "ui icon button"; Dialogs.onChooseFiles Load;
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));") ] [
-                  i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
-              
-              button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
-                  i [clazz "file outline icon"] [] ] |> UI.wrapToolTipBottom "Clear Annotation List"
-
-              button [clazz "ui icon button"; Dialogs.onSaveFile SaveCSV;
-                      clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")] [
-                  i [clazz "save icon inverted"] [] ] |> UI.wrapToolTipBottom "Save .csv"                                                                
-          ] 
-
+      
       let viewAnnotations (annotations : alist<MAnnotation>) : alist<DomNode<Action>> =
         
           annotations |> AList.map(fun a ->

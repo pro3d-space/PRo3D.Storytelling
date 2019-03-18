@@ -112,7 +112,7 @@ type ViewerAction =
     | UpdateUserFeedback        of string
     | StartImportMessaging      of list<string>
     | Logging                   of string * ViewerAction
-    | ThreadsDone               of string    
+    | ThreadsDone               of string        
 
 
 and MailboxState = {

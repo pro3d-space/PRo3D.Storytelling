@@ -325,24 +325,6 @@ module DrawingApp =
                 //Serialization.writeToFile path json 
                 
                 model
-        | Save p,_, _-> saveAnnotations p model
-
-        | Load p,_, _ ->                
-          match p.Length < 1 with
-            | true -> model
-            | false -> 
-              //let groups = Groups.tryLoadGroups path
-              let path = p.[0]
-              let groups = Groups.tryLoadAnnotations path
-              match groups with 
-                //| Some g -> { model with annotations = g  }
-                | Some g -> { model with annotations = g.annotations; colorLegend = g.colorLegend }
-                | None -> model
-        | QuickLoad,_ , _->                
-          let groups = Groups.tryLoadGroups "./lastMeasure" 
-          match groups with 
-            | Some g -> { model with annotations = g  }
-            | None -> model
         | Send, _, _ ->                                                      
             model
         | ClearWorking,_ , _->

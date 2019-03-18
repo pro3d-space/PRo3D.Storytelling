@@ -281,7 +281,7 @@ module Gui =
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
                   text "Save as..."
             ]
-            div [ clazz "ui inverted item"; Dialogs.onChooseFiles OpenScene;
+            div [ clazz "ui inverted item"; Dialogs.onChooseFiles(fun x -> match (x |> List.tryHead) with | Some y -> LoadScene y | None -> NoAction "no scene selected");
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({ filters: [{ name: 'Scene', extensions: ['scn']},], properties: ['openFile']}));")][ 
                                                     
                   text "Open"

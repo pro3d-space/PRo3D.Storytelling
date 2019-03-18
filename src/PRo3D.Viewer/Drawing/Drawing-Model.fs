@@ -41,10 +41,7 @@ type Action =
   | FlyToAnnotation     of Guid
   //| RemoveAnnotation        of list<Index>*Guid       
   | Send
-  | Export
-  | Save                of string
-  | Load                of list<string>
-  | QuickLoad
+  | Export  
   | Nop
   | UpVectorChanged     of V3d
   | NorthVectorChanged  of V3d
