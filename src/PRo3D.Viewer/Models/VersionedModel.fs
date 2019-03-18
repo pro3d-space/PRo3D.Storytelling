@@ -7,6 +7,8 @@ open Aardvark.UI
 
 open PRo3D
 open Chiron
+open Aardvark.UI
+open Aardvark.UI.Primitives
 
 #nowarn "0686"
 
@@ -58,11 +60,11 @@ with
     }
 
 module Statistics' =
-  let current = 0
+  
   //conversion
   let convert (old : Statistics) : Statistics' =
     {
-      version      = current
+      version      = Statistics'.current
       average      = old.average     
       min          = old.min         
       max          = old.max         
@@ -73,7 +75,7 @@ module Statistics' =
   //initial
   let initial = 
      {
-        version      = current
+        version      = Statistics'.current
         average      = Double.NaN
         min          = Double.NaN
         max          = Double.NaN
@@ -387,28 +389,100 @@ module Annotation' =
       view        = old.view
    }
 
+  let thickn = {
+      value   = 3.0
+      min     = 1.0
+      max     = 8.0
+      step    = 1.0
+      format  = "{0:0}"
+  }
+
+  let texts = {
+      value   = 0.05
+      min     = 0.01
+      max     = 5.0
+      step    = 0.01
+      format  = "{0:0.00}"
+  }
+
+  let make_old (projection) (geometry) (color) (thickness) (surfName) : Annotation  =       
+    {
+      key         = Guid.NewGuid()
+      geometry    = geometry
+      semantic    = Semantic.None
+      points      = plist.Empty
+      segments    = plist.Empty //[]
+      color       = color
+      thickness   = thickness
+      results     = None
+      dnsResults  = None            
+      projection  = projection
+      visible     = true
+      text        = ""
+      textsize    = texts
+      modelTrafo  = Trafo3d.Identity
+      showDns     = 
+          match geometry with 
+            | Geometry.DnS -> true 
+            | _ -> false 
+      surfaceName = surfName
+      view = FreeFlyController.initial.view
+    }
+
+  let initial_old =
+      make_old Projection.Viewpoint Geometry.Polyline { c = C4b.Magenta } thickn ""
+
   let initial : Annotation' =
    {
       version     = Annotation'.current
-      key         = Annotation.initial.key
-      modelTrafo  = Annotation.initial.modelTrafo
-      geometry    = Annotation.initial.geometry    
-      projection  = Annotation.initial.projection  
-      semantic    = Annotation.initial.semantic    
-      points      = Annotation.initial.points      
-      segments    = Annotation.initial.segments    
-      color       = Annotation.initial.color       
-      thickness   = Annotation.initial.thickness   
-      results     = Annotation.initial.results    |> Option.map AnnotationResults'.convert
-      dnsResults  = Annotation.initial.dnsResults |> Option.map DipAndStrikeResults'.convert
-      visible     = Annotation.initial.visible     
-      showDns     = Annotation.initial.showDns     
-      text        = Annotation.initial.text        
-      textsize    = Annotation.initial.textsize    
-      surfaceName = Annotation.initial.surfaceName 
-      view        = Annotation.initial.view
+      key         = initial_old.key
+      modelTrafo  = initial_old.modelTrafo
+      geometry    = initial_old.geometry    
+      projection  = initial_old.projection  
+      semantic    = initial_old.semantic    
+      points      = initial_old.points      
+      segments    = initial_old.segments    
+      color       = initial_old.color       
+      thickness   = initial_old.thickness   
+      results     = initial_old.results    |> Option.map AnnotationResults'.convert
+      dnsResults  = initial_old.dnsResults |> Option.map DipAndStrikeResults'.convert
+      visible     = initial_old.visible     
+      showDns     = initial_old.showDns     
+      text        = initial_old.text        
+      textsize    = initial_old.textsize    
+      surfaceName = initial_old.surfaceName 
+      view        = initial_old.view
    }
     
+  let thickness = [1.0; 2.0; 3.0; 4.0; 5.0; 1.0; 1.0]
+  let color = [new C4b(241,238,246); new C4b(189,201,225); new C4b(116,169,207); new C4b(43,140,190); new C4b(4,90,141); new C4b(241,163,64); new C4b(153,142,195) ]
+
+  let make (projection) (geometry) (color) (thickness) (surfName) : Annotation'  =       
+      {
+        version     = Annotation'.current
+        key         = Guid.NewGuid()
+        geometry    = geometry
+        semantic    = Semantic.None
+        points      = plist.Empty
+        segments    = plist.Empty //[]
+        color       = color
+        thickness   = thickness
+        results     = None
+        dnsResults  = None            
+        projection  = projection
+        visible     = true
+        text        = ""
+        textsize    = texts
+        modelTrafo  = Trafo3d.Identity
+        showDns     = 
+            match geometry with 
+              | Geometry.DnS -> true 
+              | _ -> false 
+        surfaceName = surfName
+        view = FreeFlyController.initial.view
+      }
+      
+  
 
   //initial
   //version modules

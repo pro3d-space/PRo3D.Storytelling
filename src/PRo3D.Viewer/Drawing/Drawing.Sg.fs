@@ -28,6 +28,7 @@ open PRo3D
 open PRo3D.Drawing
 open PRo3D.Groups
 open MBrace.FsPickler.Json   
+open PRo3D.Versioned
 
 module Sg =                             
   open PRo3D.DrawingUtilities
@@ -70,7 +71,7 @@ module Sg =
           offset          : IMod<float>
       }
 
-  let drawDns (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =                         
+  let drawDns (anno : MAnnotation') (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =                         
     aset {                            
       let! dns = anno.dnsResults 
       match dns with
@@ -137,7 +138,7 @@ module Sg =
         | None -> ()            
     } |> Sg.set
       
-  let getPolylinePoints (a : MAnnotation) =
+  let getPolylinePoints (a : MAnnotation') =
     alist {                          
       let! hasSegments = (a.segments |> AList.count) |> Mod.map(fun x -> x > 0)
       if hasSegments |> not then
@@ -378,7 +379,7 @@ module Sg =
         | _ -> yield outlineLine points v color trafo width id
     } |> Sg.set
 
-  let drawWorkingAnnotation (offset : IMod<float>) (anno : IMod<Option<MAnnotation>>)  = 
+  let drawWorkingAnnotation (offset : IMod<float>) (anno : IMod<Option<MAnnotation'>>)  = 
 
       let polyPoints =
           alist {
@@ -414,14 +415,14 @@ module Sg =
           Sg.dots points thickness color                     //support points
       ]         
   
-  let drawText' (view : IMod<CameraView>) conf (text:IMod<string>)(anno : MAnnotation) = 
+  let drawText' (view : IMod<CameraView>) conf (text:IMod<string>)(anno : MAnnotation') = 
     let points = anno.points |> AList.toMod
     let pos = 
         points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
 
     Sg.text view conf.nearPlane conf.hfov pos anno.modelTrafo text anno.textsize.value
 
-  let drawText (view : IMod<CameraView>) conf (anno : MAnnotation) = 
+  let drawText (view : IMod<CameraView>) conf (anno : MAnnotation') = 
     let points = anno.points |> AList.toMod
     let pos = 
         points |> Mod.map(fun a -> a |> PList.toList |> List.head) 
@@ -435,7 +436,7 @@ module Sg =
         else return Sg.empty
     } |> ASet.ofModSingle
 
-  let finishedAnnotation (anno : MAnnotation) (c : IMod<C4b>) (conf:innerViewConfig) 
+  let finishedAnnotation (anno : MAnnotation') (c : IMod<C4b>) (conf:innerViewConfig) 
     (view : IMod<CameraView>) (showPoints : IMod<bool>) (picked:IMod<bool>)  =
       let points = getPolylinePoints anno      
       let dots   = showPoints |> optional (Sg.getDotsIsg anno.points (anno.thickness.value |> Mod.map(fun x -> x+2.0)) c anno.geometry)
@@ -489,7 +490,7 @@ module Sg =
           Sg.set sgs 
       ] |> Sg.onOff anno.visible
  
-  let finishedAnnotationDiscs (anno : MAnnotation) (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =
+  let finishedAnnotationDiscs (anno : MAnnotation') (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =
      anno.showDns |> optional (drawDns anno conf cl cam) |> Sg.set |> Sg.onOff anno.visible
         
 

@@ -63,8 +63,7 @@ module AnnotationProperties =
                 Log.line "Position: %A" p
                 model
 
-
-    let view (model : MAnnotation) = 
+    let view (model : MAnnotation') = 
 
         require GuiEx.semui (
             Html.table [                                            
@@ -81,7 +80,7 @@ module AnnotationProperties =
 
         )
 
-    let viewResults (model : MAnnotation) (up:IMod<V3d>) =   
+    let viewResults (model : MAnnotation') (up:IMod<V3d>) =   
         
         let height   = Mod.bindOption model.results Double.NaN (fun a -> a.height)
         let heightD  = Mod.bindOption model.results Double.NaN (fun a -> a.heightDelta)
@@ -100,28 +99,26 @@ module AnnotationProperties =
         let horDist  = Mod.map( fun u -> horizontalDistance (model.points |> AList.toList) u ) up
       
         require GuiEx.semui (
-            Html.table [   
-                Html.row "Position:"    [Incremental.text (pos   |> Mod.map  (fun d -> d))]
-                Html.row "PrintPosition:"  [button [clazz "ui button tiny"; onClick (fun _ -> PrintPosition )][]] 
-                Html.row "Height:"      [Incremental.text (height   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
-                Html.row "HeightDelta:" [Incremental.text (heightD  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
-                Html.row "Avg Altitude:" [Incremental.text (alt  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
-                Html.row "Length:"      [Incremental.text (length   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
-                Html.row "WayLength:"   [Incremental.text (wLength  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
-                Html.row "Bearing:"     [Incremental.text (bearing   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
-                Html.row "Slope:"       [Incremental.text (slope  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
-                Html.row "Vertical Distance:"   [Incremental.text (vertDist  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
-                Html.row "Horizontal Distance:" [Incremental.text (horDist   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
-            ]
-
+          Html.table [   
+            Html.row "Position:"      [Incremental.text (pos   |> Mod.map  (fun d -> d))]
+            Html.row "PrintPosition:" [button [clazz "ui button tiny"; onClick (fun _ -> PrintPosition )][]]
+            Html.row "Height:"        [Incremental.text (height  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+            Html.row "HeightDelta:"   [Incremental.text (heightD |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+            Html.row "Avg Altitude:"  [Incremental.text (alt     |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+            Html.row "Length:"        [Incremental.text (length  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+            Html.row "WayLength:"     [Incremental.text (wLength |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+            Html.row "Bearing:"       [Incremental.text (bearing |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+            Html.row "Slope:"         [Incremental.text (slope   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+            Html.row "Vertical Distance:"   [Incremental.text (vertDist  |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+            Html.row "Horizontal Distance:" [Incremental.text (horDist   |> Mod.map  (fun d -> sprintf "%.4f" (d)))]
+          ]
         )
        
-
     let app = 
         {
             unpersist = Unpersist.instance
             threads = fun _ -> ThreadPool.empty
-            initial = Annotation.initial
+            initial = Annotation'.initial
             update = update
             view = view
         }

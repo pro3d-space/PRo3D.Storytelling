@@ -13,6 +13,7 @@ open PRo3D.ReferenceSystem
 
 open PRo3D
 open PRo3D.Groups
+open PRo3D.Versioned
 
 type Action =
   | SetSemantic         of Semantic
@@ -59,7 +60,7 @@ type DrawingModel = {
     pick          : bool
     hoverPosition : option<Trafo3d>    
 
-    working    : Option<Annotation>
+    working    : Option<Annotation'>
     projection : Projection
     geometry   : Geometry
     semantic   : Semantic
@@ -83,13 +84,13 @@ type DrawingModel = {
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
 module DrawingModel =
     
-    let tryGet (ans:plist<Annotation>) key = 
+    let tryGet (ans:plist<Annotation'>) key = 
             ans |> Seq.tryFind(fun x -> x.key = key)
 
-    let tryGet' (ans:hset<Annotation>) key = 
+    let tryGet' (ans:hset<Annotation'>) key = 
             ans |> Seq.tryFind(fun x -> x.key = key)
 
-    let update (ans:plist<Annotation>) (ann : Annotation) = 
+    let update (ans:plist<Annotation'>) (ann : Annotation') = 
         ans.AsList 
             |> List.updateIf (fun x -> x.key = ann.key) (fun x -> ann) 
             |> PList.ofList
@@ -99,7 +100,7 @@ module DrawingModel =
         draw          = false  
         pick          = false
         color         = { c = C4b.DarkBlue } 
-        thickness     = Annotation.thickn
+        thickness     = Annotation'.thickn
 
         working     = None
         projection  = Projection.Linear

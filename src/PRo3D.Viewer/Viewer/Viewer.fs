@@ -540,7 +540,7 @@ module ViewerApp =
                       |> HMap.map(fun k v -> 
                         let a = v |> Leaf.toAnnotation
                         let a' = if a.geometry = Geometry.DnS then { a with showDns = true } else a                                                             
-                        a'|> Leaf.Annotations)    
+                        a'|> Leaf.Annotations')    
                                           
                   let newflat = m.drawing.annotations.flat |> HMap.union flat
 
@@ -817,7 +817,7 @@ module ViewerApp =
                         let a = v |> Leaf.toAnnotation
                         let results    = DrawingUtilities.Calculations.recalcBearing a refsystem'.up.value refsystem'.northO  
                         let dnsResults = DipAndStrike.recalculateDnSAzimuth a refsystem'.up.value refsystem'.northO
-                        { a with results = results; dnsResults = dnsResults } |> Leaf.Annotations)
+                        { a with results = results; dnsResults = dnsResults } |> Leaf.Annotations')
                   m' 
                     |> Lenses.set _flat flat                     
                 | _ -> 

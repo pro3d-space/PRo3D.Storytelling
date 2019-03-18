@@ -474,7 +474,7 @@ module Gui =
     let viewAnnotationProperties (model :MModel) =
             let view = (fun leaf ->
                 match leaf with
-                  | MAnnotations ann -> AnnotationProperties.view ann
+                  | MAnnotations' ann -> AnnotationProperties.view ann
                   | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
             
             model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
@@ -483,7 +483,7 @@ module Gui =
     let viewAnnotationResults (model :MModel) =
             let view = (fun leaf ->
                 match leaf with
-                  | MAnnotations ann -> AnnotationProperties.viewResults ann model.scene.referenceSystem.up.value
+                  | MAnnotations' ann -> AnnotationProperties.viewResults ann model.scene.referenceSystem.up.value
                   | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
             
             model.drawing.annotations |> Groups.viewSelected view AnnotationMessage

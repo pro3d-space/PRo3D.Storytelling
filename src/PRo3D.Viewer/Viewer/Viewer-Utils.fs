@@ -46,7 +46,7 @@ module ViewerUtils =
             let! c = leaf
             match c with 
                 | MSurfaces s -> return s
-                |_ -> return failwith "wrong type"
+                | _ -> return c |> sprintf "wrong type %A; expected MSurfaces" |> failwith
             }
 
     let lookUp guid (table:amap<Guid, IMod<MLeaf>>) =

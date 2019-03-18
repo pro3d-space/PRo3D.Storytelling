@@ -16,6 +16,7 @@ open PRo3D
 module Groups =    
     open Aardvark.Base.Geometry.BvhTree   
     open Aardvark.Base.HSet
+    open PRo3D.Versioned
        
     type Action =
         | ActiveGroup           of Guid*list<Index>*string
@@ -128,7 +129,18 @@ module Groups =
         
     let tryLoadAnnotations (path:string) =
       try
-        Some (Serialization.loadAs<PRo3D.Groups.saveAnnotations> path)
+        let annotationGroups = (Serialization.loadAs<PRo3D.Groups.saveAnnotations> path)
+
+        let flat' = 
+          annotationGroups.annotations.flat 
+            |> HMap.map(fun _ v -> 
+              match v with 
+                | Leaf.Annotations a -> a |> Annotation'.convert |> Leaf.Annotations' 
+                | _ -> v)
+
+        let blarg = { annotationGroups.annotations with flat = flat' }
+
+        Some { annotationGroups with annotations = blarg }
         //Some (Serialization.loadJsonAs<PRo3D.Groups.saveAnnotations> path)
       with _ ->
         Log.error "[loadAnnotations:] couldn't load %s" path

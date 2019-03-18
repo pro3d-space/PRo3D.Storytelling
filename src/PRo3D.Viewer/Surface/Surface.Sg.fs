@@ -192,7 +192,7 @@ module Sg =
                     | Some i -> 
                         let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
                         let! surf = leaf 
-                        let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
+                        let x = match surf with | MSurfaces s -> s | _ -> surf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
                         let! hpos = x.homePosition
                         match hpos with
                             | Some p -> yield PRo3D.Sg.dot (Mod.constant p.Location) (Mod.constant 3.0) (Mod.constant C4b.Yellow)

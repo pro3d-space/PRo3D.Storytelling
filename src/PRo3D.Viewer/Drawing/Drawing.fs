@@ -37,7 +37,7 @@ module DrawingApp =
 
    // open Newtonsoft.Json
         
-    let closePolyline (a:Annotation) = 
+    let closePolyline (a:Annotation') = 
         let firstP = a.points.[0]
         let lastP = a.points.[(a.points.Count-1)]
         match a.projection with
@@ -81,9 +81,9 @@ module DrawingApp =
       let groups = 
         match getFinishedAnnotation up north planet view model with
           | Some a -> 
-            let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
-            bc.Add json
-            model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true
+            //let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
+            //bc.Add json
+            model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations' a) true
           | None -> model.annotations             
 
       { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups }
@@ -132,7 +132,7 @@ module DrawingApp =
                 //annotation states should be immutable after creation
                 //(Annotation.make model.projection model.geometry model.semantic surfaceName)  
                 //    with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
-                (Annotation.make model.projection model.geometry model.color model.thickness surfaceName)
+                (Annotation'.make model.projection model.geometry model.color model.thickness surfaceName)
                     with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
             }, None
       
@@ -243,7 +243,7 @@ module DrawingApp =
 
     let intersectAnnotation (hit : SceneHit) id (flat : hmap<Guid,Leaf>) =
       match (flat.TryFind id) with
-        | Some (Leaf.Annotations ann) ->                            
+        | Some (Leaf.Annotations' ann) ->                            
           let mutable hit2 = RayHit3d.MaxRange
           let r = hit.globalRay.Ray.Ray
           
@@ -380,7 +380,7 @@ module DrawingApp =
           model
         | PickAnnotation (hit, id), false, true ->             
             match (model.annotations.flat.TryFind id) with
-                | Some (Leaf.Annotations ann) ->                   
+                | Some (Leaf.Annotations' ann) ->                   
                   match ann.geometry with
                   | Geometry.Line | Geometry.Point when ann.projection = Projection.Linear -> //picking shapes are fine for these
                     { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
@@ -436,7 +436,8 @@ module DrawingApp =
     let toAnnotationOpt = 
       fun y -> 
         match y with
-          | MAnnotations ann -> Some ann
+          //| MAnnotations ann -> Some ann
+          | MAnnotations' ann -> Some ann
           | _ -> None
        
     let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> * ISg<Drawing.Action> =
