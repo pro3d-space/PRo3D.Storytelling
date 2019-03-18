@@ -135,7 +135,16 @@ module Groups =
           annotationGroups.annotations.flat 
             |> HMap.map(fun _ v -> 
               match v with 
-                | Leaf.Annotations a -> a |> Annotation'.convert |> Leaf.Annotations' 
+                | Leaf.Annotations a ->
+                  Log.warn "encountered legacy annotations; converting to v%d" Annotation'.current
+                  a |> Annotation'.convert |> Leaf.Annotations' 
+                | Leaf.Annotations' a -> 
+                  if a.version < Annotation'.current then
+                    Log.warn "encountered versioned annotations of v%d; updating to v%d" a.version Annotation'.current
+                  elif a.version > Annotation'.current then
+                    Log.error "version mixup - not supported encountered v%d; current v%A" a.version Annotation'.current
+
+                  a |> Leaf.Annotations'
                 | _ -> v)
 
         let blarg = { annotationGroups.annotations with flat = flat' }
