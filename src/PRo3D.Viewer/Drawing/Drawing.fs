@@ -220,26 +220,7 @@ module DrawingApp =
             getOffset          : 'ma -> IMod<float>
         }
    
-    let saveAnnotations (path:string) (model:DrawingModel) = 
-      match path.IsEmptyOrNull() with
-        | true -> model
-        | false-> 
-            let sa = 
-                {
-                    annotations = model.annotations
-                    colorLegend = model.colorLegend
-                }
-            Serialization.save "./lastMeasure" sa |> ignore 
-            let saveA = Serialization.save path sa
-            { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend }
-
-    let getAnnotationPath (scenePath:string) = 
-        let p = System.IO.Path.GetDirectoryName(scenePath)
-        let name = System.IO.Path.GetFileNameWithoutExtension(scenePath) + ".ann"
-        p + "\\" + name
-
-    let saveSceneAnnotations (scenePath:string) (model:DrawingModel) = 
-        saveAnnotations (getAnnotationPath scenePath) model
+    
 
     let intersectAnnotation (hit : SceneHit) id (flat : hmap<Guid,Leaf>) =
       match (flat.TryFind id) with

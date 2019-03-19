@@ -633,9 +633,9 @@ module ViewerApp =
                 
             | SaveScene s, _,_ ->                 
               let target = match m.scene.scenePath with | Some path -> path | None -> s
-              m |> ViewerIO.saveSceneAndAnnotations target
+              m |> ViewerIO.saveSceneAndAnnotationGroups target
             | SaveAs s,_,_ ->
-              ViewerIO.saveSceneAndAnnotations s m
+              ViewerIO.saveSceneAndAnnotationGroups s m
             | LoadScene path,_,_ ->
                 Scene.loadScene path m runtime signature 
                     |> Model.stashAndSaveRecent path
@@ -675,7 +675,7 @@ module ViewerApp =
                     timeout = 3000
                     msg     = ViewerAction.NoAction ""
                   }
-                  { (ViewerIO.saveSceneAndAnnotations path m) with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
+                  { (ViewerIO.saveSceneAndAnnotationGroups path m) with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
                 | (true, Aardvark.Application.Keys.S, None) -> 
                    //Log.error "please use \"save\" in the menu to save the scene";
 
