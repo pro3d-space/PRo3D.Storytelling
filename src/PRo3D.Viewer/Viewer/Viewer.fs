@@ -633,17 +633,17 @@ module ViewerApp =
                 
             | SaveScene s, _,_ ->                 
               let target = match m.scene.scenePath with | Some path -> path | None -> s
-              m |> ViewerUtils.IO.saveSceneAndAnnotations target
+              m |> ViewerIO.saveSceneAndAnnotations target
             | SaveAs s,_,_ ->
-              ViewerUtils.IO.saveSceneAndAnnotations s m
+              ViewerIO.saveSceneAndAnnotations s m
             | LoadScene path,_,_ ->
                 Scene.loadScene path m runtime signature 
                     |> Model.stashAndSaveRecent path
-                    |> ViewerUtils.IO.loadRoverData
-                    |> ViewerUtils.IO.loadLastAnnotations  
+                    |> ViewerIO.loadRoverData
+                    |> ViewerIO.loadLastAnnotations  
             | NewScene,_,_ ->
                 let initialModel = Viewer.initial m.messagingMailbox m.minervaModel.minervaMessagingMailbox
-                { initialModel with recent = m.recent } |> ViewerUtils.IO.loadRoverData
+                { initialModel with recent = m.recent } |> ViewerIO.loadRoverData
             | KeyDown k, _, _ ->
               let drawingAction =
                 match k with
@@ -675,7 +675,7 @@ module ViewerApp =
                     timeout = 3000
                     msg     = ViewerAction.NoAction ""
                   }
-                  { (ViewerUtils.IO.saveSceneAndAnnotations path m) with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
+                  { (ViewerIO.saveSceneAndAnnotations path m) with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
                 | (true, Aardvark.Application.Keys.S, None) -> 
                    //Log.error "please use \"save\" in the menu to save the scene";
 
@@ -1132,10 +1132,10 @@ module ViewerApp =
           if startEmpty |> not then
             PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox
               |> Scene.loadLastScene runtime signature
-              |> ViewerUtils.IO.loadRoverData
-              |> ViewerUtils.IO.loadLastAnnotations
+              |> ViewerIO.loadRoverData
+              |> ViewerIO.loadLastAnnotations
           else
-            PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> ViewerUtils.IO.loadRoverData
+            PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> ViewerIO.loadRoverData
 
         App.start {
             unpersist = Unpersist.instance

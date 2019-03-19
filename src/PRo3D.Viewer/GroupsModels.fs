@@ -14,6 +14,7 @@ open PRo3D.Surfaces
 open PRo3D.BookmarksX
 open PRo3D.Navigation2
 
+#nowarn "0044"
 
 [<DomainType>]
 type Leaf = 

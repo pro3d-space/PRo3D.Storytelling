@@ -11,8 +11,7 @@ open PRo3D.Drawing
 open PRo3D.Viewer
 open PRo3D.Versioned
 
-module ViewerUtils =
-  module IO =
+module ViewerIO =  
     open Chiron
 
     let loadRoverData (m:Model) =
