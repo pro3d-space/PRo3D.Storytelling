@@ -65,7 +65,7 @@ module ViewerIO =
       model
         
     let tryLoadAnnotations (paths : ScenePaths) =
-      try
+     // try
         //load groups.ann
         let annotationGroups = paths.annotationGroups |> Serialization.loadAs<PRo3D.Groups.saveAnnotations>
           
@@ -101,9 +101,10 @@ module ViewerIO =
 
         let annoModel = { annotationGroups.annotations with flat = flat' }
         Some { annotationGroups with annotations = annoModel }
-      with _ ->
-        Log.error "[ViewerIO] couldn't load %s" paths.annotationGroups
-        None       
+      //with e ->
+      //  Log.error "[ViewerIO] couldn't load %s" paths.annotationGroups
+      //  Log.error "[ViewerIO] couldn't load %A" e
+      //  None       
     
     let loadLastAnnotations (m:Model) = 
       match m.scene.scenePath with

@@ -12,6 +12,32 @@ open Aardvark.UI.Primitives
 
 #nowarn "0686"
 
+module Json = 
+  let writeFloat name (floatValue : float)  = 
+    json {
+      if floatValue.IsNaN() then      
+        do! Json.writeNone name
+      else
+        do! Json.write name floatValue
+    }
+
+  let readFloat name : Json<float> = 
+    json {
+      let! v = Json.tryRead name
+      return 
+        match v with
+        | Some k -> k
+        | None -> Double.NaN      
+    }
+
+  //let writeFloat name (floatValue : float)  = 
+  //  json {
+  //    if floatValue.IsNaN() then      
+  //      do! Json.writeNone name
+  //    else
+  //      do! Json.write name floatValue
+  //  }
+
 [<DomainType>]
 type Statistics' = {
   version      : int
@@ -185,13 +211,13 @@ with
   static member current = 0
   static member private readV0 =
     json {      
-      let! height     = Json.read "height"     
-      let! heightDelta= Json.read "heightDelta"
-      let! avgAltitude= Json.read "avgAltitude"
-      let! length     = Json.read "length"     
-      let! wayLength  = Json.read "wayLength"  
-      let! bearing    = Json.read "bearing"    
-      let! slope      = Json.read "slope"
+      let! height     = Json.readFloat "height"     
+      let! heightDelta= Json.readFloat "heightDelta"
+      let! avgAltitude= Json.readFloat "avgAltitude"
+      let! length     = Json.readFloat "length"     
+      let! wayLength  = Json.readFloat "wayLength"  
+      let! bearing    = Json.readFloat "bearing"    
+      let! slope      = Json.readFloat "slope"
       
       return {
         version     = AnnotationResults'.current    
@@ -211,16 +237,17 @@ with
         | 0 -> return! AnnotationResults'.readV0
         | _ -> return! v |> sprintf "don't know version %A  of AnnotationResults" |> Json.error
     }
+  
   static member ToJson (x : AnnotationResults') =
     json {
-      do! Json.write "version"     x.version     
-      do! Json.write "height"      x.height      
-      do! Json.write "heightDelta" x.heightDelta 
-      do! Json.write "avgAltitude" x.avgAltitude 
-      do! Json.write "length"      x.length      
-      do! Json.write "wayLength"   x.wayLength   
-      do! Json.write "bearing"     x.bearing     
-      do! Json.write "slope"       x.slope       
+      do! Json.write      "version"     x.version     
+      do! Json.writeFloat "height"      x.height      
+      do! Json.writeFloat "heightDelta" x.heightDelta       
+      do! Json.writeFloat "avgAltitude" x.avgAltitude 
+      do! Json.writeFloat "length" x.length            
+      do! Json.writeFloat "wayLength" x.wayLength       
+      do! Json.writeFloat "bearing"     x.bearing     
+      do! Json.writeFloat "slope"       x.slope       
     }
 
 module AnnotationResults' =

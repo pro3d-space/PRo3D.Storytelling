@@ -183,52 +183,56 @@ module Sg =
 
                
   let pickableLine (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking: bool) = 
-    match (points |> AList.toArray).Length with
-        | 0  -> Sg.empty //| 1
-        |  _ ->
-            let edges = Sg.edgeLines false points trafo 
-            let pickable = 
-                adaptive {
-                    let! edg = edges
-                    let! t = trafo
-                    let! w = width
-                    match edg.Length with
-                        | 0 -> let sphere = Sphere3d((points |> AList.toArray).[0], 0.1) // point
-                               return { shape = PickShape.Sphere sphere; trafo = Trafo3d.Identity } // line
-                        | 1 -> 
-                          let e = edg.[0]
-                          let cylinder = Cylinder3d(e.P0, e.P1, 0.1)
-                          return { shape = PickShape.Cylinder cylinder; trafo = t }
-                        | _ -> return { shape = PickShape.Box (Box3d(points |> AList.toArray)); trafo = Trafo3d.Identity } 
-                }
+    let edges = Sg.edgeLines false points trafo 
+    let pickable = 
+      adaptive {
+        let! edg = edges
+        let! t = trafo
+        let! w = width
+        let! points = points |> AList.toMod
+        match edg.Length with
+          //| 0 -> let sphere = Sphere3d((points |> AList.toArray).[0], 0.1) // point
+          //       return { shape = PickShape.Sphere sphere; trafo = Trafo3d.Identity } // line
+          | 1 -> 
+            let e = edg |> Array.head
+            let cylinder = Cylinder3d(e.P0, e.P1, 0.1)
+            return { shape = PickShape.Cylinder cylinder; trafo = t }
+          | _ -> 
+            let box = points |> Box3d
+            if box.IsInvalid then failwith "hargh dem box"
+            return { 
+              shape = box |> PickShape.Box
+              trafo = Trafo3d.Identity 
+            } 
+      }
    
-            let pline =
-                edges
-                  |> Aardvark.SceneGraph.SgPrimitives.Sg.lines color
-                  |> Sg.noEvents
-                  |> Sg.shader {
-                        do! Shader.stableTrafo
-                        do! DefaultSurfaces.vertexColor
-                        do! Shader.thickLine2
-                    }      
-                  //|> Sg.pass pass0
-                  |> Sg.trafo trafo
-                  |> Sg.uniform "LineWidth" width
-                  |> Sg.uniform "depthOffset" offset
-                  |> Sg.pickable' pickable
-                  |> Sg.noEvents
-                  |> Sg.withEvents [
-                        SceneEventKind.Down, (
-                            fun sceneHit ->
-                            if (picking) then
-                                let id = id|> Mod.force
-                                Log.warn "[AnnotationPicking] picked %A" id
-                                true, Seq.ofList[PickAnnotation (sceneHit, (id))]
-                            else
-                                false, Seq.ofList[])
-                    ]
+    let pline =
+      edges
+        |> Aardvark.SceneGraph.SgPrimitives.Sg.lines color
+        |> Sg.noEvents
+        |> Sg.shader {
+              do! Shader.stableTrafo
+              do! DefaultSurfaces.vertexColor
+              do! Shader.thickLine2
+          }      
+        //|> Sg.pass pass0
+        |> Sg.trafo trafo
+        |> Sg.uniform "LineWidth" width
+        |> Sg.uniform "depthOffset" offset
+        |> Sg.pickable' pickable
+        |> Sg.noEvents
+        |> Sg.withEvents [
+              SceneEventKind.Down, (
+                  fun sceneHit ->
+                  if (picking) then
+                      let id = id|> Mod.force
+                      Log.warn "[AnnotationPicking] picked %A" id
+                      true, Seq.ofList[PickAnnotation (sceneHit, (id))]
+                  else
+                      false, Seq.ofList[])
+          ]
     
-            pline
+    pline
 
   let outlineSize (width:IMod<float>) =
     adaptive
