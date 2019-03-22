@@ -26,6 +26,7 @@ open PRo3D.ReferenceSystem
 open PRo3D.Surfaces
 open PRo3D.Viewer
 open PRo3D.Groups
+open PRo3d.Mutable
 open Aardvark.UI.Trafos
 open Aardvark.UI.Animation
 
@@ -77,6 +78,7 @@ module ViewerUtils =
             |> Sg.uniform "useGrayS"       useGray
             |> Sg.uniform "useColorS"      useColor
             |> Sg.uniform "colorS"         color
+
 
    // let viewSingleSurfaceSg (surface : MSgSurface) (surfaceTable : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) =
     
@@ -182,7 +184,8 @@ module ViewerUtils =
             return attr
         }
 
-    let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>) (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) =
+    let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>)
+                            (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) (fp:MFootPrint) (vp:IMod<Option<MViewPlan>>) =
         
         let surf = lookUp (surface.surface) blarg
             //Mod.bind(fun x -> lookUp (x.surface) blarg )
@@ -224,7 +227,23 @@ module ViewerUtils =
           (fun x -> 
             x.Filter <- new TextureFilter(TextureFilterMode.Linear, TextureFilterMode.Point, TextureFilterMode.Linear, true ); 
             x)
+        
+        
+        let footprintVisible = //Mod.map2 (fun (vp:Option<MViewPlan>) vis -> (vp.IsSome && vis)) vp, fp.isVisible
+            adaptive {
+                let! vp = vp
+                let! visible = fp.isVisible
+                let! id = fp.vpId
+                return (vp.IsSome && visible)
+            }
 
+        let footprintMatrix = 
+            adaptive {
+                let! fppm = fp.projectionMatrix
+                let! fpvm = fp.instViewMatrix
+                let! t = trafo
+                return (fppm * fpvm * t.Forward) //* t.Forward 
+            } 
 
         let test =             
           surface.sceneGraph
@@ -237,6 +256,9 @@ module ViewerUtils =
             |> addAttributeFalsecolorMappingParameters surf
             |> Sg.uniform "TriangleSize"   triangleFilter  //triangle filter
             |> addImageCorrectionParameters surf
+            |> Sg.uniform "footprintVisible" footprintVisible
+            |> Sg.uniform "instrumentMVP" footprintMatrix
+            |> Sg.texture (Sym.ofString "FootPrintTexture") fp.projTex
             |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
             |> Sg.LodParameters( getLodParameters surf frustum )
             |> Sg.AttributeParameters( attributeParameters surf )
@@ -302,7 +324,7 @@ module ViewerUtils =
                 fun x -> ( x 
                     |> AMap.map(fun _ sf -> 
                         let bla = m.scene.surfacesModel.surfaces.flat
-                        viewSingleSurfaceSg sf bla m.frustum selected m.ctrlFlag sf.globalBB refSystem )
+                        viewSingleSurfaceSg sf bla m.frustum selected m.ctrlFlag sf.globalBB refSystem m.footPrint m.scene.viewPlans.selectedViewPlan )
                     |> AMap.toASet 
                     |> ASet.map snd                     
                 )                
@@ -328,7 +350,9 @@ module ViewerUtils =
                             PRo3D.Shader.mapGamma          |> toEffect                            
                             PRo3D.Shader.grayscale         |> toEffect
                             PRo3D.Shader.addColor          |> toEffect
-                            triangleFilterX              |> toEffect                            
+                            triangleFilterX                |> toEffect   
+                            PRo3D.Shader.footprintV        |> toEffect
+                            PRo3D.Shader.footPrintF        |> toEffect  
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()

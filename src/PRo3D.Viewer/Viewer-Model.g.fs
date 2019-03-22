@@ -272,6 +272,7 @@ module Mutable =
         let _minervaModel = PRo3D.Minerva.Mutable.MModel.Create(__initial.minervaModel)
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
+        let _footPrint = PRo3d.Mutable.MFootPrint.Create(__initial.footPrint)
         
         member x.scene = _scene
         member x.drawing = _drawing
@@ -295,6 +296,7 @@ module Mutable =
         member x.minervaModel = _minervaModel
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
+        member x.footPrint = _footPrint
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.Model) =
@@ -323,6 +325,7 @@ module Mutable =
                 PRo3D.Minerva.Mutable.MModel.Update(_minervaModel, v.minervaModel)
                 _past.Update(v.past)
                 _future.Update(v.future)
+                PRo3d.Mutable.MFootPrint.Update(_footPrint, v.footPrint)
                 
         
         static member Create(__initial : PRo3D.Viewer.Model) : MModel = MModel(__initial)
@@ -470,4 +473,10 @@ module Mutable =
                     override x.Get(r) = r.future
                     override x.Set(r,v) = { r with future = v }
                     override x.Update(r,f) = { r with future = f r.future }
+                }
+            let footPrint =
+                { new Lens<PRo3D.Viewer.Model, PRo3d.FootPrint>() with
+                    override x.Get(r) = r.footPrint
+                    override x.Set(r,v) = { r with footPrint = v }
+                    override x.Update(r,f) = { r with footPrint = f r.footPrint }
                 }

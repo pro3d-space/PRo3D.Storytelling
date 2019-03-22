@@ -37,17 +37,65 @@ module ViewPlan =
         | ChangeFocal      of string * Numeric.Action
         | SetVPName        of string
     
-    
-    let updateFootprint (roverId:string) (vp:ViewPlan) (instrument:Instrument) =
-        let intr = instrument.intrinsics
-        let extr = instrument.extrinsics
+    let projTrafo (near : float) (far : float) (focalLength:float) (aspect:float) (principalPoint:V2d) =
+        let tnf = 2.0 * far * near
+        let a = (far + near) / (far - near)
+        let b = tnf / (near - far)
 
-        let res = V2i((int)intr.horizontalResolution, (int)intr.verticalResolution)
-        let image = PixImage<byte>(Col.Format.RGB,res).ToPixImage(Col.Format.RGB)
-        let tex = PixTexture2d(PixImageMipMap [| image |], true) :> ITexture
+        let A = far / (far - near)
+        let B = near * far / (near - far)
 
+        Trafo3d(
+            M44d(
+                focalLength,                0.0,                               -principalPoint.X,  0.0,
+                0.0,                        focalLength * aspect,              -principalPoint.Y,  0.0,
+                0.0,                        0.0,                               -a,                      b,
+                0.0,                        0.0,                               -1.0,                    0.0
+            ),
+            //M44d(
+            //    focalLength,                0.0,                               principalPoint.X,  0.0,
+            //    0.0,                        focalLength * aspect,              principalPoint.Y,  0.0,
+            //    0.0,                        0.0,                               A,                      B,
+            //    0.0,                        0.0,                               1.0,                    0.0
+            //),
+            M44d(
+                1.0/focalLength,        0.0,                                    0.0,       -principalPoint.X / focalLength,
+                0.0,                    1.0 / (aspect * focalLength),           0.0,       -principalPoint.Y / (focalLength * aspect),
+                0.0,                    0.0,                                    0.0,       -1.0,
+                0.0,                    0.0,                                    1.0/b,     -a/b
 
-        failwith "footprint"
+            )
+        )
+
+    let updateFootprint (instrument:Instrument) (model:ViewPlanModel) =
+        
+        let id = match model.selectedViewPlan with
+                    | Some vp -> Some vp.id
+                    | None -> None
+        
+
+        let res = V2i((int)instrument.intrinsics.horizontalResolution, (int)instrument.intrinsics.verticalResolution)
+        //let image = PixImage<byte>(Col.Format.RGB,res).ToPixImage(Col.Format.RGB)
+       
+        let pi = PixImage<byte>(Col.Format.RGBA, res)
+        pi.GetMatrix<C4b>().SetByCoord(fun (c : V2l) -> C4b.Red) |> ignore
+        let tex = PixTexture2d(PixImageMipMap [| (pi.ToPixImage(Col.Format.RGBA)) |], true) :> ITexture
+
+        let focal = instrument.focal.value
+        let aspect = model.instrumentFrustum |> Frustum.aspect
+        let pP = V2d(instrument.intrinsics.horizontalPrinciplePoint, instrument.intrinsics.verticalPrinciplePoint)
+
+        let projectionTrafo = projTrafo model.instrumentFrustum.near model.instrumentFrustum.far focal aspect pP
+
+        let fp = 
+                {
+                    vpId      = id
+                    isVisible = true
+                    projectionMatrix = projectionTrafo.Forward
+                    instViewMatrix = model.instrumentCam.view.ViewTrafo.Forward
+                    projTex = tex
+                }
+        fp //{ model with footPrint = fp }
 
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =      
       match path with
@@ -258,7 +306,7 @@ module ViewPlan =
                   camUp = vp.roverTrafo.Forward.TransformDir ex.camUp
                    }
 
-    let updateInstrumentCam (vp:ViewPlan) (model:ViewPlanModel) =
+    let updateInstrumentCam (vp:ViewPlan) (model:ViewPlanModel) (fp:FootPrint) : ('a*ViewPlanModel)=
         match vp.selectedInstrument with
             | Some i -> let ex = transformExtrinsics vp i.extrinsics
                         let frust = model.instrumentFrustum
@@ -266,13 +314,15 @@ module ViewPlan =
                         let resh = float(i.intrinsics.horizontalResolution)
                         let resv = float(i.intrinsics.verticalResolution)
                         let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far (resh/resv)
-                        {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt ex.position (ex.position + ex.camLookAt) ex.camUp };
-                                    instrumentFrustum = ifrustum} //CameraController.initial
+                        let m' = {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt ex.position (ex.position + ex.camLookAt) ex.camUp };
+                                            instrumentFrustum = ifrustum} //CameraController.initial
+                        let f = updateFootprint i m'
+                        f,m'
                         //{ model with instrumentCam = cam } 
-            | _-> {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI };
+            | _-> fp,{model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI };
                                     instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0 }
         
-    let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan)=
+    let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan) (fp:FootPrint)  : ('a*ViewPlanModel)=
         let r = roverModel.rovers  |> HMap.find vp.rover.id
         let i = match vp.selectedInstrument with
                     | Some i -> Some (r.instruments |> HMap.find i.id)
@@ -280,12 +330,12 @@ module ViewPlan =
         let vp' = { vp with rover = r; selectedInstrument = i }  
         let m'= { model with selectedViewPlan = Some vp'; 
                              viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then vp' else x) }
-        let m'' = updateInstrumentCam vp' m'
-        { m'' with roverModel = roverModel }
+        let fp', m'' = updateInstrumentCam vp' m' fp
+        fp', { m'' with roverModel = roverModel }
 
     //let update (model : ViewPlanModel) (camState:CameraControllerState) (action : Action) =
     let update (model : ViewPlanModel) (action : Action)
-               (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*ViewPlanModel) = 
+               (navigation : Lens<'a,NavigationModel>) (footprint : Lens<'a,FootPrint>) (outerModel:'a) : ('a*ViewPlanModel) = 
         printfn "action: %A" action
         match action with
             | AddPoint (p,ref,kdTree,surfaceModel) ->
@@ -302,13 +352,19 @@ module ViewPlan =
                     | None -> outerModel, model
             | SelectViewPlan id ->
                 let vp = model.viewPlans |> Seq.tryFind(fun x -> x.id = id)
-                let vp', m =
+                let fp = (footprint.Get outerModel)
+                let vp', m , om =
                     match vp, model.selectedViewPlan with
-                        | Some a, Some b -> if a.id = b.id then None, model else Some a, (updateInstrumentCam a model)
-                        | Some a, None  -> Some a, (updateInstrumentCam a model)
-                        | None, _        -> None, model
+                        | Some a, Some b -> if a.id = b.id then None, model, outerModel
+                                            else let fp', m' = updateInstrumentCam a model fp
+                                                 let newOuterModel = footprint.Set(outerModel, fp')
+                                                 Some a, m', newOuterModel
+                        | Some a, None  -> let fp', m' = updateInstrumentCam a model fp
+                                           let newOuterModel = footprint.Set(outerModel, fp')
+                                           Some a, m', newOuterModel
+                        | None, _        -> None, model, outerModel
                 
-                outerModel, { m with selectedViewPlan = vp' }
+                om, { m with selectedViewPlan = vp' }
             | FlyToViewPlan id -> 
                 let vp = model.viewPlans |> Seq.tryFind(fun x -> x.id = id)
                 match vp with
@@ -332,9 +388,12 @@ module ViewPlan =
             | SelectInstrument i -> 
                 match model.selectedViewPlan with
                     | Some vp -> let newVp = { vp with selectedInstrument = i }
-                                 let m' = updateInstrumentCam newVp model
-                                 outerModel, { m' with selectedViewPlan = Some newVp; 
-                                                    viewPlans = model.viewPlans 
+                                 let fp = (footprint.Get outerModel)
+                                 let fp', m' = updateInstrumentCam newVp model fp
+                                 let newOuterModel = footprint.Set(outerModel, fp')
+
+                                 newOuterModel, { m' with selectedViewPlan = Some newVp; 
+                                                      viewPlans = model.viewPlans 
                                                                     |> HSet.map(fun x -> if x.id = vp.id then 
                                                                                             newVp 
                                                                                             else x) }
@@ -362,10 +421,11 @@ module ViewPlan =
                                                                                     axisId = ax'.id ; 
                                                                                     angle = ax'.angle.value } 
                                                                                     model.roverModel
-                                 
-                                let m' = updateRovers model roverModel' vp'
+                                let fp = (footprint.Get outerModel)
+                                let fp', m' = updateRovers model roverModel' vp' fp
+                                let newOuterModel = footprint.Set(outerModel, fp')
                                                             
-                                outerModel, m'
+                                newOuterModel, m'
                             | None -> outerModel, model
                                       
                     | None -> outerModel, model        
@@ -387,8 +447,11 @@ module ViewPlan =
                                                                              instrumentId = inst'.id ; 
                                                                              focal = inst'.focal.value } 
                                                                              model.roverModel
-                                                                             
-                            outerModel, updateRovers model roverModel' vp'
+                            let fp = (footprint.Get outerModel)
+                            let fp', m' = updateRovers model roverModel' vp' fp
+                            let newOuterModel = footprint.Set(outerModel, fp')
+                            
+                            newOuterModel, m'
                         | None -> outerModel, model                                       
                     | None -> outerModel, model 
             | SetVPName t -> 

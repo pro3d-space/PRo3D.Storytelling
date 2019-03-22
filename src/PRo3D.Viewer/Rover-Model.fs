@@ -112,6 +112,15 @@ type RoverModel = {
 }
 
 [<DomainType>]
+type FootPrint = {
+    vpId                : option<Guid>
+    isVisible           : bool
+    projectionMatrix    : M44d
+    instViewMatrix      : M44d
+    projTex             : ITexture
+}
+
+[<DomainType>]
 type ViewPlan = {
     [<PrimaryKey>]
     id                  : Guid
@@ -136,7 +145,10 @@ type ViewPlanModel = {
     roverModel          : RoverModel
     instrumentCam       : CameraControllerState
     instrumentFrustum   : Frustum
+    //footPrint           : FootPrint 
     }
+
+
 
 module ViewPlanModel =
     let currentAngle = 
@@ -156,6 +168,20 @@ module ViewPlanModel =
         //selectedAxis = None
         //currentAngle = currentAngle
         }
+    
+    let initPixTex = 
+        let res = V2i((int)1024, (int)1024)
+        let pi = PixImage<byte>(Col.Format.RGBA, res)
+        pi.GetMatrix<C4b>().SetByCoord(fun (c : V2l) -> C4b.White) |> ignore
+        PixTexture2d(PixImageMipMap [| (pi.ToPixImage(Col.Format.RGBA)) |], true) :> ITexture
+
+    let initFootPrint = {
+        vpId                = None
+        isVisible           = false
+        projectionMatrix    = M44d.Identity
+        instViewMatrix    = M44d.Identity
+        projTex             = initPixTex
+    }
 
     let initial = {
         viewPlans = hset.Empty
@@ -164,6 +190,7 @@ module ViewPlanModel =
         roverModel = initRoverModel
         instrumentCam = { CameraController.initial with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }        
         instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
+        //footPrint = initFootPrint
         }
 
   

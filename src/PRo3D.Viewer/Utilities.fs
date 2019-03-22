@@ -735,26 +735,60 @@ module Shader =
          yield { line.P1 with pos = V4d(p11, 1.0); lc = V2d( 1.0, 1.0 + rel); w = rel }
      }
 
+  
+  type FootPrintVertex =
+        {
+            [<Position>]                pos     : V4d            
+            [<WorldPosition>]           wp      : V4d
+            [<TexCoord>]                tc      : V2d
+            [<Color>]                   c       : V4d
+            [<Normal>]                  n       : V3d
+            [<Semantic("Scalar")>]      scalar  : float
+            [<Semantic("LightDir")>]    ldir    : V3d
+            [<Semantic("Tex0")>]        tc0     : V4d
+        }
+
+      
   let private footprintmap =
         sampler2d {
             texture uniform?FootPrintTexture
             filter Filter.MinMagMipLinear
-            addressU WrapMode.Wrap
-            addressV WrapMode.Wrap
+            borderColor C4f.Black
+            addressU WrapMode.Border
+            addressV WrapMode.Border
+            addressW WrapMode.Border
   }
 
-  let footPrint (v : Vertex) =
+  let footprintV (v : FootPrintVertex) =
+        vertex {
+            let vp = uniform.ModelViewTrafo * v.pos
+            let p = uniform.ProjTrafo * vp
+            let instrumentMatrix    : M44d   = uniform?instrumentMVP
+            let newmatrix = instrumentMatrix * vp
+            return { v with tc0 = instrumentMatrix * v.pos} //
+        }
+
+  let footPrintF (v : FootPrintVertex) =
       fragment {           
-          if uniform?falseColors then
-              let range : V2d = uniform?MinMax
-              let norm = V2d((v.scalar - range.X)/ (range.Y - range.X), 0.5)
+          if uniform?footprintVisible then
+              let proTex0 = v.tc0.XY / v.tc0.W
+              let c = footprintmap.Sample(proTex0)
+              let col = 
+                  if (c.W <= 0.50) then
+                     (v.c * 0.7)
+                  elif (c.W <= 0.999) then
+                     v.c * V4d(1.0, 0.0, 0.0, 1.0)
+                  else
+                     v.c
 
-              let c = colormap.Sample(norm).XYZ
-
-              return v.c * V4d(c.X, c.Y, c.Z, 1.0)
+              if (v.tc0.Z <= 0.0) then
+                 return (v.c * 0.7)
+              else
+                 return col 
           else
               return v.c
       }
+
 module PRo3DNumeric = 
     open Aardvark.Base.Incremental
     open Aardvark.UI

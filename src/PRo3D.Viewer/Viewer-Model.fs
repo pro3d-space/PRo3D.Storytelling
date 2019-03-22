@@ -219,6 +219,7 @@ type Model = {
 
     [<TreatAsValue>]
     future : Option<Drawing.DrawingModel> 
+    footPrint           : FootPrint 
 }
 
 
@@ -356,5 +357,6 @@ module Viewer =
         
         //instrumentCamera = { CameraController.initial with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }        
         //instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
-        viewerMode = ViewerMode.Standard                
+        viewerMode = ViewerMode.Standard  
+        footPrint = ViewPlanModel.initFootPrint
     }

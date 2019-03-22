@@ -99,6 +99,9 @@ module ViewerApp =
     // animation  
     let _animation = Model.Lens.animations
     let _animationView = _animation |. AnimationModel.Lens.cam
+
+    //footprint
+    let _footprint = Model.Lens.footPrint
        
     let lookAtData (m : Model) =         
         let bb = m |> Lenses.get _sgSurfaces |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -218,6 +221,15 @@ module ViewerApp =
                             | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; colorLegend = g.colorLegend } }
                             | None -> m
             |None -> m
+
+    let loadLastFootPrint (m:Model) = 
+        match m.scene.viewPlans.selectedViewPlan with
+            | Some vp -> match vp.selectedInstrument with
+                            | Some i -> let fp = ViewPlan.updateFootprint i m.scene.viewPlans
+                                        { m with footPrint = fp}
+                            | None -> { m with footPrint = PRo3d.ViewPlanModel.initFootPrint}
+            | None -> { m with footPrint = PRo3d.ViewPlanModel.initFootPrint}
+
           //match Serialization.fileExists "./lastmeasure" with
           //  | Some path ->                       
           //    let groups = Groups.tryLoadAnnotations path 
@@ -331,8 +343,8 @@ module ViewerApp =
                 { m with scene = {m.scene with navigation = navigation'; } }
             | Interactions.PlaceRover, ViewerMode.Standard ->
                 let ref = m.scene.referenceSystem 
-                let _, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
-                let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
+                let outerModel, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation _footprint m 
+                let m' = { m with scene = {m.scene with viewPlans = viewPlans' }; footPrint = outerModel.footPrint }
                 match m.scene.viewPlans.working.IsEmpty with
                     | true -> m' 
                     | false -> { m' with tabMenu = TabMenu.Viewplanner }
@@ -466,8 +478,8 @@ module ViewerApp =
             | ViewPlanMessage msg,_,_ ->
                 //let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
                 //{ m with scene = { m.scene with viewPlans = viewPlanModel}}  
-                let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation m
-                { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }} 
+                let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation _footprint m
+                { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }; footPrint = model.footPrint} 
             | DnSColorLegendMessage msg,_,_ ->
                 let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
                 { m with drawing = { m.drawing with colorLegend = cm } }
@@ -482,7 +494,10 @@ module ViewerApp =
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m 
-                        updateSceneWithNewSurface m 
+                        m
+                         |> loadLastFootPrint
+                         |> updateSceneWithNewSurface
+                         
             | ImportDiscoveredSurfaces sl,_,_ -> 
                 //"" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match sl with
@@ -501,7 +516,11 @@ module ViewerApp =
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m 
-                        updateSceneWithNewSurface m 
+                        //updateSceneWithNewSurface m
+                        m
+                         |> loadLastFootPrint
+                         |> updateSceneWithNewSurface
+                         
 
             | ImportDiscoveredSurfacesThreads sl,_,_ -> 
                 
@@ -523,7 +542,10 @@ module ViewerApp =
                     |> PList.single                                
                 m 
                   |> Scene.importObj runtime signature objects 
+                  |> loadLastFootPrint
                   |> updateSceneWithNewSurface
+                  
+                        
               | None -> m              
             | ImportAnnotationGroups sl,_,_ ->
               match sl |> List.tryHead with
@@ -678,14 +700,18 @@ module ViewerApp =
                             |> Model.stashAndSaveRecent path
                             |> loadRoverData
                             |> loadLastAnnotations  
+                            |> loadLastFootPrint
             | LoadScene path,_,_ ->
                 Scene.loadScene path m runtime signature 
                     |> Model.stashAndSaveRecent path
                     |> loadRoverData
-                    |> loadLastAnnotations  
+                    |> loadLastAnnotations
+                    |> loadLastFootPrint
             | NewScene,_,_ ->
                 let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox m.minervaModel.minervaMessagingMailbox with recent = m.recent }
-                loadRoverData m'
+                m'
+                  |> loadRoverData 
+                  //|> loadLastFootPrint
             | KeyDown k, _, _ ->
               let drawingAction =
                 match k with
@@ -1176,6 +1202,7 @@ module ViewerApp =
               |> Scene.loadLastScene runtime signature
               |> loadRoverData
               |> loadLastAnnotations
+              |> loadLastFootPrint
           else
             PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> loadRoverData
 
