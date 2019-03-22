@@ -598,7 +598,8 @@ module Gui =
         
   module ViewPlanner = 
     let viewPlanProperties (model:MModel) =
-            model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage 
+            //model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage 
+            model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage model.footPrint.isVisible
 
     let viewPlannerUI (m:MModel) =             
         div [][

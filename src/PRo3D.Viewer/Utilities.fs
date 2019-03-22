@@ -765,7 +765,7 @@ module Shader =
             let p = uniform.ProjTrafo * vp
             let instrumentMatrix    : M44d   = uniform?instrumentMVP
             let newmatrix = instrumentMatrix * vp
-            return { v with tc0 = instrumentMatrix * v.pos} //
+            return { v with tc0 = instrumentMatrix * vp} //v.pos
         }
 
   let footPrintF (v : FootPrintVertex) =

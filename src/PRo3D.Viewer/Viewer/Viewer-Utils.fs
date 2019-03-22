@@ -242,7 +242,7 @@ module ViewerUtils =
                 let! fppm = fp.projectionMatrix
                 let! fpvm = fp.instViewMatrix
                 let! t = trafo
-                return (fppm * fpvm * t.Forward) //* t.Forward 
+                return (fppm * fpvm ) //* t.Forward) //* t.Forward 
             } 
 
         let test =             

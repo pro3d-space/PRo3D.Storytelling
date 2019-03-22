@@ -36,6 +36,7 @@ module ViewPlan =
         | ChangeAngle      of string * PRo3DNumeric.Action
         | ChangeFocal      of string * Numeric.Action
         | SetVPName        of string
+        | ToggleFootprint
     
     let projTrafo (near : float) (far : float) (focalLength:float) (aspect:float) (principalPoint:V2d) =
         let tnf = 2.0 * far * near
@@ -463,7 +464,11 @@ module ViewPlan =
                                                                                                 vp' 
                                                                                                 else x) }              
                     | _ -> outerModel, model
-                
+             | ToggleFootprint ->   
+                        let fp = (footprint.Get outerModel)
+                        let fp' = { fp with isVisible = not fp.isVisible }
+                        let newOuterModel = footprint.Set(outerModel, fp')
+                        newOuterModel, model
             //| _ -> model
 
     module Sg =     
@@ -786,12 +791,13 @@ module ViewPlan =
 
             }
 
-        let viewRoverProperties' (r : MRover) (m : MViewPlan) =
+        let viewRoverProperties' (r : MRover) (m : MViewPlan) (fpVisible:IMod<bool>) =
             require GuiEx.semui (
                 Html.table [
                      Html.row "Change VPName:"[ Html.SemUi.textBox m.name SetVPName ]
                      Html.row "Name:"       [ Incremental.text r.id ]
                      Html.row "Instrument:" [ 
+                        Html.row "show footprint:"  [GuiEx.iconCheckBox fpVisible ToggleFootprint]
                         instrumentsDd r m 
                         Incremental.div AttributeMap.empty (AList.ofModSingle (viewInstrumentProperties m))                    
                      ]
@@ -811,11 +817,11 @@ module ViewPlan =
             ]
 
 
-        let viewRoverProperties lifter (model : MViewPlanModel) = 
+        let viewRoverProperties lifter (fpVisible:IMod<bool>) (model : MViewPlanModel) = 
             model.selectedViewPlan 
                 |> Mod.map(fun x ->
                     match x with 
-                      | Some x -> viewRoverProperties' x.rover x |> UI.map lifter
+                      | Some x -> viewRoverProperties' x.rover x fpVisible |> UI.map lifter
                       | None ->   div[][] |> UI.map lifter)
 
         let viewViewPlansUI (model:MViewPlanModel) = 
