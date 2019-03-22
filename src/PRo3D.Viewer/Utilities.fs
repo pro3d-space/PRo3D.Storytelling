@@ -743,9 +743,11 @@ module Shader =
             [<TexCoord>]                tc      : V2d
             [<Color>]                   c       : V4d
             [<Normal>]                  n       : V3d
+            [<SourceVertexIndex>]       sv      : int
             [<Semantic("Scalar")>]      scalar  : float
             [<Semantic("LightDir")>]    ldir    : V3d
             [<Semantic("Tex0")>]        tc0     : V4d
+
         }
 
       
@@ -761,32 +763,51 @@ module Shader =
 
   let footprintV (v : FootPrintVertex) =
         vertex {
-            let vp = uniform.ModelViewTrafo * v.pos
-            let p = uniform.ProjTrafo * vp
+            //let vp = uniform.ModelViewTrafo * v.pos
+            //let p = uniform.ProjTrafo * vp
+            
             let instrumentMatrix    : M44d   = uniform?instrumentMVP
-            let newmatrix = instrumentMatrix * vp
-            return { v with tc0 = instrumentMatrix * vp} //v.pos
+            
+            return { v with tc0 = instrumentMatrix * v.wp; sv = 0 } //v.pos
         }
+
+  let footprintV2 (v : FootPrintVertex) =
+      vertex {
+          let instrumentMatrix    : M44d   = uniform?instrumentMVP          
+          let vp = uniform.ModelViewTrafo * v.pos
+          let wp = uniform.ModelTrafo * v.pos
+
+          return { 
+              v with
+                  pos  = uniform.ProjTrafo * vp
+                  wp   = wp
+                  n    = transformNormal v.n
+                  ldir = V3d.Zero - vp.XYZ |> Vec.normalize
+                  tc0  = instrumentMatrix * v.pos                  
+
+          } 
+      } 
 
   let footPrintF (v : FootPrintVertex) =
       fragment {           
           if uniform?footprintVisible then
-              let proTex0 = v.tc0.XY / v.tc0.W
-              let c = footprintmap.Sample(proTex0)
-              let col = 
-                  if (c.W <= 0.50) then
-                     (v.c * 0.7)
-                  elif (c.W <= 0.999) then
-                     v.c * V4d(1.0, 0.0, 0.0, 1.0)
-                  else
-                     v.c
-
-              if (v.tc0.Z <= 0.0) then
-                 return (v.c * 0.7)
-              else
-                 return col 
+            let col = v.c * V4d(1.0, 0.0, 0.0, 1.0)
+          //    let proTex0 = v.tc0.XY / v.tc0.W
+          //    let c = footprintmap.Sample(proTex0)
+          //    let col = 
+          //        if (c.W <= 0.50) then
+          //           (v.c * 0.7)
+          //        elif (c.W <= 0.999) then
+          //           v.c * V4d(1.0, 0.0, 0.0, 1.0)
+          //        else
+          //           v.c
+            let t = v.tc0.XY / v.tc0.W
+            if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
+               return (v.c * 0.7) //darkened
+            else
+               return col 
           else
-              return v.c
+            return v.c
       }
 
 module PRo3DNumeric = 

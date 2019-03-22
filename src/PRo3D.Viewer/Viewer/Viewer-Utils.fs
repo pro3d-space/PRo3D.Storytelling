@@ -242,7 +242,7 @@ module ViewerUtils =
                 let! fppm = fp.projectionMatrix
                 let! fpvm = fp.instViewMatrix
                 let! t = trafo
-                return (fppm * fpvm ) //* t.Forward) //* t.Forward 
+                return (t.Forward * fpvm * fppm) //* t.Forward 
             } 
 
         let test =             
@@ -339,7 +339,10 @@ module ViewerUtils =
                     set 
                         |> Sg.set
                         |> Sg.effect [
-                            Shader.stableTrafo             |> toEffect 
+                          //  Shader.stableTrafo             |> toEffect 
+                         //   PRo3D.Shader.footprintV        |> toEffect
+                            PRo3D.Shader.footprintV2        |> toEffect
+                           // triangleFilterX                |> toEffect   
                             DefaultSurfaces.diffuseTexture |> toEffect
                             fixAlpha |> toEffect
                             Shader.selectionColor          |> toEffect       
@@ -349,9 +352,7 @@ module ViewerUtils =
                             PRo3D.Shader.mapBrightness     |> toEffect
                             PRo3D.Shader.mapGamma          |> toEffect                            
                             PRo3D.Shader.grayscale         |> toEffect
-                            PRo3D.Shader.addColor          |> toEffect
-                            triangleFilterX                |> toEffect   
-                            PRo3D.Shader.footprintV        |> toEffect
+                            PRo3D.Shader.addColor          |> toEffect                            
                             PRo3D.Shader.footPrintF        |> toEffect  
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
