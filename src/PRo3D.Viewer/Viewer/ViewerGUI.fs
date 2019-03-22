@@ -281,7 +281,7 @@ module Gui =
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
                   text "Save as..."
             ]
-            div [ clazz "ui inverted item"; Dialogs.onChooseFiles OpenScene;
+            div [ clazz "ui inverted item"; Dialogs.onChooseFiles(fun x -> match (x |> List.tryHead) with | Some y -> LoadScene y | None -> NoAction "no scene selected");
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({ filters: [{ name: 'Scene', extensions: ['scn']},], properties: ['openFile']}));")][ 
                                                     
                   text "Open"
@@ -474,7 +474,7 @@ module Gui =
     let viewAnnotationProperties (model :MModel) =
             let view = (fun leaf ->
                 match leaf with
-                  | MAnnotations ann -> AnnotationProperties.view ann
+                  | MAnnotations' ann -> AnnotationProperties.view ann
                   | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
             
             model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
@@ -483,7 +483,7 @@ module Gui =
     let viewAnnotationResults (model :MModel) =
             let view = (fun leaf ->
                 match leaf with
-                  | MAnnotations ann -> AnnotationProperties.viewResults ann model.scene.referenceSystem.up.value
+                  | MAnnotations' ann -> AnnotationProperties.viewResults ann model.scene.referenceSystem.up.value
                   | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
             
             model.drawing.annotations |> Groups.viewSelected view AnnotationMessage

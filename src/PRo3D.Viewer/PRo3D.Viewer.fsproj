@@ -43,7 +43,8 @@
     <DocumentationFile>
     </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
-    <StartArguments>-empty</StartArguments>
+    <StartArguments>
+    </StartArguments>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
@@ -124,6 +125,7 @@
     <Compile Include="RoverPlacementImporter.fs" />
     <Compile Include="Viewer\Viewer-Utils.fs" />
     <Compile Include="Viewer\ViewerGUI.fs" />
+    <Compile Include="Viewer\Viewer-IO.fs" />
     <Compile Include="Viewer\Viewer.fs" />
     <Compile Include="RemoteControlModel.fs" />
     <Compile Include="RemoteControlApp.fs" />

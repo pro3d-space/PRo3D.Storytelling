@@ -1,5 +1,7 @@
 ﻿namespace PRo3D
 
+open PRo3D.Versioned
+
 module AnnotationGroupsImporter = 
     open System
     open System.Xml.Linq
@@ -31,6 +33,7 @@ module AnnotationGroupsImporter =
         (m.Elements(xname "Measurements").Elements(xname "object")) 
           |> List.ofSeq
           |> List.map (MeasurementsImporter.getAnnotation trafo)
+          |> List.map Annotation'.convert
           |> List.map(fun x -> 
               let dns = 
                 x.points 
@@ -40,7 +43,7 @@ module AnnotationGroupsImporter =
                 DrawingUtilities.Calculations.calculateAnnotationResults x up north Planet.None
 
               { x with dnsResults = dns; results = Some results} )
-          |> List.map Leaf.Annotations
+          |> List.map Leaf.Annotations'
 
       let flat' = 
         annotations 

@@ -16,6 +16,7 @@ open PRo3D
 module Groups =    
     open Aardvark.Base.Geometry.BvhTree   
     open Aardvark.Base.HSet
+    open PRo3D.Versioned
        
     type Action =
         | ActiveGroup           of Guid*list<Index>*string
@@ -116,23 +117,9 @@ module Groups =
 
         (go m.rootGroup)
           |> PList.toList
-          |> HMap.ofList
-
-    let tryLoadGroups (path:string) =
-      try
-        Some (Serialization.loadAs<PRo3D.Groups.GroupsModel> path)
-        //Some (Serialization.loadJsonAs<PRo3D.Groups.GroupsModel> path)
-      with _ ->
-        Log.error "[loadGroups:] couldn't load %s" path
-        None     
+          |> HMap.ofList    
         
-    let tryLoadAnnotations (path:string) =
-      try
-        Some (Serialization.loadAs<PRo3D.Groups.saveAnnotations> path)
-        //Some (Serialization.loadJsonAs<PRo3D.Groups.saveAnnotations> path)
-      with _ ->
-        Log.error "[loadAnnotations:] couldn't load %s" path
-        None        
+     
     
     let updateActiveGroup (f : Node -> Node) (m : GroupsModel) =
         let root = updateNodeAt m.activeGroup.path f m.rootGroup        

@@ -1,5 +1,7 @@
 ﻿namespace PRo3D
 
+open PRo3D.Versioned
+
 module DrawingUtilities =
 
     open Aardvark.Base
@@ -18,16 +20,18 @@ module DrawingUtilities =
         let getHeightDelta2 (p:V3d) (upVec:V3d) (planet:Planet) = 
             CooTransformation.getHeight p upVec planet
 
-        let calcResultsPoint (model:Annotation) (upVec:V3d) (planet:Planet) =
+        let calcResultsPoint (model:Annotation') (upVec:V3d) (planet:Planet) : AnnotationResults' =
             //let p = point //trafo.Forward.TransformPos(point)
-            {   height = 0.0
-                heightDelta = 0.0
-                avgAltitude = CooTransformation.getAltitude model.points.[0] upVec planet
-                length = 0.0
-                wayLength = 0.0
-                bearing = 0.0
-                slope = 0.0
-                }
+            { 
+              version = AnnotationResults'.current
+              height = 0.0
+              heightDelta = 0.0
+              avgAltitude = CooTransformation.getAltitude model.points.[0] upVec planet
+              length = 0.0
+              wayLength = 0.0
+              bearing = 0.0
+              slope = 0.0
+            }
         
 
         let getDistance (points:list<V3d>) = 
@@ -51,7 +55,7 @@ module DrawingUtilities =
           ] |> List.sum
                                                                
 
-        let calcResultsLine (model:Annotation) (upVec:V3d) (northVec:V3d) (planet:Planet) =
+        let calcResultsLine (model:Annotation') (upVec:V3d) (northVec:V3d) (planet:Planet) : AnnotationResults' =
             let count = model.points.Count
             let dist = V3d.Distance(model.points.[0], model.points.[count-1])
             let way = match model.segments.Count with
@@ -69,21 +73,23 @@ module DrawingUtilities =
             let bearing = DipAndStrike.bearing upVec northVec line.Direction.Normalized
             let slope = DipAndStrike.pitch upVec line.Direction.Normalized
 
-            {   height = (heights |> List.max) - (heights |> List.min)
-                heightDelta = Fun.Abs (heights.[hcount-1] - heights.[0])
-                avgAltitude = (heights |> List.average)
-                length = dist
-                wayLength = way
-                bearing = bearing
-                slope = slope
-                }
+            {   
+              version     = AnnotationResults'.current
+              height      = (heights |> List.max) - (heights |> List.min)
+              heightDelta = Fun.Abs (heights.[hcount-1] - heights.[0])
+              avgAltitude = (heights |> List.average)
+              length      = dist
+              wayLength   = way
+              bearing     = bearing
+              slope       = slope
+            }
 
-        let calculateAnnotationResults (model:Annotation) (upVec:V3d) (northVec:V3d) (planet:Planet) =
+        let calculateAnnotationResults (model:Annotation') (upVec:V3d) (northVec:V3d) (planet:Planet) : AnnotationResults' =
             match model.points.Count with
                 | x when x > 1 -> calcResultsLine model upVec northVec planet
                 | _ -> calcResultsPoint model upVec planet
 
-        let recalcBearing (model:Annotation) (upVec:V3d) (northVec:V3d) = 
+        let recalcBearing (model:Annotation') (upVec:V3d) (northVec:V3d) = 
            match model.results with 
              | Some r ->
                let count = model.points.Count

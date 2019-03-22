@@ -7,8 +7,36 @@ open Aardvark.UI
 
 open PRo3D
 open Chiron
+open Aardvark.UI
+open Aardvark.UI.Primitives
 
 #nowarn "0686"
+
+module Json = 
+  let writeFloat name (floatValue : float)  = 
+    json {
+      if floatValue.IsNaN() then      
+        do! Json.writeNone name
+      else
+        do! Json.write name floatValue
+    }
+
+  let readFloat name : Json<float> = 
+    json {
+      let! v = Json.tryRead name
+      return 
+        match v with
+        | Some k -> k
+        | None -> Double.NaN      
+    }
+
+  //let writeFloat name (floatValue : float)  = 
+  //  json {
+  //    if floatValue.IsNaN() then      
+  //      do! Json.writeNone name
+  //    else
+  //      do! Json.write name floatValue
+  //  }
 
 [<DomainType>]
 type Statistics' = {
@@ -58,11 +86,11 @@ with
     }
 
 module Statistics' =
-  let current = 0
+  
   //conversion
   let convert (old : Statistics) : Statistics' =
     {
-      version      = current
+      version      = Statistics'.current
       average      = old.average     
       min          = old.min         
       max          = old.max         
@@ -73,7 +101,7 @@ module Statistics' =
   //initial
   let initial = 
      {
-        version      = current
+        version      = Statistics'.current
         average      = Double.NaN
         min          = Double.NaN
         max          = Double.NaN
@@ -183,13 +211,13 @@ with
   static member current = 0
   static member private readV0 =
     json {      
-      let! height     = Json.read "height"     
-      let! heightDelta= Json.read "heightDelta"
-      let! avgAltitude= Json.read "avgAltitude"
-      let! length     = Json.read "length"     
-      let! wayLength  = Json.read "wayLength"  
-      let! bearing    = Json.read "bearing"    
-      let! slope      = Json.read "slope"
+      let! height     = Json.readFloat "height"     
+      let! heightDelta= Json.readFloat "heightDelta"
+      let! avgAltitude= Json.readFloat "avgAltitude"
+      let! length     = Json.readFloat "length"     
+      let! wayLength  = Json.readFloat "wayLength"  
+      let! bearing    = Json.readFloat "bearing"    
+      let! slope      = Json.readFloat "slope"
       
       return {
         version     = AnnotationResults'.current    
@@ -209,16 +237,17 @@ with
         | 0 -> return! AnnotationResults'.readV0
         | _ -> return! v |> sprintf "don't know version %A  of AnnotationResults" |> Json.error
     }
+  
   static member ToJson (x : AnnotationResults') =
     json {
-      do! Json.write "version"     x.version     
-      do! Json.write "height"      x.height      
-      do! Json.write "heightDelta" x.heightDelta 
-      do! Json.write "avgAltitude" x.avgAltitude 
-      do! Json.write "length"      x.length      
-      do! Json.write "wayLength"   x.wayLength   
-      do! Json.write "bearing"     x.bearing     
-      do! Json.write "slope"       x.slope       
+      do! Json.write      "version"     x.version     
+      do! Json.writeFloat "height"      x.height      
+      do! Json.writeFloat "heightDelta" x.heightDelta       
+      do! Json.writeFloat "avgAltitude" x.avgAltitude 
+      do! Json.writeFloat "length" x.length            
+      do! Json.writeFloat "wayLength" x.wayLength       
+      do! Json.writeFloat "bearing"     x.bearing     
+      do! Json.writeFloat "slope"       x.slope       
     }
 
 module AnnotationResults' =
@@ -247,6 +276,9 @@ module AnnotationResults' =
         bearing     = Double.NaN
         slope       = Double.NaN
     }  
+
+type SemanticId = SemanticId of string
+type SemanticType = Metric = 0 | Angular = 1 | Hierarchical = 2 | Undefined = 3
 
 [<DomainType>]
 type Annotation' = {
@@ -277,9 +309,12 @@ type Annotation' = {
 
   surfaceName : string
   view        : CameraView
+
+  semanticId   : SemanticId
+  semanticType : SemanticType
 }
 with 
-  static member current = 0
+  static member current = 1
   static member private readV0 =
     json {
       let! key          = Json.read "key"
@@ -328,6 +363,63 @@ with
         textsize    = textSize         
         surfaceName = surfaceName
         view        = cameraView 
+        semanticId   = SemanticId ""
+        semanticType = SemanticType.Undefined
+      }
+    }
+  static member private readV1 =
+    json {
+      let! key          = Json.read "key"
+      let! modelTrafo   = Json.read "modelTrafo" //|> Trafo3d.Parse
+      let! geometry     = Json.read "geometry"
+      let! projection   = Json.read "projection"
+      let! semantic     = Json.read "semantic"
+
+      let! points   = Json.read "points"
+      let! segments = Json.read "segments"
+
+      let! color        = Json.readWith Ext.fromJson<ColorInput,Ext> "color"
+      let! thickness    = Json.readWith Ext.fromJson<NumericInput,Ext> "thickness"
+
+      let! results      = Json.read "results"
+      let! dnsResults   = Json.read "dnsResults"
+
+      let! visible  = Json.read "visible"
+      let! showDns  = Json.read "showDns"
+      let! text     = Json.read "text"
+      let! textSize = Json.readWith Ext.fromJson<NumericInput,Ext> "textsize"
+
+      let! surfaceName = Json.read "surfaceName"
+
+      let! (cameraView : list<string>) = Json.read "view"
+      
+      let cameraView = cameraView |> List.map V3d.Parse
+      let cameraView = CameraView(cameraView.[0],cameraView.[1],cameraView.[2],cameraView.[3], cameraView.[4])
+
+      let! semanticId    = Json.read "semanticId"
+      let! semanticType  = Json.read "semanticType"
+
+      return {
+        version     = Annotation'.current
+        key         = key           |> Guid.Parse
+        modelTrafo  = modelTrafo    |> Trafo3d.Parse        
+        geometry    = geometry      |> enum<Geometry>
+        projection  = projection    |> enum<Projection>
+        semantic    = semantic      |> enum<Semantic>
+        points      = points        |> Serialization.jsonSerializer.UnPickleOfString
+        segments    = segments      |> Serialization.jsonSerializer.UnPickleOfString
+        color       = color
+        thickness   = thickness      
+        results     = results    
+        dnsResults  = dnsResults         
+        visible     = visible 
+        showDns     = showDns   
+        text        = text      
+        textsize    = textSize         
+        surfaceName = surfaceName
+        view        = cameraView 
+        semanticId   = semanticId |> SemanticId
+        semanticType = semanticType |> enum<SemanticType>
       }
     }
   static member FromJson(_:Annotation') = 
@@ -335,6 +427,7 @@ with
       let! v = Json.read "version"
       match v with 
       | 0 -> return! Annotation'.readV0
+      | 1 -> return! Annotation'.readV1
       | _ -> return! v |> sprintf "don't know version %A of Annotation" |> Json.error
     }
 
@@ -352,16 +445,21 @@ with
       do! Json.writeWith (Ext.toJson<NumericInput,Ext>) "thickness" x.thickness
       do! Json.write "results"       x.results
       do! Json.write "dnsResults"    x.dnsResults
+      do! Json.write "visible"    x.visible
+      do! Json.write "showDns"    x.showDns
       do! Json.write "text"    x.text
       do! Json.writeWith (Ext.toJson<NumericInput,Ext>) "textsize" x.textsize
       do! Json.write "surfaceName"    x.surfaceName
 
       let camView = [x.view.Sky; x.view.Location; x.view.Forward; x.view.Up ; x.view.Right] |> List.map(fun x -> x.ToString())      
       do! Json.write "view" camView
+      do! Json.write "semanticId" (x.semanticId.ToString())
+      do! Json.write "semanticType" (x.semanticType |> int)
+      
     }
 
 module Annotation' =
-  let current = 0
+  
   //conversion
   let convert (old : Annotation) : Annotation' =
    {
@@ -383,30 +481,106 @@ module Annotation' =
       textsize    = old.textsize    
       surfaceName = old.surfaceName 
       view        = old.view
+      semanticId   = SemanticId ""
+      semanticType = SemanticType.Undefined
    }
+
+  let thickn = {
+      value   = 3.0
+      min     = 1.0
+      max     = 8.0
+      step    = 1.0
+      format  = "{0:0}"
+  }
+
+  let texts = {
+      value   = 0.05
+      min     = 0.01
+      max     = 5.0
+      step    = 0.01
+      format  = "{0:0.00}"
+  }
+
+  let make_old (projection) (geometry) (color) (thickness) (surfName) : Annotation  =       
+    {
+      key         = Guid.NewGuid()
+      geometry    = geometry
+      semantic    = Semantic.None
+      points      = plist.Empty
+      segments    = plist.Empty //[]
+      color       = color
+      thickness   = thickness
+      results     = None
+      dnsResults  = None            
+      projection  = projection
+      visible     = true
+      text        = ""
+      textsize    = texts
+      modelTrafo  = Trafo3d.Identity
+      showDns     = 
+          match geometry with 
+            | Geometry.DnS -> true 
+            | _ -> false 
+      surfaceName = surfName
+      view = FreeFlyController.initial.view
+    }
+
+  let initial_old =
+      make_old Projection.Viewpoint Geometry.Polyline { c = C4b.Magenta } thickn ""
 
   let initial : Annotation' =
    {
       version     = Annotation'.current
-      key         = Annotation.initial.key
-      modelTrafo  = Annotation.initial.modelTrafo
-      geometry    = Annotation.initial.geometry    
-      projection  = Annotation.initial.projection  
-      semantic    = Annotation.initial.semantic    
-      points      = Annotation.initial.points      
-      segments    = Annotation.initial.segments    
-      color       = Annotation.initial.color       
-      thickness   = Annotation.initial.thickness   
-      results     = Annotation.initial.results    |> Option.map AnnotationResults'.convert
-      dnsResults  = Annotation.initial.dnsResults |> Option.map DipAndStrikeResults'.convert
-      visible     = Annotation.initial.visible     
-      showDns     = Annotation.initial.showDns     
-      text        = Annotation.initial.text        
-      textsize    = Annotation.initial.textsize    
-      surfaceName = Annotation.initial.surfaceName 
-      view        = Annotation.initial.view
+      key         = initial_old.key
+      modelTrafo  = initial_old.modelTrafo
+      geometry    = initial_old.geometry    
+      projection  = initial_old.projection  
+      semantic    = initial_old.semantic    
+      points      = initial_old.points      
+      segments    = initial_old.segments    
+      color       = initial_old.color       
+      thickness   = initial_old.thickness   
+      results     = initial_old.results    |> Option.map AnnotationResults'.convert
+      dnsResults  = initial_old.dnsResults |> Option.map DipAndStrikeResults'.convert
+      visible     = initial_old.visible     
+      showDns     = initial_old.showDns     
+      text        = initial_old.text        
+      textsize    = initial_old.textsize    
+      surfaceName = initial_old.surfaceName 
+      view        = initial_old.view
+      semanticId   = SemanticId ""
+      semanticType = SemanticType.Undefined
    }
     
+  let thickness = [1.0; 2.0; 3.0; 4.0; 5.0; 1.0; 1.0]
+  let color = [new C4b(241,238,246); new C4b(189,201,225); new C4b(116,169,207); new C4b(43,140,190); new C4b(4,90,141); new C4b(241,163,64); new C4b(153,142,195) ]
+
+  let make (projection) (geometry) (color) (thickness) (surfName) : Annotation'  =       
+      {
+        version     = Annotation'.current
+        key         = Guid.NewGuid()
+        geometry    = geometry
+        semantic    = Semantic.None
+        points      = plist.Empty
+        segments    = plist.Empty //[]
+        color       = color
+        thickness   = thickness
+        results     = None
+        dnsResults  = None            
+        projection  = projection
+        visible     = true
+        text        = ""
+        textsize    = texts
+        modelTrafo  = Trafo3d.Identity
+        showDns     = 
+            match geometry with 
+              | Geometry.DnS -> true 
+              | _ -> false 
+        surfaceName = surfName
+        view = FreeFlyController.initial.view
+        semanticId   = SemanticId ""
+        semanticType = SemanticType.Undefined
+      }
 
   //initial
   //version modules
@@ -545,12 +719,12 @@ type ViewConfigModel' with
              do! Json.write "version" x.version
          }
 
-module Testing = 
+module IO = 
   let writeToFile path (contents : string) =
       System.IO.File.WriteAllText(path, contents)
 
   let readFromFile path =
-      System.IO.File.ReadAllText(path)
+      System.IO.File.ReadAllText(path)  
 
   let writeStuff() =
     let oldconfig = ViewConfigModel.initial |> ViewConfigModel'.convert

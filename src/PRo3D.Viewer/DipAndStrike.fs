@@ -1,5 +1,7 @@
 ﻿namespace PRo3D
 
+open PRo3D.Versioned
+
 module DipAndStrike =
     open Aardvark.Base
     open Aardvark.Application
@@ -68,7 +70,7 @@ module DipAndStrike =
         distances
       
 
-    let calculateDipAndStrikeResults (up:V3d) (north : V3d) (points:plist<V3d>)=
+    let calculateDipAndStrikeResults (up:V3d) (north : V3d) (points:plist<V3d>) =
 
         let points = points |> PList.filter(fun x -> not x.IsNaN)
 
@@ -118,6 +120,7 @@ module DipAndStrike =
                 let v = strike.Cross(up).Normalized
 
                 let dns = {
+                    version         = DipAndStrikeResults'.current
                     plane           = plane
                     dipAngle        = Math.Acos(v.Dot(dip)).DegreesFromRadians()
                     dipDirection    = dip
@@ -127,6 +130,7 @@ module DipAndStrike =
                     centerOfMass    = (new Box3d(points)).Center //[@LF] this is not the center of mass (sum over points / no of points)
                     error           = 
                       { 
+                        version = Statistics'.current
                         average = avg
                         min = min
                         max = max
@@ -137,7 +141,7 @@ module DipAndStrike =
                 Some dns
             | _ -> None 
         
-    let recalculateDnSAzimuth (anno:Annotation) (up:V3d) (north : V3d) =
+    let recalculateDnSAzimuth (anno:Annotation') (up:V3d) (north : V3d) =
 
         let points = anno.points |> PList.filter(fun x -> not x.IsNaN)
         match anno.dnsResults with

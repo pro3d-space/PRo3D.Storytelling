@@ -112,7 +112,7 @@ type ViewerAction =
     | UpdateUserFeedback        of string
     | StartImportMessaging      of list<string>
     | Logging                   of string * ViewerAction
-    | ThreadsDone               of string    
+    | ThreadsDone               of string        
 
 
 and MailboxState = {
@@ -263,7 +263,7 @@ module Viewer =
 
     let sceneElm = {id = "scene"; title = (Some "Scene"); weight = 0.4; deleteInvisible = None; isCloseable = None }
     
-    let initialDockConfig = 
+    let dockConfigFull = 
       config {
           content (                        
               horizontal 1.0 [                                                        
@@ -272,8 +272,7 @@ module Viewer =
                     {id = "instrumentview"; title = Some " Instrument View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
                 ]                            
                 vertical 0.3 [
-                  stack 0.5 None [
-                    //{id = "scene"; title = Some "Scene"; weight = 0.4; deleteInvisible = None }
+                  stack 0.5 None [                    
                     {id = "surfaces"; title = Some " Surfaces "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "annotations"; title = Some " Annotations "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                   ]                          
@@ -286,8 +285,30 @@ module Viewer =
                     {id = "minerva"; title = Some " Minerva "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                   ]
                 ]
-              ]              
-          //  ]
+              ]                        
+          )
+          appName "PRo3D"
+          useCachedConfig false
+      }
+
+    let dockConfigCore = 
+      config {
+          content (                        
+              horizontal 1.0 [                                                        
+                stack 0.7 None [
+                    {id = "render"; title = Some " Main View "; weight = 0.6; deleteInvisible = None; isCloseable = None}                       
+                ]                            
+                vertical 0.3 [
+                  stack 0.5 None [                        
+                    {id = "surfaces"; title = Some " Surfaces "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "annotations"; title = Some " Annotations "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                  ]                          
+                  stack 0.5 (Some "config") [
+                    {id = "config"; title = Some " Config "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "bookmarks"; title = Some " Bookmarks"; weight = 0.4; deleteInvisible = None; isCloseable = None }                       
+                  ]
+                ]
+              ]                        
           )
           appName "PRo3D"
           useCachedConfig false
@@ -313,7 +334,7 @@ module Viewer =
             //orientationSystem = ReferenceSystem.initial
             bookmarksModel  = BookmarksModel.initial
             viewPlans       = ViewPlanModel.initial                                        
-            dockConfig      = initialDockConfig                          
+            dockConfig      = dockConfigFull
             closedPages     = list.Empty 
             firstImport     = true
             userFeedback    = ""

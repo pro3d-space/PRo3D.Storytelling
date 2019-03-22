@@ -28,6 +28,7 @@ open PRo3D
 open PRo3D.Drawing
 open PRo3D.Groups
 open MBrace.FsPickler.Json   
+open PRo3D.Versioned
 
 module UI =
       open Aardvark.Base.Incremental
@@ -43,7 +44,7 @@ module UI =
             //  Html.Layout.boxH [ Html.SemUi.dropDown model.semantic SetSemantic ]                
           ]
                     
-      let mkColor (model : MGroupsModel) (a : MAnnotation) =
+      let mkColor (model : MGroupsModel) (a : MAnnotation') =
         let color =  
             model.selectedLeaves
                 |> ASet.map(fun x -> x.id = a.key)
@@ -60,56 +61,43 @@ module UI =
         //    }
       
       
-      let mkCubeColor (model : MGroupsModel) (a : MAnnotation) =
+      let mkCubeColor (model : MGroupsModel) (a : MAnnotation') =
         model.selectedLeaves
                 |> ASet.map(fun x -> x.id = a.key)
                 |> ASet.contains true
                 |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
 
-      let isSingleSelect (model : MGroupsModel) (a : MAnnotation) =
+      let isSingleSelect (model : MGroupsModel) (a : MAnnotation') =
           model.singleSelectLeaf |> Mod.map( fun x -> 
               match x with 
                 | Some selected -> selected = a.key
                 | None -> false )
 
-      let annotationMenu = 
+      let annotationMenu = //todo move to viewer io gui
           div [ clazz "ui dropdown item"] [
               text "Annotations"
               i [clazz "dropdown icon"][] 
               div [ clazz "menu"] [                    
-                  div [ clazz "ui inverted item"; Dialogs.onChooseFiles Load;
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));" )][
-                          text "Load"
-                  ]
+                  //div [ clazz "ui inverted item"; Dialogs.onChooseFiles Load;
+                  //clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));" )][
+                  //        text "Load"
+                  //]
                   div [ clazz "ui inverted item"; onMouseClick (fun _ -> Clear)][
                           text "Clear List"
                   ]
                   div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveCSV;
                       clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")][
-                          text "Save .csv"
+                          text "Export as csv"
                   ]
+                  //div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveVersioned)][
+                  //    text "Save versioned"
+                  //]
+                  //div [ clazz "ui inverted item"; onMouseClick (fun _ -> LoadVersioned)][
+                  //    text "Load versioned"
+                  //]
               ]
           ]                    
-
-      let viewAnnotationImportExport (m:MDrawingModel) =
-         div [clazz "ui buttons inverted"] [
-                              
-              button [clazz "ui icon button"; Dialogs.onSaveFile Save;
-                      clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements'}]}));")] [
-                  i [clazz "save icon"] [] ] |> UI.wrapToolTipBottom "Save Annotations"
-                              
-              button [clazz "ui icon button"; Dialogs.onChooseFiles Load;
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));") ] [
-                  i [clazz "folder outline icon"] [] ] |> UI.wrapToolTipBottom "Load Annotations"
-              
-              button [clazz "ui icon button"; onMouseClick (fun _ -> Clear)] [
-                  i [clazz "file outline icon"] [] ] |> UI.wrapToolTipBottom "Clear Annotation List"
-
-              button [clazz "ui icon button"; Dialogs.onSaveFile SaveCSV;
-                      clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")] [
-                  i [clazz "save icon inverted"] [] ] |> UI.wrapToolTipBottom "Save .csv"                                                                
-          ] 
-
+      
       let viewAnnotations (annotations : alist<MAnnotation>) : alist<DomNode<Action>> =
         
           annotations |> AList.map(fun a ->
@@ -121,7 +109,12 @@ module UI =
               ]
             ])
                        
-      let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)(singleSelect : MAnnotation*list<Index> -> 'outer)(multiSelect : MAnnotation*list<Index> -> 'outer)(lift : Groups.Action -> 'outer) (annotations: alist<MAnnotation>) : alist<DomNode<'outer>> =                         
+      let viewAnnotationsInGroup (path:list<Index>) (model:MGroupsModel)
+        (singleSelect : MAnnotation'*list<Index> -> 'outer)
+        (multiSelect : MAnnotation'*list<Index> -> 'outer)
+        (lift : Groups.Action -> 'outer) 
+        (annotations: alist<MAnnotation'>) : alist<DomNode<'outer>> =
+
         annotations 
           |> AList.map(fun a ->
             
@@ -205,7 +198,7 @@ module UI =
             ]                            
           )     
             
-      let rec viewTree path (group : MNode) (model : MGroupsModel) (lookup : amap<Guid, MAnnotation>) : DomNode<Action> =
+      let rec viewTree path (group : MNode) (model : MGroupsModel) (lookup : amap<Guid, MAnnotation'>) : DomNode<Action> =
                                                   
           let icon =
               adaptive {
@@ -260,11 +253,11 @@ module UI =
               }         
 
           let singleSelect = 
-              fun (a:MAnnotation,path:list<Index>) -> 
+              fun (a:MAnnotation',path:list<Index>) -> 
                   Action.GroupsMessage(Groups.SingleSelectLeaf (path, a.key, ""))
 
           let multiSelect = 
-              fun (a:MAnnotation,path:list<Index>) -> 
+              fun (a:MAnnotation',path:list<Index>) -> 
                   Action.GroupsMessage(Groups.AddLeafToSelection (path, a.key, ""))
 
           let lift = fun (a:Groups.Action) -> (GroupsMessage a)
@@ -288,8 +281,8 @@ module UI =
           
       let toMAnnotation (leaf : MLeaf) =
         match leaf with 
-        | MAnnotations a -> a
-        | _ -> failwith "wrong type"
+        | MAnnotations' a -> a
+        | _ -> leaf |> sprintf "wrong type %A; expected MAnnotations'" |> failwith
 
       let viewAnnotationGroups (model:MDrawingModel) = 
         let a = 

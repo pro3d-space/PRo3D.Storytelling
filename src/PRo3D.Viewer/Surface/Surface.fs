@@ -765,7 +765,7 @@ module Surface =
 
                     let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
                     let! surf = leaf 
-                    let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
+                    let x = match surf with | MSurfaces s -> s | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
                                        
                     return SurfaceProperties.view x |> UI.map SurfacePropertiesMessage
                 | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map SurfacePropertiesMessage 
@@ -786,7 +786,7 @@ module Surface =
                     //return TranslationApp.UI.view sg.transformation |> UI.map TranslationMessage
                     let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
                     let! surf = leaf 
-                    let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
+                    let x = match surf with | MSurfaces s -> s | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
                     return TranslationApp.UI.view x.transformation |> UI.map TranslationMessage
                 | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map TranslationMessage 
         }                          
@@ -800,7 +800,7 @@ module Surface =
 
                     let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
                     let! surf = leaf 
-                    let colorCorrection = match surf with | MSurfaces s -> s.colorCorrection | _ -> failwith "wrong type"
+                    let colorCorrection = match surf with | MSurfaces s -> s.colorCorrection | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
                     return ColorCorrectionProperties.view colorCorrection |> UI.map ColorCorrectionMessage
                 | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ColorCorrectionMessage 
         }                          
@@ -817,7 +817,7 @@ module Surface =
                     let scalar = 
                       match surf with 
                        | MSurfaces s -> s.selectedScalar 
-                       | _ -> failwith "wrong type"
+                       | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
 
                     let! scalar = scalar
                     match scalar with
@@ -836,7 +836,7 @@ module Surface =
 
                     let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
                     let! surf = leaf 
-                    let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> failwith "wrong type"
+                    let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
                     let! scalar = scalar
                     match scalar with
                         | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
