@@ -341,7 +341,7 @@ module ViewerUtils =
                         |> Sg.effect [
                           //  Shader.stableTrafo             |> toEffect 
                          //   PRo3D.Shader.footprintV        |> toEffect
-                            PRo3D.Shader.footprintV2        |> toEffect
+                          //  PRo3D.Shader.footprintV2        |> toEffect
                            // triangleFilterX                |> toEffect   
                             DefaultSurfaces.diffuseTexture |> toEffect
                             fixAlpha |> toEffect
@@ -353,7 +353,7 @@ module ViewerUtils =
                             PRo3D.Shader.mapGamma          |> toEffect                            
                             PRo3D.Shader.grayscale         |> toEffect
                             PRo3D.Shader.addColor          |> toEffect                            
-                            PRo3D.Shader.footPrintF        |> toEffect  
+                           // PRo3D.Shader.footPrintF        |> toEffect  
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
