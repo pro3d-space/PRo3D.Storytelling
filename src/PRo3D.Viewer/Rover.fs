@@ -364,7 +364,7 @@ module RoverApp =
     //              | None ->   div[][])
 
     //let instrumentsDd (r:MRover) (m : MRoverModel) = 
-    //    UI.dropDown'' (r.instruments |> mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )   
+    //    youUI.dropDown'' (r.instruments |> mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )   
 
     //let viewAxesList (r : MRover) (m : MRoverModel) =
     //    alist {

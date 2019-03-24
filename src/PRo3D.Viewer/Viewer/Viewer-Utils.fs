@@ -339,7 +339,7 @@ module ViewerUtils =
                     set 
                         |> Sg.set
                         |> Sg.effect [
-                          //  Shader.stableTrafo             |> toEffect 
+                            Shader.stableTrafo             |> toEffect 
                          //   PRo3D.Shader.footprintV        |> toEffect
                           //  PRo3D.Shader.footprintV2        |> toEffect
                            // triangleFilterX                |> toEffect   
@@ -362,9 +362,10 @@ module ViewerUtils =
                 yield RenderCommand.SceneGraph sg
 
                 //if i = c then //now gets rendered multiple times
-                yield RenderCommand.SceneGraph depthTested // assign priorities globally, or for each anno and make sets
+                 // assign priorities globally, or for each anno and make sets
 
                 yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
             
             yield RenderCommand.SceneGraph overlayed
+            yield RenderCommand.SceneGraph depthTested
         }  
