@@ -48,8 +48,8 @@ module ViewPlan =
 
         Trafo3d(
             M44d(
-                focalLength,                0.0,                               -principalPoint.X,  0.0,
-                0.0,                        focalLength * aspect,              -principalPoint.Y,  0.0,
+                focalLength,                0.0,                               -principalPoint.X,       0.0,
+                0.0,                        focalLength * aspect,              -principalPoint.Y,       0.0,
                 0.0,                        0.0,                               -a,                      b,
                 0.0,                        0.0,                               -1.0,                    0.0
             ),
@@ -79,7 +79,7 @@ module ViewPlan =
         //let image = PixImage<byte>(Col.Format.RGB,res).ToPixImage(Col.Format.RGB)
        
         let pi = PixImage<byte>(Col.Format.RGBA, res)
-        pi.GetMatrix<C4b>().SetByCoord(fun (c : V2l) -> C4b.Red) |> ignore
+        pi.GetMatrix<C4b>().SetByCoord(fun (c : V2l) -> C4b.White) |> ignore
         let tex = PixTexture2d(PixImageMipMap [| (pi.ToPixImage(Col.Format.RGBA)) |], true) :> ITexture
 
         let focal = instrument.focal.value

@@ -241,8 +241,10 @@ module ViewerUtils =
             adaptive {
                 let! fppm = fp.projectionMatrix
                 let! fpvm = fp.instViewMatrix
+                let! s = surf
+                let! ts = s.preTransform
                 let! t = trafo
-                return (fppm * fpvm ) //* t.Forward) //* t.Forward 
+                return (fppm * fpvm * ts.Forward) //* t.Forward) //* t.Forward 
             } 
 
         let test =             

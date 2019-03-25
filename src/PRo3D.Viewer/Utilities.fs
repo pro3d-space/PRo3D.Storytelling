@@ -765,14 +765,14 @@ module Shader =
             let p = uniform.ProjTrafo * vp
             let instrumentMatrix    : M44d   = uniform?instrumentMVP
             let newmatrix = instrumentMatrix * vp
-            return { v with tc0 = instrumentMatrix * vp} //v.pos
+            return { v with tc0 = instrumentMatrix * v.pos} //vp
         }
 
   let footPrintF (v : FootPrintVertex) =
       fragment {           
           if uniform?footprintVisible then
-              let proTex0 = v.tc0.XY / v.tc0.W
-              let c = footprintmap.Sample(proTex0)
+              let test = v.tc0.XY / v.tc0.W
+              let c = footprintmap.Sample(test)
               let col = 
                   if (c.W <= 0.50) then
                      (v.c * 0.7)
