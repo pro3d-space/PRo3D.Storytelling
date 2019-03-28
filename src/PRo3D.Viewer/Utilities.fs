@@ -612,6 +612,21 @@ module Shader =
             else 
                 (startColor + (hStepSize * ((float)(pos1))))
         currColorH
+
+  let private diffuseSampler =
+      sampler2d {
+          texture uniform?DiffuseColorTexture          
+          filter Filter.Anisotropic
+          maxAnisotropy 16
+          addressU WrapMode.Wrap
+          addressV WrapMode.Wrap
+      }
+
+  let improvedDiffuseTexture (v : Effects.Vertex) =
+    fragment {
+        let texColor = diffuseSampler.Sample(v.tc,-1.0)
+        return texColor
+    }
             
   let falseColorLegend2 (v : Vertex) =
       fragment {    

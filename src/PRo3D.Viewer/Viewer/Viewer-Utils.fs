@@ -339,11 +339,9 @@ module ViewerUtils =
                     set 
                         |> Sg.set
                         |> Sg.effect [
-                            Shader.stableTrafo             |> toEffect 
-                         //   PRo3D.Shader.footprintV        |> toEffect
-                          //  PRo3D.Shader.footprintV2        |> toEffect
-                           // triangleFilterX                |> toEffect   
-                            DefaultSurfaces.diffuseTexture |> toEffect
+                            Shader.stableTrafo             |> toEffect                          
+                            triangleFilterX                |> toEffect                               
+                            PRo3D.Shader.improvedDiffuseTexture |> toEffect
                             fixAlpha |> toEffect
                             Shader.selectionColor          |> toEffect       
                             Shader.LoDColor                |> toEffect                             
@@ -352,12 +350,10 @@ module ViewerUtils =
                             PRo3D.Shader.mapBrightness     |> toEffect
                             PRo3D.Shader.mapGamma          |> toEffect                            
                             PRo3D.Shader.grayscale         |> toEffect
-                            PRo3D.Shader.addColor          |> toEffect                            
-                           // PRo3D.Shader.footPrintF        |> toEffect  
+                            PRo3D.Shader.addColor          |> toEffect                                                       
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
-                        |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
-                        //|> Sg.pass RenderPass.main
+                        |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()                        
 
                 yield RenderCommand.SceneGraph sg
 
