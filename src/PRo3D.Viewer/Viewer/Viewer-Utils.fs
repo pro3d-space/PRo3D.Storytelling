@@ -358,9 +358,10 @@ module ViewerUtils =
 
                 //if i = c then //now gets rendered multiple times
                  // assign priorities globally, or for each anno and make sets
+                yield RenderCommand.SceneGraph depthTested
 
                 yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
             
             yield RenderCommand.SceneGraph overlayed
-            yield RenderCommand.SceneGraph depthTested
+            
         }  

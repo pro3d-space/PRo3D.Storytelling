@@ -160,27 +160,7 @@ module Sg =
   let pass0 = RenderPass.main
   let pass1 = RenderPass.after "outline" RenderPassOrder.Arbitrary pass0
 
-  //let mask (points : alist<V3d>) (v:int) (color:IMod<C4b>) (trafo : IMod<Trafo3d>) = 
-  //      let edges = Sg.edgeLines false points trafo 
-  //      edges
-  //          |> Aardvark.SceneGraph.SgPrimitives.Sg.lines color
-  //          |> Sg.noEvents
-  //          |> Sg.shader {
-  //                  do! Shader.stableTrafo
-  //                  do! DefaultSurfaces.vertexColor
-  //                  do! Shader.thickLine    
-  //              }                             
-  //          |> Sg.pass pass0
-  //          |> Sg.trafo trafo
-  //          |> Sg.stencilMode (Mod.constant (write v))
-  //          |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Stencil])
-  //          |> Sg.shader {
-  //                  do! DefaultSurfaces.trafo
-  //                  do! DefaultSurfaces.vertexColor
-  //                  do! DefaultSurfaces.simpleLighting
-  //              }
-
-               
+                 
   let pickableLine (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking: bool) = 
     let edges = Sg.edgeLines false points trafo 
     let pickable = 
@@ -189,9 +169,7 @@ module Sg =
         let! t = trafo
         let! w = width
         let! points = points |> AList.toMod
-        match edg.Length with
-          //| 0 -> let sphere = Sphere3d((points |> AList.toArray).[0], 0.1) // point
-          //       return { shape = PickShape.Sphere sphere; trafo = Trafo3d.Identity } // line
+        match edg.Length with          
           | 1 -> 
             let e = edg |> Array.head
             let cylinder = Cylinder3d(e.P0, e.P1, 0.1)
@@ -212,12 +190,18 @@ module Sg =
         |> Sg.shader {
               do! Shader.stableTrafo
               do! DefaultSurfaces.vertexColor
-              do! Shader.thickLine2
+              do! Shader.Shaders.thickLine
+              do! Shader.Shaders.depthOffsetFS
           }      
         //|> Sg.pass pass0
         |> Sg.trafo trafo
         |> Sg.uniform "LineWidth" width
-        |> Sg.uniform "depthOffset" offset
+        |> Sg.uniform "DepthOffset" (
+            offset |> Mod.map (fun depthWorld -> 
+                let dLin = depthWorld / (100.0 - 0.1)
+                printfn "linear depth offset: %A" dLin
+                dLin
+            ))        
         |> Sg.pickable' pickable
         |> Sg.noEvents
         |> Sg.withEvents [
@@ -244,18 +228,7 @@ module Sg =
         
         let edges = Sg.edgeLines false points trafo
         let sg = edges |> Aardvark.SceneGraph.SgPrimitives.Sg.lines color
-
-
-        let pickable = 
-            adaptive {
-                let! edg = edges
-                let! w = width
-                match edg.Length with
-                    | 0 -> let sphere = Sphere3d((points |> AList.toArray).[0], 1.0) // point
-                           return { shape = PickShape.Sphere sphere; trafo = Trafo3d.Identity } // line
-                    | _ -> return { shape = PickShape.Box (Box3d(points |> AList.toArray)); trafo = Trafo3d.Identity } 
-            }
-   
+     
         let regular =
             sg
             |> Sg.noEvents
@@ -263,13 +236,10 @@ module Sg =
             |> Sg.shader {
                 do! Shader.stableTrafo
                 do! DefaultSurfaces.vertexColor
-                do! Shader.thickLine    
-            }      
-            //|> Sg.pass pass0
+                do! Shader.Shaders.thickLine                
+            }                  
             |> Sg.trafo trafo
-            |> Sg.uniform "LineWidth" width
-            |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
-         //   |> Sg.pickable' pickable
+            |> Sg.uniform "LineWidth" width            
             |> Sg.noEvents
             |> Sg.withEvents [
                 SceneEventKind.Down, (
@@ -279,20 +249,7 @@ module Sg =
                     else
                         false, Seq.ofList[])
             ]
-
-        //let regular =
-        //    sg
-        //    |> Sg.noEvents
-        //    |> Sg.pass pass0
-        //    |> Sg.shader {
-        //         do! Shader.stableTrafo
-        //         do! DefaultSurfaces.vertexColor
-        //         do! Shader.thickLine    
-        //     }                               
-        //     |> Sg.trafo trafo
-        //     |> Sg.uniform "LineWidth" width
-        //     |> Sg.uniform "DepthOffset" (Mod.constant 0.2)
-             
+    
         let mask = 
             sg
             |> Sg.noEvents
@@ -302,7 +259,7 @@ module Sg =
             |> Sg.shader {
                  do! Shader.stableTrafo
                  do! DefaultSurfaces.vertexColor
-                 do! Shader.thickLine    
+                 do! Shader.Shaders.thickLine
              }                               
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
@@ -323,7 +280,7 @@ module Sg =
                 do! DefaultSurfaces.constantColor C4f.VRVisGreen
             }
             |> Sg.uniform "LineWidth" (outlineSize width)
-            |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
+            |> Sg.uniform "DepthOffset" (Mod.constant 0.0)
        
         Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents 
 
