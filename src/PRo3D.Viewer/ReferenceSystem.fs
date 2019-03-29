@@ -161,7 +161,7 @@ module ReferenceSystemApp =
             Sg.cone 30 color radius size
                     |> Sg.noEvents
                     |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
-                        do! Shader.stableTrafo
+                        do! Aardvark.GeoSpatial.Opc.Shader.stableTrafo
                         do! DefaultSurfaces.vertexColor
                        // do! DefaultSurfaces.simpleLighting
                     }

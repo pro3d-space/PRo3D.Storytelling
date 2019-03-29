@@ -10,6 +10,7 @@ open Aardvark.Base.Rendering
 
 open PRo3D.Base
 open PRo3D.Minerva.Communication
+open Aardvark.GeoSpatial.Opc
 
 [<AutoOpen>]
 module MissingInBase = 
@@ -281,8 +282,8 @@ module App =
     } 
     |> Sg.set
     |> Sg.effect [
-        toEffect <| Aardvark.SceneGraph.Opc.Shader.screenSpaceScale
-        toEffect <| Aardvark.SceneGraph.Opc.Shader.stableTrafo
+        toEffect <| Shader.screenSpaceScale
+        toEffect <| Shader.stableTrafo
         toEffect <| DefaultSurfaces.vertexColor          
     ]
 

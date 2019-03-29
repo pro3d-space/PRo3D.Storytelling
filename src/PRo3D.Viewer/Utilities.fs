@@ -6,7 +6,7 @@ open System.Windows.Forms
 
 
 open Aardvark.Base
-open Aardvark.SceneGraph.Opc
+open Aardvark.GeoSpatial.Opc
 open PRo3D
 
 module Dialogs =
@@ -475,7 +475,7 @@ module Lenses =
 
 module Shader =
   
-  open Aardvark.SceneGraph.Opc.Shader
+  open Aardvark.GeoSpatial.Opc.Shader
   
   open Aardvark.Base
   open Aardvark.Base.Incremental

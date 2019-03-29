@@ -15,8 +15,7 @@ open Aardvark.Rendering.Text
 
 open Aardvark.SceneGraph.Opc
 open Aardvark.SceneGraph.SgPrimitives.Sg
-open Aardvark.VRVis
-open Aardvark.VRVis.Opc
+open Aardvark.GeoSpatial.Opc
 
 open MBrace.FsPickler
 open System.IO
@@ -32,7 +31,7 @@ open Aardvark.UI.Animation
 
 
 module ViewerUtils =    
-    open Aardvark.SceneGraph.Opc.Shader
+    open Aardvark.GeoSpatial.Opc.Shader
     open FShade
                           
     let colormap = 

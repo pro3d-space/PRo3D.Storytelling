@@ -32,6 +32,7 @@ open PRo3D.Groups
 open System.Text
 open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis.Opc
+open Aardvark.GeoSpatial.Opc
 
 open Aardium
 open System.Threading

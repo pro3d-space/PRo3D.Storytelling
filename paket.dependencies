@@ -32,7 +32,7 @@ nuget Uncodium.Eigensystems                 ~> 1.0.1
 
 nuget Aardvark.Geometry.Intersection        ~> 4.5.2
 
-nuget Aardvark.GeoSpatial.Opc               ~> 0.0.2
+nuget Aardvark.GeoSpatial.Opc               ~> 0.0.3
 
 nuget FSharp.Core                           ~> 4.3.0
 nuget FSharp.Data                           ~> 3.0.0

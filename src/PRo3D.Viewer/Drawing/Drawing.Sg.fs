@@ -19,15 +19,14 @@ open Aardvark.Application
 open Aardvark.SceneGraph
 open Aardvark.SceneGraph.Opc
 open Aardvark.Rendering.Text
-open Aardvark.VRVis
-open Aardvark.VRVis.Opc
+
+open Aardvark.GeoSpatial.Opc
 
 open Aardvark.UI
 open Aardvark.UI.Primitives    
 open PRo3D
 open PRo3D.Drawing
 open PRo3D.Groups
-open MBrace.FsPickler.Json   
 open PRo3D.Versioned
 
 module Sg =                             
