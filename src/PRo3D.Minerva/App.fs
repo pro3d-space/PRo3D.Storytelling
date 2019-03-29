@@ -281,8 +281,8 @@ module App =
     } 
     |> Sg.set
     |> Sg.effect [
-        toEffect <| Shader.screenSpaceScale
-        toEffect <| Shader.stableTrafo
+        toEffect <| Aardvark.SceneGraph.Opc.Shader.screenSpaceScale
+        toEffect <| Aardvark.SceneGraph.Opc.Shader.stableTrafo
         toEffect <| DefaultSurfaces.vertexColor          
     ]
 
