@@ -244,7 +244,8 @@ module ViewerUtils =
                 let! s = surf
                 let! ts = s.preTransform
                 let! t = trafo
-                return (fppm * fpvm * ts.Forward) //* t.Forward) //* t.Forward 
+                //return (t.Forward * fpvm * fppm) //* t.Forward 
+                return (fppm * fpvm) // * ts.Forward
             } 
 
         let test =             
@@ -342,6 +343,9 @@ module ViewerUtils =
                         |> Sg.set
                         |> Sg.effect [
                             Shader.stableTrafo             |> toEffect 
+                            PRo3D.Shader.footprintV        |> toEffect
+                            //PRo3D.Shader.footprintV2        |> toEffect
+                           // triangleFilterX                |> toEffect   
                             DefaultSurfaces.diffuseTexture |> toEffect
                             fixAlpha |> toEffect
                             Shader.selectionColor          |> toEffect       
@@ -351,9 +355,7 @@ module ViewerUtils =
                             PRo3D.Shader.mapBrightness     |> toEffect
                             PRo3D.Shader.mapGamma          |> toEffect                            
                             PRo3D.Shader.grayscale         |> toEffect
-                            PRo3D.Shader.addColor          |> toEffect
-                            triangleFilterX                |> toEffect   
-                            PRo3D.Shader.footprintV        |> toEffect
+                            PRo3D.Shader.addColor          |> toEffect                            
                             PRo3D.Shader.footPrintF        |> toEffect  
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
@@ -363,9 +365,10 @@ module ViewerUtils =
                 yield RenderCommand.SceneGraph sg
 
                 //if i = c then //now gets rendered multiple times
-                yield RenderCommand.SceneGraph depthTested // assign priorities globally, or for each anno and make sets
+                 // assign priorities globally, or for each anno and make sets
 
                 yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
             
             yield RenderCommand.SceneGraph overlayed
+            yield RenderCommand.SceneGraph depthTested
         }  

@@ -83,10 +83,17 @@ module ViewPlan =
         let tex = PixTexture2d(PixImageMipMap [| (pi.ToPixImage(Col.Format.RGBA)) |], true) :> ITexture
 
         let focal = instrument.focal.value
-        let aspect = model.instrumentFrustum |> Frustum.aspect
-        let pP = V2d(instrument.intrinsics.horizontalPrinciplePoint, instrument.intrinsics.verticalPrinciplePoint)
+        let projectionTrafo = model.instrumentFrustum |> Frustum.projTrafo
+        //|> Frustum.aspect
+        //let frust    = model.instrumentFrustum
+        //let hfov     = instrument.intrinsics.horizontalFieldOfView
+        //let resh     = float(instrument.intrinsics.horizontalResolution)
+        //let resv     = float(instrument.intrinsics.verticalResolution)
+        //let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far (resh/resv)
+        //let aspect = frust |> Frustum.aspect
+        //let pP = V2d(instrument.intrinsics.horizontalPrinciplePoint, instrument.intrinsics.verticalPrinciplePoint)
 
-        let projectionTrafo = projTrafo model.instrumentFrustum.near model.instrumentFrustum.far focal aspect pP
+        //let projectionTrafo = projTrafo model.instrumentFrustum.near model.instrumentFrustum.far focal aspect pP
 
         let fp = 
                 {
@@ -302,24 +309,32 @@ module ViewPlan =
         vps |> HSet.filter (fun x -> x.id <> id)   
     
     let transformExtrinsics (vp:ViewPlan) (ex:Extrinsics) =
-        { ex with position = vp.roverTrafo.Forward.TransformPos ex.position;
-                  camLookAt = vp.roverTrafo.Forward.TransformDir ex.camLookAt;
-                  camUp = vp.roverTrafo.Forward.TransformDir ex.camUp
-                   }
+      { 
+        ex with 
+          position  = vp.roverTrafo.Forward.TransformPos ex.position
+          camLookAt = vp.roverTrafo.Forward.TransformDir ex.camLookAt
+          camUp     = vp.roverTrafo.Forward.TransformDir ex.camUp
+      }
 
-    let updateInstrumentCam (vp:ViewPlan) (model:ViewPlanModel) (fp:FootPrint) : ('a*ViewPlanModel)=
+    let updateInstrumentCam (vp:ViewPlan) (model:ViewPlanModel) (fp:FootPrint) : (FootPrint * ViewPlanModel)=
         match vp.selectedInstrument with
-            | Some i -> let ex = transformExtrinsics vp i.extrinsics
-                        let frust = model.instrumentFrustum
-                        let hfov = i.intrinsics.horizontalFieldOfView
-                        let resh = float(i.intrinsics.horizontalResolution)
-                        let resv = float(i.intrinsics.verticalResolution)
-                        let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far (resh/resv)
-                        let m' = {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt ex.position (ex.position + ex.camLookAt) ex.camUp };
-                                            instrumentFrustum = ifrustum} //CameraController.initial
-                        let f = updateFootprint i m'
-                        f,m'
-                        //{ model with instrumentCam = cam } 
+            | Some i -> 
+              let extr     = transformExtrinsics vp i.extrinsics
+              let frust    = model.instrumentFrustum
+              let hfov     = i.intrinsics.horizontalFieldOfView
+              let resh     = float(i.intrinsics.horizontalResolution)
+              let resv     = float(i.intrinsics.verticalResolution)
+              let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far (resh/resv)
+              let m' = 
+                {model with 
+                  instrumentCam = {
+                    model.instrumentCam with 
+                      view = CameraView.look extr.position extr.camLookAt.Normalized extr.camUp.Normalized };
+                  instrumentFrustum = ifrustum}
+              Log.line "%A" model.instrumentCam.view.ViewTrafo
+              let f = updateFootprint i m'
+              f,m'
+              //{ model with instrumentCam = cam } 
             | _-> fp,{model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI };
                                     instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0 }
         
