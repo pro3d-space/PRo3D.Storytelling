@@ -10,6 +10,7 @@ open Aardvark.Base.Rendering
 
 open PRo3D.Base
 open PRo3D.Minerva.Communication
+open Aardvark.GeoSpatial.Opc
 
 [<AutoOpen>]
 module MissingInBase = 

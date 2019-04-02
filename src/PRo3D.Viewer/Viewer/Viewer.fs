@@ -162,7 +162,7 @@ module ViewerApp =
             getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
             getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
             getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
-            getOffset          = fun (x:MViewConfigModel) -> Mod.constant(0.001)//x.offset.value
+            getOffset          = fun (x:MViewConfigModel) -> Mod.constant(0.1)//x.offset.value
         }
 
     let navConf : Navigation.smallConfig<ViewConfigModel, ReferenceSystem> =
@@ -942,8 +942,8 @@ module ViewerApp =
                 attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
                 attribute "data-samples" "4"
                 attribute "useMapping" "true"
-            //   attribute "showFPS" "true"        
-            //   attribute "data-renderalways" "true"
+                attribute "showFPS" "true"        
+                attribute "data-renderalways" "true"
                 onKeyDown (KeyDown)
                 onKeyUp (KeyUp)                
             ] 

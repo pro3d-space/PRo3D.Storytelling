@@ -32,6 +32,7 @@ open PRo3D.Groups
 open System.Text
 open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis.Opc
+open Aardvark.GeoSpatial.Opc
 
 open Aardium
 open System.Threading
@@ -63,7 +64,7 @@ type License = {
   institution : string
 }
 
-let viewerVersion       = "2.9.4-prerelease4"
+let viewerVersion       = "2.9.5-prerelease1"
 let mutable licenseText = ""
 let catchDomainErrors   = false
 let licenseCheck        = false

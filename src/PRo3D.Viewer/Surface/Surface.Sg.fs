@@ -11,7 +11,7 @@ open Aardvark.SceneGraph
 open Aardvark.SceneGraph.IO
 open Aardvark.SceneGraph.Opc
 
-open Aardvark.VRVis.Opc
+open Aardvark.GeoSpatial.Opc
 
 open Aardvark.UI.Operators
 open Aardvark.UI.Trafos  

@@ -15,8 +15,7 @@ open Aardvark.Rendering.Text
 
 open Aardvark.SceneGraph.Opc
 open Aardvark.SceneGraph.SgPrimitives.Sg
-open Aardvark.VRVis
-open Aardvark.VRVis.Opc
+open Aardvark.GeoSpatial.Opc
 
 open MBrace.FsPickler
 open System.IO
@@ -32,7 +31,7 @@ open Aardvark.UI.Animation
 
 
 module ViewerUtils =    
-    open Aardvark.SceneGraph.Opc.Shader
+    open Aardvark.GeoSpatial.Opc.Shader
     open FShade
                           
     let colormap = 
@@ -342,11 +341,9 @@ module ViewerUtils =
                     set 
                         |> Sg.set
                         |> Sg.effect [
-                            Shader.stableTrafo             |> toEffect 
-                            PRo3D.Shader.footprintV        |> toEffect
-                            //PRo3D.Shader.footprintV2        |> toEffect
-                           // triangleFilterX                |> toEffect   
-                            DefaultSurfaces.diffuseTexture |> toEffect
+                            Shader.stableTrafo             |> toEffect                          
+                            triangleFilterX                |> toEffect                               
+                            PRo3D.Shader.improvedDiffuseTexture |> toEffect
                             fixAlpha |> toEffect
                             Shader.selectionColor          |> toEffect       
                             Shader.LoDColor                |> toEffect                             
@@ -355,20 +352,21 @@ module ViewerUtils =
                             PRo3D.Shader.mapBrightness     |> toEffect
                             PRo3D.Shader.mapGamma          |> toEffect                            
                             PRo3D.Shader.grayscale         |> toEffect
-                            PRo3D.Shader.addColor          |> toEffect                            
-                            PRo3D.Shader.footPrintF        |> toEffect  
+                            PRo3D.Shader.addColor          |> toEffect
+                            PRo3D.Shader.footprintV        |> toEffect
+                            PRo3D.Shader.footPrintF        |> toEffect
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
-                        |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()
-                        //|> Sg.pass RenderPass.main
+                        |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()                        
 
                 yield RenderCommand.SceneGraph sg
 
                 //if i = c then //now gets rendered multiple times
                  // assign priorities globally, or for each anno and make sets
+                yield RenderCommand.SceneGraph depthTested
 
                 yield Aardvark.UI.RenderCommand.Clear(None,Some (Mod.constant 1.0))
             
             yield RenderCommand.SceneGraph overlayed
-            yield RenderCommand.SceneGraph depthTested
+            
         }  
