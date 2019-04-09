@@ -111,6 +111,61 @@ type RoverModel = {
     //currentAngle       : NumericInput
 }
 
+type XMLScheme = {
+    xmlType    : string
+    version     : float
+}
+type FileInfo = {
+    fileType    : string
+    path        : string
+    name        : string
+}
+type Calibration = {
+    instrumentPlatformXmlFileName       : string
+    instrumentPlatformXmlFileVersion    : float
+}
+type RoverInfo = {
+    position        : V3d
+    lookAtPosition  : V3d
+    placementTrafo  : Trafo3d
+}
+type Angles = {
+    panAxis     : double
+    tiltAxis    : double
+}
+type ReferenceFrameInfo = {
+    name            : string
+    parentFrameName : string
+}
+
+
+type InstrumentInfo = {
+    camIdentifier       : string
+    angles              : Angles
+    focalLength         : double
+    referenceFrameInfo  : ReferenceFrameInfo
+}
+type SurfaceInfoData = {
+    opcId   : Guid
+    layers  : List<string>
+}
+
+
+type Acquisition = {
+    roverInfo           : RoverInfo
+    instrumentInfo      : InstrumentInfo
+    //surfaceInfoData     : SurfaceInfoData
+    //renderingInfo       : RenderingInfo
+}
+
+[<DomainType>]
+type SimulatedViewData = {
+    xmlScheme   : XMLScheme
+    fileInfo    : FileInfo
+    calibration : Calibration
+    acquisition : Acquisition
+}
+
 [<DomainType>]
 type FootPrint = {
     vpId                : option<Guid>

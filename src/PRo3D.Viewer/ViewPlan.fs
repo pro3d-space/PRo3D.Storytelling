@@ -9,6 +9,7 @@ open Aardvark.SceneGraph.SgPrimitives
 open Aardvark.Base.Rendering
 
 open System
+open System.Diagnostics
 open System.IO
 
 open PRo3d
@@ -37,74 +38,11 @@ module ViewPlan =
         | ChangeFocal      of string * Numeric.Action
         | SetVPName        of string
         | ToggleFootprint
+        | SaveFootPrint
+        | OpenFootprintFolder
     
-    let projTrafo (near : float) (far : float) (focalLength:float) (aspect:float) (principalPoint:V2d) =
-        let tnf = 2.0 * far * near
-        let a = (far + near) / (far - near)
-        let b = tnf / (near - far)
-
-        let A = far / (far - near)
-        let B = near * far / (near - far)
-
-        Trafo3d(
-            M44d(
-                focalLength,                0.0,                               -principalPoint.X,       0.0,
-                0.0,                        focalLength * aspect,              -principalPoint.Y,       0.0,
-                0.0,                        0.0,                               -a,                      b,
-                0.0,                        0.0,                               -1.0,                    0.0
-            ),
-            //M44d(
-            //    focalLength,                0.0,                               principalPoint.X,  0.0,
-            //    0.0,                        focalLength * aspect,              principalPoint.Y,  0.0,
-            //    0.0,                        0.0,                               A,                      B,
-            //    0.0,                        0.0,                               1.0,                    0.0
-            //),
-            M44d(
-                1.0/focalLength,        0.0,                                    0.0,       -principalPoint.X / focalLength,
-                0.0,                    1.0 / (aspect * focalLength),           0.0,       -principalPoint.Y / (focalLength * aspect),
-                0.0,                    0.0,                                    0.0,       -1.0,
-                0.0,                    0.0,                                    1.0/b,     -a/b
-
-            )
-        )
-
-    let updateFootprint (instrument:Instrument) (model:ViewPlanModel) =
-        
-        let id = match model.selectedViewPlan with
-                    | Some vp -> Some vp.id
-                    | None -> None
-        
-
-        let res = V2i((int)instrument.intrinsics.horizontalResolution, (int)instrument.intrinsics.verticalResolution)
-        //let image = PixImage<byte>(Col.Format.RGB,res).ToPixImage(Col.Format.RGB)
-       
-        let pi = PixImage<byte>(Col.Format.RGBA, res)
-        pi.GetMatrix<C4b>().SetByCoord(fun (c : V2l) -> C4b.White) |> ignore
-        let tex = PixTexture2d(PixImageMipMap [| (pi.ToPixImage(Col.Format.RGBA)) |], true) :> ITexture
-
-        let focal = instrument.focal.value
-        let projectionTrafo = model.instrumentFrustum |> Frustum.projTrafo
-        //|> Frustum.aspect
-        //let frust    = model.instrumentFrustum
-        //let hfov     = instrument.intrinsics.horizontalFieldOfView
-        //let resh     = float(instrument.intrinsics.horizontalResolution)
-        //let resv     = float(instrument.intrinsics.verticalResolution)
-        //let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far (resh/resv)
-        //let aspect = frust |> Frustum.aspect
-        //let pP = V2d(instrument.intrinsics.horizontalPrinciplePoint, instrument.intrinsics.verticalPrinciplePoint)
-
-        //let projectionTrafo = projTrafo model.instrumentFrustum.near model.instrumentFrustum.far focal aspect pP
-
-        let fp = 
-                {
-                    vpId      = id
-                    isVisible = true
-                    projectionMatrix = projectionTrafo.Forward
-                    instViewMatrix = model.instrumentCam.view.ViewTrafo.Forward
-                    projTex = tex
-                }
-        fp //{ model with footPrint = fp }
-
+    
+    
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =      
       match path with
         | Some _ ->
@@ -332,7 +270,7 @@ module ViewPlan =
                       view = CameraView.look extr.position extr.camLookAt.Normalized extr.camUp.Normalized };
                   instrumentFrustum = ifrustum}
               Log.line "%A" model.instrumentCam.view.ViewTrafo
-              let f = updateFootprint i m'
+              let f = FootPrint.updateFootprint i m'
               f,m'
               //{ model with instrumentCam = cam } 
             | _-> fp,{model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI };
@@ -351,7 +289,7 @@ module ViewPlan =
 
     //let update (model : ViewPlanModel) (camState:CameraControllerState) (action : Action) =
     let update (model : ViewPlanModel) (action : Action)
-               (navigation : Lens<'a,NavigationModel>) (footprint : Lens<'a,FootPrint>) (outerModel:'a) : ('a*ViewPlanModel) = 
+               (navigation : Lens<'a,NavigationModel>) (footprint : Lens<'a,FootPrint>) (scenepath:Option<string>) (outerModel:'a) : ('a*ViewPlanModel) = 
         printfn "action: %A" action
         match action with
             | AddPoint (p,ref,kdTree,surfaceModel) ->
@@ -484,6 +422,17 @@ module ViewPlan =
                         let fp' = { fp with isVisible = not fp.isVisible }
                         let newOuterModel = footprint.Set(outerModel, fp')
                         newOuterModel, model
+             | SaveFootPrint -> match scenepath with
+                                    | Some sp -> outerModel, (FootPrint.createFootprintData model sp)
+                                    | None -> outerModel, model
+             | OpenFootprintFolder ->
+                match scenepath with
+                    | Some sp -> 
+                        let fpPath = FootPrint.getFootprintsPath sp
+                        if (Directory.Exists fpPath) then
+                                Process.Start("explorer.exe", fpPath) |> ignore
+                        outerModel, model
+                    | None -> outerModel, model
             //| _ -> model
 
     module Sg =     
@@ -772,6 +721,20 @@ module ViewPlan =
                       | Some i -> instrumentProperties i
                       | None ->   div[][])
 
+        let viewFootprintProperties (fpVisible:IMod<bool>) (m : MViewPlan) = 
+            m.selectedInstrument 
+                |> Mod.map(fun x ->
+                    match x with 
+                      | Some i -> require GuiEx.semui (
+                                    Html.table [  
+                                        Html.row "show footprint:"  [GuiEx.iconCheckBox fpVisible ToggleFootprint]
+                                        Html.row "export footprint:"  [button [clazz "ui button tiny"; onClick (fun _ -> SaveFootPrint )][]]
+                                        Html.row "open footprint folder:"  [button [clazz "ui button tiny"; onClick (fun _ -> OpenFootprintFolder )][]]
+                                    ]
+                                )
+                      | None ->   div[][])
+
+
         //let instrumentsDd (r:MRover) (m : MViewPlan) = 
         //    UI.dropDown'' (r.instruments |> RoverApp.mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )   
         
@@ -812,14 +775,17 @@ module ViewPlan =
                      Html.row "Change VPName:"[ Html.SemUi.textBox m.name SetVPName ]
                      Html.row "Name:"       [ Incremental.text r.id ]
                      Html.row "Instrument:" [ 
-                        Html.row "show footprint:"  [GuiEx.iconCheckBox fpVisible ToggleFootprint]
                         instrumentsDd r m 
                         Incremental.div AttributeMap.empty (AList.ofModSingle (viewInstrumentProperties m))                    
                      ]
                      Html.row "Axes:" [   
                         Incremental.div AttributeMap.empty (viewAxesList r m)
                      ]
-                ]
+                     Html.row "Footprint:" [   
+                        Incremental.div AttributeMap.empty (AList.ofModSingle ( viewFootprintProperties fpVisible m ))
+                     ]
+                     ]
+                
             )
 
         let viewSelectRover (m : MRoverModel) : DomNode<RoverApp.Action> =

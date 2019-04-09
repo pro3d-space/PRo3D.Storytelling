@@ -112,6 +112,7 @@
     <Compile Include="Surface\Surface.fs" />
     <Compile Include="Rover-Model.fs" />
     <Compile Include="Rover.fs" />
+    <Compile Include="FootPrint.fs" />
     <Compile Include="ViewPlan.fs" />
     <Compile Include="Properties.fs" />
     <Compile Include="ConfigTestModel.fs" />

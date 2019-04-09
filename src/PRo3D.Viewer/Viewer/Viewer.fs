@@ -321,7 +321,7 @@ module ViewerApp =
                 { m with scene = {m.scene with navigation = navigation'; } }
             | Interactions.PlaceRover, ViewerMode.Standard ->
                 let ref = m.scene.referenceSystem 
-                let outerModel, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation _footprint m 
+                let outerModel, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation _footprint m.scene.scenePath m 
                 let m' = { m with scene = {m.scene with viewPlans = viewPlans' }; footPrint = outerModel.footPrint }
                 match m.scene.viewPlans.working.IsEmpty with
                     | true -> m' 
@@ -452,9 +452,7 @@ module ViewerApp =
                 let viewPlanModel = ViewPlan.updateViewPlanFromRover roverModel m.scene.viewPlans
                 { m with scene = { m.scene with viewPlans = viewPlanModel}} 
             | ViewPlanMessage msg,_,_ ->
-                //let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
-                //{ m with scene = { m.scene with viewPlans = viewPlanModel}}  
-                let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation _footprint m
+                let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation _footprint m.scene.scenePath m
                 { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }; footPrint = model.footPrint} 
             | DnSColorLegendMessage msg,_,_ ->
                 let cm = FalseColorLegendApp.update m.drawing.colorLegend msg

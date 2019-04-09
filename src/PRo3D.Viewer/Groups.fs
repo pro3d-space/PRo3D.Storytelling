@@ -283,6 +283,9 @@ module Groups =
                 { model with rootGroup = updateNodeAt p func model.rootGroup }
             | RemoveGroup p -> 
 
+                let node = 
+                    model.rootGroup 
+                      |> getNode p
                 //delete from flat
                 let flat' = 
                     model.rootGroup 
@@ -301,7 +304,13 @@ module Groups =
                 let selection = checkSelection m'
                 let last = checkLastSelected m'
 
-                { m' with selectedLeaves = selection ; singleSelectLeaf = last }
+                // update active group (use parent group)
+                let newSelection = {
+                    id   = m'.rootGroup.key
+                    path = list.Empty
+                    name = m'.rootGroup.name}
+               
+                { m' with selectedLeaves = selection ; singleSelectLeaf = last; activeGroup = newSelection; lastSelectedItem = SelectedItem.Group }
 
             | AddChildren (p,cs) ->
                 failwith "addchildren"
