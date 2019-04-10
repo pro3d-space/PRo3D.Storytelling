@@ -160,9 +160,16 @@ module Sg =
               
     let createSgSurfaces runtime signature (surfaces:plist<PRo3D.Surfaces.Surface>) =
       
-      let sghs =
+      let surfaces = 
         surfaces
           |> PList.toList
+          |> List.filter(fun s ->
+            let dirExists = Directory.Exists s.importPath
+            if dirExists |> not then Log.error "[Surface.Sg] could not find %s" s.importPath
+            dirExists)
+
+      let sghs =
+        surfaces          
           |> List.map (fun d -> 
            { 
              Configurations.Empty.mars() with 
@@ -170,7 +177,7 @@ module Sg =
                preTransform = d.preTransform
                useCompressedTextures = false })
           |> List.map (fun d -> createPlainSceneGraph runtime signature d true)
-          |> List.zip (surfaces |> PList.toList)
+          |> List.zip surfaces
           |> List.map(fun (surf, (sg, hierarchies, kdtree)) -> 
               let bb = hierarchies |> combineLeafBBs |> transformBox surf.preTransform
               { surf = surf; bb = bb; sg = sg; kdtree = kdtree })
