@@ -387,12 +387,10 @@ module Mutable =
     type MSimulatedViewData(__initial : PRo3d.SimulatedViewData) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.SimulatedViewData> = Aardvark.Base.Incremental.EqModRef<PRo3d.SimulatedViewData>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.SimulatedViewData>
-        let _xmlScheme = ResetMod.Create(__initial.xmlScheme)
         let _fileInfo = ResetMod.Create(__initial.fileInfo)
         let _calibration = ResetMod.Create(__initial.calibration)
         let _acquisition = ResetMod.Create(__initial.acquisition)
         
-        member x.xmlScheme = _xmlScheme :> IMod<_>
         member x.fileInfo = _fileInfo :> IMod<_>
         member x.calibration = _calibration :> IMod<_>
         member x.acquisition = _acquisition :> IMod<_>
@@ -402,7 +400,6 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
-                ResetMod.Update(_xmlScheme,v.xmlScheme)
                 ResetMod.Update(_fileInfo,v.fileInfo)
                 ResetMod.Update(_calibration,v.calibration)
                 ResetMod.Update(_acquisition,v.acquisition)
@@ -422,12 +419,6 @@ module Mutable =
     module SimulatedViewData =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
-            let xmlScheme =
-                { new Lens<PRo3d.SimulatedViewData, PRo3d.XMLScheme>() with
-                    override x.Get(r) = r.xmlScheme
-                    override x.Set(r,v) = { r with xmlScheme = v }
-                    override x.Update(r,f) = { r with xmlScheme = f r.xmlScheme }
-                }
             let fileInfo =
                 { new Lens<PRo3d.SimulatedViewData, PRo3d.FileInfo>() with
                     override x.Get(r) = r.fileInfo

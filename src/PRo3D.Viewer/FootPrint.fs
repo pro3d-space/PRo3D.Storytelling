@@ -12,6 +12,10 @@ open System
 open System.Diagnostics
 open System.IO
 
+open MBrace.FsPickler.Json   
+open PRo3D.Versioned
+open Chiron
+
 open PRo3d
 
 module FootPrint = 
@@ -26,6 +30,7 @@ module FootPrint =
             compressTime    : float
             frameTime       : float
         }
+    
 
     let getFootprintsPath (scenePath:string) =
         let path = Path.GetDirectoryName scenePath
@@ -41,7 +46,7 @@ module FootPrint =
             let clientBla : list<ClientStatistics> =
                 Pickler.unpickleOfJson  result
             match clientBla.Length with
-                | 2 -> clientBla.[0] 
+                | 2 -> clientBla.[1] 
                 | _ -> failwith "no client bla"
 
         let screenshot =            
@@ -88,10 +93,11 @@ module FootPrint =
                 try takeScreenshot "http://localhost:54321" width height pngName fpPath with e -> printfn "error: %A" e
 
                 // save svx file
-                let xmlScheme = {
-                    xmlType = "XMLScheme"
-                    version = 1.0
-                }
+                //let xmlScheme = {
+                //    xmlType = "XMLScheme"
+                //    version = 1.0
+                //}
+
                 let fileInfo = {
                     fileType = "PNGImage"
                     path = fpPath
@@ -136,12 +142,14 @@ module FootPrint =
                 }
                 let simulatedViewData =
                     {
-                        xmlScheme   = xmlScheme
+                        //xmlScheme   = xmlScheme
                         fileInfo    = fileInfo
                         calibration = calibration
                         acquisition = acquisition
                     }
-                Serialization.save (Path.Combine(fpPath, svxName)) simulatedViewData |> ignore
+                //Serialization.save (Path.Combine(fpPath, svxName)) simulatedViewData |> ignore
+                let json = simulatedViewData |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty |> IO.writeToFile (Path.Combine(fpPath, svxName))
+                //Serialization.writeToFile (Path.Combine(fpPath, svxName)) json 
                 vp
             | None -> vp 
 
