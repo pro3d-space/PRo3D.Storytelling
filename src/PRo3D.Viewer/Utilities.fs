@@ -744,15 +744,15 @@ module Shader =
   let footPrintF (v : FootPrintVertex) =
       fragment {           
           if uniform?footprintVisible then
-            let col = v.c * V4d(1.0, 0.0, 0.0, 1.0)
+            let outside = v.c * 0.7
             let t = v.tc0.XY / v.tc0.W
             let c = 
                 if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
                    v.c //(v.c * 0.7) //darkened
                 else
-                   col 
+                   outside 
             if (v.tc0.Z <= 0.0) then
-                return col
+                return outside
             else
                 return c 
              
