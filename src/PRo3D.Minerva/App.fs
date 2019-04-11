@@ -104,7 +104,7 @@ module App =
     let cql = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
     
 
-    (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
+    (@"https://minerva.eox.at/opensearch/collections/all/json/", HMap.empty)
 
   let update (model : Model) (msg : MinervaAction) : Model =
       match msg with

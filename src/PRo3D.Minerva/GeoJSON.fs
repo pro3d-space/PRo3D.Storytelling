@@ -166,8 +166,12 @@ module MinervaGeoJSON =
     //client.DownloadString(site)
 
   let loadFromUrls (sites : list<string * QueryDict>) = 
+    let count = sites.Length |> float
     sites 
-      |> List.map(fun (x,nv) -> x |> patchThroughWebClient nv |> JsonValue.Parse)
+      |> List.mapi(fun i (x,nv) -> 
+        Report.Progress(float i / count)
+        x |> patchThroughWebClient nv |> JsonValue.Parse
+      )
       //|> Async.Parallel
       //|> Async.RunSynchronously 
       |> List.map parseRoot
@@ -181,8 +185,7 @@ module MinervaGeoJSON =
     let pages =
       [0 .. probs.itemsPerPage .. probs.totalCount]
         |> List.map(fun index -> 
-          //sprintf "%s?startIndex=%d&count=%d&%s" site index probs.itemsPerPage cql
-            Report.Progress(float index / float probs.totalCount)
+          //sprintf "%s?startIndex=%d&count=%d&%s" site index probs.itemsPerPage cql            
             let nv = [("startIndex",index.ToString()); ("count",probs.itemsPerPage.ToString())] |> HMap.ofList
             site, (HMap.union nv cql)
           )
