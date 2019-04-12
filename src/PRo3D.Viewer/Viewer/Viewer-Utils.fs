@@ -240,8 +240,11 @@ module ViewerUtils =
             adaptive {
                 let! fppm = fp.projectionMatrix
                 let! fpvm = fp.instViewMatrix
+                let! s = surf
+                let! ts = s.preTransform
                 let! t = trafo
-                return (t.Forward * fpvm * fppm) //* t.Forward 
+                //return (t.Forward * fpvm * fppm) //* t.Forward 
+                return (fppm * fpvm) // * ts.Forward
             } 
 
         let test =             
@@ -349,7 +352,9 @@ module ViewerUtils =
                             PRo3D.Shader.mapBrightness     |> toEffect
                             PRo3D.Shader.mapGamma          |> toEffect                            
                             PRo3D.Shader.grayscale         |> toEffect
-                            PRo3D.Shader.addColor          |> toEffect                                                       
+                            PRo3D.Shader.addColor          |> toEffect
+                            PRo3D.Shader.footprintV        |> toEffect
+                            PRo3D.Shader.footPrintF        |> toEffect
                         ]
                         |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                         |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()                        

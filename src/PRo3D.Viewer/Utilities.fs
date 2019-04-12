@@ -744,21 +744,41 @@ module Shader =
   let footPrintF (v : FootPrintVertex) =
       fragment {           
           if uniform?footprintVisible then
-            let col = v.c * V4d(1.0, 0.0, 0.0, 1.0)
-          //    let proTex0 = v.tc0.XY / v.tc0.W
-          //    let c = footprintmap.Sample(proTex0)
-          //    let col = 
-          //        if (c.W <= 0.50) then
-          //           (v.c * 0.7)
-          //        elif (c.W <= 0.999) then
-          //           v.c * V4d(1.0, 0.0, 0.0, 1.0)
-          //        else
-          //           v.c
+            let outside = v.c * 0.7
             let t = v.tc0.XY / v.tc0.W
-            if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
-               return (v.c * 0.7) //darkened
+            let c = 
+                if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
+                   v.c //(v.c * 0.7) //darkened
+                else
+                   outside 
+            if (v.tc0.Z <= 0.0) then
+                return outside
             else
-               return col 
+                return c 
+             
+          else
+            return v.c
+      }
+
+  let footPrintF2 (v : FootPrintVertex) =
+      fragment {           
+          if uniform?footprintVisible then
+            //let col = v.c * V4d(1.0, 0.0, 0.0, 1.0)
+            let proTex0 = v.tc0.XY / v.tc0.W
+            let c = footprintmap.Sample(proTex0)
+            let col = 
+                if (c.W <= 0.50) then
+                    (v.c * 0.7)
+                elif (c.W <= 0.999) then
+                    v.c * V4d(1.0, 0.0, 0.0, 1.0)
+                else
+                    v.c
+           
+
+            if (v.tc0.Z <= 0.0) then
+                return (v.c * 0.7)
+            else
+                return col 
           else
             return v.c
       }

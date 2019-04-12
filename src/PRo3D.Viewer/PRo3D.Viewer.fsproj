@@ -110,10 +110,11 @@
     <Compile Include="Surface\Surface.Files.fs" />
     <Compile Include="Surface\Surface.Sg.fs" />
     <Compile Include="Surface\Surface.fs" />
-    <Compile Include="ViewPlanner\Rover-Model.fs" />    
+    <Compile Include="Properties.fs" />
+    <Compile Include="ViewPlanner\Rover-Model.fs" />
+    <Compile Include="ViewPlanner\FootPrint.fs" />
     <Compile Include="ViewPlanner\Rover.fs" />
     <Compile Include="ViewPlanner\ViewPlan.fs" />
-    <Compile Include="Properties.fs" />    
     <Compile Include="Viewer-Model.fs" />
     <Compile Include="Bookmarks.fs" />
     <Compile Include="Scene.fs" />
