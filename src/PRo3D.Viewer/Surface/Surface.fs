@@ -198,6 +198,7 @@ module Surface =
         | OpenFolder                of Guid
         | RebuildKdTrees            of Guid
         | ToggleActiveFlag          of Guid
+        | ChangeImportDirectory     of Guid*string
         | GroupsMessage             of Groups.Action  
         //| PickObject                of V3d
         | PlaceSurface              of V3d
@@ -395,6 +396,12 @@ module Surface =
             | Some (Leaf.Surfaces s) ->
               { s with isActive = not s.isActive } |> SurfaceModel.updateSingleSurface' model
             | _ -> model
+        | ChangeImportDirectory (id, dir) ->
+          let surf = id |> SurfaceModel.getSurface model
+          match surf with
+            | Some (Leaf.Surfaces s) ->
+              { s with importPath = dir } |> SurfaceModel.updateSingleSurface' model
+            | _ -> model          
         | GroupsMessage msg -> 
             let groups = Groups.update model.surfaces msg
 
@@ -626,14 +633,30 @@ module Surface =
                              yield i [clazz "folder icon"                                                
                                       onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "Open Folder"
 
-                             yield i [
-                               clazz "microchip icon"
-                               onClick (fun _ -> RebuildKdTrees key)
-                             ][] |> UI.wrapToolTip "process kdtrees"
+                             //yield i [
+                             //  clazz "microchip icon"
+                             //  onClick (fun _ -> RebuildKdTrees key)
+                             //][] |> UI.wrapToolTip "process kdtrees"
 
                              yield Incremental.i (absRelIcons) (AList.empty)
                              yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
                              yield GuiEx.iconCheckBox s.isActive (ToggleActiveFlag key) |> UI.wrapToolTip "Toggle IsActive"
+
+                             let! path = s.importPath
+                             //
+                             //  yield i 
+                             if (Directory.Exists path) |> not then
+                               yield i [
+                                 clazz "exclamation red icon"
+                                 //Dialogs.onChooseDirectory key ChangeImportDirectory;
+                                 ////clientEvent "onclick" ("""
+                                 ////   var files = parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory','multiSelections']});
+                                 ////   console.log(files);
+                                 ////   parent.aardvark.processEvent('__ID__', 'onchoose', files);
+                                 ////   """)
+                                 //clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory','multiSelections']}));")
+                                 ]
+                                 []
                          } 
                      )                                     
                  ]

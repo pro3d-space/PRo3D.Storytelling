@@ -19,16 +19,15 @@ open Aardvark.UI.Trafos
 open PRo3D
 open PRo3D.Groups
 
-
 module Sg =
     open Aardvark.Prinziple
     open Aardvark.VRVis.Opc      
 
     type SgHelper = {
-      surf        : PRo3D.Surfaces.Surface
-      bb          : Box3d
-      sg          : ISg        
-      kdtree      : hmap<Box3d,KdTrees.Level0KdTree>
+      surf   : PRo3D.Surfaces.Surface
+      bb     : Box3d
+      sg     : ISg        
+      kdtree : hmap<Box3d,KdTrees.Level0KdTree>
     }
 
     let mutable hackRunner = None
@@ -54,14 +53,13 @@ module Sg =
             |> Seq.toList
                             
         let kdTreesPerHierarchy =
-            [| for h in patchHierarchies do
-                if createKdTrees then   
-                    let kdMap = KdTrees.loadKdTrees h Trafo3d.Identity ViewerModality.XYZ Serialization.binarySerializer
-
-                    yield kdMap
-                else 
-                    yield HMap.empty
-            |]
+          [| 
+            for h in patchHierarchies do
+              if createKdTrees then   
+                  yield KdTrees.loadKdTrees h Trafo3d.Identity ViewerModality.XYZ Serialization.binarySerializer                    
+              else 
+                  yield HMap.empty
+          |]
 
         let totalKdTrees = kdTreesPerHierarchy.Length
         Log.line "creating %d kdTrees" totalKdTrees
@@ -76,17 +74,14 @@ module Sg =
                 )
                 |> Array.fold (fun a b -> HMap.union a b) HMap.empty
         
-        // create level of detail hierarchy (Sg)
-        //Sg.patchLod signature runner patchHierarchy.opcPaths.Opc_DirAbsPath
+        // create level of detail hierarchy (Sg)        
         let g = 
           patchHierarchies 
-          |> List.map (fun h ->                     
-            let sg = 
-              Sg.patchLod signature runner h.opcPaths.Opc_DirAbsPath
-                scene.lodDecider scene.useCompressedTextures
-                ViewerModality.XYZ
-                (PatchLod.toRoseTree h.tree)
-            sg) 
+          |> List.map (fun h ->                                  
+               Sg.patchLod signature runner h.opcPaths.Opc_DirAbsPath
+                  scene.lodDecider scene.useCompressedTextures
+                  ViewerModality.XYZ
+                  (PatchLod.toRoseTree h.tree))
           |> Sg.ofList                
                                                 
         g, patchHierarchies, kdTrees
@@ -97,50 +92,18 @@ module Sg =
         else bb
     
     let combineLeafBBs (hierarchies : list<PatchHierarchy>) =
-            hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getLeaves)
-            |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
-            |> Seq.concat
-            |> Box3d.ofSeq
+      hierarchies
+        |> List.map(fun d -> d.tree |> QTree.getLeaves)
+        |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
+        |> Seq.concat
+        |> Box3d.ofSeq
     
     let combineRootBBs (hierarchies : list<PatchHierarchy>) =
-            hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getRoot)                  
-            |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
-            |> Box3d.ofSeq
-    
-    /// creates a surface from opc folder path
-    //let mk (stype:SurfaceType) (maxTriangleSize : float) path =                 
-    
-    //    let names = Files.getOPCNames path                
-    //    {
-    //        guid            = Guid.NewGuid()
-    //        name            = IO.Path.GetFileName path
-    //        importPath      = path
-    //        opcNames        = names
-    //        opcPaths        = names |> Files.expandNamesToPaths path
-    //        fillMode        = FillMode.Fill
-    //        cullMode        = CullMode.None
-    //        isVisible       = true
-    //        isActive        = true
-    //        relativePaths   = false
-    //        quality         = Init.quality
-    //        priority        = Init.priority
-    //        scaling         = Init.scaling
-    //        preTransform    = Trafo3d.Identity            
-    //        scalarLayers    = hmap.Empty //PList.empty
-    //        selectedScalar  = None
-    //        textureLayers   = PList.empty
-    //        selectedTexture = None            
-    
-    //        triangleSize = { Init.triangleSize with value = maxTriangleSize }
-    //        surfaceType = stype
-    
-    //        colorCorrection = Init.initColorCorrection
-    //        homePosition = None
-    //        transformation = Init.Transformations
-    //    }       
-    
+      hierarchies
+        |> List.map(fun d -> d.tree |> QTree.getRoot)                  
+        |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
+        |> Box3d.ofSeq
+       
     let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,KdTrees.Level0KdTree>) = 
     
         let pose = Pose.translate V3d.Zero // bb.Center
