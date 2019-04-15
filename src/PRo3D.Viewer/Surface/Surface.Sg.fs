@@ -194,17 +194,22 @@ module Sg =
         let point = 
             aset{
                 let! guid = model.surfaces.singleSelectLeaf
-            
+                let fail = Aardvark.UI.Extensions.Sg.empty
+
                 match guid with
                     | Some i -> 
-                        let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                        let! surf = leaf 
-                        let x = match surf with | MSurfaces s -> s | _ -> surf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
-                        let! hpos = x.homePosition
-                        match hpos with
-                            | Some p -> yield PRo3D.Sg.dot (Mod.constant p.Location) (Mod.constant 3.0) (Mod.constant C4b.Yellow)
-                            | None -> yield Aardvark.UI.Extensions.Sg.empty
-                    | None -> yield Aardvark.UI.Extensions.Sg.empty
+                        let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                        if exists then
+                          let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                          let! surf = leaf 
+                          let x = match surf with | MSurfaces s -> s | _ -> surf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                          let! hpos = x.homePosition
+                          match hpos with
+                              | Some p -> yield PRo3D.Sg.dot (Mod.constant p.Location) (Mod.constant 3.0) (Mod.constant C4b.Yellow)
+                              | None -> yield fail
+                        else
+                          yield fail
+                    | None -> yield fail
             }|> Aardvark.UI.``F# Sg``.Sg.set
         Aardvark.UI.``F# Sg``.Sg.ofList [point]
         

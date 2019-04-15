@@ -765,7 +765,7 @@ module Surface =
             
             match guid with
               | Some i ->
-                let! exists = (flat |> AMap.keys) |> ASet.contains i
+                let! exists = flat |> AMap.keys |> ASet.contains i
                 if exists then
                   let leaf = flat |> AMap.find i |> Mod.bind(id)
                   let! surf = leaf 
@@ -825,18 +825,21 @@ module Surface =
             
             match guid with
                 | Some i -> 
-
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let scalar = 
-                      match surf with 
-                       | MSurfaces s -> s.selectedScalar 
-                       | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
-
-                    let! scalar = scalar
-                    match scalar with
-                        | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
-                        | None -> return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
+                    let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                    if exists then
+                      let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                      let! surf = leaf 
+                      let scalar = 
+                        match surf with 
+                         | MSurfaces s -> s.selectedScalar 
+                         | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                      
+                      let! scalar = scalar
+                      match scalar with
+                          | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
+                          | None -> return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
+                    else
+                      return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
                                   
                 | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ScalarsColorLegendMessage 
         }                          
@@ -847,14 +850,17 @@ module Surface =
             
             match guid with
                 | Some i -> 
-
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
-                    let! scalar = scalar
-                    match scalar with
-                        | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
-                        | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
+                    let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                    if exists then
+                      let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                      let! surf = leaf 
+                      let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                      let! scalar = scalar
+                      match scalar with
+                          | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
+                          | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
+                    else
+                      yield div[ style "font-style:italic"][ text "no scalar selected" ]
                                   
                 | None -> yield div[ style "font-style:italic"][ text "no surface selected" ]
         }  
