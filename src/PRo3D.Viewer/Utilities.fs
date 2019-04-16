@@ -75,6 +75,24 @@ module Dialogs =
                 | _ -> chosen []//failwithf "onChooseFiles: %A" xs
         onEvent "onchoose" [] cb   
 
+    let onChooseDirectory (id:Guid) (chosen : Guid * string -> 'msg) =
+        let cb xs =
+            match xs with
+                | [] -> chosen (id, String.Empty)
+                | x::[] when x <> null -> 
+                  let id = id
+                  let path = 
+                    x 
+                      |> Aardvark.Service.Pickler.json.UnPickleOfString 
+                      |> List.map Aardvark.Service.PathUtils.ofUnixStyle 
+                      |> List.tryHead
+                  match path with
+                  | Some p -> 
+                    chosen (id, p)
+                  | None -> chosen (id,String.Empty)
+                | _ -> chosen (id,String.Empty)//failwithf "onChooseFiles: %A" xs
+        onEvent "onchoose" [] cb   
+
     let onSaveFile (chosen : string -> 'msg) =
         let cb xs =
             match xs with

@@ -235,15 +235,9 @@ module Gui =
       [
          text "Import"
          i [clazz "dropdown icon"][] 
-         div [ clazz "menu"] [
-             //div [ clazz "ui inverted item"; 
-             //  Dialogs.onChooseFiles ImportSurface;
-             //  clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-             //  text "OPC"
-             //]
-             div [ clazz "ui inverted item"; 
-               //Dialogs.onChooseFiles  (fun paths -> ("importing opcs...", ImportDiscoveredSurfaces paths) |> Logging); //ImportDiscoveredSurfaces; // ImportSurfaceTest
-               Dialogs.onChooseFiles  ImportDiscoveredSurfacesThreads; //StartImportMessaging; //ImportDiscoveredSurfaces; // ImportSurfaceTest
+         div [ clazz "menu"] [             
+             div [ clazz "ui inverted item";
+               Dialogs.onChooseFiles  ImportDiscoveredSurfacesThreads;
                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
                text "OPC"
              ]
@@ -315,6 +309,35 @@ module Gui =
          ]
       ]
 
+    let surfaceUiThing (m : MModel)=
+      let blarg =
+        amap {
+          let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
+          
+          match selected with
+          | Some s ->
+            yield clazz "ui item"
+            yield Dialogs.onChooseDirectory s SurfaceApp.Action.ChangeImportDirectory
+            yield clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openDirectory','multiSelections']}));")
+          | None -> ()
+        }
+
+      let blurg = 
+        alist {
+          let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
+          match selected with
+          | Some s -> yield text "fix broken path"
+          | None -> ()
+        }
+
+      Incremental.div(AttributeMap.ofAMap blarg) blurg |> UI.map SurfaceActions
+
+      //div [ clazz "ui item";
+      //    Dialogs.onChooseDirectory Guid.Empty SurfaceApp.Action.ChangeImportDirectory;
+      //    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+      //    text "fix broken path"
+      //] |> UI.map SurfaceActions
+
     let menu (m : MModel) = 
       div [clazz "menu-bar"] [
         // menu
@@ -369,6 +392,8 @@ module Gui =
                               clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
                               text "Rover Placement"
                           ]
+                          
+                          surfaceUiThing m
                       ]
                   ]
               ] 

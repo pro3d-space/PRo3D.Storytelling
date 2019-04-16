@@ -21,19 +21,11 @@ module Model =
         { m with scene = s}
 
     let private stashAndSaveRecent' (s : SceneHandle) (model : Model) =
-        let scenePaths = model.recent.recentScenes                 
-                            |> List.filter (fun x -> x.path <> s.path)   
-                            |> List.append [s]
-        //let scenePaths = 
-        //    model.recent.recentScenes                 
-        //        |> HMap.update s.path 
-        //            (
-        //                fun v -> 
-        //                    match v with
-        //                        | Some x -> { x with writeDate = s.writeDate }
-        //                        | None -> s
-        //            )
-
+        let scenePaths = 
+          model.recent.recentScenes                 
+            |> List.filter (fun x -> x.path <> s.path)   
+            |> List.append [s]
+        
         let recent = { model.recent with recentScenes = scenePaths }
 
         Serialization.save "./recent" recent |> ignore
@@ -50,40 +42,35 @@ module Model =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Scene =
-    open Aardvark.Base.MultimethodTest       
     open Aardvark.UI.Primitives
     open PRo3D.Navigation2
-
-    //open Aardvark.Base.Incremental.Computation Expression Builders
-    
+        
     let _surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _flatSurfaces = Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.flat
     let _camera = Scene.Lens.navigation |. NavigationModel.Lens.camera
 
-
-    let expandRelativePaths (m:Scene) =
-                        
-        match m.scenePath with
-            | Some p ->         
-                let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
-                let flat' = 
-                    (m.surfacesModel.surfaces.flat |> Leaf.toSurfaces)
-                        |> HMap.map(fun _ x ->                            
-                                if x.relativePaths then
-                                    let p'' = Path.Combine(p', x.name)
-                                    { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
-                                else x
-                            )
-                        |> HMap.map(fun _ x -> Leaf.Surfaces x)
-
-                let sm = { m.surfacesModel.surfaces with flat = flat' }                
-                
-                { m with surfacesModel = { m.surfacesModel with surfaces = sm }}      
-            | None -> m        
+    let expandRelativePaths (m:Scene) =               
+      match m.scenePath with
+      | Some p ->         
+        let p' = Path.Combine((Path.GetDirectoryName p),"Surfaces")
+        let flat' = 
+            (m.surfacesModel.surfaces.flat |> Leaf.toSurfaces)
+                |> HMap.map(fun _ x ->                            
+                        if x.relativePaths then
+                            let p'' = Path.Combine(p', x.name)
+                            { x with opcPaths = Files.expandNamesToPaths p'' x.opcNames }
+                        else x
+                    )
+                |> HMap.map(fun _ x -> Leaf.Surfaces x)
+      
+        let sm = { m.surfacesModel.surfaces with flat = flat' }                
+        
+        { m with surfacesModel = { m.surfacesModel with surfaces = sm }}
+      | None -> m        
 
     let private readLine (filePath:string) =
-            use sr = new System.IO.StreamReader (filePath)
-            sr.ReadLine ()       
+      use sr = new System.IO.StreamReader (filePath)
+      sr.ReadLine ()       
 
     let addLegacyTrafos surfaces = 
         surfaces 
@@ -101,22 +88,22 @@ module Scene =
         Path.ChangeExtension(Path.Combine(surfacePath, name), ".opcx")
 
     let addSurfaceAttributes surfaces = 
-        surfaces 
-            |> PList.map(fun s -> s, s.importPath |> getOPCxPath)
-            |> PList.map(fun(s,p) -> 
-                    match (Serialization.fileExists p) with
-                        | Some path->        
-                            let layers = Surface.SurfaceAttributes.read path
-                            let textures = layers |> SurfaceProperties.getTextures
-
-                            { s with 
-                                scalarLayers  = layers |> SurfaceProperties.getScalarsHmap //SurfaceProperties.getScalars
-                                textureLayers = textures
-                                selectedTexture = textures |> PList.tryHead
-                            }
-                        | None ->
-                            s
-                        )
+      surfaces 
+        |> PList.map(fun s -> s, s.importPath |> getOPCxPath)
+        |> PList.map(fun(s,p) -> 
+           match (Serialization.fileExists p) with
+           | Some path->        
+               let layers = Surface.SurfaceAttributes.read path
+               let textures = layers |> SurfaceProperties.getTextures
+        
+               { s with 
+                   scalarLayers  = layers |> SurfaceProperties.getScalarsHmap //SurfaceProperties.getScalars
+                   textureLayers = textures
+                   selectedTexture = textures |> PList.tryHead
+               }
+           | None ->
+               s
+         )
 
     /// appends surfaces to existing surfaces
     let import' (runtime : IRuntime) (signature: IFramebufferSignature)(surfaces : plist<Surface>) (m : Model) =
@@ -148,7 +135,7 @@ module Scene =
         let allSurfaces = existingSurfaces |> PList.append' surfaces //????
         //handle sg surfaces
         let m = 
-            surfaces
+            allSurfaces
                 |> PList.filter (fun s -> s.surfaceType = SurfaceType.SurfaceOPC)
                 |> Sg.createSgSurfaces runtime signature
                 |> HMap.union m.scene.surfacesModel.sgSurfaces
@@ -205,8 +192,9 @@ module Scene =
           Sg.createSgSurfaces runtime signature opcSurfs |> Files.expandLazyKdTreePaths scenePath surfaces        
 
         let objSurfs = 
-            surfacesList 
+          surfacesList 
             |> PList.filter ( fun x -> x.surfaceType = SurfaceType.SurfaceOBJ)
+
         let sgSurfaceObj = 
             Surface.ObjectFiles.createSgObjects runtime signature objSurfs //|> Files.expandLazyKdTreePaths scenePath surfaces      
             
@@ -222,7 +210,6 @@ module Scene =
        let far = m.scene.config.farPlane.value
        Frustum.perspective 60.0 near far 1.0
            
-
     let resetControllerState (scn :Scene) = 
       let state = scn.navigation.camera
       { state with forward = false; backward = false; left = false; right = false; isWheel = false; zoom = false; pan = false; look = false; moveVec = V3d.Zero }
