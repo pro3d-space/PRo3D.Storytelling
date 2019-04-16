@@ -133,6 +133,7 @@ module Sg =
 
       let sghs =
         surfaces          
+          |> List.map (fun d -> { d with opcPaths = d.opcNames |> Files.expandNamesToPaths d.importPath })
           |> List.map (fun d -> 
            { 
              Configurations.Empty.mars() with 
