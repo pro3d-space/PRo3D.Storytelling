@@ -238,15 +238,30 @@ module ViewerUtils =
 
         let footprintMatrix = 
             adaptive {
+                let! t = trafo
                 let! fppm = fp.projectionMatrix
                 let! fpvm = fp.instViewMatrix
                 let! s = surf
-                let! ts = s.preTransform
-                let! t = trafo
+                let! ts = s.preTransform 
+                let testfppm = fppm * t.Backward 
+                let testfpvm = fpvm * t.Backward
                 //return (t.Forward * fpvm * fppm) //* t.Forward 
-                return (fppm * fpvm) // * ts.Forward
+                //return (fppm * fpvm) // * ts.Forward
+                return (testfppm * testfpvm)
             } 
-
+        
+        let projMTest = 
+            adaptive {
+                let! fppm = fp.projectionMatrix
+                let! t = trafo
+                return fppm/t.Forward
+            }
+        let instVMMTest = 
+            adaptive {
+                let! fppm = fp.projectionMatrix
+                let! t = trafo
+                return fppm/t.Forward
+            }
         let test =             
           surface.sceneGraph
             |> Mod.map createSg
@@ -260,6 +275,9 @@ module ViewerUtils =
             |> addImageCorrectionParameters surf
             |> Sg.uniform "footprintVisible" footprintVisible
             |> Sg.uniform "instrumentMVP" footprintMatrix
+            |> Sg.uniform "projMVP" fp.projectionMatrix
+            |> Sg.uniform "globalToLocal" fp.globalToLocalPos
+            |> Sg.uniform "instViewMVP" fp.instViewMatrix
             |> Sg.texture (Sym.ofString "FootPrintTexture") fp.projTex
             |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
             |> Sg.LodParameters( getLodParameters surf frustum )

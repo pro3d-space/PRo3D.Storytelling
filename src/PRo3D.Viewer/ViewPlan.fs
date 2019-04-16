@@ -270,7 +270,7 @@ module ViewPlan =
                       view = CameraView.look extr.position extr.camLookAt.Normalized extr.camUp.Normalized };
                   instrumentFrustum = ifrustum}
               Log.line "%A" model.instrumentCam.view.ViewTrafo
-              let f = FootPrint.updateFootprint i m'
+              let f = FootPrint.updateFootprint i extr m' vp.position
               f,m'
               //{ model with instrumentCam = cam } 
             | _-> fp,{model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI };

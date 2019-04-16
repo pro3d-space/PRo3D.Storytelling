@@ -257,6 +257,7 @@ type FootPrint = {
     projectionMatrix    : M44d
     instViewMatrix      : M44d
     projTex             : ITexture
+    globalToLocalPos    : V3d
 }
 
 [<DomainType>]
@@ -320,6 +321,7 @@ module ViewPlanModel =
         projectionMatrix    = M44d.Identity
         instViewMatrix    = M44d.Identity
         projTex             = initPixTex
+        globalToLocalPos    = V3d.OOO
     }
 
     let initial = {

@@ -46,25 +46,34 @@ module FootPrint =
             let clientBla : list<ClientStatistics> =
                 Pickler.unpickleOfJson  result
             match clientBla.Length with
-                | 2 -> clientBla.[1] 
+                | 2 -> clientBla // clientBla.[1] 
                 | _ -> failwith "no client bla"
 
-        let screenshot =            
-            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress clientStatistic.name width height
-        Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
+        for cs in clientStatistic do
+            let screenshot =            
+                sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress cs.name width height
+            Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
 
-        match System.IO.Directory.Exists folder with
-          | true -> ()
-          | false -> System.IO.Directory.CreateDirectory folder |> ignore
+            match System.IO.Directory.Exists folder with
+              | true -> ()
+              | false -> System.IO.Directory.CreateDirectory folder |> ignore
+            
+            let filename = cs.name + name
+            wc.DownloadFile(screenshot,Path.combine [folder; filename])
+         
+        //let screenshot =            
+        //    sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress clientStatistic.[0].name width height
+        //Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
+
+        //match System.IO.Directory.Exists folder with
+        //  | true -> ()
+        //  | false -> System.IO.Directory.CreateDirectory folder |> ignore
                
-        wc.DownloadFile(screenshot,Path.combine [folder; name])
+        //wc.DownloadFile(screenshot,Path.combine [folder; name])
 
     let createFootprintData (vp:ViewPlanModel) (scenePath:string) =
 
         let fpPath = getFootprintsPath scenePath
-        // Check if the target directory exists, if not, create it.
-        //if not(Directory.Exists fpPath) then
-        //    Directory.CreateDirectory fpPath |> ignore
 
         match vp.selectedViewPlan with
             | Some v -> 
@@ -74,10 +83,11 @@ module FootPrint =
                     match v.selectedInstrument with
                                 | Some i -> i.id
                                 | None -> ""
-                                
+                
+               
                 let pngName = System.String.Format(
-                                    "{0:0000}{1:00}{2:00}_{3:00}{4:00}{5:00}_{6}_{7}.png",
-                                    now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, roverName, instrumentName)
+                                        "{0:0000}{1:00}{2:00}_{3:00}{4:00}{5:00}_{6}_{7}.png",
+                                        now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, roverName, instrumentName)
 
                 let svxName = System.String.Format(
                                     "{0:0000}{1:00}{2:00}_{3:00}{4:00}{5:00}_{6}_{7}.svx",
@@ -154,37 +164,37 @@ module FootPrint =
             | None -> vp 
 
 
-    let projTrafo (near : float) (far : float) (focalLength:float) (aspect:float) (principalPoint:V2d) =
-        let tnf = 2.0 * far * near
-        let a = (far + near) / (far - near)
-        let b = tnf / (near - far)
+    //let projTrafo (near : float) (far : float) (focalLength:float) (aspect:float) (principalPoint:V2d) =
+    //    let tnf = 2.0 * far * near
+    //    let a = (far + near) / (far - near)
+    //    let b = tnf / (near - far)
 
-        let A = far / (far - near)
-        let B = near * far / (near - far)
+    //    let A = far / (far - near)
+    //    let B = near * far / (near - far)
 
-        Trafo3d(
-            M44d(
-                focalLength,                0.0,                               -principalPoint.X,       0.0,
-                0.0,                        focalLength * aspect,              -principalPoint.Y,       0.0,
-                0.0,                        0.0,                               -a,                      b,
-                0.0,                        0.0,                               -1.0,                    0.0
-            ),
-            //M44d(
-            //    focalLength,                0.0,                               principalPoint.X,  0.0,
-            //    0.0,                        focalLength * aspect,              principalPoint.Y,  0.0,
-            //    0.0,                        0.0,                               A,                      B,
-            //    0.0,                        0.0,                               1.0,                    0.0
-            //),
-            M44d(
-                1.0/focalLength,        0.0,                                    0.0,       -principalPoint.X / focalLength,
-                0.0,                    1.0 / (aspect * focalLength),           0.0,       -principalPoint.Y / (focalLength * aspect),
-                0.0,                    0.0,                                    0.0,       -1.0,
-                0.0,                    0.0,                                    1.0/b,     -a/b
+    //    Trafo3d(
+    //        M44d(
+    //            focalLength,                0.0,                               -principalPoint.X,       0.0,
+    //            0.0,                        focalLength * aspect,              -principalPoint.Y,       0.0,
+    //            0.0,                        0.0,                               -a,                      b,
+    //            0.0,                        0.0,                               -1.0,                    0.0
+    //        ),
+    //        //M44d(
+    //        //    focalLength,                0.0,                               principalPoint.X,  0.0,
+    //        //    0.0,                        focalLength * aspect,              principalPoint.Y,  0.0,
+    //        //    0.0,                        0.0,                               A,                      B,
+    //        //    0.0,                        0.0,                               1.0,                    0.0
+    //        //),
+    //        M44d(
+    //            1.0/focalLength,        0.0,                                    0.0,       -principalPoint.X / focalLength,
+    //            0.0,                    1.0 / (aspect * focalLength),           0.0,       -principalPoint.Y / (focalLength * aspect),
+    //            0.0,                    0.0,                                    0.0,       -1.0,
+    //            0.0,                    0.0,                                    1.0/b,     -a/b
 
-            )
-        )
+    //        )
+    //    )
 
-    let updateFootprint (instrument:Instrument) (model:ViewPlanModel) =
+    let updateFootprint (instrument:Instrument) (transformenExt:Extrinsics) (model:ViewPlanModel) (pos:V3d) =
         
         let id = match model.selectedViewPlan with
                     | Some vp -> Some vp.id
@@ -198,7 +208,7 @@ module FootPrint =
         pi.GetMatrix<C4b>().SetByCoord(fun (c : V2l) -> C4b.White) |> ignore
         let tex = PixTexture2d(PixImageMipMap [| (pi.ToPixImage(Col.Format.RGBA)) |], true) :> ITexture
 
-        let focal = instrument.focal.value
+        //let focal = instrument.focal.value
         let projectionTrafo = model.instrumentFrustum |> Frustum.projTrafo
         //|> Frustum.aspect
         //let frust    = model.instrumentFrustum
@@ -211,13 +221,18 @@ module FootPrint =
 
         //let projectionTrafo = projTrafo model.instrumentFrustum.near model.instrumentFrustum.far focal aspect pP
 
+        let location = model.instrumentCam.view.Location - pos //transformenExt.position
+        let testview = model.instrumentCam.view.WithLocation location
+
+
         let fp = 
                 {
                     vpId      = id
                     isVisible = true
                     projectionMatrix = projectionTrafo.Forward
-                    instViewMatrix = model.instrumentCam.view.ViewTrafo.Forward
+                    instViewMatrix = testview.ViewTrafo.Forward //model.instrumentCam.view.ViewTrafo.Forward
                     projTex = tex
+                    globalToLocalPos = pos //transformenExt.position
                 }
         fp //{ model with footPrint = fp }
 

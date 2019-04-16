@@ -118,8 +118,10 @@ module ViewerIO =
     let loadLastFootPrint (m:Model) = 
         match m.scene.viewPlans.selectedViewPlan with
             | Some vp -> match vp.selectedInstrument with
-                            | Some i -> let fp = FootPrint.updateFootprint i m.scene.viewPlans
-                                        { m with footPrint = fp}
+                            | Some i -> 
+                                let extr = ViewPlan.transformExtrinsics vp i.extrinsics
+                                let fp = FootPrint.updateFootprint i extr m.scene.viewPlans vp.position
+                                { m with footPrint = fp}
                             | None -> { m with footPrint = PRo3d.ViewPlanModel.initFootPrint}
             | None -> { m with footPrint = PRo3d.ViewPlanModel.initFootPrint}
 

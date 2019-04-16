@@ -716,12 +716,20 @@ module Shader =
 
   let footprintV (v : FootPrintVertex) =
         vertex {
-            //let vp = uniform.ModelViewTrafo * v.pos
-            //let p = uniform.ProjTrafo * vp
+            let vp = uniform.ModelViewTrafo * v.pos
+            let p = uniform.ProjTrafo * v.pos
             
             let instrumentMatrix    : M44d   = uniform?instrumentMVP
-            
-            return { v with tc0 = instrumentMatrix * v.wp; sv = 0 } //v.pos
+            let projectionMatrix    : M44d   = uniform?projMVP
+            let instrumentView      : M44d   = uniform?instViewMVP
+            let globalToLocal       : V3d   = uniform?globalToLocal
+           
+            //let test = forwardMatrix * v.wp |> Vec.normalize
+            let test = v.wp - V4d(globalToLocal, 0.0) |> Vec.normalize
+            let v1 = instrumentView * test |> Vec.normalize
+            let v2 = projectionMatrix * v1 |> Vec.normalize
+            //let tt = instrumentMatrix * test
+            return { v with tc0 = v2 ; sv = 0 } //v.wp
         }
 
   let footprintV2 (v : FootPrintVertex) =
@@ -741,16 +749,37 @@ module Shader =
           } 
       } 
 
+  //let footPrintF (v : FootPrintVertex) =
+  //    fragment {           
+  //        if uniform?footprintVisible then
+  //          let col = v.c * 0.7 //V4d(1.0, 0.0, 0.0, 1.0)
+  //          let t = v.tc0.XY / v.tc0.W
+  //          let c = 
+  //              if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
+  //                 v.c //(v.c * 0.7) //darkened
+  //              else
+  //                 col 
+  //          if (v.tc0.Z <= 0.0) then
+  //              return col
+  //          else
+  //              return c 
+             
+  //        else
+  //          return v.c
+  //    }
   let footPrintF (v : FootPrintVertex) =
       fragment {           
           if uniform?footprintVisible then
-            let col = v.c * V4d(1.0, 0.0, 0.0, 1.0)
+            let col = v.c * 0.7 //V4d(1.0, 0.0, 0.0, 1.0)
             let t = v.tc0.XY / v.tc0.W
             let c = 
                 if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
                    v.c //(v.c * 0.7) //darkened
+                elif t.X > -1.01 && t.X < 1.01 && t.Y > -1.01 && t.Y < 1.01 then
+                   v.c * V4d(1.0, 0.0, 0.0, 1.0)
                 else
                    col 
+
             if (v.tc0.Z <= 0.0) then
                 return col
             else
@@ -774,7 +803,6 @@ module Shader =
                 else
                     v.c
            
-
             if (v.tc0.Z <= 0.0) then
                 return (v.c * 0.7)
             else

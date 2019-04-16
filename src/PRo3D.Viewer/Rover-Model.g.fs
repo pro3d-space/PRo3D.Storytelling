@@ -447,12 +447,14 @@ module Mutable =
         let _projectionMatrix = ResetMod.Create(__initial.projectionMatrix)
         let _instViewMatrix = ResetMod.Create(__initial.instViewMatrix)
         let _projTex = ResetMod.Create(__initial.projTex)
+        let _globalToLocalPos = ResetMod.Create(__initial.globalToLocalPos)
         
         member x.vpId = _vpId :> IMod<_>
         member x.isVisible = _isVisible :> IMod<_>
         member x.projectionMatrix = _projectionMatrix :> IMod<_>
         member x.instViewMatrix = _instViewMatrix :> IMod<_>
         member x.projTex = _projTex :> IMod<_>
+        member x.globalToLocalPos = _globalToLocalPos :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3d.FootPrint) =
@@ -464,6 +466,7 @@ module Mutable =
                 ResetMod.Update(_projectionMatrix,v.projectionMatrix)
                 ResetMod.Update(_instViewMatrix,v.instViewMatrix)
                 ResetMod.Update(_projTex,v.projTex)
+                ResetMod.Update(_globalToLocalPos,v.globalToLocalPos)
                 
         
         static member Create(__initial : PRo3d.FootPrint) : MFootPrint = MFootPrint(__initial)
@@ -509,6 +512,12 @@ module Mutable =
                     override x.Get(r) = r.projTex
                     override x.Set(r,v) = { r with projTex = v }
                     override x.Update(r,f) = { r with projTex = f r.projTex }
+                }
+            let globalToLocalPos =
+                { new Lens<PRo3d.FootPrint, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.globalToLocalPos
+                    override x.Set(r,v) = { r with globalToLocalPos = v }
+                    override x.Update(r,f) = { r with globalToLocalPos = f r.globalToLocalPos }
                 }
     
     
