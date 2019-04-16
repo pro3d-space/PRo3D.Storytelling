@@ -321,11 +321,17 @@ module ViewerApp =
                 { m with scene = {m.scene with navigation = navigation'; } }
             | Interactions.PlaceRover, ViewerMode.Standard ->
                 let ref = m.scene.referenceSystem 
-                let outerModel, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation _footprint m.scene.scenePath m 
+
+                let addPointMsg = ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))
+
+                let outerModel, viewPlans' = 
+                  ViewPlan.update m.scene.viewPlans addPointMsg _navigation _footprint m.scene.scenePath m 
+
                 let m' = { m with scene = {m.scene with viewPlans = viewPlans' }; footPrint = outerModel.footPrint }
                 match m.scene.viewPlans.working.IsEmpty with
                     | true -> m' 
                     | false -> { m' with tabMenu = TabMenu.Viewplanner }
+
             //| Interactions.AlignPick -> 
             //    { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
             | Interactions.PlaceSurface, ViewerMode.Standard -> 
@@ -449,7 +455,9 @@ module ViewerApp =
                 { m with scene = { m.scene with bookmarksModel = {m.scene.bookmarksModel with bookmarks = bm }}} 
             | RoverMessage msg,_,_ ->
                 let roverModel = RoverApp.update m.scene.viewPlans.roverModel msg
+
                 let viewPlanModel = ViewPlan.updateViewPlanFromRover roverModel m.scene.viewPlans
+
                 { m with scene = { m.scene with viewPlans = viewPlanModel}} 
             | ViewPlanMessage msg,_,_ ->
                 let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation _footprint m.scene.scenePath m
@@ -940,8 +948,8 @@ module ViewerApp =
                 attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
                 attribute "data-samples" "4"
                 attribute "useMapping" "true"
-                attribute "showFPS" "true"        
-                attribute "data-renderalways" "true"
+             // attribute "showFPS" "true"        
+             // attribute "data-renderalways" "true"
                 onKeyDown (KeyDown)
                 onKeyUp (KeyUp)                
             ] 

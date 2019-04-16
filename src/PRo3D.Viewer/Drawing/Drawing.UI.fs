@@ -264,8 +264,11 @@ module UI =
 
           let subNodes = group.subNodes |> AList.mapi (fun i v -> viewTree (i::path) v model lookup) 
           
+          
+
           let annos = 
             group.leaves 
+              |> AList.filterM(fun x -> lookup |> AMap.keys |> ASet.contains x)
               |> AList.map(fun x -> lookup |> AMap.find x |> Mod.force) 
               |> viewAnnotationsInGroup path model singleSelect multiSelect lift                
 

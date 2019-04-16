@@ -65,7 +65,7 @@ module ViewerIO =
       model
         
     let tryLoadAnnotations (paths : ScenePaths) =
-     // try
+     try
         //load groups.ann
         let annotationGroups = paths.annotationGroups |> Serialization.loadAs<PRo3D.Groups.saveAnnotations>
           
@@ -101,10 +101,10 @@ module ViewerIO =
 
         let annoModel = { annotationGroups.annotations with flat = flat' }
         Some { annotationGroups with annotations = annoModel }
-      //with e ->
-      //  Log.error "[ViewerIO] couldn't load %s" paths.annotationGroups
-      //  Log.error "[ViewerIO] couldn't load %A" e
-      //  None       
+      with e ->
+        Log.error "[ViewerIO] couldn't load %s" paths.annotationGroups
+        Log.error "[ViewerIO] couldn't load %A" e
+        None       
     
     let loadLastAnnotations (m:Model) = 
       match m.scene.scenePath with
@@ -119,8 +119,7 @@ module ViewerIO =
         match m.scene.viewPlans.selectedViewPlan with
             | Some vp -> match vp.selectedInstrument with
                             | Some i -> 
-                                let extr = ViewPlan.transformExtrinsics vp i.extrinsics
-                                let fp = FootPrint.updateFootprint i extr m.scene.viewPlans vp.position
+                                let fp = FootPrint.updateFootprint i vp.position m.scene.viewPlans 
                                 { m with footPrint = fp}
                             | None -> { m with footPrint = PRo3d.ViewPlanModel.initFootPrint}
             | None -> { m with footPrint = PRo3d.ViewPlanModel.initFootPrint}

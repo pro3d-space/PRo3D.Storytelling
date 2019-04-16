@@ -452,9 +452,12 @@ module Groups =
             let! selected = model.singleSelectLeaf
             match selected with
                 | Some guid -> 
-                    let item = 
+                    let! exists = model.flat |> AMap.keys |> ASet.contains guid
+                    if exists then
+                      let item = 
                         model.flat |> AMap.find guid |> Mod.bind(id) |> Mod.force
-                    return view item |> UI.map lifter
+                      return view item |> UI.map lifter
+                    else return div[][] |> UI.map lifter
                 | None ->
                     return div[][] |> UI.map lifter
         }

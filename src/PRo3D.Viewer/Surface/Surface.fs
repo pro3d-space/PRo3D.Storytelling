@@ -755,20 +755,27 @@ module Surface =
                         | _ -> return div[][]                                                             
                 | None   -> return div[][] 
         }
+    
+      //failwith ""
 
     let viewSurfaceProperties (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
+            let flat = model.surfaces.flat
             
             match guid with
-                | Some i -> 
-
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let x = match surf with | MSurfaces s -> s | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
-                                       
-                    return SurfaceProperties.view x |> UI.map SurfacePropertiesMessage
-                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map SurfacePropertiesMessage 
+              | Some i ->
+                let! exists = flat |> AMap.keys |> ASet.contains i
+                if exists then
+                  let leaf = flat |> AMap.find i |> Mod.bind(id)
+                  let! surf = leaf 
+                  let x = match surf with | MSurfaces s -> s | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith                                     
+                  return SurfaceProperties.view x |> UI.map SurfacePropertiesMessage
+                else
+                  return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map SurfacePropertiesMessage 
+                  
+              
+              | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map SurfacePropertiesMessage 
         }                          
         
     let surfaceGroupProperties (model:MSurfaceModel) =
@@ -779,30 +786,37 @@ module Surface =
     let viewTranslationTools (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
-            
+            let empty = div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map TranslationMessage 
+
             match guid with
-                | Some i -> 
-                    //let! sg = model.sgSurfaces |> AMap.find i 
-                    //return TranslationApp.UI.view sg.transformation |> UI.map TranslationMessage
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let x = match surf with | MSurfaces s -> s | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
-                    return TranslationApp.UI.view x.transformation |> UI.map TranslationMessage
-                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map TranslationMessage 
+              | Some i -> 
+                let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                if exists then
+                  let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                  let! surf = leaf 
+                  let x = match surf with | MSurfaces s -> s | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                  return TranslationApp.UI.view x.transformation |> UI.map TranslationMessage
+                else
+                  return empty
+              | None -> return empty
         }                          
 
     let viewColorCorrectionTools (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
+            let empty = div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ColorCorrectionMessage 
             
             match guid with
                 | Some i -> 
-
+                  let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                  if exists then
                     let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
                     let! surf = leaf 
                     let colorCorrection = match surf with | MSurfaces s -> s.colorCorrection | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
                     return ColorCorrectionProperties.view colorCorrection |> UI.map ColorCorrectionMessage
-                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ColorCorrectionMessage 
+                  else 
+                    return empty
+                | None -> return empty 
         }                          
 
     let viewColorLegendTools (model:MSurfaceModel) =
@@ -811,18 +825,21 @@ module Surface =
             
             match guid with
                 | Some i -> 
-
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let scalar = 
-                      match surf with 
-                       | MSurfaces s -> s.selectedScalar 
-                       | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
-
-                    let! scalar = scalar
-                    match scalar with
-                        | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
-                        | None -> return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
+                    let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                    if exists then
+                      let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                      let! surf = leaf 
+                      let scalar = 
+                        match surf with 
+                         | MSurfaces s -> s.selectedScalar 
+                         | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                      
+                      let! scalar = scalar
+                      match scalar with
+                          | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
+                          | None -> return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
+                    else
+                      return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
                                   
                 | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ScalarsColorLegendMessage 
         }                          
@@ -833,14 +850,17 @@ module Surface =
             
             match guid with
                 | Some i -> 
-
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
-                    let! scalar = scalar
-                    match scalar with
-                        | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
-                        | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
+                    let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                    if exists then
+                      let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                      let! surf = leaf 
+                      let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                      let! scalar = scalar
+                      match scalar with
+                          | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
+                          | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
+                    else
+                      yield div[ style "font-style:italic"][ text "no scalar selected" ]
                                   
                 | None -> yield div[ style "font-style:italic"][ text "no surface selected" ]
         }  

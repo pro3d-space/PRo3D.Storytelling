@@ -102,12 +102,7 @@ module FootPrint =
                 // save png file
                 try takeScreenshot "http://localhost:54321" width height pngName fpPath with e -> printfn "error: %A" e
 
-                // save svx file
-                //let xmlScheme = {
-                //    xmlType = "XMLScheme"
-                //    version = 1.0
-                //}
-
+               
                 let fileInfo = {
                     fileType = "PNGImage"
                     path = fpPath
@@ -152,7 +147,6 @@ module FootPrint =
                 }
                 let simulatedViewData =
                     {
-                        //xmlScheme   = xmlScheme
                         fileInfo    = fileInfo
                         calibration = calibration
                         acquisition = acquisition
@@ -194,7 +188,7 @@ module FootPrint =
     //        )
     //    )
 
-    let updateFootprint (instrument:Instrument) (transformenExt:Extrinsics) (model:ViewPlanModel) (pos:V3d) =
+    let updateFootprint (instrument:Instrument) (roverpos:V3d) (model:ViewPlanModel) =
         
         let id = match model.selectedViewPlan with
                     | Some vp -> Some vp.id
@@ -221,7 +215,7 @@ module FootPrint =
 
         //let projectionTrafo = projTrafo model.instrumentFrustum.near model.instrumentFrustum.far focal aspect pP
 
-        let location = model.instrumentCam.view.Location - pos //transformenExt.position
+        let location = model.instrumentCam.view.Location - roverpos //transformenExt.position
         let testview = model.instrumentCam.view.WithLocation location
 
 
@@ -232,7 +226,7 @@ module FootPrint =
                     projectionMatrix = projectionTrafo.Forward
                     instViewMatrix = testview.ViewTrafo.Forward //model.instrumentCam.view.ViewTrafo.Forward
                     projTex = tex
-                    globalToLocalPos = pos //transformenExt.position
+                    globalToLocalPos = roverpos //transformenExt.position
                 }
         fp //{ model with footPrint = fp }
 
