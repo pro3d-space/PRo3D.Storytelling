@@ -11,18 +11,16 @@
 \contentsline {subsubsection}{\numberline {3.1.2}ArcBall}{9}{subsubsection.3.1.2}
 \contentsline {subsection}{\numberline {3.2}Place Coordinate System}{10}{subsection.3.2}
 \contentsline {subsection}{\numberline {3.3}Draw Annotation}{11}{subsection.3.3}
-\contentsline {section}{\numberline {4}Viewer Features}{14}{section.4}
-\contentsline {subsection}{\numberline {4.1}Surfaces}{14}{subsection.4.1}
-\contentsline {subsection}{\numberline {4.2}Annotations}{16}{subsection.4.2}
-\contentsline {subsubsection}{\numberline {4.2.1}Annotations Menu}{16}{subsubsection.4.2.1}
-\contentsline {subsubsection}{\numberline {4.2.2}Annotations Listing}{17}{subsubsection.4.2.2}
-\contentsline {subsubsection}{\numberline {4.2.3}Annotations Properties}{17}{subsubsection.4.2.3}
-\contentsline {subsubsection}{\numberline {4.2.4}Import Annotations from old viewer versions}{18}{subsubsection.4.2.4}
-\contentsline {subsection}{\numberline {4.3}Bookmarks}{18}{subsection.4.3}
-\contentsline {subsection}{\numberline {4.4}Viewer Configuration}{18}{subsection.4.4}
-\contentsline {subsubsection}{\numberline {4.4.1}ViewerConfig}{19}{subsubsection.4.4.1}
-\contentsline {subsubsection}{\numberline {4.4.2}Coordinate System}{19}{subsubsection.4.4.2}
-\contentsline {subsubsection}{\numberline {4.4.3}Camera}{19}{subsubsection.4.4.3}
-\contentsline {subsection}{\numberline {4.5}Grouping}{19}{subsection.4.5}
-\contentsline {subsubsection}{\numberline {4.5.1}Group Actions}{20}{subsubsection.4.5.1}
-\contentsline {subsubsection}{\numberline {4.5.2}Leaf Actions}{20}{subsubsection.4.5.2}
+\contentsline {subsection}{\numberline {3.4}Pick Annotation}{13}{subsection.3.4}
+\contentsline {subsection}{\numberline {3.5}Pick Surface}{13}{subsection.3.5}
+\contentsline {section}{\numberline {4}Viewer Features}{15}{section.4}
+\contentsline {subsection}{\numberline {4.1}Surfaces}{15}{subsection.4.1}
+\contentsline {subsection}{\numberline {4.2}Annotations}{18}{subsection.4.2}
+\contentsline {subsection}{\numberline {4.3}Bookmarks}{20}{subsection.4.3}
+\contentsline {subsection}{\numberline {4.4}Viewer Configuration}{20}{subsection.4.4}
+\contentsline {subsubsection}{\numberline {4.4.1}ViewerConfig}{21}{subsubsection.4.4.1}
+\contentsline {subsubsection}{\numberline {4.4.2}Coordinate System}{21}{subsubsection.4.4.2}
+\contentsline {subsubsection}{\numberline {4.4.3}Camera}{21}{subsubsection.4.4.3}
+\contentsline {subsection}{\numberline {4.5}Grouping}{21}{subsection.4.5}
+\contentsline {subsubsection}{\numberline {4.5.1}Group Actions}{22}{subsubsection.4.5.1}
+\contentsline {subsubsection}{\numberline {4.5.2}Leaf Actions}{22}{subsubsection.4.5.2}

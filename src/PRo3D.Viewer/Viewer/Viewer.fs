@@ -99,6 +99,9 @@ module ViewerApp =
     // animation  
     let _animation = Model.Lens.animations
     let _animationView = _animation |. AnimationModel.Lens.cam
+
+    //footprint
+    let _footprint = Model.Lens.footPrint
        
     let lookAtData (m : Model) =         
         let bb = m |> Lenses.get _sgSurfaces |> HMap.toSeq |> Seq.map(fun (_,x) -> x.globalBB) |> Box3d.ofSeq
@@ -159,7 +162,7 @@ module ViewerApp =
             getArrowThickness  = fun (x:MViewConfigModel) -> x.arrowThickness.value
             getArrowLength     = fun (x:MViewConfigModel) -> x.arrowLength.value
             getDnsPlaneSize    = fun (x:MViewConfigModel) -> x.dnsPlaneSize.value
-            getOffset          = fun (x:MViewConfigModel) -> Mod.constant(0.001)//x.offset.value
+            getOffset          = fun (x:MViewConfigModel) -> Mod.constant(0.1)//x.offset.value
         }
 
     let navConf : Navigation.smallConfig<ViewConfigModel, ReferenceSystem> =
@@ -205,19 +208,9 @@ module ViewerApp =
         match sel with
           | Some s -> s.trafo.grabbed.IsSome
           | None -> false   
+                        
           
-    let loadRoverData (m:Model) =
-        let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
-        { m with scene = { m.scene with viewPlans = vps } }
-
-    let loadLastAnnotations (m:Model) = 
-          match  m.scene.scenePath with
-            | Some p -> let ap = DrawingApp.getAnnotationPath p
-                        let groups = Groups.tryLoadAnnotations ap 
-                        match groups with          
-                            | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; colorLegend = g.colorLegend } }
-                            | None -> m
-            |None -> m
+    
           //match Serialization.fileExists "./lastmeasure" with
           //  | Some path ->                       
           //    let groups = Groups.tryLoadAnnotations path 
@@ -291,10 +284,7 @@ module ViewerApp =
             | DockNodeConfig.Stack (weight,activeId,children) -> Stack(weight, activeId, List.append [de] children)
             | DockNodeConfig.Element element ->  Stack(0.2, None, List.append [de] [element]) 
 
-    let saveSceneAndAnnotations (path:string) (m:Model) = 
-        let s' = { m.scene with scenePath = Some path}
-        let drawing = DrawingApp.saveSceneAnnotations path m.drawing
-        { m with scene = Serialization.save path s'; drawing = drawing } |> Model.stashAndSaveRecent path
+    
 
     let matchPickingInteraction (bc : BlockingCollection<string>) (p:V3d) (hitFunction:(V3d-> V3d option)) (surf:Surface) (m:Model) = 
          match m.interaction, m.viewerMode with
@@ -331,11 +321,17 @@ module ViewerApp =
                 { m with scene = {m.scene with navigation = navigation'; } }
             | Interactions.PlaceRover, ViewerMode.Standard ->
                 let ref = m.scene.referenceSystem 
-                let _, viewPlans' = ViewPlan.update m.scene.viewPlans (ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))) _navigation m 
-                let m' = { m with scene = {m.scene with viewPlans = viewPlans' } }
+
+                let addPointMsg = ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))
+
+                let outerModel, viewPlans' = 
+                  ViewPlan.update m.scene.viewPlans addPointMsg _navigation _footprint m.scene.scenePath m 
+
+                let m' = { m with scene = {m.scene with viewPlans = viewPlans' }; footPrint = outerModel.footPrint }
                 match m.scene.viewPlans.working.IsEmpty with
                     | true -> m' 
                     | false -> { m' with tabMenu = TabMenu.Viewplanner }
+
             //| Interactions.AlignPick -> 
             //    { m with alignment = AlignmentApp.update m.alignment (AlignmentActions.AddPoint({point = p; surfaceName = surf.guid}))}
             | Interactions.PlaceSurface, ViewerMode.Standard -> 
@@ -345,9 +341,7 @@ module ViewerApp =
                 let action = SurfaceApp.Action.GroupsMessage(Groups.Action.SingleSelectLeaf(list.Empty, surf.guid, ""))
                 let surfaceModel' = SurfaceApp.update m.scene.surfacesModel action m.scene.scenePath m.scene.navigation.camera.view m.scene.referenceSystem
                 { m with scene = { m.scene with surfacesModel = surfaceModel' }}
-            | _ -> m
-
-    
+            | _ -> m    
 
     let mutable lastHash = -1    
 
@@ -434,7 +428,7 @@ module ViewerApp =
                   | Some selected ->                             
                       let f = (fun x ->
                           let a = x |> Leaf.toAnnotation
-                          AnnotationProperties.update a msg |> Leaf.Annotations)
+                          AnnotationProperties.update a msg |> Leaf.Annotations')
                             
                       m.drawing.annotations
                         |> Groups.updateLeaf selected f
@@ -461,13 +455,13 @@ module ViewerApp =
                 { m with scene = { m.scene with bookmarksModel = {m.scene.bookmarksModel with bookmarks = bm }}} 
             | RoverMessage msg,_,_ ->
                 let roverModel = RoverApp.update m.scene.viewPlans.roverModel msg
+
                 let viewPlanModel = ViewPlan.updateViewPlanFromRover roverModel m.scene.viewPlans
+
                 { m with scene = { m.scene with viewPlans = viewPlanModel}} 
             | ViewPlanMessage msg,_,_ ->
-                //let viewPlanModel = ViewPlan.update m.scene.viewPlans m.scene.navigation.camera msg
-                //{ m with scene = { m.scene with viewPlans = viewPlanModel}}  
-                let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation m
-                { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }}  
+                let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation _footprint m.scene.scenePath m
+                { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }; footPrint = model.footPrint} 
             | DnSColorLegendMessage msg,_,_ ->
                 let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
                 { m with drawing = { m.drawing with colorLegend = cm } }
@@ -482,7 +476,10 @@ module ViewerApp =
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m 
-                        updateSceneWithNewSurface m 
+                        m
+                         |> ViewerIO.loadLastFootPrint
+                         |> updateSceneWithNewSurface
+                         
             | ImportDiscoveredSurfaces sl,_,_ -> 
                 //"" |> UpdateUserFeedback |> ViewerAction |> mailbox.Post
                 match sl with
@@ -501,7 +498,11 @@ module ViewerApp =
                                 |> PList.ofList
 
                         let m = Scene.import' runtime signature surfaces m 
-                        updateSceneWithNewSurface m 
+                        //updateSceneWithNewSurface m
+                        m
+                         |> ViewerIO.loadLastFootPrint
+                         |> updateSceneWithNewSurface
+                         
 
             | ImportDiscoveredSurfacesThreads sl,_,_ -> 
                 
@@ -523,7 +524,10 @@ module ViewerApp =
                     |> PList.single                                
                 m 
                   |> Scene.importObj runtime signature objects 
+                  |> ViewerIO.loadLastFootPrint
                   |> updateSceneWithNewSurface
+                  
+                        
               | None -> m              
             | ImportAnnotationGroups sl,_,_ ->
               match sl |> List.tryHead with
@@ -540,7 +544,7 @@ module ViewerApp =
                       |> HMap.map(fun k v -> 
                         let a = v |> Leaf.toAnnotation
                         let a' = if a.geometry = Geometry.DnS then { a with showDns = true } else a                                                             
-                        a'|> Leaf.Annotations)    
+                        a'|> Leaf.Annotations')    
                                           
                   let newflat = m.drawing.annotations.flat |> HMap.union flat
 
@@ -657,35 +661,20 @@ module ViewerApp =
                     | false -> m
                 
             | SaveScene s, _,_ ->                 
-                match m.scene.scenePath with
-                    | None ->                        
-                        match s.IsEmptyOrNull() with
-                            | true -> m
-                            | _ -> saveSceneAndAnnotations s m
-                    | Some path -> 
-                        saveSceneAndAnnotations path m                                     
-            | SaveAs s,_,_ ->                
-                match s.IsEmptyOrNull() with
-                    | true -> m
-                    | _  -> saveSceneAndAnnotations s m
-                            
-            | OpenScene sl,_,_ ->
-                match sl.Length < 1 with
-                    | true -> m
-                    | false -> 
-                        let path = sl.[0]
-                        Scene.loadScene path m runtime signature 
-                            |> Model.stashAndSaveRecent path
-                            |> loadRoverData
-                            |> loadLastAnnotations  
+              let target = match m.scene.scenePath with | Some path -> path | None -> s
+              m |> ViewerIO.saveSceneAndAnnotationGroups target
+            | SaveAs s,_,_ ->
+              ViewerIO.saveSceneAndAnnotationGroups s m
+                            |> ViewerIO.loadLastFootPrint
             | LoadScene path,_,_ ->
                 Scene.loadScene path m runtime signature 
                     |> Model.stashAndSaveRecent path
-                    |> loadRoverData
-                    |> loadLastAnnotations  
+                    |> ViewerIO.loadRoverData
+                    |> ViewerIO.loadLastAnnotations  
+                    |> ViewerIO.loadLastFootPrint
             | NewScene,_,_ ->
-                let m' = { PRo3D.Viewer.Viewer.initial m.messagingMailbox m.minervaModel.minervaMessagingMailbox with recent = m.recent }
-                loadRoverData m'
+                let initialModel = Viewer.initial m.messagingMailbox m.minervaModel.minervaMessagingMailbox
+                { initialModel with recent = m.recent } |> ViewerIO.loadRoverData
             | KeyDown k, _, _ ->
               let drawingAction =
                 match k with
@@ -717,7 +706,7 @@ module ViewerApp =
                     timeout = 3000
                     msg     = ViewerAction.NoAction ""
                   }
-                  { (saveSceneAndAnnotations path m) with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
+                  { (ViewerIO.saveSceneAndAnnotationGroups path m) with ctrlFlag = false } |> UserFeedback.queueFeedback feedback
                 | (true, Aardvark.Application.Keys.S, None) -> 
                    //Log.error "please use \"save\" in the menu to save the scene";
 
@@ -817,7 +806,7 @@ module ViewerApp =
                         let a = v |> Leaf.toAnnotation
                         let results    = DrawingUtilities.Calculations.recalcBearing a refsystem'.up.value refsystem'.northO  
                         let dnsResults = DipAndStrike.recalculateDnSAzimuth a refsystem'.up.value refsystem'.northO
-                        { a with results = results; dnsResults = dnsResults } |> Leaf.Annotations)
+                        { a with results = results; dnsResults = dnsResults } |> Leaf.Annotations')
                   m' 
                     |> Lenses.set _flat flat                     
                 | _ -> 
@@ -963,8 +952,8 @@ module ViewerApp =
                 attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
                 attribute "data-samples" "4"
                 attribute "useMapping" "true"
-            //   attribute "showFPS" "true"        
-            //   attribute "data-renderalways" "true"
+             // attribute "showFPS" "true"        
+             // attribute "data-renderalways" "true"
                 onKeyDown (KeyDown)
                 onKeyUp   (KeyUp)        
               //  onResize  (OnResize)
@@ -1190,10 +1179,11 @@ module ViewerApp =
           if startEmpty |> not then
             PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox
               |> Scene.loadLastScene runtime signature
-              |> loadRoverData
-              |> loadLastAnnotations
+              |> ViewerIO.loadRoverData
+              |> ViewerIO.loadLastAnnotations
+              |> ViewerIO.loadLastFootPrint
           else
-            PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> loadRoverData
+            PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> ViewerIO.loadRoverData
 
         App.start {
             unpersist = Unpersist.instance

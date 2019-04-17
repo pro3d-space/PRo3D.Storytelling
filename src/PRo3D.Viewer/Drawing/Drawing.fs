@@ -29,13 +29,15 @@ open PRo3D.Drawing
 open PRo3D.DrawingApp
 open PRo3D.Groups
 open MBrace.FsPickler.Json   
+open PRo3D.Versioned
+open Chiron
 
 module DrawingApp =
     open PRo3D.Base
 
    // open Newtonsoft.Json
         
-    let closePolyline (a:Annotation) = 
+    let closePolyline (a:Annotation') = 
         let firstP = a.points.[0]
         let lastP = a.points.[(a.points.Count-1)]
         match a.projection with
@@ -79,9 +81,9 @@ module DrawingApp =
       let groups = 
         match getFinishedAnnotation up north planet view model with
           | Some a -> 
-            let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
-            bc.Add json
-            model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations a) true
+            //let json = a |> JsonTypes.ofAnnotation |> Aardvark.UI.Pickler.jsonToString                 
+            //bc.Add json
+            model.annotations |> Groups.addLeafToActiveGroup (Leaf.Annotations' a) true
           | None -> model.annotations             
 
       { model with  working = None; pendingIntersections = ThreadPool.empty; annotations = groups }
@@ -130,7 +132,7 @@ module DrawingApp =
                 //annotation states should be immutable after creation
                 //(Annotation.make model.projection model.geometry model.semantic surfaceName)  
                 //    with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
-                (Annotation.make model.projection model.geometry model.color model.thickness surfaceName)
+                (Annotation'.make model.projection model.geometry model.color model.thickness surfaceName)
                     with points = PList.ofList [p]; modelTrafo = Trafo3d.Translation p
             }, None
       
@@ -218,30 +220,11 @@ module DrawingApp =
             getOffset          : 'ma -> IMod<float>
         }
    
-    let saveAnnotations (path:string) (model:DrawingModel) = 
-      match path.IsEmptyOrNull() with
-        | true -> model
-        | false-> 
-            let sa = 
-                {
-                    annotations = model.annotations
-                    colorLegend = model.colorLegend
-                }
-            Serialization.save "./lastMeasure" sa |> ignore 
-            let saveA = Serialization.save path sa
-            { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend }
-
-    let getAnnotationPath (scenePath:string) = 
-        let p = System.IO.Path.GetDirectoryName(scenePath)
-        let name = System.IO.Path.GetFileNameWithoutExtension(scenePath) + ".ann"
-        p + "\\" + name
-
-    let saveSceneAnnotations (scenePath:string) (model:DrawingModel) = 
-        saveAnnotations (getAnnotationPath scenePath) model
+    
 
     let intersectAnnotation (hit : SceneHit) id (flat : hmap<Guid,Leaf>) =
       match (flat.TryFind id) with
-        | Some (Leaf.Annotations ann) ->                            
+        | Some (Leaf.Annotations' ann) ->                            
           let mutable hit2 = RayHit3d.MaxRange
           let r = hit.globalRay.Ray.Ray
           
@@ -323,24 +306,6 @@ module DrawingApp =
                 //Serialization.writeToFile path json 
                 
                 model
-        | Save p,_, _-> saveAnnotations p model
-
-        | Load p,_, _ ->                
-          match p.Length < 1 with
-            | true -> model
-            | false -> 
-              //let groups = Groups.tryLoadGroups path
-              let path = p.[0]
-              let groups = Groups.tryLoadAnnotations path
-              match groups with 
-                //| Some g -> { model with annotations = g  }
-                | Some g -> { model with annotations = g.annotations; colorLegend = g.colorLegend }
-                | None -> model
-        | QuickLoad,_ , _->                
-          let groups = Groups.tryLoadGroups "./lastMeasure" 
-          match groups with 
-            | Some g -> { model with annotations = g  }
-            | None -> model
         | Send, _, _ ->                                                      
             model
         | ClearWorking,_ , _->
@@ -378,7 +343,7 @@ module DrawingApp =
           model
         | PickAnnotation (hit, id), false, true ->             
             match (model.annotations.flat.TryFind id) with
-                | Some (Leaf.Annotations ann) ->                   
+                | Some (Leaf.Annotations' ann) ->                   
                   match ann.geometry with
                   | Geometry.Line | Geometry.Point when ann.projection = Projection.Linear -> //picking shapes are fine for these
                     { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
@@ -398,28 +363,53 @@ module DrawingApp =
                       Log.stop()
                       { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
                     | None ->Log.stop(); model                    
-                | _ -> model
-        | _ -> model
+                | _ -> model        
+        | SaveVersioned, _,_ ->
+          let path = "./annotations.json"
+          let pathgGrouping = "./annotations.grouping"
+          
+          Log.line "[Drawing] Writing annotations"
+          model.annotations.flat 
+              |> HMap.toList 
+              |> List.map(fun (_,b) -> b |> Leaf.toAnnotation) // |> Annotation'.convert)
+              |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty |> IO.writeToFile path
+          
+          Log.line "[Drawing] Writing grouping"
+          let annotations' = { model.annotations with flat = HMap.empty } |> Serialization.save pathgGrouping
 
-    
-                                
+          { model with annotations = annotations' }
+          //model
+        | LoadVersioned, _,_ ->
+          let path = "./annotations.json"
+          let pathgGrouping = "./annotations.grouping"
+
+          Log.line "[Drawing] Reading annotations"
+          let (annos : list<Annotation'>) = path |> IO.readFromFile |> Json.parse |> Json.deserialize
+          let annos = annos |> List.map(fun x -> (x.key,x |> Leaf.Annotations')) |> HMap.ofList
+          
+          Log.line "[Drawing] Reading grouping"
+          let grouping = Serialization.loadAs<GroupsModel> pathgGrouping
+          let grouping = { grouping with flat = annos }
+
+          { model with annotations = grouping }
+        | _ -> model
+                                    
     let threads (m : DrawingModel) = m.pendingIntersections
     
     let toAnnotationOpt = 
       fun y -> 
         match y with
-          | MAnnotations ann -> Some ann
+          //| MAnnotations ann -> Some ann
+          | MAnnotations' ann -> Some ann
           | _ -> None
-    
-   
-
-    let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> * ISg<Drawing.Action>=
+       
+    let view<'ma> (mbigConfig : 'ma)(msmallConfig : MSmallConfig<'ma>) (view : IMod<CameraView>) (model:MDrawingModel) : ISg<Drawing.Action> * ISg<Drawing.Action> =
         // order is irrelevant for rendering. change list to set,
         // since set provides more degrees of freedom for the compiler           
         let annoSet = 
             model.annotations.flat 
                 |> AMap.chooseM(fun _ y -> y |> Mod.map toAnnotationOpt) 
-                |> AMap.toASet        
+                |> AMap.toASet                        
 
         let config : Sg.innerViewConfig = 
             {
@@ -439,7 +429,7 @@ module DrawingApp =
               let showPoints = 
                 a.geometry 
                   |> Mod.map(function | Geometry.Point | Geometry.DnS -> true | _ -> false)
-
+              
               Sg.finishedAnnotation a c config view showPoints picked
               )
             |> Sg.set               

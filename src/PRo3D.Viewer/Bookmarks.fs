@@ -81,6 +81,7 @@ module Bookmarks =
         alist {
           let bookmarks = 
             bookmarks
+              |> AList.filterM(fun x -> model.flat |> AMap.keys |> ASet.contains x)
               |> AList.map (fun x -> model.flat |> AMap.find x |> Mod.bind(id) |> Mod.force)
               |> AList.choose( fun x -> 
                  match x with

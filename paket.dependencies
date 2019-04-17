@@ -18,11 +18,11 @@ nuget Unofficial.OpenTK                  ~> 3.0.16
 nuget FShade        ~> 4.3.1
 nuget FShade.Debug  ~> 4.3.1
 
-nuget Aardvark.Base                         ~> 4.3.1
-nuget Aardvark.Base.IO                      ~> 4.3.1
-nuget Aardvark.Base.Incremental             ~> 4.3.1
-nuget Aardvark.Base.FSharp                  ~> 4.3.1
-nuget Aardvark.Base.Essentials              ~> 4.3.1
+nuget Aardvark.Base                         ~> 4.4.0
+nuget Aardvark.Base.IO                      ~> 4.4.0
+nuget Aardvark.Base.Incremental             ~> 4.4.0
+nuget Aardvark.Base.FSharp                  ~> 4.4.0
+nuget Aardvark.Base.Essentials              ~> 4.4.0
                                              
 nuget Aardvark.Compiler.DomainTypes         ~> 4.2.0
 nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 4.2.0
@@ -32,7 +32,7 @@ nuget Uncodium.Eigensystems                 ~> 1.0.1
 
 nuget Aardvark.Geometry.Intersection        ~> 4.5.2
 
-nuget Aardvark.VRVis.Opc                    ~> 4.5.6
+nuget Aardvark.GeoSpatial.Opc               ~> 0.0.6
 
 nuget FSharp.Core                           ~> 4.3.0
 nuget FSharp.Data                           ~> 3.0.0
@@ -40,10 +40,10 @@ nuget FSharp.Data                           ~> 3.0.0
 nuget FsPickler                             ~> 5.2.0
 nuget FsPickler.Json                        ~> 5.2.0
 
-nuget Aardvark.UI                           ~> 4.4.8
-nuget Aardvark.UI.Primitives                ~> 4.4.8
-nuget Aardvark.Service                      ~> 4.4.8
-nuget Aardvark.Cef.WinForms                 ~> 4.4.8
+nuget Aardvark.UI                           = 4.4.13-prerelease2
+nuget Aardvark.UI.Primitives                = 4.4.13-prerelease2
+nuget Aardvark.Service                      = 4.4.13-prerelease2
+nuget Aardvark.Cef.WinForms                 = 4.4.13-prerelease2
 
 nuget Aardium  ~> 1.0.9
 

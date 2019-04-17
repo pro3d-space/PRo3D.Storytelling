@@ -18,6 +18,7 @@ module Mutable =
                 | Annotations(value) -> MAnnotations(__model, value) :> MLeaf
                 | Surfaces(value) -> MSurfaces(__model, value) :> MLeaf
                 | Bookmarks(value) -> MBookmarks(__model, value) :> MLeaf
+                | Annotations'(value) -> MAnnotations'(__model, value) :> MLeaf
         
         static member Create(v : PRo3D.Groups.Leaf) =
             ResetMod.Create(MLeaf.CreateValue v) :> IMod<_>
@@ -91,14 +92,36 @@ module Mutable =
                         true
                     | _ -> false
     
+    and private MAnnotations'(__initial : PRo3D.Groups.Leaf, value : PRo3D.Versioned.Annotation') =
+        inherit MLeaf()
+        
+        let mutable __current = __initial
+        let _value = PRo3D.Versioned.Mutable.MAnnotation'.Create(value)
+        member x.value = _value
+        
+        override x.ToString() = __current.ToString()
+        override x.AsString = sprintf "%A" __current
+        
+        override x.TryUpdate(__model : PRo3D.Groups.Leaf) = 
+            if System.Object.ReferenceEquals(__current, __model) then
+                true
+            else
+                match __model with
+                    | Annotations'(value) -> 
+                        __current <- __model
+                        PRo3D.Versioned.Mutable.MAnnotation'.Update(_value, value)
+                        true
+                    | _ -> false
+    
     
     [<AutoOpen>]
     module MLeafPatterns =
-        let (|MAnnotations|MSurfaces|MBookmarks|) (m : MLeaf) =
+        let (|MAnnotations|MSurfaces|MBookmarks|MAnnotations'|) (m : MLeaf) =
             match m with
             | :? MAnnotations as v -> MAnnotations(v.value)
             | :? MSurfaces as v -> MSurfaces(v.value)
             | :? MBookmarks as v -> MBookmarks(v.value)
+            | :? MAnnotations' as v -> MAnnotations'(v.value)
             | _ -> failwith "impossible"
     
     

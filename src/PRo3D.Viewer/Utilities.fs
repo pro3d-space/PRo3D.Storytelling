@@ -6,8 +6,9 @@ open System.Windows.Forms
 
 
 open Aardvark.Base
-open Aardvark.SceneGraph.Opc
+//open Aardvark.GeoSpatial.Opc
 open PRo3D
+open Aardvark.GeoSpatial.Opc
 
 module Dialogs =
     open Microsoft.WindowsAPICodePack.Dialogs    
@@ -65,22 +66,31 @@ module Dialogs =
     // aardium dialogs
 
     open Aardvark.UI
-    
-    //let onSaveFile (w : Form) =
-    //    let cb xs =
-    //        match xs with
-    //            | x::[] when x <> null -> x |> Aardvark.Service.Pickler.json.UnPickleOfString |> Aardvark.Service.PathUtils.ofUnixStyle
-    //            | _ -> failwithf "onSaveFile: %A" xs
-    //    let mutable r = Unchecked.defaultof<_>
-    //    w.Invoke(Action(fun _ -> r <- onEvent "onsave" [] cb )) |> ignore
-    //    r
-
+        
     let onChooseFiles (chosen : list<string> -> 'msg) =
         let cb xs =
             match xs with
                 | [] -> chosen []
                 | x::[] when x <> null -> x |> Aardvark.Service.Pickler.json.UnPickleOfString |> List.map Aardvark.Service.PathUtils.ofUnixStyle |> chosen
                 | _ -> chosen []//failwithf "onChooseFiles: %A" xs
+        onEvent "onchoose" [] cb   
+
+    let onChooseDirectory (id:Guid) (chosen : Guid * string -> 'msg) =
+        let cb xs =
+            match xs with
+                | [] -> chosen (id, String.Empty)
+                | x::[] when x <> null -> 
+                  let id = id
+                  let path = 
+                    x 
+                      |> Aardvark.Service.Pickler.json.UnPickleOfString 
+                      |> List.map Aardvark.Service.PathUtils.ofUnixStyle 
+                      |> List.tryHead
+                  match path with
+                  | Some p -> 
+                    chosen (id, p)
+                  | None -> chosen (id,String.Empty)
+                | _ -> chosen (id,String.Empty)//failwithf "onChooseFiles: %A" xs
         onEvent "onchoose" [] cb   
 
     let onSaveFile (chosen : string -> 'msg) =
@@ -163,70 +173,59 @@ module Copy =
 
 module Sg =
     open Aardvark.Base.Incremental
-    open Aardvark.SceneGraph
-    open Aardvark.SceneGraph.SgPrimitives
     open Aardvark.Base.Rendering
-    open Aardvark.UI
     open Aardvark.Rendering.Text    
+    open Aardvark.SceneGraph
+    open Aardvark.UI
 
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
-            adaptive {
-                let! p = p
-                let! v = view
-                let! near = near
-                let! size = size
-                let! hfov = hfov
-                let hfov_rad = Conversion.RadiansFromDegrees(hfov)
-               
-                let wz = Fun.Tan(hfov_rad / 2.0) * near * size
-                let dist = V3d.Distance(p, v.Location)
+      adaptive {
+          let! p = p
+          let! v = view
+          let! near = near
+          let! size = size
+          let! hfov = hfov
+          let hfov_rad = Conversion.RadiansFromDegrees(hfov)
+         
+          let wz = Fun.Tan(hfov_rad / 2.0) * near * size
+          let dist = V3d.Distance(p, v.Location)
+      
+          return ( wz / near ) * dist
+      }
 
-                return ( wz / near ) * dist
-            }
+    //## LINES ##
 
     let edgeLines (close : bool) (points : alist<V3d>) (trafo:IMod<Trafo3d>) =
-        points
-            |> AList.map(fun d -> trafo.GetValue().Backward.TransformPos d)
-            |> AList.toMod 
-            |> Mod.map (fun l ->
-                let list = PList.toList l
-                let head = list |> List.tryHead
-                    
-                match head with
-                    | Some h -> if close then list @ [h] else list
-                                    |> List.pairwise
-                                    |> List.map (fun (a,b) -> new Line3d(a,b))
-                                    |> List.toArray
-                    | None -> [||])
-
-    
-
-    let linePass = RenderPass.after "lines" RenderPassOrder.Arbitrary RenderPass.main
+      points
+        |> AList.map(fun d -> trafo.GetValue().Backward.TransformPos d)
+        |> AList.toMod 
+        |> Mod.map (fun l ->
+            let list = PList.toList l
+            let head = list |> List.tryHead
+                
+            match head with
+                | Some h -> if close then list @ [h] else list
+                                |> List.pairwise
+                                |> List.map (fun (a,b) -> new Line3d(a,b))
+                                |> List.toArray
+                | None -> [||])       
                             
     let lines (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
-        
-        let edges = edgeLines false points trafo     
-        edges
-            |> Sg.lines color
-            |> Sg.noEvents
-            |> Sg.shader {
-                 do! Shader.stableTrafo
-                 do! DefaultSurfaces.vertexColor
-                 do! Shader.thickLine    
-             }                               
-             |> Sg.trafo trafo
-             |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" offset
-    
-    let lines' (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) =
-      let trafo = 
-        points 
-          |> AList.toMod 
-          |> Mod.map(fun x -> (PList.tryHead x) |> Option.defaultValue V3d.Zero) 
-          |> Mod.map (Trafo3d.Translation)        
-        
-      lines points offset color width trafo
-                        
+      
+      let edges = edgeLines false points trafo
+      edges
+        |> Sg.lines color
+        |> Sg.noEvents
+        |> Sg.shader {
+             do! DefaultSurfaces.stableTrafo
+             do! DefaultSurfaces.vertexColor
+             do! Shader.Shaders.thickLine
+         }                               
+        |> Sg.trafo trafo
+        |> Sg.uniform "LineWidth" width
+        |> Sg.uniform "DepthOffset" (
+            offset |> Mod.map (fun depthWorld -> depthWorld / (100.0 - 0.1))) 
+                               
     let scaledLines (points : alist<V3d>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
         let edges = edgeLines false points trafo     
         let size =
@@ -240,15 +239,16 @@ module Sg =
             |> Sg.noEvents
             |> Sg.uniform "WorldPos" (trafo |> Mod.map(fun (x : Trafo3d) -> x.Forward.C3.XYZ))
             |> Sg.uniform "Size" size
-            |> Sg.shader {
-               //  do! Shader.screenSpaceScale
+            |> Sg.shader {               
                  do! Shader.stableTrafo
                  do! DefaultSurfaces.vertexColor
-                 do! Shader.thickLine    
+                 do! Shader.Shaders.thickLine
              }                               
              |> Sg.trafo trafo
              |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
+             |> Sg.uniform "DepthOffset" (Mod.constant 0.0)
+    
+    //## PICKING ##
 
     let cylinders width positions = 
         positions |> Array.pairwise |> Array.map(fun (a,b) -> Line3d(a,b)) |> Array.map (fun x -> Cylinder3d(x, width))
@@ -262,7 +262,9 @@ module Sg =
             Triangle3d(pos.[i0], pos.[i0 + 1], pos.[i0 + 2])
 
         Array.init (pos.Length / 3) get
-         
+    
+    //## POINTS ##
+
     let mkDotISg color (size : IMod<float>) (pos : IMod<V3d>) = 
         Sg.sphere 2 color (Mod.constant 1.0)
             |> Sg.noEvents
@@ -295,8 +297,7 @@ module Sg =
     
     let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
         aset {
-            for p in points |> ASet.ofAList do
-               // let scale = computeScale view (Mod.constant p) 5.0                               
+            for p in points |> ASet.ofAList do                        
                 yield mkDotISg color (size) (Mod.constant p)
         } 
         |> Sg.set
@@ -306,6 +307,19 @@ module Sg =
             toEffect <| DefaultSurfaces.vertexColor          
         ]
 
+    let scaledDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (view : IMod<CameraView>) (near : IMod<float>) (hfov : IMod<float>) =
+        aset {
+            for p in points |> ASet.ofAList do   
+                let scaledSize = 
+                        computeInvariantScale view near (Mod.constant p) size hfov //(Mod.constant 0.05)
+                yield mkDotISg color scaledSize (Mod.constant p)
+        } 
+        |> Sg.set
+        |> Sg.effect [
+            toEffect <| Shader.screenSpaceScale
+            toEffect <| Shader.stableTrafo
+            toEffect <| DefaultSurfaces.vertexColor          
+        ]
     let getDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) =
         aset {
             let! geometry = geometry
@@ -316,7 +330,21 @@ module Sg =
               |_-> yield dots points size color    
         } |> Sg.set
 
-        
+    let getScaledDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) (view : IMod<CameraView>) (near : IMod<float>) (hfov : IMod<float>) =
+        aset {
+            
+            let! geometry = geometry
+            match geometry with
+              | Geometry.Point -> match points|> AList.toList |> List.tryHead with
+                                    | Some p -> 
+                                        let scaledSize = 
+                                            computeInvariantScale view near (Mod.constant p) size hfov 
+                                        yield dot (Mod.constant p) scaledSize color
+                                    | _-> yield Sg.empty
+              |_-> yield scaledDots points size color view near hfov 
+        } |> Sg.set
+
+    //## TEXT ##
         
     ///probably move to a shader
     let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) =
@@ -349,8 +377,7 @@ module Sg =
               let! modelt = modelTrafo
       
               return screenAligned v.Forward v.Up modelt
-          }
-      let bounds : Border2d = { left = 0.1; right = 0.1; top = 0.1; bottom = 0.1 }
+          }      
       
       Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
           |> Sg.noEvents
@@ -449,7 +476,7 @@ module Lenses =
 
 module Shader =
   
-  open Aardvark.SceneGraph.Opc.Shader
+  open Aardvark.GeoSpatial.Opc.Shader
   
   open Aardvark.Base
   open Aardvark.Base.Incremental
@@ -586,6 +613,21 @@ module Shader =
             else 
                 (startColor + (hStepSize * ((float)(pos1))))
         currColorH
+
+  let private diffuseSampler =
+      sampler2d {
+          texture uniform?DiffuseColorTexture          
+          filter Filter.Anisotropic
+          maxAnisotropy 16
+          addressU WrapMode.Wrap
+          addressV WrapMode.Wrap
+      }
+
+  let improvedDiffuseTexture (v : Effects.Vertex) =
+    fragment {
+        let texColor = diffuseSampler.Sample(v.tc,-1.0)
+        return texColor
+    }
             
   let falseColorLegend2 (v : Vertex) =
       fragment {    
@@ -664,50 +706,128 @@ module Shader =
         else
             return v.c
     }
+  
+  type FootPrintVertex =
+        {
+            [<Position>]                pos     : V4d            
+            [<WorldPosition>]           wp      : V4d
+            [<TexCoord>]                tc      : V2d
+            [<Color>]                   c       : V4d
+            [<Normal>]                  n       : V3d
+            [<SourceVertexIndex>]       sv      : int
+            [<Semantic("Scalar")>]      scalar  : float
+            [<Semantic("LightDir")>]    ldir    : V3d
+            [<Semantic("Tex0")>]        tc0     : V4d
 
-  let thickLine2 (line : Line<ThickLineVertex>) =
-     triangle {
-         let offset : float = uniform?depthOffset
-         let t = uniform.LineWidth                                 
-                      
-         let sizeF = V3d(float uniform.ViewportSize.X, float uniform.ViewportSize.Y, 1.0)
-         
-         let pp0 = line.P0.pos
-         let pp1 = line.P1.pos
-         let middle = (pp0 + pp1) / 2.0
-         let viewVec = ((middle.XYZ - uniform.CameraLocation).Normalized)
-         let viewVec = uniform.ProjTrafoInv * V4d(viewVec.X, viewVec.Y, viewVec.Z, 1.0)
+        }
 
-         let pp0 = pp0 + viewVec * offset
-         let pp1 = pp1 + viewVec * offset
-                                         
-         //clipping
-         let pp0 = if pp0.Z < 0.0 then (Lerp pp1 pp0 (pp1.Z / (pp1.Z - pp0.Z))) else pp0
-         let pp1 = if pp1.Z < 0.0 then (Lerp pp0 pp1 (pp0.Z / (pp0.Z - pp1.Z))) else pp1            
-                 
-         let p0 = pp0.XYZ / pp0.W
-         let p1 = pp1.XYZ / pp1.W
-                    
-         let fwp = (p1.XYZ - p0.XYZ) * sizeF
-    
-         let fw = V3d(fwp.XY * 2.0, 0.0) |> Vec.normalize
-         let r = V3d(-fw.Y, fw.X, 0.0) / sizeF
-         let d = fw / sizeF
+      
+  let private footprintmap =
+        sampler2d {
+            texture uniform?FootPrintTexture
+            filter Filter.MinMagMipLinear
+            borderColor C4f.Black
+            addressU WrapMode.Border
+            addressV WrapMode.Border
+            addressW WrapMode.Border
+  }
 
-        // let k = (d.Normalized |> Vec.cross r.Normalized).Normalized * offset      
+  let footprintV (v : FootPrintVertex) =
+        vertex {
+            let vp = uniform.ModelViewTrafo * v.pos
+            let p = uniform.ProjTrafo * v.pos
+            
+            let instrumentMatrix    : M44d   = uniform?instrumentMVP
+            let projectionMatrix    : M44d   = uniform?projMVP
+            let instrumentView      : M44d   = uniform?instViewMVP
+            let globalToLocal       : V3d   = uniform?globalToLocal
+           
+            //let test = forwardMatrix * v.wp |> Vec.normalize
+            let test = v.wp - V4d(globalToLocal, 0.0) |> Vec.normalize
+            let v1 = instrumentView * test |> Vec.normalize
+            let v2 = projectionMatrix * v1 |> Vec.normalize
+            //let tt = instrumentMatrix * test
+            return { v with tc0 = v2 ; sv = 0 } //v.wp
+        }
 
-         let p00 = p0.XYZ - r * t - d * t //+ k
-         let p10 = p0.XYZ + r * t - d * t //+ k
-         let p11 = p1.XYZ + r * t + d * t //+ k
-         let p01 = p1.XYZ - r * t + d * t //+ k
-    
-         let rel = t / (Vec.length fwp)
-    
-         yield { line.P0 with pos = V4d(p00, 1.0); lc = V2d(-1.0, -rel); w = rel }
-         yield { line.P0 with pos = V4d(p10, 1.0); lc = V2d( 1.0, -rel); w = rel }
-         yield { line.P1 with pos = V4d(p01, 1.0); lc = V2d(-1.0, 1.0 + rel); w = rel }
-         yield { line.P1 with pos = V4d(p11, 1.0); lc = V2d( 1.0, 1.0 + rel); w = rel }
-     }
+  let footprintV2 (v : FootPrintVertex) =
+      vertex {
+          let instrumentMatrix    : M44d   = uniform?instrumentMVP          
+          let vp = uniform.ModelViewTrafo * v.pos
+          let wp = uniform.ModelTrafo * v.pos
+
+          return { 
+              v with
+                  pos  = uniform.ProjTrafo * vp
+                  wp   = wp
+                  n    = transformNormal v.n
+                  ldir = V3d.Zero - vp.XYZ |> Vec.normalize
+                  tc0  = instrumentMatrix * v.pos                  
+
+          } 
+      } 
+
+  //let footPrintF (v : FootPrintVertex) =
+  //    fragment {           
+  //        if uniform?footprintVisible then
+  //          let col = v.c * 0.7 //V4d(1.0, 0.0, 0.0, 1.0)
+  //          let t = v.tc0.XY / v.tc0.W
+  //          let c = 
+  //              if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
+  //                 v.c //(v.c * 0.7) //darkened
+  //              else
+  //                 col 
+  //          if (v.tc0.Z <= 0.0) then
+  //              return col
+  //          else
+  //              return c 
+             
+  //        else
+  //          return v.c
+  //    }
+  let footPrintF (v : FootPrintVertex) =
+      fragment {           
+          if uniform?footprintVisible then
+            let outside = v.c * 0.7 
+            let t = v.tc0.XY / v.tc0.W
+            let c = 
+                if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
+                   v.c 
+                elif t.X > -1.01 && t.X < 1.01 && t.Y > -1.01 && t.Y < 1.01 then
+                   v.c * V4d(1.0, 0.0, 0.0, 1.0)
+                else
+                   outside 
+
+            if (v.tc0.Z <= 0.0) then
+                return outside
+            else
+                return c 
+             
+          else
+            return v.c
+      }
+
+  let footPrintF2 (v : FootPrintVertex) =
+      fragment {           
+          if uniform?footprintVisible then
+            //let col = v.c * V4d(1.0, 0.0, 0.0, 1.0)
+            let proTex0 = v.tc0.XY / v.tc0.W
+            let c = footprintmap.Sample(proTex0)
+            let col = 
+                if (c.W <= 0.50) then
+                    (v.c * 0.7)
+                elif (c.W <= 0.999) then
+                    v.c * V4d(1.0, 0.0, 0.0, 1.0)
+                else
+                    v.c
+           
+            if (v.tc0.Z <= 0.0) then
+                return (v.c * 0.7)
+            else
+                return col 
+          else
+            return v.c
+      }
 
 module PRo3DNumeric = 
     open Aardvark.Base.Incremental

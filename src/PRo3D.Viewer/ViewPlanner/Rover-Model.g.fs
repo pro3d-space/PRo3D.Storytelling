@@ -384,6 +384,143 @@ module Mutable =
                 }
     
     
+    type MSimulatedViewData(__initial : PRo3d.SimulatedViewData) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.SimulatedViewData> = Aardvark.Base.Incremental.EqModRef<PRo3d.SimulatedViewData>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.SimulatedViewData>
+        let _fileInfo = ResetMod.Create(__initial.fileInfo)
+        let _calibration = ResetMod.Create(__initial.calibration)
+        let _acquisition = ResetMod.Create(__initial.acquisition)
+        
+        member x.fileInfo = _fileInfo :> IMod<_>
+        member x.calibration = _calibration :> IMod<_>
+        member x.acquisition = _acquisition :> IMod<_>
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3d.SimulatedViewData) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                ResetMod.Update(_fileInfo,v.fileInfo)
+                ResetMod.Update(_calibration,v.calibration)
+                ResetMod.Update(_acquisition,v.acquisition)
+                
+        
+        static member Create(__initial : PRo3d.SimulatedViewData) : MSimulatedViewData = MSimulatedViewData(__initial)
+        static member Update(m : MSimulatedViewData, v : PRo3d.SimulatedViewData) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3d.SimulatedViewData> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module SimulatedViewData =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let fileInfo =
+                { new Lens<PRo3d.SimulatedViewData, PRo3d.FileInfo>() with
+                    override x.Get(r) = r.fileInfo
+                    override x.Set(r,v) = { r with fileInfo = v }
+                    override x.Update(r,f) = { r with fileInfo = f r.fileInfo }
+                }
+            let calibration =
+                { new Lens<PRo3d.SimulatedViewData, PRo3d.Calibration>() with
+                    override x.Get(r) = r.calibration
+                    override x.Set(r,v) = { r with calibration = v }
+                    override x.Update(r,f) = { r with calibration = f r.calibration }
+                }
+            let acquisition =
+                { new Lens<PRo3d.SimulatedViewData, PRo3d.Acquisition>() with
+                    override x.Get(r) = r.acquisition
+                    override x.Set(r,v) = { r with acquisition = v }
+                    override x.Update(r,f) = { r with acquisition = f r.acquisition }
+                }
+    
+    
+    type MFootPrint(__initial : PRo3d.FootPrint) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.FootPrint> = Aardvark.Base.Incremental.EqModRef<PRo3d.FootPrint>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.FootPrint>
+        let _vpId = MOption.Create(__initial.vpId)
+        let _isVisible = ResetMod.Create(__initial.isVisible)
+        let _projectionMatrix = ResetMod.Create(__initial.projectionMatrix)
+        let _instViewMatrix = ResetMod.Create(__initial.instViewMatrix)
+        let _projTex = ResetMod.Create(__initial.projTex)
+        let _globalToLocalPos = ResetMod.Create(__initial.globalToLocalPos)
+        
+        member x.vpId = _vpId :> IMod<_>
+        member x.isVisible = _isVisible :> IMod<_>
+        member x.projectionMatrix = _projectionMatrix :> IMod<_>
+        member x.instViewMatrix = _instViewMatrix :> IMod<_>
+        member x.projTex = _projTex :> IMod<_>
+        member x.globalToLocalPos = _globalToLocalPos :> IMod<_>
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3d.FootPrint) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                MOption.Update(_vpId, v.vpId)
+                ResetMod.Update(_isVisible,v.isVisible)
+                ResetMod.Update(_projectionMatrix,v.projectionMatrix)
+                ResetMod.Update(_instViewMatrix,v.instViewMatrix)
+                ResetMod.Update(_projTex,v.projTex)
+                ResetMod.Update(_globalToLocalPos,v.globalToLocalPos)
+                
+        
+        static member Create(__initial : PRo3d.FootPrint) : MFootPrint = MFootPrint(__initial)
+        static member Update(m : MFootPrint, v : PRo3d.FootPrint) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3d.FootPrint> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module FootPrint =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let vpId =
+                { new Lens<PRo3d.FootPrint, Microsoft.FSharp.Core.Option<System.Guid>>() with
+                    override x.Get(r) = r.vpId
+                    override x.Set(r,v) = { r with vpId = v }
+                    override x.Update(r,f) = { r with vpId = f r.vpId }
+                }
+            let isVisible =
+                { new Lens<PRo3d.FootPrint, System.Boolean>() with
+                    override x.Get(r) = r.isVisible
+                    override x.Set(r,v) = { r with isVisible = v }
+                    override x.Update(r,f) = { r with isVisible = f r.isVisible }
+                }
+            let projectionMatrix =
+                { new Lens<PRo3d.FootPrint, Aardvark.Base.M44d>() with
+                    override x.Get(r) = r.projectionMatrix
+                    override x.Set(r,v) = { r with projectionMatrix = v }
+                    override x.Update(r,f) = { r with projectionMatrix = f r.projectionMatrix }
+                }
+            let instViewMatrix =
+                { new Lens<PRo3d.FootPrint, Aardvark.Base.M44d>() with
+                    override x.Get(r) = r.instViewMatrix
+                    override x.Set(r,v) = { r with instViewMatrix = v }
+                    override x.Update(r,f) = { r with instViewMatrix = f r.instViewMatrix }
+                }
+            let projTex =
+                { new Lens<PRo3d.FootPrint, Aardvark.Base.ITexture>() with
+                    override x.Get(r) = r.projTex
+                    override x.Set(r,v) = { r with projTex = v }
+                    override x.Update(r,f) = { r with projTex = f r.projTex }
+                }
+            let globalToLocalPos =
+                { new Lens<PRo3d.FootPrint, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.globalToLocalPos
+                    override x.Set(r,v) = { r with globalToLocalPos = v }
+                    override x.Update(r,f) = { r with globalToLocalPos = f r.globalToLocalPos }
+                }
+    
+    
     type MViewPlan(__initial : PRo3d.ViewPlan) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3d.ViewPlan> = Aardvark.Base.Incremental.EqModRef<PRo3d.ViewPlan>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3d.ViewPlan>

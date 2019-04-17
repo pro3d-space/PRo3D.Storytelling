@@ -32,6 +32,7 @@ open PRo3D.Groups
 open System.Text
 open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis.Opc
+open Aardvark.GeoSpatial.Opc
 
 open Aardium
 open System.Threading
@@ -63,16 +64,17 @@ type License = {
   institution : string
 }
 
-let viewerVersion       = "2.9.4-prerelease1"
+let viewerVersion       = "2.9.5-prerelease2"
 let mutable licenseText = ""
 let catchDomainErrors   = false
 let licenseCheck        = false
-let licPath             = @".\pro3d.lic"
+let doBuildLicense      = false
+let licPath             = @".\license\pro3d.lic"
 
 let buildLicense(time) = 
   
-  let userName    = "Elyse Allender"
-  let institution = "St. Andrews"
+  let userName    = "Isa Barbarisi"  
+  let institution = "ESAC"
 
   let mutable createAKey = new SKGL.Generate()
   createAKey.secretPhase <- (userName + institution + viewerVersion).GetHashCode().ToString()
@@ -129,7 +131,8 @@ let main argv =
     Aardvark.Rendering.GL.RuntimeConfig.SupressSparseBuffers <- true
     app.ShaderCachePath <- None
 
-    //buildLicense(365)
+    if doBuildLicense then
+      buildLicense(365)      
         
     Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.surfaceModelPickler)
     Serialization.registry.RegisterFactory (fun _ -> KdTrees.level0KdTreePickler)

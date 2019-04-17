@@ -198,6 +198,7 @@ module Surface =
         | OpenFolder                of Guid
         | RebuildKdTrees            of Guid
         | ToggleActiveFlag          of Guid
+        | ChangeImportDirectory     of Guid*string
         | GroupsMessage             of Groups.Action  
         //| PickObject                of V3d
         | PlaceSurface              of V3d
@@ -395,6 +396,12 @@ module Surface =
             | Some (Leaf.Surfaces s) ->
               { s with isActive = not s.isActive } |> SurfaceModel.updateSingleSurface' model
             | _ -> model
+        | ChangeImportDirectory (id, dir) ->
+          let surf = id |> SurfaceModel.getSurface model
+          match surf with
+            | Some (Leaf.Surfaces s) ->
+              { s with importPath = dir } |> SurfaceModel.updateSingleSurface' model
+            | _ -> model          
         | GroupsMessage msg -> 
             let groups = Groups.update model.surfaces msg
 
@@ -626,14 +633,30 @@ module Surface =
                              yield i [clazz "folder icon"                                                
                                       onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "Open Folder"
 
-                             yield i [
-                               clazz "microchip icon"
-                               onClick (fun _ -> RebuildKdTrees key)
-                             ][] |> UI.wrapToolTip "process kdtrees"
+                             //yield i [
+                             //  clazz "microchip icon"
+                             //  onClick (fun _ -> RebuildKdTrees key)
+                             //][] |> UI.wrapToolTip "process kdtrees"
 
                              yield Incremental.i (absRelIcons) (AList.empty)
                              yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
                              yield GuiEx.iconCheckBox s.isActive (ToggleActiveFlag key) |> UI.wrapToolTip "Toggle IsActive"
+
+                             let! path = s.importPath
+                             //
+                             //  yield i 
+                             if (Directory.Exists path) |> not then
+                               yield i [
+                                 clazz "exclamation red icon"
+                                 //Dialogs.onChooseDirectory key ChangeImportDirectory;
+                                 ////clientEvent "onclick" ("""
+                                 ////   var files = parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory','multiSelections']});
+                                 ////   console.log(files);
+                                 ////   parent.aardvark.processEvent('__ID__', 'onchoose', files);
+                                 ////   """)
+                                 //clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory','multiSelections']}));")
+                                 ]
+                                 []
                          } 
                      )                                     
                  ]
@@ -755,20 +778,27 @@ module Surface =
                         | _ -> return div[][]                                                             
                 | None   -> return div[][] 
         }
+    
+      //failwith ""
 
     let viewSurfaceProperties (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
+            let flat = model.surfaces.flat
             
             match guid with
-                | Some i -> 
-
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
-                                       
-                    return SurfaceProperties.view x |> UI.map SurfacePropertiesMessage
-                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map SurfacePropertiesMessage 
+              | Some i ->
+                let! exists = flat |> AMap.keys |> ASet.contains i
+                if exists then
+                  let leaf = flat |> AMap.find i |> Mod.bind(id)
+                  let! surf = leaf 
+                  let x = match surf with | MSurfaces s -> s | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith                                     
+                  return SurfaceProperties.view x |> UI.map SurfacePropertiesMessage
+                else
+                  return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map SurfacePropertiesMessage 
+                  
+              
+              | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map SurfacePropertiesMessage 
         }                          
         
     let surfaceGroupProperties (model:MSurfaceModel) =
@@ -779,30 +809,37 @@ module Surface =
     let viewTranslationTools (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
-            
+            let empty = div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map TranslationMessage 
+
             match guid with
-                | Some i -> 
-                    //let! sg = model.sgSurfaces |> AMap.find i 
-                    //return TranslationApp.UI.view sg.transformation |> UI.map TranslationMessage
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
-                    return TranslationApp.UI.view x.transformation |> UI.map TranslationMessage
-                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map TranslationMessage 
+              | Some i -> 
+                let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                if exists then
+                  let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                  let! surf = leaf 
+                  let x = match surf with | MSurfaces s -> s | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                  return TranslationApp.UI.view x.transformation |> UI.map TranslationMessage
+                else
+                  return empty
+              | None -> return empty
         }                          
 
     let viewColorCorrectionTools (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
+            let empty = div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ColorCorrectionMessage 
             
             match guid with
                 | Some i -> 
-
+                  let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                  if exists then
                     let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
                     let! surf = leaf 
-                    let colorCorrection = match surf with | MSurfaces s -> s.colorCorrection | _ -> failwith "wrong type"
+                    let colorCorrection = match surf with | MSurfaces s -> s.colorCorrection | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
                     return ColorCorrectionProperties.view colorCorrection |> UI.map ColorCorrectionMessage
-                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ColorCorrectionMessage 
+                  else 
+                    return empty
+                | None -> return empty 
         }                          
 
     let viewColorLegendTools (model:MSurfaceModel) =
@@ -811,18 +848,21 @@ module Surface =
             
             match guid with
                 | Some i -> 
-
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let scalar = 
-                      match surf with 
-                       | MSurfaces s -> s.selectedScalar 
-                       | _ -> failwith "wrong type"
-
-                    let! scalar = scalar
-                    match scalar with
-                        | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
-                        | None -> return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
+                    let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                    if exists then
+                      let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                      let! surf = leaf 
+                      let scalar = 
+                        match surf with 
+                         | MSurfaces s -> s.selectedScalar 
+                         | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                      
+                      let! scalar = scalar
+                      match scalar with
+                          | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
+                          | None -> return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
+                    else
+                      return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
                                   
                 | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ScalarsColorLegendMessage 
         }                          
@@ -833,14 +873,17 @@ module Surface =
             
             match guid with
                 | Some i -> 
-
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> failwith "wrong type"
-                    let! scalar = scalar
-                    match scalar with
-                        | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
-                        | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
+                    let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                    if exists then
+                      let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                      let! surf = leaf 
+                      let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                      let! scalar = scalar
+                      match scalar with
+                          | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
+                          | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
+                    else
+                      yield div[ style "font-style:italic"][ text "no scalar selected" ]
                                   
                 | None -> yield div[ style "font-style:italic"][ text "no surface selected" ]
         }  

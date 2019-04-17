@@ -9,6 +9,7 @@ open Aardvark.SceneGraph.SgPrimitives
 open Aardvark.Base.Rendering
 
 open System
+open System.Diagnostics
 open System.IO
 
 open PRo3d
@@ -36,7 +37,12 @@ module ViewPlan =
         | ChangeAngle      of string * PRo3DNumeric.Action
         | ChangeFocal      of string * Numeric.Action
         | SetVPName        of string
-             
+        | ToggleFootprint
+        | SaveFootPrint
+        | OpenFootprintFolder
+    
+    
+    
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =      
       match path with
         | Some _ ->
@@ -241,26 +247,36 @@ module ViewPlan =
         vps |> HSet.filter (fun x -> x.id <> id)   
     
     let transformExtrinsics (vp:ViewPlan) (ex:Extrinsics) =
-        { ex with position = vp.roverTrafo.Forward.TransformPos ex.position;
-                  camLookAt = vp.roverTrafo.Forward.TransformDir ex.camLookAt;
-                  camUp = vp.roverTrafo.Forward.TransformDir ex.camUp
-                   }
+      { 
+        ex with 
+          position  = vp.roverTrafo.Forward.TransformPos ex.position
+          camLookAt = vp.roverTrafo.Forward.TransformDir ex.camLookAt
+          camUp     = vp.roverTrafo.Forward.TransformDir ex.camUp
+      }
 
-    let updateInstrumentCam (vp:ViewPlan) (model:ViewPlanModel) =
+    let updateInstrumentCam (vp:ViewPlan) (model:ViewPlanModel) (fp:FootPrint) : (FootPrint * ViewPlanModel)=
         match vp.selectedInstrument with
-            | Some i -> let ex = transformExtrinsics vp i.extrinsics
-                        let frust = model.instrumentFrustum
-                        let hfov = i.intrinsics.horizontalFieldOfView
-                        let resh = float(i.intrinsics.horizontalResolution)
-                        let resv = float(i.intrinsics.verticalResolution)
-                        let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far (resh/resv)
-                        {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt ex.position (ex.position + ex.camLookAt) ex.camUp };
-                                    instrumentFrustum = ifrustum} //CameraController.initial
-                        //{ model with instrumentCam = cam } 
-            | _-> {model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI };
+            | Some i -> 
+              let extr     = transformExtrinsics vp i.extrinsics
+              let frust    = model.instrumentFrustum
+              let hfov     = i.intrinsics.horizontalFieldOfView
+              let resh     = float(i.intrinsics.horizontalResolution)
+              let resv     = float(i.intrinsics.verticalResolution)
+              let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far (resh/resv)
+              let m' = 
+                {model with 
+                  instrumentCam = {
+                    model.instrumentCam with 
+                      view = CameraView.look extr.position extr.camLookAt.Normalized extr.camUp.Normalized };
+                  instrumentFrustum = ifrustum}
+              Log.line "%A" model.instrumentCam.view.ViewTrafo
+              let f = FootPrint.updateFootprint i extr m' vp.position
+              f,m'
+              //{ model with instrumentCam = cam } 
+            | _-> fp,{model with instrumentCam = {model.instrumentCam with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI };
                                     instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0 }
         
-    let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan)=
+    let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan) (fp:FootPrint)  : ('a*ViewPlanModel)=
         let r = roverModel.rovers  |> HMap.find vp.rover.id
         let i = match vp.selectedInstrument with
                     | Some i -> Some (r.instruments |> HMap.find i.id)
@@ -268,12 +284,12 @@ module ViewPlan =
         let vp' = { vp with rover = r; selectedInstrument = i }  
         let m'= { model with selectedViewPlan = Some vp'; 
                              viewPlans = model.viewPlans |> HSet.map(fun x -> if x.id = vp.id then vp' else x) }
-        let m'' = updateInstrumentCam vp' m'
-        { m'' with roverModel = roverModel }
+        let fp', m'' = updateInstrumentCam vp' m' fp
+        fp', { m'' with roverModel = roverModel }
 
     //let update (model : ViewPlanModel) (camState:CameraControllerState) (action : Action) =
     let update (model : ViewPlanModel) (action : Action)
-               (navigation : Lens<'a,NavigationModel>) (outerModel:'a) : ('a*ViewPlanModel) = 
+               (navigation : Lens<'a,NavigationModel>) (footprint : Lens<'a,FootPrint>) (scenepath:Option<string>) (outerModel:'a) : ('a*ViewPlanModel) = 
         printfn "action: %A" action
         match action with
             | AddPoint (p,ref,kdTree,surfaceModel) ->
@@ -290,13 +306,19 @@ module ViewPlan =
                     | None -> outerModel, model
             | SelectViewPlan id ->
                 let vp = model.viewPlans |> Seq.tryFind(fun x -> x.id = id)
-                let vp', m =
+                let fp = (footprint.Get outerModel)
+                let vp', m , om =
                     match vp, model.selectedViewPlan with
-                        | Some a, Some b -> if a.id = b.id then None, model else Some a, (updateInstrumentCam a model)
-                        | Some a, None  -> Some a, (updateInstrumentCam a model)
-                        | None, _        -> None, model
+                        | Some a, Some b -> if a.id = b.id then None, model, outerModel
+                                            else let fp', m' = updateInstrumentCam a model fp
+                                                 let newOuterModel = footprint.Set(outerModel, fp')
+                                                 Some a, m', newOuterModel
+                        | Some a, None  -> let fp', m' = updateInstrumentCam a model fp
+                                           let newOuterModel = footprint.Set(outerModel, fp')
+                                           Some a, m', newOuterModel
+                        | None, _        -> None, model, outerModel
                 
-                outerModel, { m with selectedViewPlan = vp' }
+                om, { m with selectedViewPlan = vp' }
             | FlyToViewPlan id -> 
                 let vp = model.viewPlans |> Seq.tryFind(fun x -> x.id = id)
                 match vp with
@@ -320,9 +342,12 @@ module ViewPlan =
             | SelectInstrument i -> 
                 match model.selectedViewPlan with
                     | Some vp -> let newVp = { vp with selectedInstrument = i }
-                                 let m' = updateInstrumentCam newVp model
-                                 outerModel, { m' with selectedViewPlan = Some newVp; 
-                                                    viewPlans = model.viewPlans 
+                                 let fp = (footprint.Get outerModel)
+                                 let fp', m' = updateInstrumentCam newVp model fp
+                                 let newOuterModel = footprint.Set(outerModel, fp')
+
+                                 newOuterModel, { m' with selectedViewPlan = Some newVp; 
+                                                      viewPlans = model.viewPlans 
                                                                     |> HSet.map(fun x -> if x.id = vp.id then 
                                                                                             newVp 
                                                                                             else x) }
@@ -350,10 +375,11 @@ module ViewPlan =
                                                                                     axisId = ax'.id ; 
                                                                                     angle = ax'.angle.value } 
                                                                                     model.roverModel
-                                 
-                                let m' = updateRovers model roverModel' vp'
+                                let fp = (footprint.Get outerModel)
+                                let fp', m' = updateRovers model roverModel' vp' fp
+                                let newOuterModel = footprint.Set(outerModel, fp')
                                                             
-                                outerModel, m'
+                                newOuterModel, m'
                             | None -> outerModel, model
                                       
                     | None -> outerModel, model        
@@ -375,7 +401,11 @@ module ViewPlan =
                                                                              instrumentId = inst'.id ; 
                                                                              focal = inst'.focal.value } 
                                                                              model.roverModel
-                            outerModel, updateRovers model roverModel' vp'
+                            let fp = (footprint.Get outerModel)
+                            let fp', m' = updateRovers model roverModel' vp' fp
+                            let newOuterModel = footprint.Set(outerModel, fp')
+                            
+                            newOuterModel, m'
                         | None -> outerModel, model                                       
                     | None -> outerModel, model 
             | SetVPName t -> 
@@ -387,7 +417,22 @@ module ViewPlan =
                                                                                                 vp' 
                                                                                                 else x) }              
                     | _ -> outerModel, model
-                
+             | ToggleFootprint ->   
+                        let fp = (footprint.Get outerModel)
+                        let fp' = { fp with isVisible = not fp.isVisible }
+                        let newOuterModel = footprint.Set(outerModel, fp')
+                        newOuterModel, model
+             | SaveFootPrint -> match scenepath with
+                                    | Some sp -> outerModel, (FootPrint.createFootprintData model sp)
+                                    | None -> outerModel, model
+             | OpenFootprintFolder ->
+                match scenepath with
+                    | Some sp -> 
+                        let fpPath = FootPrint.getFootprintsPath sp
+                        if (Directory.Exists fpPath) then
+                                Process.Start("explorer.exe", fpPath) |> ignore
+                        outerModel, model
+                    | None -> outerModel, model
             //| _ -> model
 
     module Sg =     
@@ -676,6 +721,20 @@ module ViewPlan =
                       | Some i -> instrumentProperties i
                       | None ->   div[][])
 
+        let viewFootprintProperties (fpVisible:IMod<bool>) (m : MViewPlan) = 
+            m.selectedInstrument 
+                |> Mod.map(fun x ->
+                    match x with 
+                      | Some i -> require GuiEx.semui (
+                                    Html.table [  
+                                        Html.row "show footprint:"  [GuiEx.iconCheckBox fpVisible ToggleFootprint]
+                                        Html.row "export footprint:"  [button [clazz "ui button tiny"; onClick (fun _ -> SaveFootPrint )][]]
+                                        Html.row "open footprint folder:"  [button [clazz "ui button tiny"; onClick (fun _ -> OpenFootprintFolder )][]]
+                                    ]
+                                )
+                      | None ->   div[][])
+
+
         //let instrumentsDd (r:MRover) (m : MViewPlan) = 
         //    UI.dropDown'' (r.instruments |> RoverApp.mapTolist) m.selectedInstrument (fun x -> SelectInstrument (x |> Option.map(fun y -> y.Current |> Mod.force))) (fun x -> (x.id |> Mod.force) )   
         
@@ -710,7 +769,7 @@ module ViewPlan =
 
             }
 
-        let viewRoverProperties' (r : MRover) (m : MViewPlan) =
+        let viewRoverProperties' (r : MRover) (m : MViewPlan) (fpVisible:IMod<bool>) =
             require GuiEx.semui (
                 Html.table [
                      Html.row "Change VPName:"[ Html.SemUi.textBox m.name SetVPName ]
@@ -722,7 +781,11 @@ module ViewPlan =
                      Html.row "Axes:" [   
                         Incremental.div AttributeMap.empty (viewAxesList r m)
                      ]
-                ]
+                     Html.row "Footprint:" [   
+                        Incremental.div AttributeMap.empty (AList.ofModSingle ( viewFootprintProperties fpVisible m ))
+                     ]
+                     ]
+                
             )
 
         let viewSelectRover (m : MRoverModel) : DomNode<RoverApp.Action> =
@@ -735,11 +798,11 @@ module ViewPlan =
             ]
 
 
-        let viewRoverProperties lifter (model : MViewPlanModel) = 
+        let viewRoverProperties lifter (fpVisible:IMod<bool>) (model : MViewPlanModel) = 
             model.selectedViewPlan 
                 |> Mod.map(fun x ->
                     match x with 
-                      | Some x -> viewRoverProperties' x.rover x |> UI.map lifter
+                      | Some x -> viewRoverProperties' x.rover x fpVisible |> UI.map lifter
                       | None ->   div[][] |> UI.map lifter)
 
         let viewViewPlansUI (model:MViewPlanModel) = 

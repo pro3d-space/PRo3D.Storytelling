@@ -16,6 +16,7 @@ open PRo3D
 module Groups =    
     open Aardvark.Base.Geometry.BvhTree   
     open Aardvark.Base.HSet
+    open PRo3D.Versioned
        
     type Action =
         | ActiveGroup           of Guid*list<Index>*string
@@ -116,23 +117,9 @@ module Groups =
 
         (go m.rootGroup)
           |> PList.toList
-          |> HMap.ofList
-
-    let tryLoadGroups (path:string) =
-      try
-        Some (Serialization.loadAs<PRo3D.Groups.GroupsModel> path)
-        //Some (Serialization.loadJsonAs<PRo3D.Groups.GroupsModel> path)
-      with _ ->
-        Log.error "[loadGroups:] couldn't load %s" path
-        None     
+          |> HMap.ofList    
         
-    let tryLoadAnnotations (path:string) =
-      try
-        Some (Serialization.loadAs<PRo3D.Groups.saveAnnotations> path)
-        //Some (Serialization.loadJsonAs<PRo3D.Groups.saveAnnotations> path)
-      with _ ->
-        Log.error "[loadAnnotations:] couldn't load %s" path
-        None        
+     
     
     let updateActiveGroup (f : Node -> Node) (m : GroupsModel) =
         let root = updateNodeAt m.activeGroup.path f m.rootGroup        
@@ -296,6 +283,9 @@ module Groups =
                 { model with rootGroup = updateNodeAt p func model.rootGroup }
             | RemoveGroup p -> 
 
+                let node = 
+                    model.rootGroup 
+                      |> getNode p
                 //delete from flat
                 let flat' = 
                     model.rootGroup 
@@ -314,7 +304,13 @@ module Groups =
                 let selection = checkSelection m'
                 let last = checkLastSelected m'
 
-                { m' with selectedLeaves = selection ; singleSelectLeaf = last }
+                // update active group (use parent group)
+                let newSelection = {
+                    id   = m'.rootGroup.key
+                    path = list.Empty
+                    name = m'.rootGroup.name}
+               
+                { m' with selectedLeaves = selection ; singleSelectLeaf = last; activeGroup = newSelection; lastSelectedItem = SelectedItem.Group }
 
             | AddChildren (p,cs) ->
                 failwith "addchildren"
@@ -456,9 +452,12 @@ module Groups =
             let! selected = model.singleSelectLeaf
             match selected with
                 | Some guid -> 
-                    let item = 
+                    let! exists = model.flat |> AMap.keys |> ASet.contains guid
+                    if exists then
+                      let item = 
                         model.flat |> AMap.find guid |> Mod.bind(id) |> Mod.force
-                    return view item |> UI.map lifter
+                      return view item |> UI.map lifter
+                    else return div[][] |> UI.map lifter
                 | None ->
                     return div[][] |> UI.map lifter
         }
