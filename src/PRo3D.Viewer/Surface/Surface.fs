@@ -16,6 +16,7 @@ open Aardvark.VRVis.Opc
 open Aardvark.UI.Operators
 open Aardvark.UI.Trafos  
 
+open PRo3D.Base
 open PRo3D
 open PRo3D.Groups
 
@@ -95,7 +96,7 @@ module Surface =
                           
                           kd // |> PRo3D.Serialization.save kdTreePath // Serialization crashes, maybe use texture converter
                     else
-                        PRo3D.Serialization.loadAs<KdTrees.InCoreKdTree> kdTreePath
+                        Serialization.loadAs<KdTrees.InCoreKdTree> kdTreePath
                       //let t = PRo3D.Serialization.loadAs<KdTrees.Level0KdTree> kdTreePath
                       //match t with
                       //  | KdTrees.Level0KdTree.InCoreKdTree kd -> kd

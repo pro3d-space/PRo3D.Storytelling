@@ -102,10 +102,13 @@ module App =
 
   let getIdQuerySite (ids:list<string>) = 
     let groupString = ids |> String.concat("','")
-    let cql = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
+   // let cql = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
+    let minSol = 751
+    let maxSol = 926
+    let cqlString = sprintf @"(planetDayNumber > %d AND planetDayNumber < %d)" minSol maxSol
+    let cql = [("cql", cqlString)] |> HMap.ofList
     
-
-    (@"https://minerva.eox.at/opensearch/collections/all/json/", HMap.empty)
+    (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
 
   let update (model : Model) (msg : MinervaAction) : Model =
       match msg with
@@ -129,6 +132,17 @@ module App =
         let data = idList |> getIdQuerySite |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
         Log.stop()
 
+        { model with data = data }
+      | SaveFeatureCollection -> 
+        Log.startTimed "[Minerva] saving %d products" model.data.features.Count
+        PRo3D.Base.Serialization.save ".\data.minerva" model.data |> ignore
+        Log.stop()
+        model
+      | LoadFeatureCollection -> 
+        Log.startTimed "[Minerva] loading products"
+        let data = PRo3D.Base.Serialization.loadAs ".\data.minerva"
+        Log.stop()
+        Log.line "[Minerva] found %d entries" model.data.features.Count
         { model with data = data }
       | ConnectVisplore -> 
         if model.vplMessages.store.IsEmpty then
@@ -260,10 +274,15 @@ module App =
         }
 
      div [clazz "ui inverted segment"] [
-       button [clazz "ui button"; onClick (fun _ -> PerformQueries)][text "Load"]
-       button [clazz "ui button"; onClick (fun _ -> Reset)][text "Clear"]
-       button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Export"]
-       button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
+       div [clazz "ui buttons"] [
+         button [clazz "ui button"; onClick (fun _ -> PerformQueries)][text "Query DB"]
+         button [clazz "ui button"; onClick (fun _ -> SaveFeatureCollection)][text "Save"]
+         button [clazz "ui button"; onClick (fun _ -> LoadFeatureCollection)][text "Load"]
+         button [clazz "ui button"; onClick (fun _ -> Reset)][text "Clear"]
+         button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Export"]
+         button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
+       ]
+    
        Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) content  
      ]
 

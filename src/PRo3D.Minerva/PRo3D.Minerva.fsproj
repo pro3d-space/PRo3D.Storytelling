@@ -593,6 +593,29 @@
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1'">
       <ItemGroup>
+        <Reference Include="System.Web">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="RestSharp">
+          <HintPath>..\..\packages\RestSharp\lib\net452\RestSharp.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
+      <ItemGroup>
+        <Reference Include="RestSharp">
+          <HintPath>..\..\packages\RestSharp\lib\netstandard2.0\RestSharp.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1'">
+      <ItemGroup>
         <Reference Include="ICSharpCode.SharpZipLib">
           <HintPath>..\..\packages\SharpZipLib.NETStandard\lib\net45\ICSharpCode.SharpZipLib.dll</HintPath>
           <Private>True</Private>

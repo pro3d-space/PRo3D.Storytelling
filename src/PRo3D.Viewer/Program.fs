@@ -133,7 +133,9 @@ let main argv =
 
     if doBuildLicense then
       buildLicense(365)      
-        
+    
+    Serialization.init()
+
     Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.surfaceModelPickler)
     Serialization.registry.RegisterFactory (fun _ -> KdTrees.level0KdTreePickler)
     Serialization.registry.RegisterFactory (fun _ -> Surfaces.Init.incorePickler)
@@ -200,7 +202,7 @@ let main argv =
         Reflection.assemblyWebPart typeof<EmbeddedRessource>.Assembly
        // prefix "/instrument" >=> MutableApp.toWebPart runtime instrumentApp
         Suave.Files.browseHome        
-    ]
+    ] |> ignore
 
     //WebPart.startServer 4322 [
     //    MutableApp.toWebPart' runtime false instrumentApp        
@@ -242,7 +244,7 @@ let main argv =
         POST >=> path "/shots" >=> mapJson takeScreenshot
         POST >=> path "/platformshots" >=> mapJson takePlatformShot
         Suave.Files.browseHome
-    ] 
+    ] |> ignore
 
     let titlestr = "PRo3D Viewer - " + viewerVersion + " - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH" + licenseText
 

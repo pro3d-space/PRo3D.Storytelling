@@ -113,6 +113,8 @@ type FeatureCollection =
 
 type MinervaAction =
   | PerformQueries
+  | SaveFeatureCollection
+  | LoadFeatureCollection
   | Reset
   | WriteScreenCoordsDebug
   | PerformIdQuery of list<string>

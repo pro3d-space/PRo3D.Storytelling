@@ -13,6 +13,7 @@ open PRo3D.Groups
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Model =
+    open PRo3D.Base
 
     let withScene (s:Scene) (m:Model) =
         { m with scene = s}
@@ -44,6 +45,7 @@ module Model =
 module Scene =
     open Aardvark.UI.Primitives
     open PRo3D.Navigation2
+    open PRo3D.Base
         
     let _surfaceModelLens = Model.Lens.scene |. Scene.Lens.surfacesModel
     let _flatSurfaces = Scene.Lens.surfacesModel |. SurfaceModel.Lens.surfaces |. GroupsModel.Lens.flat

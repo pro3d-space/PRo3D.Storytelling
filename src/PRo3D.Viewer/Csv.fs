@@ -1,7 +1,5 @@
 ﻿namespace PRo3D
 
-open PRo3D.Versioned
-
 module Csv =
     
     open System.IO
@@ -9,6 +7,7 @@ module Csv =
     open Aardvark.UI
     open Aardvark.Base
     open System
+    open PRo3D.Versioned
 
     type ExportDnS = {
         dipAngle      : float
@@ -55,7 +54,7 @@ module Csv =
         z             : double
     }
 
-    let exportAnnotation (lookUp) (a:Annotation') =
+    let exportAnnotation (lookUp) (a: Annotation') =
       
       let results = 
         match a.results with

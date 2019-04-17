@@ -12,6 +12,8 @@ open Aardvark.UI.Primitives
 
 #nowarn "0686"
 
+open PRo3D.Base
+
 module Json = 
   let writeFloat name (floatValue : float)  = 
     json {

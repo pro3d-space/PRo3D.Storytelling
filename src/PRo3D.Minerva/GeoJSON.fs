@@ -10,6 +10,8 @@ module MinervaGeoJSON =
   open System.Net
   open System.Collections.Specialized
   open System.Text
+  open RestSharp
+  open RestSharp.Authenticators
 
   let shout s =
     Log.line "%A" s  
@@ -159,11 +161,25 @@ module MinervaGeoJSON =
     client.UseDefaultCredentials <- true       
     let credentials = System.Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes("minerva:tai8Ies7"))   
     client.Headers.[System.Net.HttpRequestHeader.Authorization] <- "Basic " + credentials   
-    //client.QueryString <- nv |> toNameValue    
+   // client.QueryString <- nv |> toNameValue    
+    
     let response = client.UploadValues(site, nv |> toNameValue)
     let responseString = Encoding.Default.GetString(response)
     responseString
     //client.DownloadString(site)
+
+  let patchThroughRestSharpClient (nv : QueryDict) (site : string)  = 
+    let mutable client = RestClient(site)
+
+    let mutable request = RestRequest(Method.POST)
+    client.Authenticator <- HttpBasicAuthenticator("minerva", "tai8Ies7")
+    request.AddHeader("Postman-Token", "a8d4ee8e-d6c7-4ea4-84c1-e0f5e4c9d9a6") |> ignore
+    request.AddHeader("cache-control", "no-cache") |> ignore
+    request.AddHeader("Authorization", "Basic bWluZXJ2YTp0YWk4SWVzNw==") |> ignore
+    request.AddHeader("content-type", "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW") |> ignore
+    request.AddParameter("multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW", "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"cql\"\r\n\r\n(planetDayNumber>751AND planetDayNumber<903)\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--", ParameterType.RequestBody) |> ignore
+    let mutable response = client.Execute(request)
+    response.Content
 
   let loadFromUrls (sites : list<string * QueryDict>) = 
     let count = sites.Length |> float
@@ -177,11 +193,12 @@ module MinervaGeoJSON =
       |> List.map parseRoot
       |> combineFeatureCollections
 
-    
+
   let loadPaged (site:string) (cql : QueryDict) = 
     
-    let bla = site |> patchThroughWebClient HMap.empty |> JsonValue.Parse
+    let bla = site |> patchThroughWebClient cql |> JsonValue.Parse
     let probs = bla?properties |> parseRootProperties
+    Log.line "[Minerva] found %i entries" probs.totalCount
     let pages =
       [0 .. probs.itemsPerPage .. probs.totalCount]
         |> List.map(fun index -> 

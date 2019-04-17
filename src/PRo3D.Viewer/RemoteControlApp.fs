@@ -4,6 +4,7 @@ open Aardvark.Base
 open Aardvark.UI
 open RemoteControlModel
 open System
+open PRo3D.Base
 
 type ClientStatistics =
     {

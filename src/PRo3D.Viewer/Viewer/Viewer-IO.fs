@@ -14,6 +14,7 @@ open PRo3D.Versioned
 module ViewerIO =  
     open Chiron
     open Aardvark.Rendering.GL
+    open PRo3D.Base
 
     //rover data
     let loadRoverData (m:Model) =

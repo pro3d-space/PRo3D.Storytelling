@@ -17,6 +17,7 @@ open Aardvark.UI.Operators
 open Aardvark.UI.Trafos  
 
 open PRo3D
+open PRo3D.Base
 open PRo3D.Groups
 
 module Sg =

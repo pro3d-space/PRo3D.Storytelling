@@ -11,12 +11,14 @@ open Aardvark.VRVis.Opc
 
 open System
 
+open PRo3D.Base
 open PRo3D
+open PRo3D.Versioned
+open Aardvark.Base.Geometry.BvhTree   
+open Aardvark.Base.HSet
 
 module Groups =    
-    open Aardvark.Base.Geometry.BvhTree   
-    open Aardvark.Base.HSet
-    open PRo3D.Versioned
+    
        
     type Action =
         | ActiveGroup           of Guid*list<Index>*string

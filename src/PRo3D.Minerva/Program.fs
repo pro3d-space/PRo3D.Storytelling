@@ -36,7 +36,7 @@ let main argv =
         MutableApp.toWebPart' runtime false mainApp
       //  Reflection.assemblyWebPart typeof<EmbeddedResources>.Assembly
         Suave.Files.browseHome        
-  ]
+  ] |> ignore
 
   Aardium.run {
         url "http://localhost:1776/"   //"http://localhost:4321/?page=main"

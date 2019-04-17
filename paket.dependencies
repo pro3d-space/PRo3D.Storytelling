@@ -54,7 +54,7 @@ nuget WindowsAPICodePack-Core
 nuget WindowsAPICodePack-ShellExtensions
 
 nuget Chiron ~> 6.3.1
-
+nuget RestSharp  ~> 106.6.9
 
 group Build
 framework: net45

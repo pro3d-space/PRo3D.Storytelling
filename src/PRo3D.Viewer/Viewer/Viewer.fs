@@ -77,6 +77,7 @@ module ViewerApp =
     open Aardvark.Rendering.GL.OpenGl.Pointers
     open Aardvark.UI.Animation    
     open System.Threading
+    open PRo3D.Base
                  
     // surfaces
     let _surfacesModel   = Model.Lens.scene |. Scene.Lens.surfacesModel        
