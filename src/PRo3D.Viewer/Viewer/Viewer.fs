@@ -1108,7 +1108,7 @@ module ViewerApp =
                   body renderViewAttributes [ //[ style "background: #1B1C1E; height:100%; width:100%"] [
                       div [style "background:#000;"] [
                           viewRenderView m
-                          //Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
+                          Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
                           Viewer.Gui.textOverlaysUserFeedback m.scene
                           Viewer.Gui.dnsColorLegend m
                           Viewer.Gui.scalarsColorLegend m]
