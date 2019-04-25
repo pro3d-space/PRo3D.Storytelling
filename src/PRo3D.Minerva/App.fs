@@ -11,6 +11,7 @@ open Aardvark.Base.Rendering
 open PRo3D.Base
 open PRo3D.Minerva.Communication
 open Aardvark.GeoSpatial.Opc
+open System
 
 [<AutoOpen>]
 module MissingInBase = 
@@ -74,6 +75,21 @@ module App =
 
     { features with features = a }
 
+  let instrumentText (instr : Instrument) =
+    match instr with
+    | Instrument.MAHLI        -> "MAHLI"
+    | Instrument.FrontHazcam  -> "FrontHazcam"
+    | Instrument.Mastcam      -> "Mastcam"
+    | Instrument.APXS         -> "APXS"
+    | Instrument.FrontHazcamR -> "FrontHazcamR"
+    | Instrument.FrontHazcamL -> "FrontHazcamL"
+    | Instrument.MastcamR     -> "MastcamR"    
+    | Instrument.MastcamL     -> "MastcamL"
+    | Instrument.ChemLib      -> "ChemLib"    
+    | Instrument.ChemRmi      -> "ChemRmi"
+    | Instrument.NotImplemented -> "not impl. yet"
+    | _ -> instr |> sprintf "unknown instrument identifier %A" |> failwith
+
   let writeLinesToFile path (contents : list<string>) =
         System.IO.File.WriteAllLines(path, contents)
 
@@ -99,18 +115,60 @@ module App =
   //https://minerva.eox.at/opensearch/collections/all/json/?cql=(identifier%20IN%20(%271092ML0047930090500286E01_DRCX%27,%271092MR0047900090600628I01_DRCX%27))
 
   let idTestList = [ "271092ML0047930090500286E01_DRCX"; "1092MR0047900090600628I01_DRCX"]
+   
+   
+  let getInstrumentQuery (filter:QueryFilter) =
+    let mutable cqlStringInst = []
+    if filter.checkMAHLI then cqlStringInst <- (cqlStringInst @ ["MAHLI"])
+    //if filter.checkFrontHazcam then cqlStringInst <- (cqlStringInst @ [instrumentText Instrument.FrontHazcam])
+    //if filter.checkMastcam then cqlStringInst <- (cqlStringInst @ [instrumentText Instrument.Mastcam])
+    if filter.checkAPXS then cqlStringInst <- (cqlStringInst @ ["APXS"])
+    if filter.checkFrontHazcamR then cqlStringInst <- (cqlStringInst @ ["FHAZ_RIGHT_B"])
+    if filter.checkFrontHazcamL then cqlStringInst <- (cqlStringInst @ ["FHAZ_LEFT_B"])
+    if filter.checkMastcamR then cqlStringInst <- (cqlStringInst @ ["MAST_RIGHT"])
+    if filter.checkMastcamL then cqlStringInst <- (cqlStringInst @ ["MAST_LEFT"])
+    if filter.checkChemLib then cqlStringInst <- (cqlStringInst @ ["CHEMCAM_LIBS"])
+    if filter.checkChemRmi then cqlStringInst <- (cqlStringInst @ ["CHEMCAM_RMI"])
+    let groupString = cqlStringInst |> String.concat("','")
+    sprintf @"(instrumentId IN ('" + groupString + "'))"
 
-  let getIdQuerySite (ids:list<string>) = 
-    let groupString = ids |> String.concat("','")
-   // let cql = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
-    let minSol = 751
-    let maxSol = 926
-    let cqlString = sprintf @"(planetDayNumber > %d AND planetDayNumber < %d)" minSol maxSol
-    let cql = [("cql", cqlString)] |> HMap.ofList
     
+
+  let getIdQuerySite (filter:QueryFilter) (ids:list<string>)  = 
+    let groupString = ids |> String.concat("','")
+    //let cql1 = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
+    let cqlStringSol = sprintf @"(planetDayNumber > %f AND planetDayNumber < %f)"  filter.minSol.value filter.maxSol.value
+    let cqlStringInst = getInstrumentQuery filter
+    let cqlStringAll = sprintf @"(" + cqlStringSol + " AND " + cqlStringInst + ")"
+    let cql = [("cql", cqlStringAll)] |> HMap.ofList
     (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
 
-  let update (model : Model) (msg : MinervaAction) : Model =
+  //let getDistFeatures' (features:alist<Feature>) (view:IMod<CameraView>) (dist:IMod<float>) =
+  //  alist {
+  //      let! distance = dist
+  //      let! cam = view
+  //      let fl = 
+  //          features
+  //          |> AList.map(fun f -> 
+  //              f.geometry.positions
+  //               |> List.choose(fun x -> if V3d.Distance(cam.Location, x) < distance then Some f else None)
+  //               |> AList.ofList
+  //          ) |> AList.concat
+  //      yield fl
+  //  } |> AList.concat
+
+  let getDistFeatures (features:plist<Feature>) (view:CameraView) (dist:float) =
+    let fl = 
+        features
+        |> PList.map(fun f -> 
+            f.geometry.positions
+                |> List.choose(fun x -> if V3d.Distance(view.Location, x) < dist then Some f else None)
+                |> PList.ofList
+        ) |> PList.concat
+    fl
+   
+
+  let update (view:CameraView) (model : Model) (msg : MinervaAction) : Model =
       match msg with
       | Reset ->
         { model with data = Initial.data }
@@ -119,17 +177,18 @@ module App =
         try
           //let data = model.queries |> MinervaGeoJSON.loadMultiple        
           Log.startTimed "[Minerva] Fetching full dataset from Server"
-          let data = idTestList |> getIdQuerySite |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
-          //let features = data.features |> PList.sortBy(fun x -> x.sol)           
-          Log.stop()
+          let data = idTestList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
+          //let features = data.features |> PList.sortBy(fun x -> x.sol)    
           
-          { model with data = data } //{ data with features = features } } //|> computeXYZFeatures}
+          Log.stop()
+          let m' = { model with data = data } //{ data with features = features } } //|> computeXYZFeatures}
+          { m' with queryFilter = {m'.queryFilter with distFilteredFeatures = data.features }}
         with e ->
           Log.error "%A" e.Message
           model
       | PerformIdQuery idList ->
         Log.startTimed "fetching %d entries by ids" idList.Length
-        let data = idList |> getIdQuerySite |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
+        let data = idList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
         Log.stop()
 
         { model with data = data }
@@ -196,21 +255,53 @@ module App =
           model
       | FlyToProduct _ ->         
         model
+      | SetMinSol ms ->
+        let minsol = Numeric.update model.queryFilter.minSol ms
+        { model with queryFilter = {model.queryFilter with minSol = minsol }}
+      | SetMaxSol ms ->
+        let maxsol = Numeric.update model.queryFilter.maxSol ms
+        { model with queryFilter = {model.queryFilter with maxSol = maxsol }}
+      | SetDistance d ->
+        let dist = Numeric.update model.queryFilter.distance d
+        let distfeatures = getDistFeatures model.data.features view dist.value
+        { model with queryFilter = {model.queryFilter with distance = dist; distFilteredFeatures = distfeatures }}
+      | CheckMAHLI -> 
+        { model with queryFilter = {model.queryFilter with checkMAHLI = not model.queryFilter.checkMAHLI }}
+      | CheckFrontHazcam -> 
+        { model with queryFilter = {model.queryFilter with checkFrontHazcam = not model.queryFilter.checkFrontHazcam }}
+      | CheckMastcam -> 
+        { model with queryFilter = {model.queryFilter with checkMastcam = not model.queryFilter.checkMastcam }}
+      | CheckAPXS -> 
+        { model with queryFilter = {model.queryFilter with checkAPXS = not model.queryFilter.checkAPXS }}
+      | CheckFrontHazcamR -> 
+        { model with queryFilter = {model.queryFilter with checkFrontHazcamR = not model.queryFilter.checkFrontHazcamR }}
+      | CheckFrontHazcamL -> 
+        { model with queryFilter = {model.queryFilter with checkFrontHazcamL = not model.queryFilter.checkFrontHazcamL }}
+      | CheckMastcamR -> 
+        { model with queryFilter = {model.queryFilter with checkMastcamR = not model.queryFilter.checkMastcamR }}
+      | CheckMastcamL -> 
+        { model with queryFilter = {model.queryFilter with checkMastcamL = not model.queryFilter.checkMastcamL }}
+      | CheckChemLib -> 
+        { model with queryFilter = {model.queryFilter with checkChemLib = not model.queryFilter.checkChemLib }}
+      | CheckChemRmi -> 
+        { model with queryFilter = {model.queryFilter with checkChemRmi = not model.queryFilter.checkChemRmi }}
 
-  let instrumentText (instr : Instrument) =
-    match instr with
-    | Instrument.MAHLI        -> "MAHLI"
-    | Instrument.FrontHazcam  -> "FrontHazcam"
-    | Instrument.Mastcam      -> "Mastcam"
-    | Instrument.APXS         -> "APXS"
-    | Instrument.FrontHazcamR -> "FrontHazcamR"
-    | Instrument.FrontHazcamL -> "FrontHazcamL"
-    | Instrument.MastcamR     -> "MastcamR"    
-    | Instrument.MastcamL     -> "MastcamL"
-    | Instrument.ChemLib      -> "ChemLib"    
-    | Instrument.ChemRmi      -> "ChemRmi"
-    | Instrument.NotImplemented -> "not impl. yet"
-    | _ -> instr |> sprintf "unknown instrument identifier %A" |> failwith
+  let iconToggle (dings : IMod<bool>) onIcon offIcon action =
+    let toggleIcon = dings |> Mod.map(fun isOn -> if isOn then onIcon else offIcon)
+
+    let attributes = 
+        amap {
+            let! icon = toggleIcon
+            yield clazz icon
+            yield onClick (fun _ -> action)
+        } |> AttributeMap.ofAMap
+
+    Incremental.i attributes AList.empty
+
+  let iconCheckBox (dings : IMod<bool>) action =
+    iconToggle dings "check square outline icon" "square icon" action
+
+  
     
   let viewFeatures (pos : IMod<V3d>)(instr : Instrument) (features : list<Feature>) = 
     [
@@ -253,12 +344,42 @@ module App =
              ]
          ]
      )  
+  
+
+  let viewQueryInstruments (model :MQueryFilter) =
+    require Html.semui (
+        Html.table [  
+            Html.row (instrumentText Instrument.MAHLI)  [iconCheckBox model.checkMAHLI CheckMAHLI]
+            //Html.row (instrumentText Instrument.FrontHazcam)  [iconCheckBox model.checkFrontHazcam CheckFrontHazcam]
+            //Html.row (instrumentText Instrument.Mastcam)  [iconCheckBox model.checkMastcam CheckMastcam]
+            Html.row (instrumentText Instrument.APXS)  [iconCheckBox model.checkAPXS CheckAPXS]
+            Html.row (instrumentText Instrument.FrontHazcamR)  [iconCheckBox model.checkFrontHazcamR CheckFrontHazcamR]
+            Html.row (instrumentText Instrument.FrontHazcamL)  [iconCheckBox model.checkFrontHazcamL CheckFrontHazcamL]
+            Html.row (instrumentText Instrument.MastcamR)  [iconCheckBox model.checkMastcamR CheckMastcamR]
+            Html.row (instrumentText Instrument.MastcamL)  [iconCheckBox model.checkMastcamL CheckMastcamL]
+            Html.row (instrumentText Instrument.ChemLib)  [iconCheckBox model.checkChemLib CheckChemLib]
+            Html.row (instrumentText Instrument.ChemRmi)  [iconCheckBox model.checkChemRmi CheckChemRmi]
+        ]
+    )
+
+  let viewQueryFilters (model :MQueryFilter) =
+    require Html.semui ( 
+        Html.table [                
+            Html.row "min sol:"  [Numeric.view' [NumericInputType.InputBox] model.minSol |> UI.map (fun x -> SetMinSol x)]
+            Html.row "max sol:"  [Numeric.view' [NumericInputType.InputBox] model.maxSol |> UI.map (fun x -> SetMaxSol x)]
+            Html.row "instruments:" [ ( viewQueryInstruments model )]
+            Html.row "distance:" [Numeric.view' [NumericInputType.Slider] model.distance |> UI.map (fun x -> SetDistance x)] 
+        ]
+        
+    ) 
+  
 
   let viewFeaturesGui (pos : IMod<V3d>)(model :MModel) =
     
      let content =
-        alist {                    
-          let! features = model.data.features |> AList.toMod
+        alist { 
+          //let! features = model.data.features |> AList.toMod
+          let! features = model.queryFilter.distFilteredFeatures |> AList.toMod
           let groupedFeatures = features |> PList.toList |> List.groupBy(fun x -> x.instrument)
 
           for (instr, group) in groupedFeatures do
@@ -282,7 +403,9 @@ module App =
          button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Export"]
          button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
        ]
-    
+       
+       viewQueryFilters model.queryFilter                   
+                     
        Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) content  
      ]
 
@@ -312,9 +435,10 @@ module App =
         toEffect <| Shader.stableTrafo
         toEffect <| DefaultSurfaces.vertexColor          
     ]
-
-  let viewFeaturesSg (model : MModel) =
-    model.data.features 
+  
+  let viewFeaturesSg (model : MModel) (view:IMod<CameraView>) =
+    //model.data.features 
+    model.queryFilter.distFilteredFeatures 
       |> AList.map(fun f -> 
         dots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
           //|> List.map(fun y -> 
@@ -374,7 +498,7 @@ module App =
         unpersist = Unpersist.instance
         threads   = fun m -> m.vplMessages
         view      = viewWrapped (Mod.constant V3d.Zero) //localhost
-        update    = update
+        update    = update (CameraView.lookAt V3d.Zero V3d.One V3d.OOI)
         initial   = Initial.model mailbox
     }
 

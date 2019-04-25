@@ -120,7 +120,39 @@ type MinervaAction =
   | PerformIdQuery of list<string>
   | ConnectVisplore
   | FlyToProduct of V3d
+  | SetMinSol of Numeric.Action
+  | SetMaxSol of Numeric.Action
+  | SetDistance of Numeric.Action
+  | CheckMAHLI
+  | CheckFrontHazcam
+  | CheckMastcam
+  | CheckAPXS
+  | CheckFrontHazcamR
+  | CheckFrontHazcamL
+  | CheckMastcamR
+  | CheckMastcamL
+  | CheckChemLib
+  | CheckChemRmi
+      
 
+[<DomainType>]
+type QueryFilter = {
+    minSol               : NumericInput
+    maxSol               : NumericInput
+    instrument           : Instrument
+    distance             : NumericInput
+    distFilteredFeatures : plist<Feature>
+    checkMAHLI           : bool
+    checkFrontHazcam     : bool
+    checkMastcam         : bool
+    checkAPXS            : bool
+    checkFrontHazcamR    : bool
+    checkFrontHazcamL    : bool
+    checkMastcamR        : bool
+    checkMastcamL        : bool
+    checkChemLib         : bool
+    checkChemRmi         : bool
+}
 
 type MessagingMailbox = MailboxProcessor<MailboxAction>
 
@@ -152,6 +184,7 @@ type Model =
 
     minervaMessagingMailbox : MessagingMailbox
     minervaMailboxState     : MailboxState
+    queryFilter             : QueryFilter
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
@@ -191,8 +224,8 @@ module Model =
       | "apxs"         -> Instrument.APXS
       | "fhaz_left_b"  -> Instrument.FrontHazcamL    
       | "fhaz_right_b" -> Instrument.FrontHazcamR    
-      | "mast_left"    -> Instrument.MastcamR
-      | "mast_right"   -> Instrument.MastcamL
+      | "mast_left"    -> Instrument.MastcamL
+      | "mast_right"   -> Instrument.MastcamR
       | "chemcam_libs" -> Instrument.ChemLib
       | "chemcam_rmi"  -> Instrument.ChemRmi      
       | _ -> id |> sprintf "unknown instrument %A" |> failwith
@@ -220,6 +253,48 @@ module Initial =
       typus       = Typus.Feature
       features    = PList.empty
     }
+  let minS = 
+        {
+            value = 751.0
+            min =  0.0
+            max = 10000.0
+            step = 1.0
+            format = "{0:0}"
+        }
+  let maxS = 
+        {
+            value = 926.0
+            min =  0.0
+            max = 10000.0
+            step = 1.0
+            format = "{0:0}"
+        }
+  let dist = 
+        {
+            value = 10000000.0
+            min =  0.0
+            max = 10000000.0
+            step = 100.0
+            format = "{0:0}"
+        }
+  let queryFilter = 
+    {
+        minSol                = minS
+        maxSol                = maxS
+        instrument            = Instrument.NotImplemented
+        distance              = dist
+        distFilteredFeatures  = PList.empty
+        checkMAHLI            = true
+        checkFrontHazcam      = true
+        checkMastcam          = true
+        checkAPXS             = true
+        checkFrontHazcamR     = true
+        checkFrontHazcamL     = true
+        checkMastcamR         = true
+        checkMastcamL         = true
+        checkChemLib          = true
+        checkChemRmi          = true
+    }
           
   let sites = [
     //@"https://minerva.eox.at/opensearch/collections/MAHLI/json/"
@@ -240,4 +315,5 @@ module Initial =
 
       minervaMailboxState = MailboxState.empty
       minervaMessagingMailbox = mailbox
+      queryFilter = queryFilter
     }

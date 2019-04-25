@@ -912,8 +912,8 @@ module ViewerApp =
                     |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates.csv"
                 m
               | _ ->                
-                
-                 let minerva' = PRo3D.Minerva.App.update m.minervaModel a                                                                                       
+                 let currentView = m.scene.navigation.camera.view
+                 let minerva' = PRo3D.Minerva.App.update currentView m.minervaModel a                                                                               
                  //MailboxAction.ViewerAction
                  //ViewerAction.MinervaActions
                  //a |> ViewerAction.MinervaActions |> MailboxAction.ViewerAction
@@ -1046,7 +1046,7 @@ module ViewerApp =
                 |> Sg.map ViewPlanMessage
 
             let minervaFeatures = 
-              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions                                    
+              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel m.scene.navigation.camera.view |> Sg.map MinervaActions                                    
 
             [exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
 
