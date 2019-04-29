@@ -141,8 +141,8 @@ module App =
     //let cql1 = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
     let cqlStringSol = sprintf @"(planetDayNumber > %f AND planetDayNumber < %f)"  filter.minSol.value filter.maxSol.value
     let cqlStringInst = getInstrumentQuery filter
-    let cqlStringAll = sprintf @"(" + cqlStringSol + " AND " + cqlStringInst + ")"
-    let cql = [("cql", cqlStringAll)] |> HMap.ofList
+    //let cqlStringAll = sprintf @"(" + cqlStringSol + " AND " + cqlStringInst + ")"
+    let cql = [("cql", cqlStringSol)] |> HMap.ofList
     (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
 
   //let getDistFeatures' (features:alist<Feature>) (view:IMod<CameraView>) (dist:IMod<float>) =
