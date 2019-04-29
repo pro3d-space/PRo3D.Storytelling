@@ -82,6 +82,7 @@ module Mutable =
         let _instrument = ResetMod.Create(__initial.instrument)
         let _distance = Aardvark.UI.Mutable.MNumericInput.Create(__initial.distance)
         let _distFilteredFeatures = MList.Create(__initial.distFilteredFeatures)
+        let _solLables = MMap.Create(__initial.solLables)
         let _checkMAHLI = ResetMod.Create(__initial.checkMAHLI)
         let _checkFrontHazcam = ResetMod.Create(__initial.checkFrontHazcam)
         let _checkMastcam = ResetMod.Create(__initial.checkMastcam)
@@ -98,6 +99,7 @@ module Mutable =
         member x.instrument = _instrument :> IMod<_>
         member x.distance = _distance
         member x.distFilteredFeatures = _distFilteredFeatures :> alist<_>
+        member x.solLables = _solLables :> amap<_,_>
         member x.checkMAHLI = _checkMAHLI :> IMod<_>
         member x.checkFrontHazcam = _checkFrontHazcam :> IMod<_>
         member x.checkMastcam = _checkMastcam :> IMod<_>
@@ -119,6 +121,7 @@ module Mutable =
                 ResetMod.Update(_instrument,v.instrument)
                 Aardvark.UI.Mutable.MNumericInput.Update(_distance, v.distance)
                 MList.Update(_distFilteredFeatures, v.distFilteredFeatures)
+                MMap.Update(_solLables, v.solLables)
                 ResetMod.Update(_checkMAHLI,v.checkMAHLI)
                 ResetMod.Update(_checkFrontHazcam,v.checkFrontHazcam)
                 ResetMod.Update(_checkMastcam,v.checkMastcam)
@@ -174,6 +177,12 @@ module Mutable =
                     override x.Get(r) = r.distFilteredFeatures
                     override x.Set(r,v) = { r with distFilteredFeatures = v }
                     override x.Update(r,f) = { r with distFilteredFeatures = f r.distFilteredFeatures }
+                }
+            let solLables =
+                { new Lens<PRo3D.Minerva.QueryFilter, Aardvark.Base.hmap<System.String,Aardvark.Base.V3d>>() with
+                    override x.Get(r) = r.solLables
+                    override x.Set(r,v) = { r with solLables = v }
+                    override x.Update(r,f) = { r with solLables = f r.solLables }
                 }
             let checkMAHLI =
                 { new Lens<PRo3D.Minerva.QueryFilter, System.Boolean>() with

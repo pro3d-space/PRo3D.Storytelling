@@ -142,6 +142,7 @@ type QueryFilter = {
     instrument           : Instrument
     distance             : NumericInput
     distFilteredFeatures : plist<Feature>
+    solLables            : hmap<string,V3d>
     checkMAHLI           : bool
     checkFrontHazcam     : bool
     checkMastcam         : bool
@@ -284,6 +285,7 @@ module Initial =
         instrument            = Instrument.NotImplemented
         distance              = dist
         distFilteredFeatures  = PList.empty
+        solLables             = hmap.Empty
         checkMAHLI            = true
         checkFrontHazcam      = true
         checkMastcam          = true

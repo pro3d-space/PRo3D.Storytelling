@@ -7,6 +7,7 @@ open Aardvark.UI.Events
 open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.Base.Rendering
+open Aardvark.Rendering.Text 
 
 open PRo3D.Base
 open PRo3D.Minerva.Communication
@@ -59,6 +60,7 @@ module App =
   open System.Net.Sockets
   open Aardvark.SceneGraph.Opc
   open System.Threading  
+  //open Mutable.QueryFilterModule
 
   //coords  -4831.341805
 
@@ -157,6 +159,23 @@ module App =
   //      yield fl
   //  } |> AList.concat
 
+  let updateSolLables (model : Model) (features:plist<Feature>) =
+    //let features = model.queryFilter.distFilteredFeatures
+    let minS = model.queryFilter.minSol.value
+    let maxS = model.queryFilter.maxSol.value
+    let mutable lables = hmap.Empty
+    for s in minS .. maxS do
+        let solFeatures = features |> PList.filter (fun (f:Feature) -> f.sol = ((int)s)) |> PList.toList 
+        if solFeatures.IsEmpty then
+            lables |> ignore
+        else
+            let f = solFeatures.Head
+            let pos = f.geometry.positions.Head
+            let txt = sprintf "Sol %i" ((int)f.sol)
+                
+            lables <- lables.Add(txt, pos) //|> ignore
+    lables
+
   let getDistFeatures (features:plist<Feature>) (view:CameraView) (dist:float) =
     let fl = 
         features
@@ -182,7 +201,8 @@ module App =
           
           Log.stop()
           let m' = { model with data = data } //{ data with features = features } } //|> computeXYZFeatures}
-          { m' with queryFilter = {m'.queryFilter with distFilteredFeatures = data.features }}
+          let solLables' = updateSolLables m' data.features
+          { m' with queryFilter = {m'.queryFilter with distFilteredFeatures = data.features; solLables = solLables' }}
         with e ->
           Log.error "%A" e.Message
           model
@@ -264,7 +284,8 @@ module App =
       | SetDistance d ->
         let dist = Numeric.update model.queryFilter.distance d
         let distfeatures = getDistFeatures model.data.features view dist.value
-        { model with queryFilter = {model.queryFilter with distance = dist; distFilteredFeatures = distfeatures }}
+        let solLables' = updateSolLables model distfeatures
+        { model with queryFilter = {model.queryFilter with distance = dist; distFilteredFeatures = distfeatures; solLables = solLables' }}
       | CheckMAHLI -> 
         { model with queryFilter = {model.queryFilter with checkMAHLI = not model.queryFilter.checkMAHLI }}
       | CheckFrontHazcam -> 
@@ -435,22 +456,159 @@ module App =
         toEffect <| Shader.stableTrafo
         toEffect <| DefaultSurfaces.vertexColor          
     ]
+
+  let indexedGeometryDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =       
+      let points' = points |> AList.toMod |> Mod.map(fun x -> x |> PList.toArray)
+      let colors = points' |> Mod.map2(fun c x -> Array.create x.Length c) color
+      
+      Sg.draw IndexedGeometryMode.PointList
+       |> Sg.vertexAttribute DefaultSemantic.Positions points'         
+       |> Sg.vertexAttribute DefaultSemantic.Colors colors
+       |> Sg.effect [
+          toEffect Shader.stableTrafo
+          toEffect DefaultSurfaces.vertexColor
+          toEffect DefaultSurfaces.pointSprite
+       ]
+       |> Sg.uniform "PointSize" size
   
-  let viewFeaturesSg (model : MModel) (view:IMod<CameraView>) =
+  //let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
+  //    adaptive {
+  //        let! p = p
+  //        let! v = view
+  //        let! near = near
+  //        let! size = size
+  //        let! hfov = hfov
+  //        let hfov_rad = Conversion.RadiansFromDegrees(hfov)
+         
+  //        let wz = Fun.Tan(hfov_rad / 2.0) * near * size
+  //        let dist = V3d.Distance(p, v.Location)
+      
+  //        return ( wz / near ) * dist
+  //    }
+  let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:V3d) (size:IMod<float>) (hfov:IMod<float>) =
+      adaptive {
+          //let! p = p
+          let! v = view
+          let! near = near
+          let! size = size
+          let! hfov = hfov
+          let hfov_rad = Conversion.RadiansFromDegrees(hfov)
+         
+          let wz = Fun.Tan(hfov_rad / 2.0) * near * size
+          let dist = V3d.Distance(p, v.Location)
+      
+          return ( wz / near ) * dist
+      }
+
+  let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) =
+        let right = up.Cross forw
+        let rotTrafo = 
+            new Trafo3d(
+                new M44d(
+                    right.X, up.X, forw.X, 0.0,
+                    right.Y, up.Y, forw.Y, 0.0,
+                    right.Z, up.Z, forw.Z, 0.0,
+                    0.0,     0.0,  0.0,    1.0
+                ),
+                new M44d(
+                    right.X, right.Y, right.Z, 0.0,
+                    up.X,    up.Y,    up.Z,    0.0,
+                    forw.X,  forw.Y,  forw.Z,  0.0,
+                    0.0,     0.0,     0.0,     1.0
+                )
+        )
+        rotTrafo * modelt
+
+  //let text (view : IMod<CameraView>) (near : IMod<float>) (hfov:IMod<float>) (pos:IMod<V3d>) (modelTrafo:IMod<Trafo3d>) (text:IMod<string>) (size:IMod<float>) =
+         
+  //    let invScaleTrafo = 
+  //        computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
+      
+  //    let billboardTrafo = 
+  //        adaptive {
+  //            let! v = view
+  //            let! modelt = modelTrafo
+      
+  //            return screenAligned v.Forward v.Up modelt
+  //        }      
+      
+  //    Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
+  //        |> Sg.noEvents
+  //        |> Sg.shader {
+  //          do! Shader.stableTrafo
+  //        }            
+  //        |> Sg.trafo invScaleTrafo
+  //        |> Sg.trafo billboardTrafo  
+
+  let text (view : IMod<CameraView>) (near : IMod<float>) (hfov:IMod<float>) (pos:V3d) (modelTrafo:Trafo3d) (text:IMod<string>) (size:IMod<float>) =
+         
+      let invScaleTrafo = //Trafo3d.Scale(0.5)
+          computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
+      
+      let billboardTrafo = 
+          adaptive {
+              let! v = view
+              let modelt = modelTrafo
+      
+              return screenAligned v.Forward v.Up modelt
+          }      
+      
+      Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
+          |> Sg.noEvents
+          |> Sg.shader {
+            do! Shader.stableTrafo
+          }            
+          |> Sg.trafo invScaleTrafo //(Mod.constant invScaleTrafo)
+          |> Sg.trafo billboardTrafo  
+
+
+  let getSolBillboards (model : MModel) (view:IMod<CameraView>) (near:IMod<float>) =
+    //alist {
+        let lables =
+            model.queryFilter.solLables
+             |> AMap.map(fun txt pos ->
+                text view near (Mod.constant 60.0) pos (Trafo3d.Translation(pos)) (Mod.constant txt) (Mod.constant 10.05)
+                ) 
+             |> AMap.toASet  
+             |> ASet.map(fun x -> snd x)
+             |> Sg.Set
+        lables
+        
+
+        //let test =
+        //  features
+        //   |> AList.map( fun f ->
+        //                let pos = f.geometry.positions.Head
+        //                let nPosTrafo = Trafo3d.Translation(pos)
+        //                let txt = sprintf "Sol %i" ((int)f.sol)
+                    
+        //                text view near (Mod.constant 60.0) (Mod.constant pos) (Mod.constant nPosTrafo) (Mod.constant txt) (Mod.constant 10.05)
+        //                text view near (Mod.constant 60.0) pos nPosTrafo (Mod.constant txt) (Mod.constant 10.05)
+        //        )
+        
+
+        //yield test     
+    //}   |> Sg.set //|> AList.concat  |> AList.toASet
+
+  let viewFeaturesSg (model : MModel) =
     //model.data.features 
+    
     model.queryFilter.distFilteredFeatures 
-      |> AList.map(fun f -> 
+        |> AList.map(fun f -> 
         dots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
-          //|> List.map(fun y -> 
-          //  drawPoint (f.instrument |> Model.instrumentColor |> Mod.constant) (0.05 |> Mod.constant) (y |> Mod.constant)) |> Sg.ofList
-      ) 
-      |> AList.toASet 
-      |> Sg.set
-      |> Sg.effect [
+        //indexedGeometryDots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
+            //|> List.map(fun y -> 
+            //  drawPoint (f.instrument |> Model.instrumentColor |> Mod.constant) (0.05 |> Mod.constant) (y |> Mod.constant)) |> Sg.ofList
+        ) 
+        |> AList.toASet 
+        |> Sg.set
+        |> Sg.effect [
         DefaultSurfaces.stableTrafo |> toEffect
         DefaultSurfaces.vertexColor |> toEffect
-     //   DefaultSurfaces.pointSprite |> toEffect
-      ]
+        //   DefaultSurfaces.pointSprite |> toEffect
+        ]
+    
+    //Sg.ofList [sgFeatures; solBillboards]
 
   let myCss = [
     { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }

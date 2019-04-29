@@ -1046,9 +1046,11 @@ module ViewerApp =
                 |> Sg.map ViewPlanMessage
 
             let minervaFeatures = 
-              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel m.scene.navigation.camera.view |> Sg.map MinervaActions                                    
+              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions
+            let solText = 
+                PRo3D.Minerva.App.getSolBillboards m.minervaModel m.scene.navigation.camera.view m.scene.config.nearPlane.value |> Sg.map MinervaActions
 
-            [exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures] |> Sg.ofList // (*;orientationCube*)
+            [exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures; solText] |> Sg.ofList // (*;orientationCube*)
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed annotationSg m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
