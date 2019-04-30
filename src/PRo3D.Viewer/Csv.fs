@@ -98,7 +98,7 @@ module Csv =
 
       let points = 
         a.points 
-          |> PList.map a.modelTrafo.Forward.TransformPos 
+          //|> PList.map a.modelTrafo.Forward.TransformPos 
           |> PList.toArray
 
       let c = Box3d(points).Center

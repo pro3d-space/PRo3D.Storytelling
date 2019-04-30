@@ -139,7 +139,7 @@ module App =
   let getIdQuerySite (filter:QueryFilter) (ids:list<string>)  = 
     let groupString = ids |> String.concat("','")
     //let cql1 = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
-    let cqlStringSol = sprintf @"(planetDayNumber > %f AND planetDayNumber < %f)"  filter.minSol.value filter.maxSol.value
+    let cqlStringSol = sprintf @"(planetDayNumber >= %f AND planetDayNumber <= %f)"  filter.minSol.value filter.maxSol.value
     let cqlStringInst = getInstrumentQuery filter
     //let cqlStringAll = sprintf @"(" + cqlStringSol + " AND " + cqlStringInst + ")"
     let cql = [("cql", cqlStringSol)] |> HMap.ofList
@@ -518,27 +518,7 @@ module App =
                 )
         )
         rotTrafo * modelt
-
-  //let text (view : IMod<CameraView>) (near : IMod<float>) (hfov:IMod<float>) (pos:IMod<V3d>) (modelTrafo:IMod<Trafo3d>) (text:IMod<string>) (size:IMod<float>) =
-         
-  //    let invScaleTrafo = 
-  //        computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
-      
-  //    let billboardTrafo = 
-  //        adaptive {
-  //            let! v = view
-  //            let! modelt = modelTrafo
-      
-  //            return screenAligned v.Forward v.Up modelt
-  //        }      
-      
-  //    Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
-  //        |> Sg.noEvents
-  //        |> Sg.shader {
-  //          do! Shader.stableTrafo
-  //        }            
-  //        |> Sg.trafo invScaleTrafo
-  //        |> Sg.trafo billboardTrafo  
+        
 
   let text (view : IMod<CameraView>) (near : IMod<float>) (hfov:IMod<float>) (pos:V3d) (modelTrafo:Trafo3d) (text:IMod<string>) (size:IMod<float>) =
          
@@ -592,7 +572,6 @@ module App =
 
   let viewFeaturesSg (model : MModel) =
     //model.data.features 
-    
     model.queryFilter.distFilteredFeatures 
         |> AList.map(fun f -> 
         dots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
