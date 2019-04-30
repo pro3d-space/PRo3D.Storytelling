@@ -111,15 +111,7 @@ type FeatureCollection =
     features    : plist<Feature>
   }
 
-type MinervaAction =
-  | PerformQueries
-  | SaveFeatureCollection
-  | LoadFeatureCollection
-  | Reset
-  | WriteScreenCoordsDebug
-  | PerformIdQuery of list<string>
-  | ConnectVisplore
-  | FlyToProduct of V3d
+  type QueryAction =
   | SetMinSol of Numeric.Action
   | SetMaxSol of Numeric.Action
   | SetDistance of Numeric.Action
@@ -133,10 +125,21 @@ type MinervaAction =
   | CheckMastcamL
   | CheckChemLib
   | CheckChemRmi
+
+type MinervaAction =
+  | PerformQueries
+  | SaveFeatureCollection
+  | LoadFeatureCollection
+  | Reset
+  | WriteScreenCoordsDebug
+  | PerformIdQuery of list<string>
+  | ConnectVisplore
+  | FlyToProduct of V3d
+  | QueryMessage of QueryAction
       
 
 [<DomainType>]
-type QueryFilter = {
+type QueryModel = {
     minSol               : NumericInput
     maxSol               : NumericInput
     instrument           : Instrument
@@ -185,7 +188,7 @@ type Model =
 
     minervaMessagingMailbox : MessagingMailbox
     minervaMailboxState     : MailboxState
-    queryFilter             : QueryFilter
+    queryFilter             : QueryModel
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
