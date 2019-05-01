@@ -400,7 +400,7 @@ module Surface =
         | ChangeImportDirectory (id, dir) ->
           let surf = id |> SurfaceModel.getSurface model
           match surf with
-            | Some (Leaf.Surfaces s) ->
+            | Some (Leaf.Surfaces s) when (dir |> System.IO.Directory.Exists) && (dir |> Files.isSurfaceFolder) ->
               { s with importPath = dir } |> SurfaceModel.updateSingleSurface' model
             | _ -> model          
         | GroupsMessage msg -> 
@@ -646,7 +646,7 @@ module Surface =
                              let! path = s.importPath
                              //
                              //  yield i 
-                             if (Directory.Exists path) |> not then
+                             if (Directory.Exists path) |> not || (path |> Files.isSurfaceFolder |> not) then
                                yield i [
                                  clazz "exclamation red icon"
                                  //Dialogs.onChooseDirectory key ChangeImportDirectory;
