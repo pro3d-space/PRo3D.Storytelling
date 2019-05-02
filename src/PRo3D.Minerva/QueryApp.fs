@@ -41,6 +41,20 @@ module QueryApp =
             ) |> PList.concat
         fl
 
+     //let getDistFeatures' (features:alist<Feature>) (view:IMod<CameraView>) (dist:IMod<float>) =
+  //  alist {
+  //      let! distance = dist
+  //      let! cam = view
+  //      let fl = 
+  //          features
+  //          |> AList.map(fun f -> 
+  //              f.geometry.positions
+  //               |> List.choose(fun x -> if V3d.Distance(cam.Location, x) < distance then Some f else None)
+  //               |> AList.ofList
+  //          ) |> AList.concat
+  //      yield fl
+  //  } |> AList.concat
+
     let update (view:CameraView) (model : QueryModel) (features:plist<Feature>) (msg : QueryAction) : QueryModel =
       match msg with
       | SetMinSol ms ->
