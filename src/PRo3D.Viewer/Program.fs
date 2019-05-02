@@ -64,7 +64,7 @@ type License = {
   institution : string
 }
 
-let viewerVersion       = "2.9.5-prerelease2"
+let viewerVersion       = "2.9.6-prerelease1"
 let mutable licenseText = ""
 let catchDomainErrors   = false
 let licenseCheck        = false
