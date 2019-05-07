@@ -177,6 +177,49 @@ module Sg =
     open Aardvark.Rendering.Text    
     open Aardvark.SceneGraph
     open Aardvark.UI
+    open FShade
+
+    type UniformScope with
+        member x.PointSize : float = uniform?PointSize
+
+    type pointVertex =
+        {
+            [<Position>] pos : V4d
+            [<PointSize>] p : float
+            [<Color>] c : V4d
+        }
+    
+    let constantColor (color : V4d) (v : pointVertex) =
+        vertex {
+            let ps : float = uniform?PointSize
+            return { v with c = color; p = ps }
+        }
+
+    let pointTrafo (v : pointVertex) =
+        vertex {
+            let wp = uniform.ModelTrafo * v.pos
+            return { 
+                v with 
+                    pos = uniform.ViewProjTrafo * wp
+            }
+        }
+
+    let createHarrisPoints (positions : V3d[])  (color : C4b) (size : IMod<float>) =
+        let colors = Array.create positions.Length color
+        let pointSize = Mod.constant 5.0
+        let c = V4d((float)color.R, (float)color.G, (float)color.B, (float)color.A)
+
+        Aardvark.UI.``F# Sg``.Sg.ofList [
+                 Sg.draw IndexedGeometryMode.PointList
+            ]
+             |> Sg.vertexAttribute DefaultSemantic.Positions (positions |> Mod.constant)
+             |> Sg.vertexAttribute DefaultSemantic.Colors (colors |> Mod.constant)
+             |> Sg.uniform "PointSize" size //pointSize
+            |> Sg.shader {
+                do! pointTrafo
+                do! constantColor c
+                do! DefaultSurfaces.vertexColor |> toEffect
+            }
 
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
       adaptive {
@@ -306,6 +349,14 @@ module Sg =
             toEffect <| Shader.stableTrafo
             toEffect <| DefaultSurfaces.vertexColor          
         ]
+    
+    let dots1 (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
+        let ps = points |> AList.toArray
+        color 
+        |> Mod.map( fun c -> createHarrisPoints ps c size )
+        |> Mod.toASet
+        |> Sg.set
+        
 
     let scaledDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (view : IMod<CameraView>) (near : IMod<float>) (hfov : IMod<float>) =
         aset {

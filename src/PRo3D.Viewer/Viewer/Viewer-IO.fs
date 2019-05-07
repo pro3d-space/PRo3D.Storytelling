@@ -92,7 +92,10 @@ module ViewerIO =
         let annos =
           if (File.Exists paths.annotationVersioned) then
             Log.line "[ViewerIO] Reading annotations"
-            let (annos : list<Annotation'>) = paths.annotationVersioned |> IO.readFromFile |> Json.parse |> Json.deserialize
+            let (annos : list<Annotation'>) = paths.annotationVersioned 
+                                                |> IO.readFromFile 
+                                                |> Json.parse 
+                                                |> Json.deserialize
             annos |> List.map(fun x -> (x.key,x |> Leaf.Annotations')) |> HMap.ofList
           else
             HMap.empty

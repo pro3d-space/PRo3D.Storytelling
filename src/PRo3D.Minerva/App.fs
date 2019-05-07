@@ -1,6 +1,6 @@
 ﻿namespace PRo3D.Minerva
 
-open Aardvark.UI
+//open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.UI.Events
 
@@ -13,6 +13,7 @@ open PRo3D.Base
 open PRo3D.Minerva.Communication
 open Aardvark.GeoSpatial.Opc
 open System
+open Aardvark.UI
 
 [<AutoOpen>]
 module MissingInBase = 
@@ -60,7 +61,6 @@ module App =
   open System.Net.Sockets
   open Aardvark.SceneGraph.Opc
   open System.Threading  
-  //open Mutable.QueryFilterModule
 
   //coords  -4831.341805
 
@@ -122,8 +122,6 @@ module App =
   let getInstrumentQuery (filter:QueryModel) =
     let mutable cqlStringInst = []
     if filter.checkMAHLI then cqlStringInst <- (cqlStringInst @ ["MAHLI"])
-    //if filter.checkFrontHazcam then cqlStringInst <- (cqlStringInst @ [instrumentText Instrument.FrontHazcam])
-    //if filter.checkMastcam then cqlStringInst <- (cqlStringInst @ [instrumentText Instrument.Mastcam])
     if filter.checkAPXS then cqlStringInst <- (cqlStringInst @ ["APXS"])
     if filter.checkFrontHazcamR then cqlStringInst <- (cqlStringInst @ ["FHAZ_RIGHT_B"])
     if filter.checkFrontHazcamL then cqlStringInst <- (cqlStringInst @ ["FHAZ_LEFT_B"])
@@ -141,7 +139,7 @@ module App =
     //let cql1 = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
     let cqlStringSol = sprintf @"(planetDayNumber >= %f AND planetDayNumber <= %f)"  filter.minSol.value filter.maxSol.value
     let cqlStringInst = getInstrumentQuery filter
-    //let cqlStringAll = sprintf @"(" + cqlStringSol + " AND " + cqlStringInst + ")"
+    let cqlStringAll = sprintf @"(" + cqlStringSol + " AND " + cqlStringInst + ")"
     let cql = [("cql", cqlStringSol)] |> HMap.ofList
     (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
 
@@ -322,149 +320,37 @@ module App =
        Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) content  
      ]
 
-  let drawPoint color size (pos : IMod<V3d>) = 
-    Sg.sphere 4 color size
-        |> Sg.noEvents
-        |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
-        //|> Sg.uniform "PointSize" size
-        //|> Sg.uniform "WorldPos" pos
-
-  let mkDotISg color (size : IMod<float>) (pos : IMod<V3d>) = 
-        Sg.sphere 2 color (Mod.constant 1.0)
-            |> Sg.noEvents
-            |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
-            |> Sg.uniform "Size" size
-            |> Sg.uniform "WorldPos" pos
-
-  let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) = //TODO TO refactor, put into base prj
-    aset {
-        for p in points |> ASet.ofAList do
-           // let scale = computeScale view (Mod.constant p) 5.0                               
-            yield mkDotISg color (size) (Mod.constant p)
-    } 
-    |> Sg.set
-    |> Sg.effect [
-        toEffect <| Shader.screenSpaceScale
-        toEffect <| Shader.stableTrafo
-        toEffect <| DefaultSurfaces.vertexColor          
-    ]
-
-  let indexedGeometryDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =       
-      let points' = points |> AList.toMod |> Mod.map(fun x -> x |> PList.toArray)
-      let colors = points' |> Mod.map2(fun c x -> Array.create x.Length c) color
-      
-      Sg.draw IndexedGeometryMode.PointList
-       |> Sg.vertexAttribute DefaultSemantic.Positions points'         
-       |> Sg.vertexAttribute DefaultSemantic.Colors colors
-       |> Sg.effect [
-          toEffect Shader.stableTrafo
-          toEffect DefaultSurfaces.vertexColor
-          toEffect DefaultSurfaces.pointSprite
-       ]
-       |> Sg.uniform "PointSize" size
-  
- 
-  let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:V3d) (size:IMod<float>) (hfov:IMod<float>) =
-      adaptive {
-          //let! p = p
-          let! v = view
-          let! near = near
-          let! size = size
-          let! hfov = hfov
-          let hfov_rad = Conversion.RadiansFromDegrees(hfov)
-         
-          let wz = Fun.Tan(hfov_rad / 2.0) * near * size
-          let dist = V3d.Distance(p, v.Location)
-      
-          return ( wz / near ) * dist
-      }
-
-  let screenAligned (forw : V3d) (up : V3d) (modelt: Trafo3d) =
-        let right = up.Cross forw
-        let rotTrafo = 
-            new Trafo3d(
-                new M44d(
-                    right.X, up.X, forw.X, 0.0,
-                    right.Y, up.Y, forw.Y, 0.0,
-                    right.Z, up.Z, forw.Z, 0.0,
-                    0.0,     0.0,  0.0,    1.0
-                ),
-                new M44d(
-                    right.X, right.Y, right.Z, 0.0,
-                    up.X,    up.Y,    up.Z,    0.0,
-                    forw.X,  forw.Y,  forw.Z,  0.0,
-                    0.0,     0.0,     0.0,     1.0
-                )
-        )
-        rotTrafo * modelt
-        
-
-  let text (view : IMod<CameraView>) (near : IMod<float>) (hfov:IMod<float>) (pos:V3d) (modelTrafo:Trafo3d) (text:IMod<string>) (size:IMod<float>) =
-         
-      let invScaleTrafo = //Trafo3d.Scale(0.5)
-          computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
-      
-      let billboardTrafo = 
-          adaptive {
-              let! v = view
-              let modelt = modelTrafo
-      
-              return screenAligned v.Forward v.Up modelt
-          }      
-      
-      Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
-          |> Sg.noEvents
-          |> Sg.shader {
-            do! Shader.stableTrafo
-          }            
-          |> Sg.trafo invScaleTrafo //(Mod.constant invScaleTrafo)
-          |> Sg.trafo billboardTrafo  
-
 
   let getSolBillboards (model : MModel) (view:IMod<CameraView>) (near:IMod<float>) =
-    //alist {
         let lables =
             model.queryFilter.solLables
              |> AMap.map(fun txt pos ->
-                text view near (Mod.constant 60.0) pos (Trafo3d.Translation(pos)) (Mod.constant txt) (Mod.constant 10.05)
+                Drawing.text view near (Mod.constant 60.0) pos (Trafo3d.Translation(pos)) (Mod.constant txt) (Mod.constant 10.05)
                 ) 
              |> AMap.toASet  
              |> ASet.map(fun x -> snd x)
-             |> Sg.Set
+             |> Aardvark.UI.``F# Sg``.Sg.set
         lables
         
-
-        //let test =
-        //  features
-        //   |> AList.map( fun f ->
-        //                let pos = f.geometry.positions.Head
-        //                let nPosTrafo = Trafo3d.Translation(pos)
-        //                let txt = sprintf "Sol %i" ((int)f.sol)
-                    
-        //                text view near (Mod.constant 60.0) (Mod.constant pos) (Mod.constant nPosTrafo) (Mod.constant txt) (Mod.constant 10.05)
-        //                text view near (Mod.constant 60.0) pos nPosTrafo (Mod.constant txt) (Mod.constant 10.05)
-        //        )
-        
-
-        //yield test     
-    //}   |> Sg.set //|> AList.concat  |> AList.toASet
 
   let viewFeaturesSg (model : MModel) =
     //model.data.features 
     model.queryFilter.distFilteredFeatures 
         |> AList.map(fun f -> 
-        dots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
-        //indexedGeometryDots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
-            //|> List.map(fun y -> 
-            //  drawPoint (f.instrument |> Model.instrumentColor |> Mod.constant) (0.05 |> Mod.constant) (y |> Mod.constant)) |> Sg.ofList
+        //Drawing.dots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
+        //Drawing.createIndexedGeometry (f.geometry.positions |> List.toArray) [|f.instrument |> Model.instrumentColor|]
+        //Drawing.indexedGeometryDots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
+        //|> Sg.ofIndexedGeometry
+        Drawing.createHarrisPoints (f.geometry.positions |> List.toArray) (f.instrument |> Model.instrumentColor )
         ) 
         |> AList.toASet 
-        |> Sg.set
-        |> Sg.effect [
-        DefaultSurfaces.stableTrafo |> toEffect
-        DefaultSurfaces.vertexColor |> toEffect
-        //   DefaultSurfaces.pointSprite |> toEffect
-        ]
+        |> Aardvark.UI.``F# Sg``.Sg.set //Aardvark.SceneGraph.SgFSharp.Sg.set
+        //|> Sg.effect [
+        //DefaultSurfaces.stableTrafo |> toEffect
+        //DefaultSurfaces.vertexColor |> toEffect
+        ////   DefaultSurfaces.pointSprite |> toEffect
+        //]
+       
     
 
   let myCss = [
