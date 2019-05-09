@@ -32,6 +32,13 @@ module Json =
         | None -> Double.NaN      
     }
 
+  let parsePlane3d (s:string) =
+    let x = s.NestedBracketSplitLevelOne() |> Seq.toArray
+    let n = x.[0] |> V3d.Parse
+    let p = float(x.[1]) //|> Double.Parse
+    Plane3d(n, p)
+            
+
   //let writeFloat name (floatValue : float)  = 
   //  json {
   //    if floatValue.IsNaN() then      
@@ -138,7 +145,7 @@ with
 
       return {
           version         = DipAndStrikeResults'.current
-          plane           = plane |> Plane3d.Parse
+          plane           = plane |> Json.parsePlane3d //plane |> Plane3d.Parse
           dipAngle        = dipAngle
           dipDirection    = dipDirection |> V3d.Parse
           strikeDirection = strikeDirection |> V3d.Parse
