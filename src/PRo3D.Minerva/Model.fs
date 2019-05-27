@@ -125,6 +125,7 @@ type FeatureCollection =
   | CheckMastcamL
   | CheckChemLib
   | CheckChemRmi
+  | SetPointSize of Numeric.Action
 
 type MinervaAction =
   | PerformQueries
@@ -139,13 +140,22 @@ type MinervaAction =
       
 
 [<DomainType>]
+type SgFeatures = {
+    positions   : V3d[]
+    colors      : C4b[]
+}
+
+[<DomainType>]
 type QueryModel = {
     minSol               : NumericInput
     maxSol               : NumericInput
+
     instrument           : Instrument
     distance             : NumericInput
     distFilteredFeatures : plist<Feature>
+
     solLables            : hmap<string,V3d>
+
     checkMAHLI           : bool
     checkFrontHazcam     : bool
     checkMastcam         : bool
@@ -156,6 +166,9 @@ type QueryModel = {
     checkMastcamL        : bool
     checkChemLib         : bool
     checkChemRmi         : bool
+
+    pointSize            : NumericInput
+    sgFeatures           : SgFeatures
 }
 
 type MessagingMailbox = MailboxProcessor<MailboxAction>
@@ -281,6 +294,22 @@ module Initial =
             step = 100.0
             format = "{0:0}"
         }
+
+  let pSize = 
+        {
+            value = 5.0
+            min = 0.5
+            max = 15.0
+            step = 0.1
+            format = "{0:0.00}"
+        }
+
+  let sgfeatures =
+    {
+        positions = Array.empty
+        colors    = Array.empty
+    }
+
   let queryFilter = 
     {
         minSol                = minS
@@ -299,6 +328,8 @@ module Initial =
         checkMastcamL         = true
         checkChemLib          = true
         checkChemRmi          = true
+        pointSize             = pSize
+        sgFeatures            = sgfeatures
     }
           
   let sites = [

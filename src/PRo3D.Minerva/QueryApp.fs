@@ -41,6 +41,21 @@ module QueryApp =
             ) |> PList.concat
         fl
 
+    let updateSgFeatures (features:plist<Feature>) =
+        let positions' = 
+            features
+            |> PList.map(fun f -> f.geometry.positions |> PList.ofList )
+            |> PList.concat
+            |> PList.toArray
+
+        let colors' = [| for i in 0 .. (positions'.Length - 1) -> C4b.Red |]
+          
+            
+        {
+            positions = positions'
+            colors = colors'
+        }
+
      //let getDistFeatures' (features:alist<Feature>) (view:IMod<CameraView>) (dist:IMod<float>) =
   //  alist {
   //      let! distance = dist
@@ -67,6 +82,7 @@ module QueryApp =
         let dist = Numeric.update model.distance d
         let distfeatures = getDistFeatures features view dist.value
         let solLables' = updateSolLables model distfeatures
+        let sgfs = updateSgFeatures distfeatures
         { model with distance = dist; distFilteredFeatures = distfeatures; solLables = solLables' }
       | CheckMAHLI -> 
         { model with checkMAHLI = not model.checkMAHLI }
@@ -88,6 +104,9 @@ module QueryApp =
         { model with checkChemLib = not model.checkChemLib }
       | CheckChemRmi -> 
         { model with checkChemRmi = not model.checkChemRmi }
+      | SetPointSize s ->
+        let size = Numeric.update model.pointSize s
+        { model with pointSize = size }
 
     let iconToggle (dings : IMod<bool>) onIcon offIcon action =
         let toggleIcon = dings |> Mod.map(fun isOn -> if isOn then onIcon else offIcon)
@@ -128,6 +147,7 @@ module QueryApp =
                 Html.row "max sol:"  [Numeric.view' [NumericInputType.InputBox] model.maxSol |> UI.map (fun x -> SetMaxSol x)]
                 Html.row "instruments:" [ ( viewQueryInstruments model )]
                 Html.row "distance:" [Numeric.view' [NumericInputType.Slider] model.distance |> UI.map (fun x -> SetDistance x)] 
+                Html.row "point size:" [Numeric.view' [NumericInputType.Slider] model.pointSize |> UI.map (fun x -> SetPointSize x)] 
             ]
         
         ) 

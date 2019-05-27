@@ -160,7 +160,8 @@ module App =
           Log.stop()
           let m' = { model with data = data } //{ data with features = features } } //|> computeXYZFeatures}
           let solLables' = QueryApp.updateSolLables model.queryFilter data.features
-          { m' with queryFilter = {m'.queryFilter with distFilteredFeatures = data.features; solLables = solLables' }}
+          let sgfs = QueryApp.updateSgFeatures data.features
+          { m' with queryFilter = {m'.queryFilter with distFilteredFeatures = data.features; solLables = solLables'; sgFeatures = sgfs }}
         with e ->
           Log.error "%A" e.Message
           model
@@ -334,24 +335,52 @@ module App =
         
 
   let viewFeaturesSg (model : MModel) =
-    //model.data.features 
+    
+
     model.queryFilter.distFilteredFeatures 
         |> AList.map(fun f -> 
-        //Drawing.dots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
-        //Drawing.createIndexedGeometry (f.geometry.positions |> List.toArray) [|f.instrument |> Model.instrumentColor|]
-        //Drawing.indexedGeometryDots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
-        //|> Sg.ofIndexedGeometry
-        Drawing.createHarrisPoints (f.geometry.positions |> List.toArray) (f.instrument |> Model.instrumentColor )
+            let size = model.queryFilter.pointSize.value
+            Drawing.dots (f.geometry.positions |> AList.ofList) size  (f.instrument |> Model.instrumentColor |> Mod.constant)
         ) 
         |> AList.toASet 
-        |> Aardvark.UI.``F# Sg``.Sg.set //Aardvark.SceneGraph.SgFSharp.Sg.set
+        |> Aardvark.UI.``F# Sg``.Sg.set 
+
+    //let points = model.queryFilter.sgFeatures.positions
+    //Drawing.dots (positions |> AList.ofArray) model.queryFilter.pointSize.value  (C4b.Red |> Mod.constant)
+    //Drawing.dots points model.queryFilter.pointSize.value  (C4b.Red |> Mod.constant)
+        //|> AList.toASet 
+        //|> Aardvark.UI.``F# Sg``.Sg.set 
+       
+  let viewFeaturesSg1 (model : MModel) =
+    //let positions = 
+    //    model.queryFilter.distFilteredFeatures
+    //     |> AList.map(fun f -> f.geometry.positions |> AList.ofList)
+    //     |> AList.concat
+    //     |> AList.toArray
+    //let colors =
+    //    model.queryFilter.distFilteredFeatures
+    //     |> AList.map(fun f -> let c = f.instrument |> Model.instrumentColor
+    //                           V4d((float)c.R/255.0, (float)c.G/255.0, (float)c.B/255.0, (float)c.A/255.0))
+    //     |> AList.toArray
+
+    //let colors1 =
+    //    model.queryFilter.distFilteredFeatures
+    //     |> AList.map(fun f -> f.instrument |> Model.instrumentColor)
+    //     |> AList.toArray
+
+    //let pos = 
+    //    positions
+    //     |> Array.map( fun x -> V3f(x))
+    
+    //Drawing.createIndexedGeometry pos colors1
+    Drawing.createHarrisPoints2 model.queryFilter.sgFeatures.positions model.queryFilter.sgFeatures.colors model.queryFilter.pointSize.value
+    //Drawing.testPoints' model.queryFilter.sgFeatures.positions model.queryFilter.sgFeatures.colors
+    //Drawing.createHarrisPoints positions 
         //|> Sg.effect [
         //DefaultSurfaces.stableTrafo |> toEffect
-        //DefaultSurfaces.vertexColor |> toEffect
+        ////DefaultSurfaces.vertexColor |> toEffect
         ////   DefaultSurfaces.pointSprite |> toEffect
         //]
-       
-    
 
   let myCss = [
     { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }

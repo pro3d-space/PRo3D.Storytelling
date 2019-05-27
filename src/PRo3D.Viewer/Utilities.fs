@@ -304,6 +304,7 @@ module Sg =
             let i0 = 3 * ti
             Triangle3d(pos.[i0], pos.[i0 + 1], pos.[i0 + 2])
 
+
         Array.init (pos.Length / 3) get
     
     //## POINTS ##

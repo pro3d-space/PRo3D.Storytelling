@@ -200,6 +200,7 @@ module Surface =
         | RebuildKdTrees            of Guid
         | ToggleActiveFlag          of Guid
         | ChangeImportDirectory     of Guid*string
+        | ChangeImportDirectories   of list<string>
         | GroupsMessage             of Groups.Action  
         //| PickObject                of V3d
         | PlaceSurface              of V3d
@@ -329,6 +330,41 @@ module Surface =
       //this does only update surfaces ... not kdtrees or sgs !!!!             
       { model with surfaces = { model.surfaces with flat = flat' } }
 
+    let changeImportDirectories (model:SurfaceModel) (selectedPaths:list<string>) = 
+        let surfacePaths = 
+            selectedPaths
+            |> List.map Files.superDiscoveryMultipleSurfaceFolder
+            |> List.concat
+
+        let surfaces =        
+            model.surfaces.flat 
+              |> HMap.toList
+              |> List.map(fun (_,v) -> 
+                let s = (v |> Leaf.toSurface)
+                let newPath = 
+                    surfacePaths
+                        |> List.map( fun p -> 
+                                        let name = p |> IO.Path.GetFileName
+                                        match name = s.name with
+                                         | true -> Some p
+                                         | false -> None)
+                        |> List.choose( fun np -> np) 
+                match newPath.IsEmpty with
+                 | true -> s
+                 | false -> { s with importPath = newPath.Head } 
+              )
+              
+        let flat' = 
+            surfaces 
+              |> List.choose(fun x -> 
+                let f = (fun _ -> x |> Leaf.Surfaces)
+                Groups.updateLeaf' x.guid f model.surfaces 
+                  |> HMap.tryFind x.guid 
+                  |> Option.map(fun leaf -> (x.guid,leaf) |> hmapsingle))          
+              |> List.fold HMap.union HMap.empty
+              
+        { model with surfaces = { model.surfaces with flat = flat' } }
+
    
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) (view:CameraView) (refSys : PRo3D.ReferenceSystem.ReferenceSystem) = 
       match action with
@@ -403,6 +439,13 @@ module Surface =
             | Some (Leaf.Surfaces s) when (dir |> System.IO.Directory.Exists) && (dir |> Files.isSurfaceFolder) ->
               { s with importPath = dir } |> SurfaceModel.updateSingleSurface' model
             | _ -> model          
+        | ChangeImportDirectories sl ->
+            match sl with
+                | [] -> model
+                | paths ->
+                    let selectedPaths = paths |> List.choose Files.tryDirectoryExists
+                    changeImportDirectories model selectedPaths
+            
         | GroupsMessage msg -> 
             let groups = Groups.update model.surfaces msg
 

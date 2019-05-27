@@ -78,10 +78,15 @@ module Group =
         visible = true
         expanded = true
         }
-    let initTreeSelection =  { 
+    let initChildSelection =  { 
         id = Guid.Empty
         path = list.Empty
         name = "" 
+        }
+    let initGroupSelection =  { 
+        id = initRoot.key
+        path = list.Empty
+        name = initRoot.name 
         }
 
     let tryGet' (ans:hset<Leaf>) id = 
@@ -166,11 +171,11 @@ module Leaf =
 module GroupsModel =
     let initial = {
         rootGroup        = Group.initRoot
-        activeGroup      = Group.initTreeSelection
-        activeChild      = Group.initTreeSelection
+        activeGroup      = Group.initGroupSelection
+        activeChild      = Group.initChildSelection
         flat             = hmap.Empty
         groupsLookup     = hmap.Empty
-        lastSelectedItem = SelectedItem.Child
+        lastSelectedItem = SelectedItem.Group
         selectedLeaves   = hset.Empty
         singleSelectLeaf = None
     }

@@ -74,6 +74,52 @@ module Mutable =
                 }
     
     
+    type MSgFeatures(__initial : PRo3D.Minerva.SgFeatures) =
+        inherit obj()
+        let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.SgFeatures> = Aardvark.Base.Incremental.EqModRef<PRo3D.Minerva.SgFeatures>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.SgFeatures>
+        let _positions = ResetMod.Create(__initial.positions)
+        let _colors = ResetMod.Create(__initial.colors)
+        
+        member x.positions = _positions :> IMod<_>
+        member x.colors = _colors :> IMod<_>
+        
+        member x.Current = __current :> IMod<_>
+        member x.Update(v : PRo3D.Minerva.SgFeatures) =
+            if not (System.Object.ReferenceEquals(__current.Value, v)) then
+                __current.Value <- v
+                
+                ResetMod.Update(_positions,v.positions)
+                ResetMod.Update(_colors,v.colors)
+                
+        
+        static member Create(__initial : PRo3D.Minerva.SgFeatures) : MSgFeatures = MSgFeatures(__initial)
+        static member Update(m : MSgFeatures, v : PRo3D.Minerva.SgFeatures) = m.Update(v)
+        
+        override x.ToString() = __current.Value.ToString()
+        member x.AsString = sprintf "%A" __current.Value
+        interface IUpdatable<PRo3D.Minerva.SgFeatures> with
+            member x.Update v = x.Update v
+    
+    
+    
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module SgFeatures =
+        [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+        module Lens =
+            let positions =
+                { new Lens<PRo3D.Minerva.SgFeatures, Aardvark.Base.V3d[]>() with
+                    override x.Get(r) = r.positions
+                    override x.Set(r,v) = { r with positions = v }
+                    override x.Update(r,f) = { r with positions = f r.positions }
+                }
+            let colors =
+                { new Lens<PRo3D.Minerva.SgFeatures, Aardvark.Base.C4b[]>() with
+                    override x.Get(r) = r.colors
+                    override x.Set(r,v) = { r with colors = v }
+                    override x.Update(r,f) = { r with colors = f r.colors }
+                }
+    
+    
     type MQueryModel(__initial : PRo3D.Minerva.QueryModel) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.QueryModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Minerva.QueryModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.QueryModel>
@@ -93,6 +139,8 @@ module Mutable =
         let _checkMastcamL = ResetMod.Create(__initial.checkMastcamL)
         let _checkChemLib = ResetMod.Create(__initial.checkChemLib)
         let _checkChemRmi = ResetMod.Create(__initial.checkChemRmi)
+        let _pointSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.pointSize)
+        let _sgFeatures = MSgFeatures.Create(__initial.sgFeatures)
         
         member x.minSol = _minSol
         member x.maxSol = _maxSol
@@ -110,6 +158,8 @@ module Mutable =
         member x.checkMastcamL = _checkMastcamL :> IMod<_>
         member x.checkChemLib = _checkChemLib :> IMod<_>
         member x.checkChemRmi = _checkChemRmi :> IMod<_>
+        member x.pointSize = _pointSize
+        member x.sgFeatures = _sgFeatures
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.QueryModel) =
@@ -132,6 +182,8 @@ module Mutable =
                 ResetMod.Update(_checkMastcamL,v.checkMastcamL)
                 ResetMod.Update(_checkChemLib,v.checkChemLib)
                 ResetMod.Update(_checkChemRmi,v.checkChemRmi)
+                Aardvark.UI.Mutable.MNumericInput.Update(_pointSize, v.pointSize)
+                MSgFeatures.Update(_sgFeatures, v.sgFeatures)
                 
         
         static member Create(__initial : PRo3D.Minerva.QueryModel) : MQueryModel = MQueryModel(__initial)
@@ -243,6 +295,18 @@ module Mutable =
                     override x.Get(r) = r.checkChemRmi
                     override x.Set(r,v) = { r with checkChemRmi = v }
                     override x.Update(r,f) = { r with checkChemRmi = f r.checkChemRmi }
+                }
+            let pointSize =
+                { new Lens<PRo3D.Minerva.QueryModel, Aardvark.UI.NumericInput>() with
+                    override x.Get(r) = r.pointSize
+                    override x.Set(r,v) = { r with pointSize = v }
+                    override x.Update(r,f) = { r with pointSize = f r.pointSize }
+                }
+            let sgFeatures =
+                { new Lens<PRo3D.Minerva.QueryModel, PRo3D.Minerva.SgFeatures>() with
+                    override x.Get(r) = r.sgFeatures
+                    override x.Set(r,v) = { r with sgFeatures = v }
+                    override x.Update(r,f) = { r with sgFeatures = f r.sgFeatures }
                 }
     
     

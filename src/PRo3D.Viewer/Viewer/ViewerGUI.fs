@@ -330,6 +330,20 @@ module Gui =
 
       Incremental.div(AttributeMap.ofAMap blarg) blurg |> UI.map SurfaceActions
 
+    let fixAllBrokenPaths =
+        let ui = 
+            alist {
+                yield
+                 div [ clazz "ui item";
+                        Dialogs.onChooseFiles  SurfaceApp.Action.ChangeImportDirectories;
+                        clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
+                        text "fix all broken paths"
+                        ]
+            }
+
+        Incremental.div(AttributeMap.Empty) ui |> UI.map SurfaceActions
+
+
       //div [ clazz "ui item";
       //    Dialogs.onChooseDirectory Guid.Empty SurfaceApp.Action.ChangeImportDirectory;
       //    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
@@ -390,7 +404,9 @@ module Gui =
                               clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
                               text "Rover Placement"
                           ]
-                          
+
+                          fixAllBrokenPaths
+
                           surfaceUiThing m
                       ]
                   ]

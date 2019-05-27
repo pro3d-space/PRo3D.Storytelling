@@ -306,7 +306,7 @@ module Groups =
                 let selection = checkSelection m'
                 let last = checkLastSelected m'
 
-                // update active group (use parent group)
+                // update active group (use root group)
                 let newSelection = {
                     id   = m'.rootGroup.key
                     path = list.Empty
