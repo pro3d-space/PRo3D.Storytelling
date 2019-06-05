@@ -205,7 +205,7 @@ let provenanceView (model : MModel) =
 
     body [] [
         model.provenance
-            |> ProvenanceApp.view camera model.story
+            |> ProvenanceApp.view model.story
             |> UI.map ProvenanceAction
     ]
 

@@ -16,7 +16,7 @@ module private Helpers =
 
     // Updates the model based on the id of a bookmark and the given function; if the bookmark
     // does not exist, the identity function is applied instead
-    let updateById (id : BookmarkId) (f : Index -> Bookmark -> Model -> Model) (model : Model) =
+    let updateById (f : Index -> Bookmark -> Model -> Model) (id : BookmarkId) (model : Model) =
         match model.bookmarks.list |> PList.tryFindIndex (fun b -> b.id = id) with
             | None ->
                 Log.error "Bookmark with id '%A' does not exist!" id
@@ -50,31 +50,31 @@ let update (msg : BookmarkAction) (model : Model) =
             model |> Lens.update lensList (PList.append b)
 
         | Remove id ->
-            model |> updateById id (fun i _ m ->
+            model |> updateById (fun i _ m ->
                 m |> Lens.update lensList (PList.remove i)
-            )
+            ) id
 
         | Update id ->
-            model |> updateById id (fun i b m ->
+            model |> updateById (fun i b m ->
                 let b = { b with view = model.view.state }
                 m |> Lens.update lensList (PList.set i b)
-            )
+            ) id
 
         | SetTitle (id, s) ->
-            model |> updateById id (fun i b m ->
+            model |> updateById (fun i b m ->
                 let b = { b with title = s }
                 m |> Lens.update lensList (PList.set i b)
-            )
+            ) id
 
         | Goto id ->
-            model |> updateById id (fun _ b m ->
+            model |> updateById (fun _ b m ->
                 m |> restore true b
-            )
+            ) id
 
         | MouseEnter id ->
-            model |> updateById id (fun _ b m ->
+            model |> updateById (fun _ b m ->
                 m |> Lens.update Model.Lens.provenance (ProvenanceApp.update m.story <| SetHighlight b.node.id)
-            )
+            ) id
 
         | MouseLeave ->
             model |> Lens.update Model.Lens.provenance (ProvenanceApp.update model.story RemoveHighlight)

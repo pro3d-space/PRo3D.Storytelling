@@ -11,6 +11,16 @@ open Story
 [<AutoOpen>]
 module private Helpers =
 
+    // Updates the provenance based on the id of a node and the given function; if the node
+    // does not exist, the identity function is applied instead
+    let updateById (f : Node ztree -> Provenance -> Provenance) (id : NodeId) (p : Provenance) =
+        match p.tree |> ZTree.root |> ZTree.tryFind (fun n -> n.id = id) with
+            | None ->
+                Log.error "Provenance node with id '%A' does not exist!" id
+                p
+            | Some x ->
+                p |> f x
+
     module Rules =
 
         let checkMessage (msg : Message) (input : Decision<Node ztree>) =
@@ -131,15 +141,10 @@ let rec update (story : Story) (msg : ProvenanceAction) (p : Provenance) =
             { p with tree = t }
 
         | Goto id ->
-            p.tree |> ZTree.root
-                   |> ZTree.find (fun n -> n.id = id)
-                   |> fun t -> { p with tree = t }
+            p |> updateById (fun t p -> { p with tree = t }) id
 
         | MouseEnter id ->
-            let t = p.tree |> ZTree.root
-                           |> ZTree.find (fun n -> n.id = id)
-
-            { p with hovered = Some t }
+            p |> updateById (fun t p -> { p with hovered = Some t }) id
 
         | MouseLeave ->
             { p with hovered = None }
@@ -150,7 +155,7 @@ let rec update (story : Story) (msg : ProvenanceAction) (p : Provenance) =
         | RemoveHighlight ->
             { p with highlight = None }
 
-let view (camera : IMod<CameraView>)(s : MStory) (p : MProvenance) =
+let view (s : MStory) (p : MProvenance) =
     let dependencies = [
         { kind = Script; name = "d3"; url = "http://d3js.org/d3.v5.min.js" }
         { kind = Stylesheet; name = "provenanceStyle"; url = "Provenance.css" }

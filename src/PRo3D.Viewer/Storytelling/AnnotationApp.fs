@@ -13,17 +13,31 @@ module private Helpers =
 
     let rnd = new RandomSystem ()
 
-    let findById (id : AnnotationId) (a : Annotations) =
-        let index = a.list |> PList.findIndex (fun x -> x.id = id)
-        (index, PList.get index a.list)
+    let tryFindById (id : AnnotationId) (a : Annotations) =
+        a.list |> PList.tryFindIndex (fun x -> x.id = id)
+               |> Option.map (fun i -> i, PList.get i a.list)
 
-    let updateById (f : Annotation -> Annotation) (id : AnnotationId) (a : Annotations) =
-        let (index, x) = findById id a
-        { a with list = a.list |> PList.set index (f x) }
+    // Updates the annotations based on the id of an annotation and the given function; if the annotation
+    // does not exist, the identity function is applied instead
+    let updateById (f : Index -> Annotation -> Annotations -> Annotations) (id : AnnotationId) (a : Annotations) =
+        match tryFindById id a with
+            | None ->
+                Log.error "Annotation with id '%A' does not exist!" id
+                a
+            | Some (i, x) ->
+                a |> f i x
+
+    let mapById (f : Annotation -> Annotation) (id : AnnotationId) (a : Annotations) =
+        let g i a =
+            Lens.update Annotations.Lens.list (PList.set i (f a))
+
+        a |> updateById g id
 
     let deleteById (id : AnnotationId) (a : Annotations) =
-        let (index, _) = findById id a
-        { a with list = a.list |> PList.remove index }
+        let g i _ =
+            Lens.update Annotations.Lens.list (PList.remove i)
+
+        a |> updateById g id
 
 let init = {
     list = PList.empty
@@ -34,20 +48,20 @@ let init = {
 let update (msg : AnnotationAction) (a : Annotations) =
     match msg with
         | LabelChanged (id, text) ->
-            a |> updateById (Annotation.setLabelText text) id
+            a |> mapById (Annotation.setLabelText text) id
         | LabelMoved (id, pos) ->
-            a |> updateById (Annotation.setLabelPosition pos) id
+            a |> mapById (Annotation.setLabelPosition pos) id
         | LabelResized (id, w) ->
-            a |> updateById (Annotation.setLabelWidth w) id
+            a |> mapById (Annotation.setLabelWidth w) id
         | LabelClicked id ->
             match a.targeting, a.focus with
                 | (true, Some f) when f.id = id ->
-                    a |> updateById (Annotation.setTarget None) id
+                    a |> mapById (Annotation.setTarget None) id
                       |> Lens.set Annotations.Lens.targeting false
                 | _ ->
                     a
         | Focus id ->
-            { a with focus = a |> findById id |> snd |> Some }
+            { a with focus = a |> tryFindById id |> Option.map snd }
         | Blur ->
             { a with focus = None }   
         | Add s ->
@@ -61,7 +75,7 @@ let update (msg : AnnotationAction) (a : Annotations) =
         | Target ->
             { a with targeting = not a.targeting }
         | SaveTarget p ->
-            a |> updateById (Annotation.setTarget <| Some p) a.focus.Value.id
+            a |> mapById (Annotation.setTarget <| Some p) a.focus.Value.id
               |> Lens.set Annotations.Lens.targeting false
 
 let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod<V3d>) (disabled : bool) (annotations : MAnnotations) =
