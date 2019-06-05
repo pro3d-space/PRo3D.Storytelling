@@ -100,6 +100,12 @@ let view (model : MModel) =
 
     let bookmark (b : MBookmark) =
 
+        let selected = adaptive {
+            let! id = b.node.id
+            let! t = model.provenance.tree
+            return id = t.Value.id
+        }
+
         let highlighted = adaptive {
             let! hovered = model.provenance.hovered
             let! id = b.node.id
@@ -112,9 +118,11 @@ let view (model : MModel) =
 
         Incremental.div (AttributeMap.ofAMap <| amap {
             let! id = b.id
+            let! selected = selected
             let! highlighted = highlighted
 
-            yield clazz <| "bookmark item"  + if highlighted then " highlighted" else ""
+            yield clazz <| "bookmark item"  + if selected then " selected" else ""
+                                            + if highlighted then " highlighted" else ""
             yield onMouseDoubleClick (fun _ -> Goto id)
             yield onMouseEnter (fun _ -> MouseEnter id)
             yield onMouseLeave (fun _ -> MouseLeave)
@@ -143,9 +151,10 @@ let view (model : MModel) =
 
                 Incremental.div (AttributeMap.ofList [clazz "actions"]) <| alist {
                     let! id = b.id
+                    let! selected = selected
                     let! viewChanged = viewChanged
 
-                    if viewChanged then
+                    if selected && viewChanged then
                         yield disableClickPropagation (
                             i [
                                 clazz "large clickable sync alternate icon"

@@ -37,7 +37,11 @@
     background-color: #303236;
 }
 
-.bookmark.highlighted.item {
+.bookmark.selected.item {
+    background-color: rgba(170, 253, 50, 0.3);
+}
+
+.bookmark.highlighted.item:not(.selected) {
     background-color: rgba(50, 203, 253, 0.6);
 }
 
