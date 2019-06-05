@@ -305,7 +305,7 @@ let overlayView (model : MModel) =
                             preventBlur (
                                 div [
                                     clazz "ui icon button"
-                                    onClick (fun _ -> Add |> AnnotationAction)
+                                    onClick (fun _ -> Add "" |> AnnotationAction)
                                 ] [
                                     i [clazz "add icon"] []
                                 ]

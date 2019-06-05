@@ -51,6 +51,7 @@ let initial (runtime: IRuntime) (signature: IFramebufferSignature) messagingMail
         provenance = ProvenanceApp.init <| State.create model
         story = StoryApp.init
         view = ViewApp.init <| AppModel.getViewParams model
+        bookmarks = BookmarkApp.init
         renderControlSize = V2i.One
     }
 
@@ -90,6 +91,9 @@ let update (runtime : IRuntime) (signature: IFramebufferSignature)
         
             | StoryAction a ->
                 model |> StoryApp.update a
+
+            | BookmarkAction a ->
+                model |> BookmarkApp.update a
 
             | SessionAction a ->
                 model |> SessionApp.update a
@@ -211,6 +215,11 @@ let storyboardView (model : MModel) =
               |> UI.map StoryAction
     ]
 
+let bookmarksView (model : MModel) =
+    body [] [
+        model |> BookmarkApp.view
+              |> UI.map BookmarkAction
+    ]
 
 let view (model : MModel) =
     page (fun request ->
@@ -221,6 +230,8 @@ let view (model : MModel) =
                 provenanceView model
             | Some "storyboard" ->
                 storyboardView model
+            | Some "bookmarks" ->
+                bookmarksView model
             | Some _ as p ->
                 model.inner.output |> ViewerApp.view p (Mod.constant true)
                                    |> UI.map AppAction

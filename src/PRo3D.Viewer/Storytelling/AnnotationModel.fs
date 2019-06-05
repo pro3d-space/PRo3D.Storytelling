@@ -59,17 +59,17 @@ type AnnotationAction =
     | LabelClicked  of AnnotationId
     | Focus         of AnnotationId
     | Blur
-    | Add
+    | Add           of string
     | Remove        of AnnotationId
     | Target
     | SaveTarget    of V3d
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Label =
-    let create (position : V2i) = {
+    let create (text : string) (position : V2i) = {
         width = 300;
         position = position
-        text = String.Empty
+        text = text
     }
 
 [<AutoOpen>]

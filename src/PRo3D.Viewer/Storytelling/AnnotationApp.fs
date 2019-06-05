@@ -50,10 +50,10 @@ let update (msg : AnnotationAction) (a : Annotations) =
             { a with focus = a |> findById id |> snd |> Some }
         | Blur ->
             { a with focus = None }   
-        | Add ->
+        | Add s ->
             let r = rnd.UniformV2d (Box2d (0.25, 0.25, 0.75, 0.75))
             let pos = V2i (r * V2d (baseSize))
-            let x = pos |> Label.create |> Annotation.create None
+            let x = pos |> Label.create s |> Annotation.create None
 
             { a with list = a.list |> PList.append x }
         | Remove id ->

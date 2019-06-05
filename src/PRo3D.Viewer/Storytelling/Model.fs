@@ -12,6 +12,7 @@ open View
 open Preview
 open Session
 open Animation
+open Bookmarks
 
 type Action =
     | AppAction             of AppAction
@@ -21,6 +22,7 @@ type Action =
     | NodeClick             of NodeId
     | ViewAction            of ViewAction
     | PreviewAction         of PreviewAction
+    | BookmarkAction        of BookmarkAction
     | SessionAction         of SessionAction
     | KeyDown               of Keys
     | KeyUp                 of Keys
@@ -40,6 +42,7 @@ type Model = {
     dockConfig : DockConfig
     provenance : Provenance
     story : Story
+    bookmarks : Bookmarks
     renderControlSize : V2i
 }
 

@@ -1,0 +1,65 @@
+﻿body {
+    background-color: #1B1C1E;
+    min-width: 0;
+}
+
+.clickable.icon {
+    color: rgb(164, 170, 182);
+}
+
+.clickable.icon:hover {
+    color: white;
+}
+
+.aligned-vertical {
+    margin-top: auto !important;
+    margin-bottom: auto !important;
+}
+
+.aligned-horizontal {
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.bookmarks > .controls {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px;
+}
+
+.bookmark.item {
+    display: flex !important;
+    padding: 5px !important;
+    cursor: pointer;
+}
+
+.bookmark.item:hover {
+    background-color: #303236;
+}
+
+.bookmark.highlighted.item {
+    background-color: rgba(50, 203, 253, 0.6);
+}
+
+.bookmark.item > .content {
+    position: relative;
+    width: 100%;
+    min-width: 0 !important;
+}
+
+.bookmark.item .actions {
+    display: none !important;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translate(0, -50%);
+}
+
+.bookmark.item:hover .actions {
+    display: inline-block !important;
+}
+
+.add.bookmark.item .add.icon {
+    margin-top: 5px !important;
+    margin-bottom: 5px !important;
+}

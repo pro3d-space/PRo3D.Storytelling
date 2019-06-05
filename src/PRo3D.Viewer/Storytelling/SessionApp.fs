@@ -8,6 +8,7 @@ open Model
 open Session
 open Provenance
 open Provenance.Reduced
+open Bookmarks
 open Story
 open View
 
@@ -21,6 +22,7 @@ module private Helpers =
         dockConfig : DockConfig
         provenance : Provenance
         story : Story
+        bookmarks : Bookmarks
         renderControlSize : V2i
     }
 
@@ -32,6 +34,7 @@ module private Helpers =
             dockConfig = model.dockConfig
             provenance = model.provenance
             story = model.story
+            bookmarks = model.bookmarks
             renderControlSize = model.renderControlSize
         }
 
@@ -41,11 +44,13 @@ module private Helpers =
                     dockConfig = model.dockConfig
                     provenance = model.provenance
                     story = model.story
+                    bookmarks = model.bookmarks
                     renderControlSize = model.renderControlSize
                     view = model.view
             }
 
             m |> Lens.set (Model.Lens.inner |. InnerModel.Lens.current) (State.restore m.inner.current <| Provenance.state m.provenance)
+              |> Model.setViewParams m.view.state
 
     // XML serializer
     let private xmlSerializer =

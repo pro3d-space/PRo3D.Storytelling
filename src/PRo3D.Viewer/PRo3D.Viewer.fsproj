@@ -133,6 +133,7 @@
     <Compile Include="Viewer\Viewer.fs" />
     <EmbeddedResource Include="Storytelling\Annotations.css" />
     <EmbeddedResource Include="Storytelling\Annotations.js" />
+    <EmbeddedResource Include="Storytelling\Bookmarks.css" />
     <EmbeddedResource Include="Storytelling\Menu.css" />
     <EmbeddedResource Include="Storytelling\Overlay.css" />
     <EmbeddedResource Include="Storytelling\Provenance.css" />
@@ -149,6 +150,7 @@
     <Compile Include="Storytelling\ThumbnailModel.fs" />
     <Compile Include="Storytelling\AnimationModel.fs" />
     <Compile Include="Storytelling\ViewModel.fs" />
+    <Compile Include="Storytelling\BookmarkModel.fs" />
     <Compile Include="Storytelling\PreviewModel.fs" />
     <Compile Include="Storytelling\StoryModel.fs" />
     <Compile Include="Storytelling\ProvenanceApp.fs" />
@@ -160,6 +162,7 @@
     <Compile Include="Storytelling\SessionApp.fs" />
     <Compile Include="Storytelling\ThumbnailApp.fs" />
     <Compile Include="Storytelling\StoryApp.fs" />
+    <Compile Include="Storytelling\BookmarkApp.fs" />
     <Compile Include="Storytelling\App.fs" />
     <Compile Include="RemoteControlModel.fs" />
     <Compile Include="RemoteControlApp.fs" />
