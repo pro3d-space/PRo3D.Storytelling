@@ -143,12 +143,13 @@ module App =
     let cql = [("cql", cqlStringSol)] |> HMap.ofList
     (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
 
- 
+  
 
   let update (view:CameraView) (model : Model) (msg : MinervaAction) : Model =
       match msg with
       | Reset ->
-        { model with data = Initial.data }
+        let m' = { model with data = Initial.data }
+        { m' with queryFilter = Initial.queryFilter }
       | WriteScreenCoordsDebug -> model
       | PerformQueries -> 
         try
@@ -156,12 +157,11 @@ module App =
           Log.startTimed "[Minerva] Fetching full dataset from Server"
           let data = idTestList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
           //let features = data.features |> PList.sortBy(fun x -> x.sol)    
-          
           Log.stop()
-          let m' = { model with data = data } //{ data with features = features } } //|> computeXYZFeatures}
-          let solLables' = QueryApp.updateSolLables model.queryFilter data.features
-          let sgfs = QueryApp.updateSgFeatures data.features
-          { m' with queryFilter = {m'.queryFilter with distFilteredFeatures = data.features; solLables = solLables'; sgFeatures = sgfs }}
+
+          let queryM = QueryApp.updateFeaturesForRendering model.queryFilter data.features
+          { model with data = data; queryFilter = queryM }
+
         with e ->
           Log.error "%A" e.Message
           model
@@ -237,6 +237,13 @@ module App =
       | QueryMessage msg ->
         let querymodel = QueryApp.update view model.queryFilter model.data.features msg
         { model with queryFilter = querymodel }
+      | QueryDataFile ->
+        Log.startTimed "[Minerva] Fetching full dataset from data file"
+        let data = Files.loadDataFile
+        Log.stop()
+
+        let queryM = QueryApp.useQueriesForData data.features model.queryFilter view
+        { model with data = data; queryFilter = queryM}
 
 
   let viewFeatures (pos : IMod<V3d>)(instr : Instrument) (features : list<Feature>) = 
@@ -291,7 +298,7 @@ module App =
      let content =
         alist { 
           //let! features = model.data.features |> AList.toMod
-          let! features = model.queryFilter.distFilteredFeatures |> AList.toMod
+          let! features = model.queryFilter.filteredFeatures |> AList.toMod
           let groupedFeatures = features |> PList.toList |> List.groupBy(fun x -> x.instrument)
 
           for (instr, group) in groupedFeatures do
@@ -314,6 +321,7 @@ module App =
          button [clazz "ui button"; onClick (fun _ -> Reset)][text "Clear"]
          button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Export"]
          button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
+         button [clazz "ui button"; onClick (fun _ -> QueryDataFile)][text "Query csv"]
        ]
        
        queryGui model               
@@ -337,7 +345,7 @@ module App =
   let viewFeaturesSg (model : MModel) =
     
 
-    model.queryFilter.distFilteredFeatures 
+    model.queryFilter.filteredFeatures 
         |> AList.map(fun f -> 
             let size = model.queryFilter.pointSize.value
             Drawing.dots (f.geometry.positions |> AList.ofList) size  (f.instrument |> Model.instrumentColor |> Mod.constant)
@@ -353,18 +361,18 @@ module App =
        
   let viewFeaturesSg1 (model : MModel) =
     //let positions = 
-    //    model.queryFilter.distFilteredFeatures
+    //    model.queryFilter.filteredFeatures
     //     |> AList.map(fun f -> f.geometry.positions |> AList.ofList)
     //     |> AList.concat
     //     |> AList.toArray
     //let colors =
-    //    model.queryFilter.distFilteredFeatures
+    //    model.queryFilter.filteredFeatures
     //     |> AList.map(fun f -> let c = f.instrument |> Model.instrumentColor
     //                           V4d((float)c.R/255.0, (float)c.G/255.0, (float)c.B/255.0, (float)c.A/255.0))
     //     |> AList.toArray
 
     //let colors1 =
-    //    model.queryFilter.distFilteredFeatures
+    //    model.queryFilter.filteredFeatures
     //     |> AList.map(fun f -> f.instrument |> Model.instrumentColor)
     //     |> AList.toArray
 

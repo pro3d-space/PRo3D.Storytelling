@@ -126,6 +126,7 @@ type FeatureCollection =
   | CheckChemLib
   | CheckChemRmi
   | SetPointSize of Numeric.Action
+  | UseQueriesForDataFile
 
 type MinervaAction =
   | PerformQueries
@@ -137,6 +138,7 @@ type MinervaAction =
   | ConnectVisplore
   | FlyToProduct of V3d
   | QueryMessage of QueryAction
+  | QueryDataFile
       
 
 [<DomainType>]
@@ -152,7 +154,7 @@ type QueryModel = {
 
     instrument           : Instrument
     distance             : NumericInput
-    distFilteredFeatures : plist<Feature>
+    filteredFeatures     : plist<Feature>
 
     solLables            : hmap<string,V3d>
 
@@ -169,6 +171,8 @@ type QueryModel = {
 
     pointSize            : NumericInput
     sgFeatures           : SgFeatures
+
+    useFileQueries       : bool
 }
 
 type MessagingMailbox = MailboxProcessor<MailboxAction>
@@ -316,7 +320,7 @@ module Initial =
         maxSol                = maxS
         instrument            = Instrument.NotImplemented
         distance              = dist
-        distFilteredFeatures  = PList.empty
+        filteredFeatures      = PList.empty
         solLables             = hmap.Empty
         checkMAHLI            = true
         checkFrontHazcam      = true
@@ -330,6 +334,7 @@ module Initial =
         checkChemRmi          = true
         pointSize             = pSize
         sgFeatures            = sgfeatures
+        useFileQueries        = false
     }
           
   let sites = [

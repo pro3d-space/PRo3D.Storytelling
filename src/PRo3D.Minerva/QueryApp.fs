@@ -31,14 +31,37 @@ module QueryApp =
                 lables <- lables.Add(txt, pos) //|> ignore
         lables
 
-    let getDistFeatures (features:plist<Feature>) (view:CameraView) (dist:float) =
-        let fl = 
-            features
+    let getDistFeatures (view:CameraView) (dist:float) (features:plist<Feature>) =
+        features
             |> PList.map(fun f -> 
                 f.geometry.positions
                     |> List.choose(fun x -> if V3d.Distance(view.Location, x) < dist then Some f else None)
                     |> PList.ofList
             ) |> PList.concat
+        
+
+    let solFilter (minsol:float) (maxsol:float) (features:plist<Feature>) =
+        features
+         |> PList.choose(fun f -> if f.sol >= int(minsol) && f.sol <= int(maxsol) then Some f else None)
+       
+
+    let instrumentFilter (model : QueryModel) (features:plist<Feature>) =
+        let fl = 
+            features
+            |> PList.choose(fun f -> 
+                match f.instrument with
+                  | Instrument.MAHLI -> if model.checkMAHLI then Some f else None        
+                  | Instrument.FrontHazcam -> if model.checkFrontHazcam then Some f else None     
+                  | Instrument.Mastcam -> if model.checkMastcam then Some f else None         
+                  | Instrument.APXS -> if model.checkAPXS then Some f else None             
+                  | Instrument.FrontHazcamR -> if model.checkFrontHazcamR then Some f else None     
+                  | Instrument.FrontHazcamL -> if model.checkFrontHazcamL then Some f else None   
+                  | Instrument.MastcamR -> if model.checkMastcamR then Some f else None      
+                  | Instrument.MastcamL -> if model.checkMastcamL then Some f else None        
+                  | Instrument.ChemLib -> if model.checkChemLib then Some f else None         
+                  | Instrument.ChemRmi -> if model.checkChemRmi then Some f else None  
+                  | _ -> None
+            )
         fl
 
     let updateSgFeatures (features:plist<Feature>) =
@@ -70,43 +93,72 @@ module QueryApp =
   //      yield fl
   //  } |> AList.concat
 
+    let updateFeaturesForRendering (model : QueryModel) (features:plist<Feature>) =
+        let solLables' = updateSolLables model features
+        let sgfs = updateSgFeatures features
+        { model with filteredFeatures = features; solLables = solLables'; sgFeatures = sgfs }
+        
+    
+    let useQueriesForData (features:plist<Feature>) (qModel : QueryModel) (view:CameraView) =
+        if qModel.useFileQueries then
+            features
+            |> getDistFeatures view qModel.distance.value
+            |> solFilter qModel.minSol.value qModel.maxSol.value
+            |> instrumentFilter qModel
+            |> updateFeaturesForRendering qModel 
+        else updateFeaturesForRendering qModel features
+        
+    
     let update (view:CameraView) (model : QueryModel) (features:plist<Feature>) (msg : QueryAction) : QueryModel =
       match msg with
       | SetMinSol ms ->
         let minsol = Numeric.update model.minSol ms
-        { model with minSol = minsol }
+        let m = { model with minSol = minsol }
+        useQueriesForData features m view
       | SetMaxSol ms ->
         let maxsol = Numeric.update model.maxSol ms
-        { model with maxSol = maxsol }
+        let m = { model with maxSol = maxsol }
+        useQueriesForData features m view
       | SetDistance d ->
         let dist = Numeric.update model.distance d
-        let distfeatures = getDistFeatures features view dist.value
-        let solLables' = updateSolLables model distfeatures
-        let sgfs = updateSgFeatures distfeatures
-        { model with distance = dist; distFilteredFeatures = distfeatures; solLables = solLables' }
+        let m = { model with distance = dist }
+        useQueriesForData features m view
       | CheckMAHLI -> 
-        { model with checkMAHLI = not model.checkMAHLI }
+        let m = { model with checkMAHLI = not model.checkMAHLI }
+        useQueriesForData features m view
       | CheckFrontHazcam -> 
-        { model with checkFrontHazcam = not model.checkFrontHazcam }
+        let m = { model with checkFrontHazcam = not model.checkFrontHazcam }
+        useQueriesForData features m view
       | CheckMastcam -> 
-        { model with checkMastcam = not model.checkMastcam }
+        let m = { model with checkMastcam = not model.checkMastcam }
+        useQueriesForData features m view
       | CheckAPXS -> 
-        { model with checkAPXS = not model.checkAPXS }
+        let m = { model with checkAPXS = not model.checkAPXS }
+        useQueriesForData features m view
       | CheckFrontHazcamR -> 
-        { model with checkFrontHazcamR = not model.checkFrontHazcamR }
+        let m = { model with checkFrontHazcamR = not model.checkFrontHazcamR }
+        useQueriesForData features m view
       | CheckFrontHazcamL -> 
-        { model with checkFrontHazcamL = not model.checkFrontHazcamL }
+        let m = { model with checkFrontHazcamL = not model.checkFrontHazcamL }
+        useQueriesForData features m view
       | CheckMastcamR -> 
-        { model with checkMastcamR = not model.checkMastcamR }
+        let m = { model with checkMastcamR = not model.checkMastcamR }
+        useQueriesForData features m view
       | CheckMastcamL -> 
-        { model with checkMastcamL = not model.checkMastcamL }
+        let m = { model with checkMastcamL = not model.checkMastcamL }
+        useQueriesForData features m view
       | CheckChemLib -> 
-        { model with checkChemLib = not model.checkChemLib }
+        let m = { model with checkChemLib = not model.checkChemLib }
+        useQueriesForData features m view
       | CheckChemRmi -> 
-        { model with checkChemRmi = not model.checkChemRmi }
+        let m = { model with checkChemRmi = not model.checkChemRmi }
+        useQueriesForData features m view
       | SetPointSize s ->
         let size = Numeric.update model.pointSize s
         { model with pointSize = size }
+      | UseQueriesForDataFile ->
+        let m = { model with useFileQueries = not model.useFileQueries }
+        useQueriesForData features m view
 
     let iconToggle (dings : IMod<bool>) onIcon offIcon action =
         let toggleIcon = dings |> Mod.map(fun isOn -> if isOn then onIcon else offIcon)
@@ -142,7 +194,9 @@ module QueryApp =
 
     let viewQueryFilters (model :MQueryModel) =
         require Html.semui ( 
-            Html.table [                
+
+            Html.table [ 
+                Html.row ("use queries for data")  [iconCheckBox model.useFileQueries UseQueriesForDataFile]
                 Html.row "min sol:"  [Numeric.view' [NumericInputType.InputBox] model.minSol |> UI.map (fun x -> SetMinSol x)]
                 Html.row "max sol:"  [Numeric.view' [NumericInputType.InputBox] model.maxSol |> UI.map (fun x -> SetMaxSol x)]
                 Html.row "instruments:" [ ( viewQueryInstruments model )]

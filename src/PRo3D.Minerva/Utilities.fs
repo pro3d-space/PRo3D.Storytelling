@@ -20,39 +20,110 @@ open FShade
 open Aardvark.UI
 open FSharp.Data
 
-//module Files = 
+module Files = 
 
-//    let getFeature (row:CsvRow) : Feature =
-//        let id' = row.GetColumn "{Key}Product_id"
-//        let inst = row.GetColumn "{Category}Instrument_id"
-//        let sol' = row.GetColumn "{Value}{Sol}Planet_day_number"
+    let getProperties (ins : Instrument) (insId:string) (row:CsvRow) : PRo3D.Minerva.Properties = 
+        match ins with
+            | Instrument.MAHLI ->   
+                {
+                MAHLI_Properties.id = insId |> FeatureId
+                beginTime =  DateTime.Parse(row.GetColumn "{Timestamp}Start_time")
+                endTime =  DateTime.Parse(row.GetColumn "{Timestamp}Stop_time")
+                } |> Properties.MAHLI
+            | Instrument.FrontHazcam | Instrument.FrontHazcamL | Instrument.FrontHazcamR ->
+                {
+                FrontHazcam_Properties.id = insId |> FeatureId
+                beginTime =  DateTime.Parse(row.GetColumn "{Timestamp}Start_time")
+                endTime =  DateTime.Parse(row.GetColumn "{Timestamp}Stop_time")
+                } |> Properties.FrontHazcam
+            | Instrument.Mastcam | Instrument.MastcamL | Instrument.MastcamR ->
+                {
+                Mastcam_Properties.id = insId |> FeatureId
+                beginTime =  DateTime.Parse(row.GetColumn "{Timestamp}Start_time")
+                endTime =  DateTime.Parse(row.GetColumn "{Timestamp}Stop_time")
+                } |> Properties.Mastcam
+            | Instrument.APXS ->
+              {
+                APXS_Properties.id = insId |> FeatureId
+              } |> Properties.APXS       
+            | Instrument.ChemLib ->
+              {
+                ChemCam_Properties.id = insId |> FeatureId           
+              } |> Properties.ChemCam       
+            | Instrument.ChemRmi ->
+              {
+                ChemCam_Properties.id = insId |> FeatureId            
+              } |> Properties.ChemCam       
+            | Instrument.NotImplemented ->
+              {
+                APXS_Properties.id = insId |> FeatureId
+              } |> Properties.APXS               
+            | _ -> failwith "encountered invalid instrument from parsing"
 
-//        let omega = row.GetColumn "{Angle}Omega"
-//        let phi = row.GetColumn "{Angle}Phi"
-//        let kappa = row.GetColumn "{Angle}Kappa"
+    let getFeature (row:CsvRow) : option<Feature> =
 
-//        let x = row.GetColumn "{CartX}X"
-//        let y = row.GetColumn "{CartY}Y"
-//        let z = row.GetColumn "{CartZ}Z"
+        let id' = row.GetColumn "{Key}Product_id"
+        match id' with
+         | "" -> None
+         | _-> 
+            let inst = row.GetColumn "{Category}Instrument_id"
+            let instrument = inst |> Model.toInstrument
+            let sol' = (row.GetColumn "{Value}{Sol}Planet_day_number").AsInteger()
 
-//        {
-//          id          = id'
-//          instrument  = inst |> Model.toInstrument
-//          typus       = FeatureCollection
-//          boundingBox = Box2d.Invalid//feature?bbox |> parseBoundingBox
-//          properties  = prop
-//          geometry    = { geometry with positions = position |> List.singleton }
-//          sol         = sol'
-//        } 
+            let omega = (row.GetColumn "{Angle}Omega").AsFloat()
+            let phi = (row.GetColumn "{Angle}Phi").AsFloat()
+            let kappa = (row.GetColumn "{Angle}Kappa").AsFloat()
 
-//    let loadDataDump = 
-//        let directory = @".\MinervaData"
-//        let allData = CsvFile.Load(@".\MinervaData\dump.csv").Cache()
+            let x = (row.GetColumn "{CartX}X").AsFloat()
+            let y = (row.GetColumn "{CartY}Y").AsFloat()
+            let z = (row.GetColumn "{CartZ}Z").AsFloat()
 
-//        allData.Rows
-//            |> Seq.map( fun x -> getFeature x )
+            let instName = row.GetColumn "{Category}Instrument_name"
 
-//        //allData
+            let props = getProperties instrument inst row
+
+            let geo = 
+                {
+                    typus = Typus.Point
+                    coordinates = V3d(omega, phi, kappa) |> List.singleton
+                    positions = V3d(x, y, z) |> List.singleton
+                }
+
+            let feature = 
+                {
+                  id          = id'
+                  instrument  = instrument
+                  typus       = Feature
+                  boundingBox = Box2d.Invalid//feature?bbox |> parseBoundingBox
+                  properties  = props
+                  geometry    = geo
+                  sol         = sol'
+                } 
+            Some feature
+
+    let loadDataFile = 
+        let directory = @".\MinervaData"
+        let path = ".\MinervaData\dump.csv"
+        match System.IO.File.Exists path with
+         | true -> 
+            let allData = CsvFile.Load(@".\MinervaData\dump.csv").Cache()
+
+            let features = 
+                allData.Rows
+                    |> Seq.choose( fun x -> getFeature x )
+                
+
+            {
+              name        = "dump"
+              typus       = Typus.FeatureCollection    
+              boundingBox = Box2d.Invalid
+              features    = features |> PList.ofSeq
+            }
+         | false -> 
+            Log.line "wrong filename"
+            Initial.data
+
+        //allData
 
 module Shader = 
 
