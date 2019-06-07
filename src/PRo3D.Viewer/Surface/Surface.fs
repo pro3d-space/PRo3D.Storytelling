@@ -63,14 +63,14 @@ module Surface =
     module ObjectFiles =        
         open Aardvark.Geometry
 
-        let loadObject (s:PRo3D.Surfaces.Surface) : SgSurface =                        
-            let obj = Loader.Assimp.load (s.importPath)  
+        let loadObject (surface : PRo3D.Surfaces.Surface) : SgSurface =                        
+            let obj = Loader.Assimp.load (surface.importPath)  
             let mutable count = 0
             let kdTrees = 
               obj.meshes 
                 |> Array.map(fun x ->
-                  let dir = Path.GetDirectoryName(s.importPath)
-                  let filename = Path.GetFileNameWithoutExtension(s.importPath) + count.ToString() + ".aakd"
+                  let dir = Path.GetDirectoryName(surface.importPath)
+                  let filename = Path.GetFileNameWithoutExtension(surface.importPath) + count.ToString() + ".aakd"
                   let kdTreePath = dir + "\\" + filename //Path.ChangeExtension(s.importPath, name)
                   count <- count + 1
                   let tree' = 
@@ -81,7 +81,7 @@ module Surface =
                           //let indices = x.geometry.IndexArray |> unbox<int[]> potential problem with indices
                           let t = DebugKdTreesX.getTriangleSet3f pos
                                         
-                          Log.startTimed "Building kdtrees for %s" (s.importPath |> Path.GetFileName)
+                          Log.startTimed "Building kdtrees for %s" (surface.importPath |> Path.GetFileName)
                           let tree = 
                             KdIntersectionTree(t, 
                               KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical) //|> PRo3D.Serialization.save kdTreePath                  
@@ -119,8 +119,9 @@ module Surface =
 
             let pose = Pose.translate bb.Center // bb.Center V3d.Zero
             let trafo = { TrafoController.initial with pose = pose; previewTrafo = Pose.toTrafo pose; mode = TrafoMode.Local }
+
             {
-                surface     = s.guid    
+                surface     = surface.guid    
                 trafo       = trafo
                 globalBB    = bb
                 sceneGraph  = sg
@@ -130,9 +131,9 @@ module Surface =
                  
         let createSgObjects _ _ surfaces =
             let sghs =
-                surfaces
-                    |> PList.toList
-              |> List.map loadObject
+              surfaces
+                |> PList.toList 
+                |> List.map loadObject
 
             let sgObjects =
                 sghs 

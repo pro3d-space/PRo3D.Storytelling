@@ -318,7 +318,7 @@ module Drawing =
         |> Sg.effect [
             toEffect Shader.stableTrafo
             toEffect DefaultSurfaces.vertexColor
-            //toEffect DefaultSurfaces.pointSprite
+            toEffect DefaultSurfaces.pointSprite
         ]
         |> Sg.uniform "PointSize" size
   
@@ -375,6 +375,7 @@ module Drawing =
             |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
             do! Shader.stableTrafo
             }            
-            |> Aardvark.UI.``F# Sg``.Sg.trafo invScaleTrafo //(Mod.constant invScaleTrafo)
-            |> Aardvark.UI.``F# Sg``.Sg.trafo billboardTrafo  
+            |> Aardvark.UI.``F# Sg``.Sg.trafo (modelTrafo |> Mod.constant)
+            //|> Aardvark.UI.``F# Sg``.Sg.trafo invScaleTrafo //(Mod.constant invScaleTrafo)
+            //|> Aardvark.UI.``F# Sg``.Sg.trafo billboardTrafo  
 

@@ -31,6 +31,16 @@ module QueryApp =
                 lables <- lables.Add(txt, pos) //|> ignore
         lables
 
+    let updateSolLables2 (model : QueryModel) (features:plist<Feature>) =
+      let range = new Range1i(model.minSol.value |> int, model.maxSol.value |> int)
+
+      features 
+        |> PList.toList 
+        |> List.filter (fun x -> range.Contains(x.sol))
+        |> List.map(fun x -> x.sol |> string, x.geometry.positions.Head) 
+        |> HMap.ofList      
+        
+
     let getDistFeatures (view:CameraView) (dist:float) (features:plist<Feature>) =
         features
             |> PList.map(fun f -> 
@@ -94,9 +104,11 @@ module QueryApp =
   //  } |> AList.concat
 
     let updateFeaturesForRendering (model : QueryModel) (features:plist<Feature>) =
-        let solLables' = updateSolLables model features
+        Log.startTimed "[Minerva] updating sol labels"
+        let solLabels = updateSolLables2 model features
+        Log.stop()
         let sgfs = updateSgFeatures features
-        { model with filteredFeatures = features; solLables = solLables'; sgFeatures = sgfs }
+        { model with filteredFeatures = features; solLables = solLabels; sgFeatures = sgfs }
         
     
     let useQueriesForData (features:plist<Feature>) (qModel : QueryModel) (view:CameraView) =

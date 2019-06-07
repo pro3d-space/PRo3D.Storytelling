@@ -243,6 +243,9 @@ module App =
         Log.stop()
 
         let queryM = QueryApp.useQueriesForData data.features model.queryFilter view
+
+        Log.line "[Minerva] found %A features in collection" queryM.filteredFeatures.Count
+
         { model with data = data; queryFilter = queryM}
 
 
@@ -295,7 +298,7 @@ module App =
             |> UI.map QueryMessage 
             //|> Mod.constant
     
-     let content =
+     let listOfFeatures =
         alist { 
           //let! features = model.data.features |> AList.toMod
           let! features = model.queryFilter.filteredFeatures |> AList.toMod
@@ -318,15 +321,18 @@ module App =
          button [clazz "ui button"; onClick (fun _ -> PerformQueries)][text "Query DB"]
          button [clazz "ui button"; onClick (fun _ -> SaveFeatureCollection)][text "Save"]
          button [clazz "ui button"; onClick (fun _ -> LoadFeatureCollection)][text "Load"]
-         button [clazz "ui button"; onClick (fun _ -> Reset)][text "Clear"]
+         button [clazz "ui button"; onClick (fun _ -> Reset)][text "Clear"]         
+       ]
+
+       div [clazz "ui buttons"] [
          button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Export"]
          button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
-         button [clazz "ui button"; onClick (fun _ -> QueryDataFile)][text "Query csv"]
+         button [clazz "ui button"; onClick (fun _ -> QueryDataFile)][text "Load csv"]
        ]
        
        queryGui model               
                      
-       Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) content  
+       Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) AList.empty  
      ]
 
 
@@ -344,14 +350,19 @@ module App =
 
   let viewFeaturesSg (model : MModel) =
     
+    let blarg = 
+      model.queryFilter.filteredFeatures 
+        |> AList.collect(fun f -> f.geometry.positions |> AList.ofList)
+    
+    Drawing.indexedGeometryDots blarg model.queryFilter.pointSize.value (Mod.constant C4b.White)
+        //|> AList.map(fun f -> 
+        //    let size = model.queryFilter.pointSize.value
+        //    Drawing.dots (f.geometry.positions |> AList.ofList) size  (f.instrument |> Model.instrumentColor |> Mod.constant)
+        //) 
+        //|> AList.toASet 
+        //|> Aardvark.UI.``F# Sg``.Sg.set 
 
-    model.queryFilter.filteredFeatures 
-        |> AList.map(fun f -> 
-            let size = model.queryFilter.pointSize.value
-            Drawing.dots (f.geometry.positions |> AList.ofList) size  (f.instrument |> Model.instrumentColor |> Mod.constant)
-        ) 
-        |> AList.toASet 
-        |> Aardvark.UI.``F# Sg``.Sg.set 
+//    Sg.empty
 
     //let points = model.queryFilter.sgFeatures.positions
     //Drawing.dots (positions |> AList.ofArray) model.queryFilter.pointSize.value  (C4b.Red |> Mod.constant)
