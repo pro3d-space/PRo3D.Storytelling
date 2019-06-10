@@ -224,8 +224,9 @@ module FalseColorLegendApp =
 
                         let range = fcUpperBound - fcLowerBound
                         let numOfRangeGaps = int (System.Math.Round (range / fcInterval))
-                        let numOfBuckets = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
-                        let numOfLabels =   if numOfBuckets > 100 then 25
+                        let numOfBuckets = if (numOfRangeGaps + 2) > 200 then 200 else (numOfRangeGaps + 2)
+                        let numOfLabels =   if numOfBuckets > 200 then 50
+                                            else if numOfBuckets > 100 then 25
                                         
                                             else if numOfBuckets > 25 then (numOfBuckets / 4)
                                             else numOfBuckets - 2 
