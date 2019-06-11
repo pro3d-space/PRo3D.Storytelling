@@ -342,7 +342,7 @@ module App =
         lables
         
 
-  let viewFeaturesSg (model : MModel) =
+  let viewFeaturesSg1 (model : MModel) =
     
 
     model.queryFilter.filteredFeatures 
@@ -359,7 +359,7 @@ module App =
         //|> AList.toASet 
         //|> Aardvark.UI.``F# Sg``.Sg.set 
        
-  let viewFeaturesSg1 (model : MModel) =
+  let viewFeaturesSg (model : MModel) =
     //let positions = 
     //    model.queryFilter.filteredFeatures
     //     |> AList.map(fun f -> f.geometry.positions |> AList.ofList)
@@ -381,8 +381,8 @@ module App =
     //     |> Array.map( fun x -> V3f(x))
     
     //Drawing.createIndexedGeometry pos colors1
-    Drawing.createHarrisPoints2 model.queryFilter.sgFeatures.positions model.queryFilter.sgFeatures.colors model.queryFilter.pointSize.value
-    //Drawing.testPoints' model.queryFilter.sgFeatures.positions model.queryFilter.sgFeatures.colors
+    //Drawing.createHarrisPoints2 model.queryFilter.sgFeatures.positions model.queryFilter.sgFeatures.colors model.queryFilter.pointSize.value
+    Drawing.testPoints' model.queryFilter.sgFeatures.positions model.queryFilter.sgFeatures.colors
     //Drawing.createHarrisPoints positions 
         //|> Sg.effect [
         //DefaultSurfaces.stableTrafo |> toEffect

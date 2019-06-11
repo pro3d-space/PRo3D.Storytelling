@@ -175,6 +175,11 @@ type QueryModel = {
     useFileQueries       : bool
 }
 
+type Selection = {
+    selectedProducts        : hset<string> 
+    singleSelectProduct     : option<string>
+}
+
 type MessagingMailbox = MailboxProcessor<MailboxAction>
 
 and MailboxState = {
@@ -206,6 +211,7 @@ type Model =
     minervaMessagingMailbox : MessagingMailbox
     minervaMailboxState     : MailboxState
     queryFilter             : QueryModel
+    selection               : Selection
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
@@ -336,6 +342,11 @@ module Initial =
         sgFeatures            = sgfeatures
         useFileQueries        = false
     }
+  let selection =
+    {
+        selectedProducts = hset.Empty
+        singleSelectProduct = None
+    }
           
   let sites = [
     //@"https://minerva.eox.at/opensearch/collections/MAHLI/json/"
@@ -357,4 +368,5 @@ module Initial =
       minervaMailboxState = MailboxState.empty
       minervaMessagingMailbox = mailbox
       queryFilter = queryFilter
+      selection = selection
     }
