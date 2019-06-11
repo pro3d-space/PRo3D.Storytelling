@@ -201,25 +201,28 @@ let renderView (model : MModel) =
     )
 
 let provenanceView (model : MModel) =
-    let camera = model.view.state.camera.Current
-
     body [] [
         model.provenance
-            |> ProvenanceApp.view model.story
+            |> ProvenanceApp.view model.story model.bookmarks
             |> UI.map ProvenanceAction
     ]
 
 let storyboardView (model : MModel) =
-    body [] [
+    body [
+        onMouseEnter (fun _ -> Story |> Some |> SetNodeReferenceSpace |> ProvenanceAction)
+        onMouseLeave (fun _ -> None |> SetNodeReferenceSpace |> ProvenanceAction)
+    ] [
         model |> StoryApp.storyboardView
               |> UI.map StoryAction
     ]
 
 let bookmarksView (model : MModel) =
-    body [] [
-        model |> BookmarkApp.view
-              |> UI.map BookmarkAction
-    ]
+    body [
+        onMouseEnter (fun _ -> Bookmarks |> Some |> SetNodeReferenceSpace |> ProvenanceAction)
+        onMouseLeave (fun _ -> None |> SetNodeReferenceSpace |> ProvenanceAction)
+    ] [
+        model |> BookmarkApp.view |> UI.map BookmarkAction  
+    ] 
 
 let view (model : MModel) =
     page (fun request ->

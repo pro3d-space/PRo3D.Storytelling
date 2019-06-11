@@ -20,7 +20,7 @@ module private Helpers =
     type SessionModel = {
         view : View
         dockConfig : DockConfig
-        provenance : Provenance
+        provenance : Node ztree
         story : Story
         bookmarks : Bookmarks
         renderControlSize : V2i
@@ -32,7 +32,7 @@ module private Helpers =
         let create (model : Model) = {
             view = model.view
             dockConfig = model.dockConfig
-            provenance = model.provenance
+            provenance = model.provenance.tree
             story = model.story
             bookmarks = model.bookmarks
             renderControlSize = model.renderControlSize
@@ -42,7 +42,7 @@ module private Helpers =
             let m = {
                 current with
                     dockConfig = model.dockConfig
-                    provenance = model.provenance
+                    provenance = {current.provenance with tree = model.provenance }
                     story = model.story
                     bookmarks = model.bookmarks
                     renderControlSize = model.renderControlSize

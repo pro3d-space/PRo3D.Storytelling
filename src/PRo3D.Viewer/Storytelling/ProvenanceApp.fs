@@ -4,6 +4,7 @@ open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.UI
 
+open Bookmarks
 open Provenance
 open Provenance.Reduced
 open Story
@@ -122,7 +123,8 @@ module private Helpers =
 let init (state : State) =
     { tree = Node.create state None |> ZTree.single
       highlight = None
-      hovered = None }
+      hovered = None 
+      reference = None }
 
 let rec update (story : Story) (msg : ProvenanceAction) (p : Provenance) =
     match msg with
@@ -155,7 +157,10 @@ let rec update (story : Story) (msg : ProvenanceAction) (p : Provenance) =
         | RemoveHighlight ->
             { p with highlight = None }
 
-let view (s : MStory) (p : MProvenance) =
+        | SetNodeReferenceSpace s ->
+            { p with reference = s }
+
+let view (s : MStory) (b : MBookmarks) (p : MProvenance) =
     let dependencies = [
         { kind = Script; name = "d3"; url = "http://d3js.org/d3.v5.min.js" }
         { kind = Stylesheet; name = "provenanceStyle"; url = "Provenance.css" }
@@ -207,12 +212,24 @@ let view (s : MStory) (p : MProvenance) =
     let provenanceData = adaptive {
         let! t = p.tree
         let! h = p.highlight |> Mod.map (Option.map string >> Option.defaultValue "")
+        let! r = p.reference
 
         // TODO: Dependency on the whole story struct is an overkill, can be optimized.
         let! s = s.Current
+        let! b = b.Current
+
+        let isReferenced n =
+            match r with
+                | None -> 
+                    false
+                | Some Story ->
+                    s |> Story.isNodeReferenced n false
+                | Some Bookmarks ->
+                    b.list |> PList.tryFind (fun x -> x.node.id = n.id)
+                           |> Option.isSome
 
         let props n = 
-            ("isReferenced", s |> Story.isNodeReferenced n false |> string) :: (Provenance.Node.properties n)
+            ("isReferenced", n |> isReferenced |> string) :: (Provenance.Node.properties n)
         
         // TODO: It might be possible to increase performance by handling
         // the highlight property with a separate channel that does not trigger the

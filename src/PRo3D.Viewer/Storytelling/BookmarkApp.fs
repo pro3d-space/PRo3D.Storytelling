@@ -89,7 +89,8 @@ let update (msg : BookmarkAction) (model : Model) =
                       thumbnail = ThumbnailApp.empty }
                 )
 
-            let story = { StoryApp.init with slides = slides }
+            let story = { StoryApp.init with slides = slides 
+                                             showAnnotations = true }
 
             model |> Lens.set (Model.Lens.story) story
 

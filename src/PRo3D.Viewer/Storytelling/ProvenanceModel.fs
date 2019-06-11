@@ -35,20 +35,26 @@ type Node = {
     message : Option<Message>
 }
 
+type NodeReferenceSpace =
+    | Story
+    | Bookmarks
+
 [<DomainType>]
 type Provenance = {
     tree : ZTree<Node>
     highlight : NodeId option
     hovered : ZTree<Node> option
-}
+    reference : NodeReferenceSpace option   // The active node reference space determines how nodes are highlighted
+}                                           // E.g. nodes part of a story are highlighted if reference is set accordingly
 
 type ProvenanceAction =
-    | Update            of State * Message
-    | Goto              of NodeId
-    | SetHighlight      of NodeId
+    | Update                of State * Message
+    | Goto                  of NodeId
+    | SetHighlight          of NodeId
     | RemoveHighlight
-    | MouseEnter        of NodeId
+    | MouseEnter            of NodeId
     | MouseLeave
+    | SetNodeReferenceSpace of NodeReferenceSpace option
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Node =
