@@ -146,7 +146,6 @@ type SgFeatures = {
     positions   : V3d[]
     colors      : C4b[]
     trafo       : Trafo3d
-    head        : V3d
 }
 
 [<DomainType>]
@@ -176,6 +175,12 @@ type QueryModel = {
 
     useFileQueries       : bool
 }
+
+type SelectionModel = {
+    selectedProducts     : hset<string> 
+    singleSelectProduct  : option<string>
+}
+
 
 type MessagingMailbox = MailboxProcessor<MailboxAction>
 
@@ -208,6 +213,7 @@ type Model =
     minervaMessagingMailbox : MessagingMailbox
     minervaMailboxState     : MailboxState
     queryFilter             : QueryModel
+    selection               : SelectionModel
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
@@ -315,7 +321,6 @@ module Initial =
         positions = Array.empty
         colors    = Array.empty
         trafo     = Trafo3d.Identity
-        head      = V3d.Zero
     }
 
   let queryFilter = 
@@ -340,6 +345,12 @@ module Initial =
         sgFeatures            = sgfeatures
         useFileQueries        = false
     }
+
+  let selectionM =
+    {
+        selectedProducts     = hset.Empty
+        singleSelectProduct  = None
+    }
           
   let sites = [
     //@"https://minerva.eox.at/opensearch/collections/MAHLI/json/"
@@ -361,4 +372,5 @@ module Initial =
       minervaMailboxState = MailboxState.empty
       minervaMessagingMailbox = mailbox
       queryFilter = queryFilter
+      selection = selectionM
     }

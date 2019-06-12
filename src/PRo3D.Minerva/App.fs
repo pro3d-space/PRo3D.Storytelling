@@ -348,22 +348,7 @@ module App =
         lables
         
 
-  let viewFeaturesSg1 (model : MModel) =
-    
-    let blarg = 
-      model.queryFilter.filteredFeatures 
-        |> AList.collect(fun f -> f.geometry.positions |> AList.ofList)
-    
-    Drawing.indexedGeometryDots blarg model.queryFilter.pointSize.value (Mod.constant C4b.White)
-        //|> AList.map(fun f -> 
-        //    let size = model.queryFilter.pointSize.value
-        //    Drawing.dots (f.geometry.positions |> AList.ofList) size  (f.instrument |> Model.instrumentColor |> Mod.constant)
-        //) 
-        //|> AList.toASet 
-        //|> Aardvark.UI.``F# Sg``.Sg.set 
-
-//    Sg.empty
-
+  //let viewFeaturesSg1 (model : MModel) =
     //let points = model.queryFilter.sgFeatures.positions
     //Drawing.dots (positions |> AList.ofArray) model.queryFilter.pointSize.value  (C4b.Red |> Mod.constant)
     //Drawing.dots points model.queryFilter.pointSize.value  (C4b.Red |> Mod.constant)
@@ -371,36 +356,8 @@ module App =
         //|> Aardvark.UI.``F# Sg``.Sg.set 
        
   let viewFeaturesSg (model : MModel) =
-    //let positions = 
-    //    model.queryFilter.filteredFeatures
-    //     |> AList.map(fun f -> f.geometry.positions |> AList.ofList)
-    //     |> AList.concat
-    //     |> AList.toArray
-    //let colors =
-    //    model.queryFilter.filteredFeatures
-    //     |> AList.map(fun f -> let c = f.instrument |> Model.instrumentColor
-    //                           V4d((float)c.R/255.0, (float)c.G/255.0, (float)c.B/255.0, (float)c.A/255.0))
-    //     |> AList.toArray
-
-    //let colors1 =
-    //    model.queryFilter.filteredFeatures
-    //     |> AList.map(fun f -> f.instrument |> Model.instrumentColor)
-    //     |> AList.toArray
-
-    //let pos = 
-    //    positions
-    //     |> Array.map( fun x -> V3f(x))
-    
-    //Drawing.createIndexedGeometry pos colors1
-    //Drawing.createHarrisPoints2 model.queryFilter.sgFeatures.positions model.queryFilter.sgFeatures.colors model.queryFilter.pointSize.value
-    Drawing.testPoints' model.queryFilter.sgFeatures//.positions model.queryFilter.sgFeatures.colors
-    //Drawing.createHarrisPoints positions 
-        //|> Sg.effect [
-        //DefaultSurfaces.stableTrafo |> toEffect
-        ////DefaultSurfaces.vertexColor |> toEffect
-        ////   DefaultSurfaces.pointSprite |> toEffect
-        //]
-
+    Drawing.drawIndexedGeometryPoints model.queryFilter.sgFeatures
+  
   let myCss = [
     { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
     { kind = Stylesheet;  name = "semui-overrides"; url = "semui-overrides.css" }

@@ -80,12 +80,10 @@ module Mutable =
         let _positions = ResetMod.Create(__initial.positions)
         let _colors = ResetMod.Create(__initial.colors)
         let _trafo = ResetMod.Create(__initial.trafo)
-        let _head = ResetMod.Create(__initial.head)
         
         member x.positions = _positions :> IMod<_>
         member x.colors = _colors :> IMod<_>
         member x.trafo = _trafo :> IMod<_>
-        member x.head = _head :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.SgFeatures) =
@@ -95,7 +93,6 @@ module Mutable =
                 ResetMod.Update(_positions,v.positions)
                 ResetMod.Update(_colors,v.colors)
                 ResetMod.Update(_trafo,v.trafo)
-                ResetMod.Update(_head,v.head)
                 
         
         static member Create(__initial : PRo3D.Minerva.SgFeatures) : MSgFeatures = MSgFeatures(__initial)
@@ -129,12 +126,6 @@ module Mutable =
                     override x.Get(r) = r.trafo
                     override x.Set(r,v) = { r with trafo = v }
                     override x.Update(r,f) = { r with trafo = f r.trafo }
-                }
-            let head =
-                { new Lens<PRo3D.Minerva.SgFeatures, Aardvark.Base.V3d>() with
-                    override x.Get(r) = r.head
-                    override x.Set(r,v) = { r with head = v }
-                    override x.Update(r,f) = { r with head = f r.head }
                 }
     
     
@@ -346,6 +337,7 @@ module Mutable =
         let _minervaMessagingMailbox = ResetMod.Create(__initial.minervaMessagingMailbox)
         let _minervaMailboxState = ResetMod.Create(__initial.minervaMailboxState)
         let _queryFilter = MQueryModel.Create(__initial.queryFilter)
+        let _selection = ResetMod.Create(__initial.selection)
         
         member x.data = _data
         member x.queries = _queries :> IMod<_>
@@ -354,6 +346,7 @@ module Mutable =
         member x.minervaMessagingMailbox = _minervaMessagingMailbox :> IMod<_>
         member x.minervaMailboxState = _minervaMailboxState :> IMod<_>
         member x.queryFilter = _queryFilter
+        member x.selection = _selection :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.Model) =
@@ -366,6 +359,7 @@ module Mutable =
                 ResetMod.Update(_minervaMessagingMailbox,v.minervaMessagingMailbox)
                 ResetMod.Update(_minervaMailboxState,v.minervaMailboxState)
                 MQueryModel.Update(_queryFilter, v.queryFilter)
+                ResetMod.Update(_selection,v.selection)
                 
         
         static member Create(__initial : PRo3D.Minerva.Model) : MModel = MModel(__initial)
@@ -423,4 +417,10 @@ module Mutable =
                     override x.Get(r) = r.queryFilter
                     override x.Set(r,v) = { r with queryFilter = v }
                     override x.Update(r,f) = { r with queryFilter = f r.queryFilter }
+                }
+            let selection =
+                { new Lens<PRo3D.Minerva.Model, PRo3D.Minerva.SelectionModel>() with
+                    override x.Get(r) = r.selection
+                    override x.Set(r,v) = { r with selection = v }
+                    override x.Update(r,f) = { r with selection = f r.selection }
                 }

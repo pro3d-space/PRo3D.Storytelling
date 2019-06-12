@@ -192,57 +192,16 @@ module Drawing =
                 do! Shader.constantColor V4d.OIOI //c 
                 //do! DefaultSurfaces.vertexColor |> toEffect
             }
-
-       
-
-    let createHarrisPoints2 (positions : IMod<V3d[]>)  (colors : IMod<C4b[]>) (size : IMod<float>) =
-        //let pointSize = Mod.constant 80.0
-
-        Aardvark.UI.``F# Sg``.Sg.ofList [
-                 Sg.draw IndexedGeometryMode.PointList
-            ]
-             |> Sg.vertexAttribute DefaultSemantic.Positions (positions)
-             |> Sg.vertexAttribute DefaultSemantic.Colors (colors)
-             |> Sg.uniform "PointSize" size
-            |> Sg.shader {
-                do! Shader.pointTrafo
-                do! Shader.differentColor 
-                do! DefaultSurfaces.vertexColor |> toEffect
-            }
-
-    let testPoints (positions : V3d[])  (colors : V4d[]) =
-
-        let pointSize = Mod.constant 70.0
-
-        Sg.draw IndexedGeometryMode.PointList
-            |> Sg.vertexAttribute DefaultSemantic.Positions (positions |> Mod.constant)
-            |> Sg.vertexAttribute DefaultSemantic.Colors (colors |> Mod.constant)
-            |> Sg.effect [
-                DefaultSurfaces.trafo |> toEffect; 
-                //Shader.pointTrafo |> toEffect; 
-                //Shader.differentColor |> toEffect; 
-                DefaultSurfaces.pointSprite |> toEffect; 
-                DefaultSurfaces.vertexColor |> toEffect;
-                Shader.pointSpriteFragment |> toEffect
-                ]
-            |> Sg.uniform "PointSize" pointSize
-
-    let testPoints' (sgfeatures : MSgFeatures) = //(positions : IMod<V3d[]>)  (colors : IMod<C4b[]>) =
+            
+            
+    let drawIndexedGeometryPoints (sgfeatures : MSgFeatures) = 
 
         let pointsF = 
             sgfeatures.positions
                 |> Mod.map2(
                 fun (h:Trafo3d) points -> 
-                    points |> Array.map(fun (x:V3d) -> (h.Backward.TransformPos x).ToV3f() ) //(x-h).ToV3f() )
+                    points |> Array.map(fun (x:V3d) -> (h.Backward.TransformPos x).ToV3f() ) 
                     ) sgfeatures.trafo
-
-        //let pointsF = 
-        //    sgfeatures.positions 
-        //        //|> AList.toMod 
-        //        |> Mod.map2(
-        //        fun (h:V3d) points -> 
-        //            points |> Array.map(fun (x:V3d) -> (x-h).ToV3f() ) //(x-h).ToV3f() )
-        //            ) sgfeatures.head
 
         let pointSize = Mod.constant 10.0
 
@@ -250,50 +209,15 @@ module Drawing =
             |> Sg.vertexAttribute DefaultSemantic.Positions (pointsF )
             |> Sg.vertexAttribute DefaultSemantic.Colors (sgfeatures.colors)
             |> Sg.effect [
-                 DefaultSurfaces.trafo |> toEffect; 
-                //Shader.pointTrafo |> toEffect; 
-                //Shader.differentColor |> toEffect; 
-                DefaultSurfaces.pointSprite |> toEffect; 
-                //DefaultSurfaces.vertexColor |> toEffect;
-                //Shader.pointSpriteFragment |> toEffect
+                 DefaultSurfaces.stableTrafo |> toEffect; 
+                DefaultSurfaces.pointSprite |> toEffect;
+                Shader.pointSpriteFragment |> toEffect
                 ]
-            //|> Sg.translate' sgfeatures.head
             |> Sg.trafo sgfeatures.trafo
             |> Sg.uniform "PointSize" pointSize
         
 
-    let createIndexedGeometry (positions : V3f[])  (colors : C4b[]) =
-        let index = [|0..positions.Length|]
-        let indexAttributes =
-            let def = [
-                DefaultSemantic.Positions, (positions) :> Array
-                DefaultSemantic.Colors, (colors |> Array.map (fun x -> x)) :> Array
-             ]
-
-            def |> SymDict.ofList 
-
-
-        let geometry =
-            IndexedGeometry(
-                Mode              = IndexedGeometryMode.PointList,
-                IndexArray        = index,
-                IndexedAttributes = indexAttributes
-            )  
-            
-        let pointSize = Mod.constant 70.0
-
-        geometry
-         |> Sg.ofIndexedGeometry
-         |> Sg.effect [
-                DefaultSurfaces.trafo |> toEffect; 
-                //Shader.pointTrafo |> toEffect; 
-                //Shader.differentColor |> toEffect; 
-                DefaultSurfaces.pointSprite |> toEffect; 
-                DefaultSurfaces.vertexColor |> toEffect;
-                Shader.pointSpriteFragment |> toEffect
-                ]
-         |> Sg.uniform "PointSize" pointSize
-           
+  
 
     let drawPoint color size (pos : IMod<V3d>) = 
         Sg.sphere 4 color size
@@ -325,21 +249,7 @@ module Drawing =
             toEffect <| DefaultSurfaces.vertexColor          
         ]
 
-    let indexedGeometryDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =       
-        let points' = points |> AList.toMod |> Mod.map(fun x -> x |> PList.toArray)
-        let colors = points' |> Mod.map2(fun c x -> Array.create x.Length c) color
-      
-        Sg.draw IndexedGeometryMode.PointList
-        |> Sg.vertexAttribute DefaultSemantic.Positions points'         
-        |> Sg.vertexAttribute DefaultSemantic.Colors colors
-        |> Sg.effect [
-            toEffect Shader.stableTrafo
-            toEffect DefaultSurfaces.vertexColor
-            toEffect DefaultSurfaces.pointSprite
-        ]
-        |> Sg.uniform "PointSize" size
   
- 
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:V3d) (size:IMod<float>) (hfov:IMod<float>) =
         adaptive {
             //let! p = p

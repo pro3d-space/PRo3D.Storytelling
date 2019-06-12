@@ -89,18 +89,16 @@ module QueryApp =
 
         let colors' = [| for i in 0 .. (positions'.Length - 1) -> C4b.Red |]
 
-        let head' =
-            positions'
-              |> PList.ofArray
-              |> PList.tryAt 0  
-              |> Option.defaultValue V3d.Zero
-          
+        let c = 
+            features
+             |> PList.map( fun x -> x.instrument |> Model.instrumentColor )
+             |> PList.toArray
+             
             
         {
             positions = positions'
-            colors = colors'
+            colors = c
             trafo = trafo'
-            head = head'
         }
 
      //let getDistFeatures' (features:alist<Feature>) (view:IMod<CameraView>) (dist:IMod<float>) =
