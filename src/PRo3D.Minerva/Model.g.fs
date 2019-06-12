@@ -79,9 +79,13 @@ module Mutable =
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.SgFeatures> = Aardvark.Base.Incremental.EqModRef<PRo3D.Minerva.SgFeatures>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.SgFeatures>
         let _positions = ResetMod.Create(__initial.positions)
         let _colors = ResetMod.Create(__initial.colors)
+        let _trafo = ResetMod.Create(__initial.trafo)
+        let _head = ResetMod.Create(__initial.head)
         
         member x.positions = _positions :> IMod<_>
         member x.colors = _colors :> IMod<_>
+        member x.trafo = _trafo :> IMod<_>
+        member x.head = _head :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.SgFeatures) =
@@ -90,6 +94,8 @@ module Mutable =
                 
                 ResetMod.Update(_positions,v.positions)
                 ResetMod.Update(_colors,v.colors)
+                ResetMod.Update(_trafo,v.trafo)
+                ResetMod.Update(_head,v.head)
                 
         
         static member Create(__initial : PRo3D.Minerva.SgFeatures) : MSgFeatures = MSgFeatures(__initial)
@@ -117,6 +123,18 @@ module Mutable =
                     override x.Get(r) = r.colors
                     override x.Set(r,v) = { r with colors = v }
                     override x.Update(r,f) = { r with colors = f r.colors }
+                }
+            let trafo =
+                { new Lens<PRo3D.Minerva.SgFeatures, Aardvark.Base.Trafo3d>() with
+                    override x.Get(r) = r.trafo
+                    override x.Set(r,v) = { r with trafo = v }
+                    override x.Update(r,f) = { r with trafo = f r.trafo }
+                }
+            let head =
+                { new Lens<PRo3D.Minerva.SgFeatures, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.head
+                    override x.Set(r,v) = { r with head = v }
+                    override x.Update(r,f) = { r with head = f r.head }
                 }
     
     

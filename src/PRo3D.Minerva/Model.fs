@@ -145,6 +145,8 @@ type MinervaAction =
 type SgFeatures = {
     positions   : V3d[]
     colors      : C4b[]
+    trafo       : Trafo3d
+    head        : V3d
 }
 
 [<DomainType>]
@@ -312,6 +314,8 @@ module Initial =
     {
         positions = Array.empty
         colors    = Array.empty
+        trafo     = Trafo3d.Identity
+        head      = V3d.Zero
     }
 
   let queryFilter = 

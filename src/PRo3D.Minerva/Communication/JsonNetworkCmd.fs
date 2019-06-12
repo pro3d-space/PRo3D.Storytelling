@@ -22,6 +22,7 @@ module JsonNetworkCommand =
 
     type C4b(r, g, b, a) =
         let mutable internalR : byte = r
+
         let mutable internalG : byte = g
         let mutable internalB : byte = b
         let mutable internalA : byte = a

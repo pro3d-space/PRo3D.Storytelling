@@ -159,7 +159,7 @@ module Shader =
             }
         }
 
-    type PSVertex = { [<TexCoord; Interpolation(InterpolationMode.Sample)>] tc : V2d }
+    //type PSVertex = { [<TexCoord; Interpolation(InterpolationMode.Sample)>] tc : V2d }
 
     let pointSpriteFragment (v : pointVertex) =
         fragment {
@@ -227,21 +227,38 @@ module Drawing =
                 ]
             |> Sg.uniform "PointSize" pointSize
 
-    let testPoints' (positions : IMod<V3d[]>)  (colors : IMod<C4b[]>) =
+    let testPoints' (sgfeatures : MSgFeatures) = //(positions : IMod<V3d[]>)  (colors : IMod<C4b[]>) =
+
+        let pointsF = 
+            sgfeatures.positions
+                |> Mod.map2(
+                fun (h:Trafo3d) points -> 
+                    points |> Array.map(fun (x:V3d) -> (h.Backward.TransformPos x).ToV3f() ) //(x-h).ToV3f() )
+                    ) sgfeatures.trafo
+
+        //let pointsF = 
+        //    sgfeatures.positions 
+        //        //|> AList.toMod 
+        //        |> Mod.map2(
+        //        fun (h:V3d) points -> 
+        //            points |> Array.map(fun (x:V3d) -> (x-h).ToV3f() ) //(x-h).ToV3f() )
+        //            ) sgfeatures.head
 
         let pointSize = Mod.constant 10.0
 
         Sg.draw IndexedGeometryMode.PointList
-            |> Sg.vertexAttribute DefaultSemantic.Positions (positions )
-            |> Sg.vertexAttribute DefaultSemantic.Colors (colors)
+            |> Sg.vertexAttribute DefaultSemantic.Positions (pointsF )
+            |> Sg.vertexAttribute DefaultSemantic.Colors (sgfeatures.colors)
             |> Sg.effect [
-                DefaultSurfaces.trafo |> toEffect; 
+                 DefaultSurfaces.trafo |> toEffect; 
                 //Shader.pointTrafo |> toEffect; 
                 //Shader.differentColor |> toEffect; 
                 DefaultSurfaces.pointSprite |> toEffect; 
-                DefaultSurfaces.vertexColor |> toEffect;
-                Shader.pointSpriteFragment |> toEffect
+                //DefaultSurfaces.vertexColor |> toEffect;
+                //Shader.pointSpriteFragment |> toEffect
                 ]
+            //|> Sg.translate' sgfeatures.head
+            |> Sg.trafo sgfeatures.trafo
             |> Sg.uniform "PointSize" pointSize
         
 

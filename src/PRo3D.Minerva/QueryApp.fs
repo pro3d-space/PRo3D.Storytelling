@@ -30,6 +30,7 @@ module QueryApp =
                 
                 lables <- lables.Add(txt, pos) //|> ignore
         lables
+        
 
     let updateSolLables2 (model : QueryModel) (features:plist<Feature>) =
       let range = new Range1i(model.minSol.value |> int, model.maxSol.value |> int)
@@ -81,12 +82,25 @@ module QueryApp =
             |> PList.concat
             |> PList.toArray
 
+        let trafo' = 
+            match positions' |> Array.tryHead with
+             | Some p -> Trafo3d.Translation p
+             | _ -> Trafo3d.Identity
+
         let colors' = [| for i in 0 .. (positions'.Length - 1) -> C4b.Red |]
+
+        let head' =
+            positions'
+              |> PList.ofArray
+              |> PList.tryAt 0  
+              |> Option.defaultValue V3d.Zero
           
             
         {
             positions = positions'
             colors = colors'
+            trafo = trafo'
+            head = head'
         }
 
      //let getDistFeatures' (features:alist<Feature>) (view:IMod<CameraView>) (dist:IMod<float>) =
