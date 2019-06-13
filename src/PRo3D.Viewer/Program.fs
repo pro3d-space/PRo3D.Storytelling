@@ -66,8 +66,8 @@ type License = {
 
 let viewerVersion       = "2.9.6-prerelease3"
 let mutable licenseText = ""
-let catchDomainErrors   = true
-let licenseCheck        = true
+let catchDomainErrors   = false
+let licenseCheck        = false
 let doBuildLicense      = false
 let licPath             = @".\license\pro3d.lic"
 
