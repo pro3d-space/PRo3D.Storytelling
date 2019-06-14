@@ -144,6 +144,13 @@ module App =
     (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
 
   
+  let loadFeatureCollection (model: Model) =
+    Log.startTimed "[Minerva] loading products"
+    let data = PRo3D.Base.Serialization.loadAs ".\data.minerva"
+    Log.stop()
+    //Log.line "[Minerva] found %d entries" model.data.features.Count
+    //{ model with data = data }
+    data
 
   let update (view:CameraView) (model : Model) (msg : MinervaAction) : Model =
       match msg with
@@ -177,11 +184,15 @@ module App =
         Log.stop()
         model
       | LoadFeatureCollection -> 
-        Log.startTimed "[Minerva] loading products"
-        let data = PRo3D.Base.Serialization.loadAs ".\data.minerva"
-        Log.stop()
-        Log.line "[Minerva] found %d entries" model.data.features.Count
-        { model with data = data }
+        //Log.startTimed "[Minerva] loading products"
+        //let data = PRo3D.Base.Serialization.loadAs ".\data.minerva"
+        //Log.stop()
+        //Log.line "[Minerva] found %d entries" model.data.features.Count
+        let data = loadFeatureCollection model
+        let queryM = QueryApp.useQueriesForData data.features model.queryFilter view
+        Log.line "[Minerva] found %A features in collection" queryM.filteredFeatures.Count
+        { model with data = data; queryFilter = queryM}
+        //{ model with data = data }
       | ConnectVisplore -> 
         if model.vplMessages.store.IsEmpty then
 
@@ -238,15 +249,26 @@ module App =
         let querymodel = QueryApp.update view model.queryFilter model.data.features msg
         { model with queryFilter = querymodel }
       | QueryDataFile ->
-        Log.startTimed "[Minerva] Fetching full dataset from data file"
-        let data = Files.loadDataFile
-        Log.stop()
-
+        let chachepath = ".\data.minerva"
+        let data = 
+            match System.IO.File.Exists chachepath with
+             | true -> loadFeatureCollection model
+             | false ->
+                Log.startTimed "[Minerva] Fetching full dataset from data file"
+                let data = Files.loadDataFile
+                Log.stop()
+                data
+        Log.line "[Minerva] found %d entries" model.data.features.Count
         let queryM = QueryApp.useQueriesForData data.features model.queryFilter view
-
         Log.line "[Minerva] found %A features in collection" queryM.filteredFeatures.Count
-
         { model with data = data; queryFilter = queryM}
+
+      | SetPointSize s ->
+        let size = Numeric.update model.featureProperties.pointSize s
+        { model with featureProperties = { model.featureProperties with pointSize = size }}
+      | SetTextSize s ->
+        let size = Numeric.update model.featureProperties.textSize s
+        { model with featureProperties = { model.featureProperties with textSize = size }}
 
 
   let viewFeatures (pos : IMod<V3d>)(instr : Instrument) (features : list<Feature>) = 
@@ -297,6 +319,18 @@ module App =
           QueryApp.viewQueryFilters model.queryFilter
             |> UI.map QueryMessage 
             //|> Mod.constant
+
+     
+     let propertiesGui =
+        require Html.semui ( 
+            Html.table [ 
+                Html.row "point size:" [Numeric.view' [NumericInputType.Slider] model.featureProperties.pointSize |> UI.map (fun x -> SetPointSize x)] 
+                Html.row "text size:" [Numeric.view' [NumericInputType.Slider] model.featureProperties.textSize |> UI.map (fun x -> SetTextSize x)] 
+            ]
+        
+        ) 
+
+
     
      let listOfFeatures =
         alist { 
@@ -310,7 +344,9 @@ module App =
                 //i [clazz "ui folder inverted middle aligned icon"] []
             //    yield div [clazz "ui header small"] [header |> text]
                 //div [clazz "ui description"] ["description" |> text]
+
                 yield accordion header "Content" false [
+                    
                   div [clazz "ui list"] (viewFeatures pos instr group)
                 ]
               ]
@@ -331,7 +367,7 @@ module App =
        ]
        
        queryGui model               
-                     
+       propertiesGui          
        Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) listOfFeatures //AList.empty  
      ]
 
@@ -340,7 +376,7 @@ module App =
         let lables =
             model.queryFilter.solLables
              |> AMap.map(fun txt pos ->
-                Drawing.text view near (Mod.constant 60.0) pos (Trafo3d.Translation(pos)) (Mod.constant txt) (Mod.constant 10.05)
+                Drawing.text view near (Mod.constant 60.0) pos (Trafo3d.Translation(pos)) (Mod.constant txt) (model.featureProperties.textSize.value)
                 ) 
              |> AMap.toASet  
              |> ASet.map(fun x -> snd x)
@@ -356,7 +392,8 @@ module App =
         //|> Aardvark.UI.``F# Sg``.Sg.set 
        
   let viewFeaturesSg (model : MModel) =
-    Drawing.drawIndexedGeometryPoints model.queryFilter.sgFeatures
+    Drawing.drawIndexedGeometryPoints model.queryFilter.sgFeatures model.featureProperties.pointSize.value
+
   
   let myCss = [
     { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }

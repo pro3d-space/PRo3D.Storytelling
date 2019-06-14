@@ -194,7 +194,7 @@ module Drawing =
             }
             
             
-    let drawIndexedGeometryPoints (sgfeatures : MSgFeatures) = 
+    let drawIndexedGeometryPoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) = 
 
         let pointsF = 
             sgfeatures.positions
@@ -203,8 +203,7 @@ module Drawing =
                     points |> Array.map(fun (x:V3d) -> (h.Backward.TransformPos x).ToV3f() ) 
                     ) sgfeatures.trafo
 
-        let pointSize = Mod.constant 10.0
-
+       
         Sg.draw IndexedGeometryMode.PointList
             |> Sg.vertexAttribute DefaultSemantic.Positions (pointsF )
             |> Sg.vertexAttribute DefaultSemantic.Colors (sgfeatures.colors)
@@ -286,8 +285,8 @@ module Drawing =
         
 
     let text (view : IMod<CameraView>) (near : IMod<float>) (hfov:IMod<float>) (pos:V3d) (modelTrafo:Trafo3d) (text:IMod<string>) (size:IMod<float>) =
-        let invScaleTrafo = //Trafo3d.Scale(0.5)
-            computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
+        let invScaleTrafo = size |> Mod.map Trafo3d.Scale
+            //computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
       
         let billboardTrafo = 
             adaptive {
@@ -301,8 +300,8 @@ module Drawing =
             |> Sg.noEvents
             |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
             do! Shader.stableTrafo
-            }            
+            }      
+            |> Aardvark.UI.``F# Sg``.Sg.trafo (invScaleTrafo)
             |> Aardvark.UI.``F# Sg``.Sg.trafo (modelTrafo |> Mod.constant)
-            //|> Aardvark.UI.``F# Sg``.Sg.trafo invScaleTrafo //(Mod.constant invScaleTrafo)
             //|> Aardvark.UI.``F# Sg``.Sg.trafo billboardTrafo  
 

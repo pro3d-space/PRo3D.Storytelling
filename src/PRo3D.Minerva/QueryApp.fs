@@ -15,23 +15,22 @@ open Aardvark.GeoSpatial.Opc
 
 module QueryApp =
 
-    let updateSolLables (model : QueryModel) (features:plist<Feature>) =
-        let minS = model.minSol.value
-        let maxS = model.maxSol.value
-        let mutable lables = hmap.Empty
-        for s in minS .. maxS do
-            let solFeatures = features |> PList.filter (fun (f:Feature) -> f.sol = ((int)s)) |> PList.toList 
-            if solFeatures.IsEmpty then
-                lables |> ignore
-            else
-                let f = solFeatures.Head
-                let pos = f.geometry.positions.Head
-                let txt = sprintf "Sol %i" ((int)f.sol)
+    //let updateSolLables (model : QueryModel) (features:plist<Feature>) =
+    //    let minS = model.minSol.value
+    //    let maxS = model.maxSol.value
+    //    let mutable lables = hmap.Empty
+    //    for s in minS .. maxS do
+    //        let solFeatures = features |> PList.filter (fun (f:Feature) -> f.sol = ((int)s)) |> PList.toList 
+    //        if solFeatures.IsEmpty then
+    //            lables |> ignore
+    //        else
+    //            let f = solFeatures.Head
+    //            let pos = f.geometry.positions.Head
+    //            let txt = sprintf "Sol %i" ((int)f.sol)
                 
-                lables <- lables.Add(txt, pos) //|> ignore
-        lables
+    //            lables <- lables.Add(txt, pos) //|> ignore
+    //    lables
         
-
     let updateSolLables2 (model : QueryModel) (features:plist<Feature>) =
       let range = new Range1i(model.minSol.value |> int, model.maxSol.value |> int)
 
@@ -44,16 +43,30 @@ module QueryApp =
 
     let getDistFeatures (view:CameraView) (dist:float) (features:plist<Feature>) =
         features
-            |> PList.map(fun f -> 
+            |> PList.toList
+            |> List.map(fun f -> 
                 f.geometry.positions
                     |> List.choose(fun x -> if V3d.Distance(view.Location, x) < dist then Some f else None)
-                    |> PList.ofList
-            ) |> PList.concat
-        
+                    //|> PList.ofList
+            ) |> List.concat |> PList.ofList
+             
+
+    let sortFeaturesByDistance (view:CameraView) (features:plist<Feature>) =
+        let distf =
+            features
+                |> PList.toList
+                |> List.sortBy(fun f -> 
+                    V3d.Distance(view.Location, f.geometry.positions.[0])
+                ) 
+                
+        match distf.Length > 5000 with
+         | true -> distf.[0..4999] |> PList.ofList
+         | false -> distf |> PList.ofList
 
     let solFilter (minsol:float) (maxsol:float) (features:plist<Feature>) =
+        let range = new Range1i(minsol |> int, maxsol |> int)
         features
-         |> PList.choose(fun f -> if f.sol >= int(minsol) && f.sol <= int(maxsol) then Some f else None)
+         |> PList.filter (fun x -> range.Contains(x.sol))
        
 
     let instrumentFilter (model : QueryModel) (features:plist<Feature>) =
@@ -87,7 +100,7 @@ module QueryApp =
              | Some p -> Trafo3d.Translation p
              | _ -> Trafo3d.Identity
 
-        let colors' = [| for i in 0 .. (positions'.Length - 1) -> C4b.Red |]
+       // let colors' = [| for i in 0 .. (positions'.Length - 1) -> C4b.Red |]
 
         let c = 
             features
@@ -124,13 +137,14 @@ module QueryApp =
         
     
     let useQueriesForData (features:plist<Feature>) (qModel : QueryModel) (view:CameraView) =
-        if qModel.useFileQueries then
+        //if qModel.useFileQueries then
             features
             |> getDistFeatures view qModel.distance.value
             |> solFilter qModel.minSol.value qModel.maxSol.value
             |> instrumentFilter qModel
+            |> sortFeaturesByDistance view 
             |> updateFeaturesForRendering qModel 
-        else updateFeaturesForRendering qModel features
+        //else updateFeaturesForRendering qModel features
         
     
     let update (view:CameraView) (model : QueryModel) (features:plist<Feature>) (msg : QueryAction) : QueryModel =
@@ -147,6 +161,7 @@ module QueryApp =
         let dist = Numeric.update model.distance d
         let m = { model with distance = dist }
         useQueriesForData features m view
+      | UpdateDistance -> useQueriesForData features model view
       | CheckMAHLI -> 
         let m = { model with checkMAHLI = not model.checkMAHLI }
         useQueriesForData features m view
@@ -177,12 +192,9 @@ module QueryApp =
       | CheckChemRmi -> 
         let m = { model with checkChemRmi = not model.checkChemRmi }
         useQueriesForData features m view
-      | SetPointSize s ->
-        let size = Numeric.update model.pointSize s
-        { model with pointSize = size }
-      | UseQueriesForDataFile ->
-        let m = { model with useFileQueries = not model.useFileQueries }
-        useQueriesForData features m view
+      //| UseQueriesForDataFile ->
+      //  let m = { model with useFileQueries = not model.useFileQueries }
+      //  useQueriesForData features m view
 
     let iconToggle (dings : IMod<bool>) onIcon offIcon action =
         let toggleIcon = dings |> Mod.map(fun isOn -> if isOn then onIcon else offIcon)
@@ -215,17 +227,21 @@ module QueryApp =
                 Html.row ("ChemRmi")  [iconCheckBox model.checkChemRmi CheckChemRmi]
             ]
         )
+    
 
     let viewQueryFilters (model :MQueryModel) =
         require Html.semui ( 
 
             Html.table [ 
-                Html.row ("use queries for data")  [iconCheckBox model.useFileQueries UseQueriesForDataFile]
+                //Html.row ("use queries for data")  [iconCheckBox model.useFileQueries UseQueriesForDataFile]
+                 
+                //Html.row "update products:"  [button [clazz "ui button"; onClick (fun _ -> UpdateProducts)][text "Query DB"]]
                 Html.row "min sol:"  [Numeric.view' [NumericInputType.InputBox] model.minSol |> UI.map (fun x -> SetMinSol x)]
                 Html.row "max sol:"  [Numeric.view' [NumericInputType.InputBox] model.maxSol |> UI.map (fun x -> SetMaxSol x)]
                 Html.row "instruments:" [ ( viewQueryInstruments model )]
-                Html.row "distance:" [Numeric.view' [NumericInputType.Slider] model.distance |> UI.map (fun x -> SetDistance x)] 
-                Html.row "point size:" [Numeric.view' [NumericInputType.Slider] model.pointSize |> UI.map (fun x -> SetPointSize x)] 
+                Html.row "distance:" [Numeric.view' [NumericInputType.Slider; NumericInputType.InputBox] model.distance |> UI.map (fun x -> SetDistance x)]
+                Html.row "update 5000 nearest" [button [clazz "ui button"; onClick (fun _ -> UpdateDistance)][]]
+                //Html.row "distance:" [viewDistanceFilters model] 
             ]
         
         ) 

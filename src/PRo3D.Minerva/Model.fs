@@ -115,6 +115,7 @@ type FeatureCollection =
   | SetMinSol of Numeric.Action
   | SetMaxSol of Numeric.Action
   | SetDistance of Numeric.Action
+  | UpdateDistance
   | CheckMAHLI
   | CheckFrontHazcam
   | CheckMastcam
@@ -125,8 +126,7 @@ type FeatureCollection =
   | CheckMastcamL
   | CheckChemLib
   | CheckChemRmi
-  | SetPointSize of Numeric.Action
-  | UseQueriesForDataFile
+  //| UseQueriesForDataFile
 
 type MinervaAction =
   | PerformQueries
@@ -139,6 +139,8 @@ type MinervaAction =
   | FlyToProduct of V3d
   | QueryMessage of QueryAction
   | QueryDataFile
+  | SetPointSize of Numeric.Action
+  | SetTextSize of Numeric.Action
       
 
 [<DomainType>]
@@ -147,6 +149,28 @@ type SgFeatures = {
     colors      : C4b[]
     trafo       : Trafo3d
 }
+
+[<DomainType>]
+type InstrumentColor = {
+    mahli        : ColorInput    
+    frontHazcam  : ColorInput 
+    mastcam      : ColorInput  
+    apxs         : ColorInput  
+    frontHazcamR : ColorInput 
+    frontHazcamL : ColorInput 
+    mastcamR     : ColorInput 
+    mastcamL     : ColorInput 
+    chemLib      : ColorInput 
+    chemRmi      : ColorInput  
+}
+
+[<DomainType>]
+type FeatureProperties = {
+    pointSize   : NumericInput
+    textSize    : NumericInput
+    instrumentColor : InstrumentColor
+}
+
 
 [<DomainType>]
 type QueryModel = {
@@ -169,11 +193,9 @@ type QueryModel = {
     checkMastcamL        : bool
     checkChemLib         : bool
     checkChemRmi         : bool
-
-    pointSize            : NumericInput
+    
     sgFeatures           : SgFeatures
-
-    useFileQueries       : bool
+    //useFileQueries       : bool
 }
 
 type SelectionModel = {
@@ -213,6 +235,7 @@ type Model =
     minervaMessagingMailbox : MessagingMailbox
     minervaMailboxState     : MailboxState
     queryFilter             : QueryModel
+    featureProperties       : FeatureProperties
     selection               : SelectionModel
   }
 
@@ -316,6 +339,35 @@ module Initial =
             format = "{0:0.00}"
         }
 
+  let tSize = 
+        {
+            value = 0.1
+            min = 0.001
+            max = 0.1
+            step = 0.001
+            format = "{0:0.000}"
+        }
+  let instrumentC =
+    {
+        mahli        = { c = C4b(27,158,119) }   
+        frontHazcam  = { c = C4b(255,255,255)} 
+        mastcam      = { c = C4b(255,255,255)} 
+        apxs         = { c = C4b(230,171,2)  } 
+        frontHazcamR = { c = C4b(31,120,180) } 
+        frontHazcamL = { c = C4b(166,206,227)} 
+        mastcamR     = { c = C4b(227,26,28)  } 
+        mastcamL     = { c = C4b(251,154,153)} 
+        chemLib      = { c = C4b(173,221,142)} 
+        chemRmi      = { c = C4b(49,163,84)  } 
+    }
+
+  let fProps = 
+    {
+        pointSize = pSize
+        textSize = tSize
+        instrumentColor = instrumentC
+    }
+
   let sgfeatures =
     {
         positions = Array.empty
@@ -341,9 +393,9 @@ module Initial =
         checkMastcamL         = true
         checkChemLib          = true
         checkChemRmi          = true
-        pointSize             = pSize
+       
         sgFeatures            = sgfeatures
-        useFileQueries        = false
+        //useFileQueries        = false
     }
 
   let selectionM =
@@ -372,5 +424,6 @@ module Initial =
       minervaMailboxState = MailboxState.empty
       minervaMessagingMailbox = mailbox
       queryFilter = queryFilter
+      featureProperties = fProps
       selection = selectionM
     }
