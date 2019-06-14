@@ -897,20 +897,20 @@ module ViewerApp =
                  let newForward = (v - currentView.Location).Normalized
                                     
                  { m with animations = createAnimation v newForward m.animations }
-              | Minerva.WriteScreenCoordsDebug -> 
-                let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
-                let points = 
-                  m.minervaModel.data.features
-                    |> PList.toList 
-                    |> List.map(fun feat -> (feat.id, feat.geometry.positions.[0]))                    
-                    |> List.map(fun (id,p) ->  (id, ((viewProj.Forward.TransformPosProj p) + V3d.One) * 0.5))
+              //| Minerva.WriteScreenCoordsDebug -> 
+              //  let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
+              //  let points = 
+              //    m.minervaModel.data.features
+              //      |> PList.toList 
+              //      |> List.map(fun feat -> (feat.id, feat.geometry.positions.[0]))                    
+              //      |> List.map(fun (id,p) ->  (id, ((viewProj.Forward.TransformPosProj p) + V3d.One) * 0.5))
                 
-               // points |> Log.line "trafo points minerva %A"                                 
-                Log.line "[Viewer] writing minerva screespace coords"
-                points 
-                    |> List.map(fun (id,v) -> sprintf "%s,%f,%f" id v.X v.Y) 
-                    |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates.csv"
-                m
+              // // points |> Log.line "trafo points minerva %A"                                 
+              //  Log.line "[Viewer] writing minerva screespace coords"
+              //  points 
+              //      |> List.map(fun (id,v) -> sprintf "%s,%f,%f" id v.X v.Y) 
+              //      |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates.csv"
+              //  m
               | _ ->                
                  let currentView = m.scene.navigation.camera.view
                  let minerva' = PRo3D.Minerva.App.update currentView m.minervaModel a                                                                               

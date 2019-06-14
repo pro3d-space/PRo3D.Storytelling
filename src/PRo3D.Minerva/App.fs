@@ -151,13 +151,31 @@ module App =
     //Log.line "[Minerva] found %d entries" model.data.features.Count
     //{ model with data = data }
     data
+  
+  let sendReplaceSelectionRequest(comm : Communicator.Communicator) = 
+    /// Minerva Example --> Replace Selection
+
+    let IdList = [|"APB_494375951RWP10910491876_______P1"; "APB_493587808RWP10820491216_______P1"; "APB_494212310RWP10900491876_______P1"|]
+    
+    let name : string = "MinervaReplaceSelection"
+    let para : JsonNetworkCommand.Params = {names = [|"IdList"|]; numOfLists = 1; numOfEntries = (IdList |> Array.length); image = None; imageResolution = None; messageID = "SelectionMessageID"}
+    let data : JsonNetworkCommand.Data = {ids = Some(IdList); positions = None; colors = None}
+
+    let jsonMessage = JsonNetworkCommand.createJsonNetworkCommand {name = name; para = para; data = data}
+    
+    comm.GetClient().SendMessageWaitForResponse(jsonMessage)
+    
 
   let update (view:CameraView) (model : Model) (msg : MinervaAction) : Model =
       match msg with
       | Reset ->
         let m' = { model with data = Initial.data }
         { m' with queryFilter = Initial.queryFilter }
-      | WriteScreenCoordsDebug -> model
+      | WriteScreenCoordsDebug -> 
+        match model.comm with
+        | Some c -> sendReplaceSelectionRequest c
+        | None   -> ()
+        model
       | PerformQueries -> 
         try
           //let data = model.queries |> MinervaGeoJSON.loadMultiple        
@@ -204,10 +222,10 @@ module App =
           //     cmd.para.messageID
           //  | _ -> sprintf "dont know %A" cmd
           Log.line "[Minerva] connecting to visplore"
+          let comm = if model.comm.IsSome then model.comm.Value else new Communicator.Communicator()
           let createWorker () =
              proclist {
-               let bc = new HarriSchirchWrongBlockingCollection<_>()
-               let comm = new Communicator.Communicator()
+               let bc = new HarriSchirchWrongBlockingCollection<_>()               
                comm.Start(fun cmd ->
                  match cmd.name with
                  | "MinervaReplaceSelection" ->
@@ -235,12 +253,12 @@ module App =
                     | None -> ()
                yield FlyToProduct V3d.Zero
 
-               comm.Close()
+              // comm.Close()
              }
           //comm.Start()
           //Thread.Sleep(60 * 100000)
           //comm.Close()        
-          { model with vplMessages = ThreadPool.add "vpl server" (createWorker()) model.vplMessages }
+          { model with vplMessages = ThreadPool.add "vpl server" (createWorker()) model.vplMessages; comm = Some comm}
         else
           model
       | FlyToProduct _ ->         
@@ -361,7 +379,7 @@ module App =
        ]
 
        div [clazz "ui buttons"] [
-         button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Export"]
+         button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Send Message"]
          button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
          button [clazz "ui button"; onClick (fun _ -> QueryDataFile)][text "Load csv"]
        ]

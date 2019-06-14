@@ -109,6 +109,7 @@ module Communicator =
             a
         server <- new Server(converter, responder)
     
+    member this.GetClient() = client
   
     member this.Start(cmd) =
         let address = System.Net.IPAddress.Parse(address)
