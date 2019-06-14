@@ -207,20 +207,12 @@ module App =
         //Log.stop()
         //Log.line "[Minerva] found %d entries" model.data.features.Count
         let data = loadFeatureCollection model
-        let queryM = QueryApp.useQueriesForData data.features model.queryFilter view
+        let queryM = QueryApp.applyFilterQueries data.features model.queryFilter view
         Log.line "[Minerva] found %A features in collection" queryM.filteredFeatures.Count
         { model with data = data; queryFilter = queryM}
         //{ model with data = data }
       | ConnectVisplore -> 
-        if model.vplMessages.store.IsEmpty then
-
-          //let evaluateCommand (cmd : PRo3D.Minerva.Communication.JsonNetworkCommand.CommandData) : string =
-          //  match cmd.name with
-          //  | "MinervaReplaceSelection" ->
-          //     // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
-          //     cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand
-          //     cmd.para.messageID
-          //  | _ -> sprintf "dont know %A" cmd
+        if model.vplMessages.store.IsEmpty then          
           Log.line "[Minerva] connecting to visplore"
           let comm = if model.comm.IsSome then model.comm.Value else new Communicator.Communicator()
           let createWorker () =
@@ -231,7 +223,7 @@ module App =
                  | "MinervaReplaceSelection" ->
                     Log.line "[Minerva] received vpl message"
                     // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
-                   // cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand 
+                    // cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand 
                     match cmd.data.ids with 
                     | Some ids -> 
                         let action = ids |> Array.toList |> PerformIdQuery 
@@ -251,25 +243,19 @@ module App =
                  match action with
                     | Some a -> yield a
                     | None -> ()
-               yield FlyToProduct V3d.Zero
-
-              // comm.Close()
-             }
-          //comm.Start()
-          //Thread.Sleep(60 * 100000)
-          //comm.Close()        
+               yield FlyToProduct V3d.Zero              
+             }          
           { model with vplMessages = ThreadPool.add "vpl server" (createWorker()) model.vplMessages; comm = Some comm}
         else
           model
-      | FlyToProduct _ ->         
-        model
-      | QueryMessage msg ->
-        let querymodel = QueryApp.update view model.queryFilter model.data.features msg
-        { model with queryFilter = querymodel }
+      | FlyToProduct _ -> model //handled in higher level app
+      | QueryMessage msg -> 
+        let queryM = QueryApp.applyFilterQueries model.data.features model.queryFilter view
+        { model with queryFilter = queryM}
       | QueryDataFile ->
-        let chachepath = ".\data.minerva"
+        let cachepath = ".\data.minerva"
         let data = 
-            match System.IO.File.Exists chachepath with
+            match System.IO.File.Exists cachepath with
              | true -> loadFeatureCollection model
              | false ->
                 Log.startTimed "[Minerva] Fetching full dataset from data file"
@@ -277,7 +263,7 @@ module App =
                 Log.stop()
                 data
         Log.line "[Minerva] found %d entries" model.data.features.Count
-        let queryM = QueryApp.useQueriesForData data.features model.queryFilter view
+        let queryM = QueryApp.applyFilterQueries data.features model.queryFilter view
         Log.line "[Minerva] found %A features in collection" queryM.filteredFeatures.Count
         { model with data = data; queryFilter = queryM}
 
@@ -289,7 +275,7 @@ module App =
         { model with featureProperties = { model.featureProperties with textSize = size }}
 
 
-  let viewFeatures (pos : IMod<V3d>)(instr : Instrument) (features : list<Feature>) = 
+  let viewFeatures (instr : Instrument) (features : list<Feature>) = 
     [
       for f in features do                                            
         let iconAttr = 
@@ -332,56 +318,54 @@ module App =
      )  
   
 
-  let viewFeaturesGui (pos : IMod<V3d>)(model :MModel) =
+  let viewFeaturesGui (model :MModel) =
      let queryGui (model:MModel) = 
           QueryApp.viewQueryFilters model.queryFilter
             |> UI.map QueryMessage 
-            //|> Mod.constant
-
      
      let propertiesGui =
         require Html.semui ( 
             Html.table [ 
                 Html.row "point size:" [Numeric.view' [NumericInputType.Slider] model.featureProperties.pointSize |> UI.map (fun x -> SetPointSize x)] 
                 Html.row "text size:" [Numeric.view' [NumericInputType.Slider] model.featureProperties.textSize |> UI.map (fun x -> SetTextSize x)] 
-            ]
-        
+            ]        
         ) 
 
-
-    
+     let take' (n : int) (input : list<'a>) : list<'a> =
+       if n >= input.Length then input else input |> List.take n
+       
      let listOfFeatures =
         alist { 
-          //let! features = model.data.features |> AList.toMod
+          
           let! features = model.queryFilter.filteredFeatures |> AList.toMod
           let groupedFeatures = features |> PList.toList |> List.groupBy(fun x -> x.instrument)
+          let! pos = model.queryFilter.filterLocation
 
           for (instr, group) in groupedFeatures do
             let header = sprintf "%s (%d)" (instr |> instrumentText) group.Length
-            yield div [clazz "ui inverted item"][
-                //i [clazz "ui folder inverted middle aligned icon"] []
-            //    yield div [clazz "ui header small"] [header |> text]
-                //div [clazz "ui description"] ["description" |> text]
+            let g = 
+              group 
+                |> List.sortBy(fun x -> V3d.DistanceSquared(pos, x.geometry.coordinates.Head)) 
+                |> take'(100)
 
-                yield accordion header "Content" false [
-                    
-                  div [clazz "ui list"] (viewFeatures pos instr group)
+            yield div [clazz "ui inverted item"][
+                yield accordion header "Content" false [                    
+                  div [clazz "ui list"] (viewFeatures instr g)
                 ]
               ]
         }
 
      div [clazz "ui inverted segment"] [
-       div [clazz "ui buttons"] [
-         button [clazz "ui button"; onClick (fun _ -> PerformQueries)][text "Query DB"]
-         button [clazz "ui button"; onClick (fun _ -> SaveFeatureCollection)][text "Save"]
-         button [clazz "ui button"; onClick (fun _ -> LoadFeatureCollection)][text "Load"]
+       h2 [clazz "ui"] [text "Data:"]
+       div [clazz "ui buttons"] [         
+         button [clazz "ui button"; onClick (fun _ -> QueryDataFile)][text "Load"]
          button [clazz "ui button"; onClick (fun _ -> Reset)][text "Clear"]         
        ]
 
+       h2 [clazz "ui"] [text "Comm:"]
        div [clazz "ui buttons"] [
-         button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Send Message"]
          button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
-         button [clazz "ui button"; onClick (fun _ -> QueryDataFile)][text "Load csv"]
+         button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Send Selection"]
        ]
        
        queryGui model               
@@ -424,7 +408,7 @@ module App =
   let viewWrapped pos (model : MModel) =
     require Html.semui (
       body [style "width: 100%; height:100%; background: #252525; overflow-x: hidden; overflow-y: scroll"] [
-        div [clazz "ui inverted segment"] [viewFeaturesGui (pos)(model)]
+        div [clazz "ui inverted segment"] [viewFeaturesGui model]
       ])
 
   let threads (m : Model) = m.vplMessages

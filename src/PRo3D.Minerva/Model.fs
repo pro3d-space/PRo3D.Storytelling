@@ -195,6 +195,7 @@ type QueryModel = {
     checkChemRmi         : bool
     
     sgFeatures           : SgFeatures
+    filterLocation       : V3d
     //useFileQueries       : bool
 }
 
@@ -395,7 +396,7 @@ module Initial =
         checkChemRmi          = true
        
         sgFeatures            = sgfeatures
-        //useFileQueries        = false
+        filterLocation        = V3d.Zero
     }
 
   let selectionM =

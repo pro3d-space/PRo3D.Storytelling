@@ -322,6 +322,7 @@ module Mutable =
         let _checkChemLib = ResetMod.Create(__initial.checkChemLib)
         let _checkChemRmi = ResetMod.Create(__initial.checkChemRmi)
         let _sgFeatures = MSgFeatures.Create(__initial.sgFeatures)
+        let _filterLocation = ResetMod.Create(__initial.filterLocation)
         
         member x.minSol = _minSol
         member x.maxSol = _maxSol
@@ -340,6 +341,7 @@ module Mutable =
         member x.checkChemLib = _checkChemLib :> IMod<_>
         member x.checkChemRmi = _checkChemRmi :> IMod<_>
         member x.sgFeatures = _sgFeatures
+        member x.filterLocation = _filterLocation :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.QueryModel) =
@@ -363,6 +365,7 @@ module Mutable =
                 ResetMod.Update(_checkChemLib,v.checkChemLib)
                 ResetMod.Update(_checkChemRmi,v.checkChemRmi)
                 MSgFeatures.Update(_sgFeatures, v.sgFeatures)
+                ResetMod.Update(_filterLocation,v.filterLocation)
                 
         
         static member Create(__initial : PRo3D.Minerva.QueryModel) : MQueryModel = MQueryModel(__initial)
@@ -480,6 +483,12 @@ module Mutable =
                     override x.Get(r) = r.sgFeatures
                     override x.Set(r,v) = { r with sgFeatures = v }
                     override x.Update(r,f) = { r with sgFeatures = f r.sgFeatures }
+                }
+            let filterLocation =
+                { new Lens<PRo3D.Minerva.QueryModel, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.filterLocation
+                    override x.Set(r,v) = { r with filterLocation = v }
+                    override x.Update(r,f) = { r with filterLocation = f r.filterLocation }
                 }
     
     

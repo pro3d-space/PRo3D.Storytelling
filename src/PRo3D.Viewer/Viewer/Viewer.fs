@@ -1131,8 +1131,8 @@ module ViewerApp =
             | Some "viewplanner" -> 
                 require (myCss) (body bodyAttributes [Gui.ViewPlanner.viewPlannerUI m])
             | Some "minerva" -> 
-               let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
-               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])            
+               //let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
+               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui m.minervaModel |> UI.map MinervaActions])            
             | None -> 
                 require (myCss) (
                   body [][                    
