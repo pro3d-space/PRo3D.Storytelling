@@ -101,7 +101,7 @@ module Files =
                 } 
             Some feature
 
-    let loadDataFile = 
+    let loadDataFile() = 
         let directory = @".\MinervaData"
         let path = ".\MinervaData\dump.csv"
         match System.IO.File.Exists path with

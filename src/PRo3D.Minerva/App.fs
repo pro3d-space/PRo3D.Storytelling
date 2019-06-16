@@ -14,6 +14,7 @@ open PRo3D.Minerva.Communication
 open Aardvark.GeoSpatial.Opc
 open System
 open Aardvark.UI
+open PRo3D.Base.AnnotationDraft
 
 [<AutoOpen>]
 module MissingInBase = 
@@ -63,6 +64,10 @@ module App =
   open System.Threading  
 
   //coords  -4831.341805
+
+  //let _featureProps = Model.Lens.featureProperties 
+  //let _instColors   = _featureProps |. FeatureProperties.Lens.instrumentColor
+  //let _color        = _instColors |. InstrumentColor.Lens.color
 
   let computeXYZFeatures (features : FeatureCollection) : FeatureCollection =
     let a = 
@@ -255,7 +260,7 @@ module App =
              | true -> loadFeatureCollection model
              | false ->
                 Log.startTimed "[Minerva] Fetching full dataset from data file"
-                let data = Files.loadDataFile
+                let data = Files.loadDataFile()
                 Log.stop()
                 data
         Log.line "[Minerva] found %d entries" model.data.features.Count
@@ -269,6 +274,25 @@ module App =
       | SetTextSize s ->
         let size = Numeric.update model.featureProperties.textSize s
         { model with featureProperties = { model.featureProperties with textSize = size }}
+      //| ChangeInstrumentColor (c,instrument) -> 
+      //  let color' = ColorPicker.update model.featureProperties.instrumentColor.color c
+      //  let m' = _color.Set(model, color')
+      //  let instC = _instColors.Get(m')
+      //  let instC' =
+      //      match instrument with
+      //      | Instrument.MAHLI -> { instC with mahli = color'.c }
+      //      | Instrument.FrontHazcam -> { instC with mahli = color'.c }
+      //      | Instrument.Mastcam -> { instC with mahli = color'.c }
+      //      | Instrument.APXS -> { instC with mahli = color'.c }
+      //      | Instrument.FrontHazcamR -> { instC with mahli = color'.c }
+      //      | Instrument.FrontHazcamL -> { instC with mahli = color'.c }
+      //      | Instrument.MastcamR -> { instC with mahli = color'.c }
+      //      | Instrument.MastcamL -> { instC with mahli = color'.c }
+      //      | Instrument.ChemLib -> { instC with mahli = color'.c }
+      //      | Instrument.ChemRmi -> { instC with mahli = color'.c }
+      //      | _ -> sprintf "unknown instrument" |> failwith
+
+      //  _instColors.Set(m', instC')
 
 
   let viewFeatures (pos : IMod<V3d>)(instr : Instrument) (features : list<Feature>) = 
@@ -346,7 +370,6 @@ module App =
                 //div [clazz "ui description"] ["description" |> text]
 
                 yield accordion header "Content" false [
-                    
                   div [clazz "ui list"] (viewFeatures pos instr group)
                 ]
               ]

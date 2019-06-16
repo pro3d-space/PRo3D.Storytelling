@@ -141,7 +141,8 @@ type MinervaAction =
   | QueryDataFile
   | SetPointSize of Numeric.Action
   | SetTextSize of Numeric.Action
-      
+  //| ChangeInstrumentColor of ColorPicker.Action * Instrument
+  
 
 [<DomainType>]
 type SgFeatures = {
@@ -152,23 +153,24 @@ type SgFeatures = {
 
 [<DomainType>]
 type InstrumentColor = {
-    mahli        : ColorInput    
-    frontHazcam  : ColorInput 
-    mastcam      : ColorInput  
-    apxs         : ColorInput  
-    frontHazcamR : ColorInput 
-    frontHazcamL : ColorInput 
-    mastcamR     : ColorInput 
-    mastcamL     : ColorInput 
-    chemLib      : ColorInput 
-    chemRmi      : ColorInput  
+    mahli        : C4b    
+    frontHazcam  : C4b 
+    mastcam      : C4b  
+    apxs         : C4b  
+    frontHazcamR : C4b 
+    frontHazcamL : C4b 
+    mastcamR     : C4b 
+    mastcamL     : C4b 
+    chemLib      : C4b 
+    chemRmi      : C4b  
+    color        : ColorInput
 }
 
 [<DomainType>]
 type FeatureProperties = {
     pointSize   : NumericInput
     textSize    : NumericInput
-    instrumentColor : InstrumentColor
+    //instrumentColor : InstrumentColor
 }
 
 
@@ -195,6 +197,7 @@ type QueryModel = {
     checkChemRmi         : bool
     
     sgFeatures           : SgFeatures
+    //instrumentColor      : InstrumentColor
     //useFileQueries       : bool
 }
 
@@ -347,25 +350,25 @@ module Initial =
             step = 0.001
             format = "{0:0.000}"
         }
-  let instrumentC =
-    {
-        mahli        = { c = C4b(27,158,119) }   
-        frontHazcam  = { c = C4b(255,255,255)} 
-        mastcam      = { c = C4b(255,255,255)} 
-        apxs         = { c = C4b(230,171,2)  } 
-        frontHazcamR = { c = C4b(31,120,180) } 
-        frontHazcamL = { c = C4b(166,206,227)} 
-        mastcamR     = { c = C4b(227,26,28)  } 
-        mastcamL     = { c = C4b(251,154,153)} 
-        chemLib      = { c = C4b(173,221,142)} 
-        chemRmi      = { c = C4b(49,163,84)  } 
-    }
+  //let instrumentC =
+  //  {
+  //      mahli        = { c = C4b(27,158,119) }   
+  //      frontHazcam  = { c = C4b(255,255,255)} 
+  //      mastcam      = { c = C4b(255,255,255)} 
+  //      apxs         = { c = C4b(230,171,2)  } 
+  //      frontHazcamR = { c = C4b(31,120,180) } 
+  //      frontHazcamL = { c = C4b(166,206,227)} 
+  //      mastcamR     = { c = C4b(227,26,28)  } 
+  //      mastcamL     = { c = C4b(251,154,153)} 
+  //      chemLib      = { c = C4b(173,221,142)} 
+  //      chemRmi      = { c = C4b(49,163,84)  } 
+  //  }
 
   let fProps = 
     {
         pointSize = pSize
         textSize = tSize
-        instrumentColor = instrumentC
+        //instrumentColor = instrumentC
     }
 
   let sgfeatures =
@@ -395,6 +398,7 @@ module Initial =
         checkChemRmi          = true
        
         sgFeatures            = sgfeatures
+        //instrumentColor       = instrumentC
         //useFileQueries        = false
     }
 
