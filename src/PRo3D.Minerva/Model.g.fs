@@ -307,10 +307,8 @@ module Mutable =
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.QueryModel> = Aardvark.Base.Incremental.EqModRef<PRo3D.Minerva.QueryModel>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.QueryModel>
         let _minSol = Aardvark.UI.Mutable.MNumericInput.Create(__initial.minSol)
         let _maxSol = Aardvark.UI.Mutable.MNumericInput.Create(__initial.maxSol)
-        let _instrument = ResetMod.Create(__initial.instrument)
         let _distance = Aardvark.UI.Mutable.MNumericInput.Create(__initial.distance)
-        let _filteredFeatures = MList.Create(__initial.filteredFeatures)
-        let _solLables = MMap.Create(__initial.solLables)
+        let _filterLocation = ResetMod.Create(__initial.filterLocation)
         let _checkMAHLI = ResetMod.Create(__initial.checkMAHLI)
         let _checkFrontHazcam = ResetMod.Create(__initial.checkFrontHazcam)
         let _checkMastcam = ResetMod.Create(__initial.checkMastcam)
@@ -321,15 +319,11 @@ module Mutable =
         let _checkMastcamL = ResetMod.Create(__initial.checkMastcamL)
         let _checkChemLib = ResetMod.Create(__initial.checkChemLib)
         let _checkChemRmi = ResetMod.Create(__initial.checkChemRmi)
-        let _sgFeatures = MSgFeatures.Create(__initial.sgFeatures)
-        let _filterLocation = ResetMod.Create(__initial.filterLocation)
         
         member x.minSol = _minSol
         member x.maxSol = _maxSol
-        member x.instrument = _instrument :> IMod<_>
         member x.distance = _distance
-        member x.filteredFeatures = _filteredFeatures :> alist<_>
-        member x.solLables = _solLables :> amap<_,_>
+        member x.filterLocation = _filterLocation :> IMod<_>
         member x.checkMAHLI = _checkMAHLI :> IMod<_>
         member x.checkFrontHazcam = _checkFrontHazcam :> IMod<_>
         member x.checkMastcam = _checkMastcam :> IMod<_>
@@ -340,8 +334,6 @@ module Mutable =
         member x.checkMastcamL = _checkMastcamL :> IMod<_>
         member x.checkChemLib = _checkChemLib :> IMod<_>
         member x.checkChemRmi = _checkChemRmi :> IMod<_>
-        member x.sgFeatures = _sgFeatures
-        member x.filterLocation = _filterLocation :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.QueryModel) =
@@ -350,10 +342,8 @@ module Mutable =
                 
                 Aardvark.UI.Mutable.MNumericInput.Update(_minSol, v.minSol)
                 Aardvark.UI.Mutable.MNumericInput.Update(_maxSol, v.maxSol)
-                ResetMod.Update(_instrument,v.instrument)
                 Aardvark.UI.Mutable.MNumericInput.Update(_distance, v.distance)
-                MList.Update(_filteredFeatures, v.filteredFeatures)
-                MMap.Update(_solLables, v.solLables)
+                ResetMod.Update(_filterLocation,v.filterLocation)
                 ResetMod.Update(_checkMAHLI,v.checkMAHLI)
                 ResetMod.Update(_checkFrontHazcam,v.checkFrontHazcam)
                 ResetMod.Update(_checkMastcam,v.checkMastcam)
@@ -364,8 +354,6 @@ module Mutable =
                 ResetMod.Update(_checkMastcamL,v.checkMastcamL)
                 ResetMod.Update(_checkChemLib,v.checkChemLib)
                 ResetMod.Update(_checkChemRmi,v.checkChemRmi)
-                MSgFeatures.Update(_sgFeatures, v.sgFeatures)
-                ResetMod.Update(_filterLocation,v.filterLocation)
                 
         
         static member Create(__initial : PRo3D.Minerva.QueryModel) : MQueryModel = MQueryModel(__initial)
@@ -394,29 +382,17 @@ module Mutable =
                     override x.Set(r,v) = { r with maxSol = v }
                     override x.Update(r,f) = { r with maxSol = f r.maxSol }
                 }
-            let instrument =
-                { new Lens<PRo3D.Minerva.QueryModel, PRo3D.Minerva.Instrument>() with
-                    override x.Get(r) = r.instrument
-                    override x.Set(r,v) = { r with instrument = v }
-                    override x.Update(r,f) = { r with instrument = f r.instrument }
-                }
             let distance =
                 { new Lens<PRo3D.Minerva.QueryModel, Aardvark.UI.NumericInput>() with
                     override x.Get(r) = r.distance
                     override x.Set(r,v) = { r with distance = v }
                     override x.Update(r,f) = { r with distance = f r.distance }
                 }
-            let filteredFeatures =
-                { new Lens<PRo3D.Minerva.QueryModel, Aardvark.Base.plist<PRo3D.Minerva.Feature>>() with
-                    override x.Get(r) = r.filteredFeatures
-                    override x.Set(r,v) = { r with filteredFeatures = v }
-                    override x.Update(r,f) = { r with filteredFeatures = f r.filteredFeatures }
-                }
-            let solLables =
-                { new Lens<PRo3D.Minerva.QueryModel, Aardvark.Base.hmap<System.String,Aardvark.Base.V3d>>() with
-                    override x.Get(r) = r.solLables
-                    override x.Set(r,v) = { r with solLables = v }
-                    override x.Update(r,f) = { r with solLables = f r.solLables }
+            let filterLocation =
+                { new Lens<PRo3D.Minerva.QueryModel, Aardvark.Base.V3d>() with
+                    override x.Get(r) = r.filterLocation
+                    override x.Set(r,v) = { r with filterLocation = v }
+                    override x.Update(r,f) = { r with filterLocation = f r.filterLocation }
                 }
             let checkMAHLI =
                 { new Lens<PRo3D.Minerva.QueryModel, System.Boolean>() with
@@ -478,18 +454,6 @@ module Mutable =
                     override x.Set(r,v) = { r with checkChemRmi = v }
                     override x.Update(r,f) = { r with checkChemRmi = f r.checkChemRmi }
                 }
-            let sgFeatures =
-                { new Lens<PRo3D.Minerva.QueryModel, PRo3D.Minerva.SgFeatures>() with
-                    override x.Get(r) = r.sgFeatures
-                    override x.Set(r,v) = { r with sgFeatures = v }
-                    override x.Update(r,f) = { r with sgFeatures = f r.sgFeatures }
-                }
-            let filterLocation =
-                { new Lens<PRo3D.Minerva.QueryModel, Aardvark.Base.V3d>() with
-                    override x.Get(r) = r.filterLocation
-                    override x.Set(r,v) = { r with filterLocation = v }
-                    override x.Update(r,f) = { r with filterLocation = f r.filterLocation }
-                }
     
     
     type MModel(__initial : PRo3D.Minerva.Model) =
@@ -497,22 +461,28 @@ module Mutable =
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.Model> = Aardvark.Base.Incremental.EqModRef<PRo3D.Minerva.Model>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.Model>
         let _data = MFeatureCollection.Create(__initial.data)
         let _queries = ResetMod.Create(__initial.queries)
+        let _queryFilter = MQueryModel.Create(__initial.queryFilter)
+        let _filteredFeatures = MList.Create(__initial.filteredFeatures)
         let _vplMessages = ResetMod.Create(__initial.vplMessages)
         let _minervaMessagingMailbox = ResetMod.Create(__initial.minervaMessagingMailbox)
         let _minervaMailboxState = ResetMod.Create(__initial.minervaMailboxState)
-        let _queryFilter = MQueryModel.Create(__initial.queryFilter)
         let _featureProperties = MFeatureProperties.Create(__initial.featureProperties)
         let _selection = ResetMod.Create(__initial.selection)
+        let _solLabels = MMap.Create(__initial.solLabels)
+        let _sgFeatures = MSgFeatures.Create(__initial.sgFeatures)
         
         member x.data = _data
         member x.queries = _queries :> IMod<_>
+        member x.queryFilter = _queryFilter
+        member x.filteredFeatures = _filteredFeatures :> alist<_>
         member x.comm = __current.Value.comm
         member x.vplMessages = _vplMessages :> IMod<_>
         member x.minervaMessagingMailbox = _minervaMessagingMailbox :> IMod<_>
         member x.minervaMailboxState = _minervaMailboxState :> IMod<_>
-        member x.queryFilter = _queryFilter
         member x.featureProperties = _featureProperties
         member x.selection = _selection :> IMod<_>
+        member x.solLabels = _solLabels :> amap<_,_>
+        member x.sgFeatures = _sgFeatures
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.Model) =
@@ -521,12 +491,15 @@ module Mutable =
                 
                 MFeatureCollection.Update(_data, v.data)
                 ResetMod.Update(_queries,v.queries)
+                MQueryModel.Update(_queryFilter, v.queryFilter)
+                MList.Update(_filteredFeatures, v.filteredFeatures)
                 ResetMod.Update(_vplMessages,v.vplMessages)
                 ResetMod.Update(_minervaMessagingMailbox,v.minervaMessagingMailbox)
                 ResetMod.Update(_minervaMailboxState,v.minervaMailboxState)
-                MQueryModel.Update(_queryFilter, v.queryFilter)
                 MFeatureProperties.Update(_featureProperties, v.featureProperties)
                 ResetMod.Update(_selection,v.selection)
+                MMap.Update(_solLabels, v.solLabels)
+                MSgFeatures.Update(_sgFeatures, v.sgFeatures)
                 
         
         static member Create(__initial : PRo3D.Minerva.Model) : MModel = MModel(__initial)
@@ -555,6 +528,18 @@ module Mutable =
                     override x.Set(r,v) = { r with queries = v }
                     override x.Update(r,f) = { r with queries = f r.queries }
                 }
+            let queryFilter =
+                { new Lens<PRo3D.Minerva.Model, PRo3D.Minerva.QueryModel>() with
+                    override x.Get(r) = r.queryFilter
+                    override x.Set(r,v) = { r with queryFilter = v }
+                    override x.Update(r,f) = { r with queryFilter = f r.queryFilter }
+                }
+            let filteredFeatures =
+                { new Lens<PRo3D.Minerva.Model, Aardvark.Base.plist<PRo3D.Minerva.Feature>>() with
+                    override x.Get(r) = r.filteredFeatures
+                    override x.Set(r,v) = { r with filteredFeatures = v }
+                    override x.Update(r,f) = { r with filteredFeatures = f r.filteredFeatures }
+                }
             let comm =
                 { new Lens<PRo3D.Minerva.Model, Microsoft.FSharp.Core.Option<PRo3D.Minerva.Communication.Communicator.Communicator>>() with
                     override x.Get(r) = r.comm
@@ -579,12 +564,6 @@ module Mutable =
                     override x.Set(r,v) = { r with minervaMailboxState = v }
                     override x.Update(r,f) = { r with minervaMailboxState = f r.minervaMailboxState }
                 }
-            let queryFilter =
-                { new Lens<PRo3D.Minerva.Model, PRo3D.Minerva.QueryModel>() with
-                    override x.Get(r) = r.queryFilter
-                    override x.Set(r,v) = { r with queryFilter = v }
-                    override x.Update(r,f) = { r with queryFilter = f r.queryFilter }
-                }
             let featureProperties =
                 { new Lens<PRo3D.Minerva.Model, PRo3D.Minerva.FeatureProperties>() with
                     override x.Get(r) = r.featureProperties
@@ -596,4 +575,16 @@ module Mutable =
                     override x.Get(r) = r.selection
                     override x.Set(r,v) = { r with selection = v }
                     override x.Update(r,f) = { r with selection = f r.selection }
+                }
+            let solLabels =
+                { new Lens<PRo3D.Minerva.Model, Aardvark.Base.hmap<System.String,Aardvark.Base.V3d>>() with
+                    override x.Get(r) = r.solLabels
+                    override x.Set(r,v) = { r with solLabels = v }
+                    override x.Update(r,f) = { r with solLabels = f r.solLabels }
+                }
+            let sgFeatures =
+                { new Lens<PRo3D.Minerva.Model, PRo3D.Minerva.SgFeatures>() with
+                    override x.Get(r) = r.sgFeatures
+                    override x.Set(r,v) = { r with sgFeatures = v }
+                    override x.Update(r,f) = { r with sgFeatures = f r.sgFeatures }
                 }

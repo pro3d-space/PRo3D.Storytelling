@@ -101,29 +101,29 @@ module Files =
                 } 
             Some feature
 
-    let loadDataFile = 
-        let directory = @".\MinervaData"
-        let path = ".\MinervaData\dump.csv"
-        match System.IO.File.Exists path with
-         | true -> 
-            let allData = CsvFile.Load(@".\MinervaData\dump.csv").Cache()
+    open System.IO    
+    open PRo3D.Base
+    let loadDataFile =
+        let cachePath = @".\MinervaData\dump.cache"
+        let path = @".\MinervaData\dump.csv"
+        match (File.Exists path, File.Exists cachePath) with
+         | (true, false) -> 
+            let allData = CsvFile.Load(path).Cache()
 
             let features = 
                 allData.Rows
                     |> Seq.choose( fun x -> getFeature x )
                 
-
             {
               name        = "dump"
               typus       = Typus.FeatureCollection    
               boundingBox = Box2d.Invalid
               features    = features |> PList.ofSeq
-            }
-         | false -> 
-            Log.line "wrong filename"
-            Initial.data
-
-        //allData
+            } |> Serialization.save cachePath
+         | (_, true) -> Serialization.loadAs cachePath
+         | _ -> 
+            Log.error "[Minerva] sth. went wrong with dump.csv"
+            Initial.data        
 
 module Shader = 
 
@@ -281,17 +281,18 @@ module Drawing =
                     0.0,     0.0,     0.0,     1.0
                 )
         )
-        rotTrafo * modelt
-        
+        rotTrafo * modelt        
 
     let text (view : IMod<CameraView>) (near : IMod<float>) (hfov:IMod<float>) (pos:V3d) (modelTrafo:Trafo3d) (text:IMod<string>) (size:IMod<float>) =
-        let invScaleTrafo = size |> Mod.map Trafo3d.Scale
-            //computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
+        let invScaleTrafo = computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale
+        //    //computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
       
         let billboardTrafo = 
             adaptive {
                 let! v = view
-                let modelt = modelTrafo
+                //let! size = size
+                let! scaleTrafo = invScaleTrafo
+                let modelt = scaleTrafo * modelTrafo
       
                 return screenAligned v.Forward v.Up modelt
             }      
@@ -300,8 +301,6 @@ module Drawing =
             |> Sg.noEvents
             |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
             do! Shader.stableTrafo
-            }      
-            |> Aardvark.UI.``F# Sg``.Sg.trafo (invScaleTrafo)
-            |> Aardvark.UI.``F# Sg``.Sg.trafo (modelTrafo |> Mod.constant)
-            //|> Aardvark.UI.``F# Sg``.Sg.trafo billboardTrafo  
+            }                  
+            |> Aardvark.UI.``F# Sg``.Sg.trafo billboardTrafo  
 

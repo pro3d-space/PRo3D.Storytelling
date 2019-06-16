@@ -15,14 +15,7 @@ open Aardvark.GeoSpatial.Opc
 
 module QueryApp =
            
-    let updateSolLabels (model : QueryModel) (features:plist<Feature>) =
-      let range = new Range1i(model.minSol.value |> int, model.maxSol.value |> int)
-
-      features 
-        |> PList.toList 
-        |> List.filter (fun x -> range.Contains(x.sol))
-        |> List.map(fun x -> x.sol |> string, x.geometry.positions.Head) 
-        |> HMap.ofList      
+     
         
     let filterByDistance (view:CameraView) (dist:float) (features:plist<Feature>) =
       features        
@@ -51,92 +44,53 @@ module QueryApp =
             )
         fl
 
-    let updateSgFeatures (features:plist<Feature>) =
-        let positions = 
-          features
-            |> PList.map(fun f -> f.geometry.positions.Head)            
-            |> PList.toArray
+    
 
-        let trafo = 
-          match positions |> Array.tryHead with
-            | Some p -> Trafo3d.Translation p
-            | _ -> Trafo3d.Identity
-       
-        let colors = 
-          features
-            |> PList.map( fun x -> x.instrument |> Model.instrumentColor )
-            |> PList.toArray
-                         
-        {
-            positions = positions
-            colors = colors
-            trafo = trafo
-        }
-
-    let updateFeaturesForRendering (model : QueryModel) (features:plist<Feature>) =
-        Log.startTimed "[Minerva] updating sol labels"
-        let solLabels = updateSolLabels model features
-        Log.stop()
-        let sgFeatures = updateSgFeatures features
-        { model with filteredFeatures = features; solLables = solLabels; sgFeatures = sgFeatures }
+    
             
-    let applyFilterQueries (features:plist<Feature>) (qModel : QueryModel) (view:CameraView) =        
+    let applyFilterQueries (features:plist<Feature>) (qModel : QueryModel) (view:CameraView) : plist<Feature> =        
       let filtered = 
         features
           |> filterByDistance view qModel.distance.value
           |> filterBySol qModel.minSol.value qModel.maxSol.value
           |> filterByInstrument qModel
-          |> updateFeaturesForRendering qModel
-      Log.line "[Minerva] filtered set %d products" filtered.filteredFeatures.Count
+          //|> updateFeaturesForRendering qModel
+      Log.line "[Minerva] filtered set %d products" filtered.Count
 
       filtered
     
-    let update (view:CameraView) (model : QueryModel) (features:plist<Feature>) (msg : QueryAction) : QueryModel =
+    let update (model : QueryModel) (msg : QueryAction) : QueryModel =
       match msg with
       | SetMinSol ms ->
         let minsol = Numeric.update model.minSol ms
-        let m = { model with minSol = minsol }
-        applyFilterQueries features m view
+        { model with minSol = minsol }        
       | SetMaxSol ms ->
         let maxsol = Numeric.update model.maxSol ms
-        let m = { model with maxSol = maxsol }
-        applyFilterQueries features m view
+        { model with maxSol = maxsol }        
       | SetDistance d ->
         let dist = Numeric.update model.distance d
-        let m = { model with distance = dist }
-        applyFilterQueries features m view
-      | UpdateDistance -> 
-        applyFilterQueries features model view
+        { model with distance = dist }        
+      | UpdateDistance -> msg |> sprintf "[Minerva] not implemented %A" |> failwith
       | CheckMAHLI -> 
-        let m = { model with checkMAHLI = not model.checkMAHLI }
-        applyFilterQueries features m view
+        { model with checkMAHLI = not model.checkMAHLI }        
       | CheckFrontHazcam -> 
-        let m = { model with checkFrontHazcam = not model.checkFrontHazcam }
-        applyFilterQueries features m view
+        { model with checkFrontHazcam = not model.checkFrontHazcam }        
       | CheckMastcam -> 
-        let m = { model with checkMastcam = not model.checkMastcam }
-        applyFilterQueries features m view
+        { model with checkMastcam = not model.checkMastcam }        
       | CheckAPXS -> 
-        let m = { model with checkAPXS = not model.checkAPXS }
-        applyFilterQueries features m view
+        { model with checkAPXS = not model.checkAPXS }        
       | CheckFrontHazcamR -> 
-        let m = { model with checkFrontHazcamR = not model.checkFrontHazcamR }
-        applyFilterQueries features m view
+        { model with checkFrontHazcamR = not model.checkFrontHazcamR }        
       | CheckFrontHazcamL -> 
-        let m = { model with checkFrontHazcamL = not model.checkFrontHazcamL }
-        applyFilterQueries features m view
+        { model with checkFrontHazcamL = not model.checkFrontHazcamL }        
       | CheckMastcamR -> 
-        let m = { model with checkMastcamR = not model.checkMastcamR }
-        applyFilterQueries features m view
+        { model with checkMastcamR = not model.checkMastcamR }        
       | CheckMastcamL -> 
-        let m = { model with checkMastcamL = not model.checkMastcamL }
-        applyFilterQueries features m view
+        { model with checkMastcamL = not model.checkMastcamL }        
       | CheckChemLib -> 
-        let m = { model with checkChemLib = not model.checkChemLib }
-        applyFilterQueries features m view
+        { model with checkChemLib = not model.checkChemLib }        
       | CheckChemRmi -> 
-        let m = { model with checkChemRmi = not model.checkChemRmi }
-        applyFilterQueries features m view      
+        { model with checkChemRmi = not model.checkChemRmi }        
 
     let iconToggle (dings : IMod<bool>) onIcon offIcon action =
         let toggleIcon = dings |> Mod.map(fun isOn -> if isOn then onIcon else offIcon)

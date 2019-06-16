@@ -129,20 +129,18 @@ type FeatureCollection =
   //| UseQueriesForDataFile
 
 type MinervaAction =
-  | PerformQueries
-  | SaveFeatureCollection
-  | LoadFeatureCollection
+  | LoadProducts
+  | ApplyFilters
+  | PerformQueries  
   | Reset
   | WriteScreenCoordsDebug
   | PerformIdQuery of list<string>
   | ConnectVisplore
   | FlyToProduct of V3d
   | QueryMessage of QueryAction
-  | QueryDataFile
   | SetPointSize of Numeric.Action
   | SetTextSize of Numeric.Action
       
-
 [<DomainType>]
 type SgFeatures = {
     positions   : V3d[]
@@ -176,13 +174,10 @@ type FeatureProperties = {
 type QueryModel = {
     minSol               : NumericInput
     maxSol               : NumericInput
-
-    instrument           : Instrument
+    
     distance             : NumericInput
-    filteredFeatures     : plist<Feature>
-
-    solLables            : hmap<string,V3d>
-
+    filterLocation       : V3d
+    
     checkMAHLI           : bool
     checkFrontHazcam     : bool
     checkMastcam         : bool
@@ -192,11 +187,7 @@ type QueryModel = {
     checkMastcamR        : bool
     checkMastcamL        : bool
     checkChemLib         : bool
-    checkChemRmi         : bool
-    
-    sgFeatures           : SgFeatures
-    filterLocation       : V3d
-    //useFileQueries       : bool
+    checkChemRmi         : bool        
 }
 
 type SelectionModel = {
@@ -225,8 +216,10 @@ module MailboxState =
 [<DomainType>]
 type Model = 
   {
-    data     : FeatureCollection
-    queries  : list<string>
+    data             : FeatureCollection
+    queries          : list<string>
+    queryFilter      : QueryModel
+    filteredFeatures : plist<Feature>
 
     [<NonIncremental>]
     comm     : option<Communicator.Communicator>
@@ -235,9 +228,11 @@ type Model =
 
     minervaMessagingMailbox : MessagingMailbox
     minervaMailboxState     : MailboxState
-    queryFilter             : QueryModel
     featureProperties       : FeatureProperties
     selection               : SelectionModel
+
+    solLabels            : hmap<string,V3d>
+    sgFeatures           : SgFeatures
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
@@ -342,9 +337,9 @@ module Initial =
 
   let tSize = 
         {
-            value = 0.1
+            value = 10.0
             min = 0.001
-            max = 0.1
+            max = 30.0
             step = 0.001
             format = "{0:0.000}"
         }
@@ -380,10 +375,10 @@ module Initial =
     {
         minSol                = minS
         maxSol                = maxS
-        instrument            = Instrument.NotImplemented
+       
         distance              = dist
-        filteredFeatures      = PList.empty
-        solLables             = hmap.Empty
+        filterLocation        = V3d.Zero
+        
         checkMAHLI            = true
         checkFrontHazcam      = true
         checkMastcam          = true
@@ -393,10 +388,7 @@ module Initial =
         checkMastcamR         = true
         checkMastcamL         = true
         checkChemLib          = true
-        checkChemRmi          = true
-       
-        sgFeatures            = sgfeatures
-        filterLocation        = V3d.Zero
+        checkChemRmi          = true              
     }
 
   let selectionM =
@@ -417,9 +409,9 @@ module Initial =
 
   let model mailbox = 
     {
-      data = data
+      data    = data
       queries = sites
-      comm = None
+      comm    = None
       vplMessages = ThreadPool.Empty
 
       minervaMailboxState = MailboxState.empty
@@ -427,4 +419,8 @@ module Initial =
       queryFilter = queryFilter
       featureProperties = fProps
       selection = selectionM
+      filteredFeatures = data.features
+
+      solLabels = HMap.empty
+      sgFeatures =  sgfeatures
     }
