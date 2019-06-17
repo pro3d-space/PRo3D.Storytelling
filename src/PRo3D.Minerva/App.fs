@@ -142,6 +142,33 @@ module App =
     let jsonMessage = JsonNetworkCommand.createJsonNetworkCommand {name = name; para = para; data = data}
     
     comm.GetClient().SendMessageWaitForResponse(jsonMessage)
+
+  let sendReplaceProjectionRequest (idList : array<string>) (positions : array<V2d>) (comm : Communicator.Communicator) =
+    /// Minerva Example --> Replace Projection
+
+    //let IdList = [|"APB_494375951RWP10910491876_______P1"; "APB_493587808RWP10820491216_______P1"; "APB_494212310RWP10900491876_______P1"|]
+    let positions = positions |> Array.map(fun x -> (x.X,x.Y) |> JsonNetworkCommand.V2d) |> Some
+
+    //let positions = [| JsonNetworkCommand.V2d(0.1, 0.01); JsonNetworkCommand.V2d(0.23, 0.1); JsonNetworkCommand.V2d(0.1, 0.005)|]
+    let imagepath = "This/is/some/path/to/an/image.png"
+    let imageresolution = JsonNetworkCommand.V2i(1024, 768)
+
+    let name : string = "MinervaReplaceProjection"
+    let para : JsonNetworkCommand.Params = 
+      { 
+        names           = [|"IdList";"Positions"|]
+        numOfLists      = 2
+        numOfEntries    = (idList |> Array.length)
+        image           = Some imagepath 
+        imageResolution = Some imageresolution
+        messageID       = ""
+      }
+
+    let data : JsonNetworkCommand.Data = {ids = Some idList; positions = positions; colors = None}
+
+    let jsonMessage = JsonNetworkCommand.createJsonNetworkCommand {name = name; para = para; data = data}    
+
+    comm.GetClient().SendMessage(jsonMessage)
     
   let take' (n : int) (input : list<'a>) : list<'a> =
        if n >= input.Length then input else input |> List.take n
@@ -186,11 +213,36 @@ module App =
     Log.stop()
     { model with solLabels = solLabels; sgFeatures = sgFeatures }
 
-  let update (view:CameraView) (model : Model) (msg : MinervaAction) : Model =
+  let update (view:CameraView) frustum (model : Model) (msg : MinervaAction) : Model =
       match msg with     
-      | WriteScreenCoordsDebug -> 
+      | SendSelection -> 
         match model.comm with
-        | Some c -> sendReplaceSelectionRequest c
+          | Some c -> sendReplaceSelectionRequest c
+          | None   -> ()
+        model
+      | SendScreenSpaceCoordinates -> 
+        let viewProj = view.ViewTrafo * Frustum.projTrafo frustum
+        let coords = 
+          model.data.features
+            |> PList.toList 
+            |> List.map(fun feat -> (feat.id, feat.geometry.positions.Head))
+            |> List.map(fun (id,p) ->  
+              let coord = (viewProj.Forward.TransformPosProj p)
+              let coord = (V2d(coord.X, coord.Y) + V2d.One) * 0.5
+              (id, coord))
+        
+        let width = 1920
+        let height = ((float)width / (frustum |> Frustum.aspect)) |> int
+
+        PRo3D.Base.Utilities.takeScreenshot "http://localhost:54321" width height "overview.jpg" @"c:\Users\ortner\Documents\visplore\Minerva"
+      /// points |> Log.line "trafo points minerva %A"                                 
+      //Log.line "[Viewer] writing minerva screespace coords"
+      //points 
+      //    |> List.map(fun (id,v) -> sprintf "%s,%f,%f" id v.X v.Y) 
+      //    |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates.csv"
+      //m
+        match model.comm with
+        | Some c -> sendReplaceProjectionRequest (coords |> List.map fst |> List.toArray) (coords |> List.map snd |> List.toArray) c
         | None   -> ()
         model
       | PerformQueries -> failwith "[Minerva] not implemented"
@@ -352,7 +404,8 @@ module App =
        h4 [clazz "ui"] [text "Comm:"]
        div [clazz "ui buttons"] [
          button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
-         button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Send Selection"]
+         button [clazz "ui button"; onClick (fun _ -> SendSelection)][text "Send Selection"]
+         button [clazz "ui button"; onClick (fun _ -> SendScreenSpaceCoordinates)][text "Send Coords"]
        ]
 
        h4 [clazz "ui"] [text "Data:"]
@@ -427,7 +480,7 @@ module App =
         unpersist = Unpersist.instance
         threads   = fun m -> m.vplMessages
         view      = viewWrapped (Mod.constant V3d.Zero) //localhost
-        update    = update (CameraView.lookAt V3d.Zero V3d.One V3d.OOI)
+        update    = update (CameraView.lookAt V3d.Zero V3d.One V3d.OOI) (Frustum.perspective 90.0 0.001 100000.0 1.0)
         initial   = Initial.model mailbox
     }
 

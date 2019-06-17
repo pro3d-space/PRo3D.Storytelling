@@ -133,7 +133,8 @@ type MinervaAction =
   | ApplyFilters
   | PerformQueries  
   | Reset
-  | WriteScreenCoordsDebug
+  | SendSelection
+  | SendScreenSpaceCoordinates
   | PerformIdQuery of list<string>
   | ConnectVisplore
   | FlyToProduct of V3d
@@ -345,7 +346,7 @@ module Initial =
         }
   let instrumentC =
     {
-        mahli        = { c = C4b(27,158,119) }   
+        mahli        = { c = C4b(255,127,0)  }   
         frontHazcam  = { c = C4b(255,255,255)} 
         mastcam      = { c = C4b(255,255,255)} 
         apxs         = { c = C4b(230,171,2)  } 
