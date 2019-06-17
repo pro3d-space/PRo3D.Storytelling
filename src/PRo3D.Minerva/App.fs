@@ -130,14 +130,11 @@ module App =
     let cql = [("cql", cqlStringSol)] |> HMap.ofList
     (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)   
   
-  let sendReplaceSelectionRequest(comm : Communicator.Communicator) = 
-    /// Minerva Example --> Replace Selection
-
-    let IdList = [|"APB_494375951RWP10910491876_______P1"; "APB_493587808RWP10820491216_______P1"; "APB_494212310RWP10900491876_______P1"|]
-    
+  let sendReplaceSelectionRequest (idList : array<string>) (comm : Communicator.Communicator) = 
+        
     let name : string = "MinervaReplaceSelection"
-    let para : JsonNetworkCommand.Params = {names = [|"IdList"|]; numOfLists = 1; numOfEntries = (IdList |> Array.length); image = None; imageResolution = None; messageID = "SelectionMessageID"}
-    let data : JsonNetworkCommand.Data = {ids = Some(IdList); positions = None; colors = None}
+    let para : JsonNetworkCommand.Params = {names = [|"IdList"|]; numOfLists = 1; numOfEntries = (idList |> Array.length); image = None; imageResolution = None; messageID = "SelectionMessageID"}
+    let data : JsonNetworkCommand.Data = {ids = Some(idList); positions = None; colors = None}
 
     let jsonMessage = JsonNetworkCommand.createJsonNetworkCommand {name = name; para = para; data = data}
     
@@ -217,7 +214,7 @@ module App =
       match msg with     
       | SendSelection -> 
         match model.comm with
-          | Some c -> sendReplaceSelectionRequest c
+          | Some c -> sendReplaceSelectionRequest (model.data.features |> PList.map(fun x -> x.id) |> PList.toArray) c
           | None   -> ()
         model
       | SendScreenSpaceCoordinates -> 
@@ -406,6 +403,11 @@ module App =
          button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
          button [clazz "ui button"; onClick (fun _ -> SendSelection)][text "Send Selection"]
          button [clazz "ui button"; onClick (fun _ -> SendScreenSpaceCoordinates)][text "Send Coords"]
+         button [
+           clazz "ui button"; 
+           onEvent "onGetRenderId" [] (fun args -> Reset)
+           clientEvent "onclick" "aardvark.processEvent(__ID__,'onGetRenderId', document.getElementsByClassName('mainrendercontrol')[0].id)"
+         ] [text "SCREAM SHOT"]
        ]
 
        h4 [clazz "ui"] [text "Data:"]

@@ -943,6 +943,7 @@ module ViewerApp =
              // attribute "data-renderalways" "true"
                 onKeyDown (KeyDown)
                 onKeyUp   (KeyUp)        
+                clazz "mainrendercontrol"
               //  onResize  (OnResize)
             ] 
         ]            
