@@ -256,12 +256,13 @@ module App =
         //with e ->
         //  Log.error "%A" e.Message
         //  model
-      | PerformIdQuery idList -> failwith "[Minerva] not implemented"
+      | PerformIdQuery idList -> //failwith "[Minerva] not implemented"
         //Log.startTimed "fetching %d entries by ids" idList.Length
         //let data = idList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
         //Log.stop()
-
+        Log.line "%A" idList
         //{ model with data = data }     
+        model
       | ConnectVisplore -> 
         if model.vplMessages.store.IsEmpty then          
           Log.line "[Minerva] connecting to visplore"
