@@ -132,43 +132,46 @@ module Mutable =
     type MInstrumentColor(__initial : PRo3D.Minerva.InstrumentColor) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.InstrumentColor> = Aardvark.Base.Incremental.EqModRef<PRo3D.Minerva.InstrumentColor>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.InstrumentColor>
-        let _mahli = Aardvark.UI.Mutable.MColorInput.Create(__initial.mahli)
-        let _frontHazcam = Aardvark.UI.Mutable.MColorInput.Create(__initial.frontHazcam)
-        let _mastcam = Aardvark.UI.Mutable.MColorInput.Create(__initial.mastcam)
-        let _apxs = Aardvark.UI.Mutable.MColorInput.Create(__initial.apxs)
-        let _frontHazcamR = Aardvark.UI.Mutable.MColorInput.Create(__initial.frontHazcamR)
-        let _frontHazcamL = Aardvark.UI.Mutable.MColorInput.Create(__initial.frontHazcamL)
-        let _mastcamR = Aardvark.UI.Mutable.MColorInput.Create(__initial.mastcamR)
-        let _mastcamL = Aardvark.UI.Mutable.MColorInput.Create(__initial.mastcamL)
-        let _chemLib = Aardvark.UI.Mutable.MColorInput.Create(__initial.chemLib)
-        let _chemRmi = Aardvark.UI.Mutable.MColorInput.Create(__initial.chemRmi)
+        let _mahli = ResetMod.Create(__initial.mahli)
+        let _frontHazcam = ResetMod.Create(__initial.frontHazcam)
+        let _mastcam = ResetMod.Create(__initial.mastcam)
+        let _apxs = ResetMod.Create(__initial.apxs)
+        let _frontHazcamR = ResetMod.Create(__initial.frontHazcamR)
+        let _frontHazcamL = ResetMod.Create(__initial.frontHazcamL)
+        let _mastcamR = ResetMod.Create(__initial.mastcamR)
+        let _mastcamL = ResetMod.Create(__initial.mastcamL)
+        let _chemLib = ResetMod.Create(__initial.chemLib)
+        let _chemRmi = ResetMod.Create(__initial.chemRmi)
+        let _color = Aardvark.UI.Mutable.MColorInput.Create(__initial.color)
         
-        member x.mahli = _mahli
-        member x.frontHazcam = _frontHazcam
-        member x.mastcam = _mastcam
-        member x.apxs = _apxs
-        member x.frontHazcamR = _frontHazcamR
-        member x.frontHazcamL = _frontHazcamL
-        member x.mastcamR = _mastcamR
-        member x.mastcamL = _mastcamL
-        member x.chemLib = _chemLib
-        member x.chemRmi = _chemRmi
+        member x.mahli = _mahli :> IMod<_>
+        member x.frontHazcam = _frontHazcam :> IMod<_>
+        member x.mastcam = _mastcam :> IMod<_>
+        member x.apxs = _apxs :> IMod<_>
+        member x.frontHazcamR = _frontHazcamR :> IMod<_>
+        member x.frontHazcamL = _frontHazcamL :> IMod<_>
+        member x.mastcamR = _mastcamR :> IMod<_>
+        member x.mastcamL = _mastcamL :> IMod<_>
+        member x.chemLib = _chemLib :> IMod<_>
+        member x.chemRmi = _chemRmi :> IMod<_>
+        member x.color = _color
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.InstrumentColor) =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
-                Aardvark.UI.Mutable.MColorInput.Update(_mahli, v.mahli)
-                Aardvark.UI.Mutable.MColorInput.Update(_frontHazcam, v.frontHazcam)
-                Aardvark.UI.Mutable.MColorInput.Update(_mastcam, v.mastcam)
-                Aardvark.UI.Mutable.MColorInput.Update(_apxs, v.apxs)
-                Aardvark.UI.Mutable.MColorInput.Update(_frontHazcamR, v.frontHazcamR)
-                Aardvark.UI.Mutable.MColorInput.Update(_frontHazcamL, v.frontHazcamL)
-                Aardvark.UI.Mutable.MColorInput.Update(_mastcamR, v.mastcamR)
-                Aardvark.UI.Mutable.MColorInput.Update(_mastcamL, v.mastcamL)
-                Aardvark.UI.Mutable.MColorInput.Update(_chemLib, v.chemLib)
-                Aardvark.UI.Mutable.MColorInput.Update(_chemRmi, v.chemRmi)
+                ResetMod.Update(_mahli,v.mahli)
+                ResetMod.Update(_frontHazcam,v.frontHazcam)
+                ResetMod.Update(_mastcam,v.mastcam)
+                ResetMod.Update(_apxs,v.apxs)
+                ResetMod.Update(_frontHazcamR,v.frontHazcamR)
+                ResetMod.Update(_frontHazcamL,v.frontHazcamL)
+                ResetMod.Update(_mastcamR,v.mastcamR)
+                ResetMod.Update(_mastcamL,v.mastcamL)
+                ResetMod.Update(_chemLib,v.chemLib)
+                ResetMod.Update(_chemRmi,v.chemRmi)
+                Aardvark.UI.Mutable.MColorInput.Update(_color, v.color)
                 
         
         static member Create(__initial : PRo3D.Minerva.InstrumentColor) : MInstrumentColor = MInstrumentColor(__initial)
@@ -186,64 +189,70 @@ module Mutable =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
             let mahli =
-                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.UI.ColorInput>() with
+                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.Base.C4b>() with
                     override x.Get(r) = r.mahli
                     override x.Set(r,v) = { r with mahli = v }
                     override x.Update(r,f) = { r with mahli = f r.mahli }
                 }
             let frontHazcam =
-                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.UI.ColorInput>() with
+                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.Base.C4b>() with
                     override x.Get(r) = r.frontHazcam
                     override x.Set(r,v) = { r with frontHazcam = v }
                     override x.Update(r,f) = { r with frontHazcam = f r.frontHazcam }
                 }
             let mastcam =
-                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.UI.ColorInput>() with
+                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.Base.C4b>() with
                     override x.Get(r) = r.mastcam
                     override x.Set(r,v) = { r with mastcam = v }
                     override x.Update(r,f) = { r with mastcam = f r.mastcam }
                 }
             let apxs =
-                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.UI.ColorInput>() with
+                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.Base.C4b>() with
                     override x.Get(r) = r.apxs
                     override x.Set(r,v) = { r with apxs = v }
                     override x.Update(r,f) = { r with apxs = f r.apxs }
                 }
             let frontHazcamR =
-                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.UI.ColorInput>() with
+                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.Base.C4b>() with
                     override x.Get(r) = r.frontHazcamR
                     override x.Set(r,v) = { r with frontHazcamR = v }
                     override x.Update(r,f) = { r with frontHazcamR = f r.frontHazcamR }
                 }
             let frontHazcamL =
-                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.UI.ColorInput>() with
+                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.Base.C4b>() with
                     override x.Get(r) = r.frontHazcamL
                     override x.Set(r,v) = { r with frontHazcamL = v }
                     override x.Update(r,f) = { r with frontHazcamL = f r.frontHazcamL }
                 }
             let mastcamR =
-                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.UI.ColorInput>() with
+                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.Base.C4b>() with
                     override x.Get(r) = r.mastcamR
                     override x.Set(r,v) = { r with mastcamR = v }
                     override x.Update(r,f) = { r with mastcamR = f r.mastcamR }
                 }
             let mastcamL =
-                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.UI.ColorInput>() with
+                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.Base.C4b>() with
                     override x.Get(r) = r.mastcamL
                     override x.Set(r,v) = { r with mastcamL = v }
                     override x.Update(r,f) = { r with mastcamL = f r.mastcamL }
                 }
             let chemLib =
-                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.UI.ColorInput>() with
+                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.Base.C4b>() with
                     override x.Get(r) = r.chemLib
                     override x.Set(r,v) = { r with chemLib = v }
                     override x.Update(r,f) = { r with chemLib = f r.chemLib }
                 }
             let chemRmi =
-                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.UI.ColorInput>() with
+                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.Base.C4b>() with
                     override x.Get(r) = r.chemRmi
                     override x.Set(r,v) = { r with chemRmi = v }
                     override x.Update(r,f) = { r with chemRmi = f r.chemRmi }
+                }
+            let color =
+                { new Lens<PRo3D.Minerva.InstrumentColor, Aardvark.UI.ColorInput>() with
+                    override x.Get(r) = r.color
+                    override x.Set(r,v) = { r with color = v }
+                    override x.Update(r,f) = { r with color = f r.color }
                 }
     
     
@@ -252,11 +261,9 @@ module Mutable =
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.FeatureProperties> = Aardvark.Base.Incremental.EqModRef<PRo3D.Minerva.FeatureProperties>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.FeatureProperties>
         let _pointSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.pointSize)
         let _textSize = Aardvark.UI.Mutable.MNumericInput.Create(__initial.textSize)
-        let _instrumentColor = MInstrumentColor.Create(__initial.instrumentColor)
         
         member x.pointSize = _pointSize
         member x.textSize = _textSize
-        member x.instrumentColor = _instrumentColor
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.FeatureProperties) =
@@ -265,7 +272,6 @@ module Mutable =
                 
                 Aardvark.UI.Mutable.MNumericInput.Update(_pointSize, v.pointSize)
                 Aardvark.UI.Mutable.MNumericInput.Update(_textSize, v.textSize)
-                MInstrumentColor.Update(_instrumentColor, v.instrumentColor)
                 
         
         static member Create(__initial : PRo3D.Minerva.FeatureProperties) : MFeatureProperties = MFeatureProperties(__initial)
@@ -293,12 +299,6 @@ module Mutable =
                     override x.Get(r) = r.textSize
                     override x.Set(r,v) = { r with textSize = v }
                     override x.Update(r,f) = { r with textSize = f r.textSize }
-                }
-            let instrumentColor =
-                { new Lens<PRo3D.Minerva.FeatureProperties, PRo3D.Minerva.InstrumentColor>() with
-                    override x.Get(r) = r.instrumentColor
-                    override x.Set(r,v) = { r with instrumentColor = v }
-                    override x.Update(r,f) = { r with instrumentColor = f r.instrumentColor }
                 }
     
     
@@ -470,6 +470,7 @@ module Mutable =
         let _selection = ResetMod.Create(__initial.selection)
         let _solLabels = MMap.Create(__initial.solLabels)
         let _sgFeatures = MSgFeatures.Create(__initial.sgFeatures)
+        let _selectedSgFeatures = MSgFeatures.Create(__initial.selectedSgFeatures)
         
         member x.data = _data
         member x.queries = _queries :> IMod<_>
@@ -483,6 +484,7 @@ module Mutable =
         member x.selection = _selection :> IMod<_>
         member x.solLabels = _solLabels :> amap<_,_>
         member x.sgFeatures = _sgFeatures
+        member x.selectedSgFeatures = _selectedSgFeatures
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.Model) =
@@ -500,6 +502,7 @@ module Mutable =
                 ResetMod.Update(_selection,v.selection)
                 MMap.Update(_solLabels, v.solLabels)
                 MSgFeatures.Update(_sgFeatures, v.sgFeatures)
+                MSgFeatures.Update(_selectedSgFeatures, v.selectedSgFeatures)
                 
         
         static member Create(__initial : PRo3D.Minerva.Model) : MModel = MModel(__initial)
@@ -587,4 +590,10 @@ module Mutable =
                     override x.Get(r) = r.sgFeatures
                     override x.Set(r,v) = { r with sgFeatures = v }
                     override x.Update(r,f) = { r with sgFeatures = f r.sgFeatures }
+                }
+            let selectedSgFeatures =
+                { new Lens<PRo3D.Minerva.Model, PRo3D.Minerva.SgFeatures>() with
+                    override x.Get(r) = r.selectedSgFeatures
+                    override x.Set(r,v) = { r with selectedSgFeatures = v }
+                    override x.Update(r,f) = { r with selectedSgFeatures = f r.selectedSgFeatures }
                 }

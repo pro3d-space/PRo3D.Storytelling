@@ -141,7 +141,10 @@ type MinervaAction =
   | QueryMessage of QueryAction
   | SetPointSize of Numeric.Action
   | SetTextSize of Numeric.Action
-      
+  | SingleSelectProduct of string
+  | AddProductToSelection of string
+  //| ChangeInstrumentColor of ColorPicker.Action * Instrument
+  
 [<DomainType>]
 type SgFeatures = {
     positions   : V3d[]
@@ -151,23 +154,24 @@ type SgFeatures = {
 
 [<DomainType>]
 type InstrumentColor = {
-    mahli        : ColorInput    
-    frontHazcam  : ColorInput 
-    mastcam      : ColorInput  
-    apxs         : ColorInput  
-    frontHazcamR : ColorInput 
-    frontHazcamL : ColorInput 
-    mastcamR     : ColorInput 
-    mastcamL     : ColorInput 
-    chemLib      : ColorInput 
-    chemRmi      : ColorInput  
+    mahli        : C4b    
+    frontHazcam  : C4b 
+    mastcam      : C4b  
+    apxs         : C4b  
+    frontHazcamR : C4b 
+    frontHazcamL : C4b 
+    mastcamR     : C4b 
+    mastcamL     : C4b 
+    chemLib      : C4b 
+    chemRmi      : C4b  
+    color        : ColorInput
 }
 
 [<DomainType>]
 type FeatureProperties = {
     pointSize   : NumericInput
     textSize    : NumericInput
-    instrumentColor : InstrumentColor
+    //instrumentColor : InstrumentColor
 }
 
 
@@ -194,6 +198,7 @@ type QueryModel = {
 type SelectionModel = {
     selectedProducts     : hset<string> 
     singleSelectProduct  : option<string>
+    //selectedSgFeatures   : SgFeatures
 }
 
 
@@ -234,6 +239,7 @@ type Model =
 
     solLabels            : hmap<string,V3d>
     sgFeatures           : SgFeatures
+    selectedSgFeatures   : SgFeatures
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
@@ -344,28 +350,35 @@ module Initial =
             step = 0.001
             format = "{0:0.000}"
         }
-  let instrumentC =
-    {
-        mahli        = { c = C4b(255,127,0)  }   
-        frontHazcam  = { c = C4b(255,255,255)} 
-        mastcam      = { c = C4b(255,255,255)} 
-        apxs         = { c = C4b(230,171,2)  } 
-        frontHazcamR = { c = C4b(31,120,180) } 
-        frontHazcamL = { c = C4b(166,206,227)} 
-        mastcamR     = { c = C4b(227,26,28)  } 
-        mastcamL     = { c = C4b(251,154,153)} 
-        chemLib      = { c = C4b(173,221,142)} 
-        chemRmi      = { c = C4b(49,163,84)  } 
-    }
+  //let instrumentC =
+  //  {
+  //      mahli        = { c = C4b(255,127,0)  }   
+  //      frontHazcam  = { c = C4b(255,255,255)} 
+  //      mastcam      = { c = C4b(255,255,255)} 
+  //      apxs         = { c = C4b(230,171,2)  } 
+  //      frontHazcamR = { c = C4b(31,120,180) } 
+  //      frontHazcamL = { c = C4b(166,206,227)} 
+  //      mastcamR     = { c = C4b(227,26,28)  } 
+  //      mastcamL     = { c = C4b(251,154,153)} 
+  //      chemLib      = { c = C4b(173,221,142)} 
+  //      chemRmi      = { c = C4b(49,163,84)  } 
+  //  }
 
   let fProps = 
     {
         pointSize = pSize
         textSize = tSize
-        instrumentColor = instrumentC
+        //instrumentColor = instrumentC
     }
 
   let sgfeatures =
+    {
+        positions = Array.empty
+        colors    = Array.empty
+        trafo     = Trafo3d.Identity
+    }
+
+  let sgSelfeatures =
     {
         positions = Array.empty
         colors    = Array.empty
@@ -396,6 +409,7 @@ module Initial =
     {
         selectedProducts     = hset.Empty
         singleSelectProduct  = None
+        //selectedSgFeatures = sgSelfeatures
     }
           
   let sites = [
@@ -424,4 +438,5 @@ module Initial =
 
       solLabels = HMap.empty
       sgFeatures =  sgfeatures
+      selectedSgFeatures = sgSelfeatures
     }

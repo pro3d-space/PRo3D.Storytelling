@@ -15,7 +15,6 @@ open Aardvark.GeoSpatial.Opc
 
 module QueryApp =
            
-     
         
     let filterByDistance (view:CameraView) (dist:float) (features:plist<Feature>) =
       features        
@@ -43,10 +42,7 @@ module QueryApp =
                   | _ -> None
             )
         fl
-
-    
-
-    
+        
             
     let applyFilterQueries (features:plist<Feature>) (qModel : QueryModel) (view:CameraView) : plist<Feature> =        
       let filtered = 

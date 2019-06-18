@@ -136,6 +136,7 @@ module Shader =
             [<PointSize>] p : float
             [<Color>] c : V4d
             [<TexCoord; Interpolation(InterpolationMode.Sample)>] tc : V2d
+            [<SourceVertexIndex>] i : int
         }
 
     let constantColor (color : V4d) (v : pointVertex) =
@@ -172,6 +173,21 @@ module Shader =
             return v
         }
 
+    let lines (t : Triangle<pointVertex>) =
+        line {
+            yield t.P0
+            yield t.P1
+            restartStrip()
+            
+            yield t.P1
+            yield t.P2
+            restartStrip()
+
+            yield t.P2
+            yield t.P0
+            restartStrip()
+        }
+
 
 module Drawing =
 
@@ -194,7 +210,7 @@ module Drawing =
             }
             
             
-    let drawIndexedGeometryPoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) = 
+    let drawIndexedGeometryPoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (outline:bool) = 
 
         let pointsF = 
             sgfeatures.positions
@@ -203,10 +219,15 @@ module Drawing =
                     points |> Array.map(fun (x:V3d) -> (h.Backward.TransformPos x).ToV3f() ) 
                     ) sgfeatures.trafo
 
-       
+        let color = 
+            match outline with
+             | true -> pointsF
+                        |> Mod.map( fun points -> points |> Array.map(fun (p:V3f) -> C4b.VRVisGreen ))
+             | false -> sgfeatures.colors
+
         Sg.draw IndexedGeometryMode.PointList
             |> Sg.vertexAttribute DefaultSemantic.Positions (pointsF )
-            |> Sg.vertexAttribute DefaultSemantic.Colors (sgfeatures.colors)
+            |> Sg.vertexAttribute DefaultSemantic.Colors (color)
             |> Sg.effect [
                  DefaultSurfaces.stableTrafo |> toEffect; 
                 DefaultSurfaces.pointSprite |> toEffect;
@@ -214,9 +235,8 @@ module Drawing =
                 ]
             |> Sg.trafo sgfeatures.trafo
             |> Sg.uniform "PointSize" pointSize
-        
-
-  
+    
+ 
 
     let drawPoint color size (pos : IMod<V3d>) = 
         Sg.sphere 4 color size
@@ -248,7 +268,62 @@ module Drawing =
             toEffect <| DefaultSurfaces.vertexColor          
         ]
 
-  
+    let outlineSize (width:IMod<float>) =
+        adaptive
+            {
+                let! w = width
+                return (w + 3.0)
+            }
+
+    let read a =
+        StencilMode(StencilOperationFunction.Keep, StencilOperationFunction.Keep, StencilOperationFunction.Keep, StencilCompareFunction.Greater, a, 0xffu)
+
+    let write a =
+        StencilMode(StencilOperationFunction.Replace, StencilOperationFunction.Replace, StencilOperationFunction.Keep, StencilCompareFunction.Greater, a, 0xffu)
+
+    let pass0 = RenderPass.main
+    let pass1 = RenderPass.after "outline" RenderPassOrder.Arbitrary pass0
+
+    let outlinePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) =
+
+        let sg = drawIndexedGeometryPoints sgfeatures pointSize false //Sg.dots points width color 
+        let sgo = drawIndexedGeometryPoints sgfeatures (outlineSize pointSize) true  //Sg.dots points (outlineSize width) (Mod.constant C4b.VRVisGreen) 
+        let regulars = 
+            sg
+             |> Sg.pass pass0
+             |> Sg.shader {
+                    do! Shader.screenSpaceScale
+                    do! Shader.stableTrafo
+                    do! DefaultSurfaces.vertexColor
+                }
+        let masks = 
+            sg
+             |> Sg.pass pass0
+             |> Sg.stencilMode (Mod.constant (write 1))
+             |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Stencil])
+             |> Sg.shader {
+                   do! Shader.screenSpaceScale
+                   do! Shader.stableTrafo
+                   do! DefaultSurfaces.vertexColor
+                }
+
+        let outls = 
+            sgo
+             |> Sg.stencilMode (Mod.constant (read 1))
+             |> Sg.depthTest (Mod.constant DepthTestMode.None)
+             |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Colors])
+             |> Sg.pass pass1
+             |> Sg.uniform "LineWidth" (outlineSize pointSize)
+             |> Sg.shader {
+                    do! Shader.screenSpaceScale
+                    do! Shader.stableTrafo
+                    do! Shader.lines
+                    do! DefaultSurfaces.thickLine
+                    do! DefaultSurfaces.thickLineRoundCaps
+                    do! DefaultSurfaces.constantColor C4f.VRVisGreen
+                }
+        Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [masks; outls] |> Sg.noEvents //regular; mask; 
+
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:V3d) (size:IMod<float>) (hfov:IMod<float>) =
         adaptive {
             //let! p = p

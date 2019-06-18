@@ -14,6 +14,7 @@ open PRo3D.Minerva.Communication
 open Aardvark.GeoSpatial.Opc
 open System
 open Aardvark.UI
+open PRo3D.Base.AnnotationDraft
 
 [<AutoOpen>]
 module MissingInBase = 
@@ -63,6 +64,10 @@ module App =
   open System.Threading  
 
   //coords  -4831.341805
+
+  //let _featureProps = Model.Lens.featureProperties 
+  //let _instColors   = _featureProps |. FeatureProperties.Lens.instrumentColor
+  //let _color        = _instColors |. InstrumentColor.Lens.color
 
   let computeXYZFeatures (features : FeatureCollection) : FeatureCollection =
     let a = 
@@ -179,6 +184,17 @@ module App =
       |> List.sortBy(fun (_,p) -> V3d.DistanceSquared(position, p))
       |> take' 50
       |> HMap.ofList
+      
+  let updateSgFeatureColors (features:plist<Feature>) (selected:hset<string>) =
+
+    features
+        |> PList.map( fun x -> 
+            if HSet.contains x.id selected
+            then 
+                C4b.VRVisGreen
+            else
+                x.instrument |> Model.instrumentColor )
+        |> PList.toArray
 
   let updateSgFeatures (features:plist<Feature>) =
     let positions = 
@@ -201,6 +217,12 @@ module App =
         colors = colors
         trafo = trafo
     }
+
+  let updateSelectedSgFeature (features:plist<Feature>) (selected:hset<string>) =
+    features
+        |> PList.filter( fun x -> HSet.contains x.id selected)
+        |> updateSgFeatures
+     
 
   let updateFeaturesForRendering (pos :V3d) (model:Model) =
     Log.startTimed "[Minerva] building sgs"
@@ -320,29 +342,123 @@ module App =
         { model with featureProperties = { model.featureProperties with pointSize = size }}
       | SetTextSize s ->
         let size = Numeric.update model.featureProperties.textSize s
-        { model with featureProperties = { model.featureProperties with textSize = size }}      
+        { model with featureProperties = { model.featureProperties with textSize = size }}   
+      | SingleSelectProduct name ->
+        { model with selection = { model.selection with singleSelectProduct = Some name }}
+      | AddProductToSelection name ->
+        let selection = model.selection.selectedProducts
+        let newSelection =
+            if HSet.contains name selection
+            then 
+                HSet.remove name selection
+            else
+                HSet.add name selection 
+        //let colors = updateSgFeatureColors model.filteredFeatures newSelection
+        let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
+        { model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
+                     //sgFeatures = { model.sgFeatures with colors = colors}}
+
+      //| ChangeInstrumentColor (c,instrument) -> 
+      //  let color' = ColorPicker.update model.featureProperties.instrumentColor.color c
+      //  let m' = _color.Set(model, color')
+      //  let instC = _instColors.Get(m')
+      //  let instC' =
+      //      match instrument with
+      //      | Instrument.MAHLI -> { instC with mahli = color'.c }
+      //      | Instrument.FrontHazcam -> { instC with mahli = color'.c }
+      //      | Instrument.Mastcam -> { instC with mahli = color'.c }
+      //      | Instrument.APXS -> { instC with mahli = color'.c }
+      //      | Instrument.FrontHazcamR -> { instC with mahli = color'.c }
+      //      | Instrument.FrontHazcamL -> { instC with mahli = color'.c }
+      //      | Instrument.MastcamR -> { instC with mahli = color'.c }
+      //      | Instrument.MastcamL -> { instC with mahli = color'.c }
+      //      | Instrument.ChemLib -> { instC with mahli = color'.c }
+      //      | Instrument.ChemRmi -> { instC with mahli = color'.c }
+      //      | _ -> sprintf "unknown instrument" |> failwith
 
   // GUI
-  let viewFeatures (instr : Instrument) (features : list<Feature>) = 
+
+  let mkColor (model :MModel) (feature : Feature) =
+    model.selection
+        |> Mod.map( fun s ->
+            s.selectedProducts
+            |> HSet.map(fun x -> x = feature.id)
+            |> HSet.contains true
+        )
+        |> Mod.map (function x -> if x then C4b.VRVisGreen else (feature.instrument |> Model.instrumentColor))
+
+  let isSingleSelect (model :MModel) (feature : Feature) =
+    model.selection |> Mod.map( fun x -> 
+        let selection = x.singleSelectProduct
+        match selection with 
+        | Some s -> s = feature.id
+        | None -> false )
+
+  let selectionColor (model :MModel) (feature : Feature) =
+    model.selection |> Mod.map( fun s -> 
+         s.selectedProducts
+            |> HSet.map(fun x -> x = feature.id)
+            |> HSet.contains true
+        )
+        |> Mod.map (function x -> if x then C4b.VRVisGreen else C4b.White)
+
+  let viewFeatures (model :MModel) (instr : Instrument) (features : list<Feature>) = 
     [
-      for f in features do                                            
-        let iconAttr = 
-          [
-            clazz "ui map pin inverted middle aligned icon"; 
-            style (sprintf "color: %s" (f.instrument |> Model.instrumentColor |> Html.ofC4b))
-            onClick(fun _ -> FlyToProduct f.geometry.positions.Head)
-          ]            
+      let ac = sprintf "color: %s" (Html.ofC4b C4b.White)
+
+      for f in features do      
+         //selection
+        //let headerColor = 
+        //    (isSingleSelect model f) 
+        //        |> Mod.map(fun x -> 
+        //        (if x then C4b.VRVisGreen else C4b.White) 
+        //            |> Html.ofC4b 
+        //            |> sprintf "color: %s"
+        //        ) 
+
+        let headerAttributes =
+            amap {
+                //yield onClick (fun _ -> SingleSelectProduct f.id)
+                yield  onClick(fun _ -> AddProductToSelection f.id)
+            } |> AttributeMap.ofAMap
+
+        //let iconAttr = 
+        //  [
+        //    clazz "ui map pin inverted middle aligned icon"; 
+        //    style (sprintf "color: %s" (f.instrument |> Model.instrumentColor |> Html.ofC4b))
+        //    onClick(fun _ -> AddProductToSelection f.id)
+        //    //onClick(fun _ -> FlyToProduct f.geometry.positions.Head)
+        //  ]  
+          
+        let iconAttributes =
+              amap {                  
+                yield clazz "ui map pin inverted middle aligned icon"
+                //yield  onClick(fun _ -> AddProductToSelection f.id)
+
+                yield style (sprintf "color: %s" (Html.ofC4b (f.instrument |> Model.instrumentColor)))
+              } |> AttributeMap.ofAMap
+
         let headerAttr : AttributeMap<_> = [clazz "ui header small"] |> AttributeMap.ofList
                         
         let item =             
           div [clazz "ui inverted item"][
-            i iconAttr []
+            Incremental.i iconAttributes AList.empty //i iconAttributes []
             div [clazz "ui content"] [
-              Incremental.div (headerAttr) (AList.single (instr |> instrumentText |> text))
-              div [clazz "ui description"] [
-                f.sol |> sprintf "Sol: %A" |> text                               
-              ] //[text (id.Replace('_',' '))]
-            ]            
+              Incremental.div (AttributeMap.ofList [style ac]) (
+                alist {
+                        let! hc = selectionColor model f
+                        let c = hc |> Html.ofC4b |> sprintf "color: %s"
+                        yield div[clazz "header"; style c][
+                             Incremental.div (headerAttributes) (AList.single (instr |> instrumentText |> text))
+                        ]
+                        yield div [clazz "ui description"] [
+                                f.sol |> sprintf "Sol: %A" |> text
+                                i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
+                                ]
+                        //yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][] //|> UI.wrapToolTip "FlyTo"
+                         
+                } )
+              ]            
           ]
         yield item 
     ]
@@ -385,6 +501,7 @@ module App =
           let! pos = model.queryFilter.filterLocation
 
           for (instr, group) in groupedFeatures do
+
             let header = sprintf "%s (%d)" (instr |> instrumentText) group.Length
             let g = 
               group 
@@ -393,7 +510,7 @@ module App =
 
             yield div [clazz "ui inverted item"][
                 yield accordion header "Content" false [                    
-                  div [clazz "ui list"] (viewFeatures instr g)
+                  div [clazz "ui list"] (viewFeatures model instr g)
                 ]
               ]
         }
@@ -450,7 +567,9 @@ module App =
     lables
           
   let viewFeaturesSg (model : MModel) =
-    Drawing.drawIndexedGeometryPoints model.sgFeatures model.featureProperties.pointSize.value
+    let selectedPoints = Drawing.outlinePoints model.selectedSgFeatures model.featureProperties.pointSize.value
+    let points = Drawing.drawIndexedGeometryPoints model.sgFeatures model.featureProperties.pointSize.value false
+    Sg.ofList [points; selectedPoints] 
   
   let threads (m : Model) = m.vplMessages
 
