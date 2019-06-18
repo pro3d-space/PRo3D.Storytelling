@@ -1,23 +1,66 @@
 ﻿namespace PRo3D.Minerva
 
-open Aardvark.UI
+//open Aardvark.UI
 open Aardvark.UI.Primitives
 open Aardvark.UI.Events
 
 open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.Base.Rendering
+open Aardvark.Rendering.Text 
 
 open PRo3D.Base
+open PRo3D.Minerva.Communication
+open Aardvark.GeoSpatial.Opc
+open System
+open Aardvark.UI
 
-type MinervaAction =
-  | PerformQueries
-  | ConnectVisplore
-  | FlyToProduct of V3d
+[<AutoOpen>]
+module MissingInBase = 
+    type ProcListBuilder with   
+        member x.While(predicate : unit -> bool, body : ProcList<'m,unit>) : ProcList<'m,unit> =
+            proclist {
+                let p = predicate()
+                if p then 
+                    yield! body
+                    yield! x.While(predicate,body)
+                else ()
+            }
+
+type HarriSchirchWrongBlockingCollection<'a>() =
+    let sema = new System.Threading.SemaphoreSlim(0)
+    let l = obj()
+    let queue = System.Collections.Generic.Queue<'a>()
+    let mutable finished = false
+
+    member x.TakeAsync() =
+        async {
+            do! sema.WaitAsync() |> Async.AwaitTask
+            if finished then return None
+            else
+                return 
+                    lock l (fun _ -> 
+                        queue.Dequeue() |> Some
+                    )
+        }
+
+    member x.Enqueue(v) =
+        lock l (fun _ -> 
+            queue.Enqueue(v)
+        )
+        sema.Release() |> ignore
+
+    member x.CompleteAdding() =
+        finished <- true
+        sema.Release()
+
+    member x.IsCompleted = finished
+        
 
 module App =
   open System.Net.Sockets
   open Aardvark.SceneGraph.Opc
+  open System.Threading  
 
   //coords  -4831.341805
 
@@ -33,6 +76,21 @@ module App =
           { feature with geometry = { feature.geometry with positions = pos }})
 
     { features with features = a }
+
+  let instrumentText (instr : Instrument) =
+    match instr with
+    | Instrument.MAHLI        -> "MAHLI"
+    | Instrument.FrontHazcam  -> "FrontHazcam"
+    | Instrument.Mastcam      -> "Mastcam"
+    | Instrument.APXS         -> "APXS"
+    | Instrument.FrontHazcamR -> "FrontHazcamR"
+    | Instrument.FrontHazcamL -> "FrontHazcamL"
+    | Instrument.MastcamR     -> "MastcamR"    
+    | Instrument.MastcamL     -> "MastcamL"
+    | Instrument.ChemLib      -> "ChemLib"    
+    | Instrument.ChemRmi      -> "ChemRmi"
+    | Instrument.NotImplemented -> "not impl. yet"
+    | _ -> instr |> sprintf "unknown instrument identifier %A" |> failwith
 
   let writeLinesToFile path (contents : list<string>) =
         System.IO.File.WriteAllLines(path, contents)
@@ -53,34 +111,140 @@ module App =
     stream.Close()
     client.Close()
 
-  let update (model : Model) (msg : MinervaAction) : Model =
-      match msg with
-      | PerformQueries -> 
-        let data = model.queries |> MinervaGeoJSON.loadMultiple
-        let pos = "[-2486641.16564715, 2289265.84573656, -276244.7871095]" |> V3d.Parse
-        
-        let features = data.features |> PList.sortBy(fun x -> x.sol)
-           // |> PList.filter(fun (x:Feature) -> V3d.Distance(pos, x.geometry.positions.Head) < 10000.0)
-            //|> PList.map(fun x -> sprintf "instr: %A id: %A position: %A" x.instrument x.id x.geometry.positions.Head)
-        //    |> PList.toList
-        //    |> writeLinesToFile ".\strangeProducts.txt"
+  //https://minerva.eox.at/opensearch/collections/all/json/?cql=(identifier%20IN%20(%271092ML0047930090500286E01_DRCX%27))
+  //271092ML0047930090500286E01_DRCX
+  //1092MR0047900090600628I01_DRCX
+  //https://minerva.eox.at/opensearch/collections/all/json/?cql=(identifier%20IN%20(%271092ML0047930090500286E01_DRCX%27,%271092MR0047900090600628I01_DRCX%27))
 
-        { model with data = { data with features = features } } //|> computeXYZFeatures}
-      | ConnectVisplore -> model
-      | FlyToProduct _ -> model
+  let idTestList = [ "271092ML0047930090500286E01_DRCX"; "1092MR0047900090600628I01_DRCX"]
+   
+   
+  let getInstrumentQuery (filter:QueryModel) =
+    let mutable cqlStringInst = []
+    if filter.checkMAHLI then cqlStringInst <- (cqlStringInst @ ["MAHLI"])
+    if filter.checkAPXS then cqlStringInst <- (cqlStringInst @ ["APXS"])
+    if filter.checkFrontHazcamR then cqlStringInst <- (cqlStringInst @ ["FHAZ_RIGHT_B"])
+    if filter.checkFrontHazcamL then cqlStringInst <- (cqlStringInst @ ["FHAZ_LEFT_B"])
+    if filter.checkMastcamR then cqlStringInst <- (cqlStringInst @ ["MAST_RIGHT"])
+    if filter.checkMastcamL then cqlStringInst <- (cqlStringInst @ ["MAST_LEFT"])
+    if filter.checkChemLib then cqlStringInst <- (cqlStringInst @ ["CHEMCAM_LIBS"])
+    if filter.checkChemRmi then cqlStringInst <- (cqlStringInst @ ["CHEMCAM_RMI"])
+    let groupString = cqlStringInst |> String.concat("','")
+    sprintf @"(instrumentId IN ('" + groupString + "'))"
 
-  let instrumentText (instr : Instrument) =
-    match instr with
-    | Instrument.MAHLI       -> "MAHLI"
-    | Instrument.FrontHazcam -> "FrontHazcam"
-    | Instrument.Mastcam     -> "Mastcam"
-    | Instrument.APXS        -> "APXS"
-    | Instrument.FrontHazcamR -> "FrontHazcamR"
-    | Instrument.FrontHazcamL -> "FrontHazcamL"
-    | Instrument.MastcamR -> "MastcamR"    
-    | Instrument.MastcamL -> "MastcamL"
-    | _ -> instr |> sprintf "unknown instrument number %A" |> failwith
     
+
+  let getIdQuerySite (filter:QueryModel) (ids:list<string>)  = 
+    let groupString = ids |> String.concat("','")
+    //let cql1 = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
+    let cqlStringSol = sprintf @"(planetDayNumber >= %f AND planetDayNumber <= %f)"  filter.minSol.value filter.maxSol.value
+    let cqlStringInst = getInstrumentQuery filter
+    let cqlStringAll = sprintf @"(" + cqlStringSol + " AND " + cqlStringInst + ")"
+    let cql = [("cql", cqlStringSol)] |> HMap.ofList
+    (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
+
+  
+
+  let update (view:CameraView) (model : Model) (msg : MinervaAction) : Model =
+      match msg with
+      | Reset ->
+        let m' = { model with data = Initial.data }
+        { m' with queryFilter = Initial.queryFilter }
+      | WriteScreenCoordsDebug -> model
+      | PerformQueries -> 
+        try
+          //let data = model.queries |> MinervaGeoJSON.loadMultiple        
+          Log.startTimed "[Minerva] Fetching full dataset from Server"
+          let data = idTestList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
+          //let features = data.features |> PList.sortBy(fun x -> x.sol)    
+          Log.stop()
+
+          let queryM = QueryApp.updateFeaturesForRendering model.queryFilter data.features
+          { model with data = data; queryFilter = queryM }
+
+        with e ->
+          Log.error "%A" e.Message
+          model
+      | PerformIdQuery idList ->
+        Log.startTimed "fetching %d entries by ids" idList.Length
+        let data = idList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
+        Log.stop()
+
+        { model with data = data }
+      | SaveFeatureCollection -> 
+        Log.startTimed "[Minerva] saving %d products" model.data.features.Count
+        PRo3D.Base.Serialization.save ".\data.minerva" model.data |> ignore
+        Log.stop()
+        model
+      | LoadFeatureCollection -> 
+        Log.startTimed "[Minerva] loading products"
+        let data = PRo3D.Base.Serialization.loadAs ".\data.minerva"
+        Log.stop()
+        Log.line "[Minerva] found %d entries" model.data.features.Count
+        { model with data = data }
+      | ConnectVisplore -> 
+        if model.vplMessages.store.IsEmpty then
+
+          //let evaluateCommand (cmd : PRo3D.Minerva.Communication.JsonNetworkCommand.CommandData) : string =
+          //  match cmd.name with
+          //  | "MinervaReplaceSelection" ->
+          //     // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
+          //     cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand
+          //     cmd.para.messageID
+          //  | _ -> sprintf "dont know %A" cmd
+          Log.line "[Minerva] connecting to visplore"
+          let createWorker () =
+             proclist {
+               let bc = new HarriSchirchWrongBlockingCollection<_>()
+               let comm = new Communicator.Communicator()
+               comm.Start(fun cmd ->
+                 match cmd.name with
+                 | "MinervaReplaceSelection" ->
+                    Log.line "[Minerva] received vpl message"
+                    // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
+                   // cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand 
+                    match cmd.data.ids with 
+                    | Some ids -> 
+                        let action = ids |> Array.toList |> PerformIdQuery 
+                        bc.Enqueue action
+                        ///|> MailboxAction.MiniAction |> model.minervaMessagingMailbox.Post
+                    | None -> ()
+                    
+                    cmd.para.messageID
+                 | "Shutdown" -> 
+                    //bc.CompleteAdding()
+                    "todo"
+                 | _ -> sprintf "dont know %A" cmd               
+               )
+               while not bc.IsCompleted do
+                 let! action = bc.TakeAsync()
+                 Log.line "[Minerva] take async"
+                 match action with
+                    | Some a -> yield a
+                    | None -> ()
+               yield FlyToProduct V3d.Zero
+
+               comm.Close()
+             }
+          //comm.Start()
+          //Thread.Sleep(60 * 100000)
+          //comm.Close()        
+          { model with vplMessages = ThreadPool.add "vpl server" (createWorker()) model.vplMessages }
+        else
+          model
+      | FlyToProduct _ ->         
+        model
+      | QueryMessage msg ->
+        let querymodel = QueryApp.update view model.queryFilter model.data.features msg
+        { model with queryFilter = querymodel }
+      | QueryDataFile ->
+        Log.startTimed "[Minerva] Fetching full dataset from data file"
+        let data = Files.loadDataFile
+        Log.stop()
+
+        let queryM = QueryApp.useQueriesForData data.features model.queryFilter view
+        { model with data = data; queryFilter = queryM}
+
 
   let viewFeatures (pos : IMod<V3d>)(instr : Instrument) (features : list<Feature>) = 
     [
@@ -123,12 +287,18 @@ module App =
              ]
          ]
      )  
+  
 
   let viewFeaturesGui (pos : IMod<V3d>)(model :MModel) =
+     let queryGui (model:MModel) = 
+          QueryApp.viewQueryFilters model.queryFilter
+            |> UI.map QueryMessage 
+            //|> Mod.constant
     
      let content =
-        alist {                    
-          let! features = model.data.features |> AList.toMod
+        alist { 
+          //let! features = model.data.features |> AList.toMod
+          let! features = model.queryFilter.filteredFeatures |> AList.toMod
           let groupedFeatures = features |> PList.toList |> List.groupBy(fun x -> x.instrument)
 
           for (instr, group) in groupedFeatures do
@@ -144,52 +314,81 @@ module App =
         }
 
      div [clazz "ui inverted segment"] [
-       button [clazz "ui button"; onClick (fun _ -> PerformQueries)][text "Load Minerva"]
-       button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect To Visplore"]
+       div [clazz "ui buttons"] [
+         button [clazz "ui button"; onClick (fun _ -> PerformQueries)][text "Query DB"]
+         button [clazz "ui button"; onClick (fun _ -> SaveFeatureCollection)][text "Save"]
+         button [clazz "ui button"; onClick (fun _ -> LoadFeatureCollection)][text "Load"]
+         button [clazz "ui button"; onClick (fun _ -> Reset)][text "Clear"]
+         button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Export"]
+         button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
+         button [clazz "ui button"; onClick (fun _ -> QueryDataFile)][text "Query csv"]
+       ]
+       
+       queryGui model               
+                     
        Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) content  
      ]
 
-  let drawPoint color size (pos : IMod<V3d>) = 
-    Sg.sphere 4 color size
-        |> Sg.noEvents
-        |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
-        //|> Sg.uniform "PointSize" size
-        //|> Sg.uniform "WorldPos" pos
 
-  let mkDotISg color (size : IMod<float>) (pos : IMod<V3d>) = 
-        Sg.sphere 2 color (Mod.constant 1.0)
-            |> Sg.noEvents
-            |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
-            |> Sg.uniform "Size" size
-            |> Sg.uniform "WorldPos" pos
-
-  let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) = //TODO TO refactor, put into base prj
-    aset {
-        for p in points |> ASet.ofAList do
-           // let scale = computeScale view (Mod.constant p) 5.0                               
-            yield mkDotISg color (size) (Mod.constant p)
-    } 
-    |> Sg.set
-    |> Sg.effect [
-        toEffect <| Shader.screenSpaceScale
-        toEffect <| Shader.stableTrafo
-        toEffect <| DefaultSurfaces.vertexColor          
-    ]
+  let getSolBillboards (model : MModel) (view:IMod<CameraView>) (near:IMod<float>) =
+        let lables =
+            model.queryFilter.solLables
+             |> AMap.map(fun txt pos ->
+                Drawing.text view near (Mod.constant 60.0) pos (Trafo3d.Translation(pos)) (Mod.constant txt) (Mod.constant 10.05)
+                ) 
+             |> AMap.toASet  
+             |> ASet.map(fun x -> snd x)
+             |> Aardvark.UI.``F# Sg``.Sg.set
+        lables
+        
 
   let viewFeaturesSg (model : MModel) =
-    model.data.features 
-      |> AList.map(fun f -> 
-        dots (f.geometry.positions |> AList.ofList) (Mod.constant 5.0) (f.instrument |> Model.instrumentColor |> Mod.constant)
-          //|> List.map(fun y -> 
-          //  drawPoint (f.instrument |> Model.instrumentColor |> Mod.constant) (0.05 |> Mod.constant) (y |> Mod.constant)) |> Sg.ofList
-      ) 
-      |> AList.toASet 
-      |> Sg.set
-      |> Sg.effect [
-        DefaultSurfaces.stableTrafo |> toEffect
-        DefaultSurfaces.vertexColor |> toEffect
-     //   DefaultSurfaces.pointSprite |> toEffect
-      ]
+    
+
+    model.queryFilter.filteredFeatures 
+        |> AList.map(fun f -> 
+            let size = model.queryFilter.pointSize.value
+            Drawing.dots (f.geometry.positions |> AList.ofList) size  (f.instrument |> Model.instrumentColor |> Mod.constant)
+        ) 
+        |> AList.toASet 
+        |> Aardvark.UI.``F# Sg``.Sg.set 
+
+    //let points = model.queryFilter.sgFeatures.positions
+    //Drawing.dots (positions |> AList.ofArray) model.queryFilter.pointSize.value  (C4b.Red |> Mod.constant)
+    //Drawing.dots points model.queryFilter.pointSize.value  (C4b.Red |> Mod.constant)
+        //|> AList.toASet 
+        //|> Aardvark.UI.``F# Sg``.Sg.set 
+       
+  let viewFeaturesSg1 (model : MModel) =
+    //let positions = 
+    //    model.queryFilter.filteredFeatures
+    //     |> AList.map(fun f -> f.geometry.positions |> AList.ofList)
+    //     |> AList.concat
+    //     |> AList.toArray
+    //let colors =
+    //    model.queryFilter.filteredFeatures
+    //     |> AList.map(fun f -> let c = f.instrument |> Model.instrumentColor
+    //                           V4d((float)c.R/255.0, (float)c.G/255.0, (float)c.B/255.0, (float)c.A/255.0))
+    //     |> AList.toArray
+
+    //let colors1 =
+    //    model.queryFilter.filteredFeatures
+    //     |> AList.map(fun f -> f.instrument |> Model.instrumentColor)
+    //     |> AList.toArray
+
+    //let pos = 
+    //    positions
+    //     |> Array.map( fun x -> V3f(x))
+    
+    //Drawing.createIndexedGeometry pos colors1
+    Drawing.createHarrisPoints2 model.queryFilter.sgFeatures.positions model.queryFilter.sgFeatures.colors model.queryFilter.pointSize.value
+    //Drawing.testPoints' model.queryFilter.sgFeatures.positions model.queryFilter.sgFeatures.colors
+    //Drawing.createHarrisPoints positions 
+        //|> Sg.effect [
+        //DefaultSurfaces.stableTrafo |> toEffect
+        ////DefaultSurfaces.vertexColor |> toEffect
+        ////   DefaultSurfaces.pointSprite |> toEffect
+        //]
 
   let myCss = [
     { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
@@ -205,13 +404,40 @@ module App =
         div [clazz "ui inverted segment"] [viewFeaturesGui (pos)(model)]
       ])
 
-  let start =
+  let threads (m : Model) = m.vplMessages
+
+  let processMailboxAction (state:MailboxState) (cancelTokenSrc:CancellationTokenSource) (inbox:MessagingMailbox) (action : MailboxAction) =
+      match action with
+      | MailboxAction.InitMailboxState s ->     
+        s
+      | MailboxAction.MiniAction a ->        
+        a |> Seq.singleton |> state.update 
+        state      
+        
+
+  let messagingMailbox (cancelTokenSrc:CancellationTokenSource) (inbox:MessagingMailbox) =
+        let rec messageLoop state = async {
+            let! msg = inbox.Receive()
+            
+            let newState =
+                try msg |> processMailboxAction state cancelTokenSrc inbox
+                with
+                | e ->
+                    Log.line "ViewerMgmt Error: Dropping msg (Exception:  %O)" e
+                    state
+            
+            return! messageLoop newState
+        }
+        messageLoop MailboxState.empty
+ 
+  let start mailbox =
+    
     App.start {
         unpersist = Unpersist.instance
-        threads   = fun _ -> ThreadPool.empty
+        threads   = fun m -> m.vplMessages
         view      = viewWrapped (Mod.constant V3d.Zero) //localhost
-        update    = update
-        initial   = Initial.model
+        update    = update (CameraView.lookAt V3d.Zero V3d.One V3d.OOI)
+        initial   = Initial.model mailbox
     }
 
     

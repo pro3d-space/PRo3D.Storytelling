@@ -11,24 +11,24 @@ open Aardvark.SceneGraph
 open Aardvark.SceneGraph.IO
 open Aardvark.SceneGraph.Opc
 
-open Aardvark.VRVis.Opc
+open Aardvark.GeoSpatial.Opc
 
 open Aardvark.UI.Operators
 open Aardvark.UI.Trafos  
 
 open PRo3D
+open PRo3D.Base
 open PRo3D.Groups
-
 
 module Sg =
     open Aardvark.Prinziple
     open Aardvark.VRVis.Opc      
 
     type SgHelper = {
-      surf        : PRo3D.Surfaces.Surface
-      bb          : Box3d
-      sg          : ISg        
-      kdtree      : hmap<Box3d,KdTrees.Level0KdTree>
+      surf   : PRo3D.Surfaces.Surface
+      bb     : Box3d
+      sg     : ISg        
+      kdtree : hmap<Box3d,KdTrees.Level0KdTree>
     }
 
     let mutable hackRunner = None
@@ -54,14 +54,13 @@ module Sg =
             |> Seq.toList
                             
         let kdTreesPerHierarchy =
-            [| for h in patchHierarchies do
-                if createKdTrees then   
-                    let kdMap = KdTrees.loadKdTrees h Trafo3d.Identity ViewerModality.XYZ Serialization.binarySerializer
-
-                    yield kdMap
-                else 
-                    yield HMap.empty
-            |]
+          [| 
+            for h in patchHierarchies do
+              if createKdTrees then   
+                  yield KdTrees.loadKdTrees h Trafo3d.Identity ViewerModality.XYZ Serialization.binarySerializer                    
+              else 
+                  yield HMap.empty
+          |]
 
         let totalKdTrees = kdTreesPerHierarchy.Length
         Log.line "creating %d kdTrees" totalKdTrees
@@ -76,25 +75,17 @@ module Sg =
                 )
                 |> Array.fold (fun a b -> HMap.union a b) HMap.empty
         
-        // create level of detail hierarchy (Sg)
-        //Sg.patchLod signature runner patchHierarchy.opcPaths.Opc_DirAbsPath
+        // create level of detail hierarchy (Sg)        
         let g = 
           patchHierarchies 
-          |> List.map (fun h ->                     
-            let sg = 
-              Sg.patchLod signature runner h.opcPaths.Opc_DirAbsPath
-                scene.lodDecider scene.useCompressedTextures
-                ViewerModality.XYZ
-                (PatchLod.toRoseTree h.tree)
-            sg) 
-          |> Sg.ofList
-        
-
-        let lodVisEnabled = Mod.init false
-        
-        let sg = g //|> Sg.transform preTransform
-                                
-        sg, patchHierarchies, kdTrees
+          |> List.map (fun h ->                                  
+               Sg.patchLod signature runner h.opcPaths.Opc_DirAbsPath
+                  scene.lodDecider scene.useCompressedTextures
+                  ViewerModality.XYZ
+                  (PatchLod.toRoseTree h.tree))
+          |> Sg.ofList                
+                                                
+        g, patchHierarchies, kdTrees
     
     let assertInvalidBB (bb:Box3d) = 
         if(bb.IsInvalid) then 
@@ -102,50 +93,18 @@ module Sg =
         else bb
     
     let combineLeafBBs (hierarchies : list<PatchHierarchy>) =
-            hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getLeaves)
-            |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
-            |> Seq.concat
-            |> Box3d.ofSeq
+      hierarchies
+        |> List.map(fun d -> d.tree |> QTree.getLeaves)
+        |> Seq.map (fun p -> p |> Seq.map(fun d -> assertInvalidBB d.info.GlobalBoundingBox)) 
+        |> Seq.concat
+        |> Box3d.ofSeq
     
     let combineRootBBs (hierarchies : list<PatchHierarchy>) =
-            hierarchies
-            |> List.map(fun d -> d.tree |> QTree.getRoot)                  
-            |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
-            |> Box3d.ofSeq
-    
-    /// creates a surface from opc folder path
-    //let mk (stype:SurfaceType) (maxTriangleSize : float) path =                 
-    
-    //    let names = Files.getOPCNames path                
-    //    {
-    //        guid            = Guid.NewGuid()
-    //        name            = IO.Path.GetFileName path
-    //        importPath      = path
-    //        opcNames        = names
-    //        opcPaths        = names |> Files.expandNamesToPaths path
-    //        fillMode        = FillMode.Fill
-    //        cullMode        = CullMode.None
-    //        isVisible       = true
-    //        isActive        = true
-    //        relativePaths   = false
-    //        quality         = Init.quality
-    //        priority        = Init.priority
-    //        scaling         = Init.scaling
-    //        preTransform    = Trafo3d.Identity            
-    //        scalarLayers    = hmap.Empty //PList.empty
-    //        selectedScalar  = None
-    //        textureLayers   = PList.empty
-    //        selectedTexture = None            
-    
-    //        triangleSize = { Init.triangleSize with value = maxTriangleSize }
-    //        surfaceType = stype
-    
-    //        colorCorrection = Init.initColorCorrection
-    //        homePosition = None
-    //        transformation = Init.Transformations
-    //    }       
-    
+      hierarchies
+        |> List.map(fun d -> d.tree |> QTree.getRoot)                  
+        |> Seq.map (fun p -> assertInvalidBB p.info.GlobalBoundingBox)
+        |> Box3d.ofSeq
+       
     let sgOfSurface (s:PRo3D.Surfaces.Surface) sg (bb:Box3d) (kd:hmap<Box3d,KdTrees.Level0KdTree>) = 
     
         let pose = Pose.translate V3d.Zero // bb.Center
@@ -165,9 +124,17 @@ module Sg =
               
     let createSgSurfaces runtime signature (surfaces:plist<PRo3D.Surfaces.Surface>) =
       
-      let sghs =
+      let surfaces = 
         surfaces
           |> PList.toList
+          |> List.filter(fun s ->
+            let dirExists = Directory.Exists s.importPath
+            if dirExists |> not then Log.error "[Surface.Sg] could not find %s" s.importPath
+            dirExists)
+
+      let sghs =
+        surfaces          
+          |> List.map (fun d -> { d with opcPaths = d.opcNames |> Files.expandNamesToPaths d.importPath })
           |> List.map (fun d -> 
            { 
              Configurations.Empty.mars() with 
@@ -175,7 +142,7 @@ module Sg =
                preTransform = d.preTransform
                useCompressedTextures = false })
           |> List.map (fun d -> createPlainSceneGraph runtime signature d true)
-          |> List.zip (surfaces |> PList.toList)
+          |> List.zip surfaces
           |> List.map(fun (surf, (sg, hierarchies, kdtree)) -> 
               let bb = hierarchies |> combineLeafBBs |> transformBox surf.preTransform
               { surf = surf; bb = bb; sg = sg; kdtree = kdtree })
@@ -192,17 +159,22 @@ module Sg =
         let point = 
             aset{
                 let! guid = model.surfaces.singleSelectLeaf
-            
+                let fail = Aardvark.UI.Extensions.Sg.empty
+
                 match guid with
                     | Some i -> 
-                        let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                        let! surf = leaf 
-                        let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
-                        let! hpos = x.homePosition
-                        match hpos with
-                            | Some p -> yield PRo3D.Sg.dot (Mod.constant p.Location) (Mod.constant 3.0) (Mod.constant C4b.Yellow)
-                            | None -> yield Aardvark.UI.Extensions.Sg.empty
-                    | None -> yield Aardvark.UI.Extensions.Sg.empty
+                        let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                        if exists then
+                          let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                          let! surf = leaf 
+                          let x = match surf with | MSurfaces s -> s | _ -> surf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                          let! hpos = x.homePosition
+                          match hpos with
+                              | Some p -> yield PRo3D.Sg.dot (Mod.constant p.Location) (Mod.constant 3.0) (Mod.constant C4b.Yellow)
+                              | None -> yield fail
+                        else
+                          yield fail
+                    | None -> yield fail
             }|> Aardvark.UI.``F# Sg``.Sg.set
         Aardvark.UI.``F# Sg``.Sg.ofList [point]
         

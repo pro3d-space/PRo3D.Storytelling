@@ -7,6 +7,7 @@ module Csv =
     open Aardvark.UI
     open Aardvark.Base
     open System
+    open PRo3D.Versioned
 
     type ExportDnS = {
         dipAngle      : float
@@ -53,13 +54,14 @@ module Csv =
         z             : double
     }
 
-    let exportAnnotation (lookUp) (a:Annotation) =
+    let exportAnnotation (lookUp) (a: Annotation') =
       
       let results = 
         match a.results with
           | Some r -> r
           | None ->  
             { 
+              version = AnnotationResults'.current
               height      = Double.NaN
               heightDelta = Double.NaN
               avgAltitude = Double.NaN
@@ -96,7 +98,7 @@ module Csv =
 
       let points = 
         a.points 
-          |> PList.map a.modelTrafo.Forward.TransformPos 
+          //|> PList.map a.modelTrafo.Forward.TransformPos 
           |> PList.toArray
 
       let c = Box3d(points).Center

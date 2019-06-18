@@ -7,15 +7,17 @@ Aardvark.Base.Rendering
 Aardvark.Application.WinForms.GL
 Aardvark.SceneGraph
 Aardvark.SceneGraph.Opc
+Aardvark.Rendering.Text
 
 Aardvark.UI
 Aardvark.UI.Primitives
 
 Aardvark.Geometry.Intersection
-Aardvark.VRVis.Opc
+Aardvark.GeoSpatial.Opc
 
 FSharp.Core
 FsPickler
 FSharp.Data
 
 Aardium
+RestSharp

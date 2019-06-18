@@ -7,10 +7,6 @@ open Aardvark.Base.Incremental
 open Aardvark.SceneGraph.AirState
 open PRo3D.Surfaces
 
-
-
-
-
 module ConfigProperties =
     open Aardvark.Base
     open Aardvark.Base.Rendering    

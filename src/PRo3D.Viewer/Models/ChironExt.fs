@@ -42,7 +42,8 @@ module ChironExt =
 type Ext = Ext
  
 type Ext with
-     static member FromJson1 (ext : Ext, v : NumericInput) = 
+     //NumericInput
+     static member FromJson1 (ext : Ext, _ : NumericInput) = 
          json {
              let! value  = Json.read "value"
              let! min    = Json.read "min"
@@ -66,7 +67,21 @@ type Ext with
          do! Json.write "step"   v.step
          do! Json.write "format" v.format
        }
+
+     //ColorInput
+     static member FromJson1 (ext : Ext, _ : ColorInput) = 
+         json {
+             let! c  = Json.read "color"                  
+             return {
+               c = c |> C4b.Parse
+             }
+         }
+     static member ToJson1 (ext : Ext, v : ColorInput) = 
+         json {
+           do! Json.write "color"  (v.c.ToString())
+         }
        
+     //int
      static member FromJson1 (ext : Ext, v : int) = 
            json {       
                return 1

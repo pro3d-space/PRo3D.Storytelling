@@ -32,6 +32,7 @@ open PRo3D.Groups
 open System.Text
 open Aardvark.SceneGraph.Opc
 open Aardvark.VRVis.Opc
+open Aardvark.GeoSpatial.Opc
 
 open Aardium
 open System.Threading
@@ -64,16 +65,17 @@ type License = {
   institution : string
 }
 
-let viewerVersion       = "2.9.4-prerelease1"
+let viewerVersion       = "2.9.6-prerelease3"
 let mutable licenseText = ""
 let catchDomainErrors   = false
 let licenseCheck        = false
-let licPath             = @".\pro3d.lic"
+let doBuildLicense      = false
+let licPath             = @".\license\pro3d.lic"
 
 let buildLicense(time) = 
   
-  let userName    = "Elyse Allender"
-  let institution = "St. Andrews"
+  let userName    = "Nina Müller"  
+  let institution = "Dibit"
 
   let mutable createAKey = new SKGL.Generate()
   createAKey.secretPhase <- (userName + institution + viewerVersion).GetHashCode().ToString()
@@ -130,10 +132,14 @@ let main argv =
     Aardvark.Rendering.GL.RuntimeConfig.SupressSparseBuffers <- true
     app.ShaderCachePath <- None
 
-    //buildLicense(365)
-        
+    Serialization.init()
+
+    if doBuildLicense then
+      buildLicense(365)      
+    
     Serialization.registry.RegisterFactory (fun _ -> SurfaceModel.surfaceModelPickler)
     Serialization.registry.RegisterFactory (fun _ -> KdTrees.level0KdTreePickler)
+    Serialization.registry.RegisterFactory (fun _ -> Surfaces.Init.incorePickler)
         
     if licenseCheck then
       checkLicense()
@@ -150,36 +156,42 @@ let main argv =
     use sendQueue = new BlockingCollection<string>()    
         
     let ws (webSocket : WebSocket) (context: HttpContext) =
-        socket {
-            let mutable loop = true
-
-            while loop do
-                let str = sendQueue.Take()
-                Log.warn "taking item from bc"
-                let s = ByteSegment(System.Text.Encoding.UTF8.GetBytes str)
-                
-                do! webSocket.send Text s true
-        }        
+      socket {
+        let mutable loop = true
+        
+        while loop do
+          let str = sendQueue.Take()
+          Log.warn "taking item from bc"
+          let s = ByteSegment(System.Text.Encoding.UTF8.GetBytes str)
+          
+          do! webSocket.send Text s true
+      }        
 
     PatchLod.useAsyncLoading <- (argv |> Array.contains "-sync" |> not)
-        
+    let startEmpty = (argv |> Array.contains "-empty")
+
     // main app
     //use form = new Form(Width = 1280, Height = 800)
     let cts = new CancellationTokenSource()
-    let messagingMailbox = MailboxProcessor.Start(Viewer.messagingMailbox cts, cts.Token)    
+    let messagingMailbox = MailboxProcessor.Start(Viewer.initMessageLoop cts, cts.Token)    
+
+    let minervaMailbox = MailboxProcessor.Start(PRo3D.Minerva.App.messagingMailbox cts, cts.Token)
 
     let mainApp = 
-        TopLevelApp.start runtime signature messagingMailbox sendQueue
+        TopLevelApp.start runtime signature startEmpty messagingMailbox minervaMailbox sendQueue
 
     let s = { MailboxState.empty with update = fun a -> mainApp.update Guid.Empty (a |> Seq.map AppAction) }
     MailboxAction.InitMailboxState s |> messagingMailbox.Post
+    
+    //let s2 = { PRo3D.Minerva.MailboxState.empty with update = mainApp.update Guid.Empty }
+    //PRo3D.Minerva.MailboxAction.InitMailboxState s2 |> minervaMailbox.Post
     
     CooTransformation.initCooTrafo () // should be a function not a value
     
     let domainError (sender:obj) (args:UnhandledExceptionEventArgs) =
         let e = args.ExceptionObject :?> Exception;
         Log.error "%A" e
-        MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |>ignore
+        MessageBox.Show(e.Message, "Sorry for the inconvenience", MessageBoxButtons.OK, MessageBoxIcon.Error) |> ignore
         ()
     
     if catchDomainErrors then
@@ -191,7 +203,7 @@ let main argv =
         Reflection.assemblyWebPart typeof<EmbeddedRessource>.Assembly
        // prefix "/instrument" >=> MutableApp.toWebPart runtime instrumentApp
         Suave.Files.browseHome        
-    ]
+    ] |> ignore
 
     //WebPart.startServer 4322 [
     //    MutableApp.toWebPart' runtime false instrumentApp        
@@ -233,7 +245,7 @@ let main argv =
         POST >=> path "/shots" >=> mapJson takeScreenshot
         POST >=> path "/platformshots" >=> mapJson takePlatformShot
         Suave.Files.browseHome
-    ] 
+    ] |> ignore
 
     let titlestr = "PRo3D Viewer - " + viewerVersion + " - VRVis Zentrum für Virtual Reality und Visualisierung Forschungs-GmbH" + licenseText
 

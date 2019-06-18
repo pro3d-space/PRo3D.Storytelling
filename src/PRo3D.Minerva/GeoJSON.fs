@@ -8,6 +8,10 @@ module MinervaGeoJSON =
   open FSharp.Data.Runtime
   open PRo3D.Base
   open System.Net
+  open System.Collections.Specialized
+  open System.Text
+  open RestSharp
+  open RestSharp.Authenticators
 
   let shout s =
     Log.line "%A" s  
@@ -57,6 +61,18 @@ module MinervaGeoJSON =
           {
             APXS_Properties.id = id |> FeatureId
           } |> Properties.APXS       
+        | Instrument.ChemLib ->
+          {
+            ChemCam_Properties.id = id |> FeatureId           
+          } |> Properties.ChemCam       
+        | Instrument.ChemRmi ->
+          {
+            ChemCam_Properties.id = id |> FeatureId            
+          } |> Properties.ChemCam       
+        | Instrument.NotImplemented ->
+          {
+            APXS_Properties.id = id |> FeatureId
+          } |> Properties.APXS               
         | _ -> failwith "encountered invalid instrument from parsing"
 
   let parseSingleCoord (c : array<float>) : V3d =
@@ -82,8 +98,9 @@ module MinervaGeoJSON =
       positions   = List.empty
     }        
 
-  let parseFeature (ins : Instrument) (feature : JsonValue) : Feature =
-    let prop = feature?properties |> parseProperties ins
+  let parseFeature (feature : JsonValue) : Feature =
+    let instrument = (feature?properties?instrument_id).AsString() |> Model.toInstrument
+    let prop = feature?properties |> parseProperties instrument
     
     let position = feature?properties?position.AsArray() |> Array.map(fun x -> x.AsFloat()) |> parseSingleCoordXYZ
     let geometry = feature?geometry |> parseGeometry    
@@ -92,7 +109,7 @@ module MinervaGeoJSON =
 
     {
       id          = (feature?id).AsString()
-      instrument  = ins
+      instrument  = instrument
       typus       = feature.GetProperty("type") |> parseTypus
       boundingBox = Box2d.Invalid//feature?bbox |> parseBoundingBox
       properties  = prop
@@ -100,17 +117,17 @@ module MinervaGeoJSON =
       sol         = sol
     } 
 
-  let parseFeatures (ins : Instrument) (features : JsonValue) : list<Feature> =  
-    features.AsArray() |> List.ofArray |> List.map (parseFeature ins)
+  let parseFeatures (features : JsonValue) : list<Feature> =  
+    features.AsArray() |> List.ofArray |> List.map (parseFeature)
     
   let parseRoot(root : JsonValue) : FeatureCollection =
-    let instrument = (root?id).AsString() |> Model.toInstrument
+    //let instrument = (root?id).AsString() |> Model.toInstrument
 
     {
       name        = (root?id).AsString()
       typus       = root.GetProperty("type") |> parseTypus    
-      boundingBox = (root?bbox) |> parseBoundingBox
-      features    = (root?features) |> parseFeatures instrument |> PList.ofList
+      boundingBox = Box2d.Invalid//(root?bbox) |> parseBoundingBox
+      features    = (root?features) |> parseFeatures |> PList.ofList
     }
 
   let load (siteUrl:string) : FeatureCollection =     
@@ -132,28 +149,63 @@ module MinervaGeoJSON =
       published    = (props?published).AsDateTime()
     }
 
-  let patchThroughWebClient (site : string) = 
-    let mutable client = new WebClient()
+  type QueryDict = hmap<string,string>
+
+  let toNameValue (nvPairs : QueryDict) =
+    let mutable nv = new NameValueCollection()
+    for (n,v) in nvPairs do nv.Add(n,v)
+    nv    
+
+  let patchThroughWebClient (nv : QueryDict) (site : string)  = 
+    let mutable client = new WebClient()    
     client.UseDefaultCredentials <- true       
     let credentials = System.Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes("minerva:tai8Ies7"))   
     client.Headers.[System.Net.HttpRequestHeader.Authorization] <- "Basic " + credentials   
-    client.DownloadString(site)
+   // client.QueryString <- nv |> toNameValue    
+    
+    let response = client.UploadValues(site, nv |> toNameValue)
+    let responseString = Encoding.Default.GetString(response)
+    responseString
+    //client.DownloadString(site)
 
-  let loadFromUrls sites = 
+  let patchThroughRestSharpClient (nv : QueryDict) (site : string)  = 
+    let mutable client = RestClient(site)
+
+    let mutable request = RestRequest(Method.POST)
+    client.Authenticator <- HttpBasicAuthenticator("minerva", "tai8Ies7")
+    request.AddHeader("Postman-Token", "a8d4ee8e-d6c7-4ea4-84c1-e0f5e4c9d9a6") |> ignore
+    request.AddHeader("cache-control", "no-cache") |> ignore
+    request.AddHeader("Authorization", "Basic bWluZXJ2YTp0YWk4SWVzNw==") |> ignore
+    request.AddHeader("content-type", "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW") |> ignore
+    request.AddParameter("multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW", "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"cql\"\r\n\r\n(planetDayNumber>751AND planetDayNumber<903)\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--", ParameterType.RequestBody) |> ignore
+    let mutable response = client.Execute(request)
+    response.Content
+
+  let loadFromUrls (sites : list<string * QueryDict>) = 
+    let count = sites.Length |> float
     sites 
-      |> List.map(fun x -> x |> patchThroughWebClient |> JsonValue.Parse)
+      |> List.mapi(fun i (x,nv) -> 
+        Report.Progress(float i / count)
+        x |> patchThroughWebClient nv |> JsonValue.Parse
+      )
       //|> Async.Parallel
       //|> Async.RunSynchronously 
       |> List.map parseRoot
       |> combineFeatureCollections
 
-  let loadPaged (site:string) = 
+
+  let loadPaged (site:string) (cql : QueryDict) = 
     
-    let bla = site |> patchThroughWebClient |> JsonValue.Parse
+    let bla = site |> patchThroughWebClient cql |> JsonValue.Parse
     let probs = bla?properties |> parseRootProperties
+    Log.line "[Minerva] found %i entries" probs.totalCount
     let pages =
       [0 .. probs.itemsPerPage .. probs.totalCount]
-        |> List.map(fun index -> sprintf "%s?startIndex=%d&count=%d" site index probs.itemsPerPage)
+        |> List.map(fun index -> 
+          //sprintf "%s?startIndex=%d&count=%d&%s" site index probs.itemsPerPage cql            
+            let nv = [("startIndex",index.ToString()); ("count",probs.itemsPerPage.ToString())] |> HMap.ofList
+            site, (HMap.union nv cql)
+          )
 
     pages |> loadFromUrls
     
@@ -161,7 +213,7 @@ module MinervaGeoJSON =
   let loadMultiple (sites : list<string>) : FeatureCollection =     
     Log.startTimed "fetching data from sites"
     let result = 
-      sites |> List.map(loadPaged) |> combineFeatureCollections
+      sites |> List.map(fun a -> loadPaged a QueryDict.Empty) |> combineFeatureCollections
     //let result = 
     //  sites |> Load
     Log.stop()

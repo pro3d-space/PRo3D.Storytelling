@@ -16,6 +16,7 @@ open Aardvark.VRVis.Opc
 open Aardvark.UI.Operators
 open Aardvark.UI.Trafos  
 
+open PRo3D.Base
 open PRo3D
 open PRo3D.Groups
 
@@ -24,6 +25,7 @@ open PRo3D.Groups
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surface =
     open Aardvark.SceneGraph.SgFSharp.Sg   
+    open System.Diagnostics 
     
     /// creates a surface from opc folder path
     let mk (stype:SurfaceType) (maxTriangleSize : float) path =                 
@@ -56,42 +58,54 @@ module Surface =
             homePosition = None
             transformation = Init.Transformations
         }       
+   
 
     module ObjectFiles =        
         open Aardvark.Geometry
 
         let loadObject (s:PRo3D.Surfaces.Surface) : SgSurface =                        
-            let obj = Loader.Assimp.load (s.importPath)            
+            let obj = Loader.Assimp.load (s.importPath)  
+            let mutable count = 0
             let kdTrees = 
               obj.meshes 
-                |> Array.map(fun x -> 
-                  let kdTreePath = Path.ChangeExtension(s.importPath,".aakd")
-                  
+                |> Array.map(fun x ->
+                  let dir = Path.GetDirectoryName(s.importPath)
+                  let filename = Path.GetFileNameWithoutExtension(s.importPath) + count.ToString() + ".aakd"
+                  let kdTreePath = dir + "\\" + filename //Path.ChangeExtension(s.importPath, name)
+                  count <- count + 1
                   let tree' = 
                     if File.Exists(kdTreePath) |> not then
-                      let pos = x.geometry.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
+                        
+                          let pos = x.geometry.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
                       
-                      //let indices = x.geometry.IndexArray |> unbox<int[]> potential problem with indices
-                      let t = DebugKdTreesX.getTriangleSet3f pos
+                          //let indices = x.geometry.IndexArray |> unbox<int[]> potential problem with indices
+                          let t = DebugKdTreesX.getTriangleSet3f pos
                                         
-                      Log.startTimed "Building kdtrees for %s" (s.importPath |> Path.GetFileName)
-                      let tree = 
-                        KdIntersectionTree(t, 
-                          KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical)                  
-                      Log.stop()
+                          Log.startTimed "Building kdtrees for %s" (s.importPath |> Path.GetFileName)
+                          let tree = 
+                            KdIntersectionTree(t, 
+                              KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical) //|> PRo3D.Serialization.save kdTreePath                  
+                          Log.stop()
                                             
 
-                      let kd : KdTrees.InCoreKdTree = {
-                        kdTree = tree.ToConcreteKdIntersectionTree();
-                        boundingBox = tree.BoundingBox3d
-                      }
-
-                      kd //|> PRo3D.Serialization.save kdTreePath // Serialization crashes, maybe use texture converter
+                          let kd : KdTrees.InCoreKdTree = {
+                            kdTree = tree.ToConcreteKdIntersectionTree();
+                            boundingBox = tree.BoundingBox3d
+                          }
+                        
+                          
+                          kd // |> PRo3D.Serialization.save kdTreePath // Serialization crashes, maybe use texture converter
                     else
-                      PRo3D.Serialization.loadAs<KdTrees.InCoreKdTree> kdTreePath
+                        Serialization.loadAs<KdTrees.InCoreKdTree> kdTreePath
+                      //let t = PRo3D.Serialization.loadAs<KdTrees.Level0KdTree> kdTreePath
+                      //match t with
+                      //  | KdTrees.Level0KdTree.InCoreKdTree kd -> kd
+                      //  | _ -> failwith "wrong type"
+
+                      
 
                   
-                    
+                  
                   tree'.boundingBox, (KdTrees.Level0KdTree.InCoreKdTree tree')
                   ) |> HMap.ofArray
 
@@ -185,6 +199,8 @@ module Surface =
         | OpenFolder                of Guid
         | RebuildKdTrees            of Guid
         | ToggleActiveFlag          of Guid
+        | ChangeImportDirectory     of Guid*string
+        | ChangeImportDirectories   of list<string>
         | GroupsMessage             of Groups.Action  
         //| PickObject                of V3d
         | PlaceSurface              of V3d
@@ -314,6 +330,42 @@ module Surface =
       //this does only update surfaces ... not kdtrees or sgs !!!!             
       { model with surfaces = { model.surfaces with flat = flat' } }
 
+    let changeImportDirectories (model:SurfaceModel) (selectedPaths:list<string>) = 
+        let surfacePaths = 
+            selectedPaths
+            |> List.map Files.superDiscoveryMultipleSurfaceFolder
+            |> List.concat
+
+        let surfaces =        
+            model.surfaces.flat 
+              |> HMap.toList
+              |> List.map(fun (_,v) -> 
+                let s = (v |> Leaf.toSurface)
+                let newPath = 
+                    surfacePaths
+                        |> List.map( fun p -> 
+                                        let name = p |> IO.Path.GetFileName
+                                        match name = s.name with
+                                         | true -> Some p
+                                         | false -> None)
+                        |> List.choose( fun np -> np) 
+                match newPath.IsEmpty with
+                 | true -> s
+                 | false -> { s with importPath = newPath.Head } 
+              )
+              
+        let flat' = 
+            surfaces 
+              |> List.choose(fun x -> 
+                let f = (fun _ -> x |> Leaf.Surfaces)
+                Groups.updateLeaf' x.guid f model.surfaces 
+                  |> HMap.tryFind x.guid 
+                  |> Option.map(fun leaf -> (x.guid,leaf) |> hmapsingle))          
+              |> List.fold HMap.union HMap.empty
+              
+        { model with surfaces = { model.surfaces with flat = flat' } }
+
+   
     let update (model:SurfaceModel) (action:Action) (scenePath : option<string>) (view:CameraView) (refSys : PRo3D.ReferenceSystem.ReferenceSystem) = 
       match action with
         | SurfacePropertiesMessage msg ->                
@@ -381,6 +433,19 @@ module Surface =
             | Some (Leaf.Surfaces s) ->
               { s with isActive = not s.isActive } |> SurfaceModel.updateSingleSurface' model
             | _ -> model
+        | ChangeImportDirectory (id, dir) ->
+          let surf = id |> SurfaceModel.getSurface model
+          match surf with
+            | Some (Leaf.Surfaces s) when (dir |> System.IO.Directory.Exists) && (dir |> Files.isSurfaceFolder) ->
+              { s with importPath = dir } |> SurfaceModel.updateSingleSurface' model
+            | _ -> model          
+        | ChangeImportDirectories sl ->
+            match sl with
+                | [] -> model
+                | paths ->
+                    let selectedPaths = paths |> List.choose Files.tryDirectoryExists
+                    changeImportDirectories model selectedPaths
+            
         | GroupsMessage msg -> 
             let groups = Groups.update model.surfaces msg
 
@@ -400,23 +465,24 @@ module Surface =
               | Some s -> 
                  let trans = Trafo3d.Translation(p)
                  let s = s |> Leaf.toSurface
-                 let f = (fun _ -> { s with preTransform = trans  } |> Leaf.Surfaces)
+                 let f = (fun _ -> { s with preTransform = Trafo3d.Translation(p)  } |> Leaf.Surfaces)
                  let g = Groups.updateLeaf s.guid f model.surfaces
                  
                  let sgs' = 
                      model.sgSurfaces
                      |> HMap.update id (fun x -> 
                        match x with 
-                       | Some sg ->    //let pose = Pose.translate p // bb.Center
-                         let pose = { sg.trafo.pose with position = sg.trafo.pose.position + p }
+                       | Some sg ->    
+                         let pose = Pose.translate p // bb.Center
+                         //let pose = { sg.trafo.pose with position = sg.trafo.pose.position + p }
 
                          let trafo' = { 
                            TrafoController.initial with 
                              pose = pose
-                             previewTrafo = trans
+                             previewTrafo = Trafo3d.Translation(p)
                              mode = TrafoMode.Local 
                          }
-                         { sg with trafo = trafo'; globalBB = (sg.globalBB.Transformed trafo'.previewTrafo) }
+                         { sg with trafo = trafo'; globalBB = (sg.globalBB.Transformed trafo'.previewTrafo) } // (Trafo3d.Translation(p))) }  //
                        | None   -> failwith "surface not found")                             
                  { model with surfaces = g; sgSurfaces = sgs'} 
               | None -> model
@@ -619,6 +685,22 @@ module Surface =
                              yield Incremental.i (absRelIcons) (AList.empty)
                              yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
                              yield GuiEx.iconCheckBox s.isActive (ToggleActiveFlag key) |> UI.wrapToolTip "Toggle IsActive"
+
+                             let! path = s.importPath
+                             //
+                             //  yield i 
+                             if (Directory.Exists path) |> not || (path |> Files.isSurfaceFolder |> not) then
+                               yield i [
+                                 clazz "exclamation red icon"
+                                 //Dialogs.onChooseDirectory key ChangeImportDirectory;
+                                 ////clientEvent "onclick" ("""
+                                 ////   var files = parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory','multiSelections']});
+                                 ////   console.log(files);
+                                 ////   parent.aardvark.processEvent('__ID__', 'onchoose', files);
+                                 ////   """)
+                                 //clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory','multiSelections']}));")
+                                 ]
+                                 []
                          } 
                      )                                     
                  ]
@@ -740,20 +822,27 @@ module Surface =
                         | _ -> return div[][]                                                             
                 | None   -> return div[][] 
         }
+    
+      //failwith ""
 
     let viewSurfaceProperties (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
+            let flat = model.surfaces.flat
             
             match guid with
-                | Some i -> 
-
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
-                                       
-                    return SurfaceProperties.view x |> UI.map SurfacePropertiesMessage
-                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map SurfacePropertiesMessage 
+              | Some i ->
+                let! exists = flat |> AMap.keys |> ASet.contains i
+                if exists then
+                  let leaf = flat |> AMap.find i |> Mod.bind(id)
+                  let! surf = leaf 
+                  let x = match surf with | MSurfaces s -> s | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith                                     
+                  return SurfaceProperties.view x |> UI.map SurfacePropertiesMessage
+                else
+                  return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map SurfacePropertiesMessage 
+                  
+              
+              | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map SurfacePropertiesMessage 
         }                          
         
     let surfaceGroupProperties (model:MSurfaceModel) =
@@ -764,30 +853,37 @@ module Surface =
     let viewTranslationTools (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
-            
+            let empty = div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map TranslationMessage 
+
             match guid with
-                | Some i -> 
-                    //let! sg = model.sgSurfaces |> AMap.find i 
-                    //return TranslationApp.UI.view sg.transformation |> UI.map TranslationMessage
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let x = match surf with | MSurfaces s -> s | _ -> failwith "wrong type"
-                    return TranslationApp.UI.view x.transformation |> UI.map TranslationMessage
-                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map TranslationMessage 
+              | Some i -> 
+                let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                if exists then
+                  let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                  let! surf = leaf 
+                  let x = match surf with | MSurfaces s -> s | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                  return TranslationApp.UI.view x.transformation |> UI.map TranslationMessage
+                else
+                  return empty
+              | None -> return empty
         }                          
 
     let viewColorCorrectionTools (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
+            let empty = div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ColorCorrectionMessage 
             
             match guid with
                 | Some i -> 
-
+                  let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                  if exists then
                     let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
                     let! surf = leaf 
-                    let colorCorrection = match surf with | MSurfaces s -> s.colorCorrection | _ -> failwith "wrong type"
+                    let colorCorrection = match surf with | MSurfaces s -> s.colorCorrection | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
                     return ColorCorrectionProperties.view colorCorrection |> UI.map ColorCorrectionMessage
-                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ColorCorrectionMessage 
+                  else 
+                    return empty
+                | None -> return empty 
         }                          
 
     let viewColorLegendTools (model:MSurfaceModel) =
@@ -796,18 +892,21 @@ module Surface =
             
             match guid with
                 | Some i -> 
-
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let scalar = 
-                      match surf with 
-                       | MSurfaces s -> s.selectedScalar 
-                       | _ -> failwith "wrong type"
-
-                    let! scalar = scalar
-                    match scalar with
-                        | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
-                        | None -> return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
+                    let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                    if exists then
+                      let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                      let! surf = leaf 
+                      let scalar = 
+                        match surf with 
+                         | MSurfaces s -> s.selectedScalar 
+                         | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                      
+                      let! scalar = scalar
+                      match scalar with
+                          | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
+                          | None -> return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
+                    else
+                      return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
                                   
                 | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ScalarsColorLegendMessage 
         }                          
@@ -818,14 +917,17 @@ module Surface =
             
             match guid with
                 | Some i -> 
-
-                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                    let! surf = leaf 
-                    let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> failwith "wrong type"
-                    let! scalar = scalar
-                    match scalar with
-                        | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
-                        | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
+                    let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                    if exists then
+                      let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                      let! surf = leaf 
+                      let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                      let! scalar = scalar
+                      match scalar with
+                          | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
+                          | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
+                    else
+                      yield div[ style "font-style:italic"][ text "no scalar selected" ]
                                   
                 | None -> yield div[ style "font-style:italic"][ text "no surface selected" ]
         }  

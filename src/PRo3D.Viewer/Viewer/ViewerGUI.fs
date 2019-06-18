@@ -61,7 +61,6 @@ module Gui =
   let textOverlays (m : MReferenceSystem) (cv : IMod<CameraView>) = 
     div [js "oncontextmenu" "event.preventDefault();"] [ 
       let planet = m.planet |> Mod.map(fun x -> sprintf "%s" (x.ToString()))  
-    
       
       let pnb = pitchAndBearing m cv
     
@@ -82,8 +81,7 @@ module Gui =
       let lat = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.latitude).ToString("0.00")))
       //let alt = spericalc |> Mod.map(fun x -> sprintf "%s m" ((x.altitude).ToString("0.00")))
       let alt2 = alt2 |> Mod.map(fun x -> sprintf "%s m" ((x).ToString("0.00")))
-                           
-      
+                                 
       let style' = "color: white; font-family:Consolas;"
     
       yield div [clazz "ui"; style "position: absolute; top: 15px; left: 15px; float:left" ] [
@@ -235,15 +233,9 @@ module Gui =
       [
          text "Import"
          i [clazz "dropdown icon"][] 
-         div [ clazz "menu"] [
-             //div [ clazz "ui inverted item"; 
-             //  Dialogs.onChooseFiles ImportSurface;
-             //  clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-             //  text "OPC"
-             //]
-             div [ clazz "ui inverted item"; 
-               //Dialogs.onChooseFiles  (fun paths -> ("importing opcs...", ImportDiscoveredSurfaces paths) |> Logging); //ImportDiscoveredSurfaces; // ImportSurfaceTest
-               Dialogs.onChooseFiles  ImportDiscoveredSurfacesThreads; //StartImportMessaging; //ImportDiscoveredSurfaces; // ImportSurfaceTest
+         div [ clazz "menu"] [             
+             div [ clazz "ui inverted item";
+               Dialogs.onChooseFiles  ImportDiscoveredSurfacesThreads;
                clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
                text "OPC"
              ]
@@ -281,7 +273,7 @@ module Gui =
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
                   text "Save as..."
             ]
-            div [ clazz "ui inverted item"; Dialogs.onChooseFiles OpenScene;
+            div [ clazz "ui inverted item"; Dialogs.onChooseFiles(fun x -> match (x |> List.tryHead) with | Some y -> LoadScene y | None -> NoAction "no scene selected");
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({ filters: [{ name: 'Scene', extensions: ['scn']},], properties: ['openFile']}));")][ 
                                                     
                   text "Open"
@@ -314,6 +306,49 @@ module Gui =
             ] 
          ]
       ]
+
+    let surfaceUiThing (m : MModel)=
+      let blarg =
+        amap {
+          let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
+          
+          match selected with
+          | Some s ->
+            yield clazz "ui item"
+            yield Dialogs.onChooseDirectory s SurfaceApp.Action.ChangeImportDirectory
+            yield clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openDirectory','multiSelections']}));")
+          | None -> ()
+        }
+
+      let blurg = 
+        alist {
+          let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
+          match selected with
+          | Some s -> yield text "fix broken path"
+          | None -> ()
+        }
+
+      Incremental.div(AttributeMap.ofAMap blarg) blurg |> UI.map SurfaceActions
+
+    let fixAllBrokenPaths =
+        let ui = 
+            alist {
+                yield
+                 div [ clazz "ui item";
+                        Dialogs.onChooseFiles  SurfaceApp.Action.ChangeImportDirectories;
+                        clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
+                        text "fix all broken paths"
+                        ]
+            }
+
+        Incremental.div(AttributeMap.Empty) ui |> UI.map SurfaceActions
+
+
+      //div [ clazz "ui item";
+      //    Dialogs.onChooseDirectory Guid.Empty SurfaceApp.Action.ChangeImportDirectory;
+      //    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+      //    text "fix broken path"
+      //] |> UI.map SurfaceActions
 
     let menu (m : MModel) = 
       div [clazz "menu-bar"] [
@@ -369,6 +404,10 @@ module Gui =
                               clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
                               text "Rover Placement"
                           ]
+
+                          fixAllBrokenPaths
+
+                          surfaceUiThing m
                       ]
                   ]
               ] 
@@ -474,7 +513,7 @@ module Gui =
     let viewAnnotationProperties (model :MModel) =
             let view = (fun leaf ->
                 match leaf with
-                  | MAnnotations ann -> AnnotationProperties.view ann
+                  | MAnnotations' ann -> AnnotationProperties.view ann
                   | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
             
             model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
@@ -483,7 +522,7 @@ module Gui =
     let viewAnnotationResults (model :MModel) =
             let view = (fun leaf ->
                 match leaf with
-                  | MAnnotations ann -> AnnotationProperties.viewResults ann model.scene.referenceSystem.up.value
+                  | MAnnotations' ann -> AnnotationProperties.viewResults ann model.scene.referenceSystem.up.value
                   | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
             
             model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
@@ -598,7 +637,8 @@ module Gui =
         
   module ViewPlanner = 
     let viewPlanProperties (model:MModel) =
-            model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage 
+            //model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage 
+            model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage model.footPrint.isVisible
 
     let viewPlannerUI (m:MModel) =             
         div [][

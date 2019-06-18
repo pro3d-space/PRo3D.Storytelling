@@ -129,7 +129,36 @@ type SgSurface = {
 }
 
 
+
 module Init =
+    open MBrace.FsPickler
+    open MBrace.FsPickler.Combinators    
+    open Aardvark.Geometry
+
+    //let initConcreteKdIntersectionTree t : ConcreteKdIntersectionTree  = //sgs
+    //    {
+    //        KdIntersectionTree = KdIntersectionTree()
+    //        Trafo = t
+    //        Attributes = List.Empty
+    //    }
+
+    //let concreteKdIntersectionTreePickler : Pickler<ConcreteKdIntersectionTree> =
+    //    Pickler.product initConcreteKdIntersectionTree
+    //    ^. Pickler.field (fun (s:ConcreteKdIntersectionTree) -> s.Trafo)       Pickler.auto<Trafo3d>
+
+
+    let initInCoreKdTree a : KdTrees.InCoreKdTree  = //sgs
+        {
+            kdTree = ConcreteKdIntersectionTree()
+            boundingBox = a
+        }
+
+    let incorePickler : Pickler<KdTrees.InCoreKdTree> =
+        Pickler.product initInCoreKdTree
+        ^. Pickler.field (fun s -> s.boundingBox)     Pickler.auto<Box3d>
+
+        
+
     let quality = 
             {
                 value = 0.1

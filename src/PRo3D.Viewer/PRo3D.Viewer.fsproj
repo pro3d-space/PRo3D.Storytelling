@@ -43,8 +43,7 @@
     <DocumentationFile>
     </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
-    <StartArguments>
-    </StartArguments>
+    <StartArguments>-empty</StartArguments>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
@@ -84,6 +83,7 @@
     <Compile Include="Extensions\Tags.fs" />
     <Compile Include="Extensions\ThreadPool.fs" />
     <Compile Include="Extensions\CameraAnimations.fs" />
+    <Compile Include="Serialization.fs" />
     <Compile Include="Models\ChironExt.fs" />
     <Compile Include="Models\Model.fs" />
     <Compile Include="Models\VersionedModel.fs" />
@@ -115,12 +115,11 @@
     <Compile Include="Surface\Surface.Files.fs" />
     <Compile Include="Surface\Surface.Sg.fs" />
     <Compile Include="Surface\Surface.fs" />
-    <Compile Include="Rover-Model.fs" />
-    <Compile Include="Rover.fs" />
-    <Compile Include="ViewPlan.fs" />
     <Compile Include="Properties.fs" />
-    <Compile Include="ConfigTestModel.fs" />
-    <Compile Include="ConfigTest.fs" />
+    <Compile Include="ViewPlanner\Rover-Model.fs" />
+    <Compile Include="ViewPlanner\FootPrint.fs" />
+    <Compile Include="ViewPlanner\Rover.fs" />
+    <Compile Include="ViewPlanner\ViewPlan.fs" />
     <Compile Include="Viewer-Model.fs" />
     <Compile Include="Bookmarks.fs" />
     <Compile Include="Scene.fs" />
@@ -130,6 +129,7 @@
     <Compile Include="RoverPlacementImporter.fs" />
     <Compile Include="Viewer\Viewer-Utils.fs" />
     <Compile Include="Viewer\ViewerGUI.fs" />
+    <Compile Include="Viewer\Viewer-IO.fs" />
     <Compile Include="Viewer\Viewer.fs" />
     <EmbeddedResource Include="Storytelling\Annotations.css" />
     <EmbeddedResource Include="Storytelling\Annotations.js" />
@@ -423,6 +423,17 @@
   <Choose>
     <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1') Or ($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
       <ItemGroup>
+        <Reference Include="Aardvark.GeoSpatial.Opc">
+          <HintPath>..\..\packages\Aardvark.GeoSpatial.Opc\lib\netstandard2.0\Aardvark.GeoSpatial.Opc.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1') Or ($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
+      <ItemGroup>
         <Reference Include="Aardvark.GPGPU">
           <HintPath>..\..\packages\Aardvark.GPGPU\lib\netstandard2.0\Aardvark.GPGPU.dll</HintPath>
           <Private>True</Private>
@@ -524,17 +535,6 @@
       <ItemGroup>
         <Reference Include="Aardvark.UI.Primitives">
           <HintPath>..\..\packages\Aardvark.UI.Primitives\lib\netstandard2.0\Aardvark.UI.Primitives.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1') Or ($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
-      <ItemGroup>
-        <Reference Include="Aardvark.VRVis.Opc">
-          <HintPath>..\..\packages\Aardvark.VRVis.Opc\lib\netstandard2.0\Aardvark.VRVis.Opc.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -1234,15 +1234,6 @@
         </Reference>
       </ItemGroup>
     </When>
-    <When Condition="($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
-      <ItemGroup>
-        <Reference Include="System.Memory">
-          <HintPath>..\..\packages\System.Memory\ref\netstandard2.0\System.Memory.dll</HintPath>
-          <Private>False</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
   </Choose>
   <Choose>
     <When Condition="($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
@@ -1518,7 +1509,7 @@
         </Reference>
       </ItemGroup>
     </When>
-    <When Condition="$(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0'">
+    <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
       <ItemGroup>
         <Reference Include="System.Runtime.CompilerServices.Unsafe">
           <HintPath>..\..\packages\System.Runtime.CompilerServices.Unsafe\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
@@ -2007,20 +1998,11 @@
     </When>
   </Choose>
   <Choose>
-    <When Condition="($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
+    <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1') Or ($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
       <ItemGroup>
         <Reference Include="System.Threading.Tasks.Extensions">
           <HintPath>..\..\packages\System.Threading.Tasks.Extensions\lib\netstandard2.0\System.Threading.Tasks.Extensions.dll</HintPath>
           <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-    <When Condition="($(TargetFrameworkIdentifier) == '.NETCoreApp' And $(TargetFrameworkVersion) == 'v2.0') Or ($(TargetFrameworkIdentifier) == '.NETStandard' And $(TargetFrameworkVersion) == 'v2.0')">
-      <ItemGroup>
-        <Reference Include="System.Threading.Tasks.Extensions">
-          <HintPath>..\..\packages\System.Threading.Tasks.Extensions\ref\netstandard2.0\System.Threading.Tasks.Extensions.dll</HintPath>
-          <Private>False</Private>
           <Paket>True</Paket>
         </Reference>
       </ItemGroup>

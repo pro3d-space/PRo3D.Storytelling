@@ -4,42 +4,50 @@ open System
 open Aardvark.Base
 open Aardvark.Base.Incremental
 
-open PRo3D
-open PRo3D.Surfaces
-open PRo3D.BookmarksX
-open PRo3D.Navigation2
-
 open Aardvark.VRVis
 open Aardvark.Geometry
 open Aardvark.SceneGraph.Opc 
 
+open PRo3D
+open PRo3D.Versioned
+open PRo3D.Surfaces
+open PRo3D.BookmarksX
+open PRo3D.Navigation2
+
+#nowarn "0044"
+
 [<DomainType>]
 type Leaf = 
-    | Annotations of value : Annotation
-    | Surfaces    of value : Surface
-    | Bookmarks   of value : Bookmark
+    | Annotations  of value : Annotation
+    | Surfaces     of value : Surface
+    | Bookmarks    of value : Bookmark
+    | Annotations' of value : PRo3D.Versioned.Annotation' // added case
     with     
       member x.id =
         match x with
           | Annotations a -> a.key
           | Surfaces    s -> s.guid
           | Bookmarks   b -> b.key
+          | Annotations' a -> a.key
 
       member x.visible =
         match x with
           | Annotations a -> a.visible
           | Surfaces    s -> s.isVisible
           | Bookmarks   b -> true
+          | Annotations' a -> a.visible
 
       member x.setVisible (v:bool) =
         match x with
-          | Annotations a -> Leaf.Annotations { a with visible = v }
-          | Surfaces    s -> Leaf.Surfaces    { s with isVisible = v }
+          | Annotations  a -> Leaf.Annotations { a with visible = v }
+          | Annotations' a -> Leaf.Annotations' { a with visible = v }
+          | Surfaces     s -> Leaf.Surfaces    { s with isVisible = v }
           | Bookmarks   _ -> x
 
        member x.active =
         match x with
           | Annotations a -> false
+          | Annotations' a -> false
           | Surfaces    s -> s.isActive
           | Bookmarks   b -> false
                 
@@ -70,10 +78,15 @@ module Group =
         visible = true
         expanded = true
         }
-    let initTreeSelection =  { 
+    let initChildSelection =  { 
         id = Guid.Empty
         path = list.Empty
         name = "" 
+        }
+    let initGroupSelection =  { 
+        id = initRoot.key
+        path = list.Empty
+        name = initRoot.name 
         }
 
     let tryGet' (ans:hset<Leaf>) id = 
@@ -99,8 +112,9 @@ module Leaf =
 
     let toggleVisibility (c : Leaf) =
         match c with
-          | Annotations a -> Annotations { a with visible   = not a.visible }
+         // | Annotations a -> Annotations { a with visible   = not a.visible }
           | Surfaces    s -> Surfaces    { s with isVisible = not s.isVisible }
+          | Annotations' a -> Annotations' { a with visible   = not a.visible }
           | _ -> c
 
     let setName (c: Leaf) (name: string) =
@@ -119,28 +133,31 @@ module Leaf =
     let toSurface leaf =
         match leaf with 
           | Leaf.Surfaces s -> s
-          | _ -> failwith "wrong type"
+          | _ -> leaf |> sprintf "wrong type %A" |> failwith
 
     let toSurfaces' surfaces =
         surfaces |> PList.choose(fun x -> match x with | Leaf.Surfaces s -> Some s| _-> None)
 
     let toAnnotation leaf =
         match leaf with 
-          | Leaf.Annotations a -> a
-          | _ -> failwith "wrong type"
+          | Leaf.Annotations' a -> a
+          | Leaf.Annotations a -> a |> Annotation'.convert
+          | _ -> leaf |> sprintf "wrong type %A; expected Annotations'" |> failwith
 
     let toAnnotations annotations =
         annotations
             |> HMap.choose(fun _ x -> 
                 match x with
-                | Leaf.Annotations s -> Some s
+                | Leaf.Annotations' s -> Some s
+                | Leaf.Annotations s -> s |> Annotation'.convert |> Some
                 | _ -> None )
 
     let childrenToAnnotations annos =
         annos
             |> HSet.choose(fun x -> 
                 match x with
-                    | Leaf.Annotations a -> Some a
+                    | Leaf.Annotations' a -> Some a
+                    | Leaf.Annotations  a -> a |> Annotation'.convert |> Some
                     | _ -> None )
 
     let childrenToBookmarks bms =
@@ -154,11 +171,11 @@ module Leaf =
 module GroupsModel =
     let initial = {
         rootGroup        = Group.initRoot
-        activeGroup      = Group.initTreeSelection
-        activeChild      = Group.initTreeSelection
+        activeGroup      = Group.initGroupSelection
+        activeChild      = Group.initChildSelection
         flat             = hmap.Empty
         groupsLookup     = hmap.Empty
-        lastSelectedItem = SelectedItem.Child
+        lastSelectedItem = SelectedItem.Group
         selectedLeaves   = hset.Empty
         singleSelectLeaf = None
     }

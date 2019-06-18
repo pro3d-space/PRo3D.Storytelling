@@ -42,6 +42,12 @@ type Interactions =
     //| DrawLog               = 7
     //| AlignPick             = 5
 
+//type ViewerMode =
+//    | Standard
+//    | Instrument
+    
+
+
 type BookmarkAction =
   | AddBookmark 
   | GroupsMessage   of Groups.Action
@@ -72,7 +78,7 @@ type ViewerAction =
     | ImportAnnotationGroups    of list<string>
     | ImportSurfaceTrafo        of list<string>
     | ImportRoverPlacement      of list<string>
-    | SwitchViewerMode
+    | SwitchViewerMode          of ViewerMode
     | DnSProperties             of PropertyActions
     | ConfigPropertiesMessage   of ConfigProperties.Action
     | QuickLoad1
@@ -108,6 +114,7 @@ type ViewerAction =
     | StartImportMessaging      of list<string>
     | Logging                   of string * ViewerAction
     | ThreadsDone               of string    
+    | OnResize                  of V2i
 
 
 and MailboxState = {
@@ -117,7 +124,9 @@ and MailboxState = {
 and MailboxAction =
   | ViewerAction  of ViewerAction
   | InitMailboxState of MailboxState
+  | InitMinervaBox of PRo3D.Minerva.MailboxState
   | DrawingAction of PRo3D.Drawing.Action
+ // | MinervaMbAction of PRo3D.Minerva.MailboxAction
 
 
 //[<DomainType>] 
@@ -175,10 +184,6 @@ type WayPoint = {
     cv   : CameraView
 }
 
-type ViewerMode =
-    | Standard
-    | Instrument
-    
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module MailboxState = 
@@ -217,7 +222,7 @@ type Model = {
 
     messagingMailbox : MessagingMailbox
     mailboxState     : MailboxState
-
+    
     minervaModel     : PRo3D.Minerva.Model
             
     [<TreatAsValue>]
@@ -225,6 +230,7 @@ type Model = {
 
     [<TreatAsValue>]
     future : Option<Drawing.DrawingModel> 
+    footPrint           : FootPrint 
 }
 
 
@@ -244,7 +250,7 @@ module Viewer =
         state
         
 
-    let messagingMailbox (cancelTokenSrc:CancellationTokenSource) (inbox:MessagingMailbox) =
+    let initMessageLoop (cancelTokenSrc:CancellationTokenSource) (inbox:MessagingMailbox) =
         let rec messageLoop state = async {
             let! msg = inbox.Receive()
             
@@ -301,6 +307,56 @@ module Viewer =
             appName "PRo3D"
             useCachedConfig false
         }
+    let dockConfigFull = 
+      config {
+          content (                        
+              horizontal 1.0 [                                                        
+                stack 0.7 None [
+                    {id = "render"; title = Some " Main View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
+                    {id = "instrumentview"; title = Some " Instrument View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
+                ]                            
+                vertical 0.3 [
+                  stack 0.5 None [                    
+                    {id = "surfaces"; title = Some " Surfaces "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "annotations"; title = Some " Annotations "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "minerva"; title = Some " Minerva "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                  ]                          
+                  stack 0.5 (Some "config") [
+                    {id = "config"; title = Some " Config "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "bookmarks"; title = Some " Bookmarks"; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "viewplanner"; title = Some " ViewPlanner "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "corr_mappings"; title = Some " RockTypes "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "corr_semantics"; title = Some " Semantics "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                  ]
+                ]
+              ]              
+          )
+          appName "PRo3D"
+          useCachedConfig false
+      }
+
+    let dockConfigCore = 
+      config {
+          content (                        
+              horizontal 1.0 [                                                        
+                stack 0.7 None [
+                    {id = "render"; title = Some " Main View "; weight = 0.6; deleteInvisible = None; isCloseable = None}                       
+                ]                            
+                vertical 0.3 [
+                  stack 0.5 None [                        
+                    {id = "surfaces"; title = Some " Surfaces "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "annotations"; title = Some " Annotations "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                  ]                          
+                  stack 0.5 (Some "config") [
+                    {id = "config"; title = Some " Config "; weight = 0.4; deleteInvisible = None; isCloseable = None }
+                    {id = "bookmarks"; title = Some " Bookmarks"; weight = 0.4; deleteInvisible = None; isCloseable = None }                       
+                  ]
+                ]
+              ]                        
+          )
+          appName "PRo3D"
+          useCachedConfig false
+      }
 
     //let initFeedback = 
     //     {  loadScene = "loading Scene..."
@@ -309,7 +365,7 @@ module Viewer =
     //        noText    = ""
     //     }
 
-    let initial msgBox = {           
+    let initial msgBox msgBox2 = {           
        // surfaces = HSet.empty
         scene = 
           {
@@ -322,7 +378,7 @@ module Viewer =
             //orientationSystem = ReferenceSystem.initial
             bookmarksModel  = BookmarksModel.initial
             viewPlans       = ViewPlanModel.initial                                        
-            dockConfig      = initialDockConfig                          
+            dockConfig      = dockConfigFull
             closedPages     = list.Empty 
             firstImport     = true
             userFeedback    = ""
@@ -363,9 +419,10 @@ module Viewer =
            cam        = CameraController.initial.view
          }
 
-        minervaModel = PRo3D.Minerva.Initial.model
+        minervaModel = PRo3D.Minerva.Initial.model msgBox2
         
         //instrumentCamera = { CameraController.initial with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }        
         //instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
         viewerMode = ViewerMode.Standard                
+        footPrint = ViewPlanModel.initFootPrint
     }

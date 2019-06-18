@@ -10,6 +10,7 @@ open PRo3D
 open PRo3D.Drawing
 open PRo3D.Viewer
 open PRo3D.Groups
+open PRo3D.Versioned
 
 open Model
 
@@ -69,10 +70,12 @@ type Segment = {
     points      : V3d rlist 
 }
 
-type OAnnotation = Annotation
+type OAnnotation = Annotation'
 
 [<DomainType>]
 type Annotation = {
+    version     : int
+
     [<PrimaryKey; NonIncremental>]
     key         : Guid
 
@@ -86,8 +89,8 @@ type Annotation = {
     segments    : Segment rlist 
     color       : ColorInput
     thickness   : NumericInput
-    results     : AnnotationResults option
-    dnsResults  : DipAndStrikeResults option
+    results     : AnnotationResults' option
+    dnsResults  : DipAndStrikeResults' option
 
     visible     : bool
     showDns     : bool
@@ -96,6 +99,9 @@ type Annotation = {
 
     surfaceName : string
     view        : CameraView
+
+    semanticId   : SemanticId
+    semanticType : SemanticType
 }
 
 type OAnnotationGroup = Node
@@ -160,7 +166,7 @@ module Message =
 
         match msg with
             | ImportAnnotationGroups _
-            | DrawingMessage (Load _) ->
+            | DrawingMessage (LoadVersioned _) ->
                 LoadAnnotations
             | _ ->
                 if c2 > c1 then
@@ -218,43 +224,49 @@ module Segment =
 module Annotation =
 
     let create (a : OAnnotation) : Annotation = {
-        key         = a.key
-        modelTrafo  = a.modelTrafo
-        geometry    = a.geometry
-        projection  = a.projection
-        semantic    = a.semantic
-        points      = { inner = a.points }
-        segments    = { inner = a.segments |> PList.map Segment.create }
-        color       = a.color
-        thickness   = a.thickness
-        results     = a.results
-        dnsResults  = a.dnsResults
-        visible     = a.visible
-        showDns     = a.showDns
-        text        = a.text
-        textsize    = a.textsize
-        surfaceName = a.surfaceName
-        view        = a.view |> CameraView.create
+        version      = a.version
+        key          = a.key
+        modelTrafo   = a.modelTrafo
+        geometry     = a.geometry
+        projection   = a.projection
+        semantic     = a.semantic
+        points       = { inner = a.points }
+        segments     = { inner = a.segments |> PList.map Segment.create }
+        color        = a.color
+        thickness    = a.thickness
+        results      = a.results
+        dnsResults   = a.dnsResults
+        visible      = a.visible
+        showDns      = a.showDns
+        text         = a.text
+        textsize     = a.textsize
+        surfaceName  = a.surfaceName
+        view         = a.view |> CameraView.create
+        semanticId   = a.semanticId
+        semanticType = a.semanticType
     }
 
     let restore (a : Annotation) : OAnnotation = {
-        key         = a.key
-        modelTrafo  = a.modelTrafo
-        geometry    = a.geometry
-        projection  = a.projection
-        semantic    = a.semantic
-        points      = a.points.inner
-        segments    = a.segments.inner |> PList.map Segment.restore
-        color       = a.color
-        thickness   = a.thickness
-        results     = a.results
-        dnsResults  = a.dnsResults
-        visible     = a.visible
-        showDns     = a.showDns
-        text        = a.text
-        textsize    = a.textsize
-        surfaceName = a.surfaceName
-        view        = a.view |> CameraView.restore
+        version      = a.version
+        key          = a.key
+        modelTrafo   = a.modelTrafo
+        geometry     = a.geometry
+        projection   = a.projection
+        semantic     = a.semantic
+        points       = a.points.inner
+        segments     = a.segments.inner |> PList.map Segment.restore
+        color        = a.color
+        thickness    = a.thickness
+        results      = a.results
+        dnsResults   = a.dnsResults
+        visible      = a.visible
+        showDns      = a.showDns
+        text         = a.text
+        textsize     = a.textsize
+        surfaceName  = a.surfaceName
+        view         = a.view |> CameraView.restore
+        semanticId   = a.semanticId
+        semanticType = a.semanticType
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -288,7 +300,7 @@ module Annotations =
 
     let create (a : OAnnotations) =
         let getAnnotation = function
-            | Annotations a -> Annotation.create a
+            | Annotations' a -> Annotation.create a
             | _ -> raise (ArgumentException ("Expected an annotation"))
     
         {
@@ -299,8 +311,8 @@ module Annotations =
 
     let restore (current : OAnnotations) (a : Annotations) : OAnnotations =
 
-        let checkSelection (contains : Guid -> 'a -> bool) (collection : 'a) (s : TreeSelection) =
-            if contains s.id collection then s else Group.initTreeSelection
+        let checkSelection (contains : Guid -> 'a -> bool) (collection : 'a) (def : TreeSelection) (s : TreeSelection) =
+            if contains s.id collection then s else def
             
         let groups =
             let rec get (g : AnnotationGroup) : Guid hset =  
@@ -314,15 +326,15 @@ module Annotations =
 
         {
             current with rootGroup = AnnotationGroup.restore a.root
-                         flat = a.flat |> HMap.map (fun _ a -> a |> Annotation.restore |> Annotations)
+                         flat = a.flat |> HMap.map (fun _ a -> a |> Annotation.restore |> Annotations')
                          singleSelectLeaf = current.singleSelectLeaf |> Option.filter (fun x -> a.flat |> HMap.containsKey x)
 
                          // TODO: The following checks are not really sufficient, since we would
                          // also have to check the validity of the path; these checks are better implemented in the
                          // groups app anyway, so I won't bother too much with it here.
                          selectedLeaves = current.selectedLeaves |> HSet.filter (fun x -> a.flat |> HMap.containsKey x.id)
-                         activeChild = current.activeChild |> (checkSelection HMap.containsKey a.flat)
-                         activeGroup = current.activeGroup |> (checkSelection HSet.contains groups)
+                         activeChild = current.activeChild |> (checkSelection HMap.containsKey a.flat Group.initChildSelection)
+                         activeGroup = current.activeGroup |> (checkSelection HSet.contains groups Group.initGroupSelection)
         }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]

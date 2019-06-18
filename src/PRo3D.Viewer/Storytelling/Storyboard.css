@@ -1,5 +1,5 @@
 ﻿body {
-    background-color: #1B1C1E
+    background-color: #1B1C1E;
 }
 
 .storyboard {
@@ -21,7 +21,7 @@
     position: relative;
     display: flex;
     align-items: center;
-    justify-content: center;    
+    justify-content: center;
     border: 1px solid rgb(93, 97, 104);
     border-radius: 4px;
     margin-left: 10px;
@@ -31,7 +31,7 @@
     min-width: 150px;
     max-width: 150px;
     height: 100px;
-    background-color: rgb(55, 57, 61)
+    background-color: rgb(55, 57, 61);
 }
 
 .storyboard .frame > .label {
@@ -40,6 +40,7 @@
     padding-right: 10px;
     top: 0;
     left: 0;
+    right: auto;
     margin: 10px !important;
 }
 
@@ -93,12 +94,12 @@
 }
 
 .storyboard .frame > .duplicate.button {
-    right : 0;
-    bottom : 0;
+    right: 0;
+    bottom: 0;
 }
 
 .storyboard .frame > .slide.button:hover {
-    opacity: 1.0;
+    opacity: 1;
 }
 
 .storyboard .frame:hover > .slide.button {
@@ -127,25 +128,29 @@
 }
 
 .storyboard .frame > .add.button {
-    opacity: 0.5
+    opacity: 0.5;
 }
 
 .storyboard .frame:hover > .add.button {
-    opacity: 1.0;
+    opacity: 1;
 }
 
 .storyboard .droppable.preview.frame > .add.button {
     display: none;
 }
 
-.storyboard .collapsing.preview.frame > .add.button { 
+.storyboard .collapsing.preview.frame > .add.button {
     display: none;
 }
 
-.storyboard:not(.dragging) .expanded.collapsing.preview.frame > .add.button { 
+.storyboard:not(.dragging) .expanded.collapsing.preview.frame > .add.button {
     display: block;
 }
 
-.storyboard .frame > .add.button > .second {
+.storyboard .frame > .add.button:hover > .first {
+    display: none;
+}
+
+.storyboard .frame > .add.button:not(:hover) > .second {
     display: none;
 }

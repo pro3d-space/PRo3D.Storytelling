@@ -30,7 +30,8 @@ module private Helpers =
         let p = model.provenance |> ProvenanceApp.update model.story (Provenance.Goto b.node.id)
         let m = State.restore model.inner.current <| Provenance.state p
 
-        model |> Lens.set Model.Lens.provenance p
+        model |> StoryApp.update DeselectSlide
+              |> Lens.set Model.Lens.provenance p
               |> Lens.set (Model.Lens.inner |. InnerModel.Lens.current) m
               |> Model.setViewParams b.view
               |> ViewApp.update (if animate then Move else Set)

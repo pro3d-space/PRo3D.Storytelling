@@ -16,7 +16,7 @@ module Mutable =
         let _draw = ResetMod.Create(__initial.draw)
         let _pick = ResetMod.Create(__initial.pick)
         let _hoverPosition = MOption.Create(__initial.hoverPosition)
-        let _working = MOption.Create(__initial.working, (fun v -> PRo3D.Mutable.MAnnotation.Create(v)), (fun (m,v) -> PRo3D.Mutable.MAnnotation.Update(m, v)), (fun v -> v))
+        let _working = MOption.Create(__initial.working, (fun v -> PRo3D.Versioned.Mutable.MAnnotation'.Create(v)), (fun (m,v) -> PRo3D.Versioned.Mutable.MAnnotation'.Update(m, v)), (fun v -> v))
         let _projection = ResetMod.Create(__initial.projection)
         let _geometry = ResetMod.Create(__initial.geometry)
         let _semantic = ResetMod.Create(__initial.semantic)
@@ -101,7 +101,7 @@ module Mutable =
                     override x.Update(r,f) = { r with hoverPosition = f r.hoverPosition }
                 }
             let working =
-                { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.Option<PRo3D.Annotation>>() with
+                { new Lens<PRo3D.Drawing.DrawingModel, Microsoft.FSharp.Core.Option<PRo3D.Versioned.Annotation'>>() with
                     override x.Get(r) = r.working
                     override x.Set(r,v) = { r with working = v }
                     override x.Update(r,f) = { r with working = f r.working }

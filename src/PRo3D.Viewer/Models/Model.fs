@@ -74,6 +74,11 @@ type Semantic =
     | GrainSize = 6 
     | None = 7
 
+type ViewerMode =
+    | Standard
+    | Instrument
+    
+
 [<DomainType>]
 type Statistics = {
   average      : float
@@ -230,7 +235,7 @@ type Segment = {
     points : plist<V3d> 
 }
 
-[<DomainType>]
+[<DomainType; Obsolete("use Annotation' instead")>]
 type Annotation = {
     [<PrimaryKey; NonIncremental>]
     key         : Guid
@@ -267,52 +272,7 @@ type Style = {
 module Annotation =
     open Aardvark.Base.IndexedGeometryPrimitives
 
-    let thickness = [1.0; 2.0; 3.0; 4.0; 5.0; 1.0; 1.0]
-    let color = [new C4b(241,238,246); new C4b(189,201,225); new C4b(116,169,207); new C4b(43,140,190); new C4b(4,90,141); new C4b(241,163,64); new C4b(153,142,195) ]
-
-    let thickn = {
-        value   = 3.0
-        min     = 1.0
-        max     = 8.0
-        step    = 1.0
-        format  = "{0:0}"
-    }
-
-    let texts = {
-        value   = 0.05
-        min     = 0.01
-        max     = 5.0
-        step    = 0.01
-        format  = "{0:0.00}"
-    }
-        
-    let make (projection) (geometry) (color) (thickness) (surfName) : Annotation  = 
-               
-        {
-            key         = Guid.NewGuid()
-            geometry    = geometry
-            semantic    = Semantic.None
-            points      = plist.Empty
-            segments    = plist.Empty //[]
-            color       = color
-            thickness   = thickness
-            results     = None
-            dnsResults  = None            
-            projection  = projection
-            visible     = true
-            text        = ""
-            textsize    = texts
-            modelTrafo  = Trafo3d.Identity
-            showDns     = 
-                match geometry with 
-                  | Geometry.DnS -> true 
-                  | _ -> false 
-            surfaceName = surfName
-            view = FreeFlyController.initial.view
-        }
-
-    let initial =
-        make Projection.Viewpoint Geometry.Polyline { c = C4b.Magenta } thickn ""
+    
 
 module JsonTypes =
     type _V3d = {
@@ -362,31 +322,31 @@ module JsonTypes =
     let sumDistance (polyline : Points) : double =
         polyline  |> List.pairwise |> List.fold (fun s (a,b) -> s + (b - a).LengthSquared) 0.0 |> Math.Sqrt
 
-    let ofAnnotation (a:Annotation) : _Annotation =
-        let polygon = ofPolygon (a.points |> PList.toList)
-        let avgHeight = (polygon |> List.map (fun v -> v.Z ) |> List.sum) / double polygon.Length
-        let distance = sumDistance (a.points |> PList.toList)
-        let angle, azimuth =
-            match a.dnsResults with
-                | Some dns -> 
-                    dns.dipAngle, dns.dipAzimuth
-                | None -> -1.0, -1.0
+    //let ofAnnotation (a:Annotation) : _Annotation =
+    //    let polygon = ofPolygon (a.points |> PList.toList)
+    //    let avgHeight = (polygon |> List.map (fun v -> v.Z ) |> List.sum) / double polygon.Length
+    //    let distance = sumDistance (a.points |> PList.toList)
+    //    let angle, azimuth =
+    //        match a.dnsResults with
+    //            | Some dns -> 
+    //                dns.dipAngle, dns.dipAzimuth
+    //            | None -> -1.0, -1.0
 
-        {            
-            semantic = a.semantic.ToString()
-            geometry = polygon
-            segments = a.segments |> PList.map (fun x -> ofSegment1 x.points) |> PList.toList //|> List.map (fun x -> ofSegment x)
-            color = a.color.ToString()
-            thickness = a.thickness.value
+    //    {            
+    //        semantic = a.semantic.ToString()
+    //        geometry = polygon
+    //        segments = a.segments |> PList.map (fun x -> ofSegment1 x.points) |> PList.toList //|> List.map (fun x -> ofSegment x)
+    //        color = a.color.ToString()
+    //        thickness = a.thickness.value
             
-            projection = a.projection.ToString()
-            elevation = avgHeight
-            distance = distance
+    //        projection = a.projection.ToString()
+    //        elevation = avgHeight
+    //        distance = distance
 
-            azimuth = azimuth
-            angle = angle
-            surfid = a.surfaceName
-        }  
+    //        azimuth = azimuth
+    //        angle = angle
+    //        surfid = a.surfaceName
+    //    }  
 
     //let ofDrawing (m : Drawing) : list<_Annotation> =
     //    m.finished.AsList |> List.map ofAnnotation

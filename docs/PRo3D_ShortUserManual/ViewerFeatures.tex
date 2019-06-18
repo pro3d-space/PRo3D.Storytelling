@@ -19,7 +19,7 @@ For surfaces, annotations and bookmarks it is possible to group them, as describ
 \label{sec:surfaces}
 
 The listing shows all surfaces in the scene. You can classify them in any group and subgroup layers, described in Section~\ref{sec:grouping}.
-You can select a surface by clicking on the surface's name, which turns its color to green. Then you can see the surface's properties in the properties panel and use the actions in the actions panel. 
+You can select a surface by clicking on the surface's name, which turns its color to green. Or you can set ``PickSurface'' in the actions menu (Figure~\ref{fig:Interactions}), press CTRL+LMB and pick the surface in the main view. Then you can see the surface's properties in the properties panel and use the actions in the actions panel. 
 It is also possible to select multiple surfaces by clicking the square icon in front of each surface. The selected surfaces have a green square in the list. The multiselection is used to move one ore more surfaces from one group to the active group.
 Under the surface's name is a little menu:
 \begin{itemize}
@@ -33,6 +33,13 @@ Under the surface's name is a little menu:
 	
 \end{itemize}
 
+\begin{figure}[h]
+    	\centering
+    		\includegraphics[width=1\textwidth]{pics/SurfaceTranslation.png}
+    	\caption[Surface Translation]{Translation of the selected surface along the axes of the coordinate system.}
+    	\label{fig:surfaceTranslation}
+   \end{figure}
+
 For each selected surface there are several panels as shown in Figure~\ref{fig:featureMenu} A to E. 
 
 In the surface properties panel (Figure~\ref{fig:featureMenu} A) are some adjustments possible:
@@ -45,72 +52,72 @@ In the surface properties panel (Figure~\ref{fig:featureMenu} A) are some adjust
 	\item \textit{TriangleFilter}: Excludes triangles with edges bigger than the entered value.
 	\item \textit{Scale}: 
 	\item \textit{FillMode}: You can switch between solid/ wireframe/ point rendering of the geometry.
-	\item \textit{Scalars}:
-	\item \textit{Textures}:
+	\item \textit{Scalars}: Select an attribute layer.
+	\item \textit{Textures}: Select a texture layer.
 	\item \textit{Cull Faces}:
 	\item \textit{Set Homeposition}: You set a new camera position for FlyTo.
 \end{itemize}
+\\
 
-The surfaces actions (Figure~\ref{fig:featureMenu} B) are described in Section~\ref{sec:leafActions}.
+The surfaces actions (Figure~\ref{fig:featureMenu} B) are described in Section~\ref{sec:leafActions}. \\
 
-\begin{figure}[h]
-    	\centering
-    		\includegraphics[width=1\textwidth]{pics/SurfaceTranslation.png}
-    	\caption[Surface Translation]{Translation of the selected surface along the axes of the coordinate system.}
-    	\label{fig:surfaceTranslation}
-   \end{figure}
-	
-You can translate the surface along the north-, east and up axis of the coordinate system, described in Section~\ref{sec:placeCS}.  The Translation panel is shown in Figure~\ref{fig:featureMenu} B and Figure~\ref{fig:surfaceTranslation}.
+
+You can translate the surface along the north-, east and up axis of the coordinate system, described in Section~\ref{sec:placeCS}. And you can rotate the surface around the up vector of the coordinate system. The Translation panel is shown in Figure~\ref{fig:featureMenu} B and Figure~\ref{fig:surfaceTranslation}. \\
 
 \begin{center}
-\colorbox{red}{\parbox{1.0\textwidth}{NOTE: Translation is only implemented for surfaces. Annotations, Rovers, the Coordinate System, ... will NOT move with the surface. You have to translate the surface first!}}
+\colorbox{red}{\parbox{1.0\textwidth}{NOTE: Translation and Rotation are only working for surfaces. Annotations, Rovers, the Coordinate System, ... will NOT move with the surface. You have to transform the surface first!}}
 \end{center}
 
 \begin{figure}[h]
     	\centering
     		\includegraphics[width=1\textwidth]{pics/SurfaceColorCorrection.png}
-    	\caption[Surface Color Correction]{Translation of the selected surface along the axes of the coordinate system.}
+    	\caption[Surface Color Correction]{Contrast-, brightness- and color filters applied on the selected surface.}
     	\label{fig:surfaceColorCorrection}
    \end{figure}
 
-You can apply different color correction filter to the selected surface	(Figure~\ref{fig:surfaceColorCorrection}).
+You can apply different color correction filter on the selected surface	(Figure~\ref{fig:surfaceColorCorrection}). \\
+
+\begin{figure}[h]
+    	\centering
+    		\includegraphics[width=1\textwidth]{pics/SurfaceColorLegend.png}
+    	\caption[Surface Color Legend]{A height map visualized by false color mapping.}
+    	\label{fig:surfaceColorLegend}
+   \end{figure}
+	
+Within the effort of including more and more meta data for a surface we included the so-called SurfaceAttributes(see Figure~\ref{fig:surfaceColorLegend}),
+which are specified in an .opcx file carrying the name of the respective surface.
+For now, these surface attributes mainly contain additional layers, which can either be a texture layer or an attribute layer.
+Texture layers are just alternative texture maps that can be mapped onto the surface, such as images from different filters or even sensors (spectral image). 
+Attribute maps on the other hand present an additional value for each position of a surface. 
+If a surface has an .opcx file attached its layers are listed and can be selected in the \textit{Scalars} and the \textit{Textures} combo boxes as part of the surface's property control (Figure~\ref{fig:featureMenu}). 
+In the Scalars ColorLegend panel, the color legend can be adjusted (Figure~\ref{fig:surfaceColorLegend}).
+
 %----------------------------------------------------------------------------------------
 %	SubSection: Annotations
 %----------------------------------------------------------------------------------------
+\newpage
 \subsection{Annotations}
 \label{sec:annotations}
 
 \begin{figure}[h]
     	\centering
-    		\includegraphics[width=0.5\textwidth]{pics/AnnotationsTabAI.png}
-    	\caption[Viewer Features Annotations]{The annotations tab.}
+    		\includegraphics[width=1\textwidth]{pics/AnnotationsAI.png}
+    	\caption[Viewer Features Annotations]{The annotations page.}
     	\label{fig:annoProps}
    \end{figure}
 	
-The annotations tab consists of four parts (Figure~\ref{fig:annoProps}):
-
-%----------------------------------------------------------------------------------------Annotations menu
-\subsubsection{Annotations Menu}
-
-In contrast to all other viewer features, the annotations are NOT saved in the scene file!
-There is a separate menu on top of the annotations tab:
+The listing shows all annotations in the scene. You can classify them in any group and subgroup layers, described in Section~\ref{sec:grouping}.
+You can select an annotation by clicking on the annotation's name, which turns its color to green. Or you can set ``PickAnnotation'' in the actions menu (Figure~\ref{fig:Interactions}), press CTRL+LMB and pick the annotation in the main view. Then you can see the annotation's properties in the properties panel and use the actions in the actions panel. 
+It is also possible to select multiple annotations by clicking the square icon in front of each annotation. The selected annotations have a green square in the list. The multiselection is used to move one ore more annotations from one group to the active group.\\
+Under the annotation's name is a little menu:
 \begin{itemize}
-	\item \textit{Save Annotations}: Opens a ``Save As'' window. Give your annotations xml file a name and click the ``Save'' button.
-	\item \textit{Load Annotations}: Select the annotations xml file and press the ``Open'' button. 
-	\item \textit{Clear Annotation List}: This clears the whole annotation list.
+  \item \textit{Toggle}: Toggles the annotation visible/invisible.
+	\item \textit{FlyTo}: A click on the button triggers a FlyTo animation.
 \end{itemize}
 
-%----------------------------------------------------------------------------------------Annotations listing
-\subsubsection{Annotations Listing}
+For each selected annotation there are several panels as shown in Figure~\ref{fig:annoProps} A to E. 
 
-The listing shows all annotations in the scene. You can classify them in any group and subgroup layers, described in Section~\ref{sec:grouping}.
-You can select an annotation by clicking on the annotation's name. Then you can see the annotation's properties in the properties panel and use the actions in the actions panel. 
-It is also possible to select more annotations by clicking the square icon in front of each annotation. The selected annotations have a green color in the viewer and a green square in the list. The multiselection is used to move one ore more annotations from one group to the active group.
-
-%----------------------------------------------------------------------------------------Annotations properties
-\subsubsection{Annotations Properties}
-
-The properties of the selected annotation (click on annotation's name) are shown. There you can get information and change some of the settings:
+The properties of the selected annotation (click on annotation's name) are shown in Figure~\ref{fig:annoProps} A. There you can get information and change some of the settings:
 \begin{itemize}
 	\item \textit{Geometry}: Shows the annotation mode (described in Section~\ref{sec:drawAnnotation}). This is not changeable retrospectively.
 	\item \textit{Projection}: Shows the projection which determines the direction of the picking ray (described in Section~\ref{sec:drawAnnotation}, shown in Figure~\ref{fig:projection}). This is not changeable retrospectively.
@@ -118,21 +125,45 @@ The properties of the selected annotation (click on annotation's name) are shown
 	\item \textit{Thickness}: You can change the annotation's line thickness.
 	\item \textit{Color}: You can change the annotation's color.
 	\item \textit{Text}: You can append a note. Write in the text field and press ``Enter''. The note will appear next to the annotation in the viewer. 
+	\item \textit{TextSize}: You can change the textsize.
 	\item \textit{Visible}: The annotation is visible (checked) or not (unchecked).
 	\item \textit{ShowDnS}: For each annotation with more than three picking points Dip and Strike information (Section~\ref{sec:drawAnnotation}) is available. The DnS is visible (checked) or not (unchecked).
-	\item \textit{Height}:  The height between the annotation's start and end point.
-	\item \textit{HeightDelta}: The height difference between the highest and lowest point of the projected line.
-	\item \textit{Length}: The sum of direct distances between the picking points.
-	\item \textit{WayLength}: The sum of projected distances between the picking points.
 \end{itemize}
 
-The annotations actions are described in Section~\ref{sec:leafActions}.
+The annotations actions (Figure~\ref{fig:annoProps} B) are described in Section~\ref{sec:leafActions}.\\
+
+The measurements tap (Figure~\ref{fig:annoProps} C) contains some information:
+\begin{itemize}
+	\item \textit{Position}: Shows the position (only for point annotations).
+	\item \textit{PrintPosition}: Prints the position in the console window.
+	\item \textit{Height}:  The height between the annotation's start and end point.
+	\item \textit{HeightDelta}: The height difference between the highest and lowest point of the projected line.
+	\item \textit{AvgAltitude}: The average altitude.
+	\item \textit{Length}: The sum of direct distances between the picking points.
+	\item \textit{WayLength}: The sum of projected distances between the picking points.
+	\item \textit{Bearing}: The annotation's bearing.
+	\item \textit{Slope}: The annotation's slope.
+	\item \textit{Vertical Distance}: The vertical distance between the annotation's start and end point in relation to the up vector of the coordinate system.
+	\item \textit{Horizontal Distance}: The horizontal distance between the annotation's start and end point in relation to the north- and right vector of the coordinate system.
+\end{itemize}
+
+\begin{figure}[h]
+    	\centering
+    		\includegraphics[width=1\textwidth]{pics/DnsAI.png}
+    	\caption[Viewer Features DnSColorLegend]{Colorcoding of the Dip\&Strike annotations according to their dipping angles.}
+    	\label{fig:dnSColorLegend}
+   \end{figure}
+	
+Measurements for the dip and strike annotations are shown in the Dip\&Strike tab (Figure~\ref{fig:annoProps} D and Figure~\ref{fig:dnSColorLegend} D).\\
+
+The color coding of the DnS annotation's discs and arrows is specified by the dipping angle. The color legend's parameters can be adjusted in the
+Dip\&Strike ColorLegend tab shown in Figure~\ref{fig:dnSColorLegend} E.
 
 %----------------------------------------------------------------------------------------Import AnnotationGroups
-\subsubsection{Import Annotations from old viewer versions} 
-
-To import annotations from old scene files click the ``browse'' button in the \textbf{ImportAnnotationGroups} section in the Scene Menu (Figure~\ref{fig:StartMenu}). This opens a folder browser dialog, where you can select an old scene file an click ''Open''.
-The annotations are loaded in the same group hierarchy to the ``root'' group.
+%\subsubsection{Import Annotations from old viewer versions} 
+%
+%To import annotations from old scene files click the ``browse'' button in the \textbf{ImportAnnotationGroups} section in the Scene Menu (Figure~\ref{fig:StartMenu}). This opens a folder browser dialog, where you can select an old scene file an click ''Open''.
+%The annotations are loaded in the same group hierarchy to the ``root'' group.
 
 
 %----------------------------------------------------------------------------------------
@@ -147,15 +178,15 @@ The annotations are loaded in the same group hierarchy to the ``root'' group.
 \subsection{Bookmarks}
 \label{sec:bookmarks}
 
-\begin{figure}[h]
-    	\centering
-    		\includegraphics[width=0.5\textwidth]{pics/bookmarks.png}
-    	\caption[Viewer Features Bookmarks]{The bookmarks tab.}
-    	\label{fig:bookmarks}
-   \end{figure}
+%\begin{figure}[h]
+    	%\centering
+    		%\includegraphics[width=0.5\textwidth]{pics/bookmarks.png}
+    	%\caption[Viewer Features Bookmarks]{The bookmarks tab.}
+    	%\label{fig:bookmarks}
+   %\end{figure}
 	
 Bookmarks enable the user to record a certain camera viewpoint.
-To add a new bookmark click the ``+'' button on top of the tab (Figure~\ref{fig:bookmarks}). The new bookmark is added to the active group in the bookmarks listing.
+To add a new bookmark click the ``+'' button on top of the page. The new bookmark is added to the active group in the bookmarks listing.
 To view the bookmark's properties and actions click on the bookmark's name. Clicking the ``house'' button beside the bookmark's name triggers a FlyTo. For multiselection click on the bookmark's square icons.
 
 %----------------------------------------------------------------------------------------
@@ -164,20 +195,7 @@ To view the bookmark's properties and actions click on the bookmark's name. Clic
 \subsection{Viewer Configuration}
 \label{sec:config}
 
-\begin{figure}[h]
-    	\centering
-    		\includegraphics[width=0.8\textwidth]{pics/ViewerConfigAI.png}
-    	\caption[Viewer Configuration]{The ``Config'' Menu with the ViewerConfiguration (A), Coordinate System (B) and Camera settings (C).}
-    	\label{fig:viewerConfig}
-   \end{figure}
-
-To edit the viewer properties, select ``Config'' in the viewer features drop down menu (Figure~\ref{fig:featureMenu}).
-There are three submenus in the config tab:
-\begin{itemize}
-	\item ViewerConfig (A in Figure~\ref{fig:viewerConfig})
-	\item Coordinate System (B in Figure~\ref{fig:viewerConfig})
-	\item Camera (C in Figure~\ref{fig:viewerConfig})
-\end{itemize}
+To edit the viewer properties, select the ``Config'' page.
 
 %----------------------------------------------------------------------------------------Viewer Config
 \subsubsection{ViewerConfig} 
@@ -210,15 +228,15 @@ The Camera submenu shows the Location, Forward- and Sky vector of the main camer
 \subsection{Grouping}
 \label{sec:grouping}
 
-\begin{figure}[h]
-    	\centering
-    		\includegraphics[width=0.5\textwidth]{pics/GroupsProperties.png}
-    	\caption[Viewer Features]{The group properties and actions.}
-    	\label{fig:groupProps}
-   \end{figure}
+%\begin{figure}[h]
+    	%\centering
+    		%\includegraphics[width=0.5\textwidth]{pics/GroupsProperties.png}
+    	%\caption[Viewer Features]{The group properties and actions.}
+    	%\label{fig:groupProps}
+   %\end{figure}
 
 Grouping is possible for surfaces, annotations and bookmarks.
-The ``root'' group is the highest level where you can add leafs and subgroups (Figure~\ref{fig:groupProps}).
+The ``root'' group is the highest level where you can add leafs and subgroups.
 Each group has a context menu:
 \begin{itemize}
 	\item \textit{Set Active}: The active group gets the new leaf. Per default the ``root'' is active.

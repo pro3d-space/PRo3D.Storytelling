@@ -35,8 +35,19 @@ module private Helpers =
 
 [<AutoOpen>]
 module private Events =
-    let onResize (cb : V2i -> 'msg) =
-        onEvent "onresize" ["{ X: $(document).width(), Y: $(document).height() }"] (List.head >> Pickler.json.UnPickleOfString >> cb)
+    let onResize' (cb : list<V2i -> 'msg>) =
+        onEvent' "onresize" ["{ X: $(document).width(), Y: $(document).height() }"] (fun args ->
+            args |> List.head |> Pickler.json.UnPickleOfString
+                 |> (fun s -> cb |> List.map (fun f -> f s))
+                 |> Seq.ofList
+        )
+
+    let onFocus' (cb : list<V2i -> 'msg>) =
+        onEvent' "onfocus" ["{ X: $(document).width(), Y: $(document).height()  }"] (fun args ->
+            args |> List.head |> Pickler.json.UnPickleOfString
+                 |> (fun s -> cb |> List.map (fun f -> f s))
+                 |> Seq.ofList
+        )
 
 let presentationModeConfig =
     config {
@@ -44,8 +55,8 @@ let presentationModeConfig =
         useCachedConfig false
     }
 
-let initial (runtime: IRuntime) (signature: IFramebufferSignature) messagingMailbox =
-    let model = ViewerApp.initial runtime signature messagingMailbox in {
+let initial (runtime: IRuntime) (signature: IFramebufferSignature) (startEmpty : bool) messagingMailbox minervaMailbox =
+    let model = ViewerApp.initial runtime signature startEmpty messagingMailbox minervaMailbox in {
         inner = { current = model; preview = None; output = model }
         dockConfig = Viewer.initialDockConfig
         provenance = ProvenanceApp.init <| State.create model
@@ -190,7 +201,12 @@ let renderView (model : MModel) =
     let showOverlays = model.story.selected |> Mod.map Option.isNone
 
     onBoot "$(document).trigger('resize')" (
-        body [ style "background: #1B1C1E"; onResize RenderControlResized; onKeyDown KeyDown; onKeyUp KeyUp ] [
+        body [ 
+            style "background: #1B1C1E"; 
+            onKeyDown KeyDown; onKeyUp KeyUp
+            onResize' [RenderControlResized; ViewerAction.OnResize >> AppAction]
+            onFocus' [ViewerAction.OnResize >> AppAction]
+        ] [
             model.inner.output
                 |> ViewerApp.view (Some "render") showOverlays
                 |> UI.map AppAction
@@ -258,11 +274,11 @@ let view (model : MModel) =
                 ]
     )
  
-let start (runtime: IRuntime) (signature: IFramebufferSignature) messagingMailbox sendQueue =       
+let start (runtime: IRuntime) (signature: IFramebufferSignature) (startEmpty : bool) messagingMailbox minervaMailbox sendQueue =       
     App.start {
         unpersist = Unpersist.instance
         threads   = threads
         view      = view //localhost
         update    = update runtime signature sendQueue messagingMailbox
-        initial   = initial runtime signature messagingMailbox
+        initial   = initial runtime signature startEmpty messagingMailbox minervaMailbox
     }

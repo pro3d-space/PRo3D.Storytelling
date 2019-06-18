@@ -356,23 +356,21 @@ let storyboardView (model : MModel) =
         onBoot "disableClickPropagation($('#__ID__'))" x
 
     let addSlideButton (before : SlideId option) =
-        onBoot "initAddButton($('#__ID__'))" (
-            div [clazz "add button"] [
-                div [clazz "ui icon button first"] [
-                    i [clazz "add icon"] []
+        div [clazz "add button"] [
+            div [clazz "ui icon button first"] [
+                i [clazz "add icon"] []
+            ]
+            div [clazz "ui vertical buttons second"] [
+                div [clazz "ui button"; onClick (fun _ -> AddFrameSlide before)] [
+                    i [clazz "camera icon"] []
+                    text "Frame"                        
                 ]
-                div [clazz "ui vertical buttons second"] [
-                    div [clazz "ui button"; onClick (fun _ -> AddFrameSlide before)] [
-                        i [clazz "camera icon"] []
-                        text "Frame"                        
-                    ]
-                    div [clazz "ui button"; onClick (fun _ -> AddTextSlide before)] [
-                        i [clazz "list icon"] []
-                        text "Text"
-                    ]
+                div [clazz "ui button"; onClick (fun _ -> AddTextSlide before)] [
+                    i [clazz "list icon"] []
+                    text "Text"
                 ]
             ]
-        )   
+        ]
 
     let mkCollapsingFrame (model : MModel) (slide : MSlide) =
         // TODO: Optimize! This depends on the whole story record!

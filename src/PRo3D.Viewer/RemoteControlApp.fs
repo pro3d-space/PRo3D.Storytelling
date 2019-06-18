@@ -4,6 +4,7 @@ open Aardvark.Base
 open Aardvark.UI
 open RemoteControlModel
 open System
+open PRo3D.Base
 
 type ClientStatistics =
     {
@@ -41,7 +42,7 @@ module RemoteControlApp =
         let clientStatistic = 
             let path = sprintf "%s/rendering/stats.json" baseAddress
             Log.line "[RemoteControl] querying rendering stats at: %s" path
-            let result = wc.DownloadString(path)
+            let result = wc.DownloadString(path) 
             let clientBla : list<ClientStatistics> =
                 Pickler.unpickleOfJson  result
             match clientBla with
