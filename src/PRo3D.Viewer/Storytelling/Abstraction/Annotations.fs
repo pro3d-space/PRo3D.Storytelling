@@ -1,4 +1,4 @@
-﻿namespace Provenance.Reduced
+namespace Provenance.Abstraction.Annotations
 
 open System
 
@@ -7,59 +7,11 @@ open Aardvark.Base.Incremental
 open Aardvark.UI
 
 open PRo3D
-open PRo3D.Drawing
-open PRo3D.Viewer
-open PRo3D.Groups
 open PRo3D.Versioned
+open PRo3D.Groups
 
-open Model
-
-type OCameraView = CameraView
-
-// We need to redefine this because we want structural equality but CameraView is a class :/
-[<DomainType>]
-type CameraView = {
-    sky : V3d
-    location : V3d
-    forward : V3d
-    up : V3d
-    right : V3d
-}
-
-type OMessage = AppAction
-
-[<DomainType>]
-type Message =
-    | AddAnnotation
-    | EditAnnotation
-    | DeleteAnnotation
-    | LoadAnnotations
-    | GroupAction
-    | Unknown 
-
-    override x.ToString () =
-        match x with
-            | AddAnnotation     -> "A"
-            | EditAnnotation    -> "E"
-            | DeleteAnnotation  -> "D"
-            | LoadAnnotations   -> "L"
-            | GroupAction       -> "G"
-            | Unknown           -> ""
-
-// We want to compare the raw content of lists with the (=) operator; plist contains
-// indices that might change by removing and adding elements, while the elements themselves remain
-// the same (i think thats the case???).
-[<CustomEquality; NoComparison>]
-type rlist<'a when 'a : equality> =
-    { inner : 'a plist }
-
-    override x.GetHashCode () =
-        x.inner |> PList.toList |> hash
-
-    override x.Equals y =
-        match y with 
-            | :? rlist<'a> as y -> PList.toList x.inner = PList.toList y.inner
-            | _ -> false
+open Provenance.Abstraction.RList
+open Provenance.Abstraction.Camera
 
 type OSegment = Segment
 
@@ -134,76 +86,6 @@ type Annotations = {
     flat : hmap<Guid, Annotation>
     root : AnnotationGroup
 }
-
-type OState = AppModel
-
-[<DomainType>]
-type State = {
-    annotations : Annotations
-}
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module CameraView =
-    
-    let create (v : OCameraView) : CameraView =
-        { sky = v.Sky
-          location = v.Location
-          forward = v.Forward
-          up = v.Up
-          right = v.Right }
-
-    let restore (v : CameraView) : OCameraView =
-        OCameraView (v.sky, v.location, v.forward, v.up, v.right)
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module Message =
-    
-    let create (current : State) (next : State) (msg : OMessage) =
-        let f1 = current.annotations.flat
-        let f2 = next.annotations.flat
-        let c1 = HMap.count f1
-        let c2 = HMap.count f2
-
-        match msg with
-            | ImportAnnotationGroups _
-            | DrawingMessage (LoadVersioned _) ->
-                LoadAnnotations
-            | _ ->
-                if c2 > c1 then
-                    AddAnnotation                   // One or more annotations were added
-                else if c2 < c1 then
-                    DeleteAnnotation                // One or more annotations were deleted
-                else
-                    if f1 <> f2 then
-                        EditAnnotation              // The map of annotations changed, i.e. at least one annotation was edited
-                    else
-                        if current <> next then
-                            GroupAction             // The annotations remained unchanged, so the grouping must have changed
-                        else
-                            Unknown                 // No relevant changes detected
-
-    // Returns if two messages of the given type can be coalesced; i.e. can
-    // an existing node with the same message be modified instead of adding a new node
-    let coalesce = function
-        | AddAnnotation -> false
-        | _ -> true
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module OMessage =
-
-    let isRelevant = function
-        | DrawingMessage _
-        | AnnotationMessage _ 
-        | AnnotationGroupsMessageViewer _ 
-        | ImportAnnotationGroups _ -> true
-        | _ -> false
-
-    let isCamera = function
-        | SetCamera _
-        | SetCameraAndFrustum _
-        | SetCameraAndFrustum2 _
-        | NavigationMessage _ -> true
-        | _ -> false
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Segment =
@@ -308,7 +190,6 @@ module Annotations =
             root = a.rootGroup |> AnnotationGroup.create a
         }
         
-
     let restore (current : OAnnotations) (a : Annotations) : OAnnotations =
 
         let checkSelection (contains : Guid -> 'a -> bool) (collection : 'a) (def : TreeSelection) (s : TreeSelection) =
@@ -336,12 +217,3 @@ module Annotations =
                          activeChild = current.activeChild |> (checkSelection HMap.containsKey a.flat Group.initChildSelection)
                          activeGroup = current.activeGroup |> (checkSelection HSet.contains groups Group.initGroupSelection)
         }
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module State =
-    
-    let create (s : OState) =
-        { annotations = Annotations.create s.drawing.annotations }
-
-    let restore (current : OState) (s : State) =
-        { current with drawing = { current.drawing with annotations = Annotations.restore current.drawing.annotations s.annotations } }

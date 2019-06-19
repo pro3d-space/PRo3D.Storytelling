@@ -6,7 +6,7 @@ open Aardvark.Application
 open Aardvark.UI.Primitives
 
 open Provenance
-open Provenance.Reduced
+open Provenance.Abstraction.Camera
 open Story
 open View
 open Preview

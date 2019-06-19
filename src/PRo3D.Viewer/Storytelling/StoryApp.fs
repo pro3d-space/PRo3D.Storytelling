@@ -4,10 +4,11 @@ open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.UI
 
+open Provenance.Abstraction.State
+open Provenance.Abstraction.Camera
 open Story
 open Model
 open Provenance
-open Provenance.Reduced
 open Annotations
 open Thumbnail
 open View

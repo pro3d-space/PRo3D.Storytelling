@@ -7,7 +7,7 @@ open Aardvark.Service
 open Model
 open Session
 open Provenance
-open Provenance.Reduced
+open Provenance.Abstraction.State
 open Bookmarks
 open Story
 open View

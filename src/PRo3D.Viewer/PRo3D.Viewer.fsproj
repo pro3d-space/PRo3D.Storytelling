@@ -143,7 +143,12 @@
     <Compile Include="Storytelling\Decision.fs" />
     <Compile Include="Storytelling\ZTree.fs" />
     <Compile Include="Storytelling\AppModel.fs" />
-    <Compile Include="Storytelling\Reduced.fs" />
+    <Compile Include="Storytelling\Abstraction\RList.fs" />
+    <Compile Include="Storytelling\Abstraction\Camera.fs" />
+    <Compile Include="Storytelling\Abstraction\Annotations.fs" />
+    <Compile Include="Storytelling\Abstraction\Surfaces.fs" />
+    <Compile Include="Storytelling\Abstraction\State.fs" />
+    <Compile Include="Storytelling\Abstraction\Message.fs" />
     <Compile Include="Storytelling\AnnotationModel.fs" />
     <Compile Include="Storytelling\AnnotationApp.fs" />
     <Compile Include="Storytelling\ProvenanceModel.fs" />

@@ -5,7 +5,6 @@ open System.Collections.Generic
 open Aardvark.Base
 open Aardvark.Base.Incremental
 
-open Model
 open Provenance
 open Annotations
 open Thumbnail

@@ -5,7 +5,7 @@ open Aardvark.Base.Incremental
 open Aardvark.UI.Animation
 
 open Animation
-open Provenance.Reduced
+open Provenance.Abstraction.Camera
 
 [<AutoOpen>]
 module Helpers =
