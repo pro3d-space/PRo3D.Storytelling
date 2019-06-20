@@ -11,10 +11,24 @@ open PRo3D.Groups
 type OSurface = Surface
 
 [<DomainType>]
-type Surface = {
-    visible : bool
-    priority : float
-}
+type Surface = 
+    { visible : bool
+      priority : float }
+
+    static member def = { visible = true; priority = 0.0 }
+
+    // Comparing surfaces is a bit tricky because we don't actually keep track of all surfaces
+    // If a surface is missing in an abstraction state, it is assumed to have the default values defined above
+    // Two states differ only if they explicitly assign different values to the same surface, or if one assigns non-default values
+    // while the other state does not contain the surface (i.e. implicitly assigns default values)
+    static member compareWithDefault f a b =
+        f (a |> Option.defaultValue Surface.def) (b |> Option.defaultValue Surface.def)
+
+    static member equalWithDefault =
+        Surface.compareWithDefault (=)
+
+    static member comparePriorityWithDefault =
+        Surface.compareWithDefault (fun a b -> a.priority = b.priority)
 
 type OSurfaces = GroupsModel
 
@@ -22,24 +36,20 @@ type OSurfaces = GroupsModel
 type Surfaces = 
     { flat : hmap<Guid, Surface> }
 
+    member x.difference' f y =
+        HMap.map2 (fun _ a b -> f a b) x.flat y.flat
+            |> HMap.filter (fun _ v -> not v)
+            |> HMap.keys |> HSet.toList
+
+    member x.difference y =
+        x.difference' Surface.equalWithDefault y
+
     override x.GetHashCode () =
         hash x.flat
 
     override x.Equals y =
-        let def = {
-            visible = true
-            priority = 0.0
-        }
-
-        // Comparing surfaces is a bit tricky because we don't actually keep track of all surfaces
-        // If a surface is missing in a abstraction state, it is assumed to have the default values defined above
-        // Two states differ only if they explicitly assign different values to the same surface, or if one assigns non-default values
-        // while the other state does not contain the surface (i.e. implicitly assigns default values)
-        let cmp a b =
-            (a |> Option.defaultValue def) = (b |> Option.defaultValue def)
-
         match y with 
-            | :? Surfaces as y -> HMap.map2 (fun _ a b -> cmp a b) x.flat y.flat |> HMap.forall (fun _ x -> x)
+            | :? Surfaces as y -> y |> x.difference |> List.isEmpty
             | _ -> false
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -60,7 +70,7 @@ module Surfaces =
 
     let private getSurface = function
         | Surfaces s -> s
-        | _ -> raise (ArgumentException ("Expected an annotation"))
+        | _ -> raise (ArgumentException ("Expected a surface"))
 
     let create (s : OSurfaces) = {
         flat = s.flat |> HMap.map (fun _ l -> l |> getSurface |> Surface.create)
@@ -69,9 +79,16 @@ module Surfaces =
     let restore (current : OSurfaces) (surfaces : Surfaces) : OSurfaces =
         let f = 
             current.flat |> HMap.map (fun k s ->
-                match surfaces.flat |> HMap.tryFind k with
-                    | None -> s
-                    | Some x -> Surfaces (Surface.restore (getSurface s) x)
+                surfaces.flat |> HMap.tryFind k 
+                              |> Option.defaultValue Surface.def
+                              |> Surface.restore (getSurface s)
+                              |> Surfaces
             )
 
         { current with flat = f }
+
+    let difference (a : Surfaces) (b : Surfaces) =
+        a.difference b
+
+    let difference' (f : Surface option -> Surface option -> bool) (a : Surfaces) (b : Surfaces) =
+        a.difference' f b

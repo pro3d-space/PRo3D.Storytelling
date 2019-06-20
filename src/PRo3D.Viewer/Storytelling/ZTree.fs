@@ -100,6 +100,20 @@ type ZTree<'a> =
                             |> List.collect (fun t -> t.Filter predicate)
             ]
 
+    member x.Map (f : 'a -> 'b) =
+        let rec mapNode = function
+            | Node (value, children) -> Node (f value, List.map mapNode children)
+
+        let rec mapPath = function
+            | Top value ->
+                Top (f value)
+            | Inner (value, left, up, right) ->
+                Inner (f value, List.map mapNode left, mapPath up, List.map mapNode right)
+
+        match x with
+            | Empty -> Empty
+            | Zipped (n, p) -> Zipped (mapNode n, mapPath p)
+
     // Find methods use filter, may be optimized
     member x.TryFind (predicate : 'a -> bool) =
         match x.Filter predicate with
@@ -226,6 +240,8 @@ module ZTree =
     let children (tree : ZTree<'a>) = tree.Children
 
     let filter (predicate : 'a -> bool) (tree : ZTree<'a>) = tree.Filter predicate
+
+    let map (f : 'a -> 'b) (tree : ZTree<'a>) = tree.Map f
 
     let tryFind (predicate : 'a -> bool) (tree : ZTree<'a>) = tree.TryFind predicate
 

@@ -1,30 +1,123 @@
 ﻿module SessionApp
 
+open System
+
 open Aardvark.Base
 open Aardvark.UI
 open Aardvark.Service
 
+open PRo3D.Groups
+
 open Model
 open Session
 open Provenance
+open Provenance.Abstraction.Annotations
+open Provenance.Abstraction.Surfaces
 open Provenance.Abstraction.State
+open Provenance.Abstraction.Message
 open Bookmarks
 open Story
 open View
 
 [<AutoOpen>]
 module private Helpers =
+    
     open MBrace.FsPickler
     open Aardvark.UI.Primitives
+
+    // We have to save the name of the surfaces since the GUID is not
+    // persistent. Thus, after loading a session, the GUIDs have to be adjusted based
+    // on the names. Obviously, a better solution would be to use hashes as identifiers instead
+    // of GUIDs
+    type Surfaces' = { 
+        flat : hmap<Guid, Surface * string> 
+    }
+
+    type State' = {
+        annotations : Annotations
+        surfaces : Surfaces'
+    }
+
+    type Node' = {
+        id : NodeId
+        state : State'
+        message : Option<Message>
+    }
 
     type SessionModel = {
         view : View
         dockConfig : DockConfig
-        provenance : Node ztree
+        provenance : Node' ztree
         story : Story
         bookmarks : Bookmarks
         renderControlSize : V2i
     }
+
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module Node =
+
+        let create (model : Model) (node : Node) =
+            let getSurfaceName (k : Guid) =
+                let inner = Model.getCurrentModel model
+                let surfaces = inner.scene.surfacesModel.surfaces
+
+                let getLeafName = function
+                    | Surfaces s -> Some s.name
+                    | _ -> None
+
+                surfaces.flat |> HMap.tryFind k
+                              |> Option.bind getLeafName
+                              |> Option.defaultValue ""
+
+            let surf (s : Surfaces) =
+                { flat = s.flat |> HMap.map (fun k v -> v, getSurfaceName k) }
+
+            let state (s : State) =
+                { annotations = s.annotations
+                  surfaces = surf s.surfaces }
+
+            { id = node.id
+              state = state node.state
+              message = node.message }
+
+        let restore (model : Model) (node : Node') : Node =
+            let findGuid (name : string) =
+                let inner = Model.getCurrentModel model
+                let surfaces = inner.scene.surfacesModel.surfaces
+
+                let checkName = function
+                    | Surfaces s -> s.name = name
+                    | _ -> false
+
+                surfaces.flat |> HMap.filter (fun _ s -> checkName s)
+                              |> HMap.keys |> HSet.toList
+                              |> List.tryHead
+
+            let surf (s : Surfaces') : Surfaces =
+
+                // Find surfaces with outdated GUIDs
+                let outdated = s.flat |> HMap.map (fun _ (v, n) -> findGuid n, v)
+                                      |> HMap.choose (fun _ (g, v)-> g |> Option.map (fun x -> x, v))
+
+                // Remove the names
+                let f = s.flat |> HMap.map (fun _ (v, _) -> v)
+
+                // Remove outdated elements and add again with new GUIDs
+                let removed =
+                    outdated |> HMap.keys |> HSet.fold (fun x k -> x |> HMap.remove k) f
+
+                let updated =
+                    outdated |> HMap.values |> Seq.fold (fun x (k, v) -> x |> HMap.add k v) removed
+
+                { flat = updated }
+
+            let state (s : State') : State =
+                { annotations = s.annotations
+                  surfaces = surf s.surfaces }
+
+            { id = node.id
+              state = state node.state 
+              message = node.message }
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module SessionModel =
@@ -32,7 +125,7 @@ module private Helpers =
         let create (model : Model) = {
             view = model.view
             dockConfig = model.dockConfig
-            provenance = model.provenance.tree
+            provenance = model.provenance.tree |> ZTree.map (Node.create model)
             story = model.story
             bookmarks = model.bookmarks
             renderControlSize = model.renderControlSize
@@ -42,7 +135,7 @@ module private Helpers =
             let m = {
                 current with
                     dockConfig = model.dockConfig
-                    provenance = {current.provenance with tree = model.provenance }
+                    provenance = {current.provenance with tree = model.provenance |> ZTree.map (Node.restore current) }
                     story = model.story
                     bookmarks = model.bookmarks
                     renderControlSize = model.renderControlSize

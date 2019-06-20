@@ -217,3 +217,13 @@ module Annotations =
                          activeChild = current.activeChild |> (checkSelection HMap.containsKey a.flat Group.initChildSelection)
                          activeGroup = current.activeGroup |> (checkSelection HSet.contains groups Group.initGroupSelection)
         }
+
+    // Computes the difference (i.e. the change set) between two given
+    // annotations records; this does only consider the annotations themselves, the
+    // group structure is ignored
+    let difference (a : Annotations) (b : Annotations) =
+        let cmp x y = Option.map2 (=) x y |> Option.defaultValue false
+
+        HMap.map2 (fun _ x y -> cmp x y) a.flat b.flat
+            |> HMap.filter (fun _ v -> not v)
+            |> HMap.keys |> HSet.toList

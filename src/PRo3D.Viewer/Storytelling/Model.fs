@@ -94,6 +94,9 @@ module InnerModel =
                       |> Option.map (fun p -> p.model)
                       |> Option.defaultValue model.current
 
+    let getCurrentModel (model : InnerModel) =
+        model.current
+
     let setCamera (camera : CameraView) (model : InnerModel) =
         { model with current = model.current |> AppModel.setCamera camera }
 
@@ -146,6 +149,9 @@ module Model =
 
     let getActiveModel (mode : Mode) (model : Model) =
         model.inner |> InnerModel.getActiveModel mode
+
+    let getCurrentModel (model : Model) =
+        model.inner |> InnerModel.getCurrentModel
 
     let setCamera (camera : CameraView) (model : Model) =
         { model with inner = model.inner |> InnerModel.setCamera camera }
