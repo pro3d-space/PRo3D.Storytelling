@@ -63,3 +63,10 @@ module Bookmark =
             node = node
             view = view
         }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Bookmarks =
+
+    let isNodeReferenced (node : Node) (b : Bookmarks) =
+        b.list |> PList.tryFind (fun x -> x.node.id = node.id)
+               |> Option.isSome

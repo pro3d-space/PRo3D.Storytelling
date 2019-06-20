@@ -77,7 +77,7 @@ let update (runtime : IRuntime) (signature: IFramebufferSignature)
                 model |> ViewApp.update a
 
             | ProvenanceAction a ->
-                let p = model.provenance |> ProvenanceApp.update model.story a
+                let p = model.provenance |> ProvenanceApp.update model.story model.bookmarks a
 
                 match a with
                     | Goto _ ->
@@ -132,7 +132,7 @@ let update (runtime : IRuntime) (signature: IFramebufferSignature)
                             let current = Provenance.state model.provenance
                             let msg = Message.create current next x
 
-                            model.provenance |> ProvenanceApp.update model.story (Update (next, msg))
+                            model.provenance |> ProvenanceApp.update model.story model.bookmarks (Update (next, msg))
             
                 model |> Lens.set (Model.Lens.inner |. InnerModel.Lens.current) s
                       |> Lens.set Model.Lens.provenance p

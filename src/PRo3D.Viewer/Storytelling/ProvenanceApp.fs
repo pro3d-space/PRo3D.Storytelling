@@ -62,7 +62,7 @@ module private Helpers =
                     | t::_ -> Decided t
             ) 
 
-        let coalesceWithCurrent (story : Story) (state : State) (msg : Message) (input : Decision<Node ztree>) =
+        let coalesceWithCurrent (story : Story) (bookmarks : Bookmarks) (state : State) (msg : Message) (input : Decision<Node ztree>) =
             input |> Decision.map (fun tree ->
                 let node = tree.Value
 
@@ -71,6 +71,7 @@ module private Helpers =
                          |> Option.map (fun m -> m = msg && Message.coalesce m)
                          |> Option.defaultValue false
                          |> (&&) (story |> Story.isNodeReferenced node true |> not)
+                         |> (&&) (bookmarks |> Bookmarks.isNodeReferenced node |> not)
                          |> (&&) (ZTree.isLeaf tree)                
 
                 match coal with
@@ -81,13 +82,14 @@ module private Helpers =
                         Undecided tree
             )
 
-        let coalesceWithChild (story : Story)  (state : State) (msg : Message) (input : Decision<Node ztree>) =
+        let coalesceWithChild (story : Story) (bookmarks : Bookmarks) (state : State) (msg : Message) (input : Decision<Node ztree>) =
             input |> Decision.map (fun tree ->
                 let c =
                     tree |> ZTree.filterChildren (fun n ->
                                 Message.coalesce msg &&
                                 n.message = Some msg && 
-                                story |> Story.isNodeReferenced n true |> not
+                                story |> Story.isNodeReferenced n true |> not &&
+                                bookmarks |> Bookmarks.isNodeReferenced n |> not
                             )
                             |> List.filter ZTree.isLeaf
 
@@ -127,7 +129,7 @@ let init (state : State) =
       hovered = None 
       reference = None }
 
-let rec update (story : Story) (msg : ProvenanceAction) (p : Provenance) =
+let rec update (story : Story) (bookmarks : Bookmarks) (msg : ProvenanceAction) (p : Provenance) =
     match msg with
         | Update (next, msg) ->
             let t =
@@ -136,8 +138,8 @@ let rec update (story : Story) (msg : ProvenanceAction) (p : Provenance) =
                     |> Rules.checkStateChanged next
                     |> Rules.checkParent next
                     |> Rules.checkChildren next
-                    |> Rules.coalesceWithCurrent story next msg
-                    //|> Rules.coalesceWithChild story next msg
+                    |> Rules.coalesceWithCurrent story bookmarks next msg
+                    //|> Rules.coalesceWithChild story bookmarks next msg
                     |> Rules.appendNew next msg
                     |> Decision.get
 
@@ -226,8 +228,7 @@ let view (s : MStory) (b : MBookmarks) (p : MProvenance) =
                 | Some Story ->
                     s |> Story.isNodeReferenced n false
                 | Some Bookmarks ->
-                    b.list |> PList.tryFind (fun x -> x.node.id = n.id)
-                           |> Option.isSome
+                    b |> Bookmarks.isNodeReferenced n
 
         let props n = 
             ("isReferenced", n |> isReferenced |> string) :: (Provenance.Node.properties n)

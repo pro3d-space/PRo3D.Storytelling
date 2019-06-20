@@ -82,7 +82,7 @@ module private Helpers =
 
         let restoreContent = function
             | FrameContent (node, view, _) ->
-                let p = model.provenance |> ProvenanceApp.update model.story (Goto node.id)
+                let p = model.provenance |> ProvenanceApp.update model.story model.bookmarks (Goto node.id)
                 let m = State.restore model.inner.current <| Provenance.state p
 
                 model |> Lens.set Model.Lens.provenance p
@@ -215,12 +215,12 @@ let update (msg : StoryAction) (model : Model) =
             let slide = model.story |> Story.findById id
             match slide.content with
                 | FrameContent (n, _, _) ->
-                    model |> Lens.update Model.Lens.provenance (ProvenanceApp.update model.story <| SetHighlight n.id)
+                    model |> Lens.update Model.Lens.provenance (ProvenanceApp.update model.story model.bookmarks <| SetHighlight n.id)
                 | _ ->
                     model
 
         | MouseLeaveSlide ->
-            model |> Lens.update Model.Lens.provenance (ProvenanceApp.update model.story RemoveHighlight)
+            model |> Lens.update Model.Lens.provenance (ProvenanceApp.update model.story model.bookmarks RemoveHighlight)
 
         | ThumbnailAction (id, a) ->
             model |> ThumbnailApp.update id a

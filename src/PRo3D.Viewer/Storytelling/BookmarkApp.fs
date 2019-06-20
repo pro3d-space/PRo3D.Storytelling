@@ -27,7 +27,7 @@ module private Helpers =
     // Restores the state and view from a bookmark
     let restore (animate : bool) (b : Bookmark) (model : Model) =
 
-        let p = model.provenance |> ProvenanceApp.update model.story (Provenance.Goto b.node.id)
+        let p = model.provenance |> ProvenanceApp.update model.story model.bookmarks (Provenance.Goto b.node.id)
         let m = State.restore model.inner.current <| Provenance.state p
 
         model |> StoryApp.update DeselectSlide
@@ -74,11 +74,11 @@ let update (msg : BookmarkAction) (model : Model) =
 
         | MouseEnter id ->
             model |> updateById (fun _ b m ->
-                m |> Lens.update Model.Lens.provenance (ProvenanceApp.update m.story <| SetHighlight b.node.id)
+                m |> Lens.update Model.Lens.provenance (ProvenanceApp.update m.story m.bookmarks <| SetHighlight b.node.id)
             ) id
 
         | MouseLeave ->
-            model |> Lens.update Model.Lens.provenance (ProvenanceApp.update model.story RemoveHighlight)
+            model |> Lens.update Model.Lens.provenance (ProvenanceApp.update model.story model.bookmarks RemoveHighlight)
 
         | CreateStory ->
             let slides =
