@@ -3,7 +3,7 @@
 open Aardvark.Base.Incremental
 open Aardvark.UI.Animation
 
-open Provenance.Abstraction.Camera
+open Abstraction.Camera
 
 [<DomainType>]
 type Animation = {

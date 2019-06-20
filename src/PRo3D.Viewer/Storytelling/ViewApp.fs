@@ -3,7 +3,7 @@
 open Aardvark.Base
 open Aardvark.Base.Incremental
 
-open Provenance.Abstraction.Camera
+open Abstraction.Camera
 
 open View
 open Model

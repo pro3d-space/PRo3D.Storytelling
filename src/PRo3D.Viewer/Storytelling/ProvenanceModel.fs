@@ -4,8 +4,8 @@ open System
 open Aardvark.Base
 open Aardvark.Base.Incremental
 
-open Provenance.Abstraction.State
-open Provenance.Abstraction.Message
+open Abstraction.State
+open Abstraction.Message
 
 type NodeId = 
     private NodeId of Guid with

@@ -1,4 +1,4 @@
-﻿namespace Provenance.Abstraction.Message
+﻿namespace Abstraction.Message
 
 open System
 
@@ -11,9 +11,9 @@ open PRo3D.Surfaces
 open PRo3D.Groups
 
 open Model
-open Provenance.Abstraction.State
-open Provenance.Abstraction.Annotations
-open Provenance.Abstraction.Surfaces
+open Abstraction.State
+open Abstraction.Annotations
+open Abstraction.Surfaces
 
 type OMessage = AppAction
 

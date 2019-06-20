@@ -13,13 +13,11 @@ function initCollapsingFrame(frame) {
 			frame.addClass('expanded')
 		} else {
 			frame.removeClass('expanded');
-			resetButton(frame.find('.add.button'));
 		}
 	});
 
 	frame.mouseleave( function () {
 		frame.removeClass('expanded');
-		resetButton(frame.find('.add.button'));
 	});
 
 	setupDropEvents(frame);

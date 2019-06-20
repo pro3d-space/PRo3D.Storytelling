@@ -11,10 +11,9 @@ open PRo3D.Groups
 open Model
 open Session
 open Provenance
-open Provenance.Abstraction.Annotations
-open Provenance.Abstraction.Surfaces
-open Provenance.Abstraction.State
-open Provenance.Abstraction.Message
+open Abstraction.Presentation
+open Abstraction.Surfaces
+open Abstraction.State
 open Bookmarks
 open Story
 open View
@@ -29,95 +28,85 @@ module private Helpers =
     // persistent. Thus, after loading a session, the GUIDs have to be adjusted based
     // on the names. Obviously, a better solution would be to use hashes as identifiers instead
     // of GUIDs
-    type Surfaces' = { 
-        flat : hmap<Guid, Surface * string> 
-    }
-
-    type State' = {
-        annotations : Annotations
-        surfaces : Surfaces'
-    }
-
-    type Node' = {
-        id : NodeId
-        state : State'
-        message : Option<Message>
-    }
+    type SurfaceNames = hmap<Guid, string>
 
     type SessionModel = {
         view : View
         dockConfig : DockConfig
-        provenance : Node' ztree
+        provenance : Node ztree
         story : Story
         bookmarks : Bookmarks
+        surfaceNames : SurfaceNames
         renderControlSize : V2i
     }
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module Surfaces =
+
+        let getNames (model : Model) : SurfaceNames =
+            let inner = Model.getCurrentModel model
+            let surfaces = inner.scene.surfacesModel.surfaces.flat |> Leaf.toSurfaces
+
+            surfaces |> HMap.map (fun _ v -> v.name)
+
+        let adjustGuids (model : Model) (session : SessionModel) (s : hmap<Guid, 'a>) =
+
+            let getName (k : Guid) =
+                session.surfaceNames |> HMap.tryFind k
+
+            let findGuid (name : string) =
+                model |> getNames
+                      |> HMap.filter (fun _ x -> x = name)
+                      |> HMap.keys |> HSet.toList
+                      |> List.tryHead
+
+            // Find surfaces with outdated GUIDs
+            let outdated = s |> HMap.map (fun k v -> k |> getName |> Option.bind findGuid, v)
+                             |> HMap.choose (fun _ (g, v)-> g |> Option.map (fun x -> x, v))
+
+            // Remove outdated elements and add again with new GUIDs
+            let removed =
+                outdated |> HMap.keys |> HSet.fold (fun x k -> x |> HMap.remove k) s
+
+            outdated |> HMap.values |> Seq.fold (fun x (k, v) -> x |> HMap.add k v) removed
+
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module Node =
 
-        let create (model : Model) (node : Node) =
-            let getSurfaceName (k : Guid) =
-                let inner = Model.getCurrentModel model
-                let surfaces = inner.scene.surfacesModel.surfaces
+        let adjustSurfaceGuids (model : Model) (session : SessionModel) (node : Node) : Node =
+            let l = Node.Lens.state |. State.Lens.surfaces |. Surfaces.Lens.flat
+            node |> Lens.update l (Surfaces.adjustGuids model session)
 
-                let getLeafName = function
-                    | Surfaces s -> Some s.name
-                    | _ -> None
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module View =
 
-                surfaces.flat |> HMap.tryFind k
-                              |> Option.bind getLeafName
-                              |> Option.defaultValue ""
+        let adjustSurfaceGuids (model : Model) (session : SessionModel) (view : View) : View =
+            let l = View.Lens.state |. ViewParams.Lens.presentation |. PresentationParams.Lens.surfaces
+            view |> Lens.update l (Surfaces.adjustGuids model session)
 
-            let surf (s : Surfaces) =
-                { flat = s.flat |> HMap.map (fun k v -> v, getSurfaceName k) }
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module Story =
 
-            let state (s : State) =
-                { annotations = s.annotations
-                  surfaces = surf s.surfaces }
+        let adjustSurfaceGuids (model : Model) (session : SessionModel) (story : Story) : Story =
 
-            { id = node.id
-              state = state node.state
-              message = node.message }
+            let updateViewParams (v : ViewParams) =
+                let l = ViewParams.Lens.presentation |. PresentationParams.Lens.surfaces
+                v |> Lens.update l (Surfaces.adjustGuids model session)
 
-        let restore (model : Model) (node : Node') : Node =
-            let findGuid (name : string) =
-                let inner = Model.getCurrentModel model
-                let surfaces = inner.scene.surfacesModel.surfaces
+            let updateContent = function
+                | FrameContent (n, v, a) -> FrameContent (n |> Node.adjustSurfaceGuids model session, updateViewParams v, a)
+                | x -> x
 
-                let checkName = function
-                    | Surfaces s -> s.name = name
-                    | _ -> false
+            let updateSlide (s : Slide) =
+                s |> Lens.update Slide.Lens.content updateContent
 
-                surfaces.flat |> HMap.filter (fun _ s -> checkName s)
-                              |> HMap.keys |> HSet.toList
-                              |> List.tryHead
+            let updateSelected (s : Story) =
+                match s.selected with
+                    | None -> s
+                    | Some x -> s |> Story.selectById (Some x.current.id)
 
-            let surf (s : Surfaces') : Surfaces =
-
-                // Find surfaces with outdated GUIDs
-                let outdated = s.flat |> HMap.map (fun _ (v, n) -> findGuid n, v)
-                                      |> HMap.choose (fun _ (g, v)-> g |> Option.map (fun x -> x, v))
-
-                // Remove the names
-                let f = s.flat |> HMap.map (fun _ (v, _) -> v)
-
-                // Remove outdated elements and add again with new GUIDs
-                let removed =
-                    outdated |> HMap.keys |> HSet.fold (fun x k -> x |> HMap.remove k) f
-
-                let updated =
-                    outdated |> HMap.values |> Seq.fold (fun x (k, v) -> x |> HMap.add k v) removed
-
-                { flat = updated }
-
-            let state (s : State') : State =
-                { annotations = s.annotations
-                  surfaces = surf s.surfaces }
-
-            { id = node.id
-              state = state node.state 
-              message = node.message }
+            story |> Lens.update Story.Lens.slides (PList.map updateSlide)
+                  |> updateSelected
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module SessionModel =
@@ -125,9 +114,10 @@ module private Helpers =
         let create (model : Model) = {
             view = model.view
             dockConfig = model.dockConfig
-            provenance = model.provenance.tree |> ZTree.map (Node.create model)
+            provenance = model.provenance.tree
             story = model.story
             bookmarks = model.bookmarks
+            surfaceNames = Surfaces.getNames model
             renderControlSize = model.renderControlSize
         }
 
@@ -135,11 +125,11 @@ module private Helpers =
             let m = {
                 current with
                     dockConfig = model.dockConfig
-                    provenance = {current.provenance with tree = model.provenance |> ZTree.map (Node.restore current) }
-                    story = model.story
+                    provenance = {current.provenance with tree = model.provenance |> ZTree.map (Node.adjustSurfaceGuids current model) }
+                    story = model.story                                           |> Story.adjustSurfaceGuids current model
                     bookmarks = model.bookmarks
                     renderControlSize = model.renderControlSize
-                    view = model.view
+                    view = model.view                                             |> View.adjustSurfaceGuids current model
             }
 
             m |> Lens.set (Model.Lens.inner |. InnerModel.Lens.current) (State.restore m.inner.current <| Provenance.state m.provenance)

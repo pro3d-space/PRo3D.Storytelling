@@ -6,8 +6,8 @@ open Aardvark.UI
 
 open Bookmarks
 open Provenance
-open Provenance.Abstraction.State
-open Provenance.Abstraction.Message
+open Abstraction.State
+open Abstraction.Message
 open Story
 
 [<AutoOpen>]

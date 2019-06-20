@@ -6,7 +6,7 @@ open Aardvark.UI
 
 open Model
 open Provenance
-open Provenance.Abstraction.State
+open Abstraction.State
 open Bookmarks
 open Story
 open View

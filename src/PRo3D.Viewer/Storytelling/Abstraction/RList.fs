@@ -1,4 +1,4 @@
-﻿namespace Provenance.Abstraction.RList
+﻿namespace Abstraction.RList
 
 open Aardvark.Base
 

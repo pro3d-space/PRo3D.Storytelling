@@ -145,6 +145,7 @@
     <Compile Include="Storytelling\AppModel.fs" />
     <Compile Include="Storytelling\Abstraction\RList.fs" />
     <Compile Include="Storytelling\Abstraction\Camera.fs" />
+    <Compile Include="Storytelling\Abstraction\Presentation.fs" />
     <Compile Include="Storytelling\Abstraction\Annotations.fs" />
     <Compile Include="Storytelling\Abstraction\Surfaces.fs" />
     <Compile Include="Storytelling\Abstraction\State.fs" />

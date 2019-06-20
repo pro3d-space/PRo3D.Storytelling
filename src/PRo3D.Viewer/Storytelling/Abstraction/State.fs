@@ -1,12 +1,12 @@
-namespace Provenance.Abstraction.State
+namespace Abstraction.State
 
 open Aardvark.Base.Incremental
 open Model
 
 open PRo3D.Groups
 
-open Provenance.Abstraction.Annotations
-open Provenance.Abstraction.Surfaces
+open Abstraction.Annotations
+open Abstraction.Surfaces
 
 type OState = AppModel
 

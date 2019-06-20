@@ -1,4 +1,4 @@
-namespace Provenance.Abstraction.Annotations
+namespace Abstraction.Annotations
 
 open System
 
@@ -10,8 +10,8 @@ open PRo3D
 open PRo3D.Versioned
 open PRo3D.Groups
 
-open Provenance.Abstraction.RList
-open Provenance.Abstraction.Camera
+open Abstraction.RList
+open Abstraction.Camera
 
 type OSegment = Segment
 

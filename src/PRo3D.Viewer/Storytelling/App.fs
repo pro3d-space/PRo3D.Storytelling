@@ -13,8 +13,8 @@ open PRo3D.Viewer
 
 open Model
 open Provenance
-open Provenance.Abstraction.State
-open Provenance.Abstraction.Message
+open Abstraction.State
+open Abstraction.Message
 open Story
 open View
 open Preview

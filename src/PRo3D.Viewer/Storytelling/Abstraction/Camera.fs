@@ -1,4 +1,4 @@
-namespace Provenance.Abstraction.Camera
+namespace Abstraction.Camera
 
 open Aardvark.Base
 open Aardvark.Base.Incremental

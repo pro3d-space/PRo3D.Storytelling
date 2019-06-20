@@ -6,13 +6,16 @@ open Aardvark.Application
 open Aardvark.UI.Primitives
 
 open Provenance
-open Provenance.Abstraction.Camera
+open Abstraction.Camera
+open Abstraction.Presentation
 open Story
 open View
 open Preview
 open Session
 open Animation
 open Bookmarks
+
+open PRo3D.Groups
 
 type Action =
     | AppAction             of AppAction
@@ -62,11 +65,20 @@ module AppModel =
     let getRendering (model : AppModel) =
         model.scene.config
 
+    let setSurfaceParams (surfaces : SurfaceParams) (model : AppModel) =
+        let s = SurfaceParams.restore model.scene.surfacesModel.surfaces surfaces
+        { model with scene = { model.scene with surfacesModel = { model.scene.surfacesModel with surfaces = s } } }
+
+    let getSurfaceParams (model : AppModel) : SurfaceParams =
+        SurfaceParams.create model.scene.surfacesModel.surfaces
+
     let setPresentation (presentation : PresentationParams) (model : AppModel) =
         model |> setRendering presentation.rendering
+              |> setSurfaceParams presentation.surfaces
 
     let getPresentation (model : AppModel) =
-        { rendering = getRendering model }
+        { rendering = getRendering model 
+          surfaces = getSurfaceParams model }
 
     let setViewParams (view : ViewParams) (model : AppModel) =
         model |> setCamera view.camera
@@ -108,6 +120,12 @@ module InnerModel =
 
     let getRendering (model : InnerModel) =
         model.current |> AppModel.getRendering
+
+    let setSurfaceParams (surfaces  : SurfaceParams) (model : InnerModel) =
+        { model with current = model.current |> AppModel.setSurfaceParams surfaces }
+
+    let getSurfaceParams (model : InnerModel) =
+        model.current |> AppModel.getSurfaceParams
 
     let setPresentation (presentation : PresentationParams) (model : InnerModel) =
         { model with current = model.current |> AppModel.setPresentation presentation }
@@ -164,6 +182,12 @@ module Model =
 
     let getRendering (model : Model) =
         model.inner |> InnerModel.getRendering
+
+    let setSurfaceParams (surfaces  : SurfaceParams) (model : Model) =
+        { model with inner = model.inner |> InnerModel.setSurfaceParams surfaces }
+
+    let getSurfaceParams (model : Model) =
+        model.inner |> InnerModel.getSurfaceParams
 
     let setPresentation (presentation : PresentationParams) (model : Model) =
         { model with inner = model.inner |> InnerModel.setPresentation presentation }

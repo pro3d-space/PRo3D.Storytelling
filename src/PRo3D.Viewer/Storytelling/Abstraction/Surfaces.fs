@@ -1,4 +1,4 @@
-namespace Provenance.Abstraction.Surfaces
+namespace Abstraction.Surfaces
 
 open System
 
@@ -15,7 +15,7 @@ type Surface =
     { visible : bool
       priority : float }
 
-    static member def = { visible = true; priority = 0.0 }
+    static member def = { visible = true; priority = Init.priority.value }
 
     // Comparing surfaces is a bit tricky because we don't actually keep track of all surfaces
     // If a surface is missing in an abstraction state, it is assumed to have the default values defined above
@@ -68,12 +68,8 @@ module Surface =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Surfaces =
 
-    let private getSurface = function
-        | Surfaces s -> s
-        | _ -> raise (ArgumentException ("Expected a surface"))
-
     let create (s : OSurfaces) = {
-        flat = s.flat |> HMap.map (fun _ l -> l |> getSurface |> Surface.create)
+        flat = s.flat |> HMap.map (fun _ l -> l |> Leaf.toSurface |> Surface.create)
     }
         
     let restore (current : OSurfaces) (surfaces : Surfaces) : OSurfaces =
@@ -81,7 +77,7 @@ module Surfaces =
             current.flat |> HMap.map (fun k s ->
                 surfaces.flat |> HMap.tryFind k 
                               |> Option.defaultValue Surface.def
-                              |> Surface.restore (getSurface s)
+                              |> Surface.restore (Leaf.toSurface s)
                               |> Surfaces
             )
 

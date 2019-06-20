@@ -2,14 +2,9 @@
 
 open Aardvark.Base.Incremental
 
-open Provenance.Abstraction.Camera
+open Abstraction.Camera
+open Abstraction.Presentation
 open Animation
-open Model
-
-[<DomainType>]
-type PresentationParams = {
-    rendering : RenderingParams
-}
 
 [<DomainType>]
 type ViewParams = {
