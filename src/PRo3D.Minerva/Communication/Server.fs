@@ -60,27 +60,31 @@ type Server(converter : string -> string, responder : string -> string) =
             Log.line "[Minerva] Received request"
 
             let buffer : byte[] = Array.zeroCreate 65536
-            let buffer1 : byte[] = Array.zeroCreate 100
+            let headerBuffer : byte[] = Array.zeroCreate 100
 
             try
-              let! head = socket.AsyncReceive(buffer1, 0, 50)
-              let headString = Encoding.ASCII.GetString(buffer1, 0, head)
+              //header
+              let! headLength = socket.AsyncReceive(headerBuffer, 0, headerBuffer.Length)
+              let headString = Encoding.ASCII.GetString(headerBuffer, 0, headLength)
               let commandLength = (headString.Split(' ').[1]) |> Int32.Parse //write functional!
               
               Log.line "[Minerva] Found Command of length: %d" commandLength
               
               let mutable msg = ""
               let mutable bytesRead = 0
-
-              //while bytesRead < commandLength do
-              // bytesRead <- bytesRead + buffer.length
-
-              let! res = socket.AsyncReceive(buffer, bytesRead, buffer.Length)
-              let page = Encoding.ASCII.GetString(buffer, 0, res)
               
-              Log.line "[Minerva] read %d bytes" res
+              //body loop
+              while bytesRead < commandLength do 
+                let! chunkSize = socket.AsyncReceive(buffer, bytesRead, buffer.Length)
+                let chunkString = Encoding.ASCII.GetString(buffer, 0, chunkSize)
+                
+                Log.line "[Minerva] read %d bytes of %d" chunkSize commandLength
+                msg <- msg + chunkString
+                bytesRead <- bytesRead + chunkSize
 
-              msg <- msg + ((page |> converter) |> responder)
+              //conversion and response
+              msg <- ((msg |> converter) |> responder)
+
               let response = Encoding.ASCII.GetBytes(msg)
               
               try
