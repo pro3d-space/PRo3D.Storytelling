@@ -346,7 +346,7 @@ module Drawing =
                 yield Sg.empty
             }  |> Sg.set
         
-        Sg.empty 
+        sg 
         |> Sg.trafo trafo
         |> Sg.pickable' pickable
         //|> Sg.noEvents
