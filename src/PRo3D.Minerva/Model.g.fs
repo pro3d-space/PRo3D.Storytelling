@@ -77,10 +77,12 @@ module Mutable =
     type MSgFeatures(__initial : PRo3D.Minerva.SgFeatures) =
         inherit obj()
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.SgFeatures> = Aardvark.Base.Incremental.EqModRef<PRo3D.Minerva.SgFeatures>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Minerva.SgFeatures>
+        let _names = ResetMod.Create(__initial.names)
         let _positions = ResetMod.Create(__initial.positions)
         let _colors = ResetMod.Create(__initial.colors)
         let _trafo = ResetMod.Create(__initial.trafo)
         
+        member x.names = _names :> IMod<_>
         member x.positions = _positions :> IMod<_>
         member x.colors = _colors :> IMod<_>
         member x.trafo = _trafo :> IMod<_>
@@ -90,6 +92,7 @@ module Mutable =
             if not (System.Object.ReferenceEquals(__current.Value, v)) then
                 __current.Value <- v
                 
+                ResetMod.Update(_names,v.names)
                 ResetMod.Update(_positions,v.positions)
                 ResetMod.Update(_colors,v.colors)
                 ResetMod.Update(_trafo,v.trafo)
@@ -109,6 +112,12 @@ module Mutable =
     module SgFeatures =
         [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
         module Lens =
+            let names =
+                { new Lens<PRo3D.Minerva.SgFeatures, System.String[]>() with
+                    override x.Get(r) = r.names
+                    override x.Set(r,v) = { r with names = v }
+                    override x.Update(r,f) = { r with names = f r.names }
+                }
             let positions =
                 { new Lens<PRo3D.Minerva.SgFeatures, Aardvark.Base.V3d[]>() with
                     override x.Get(r) = r.positions
@@ -471,6 +480,7 @@ module Mutable =
         let _solLabels = MMap.Create(__initial.solLabels)
         let _sgFeatures = MSgFeatures.Create(__initial.sgFeatures)
         let _selectedSgFeatures = MSgFeatures.Create(__initial.selectedSgFeatures)
+        let _picking = ResetMod.Create(__initial.picking)
         
         member x.data = _data
         member x.queries = _queries :> IMod<_>
@@ -485,6 +495,7 @@ module Mutable =
         member x.solLabels = _solLabels :> amap<_,_>
         member x.sgFeatures = _sgFeatures
         member x.selectedSgFeatures = _selectedSgFeatures
+        member x.picking = _picking :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Minerva.Model) =
@@ -503,6 +514,7 @@ module Mutable =
                 MMap.Update(_solLabels, v.solLabels)
                 MSgFeatures.Update(_sgFeatures, v.sgFeatures)
                 MSgFeatures.Update(_selectedSgFeatures, v.selectedSgFeatures)
+                ResetMod.Update(_picking,v.picking)
                 
         
         static member Create(__initial : PRo3D.Minerva.Model) : MModel = MModel(__initial)
@@ -596,4 +608,10 @@ module Mutable =
                     override x.Get(r) = r.selectedSgFeatures
                     override x.Set(r,v) = { r with selectedSgFeatures = v }
                     override x.Update(r,f) = { r with selectedSgFeatures = f r.selectedSgFeatures }
+                }
+            let picking =
+                { new Lens<PRo3D.Minerva.Model, System.Boolean>() with
+                    override x.Get(r) = r.picking
+                    override x.Set(r,v) = { r with picking = v }
+                    override x.Update(r,f) = { r with picking = f r.picking }
                 }

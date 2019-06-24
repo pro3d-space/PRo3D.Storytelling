@@ -143,10 +143,19 @@ type MinervaAction =
   | SetTextSize of Numeric.Action
   | SingleSelectProduct of string
   | AddProductToSelection of string
+  | PickProduct  of SceneHit * string
   //| ChangeInstrumentColor of ColorPicker.Action * Instrument
   
+//[<DomainType>]
+//type SgFeatures = {
+//    positions   : V3d[]
+//    colors      : C4b[]
+//    trafo       : Trafo3d
+//}
+
 [<DomainType>]
 type SgFeatures = {
+    names       : string[]
     positions   : V3d[]
     colors      : C4b[]
     trafo       : Trafo3d
@@ -240,6 +249,7 @@ type Model =
     solLabels            : hmap<string,V3d>
     sgFeatures           : SgFeatures
     selectedSgFeatures   : SgFeatures
+    picking              : bool
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
@@ -373,6 +383,7 @@ module Initial =
 
   let sgfeatures =
     {
+        names     = Array.empty
         positions = Array.empty
         colors    = Array.empty
         trafo     = Trafo3d.Identity
@@ -380,6 +391,7 @@ module Initial =
 
   let sgSelfeatures =
     {
+        names     = Array.empty
         positions = Array.empty
         colors    = Array.empty
         trafo     = Trafo3d.Identity
@@ -439,4 +451,5 @@ module Initial =
       solLabels = HMap.empty
       sgFeatures =  sgfeatures
       selectedSgFeatures = sgSelfeatures
+      picking = false
     }

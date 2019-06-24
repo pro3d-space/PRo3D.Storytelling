@@ -690,12 +690,16 @@ module ViewerApp =
                   | Aardvark.Application.Keys.D0 -> Drawing.Action.SetSemantic Semantic.Horizon0
                   | Aardvark.Application.Keys.D1 -> Drawing.Action.SetSemantic Semantic.Horizon1
                   | Aardvark.Application.Keys.D2 -> Drawing.Action.SetSemantic Semantic.Horizon2
-                  | Aardvark.Application.Keys.D3 -> Drawing.Action.SetSemantic Semantic.Horizon3       
+                  | Aardvark.Application.Keys.D3 -> Drawing.Action.SetSemantic Semantic.Horizon3 
                   | _  -> Drawing.Action.Nop
 
               let m =
                 match k with 
-                  | Aardvark.Application.Keys.LeftCtrl -> { m with ctrlFlag = true }
+                  | Aardvark.Application.Keys.LeftCtrl ->
+                    match m.interaction with
+                         | Interactions.PickMinervaProduct ->
+                            { m with minervaModel = { m.minervaModel with picking = true }}
+                         |_ -> { m with ctrlFlag = true}
                   | _ -> m
 
               let m =
@@ -789,6 +793,7 @@ module ViewerApp =
                             let view = m.scene.navigation.camera.view
                             let d = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopPicking 
                             { m with drawing = d; ctrlFlag = false; picking = false }
+                        | Interactions.PickMinervaProduct -> { m with minervaModel = { m.minervaModel with picking = false }}
                         |_-> { m with ctrlFlag = false; picking = false }
                   | _ -> m                                  
             | SetInteraction t,_,_ -> { m with interaction = t }

@@ -324,6 +324,55 @@ module Drawing =
                 }
         Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [masks; outls] |> Sg.noEvents //regular; mask; 
 
+    let pickable' (pick :IMod<Pickable>) (sg: ISg) =
+        Sg.PickableApplicator (pick, Mod.constant sg)
+
+    let pickableSgEmpty (point: V3d) (trafo : IMod<Trafo3d>) (id: string) (picking: IMod<bool>) (pointSize:IMod<float>) =
+        let pickable = 
+          adaptive {
+            let! size = pointSize
+            let sphere = Sphere3d(point, 0.001)
+            let! trafo = trafo
+            //return { 
+            //    shape = sphere |> PickShape.Sphere
+            //    trafo = trafo
+            //} 
+            return (sphere |> PickShape.Sphere)
+          }
+        
+
+        let sg = 
+            aset {
+                yield Sg.empty
+            }  |> Sg.set
+        
+        Sg.empty 
+        |> Sg.trafo trafo
+        |> Sg.pickable' pickable
+        //|> Sg.noEvents
+        |> Sg.withEvents [
+                SceneEventKind.Down, (
+                    fun sceneHit ->
+                    if (picking |> Mod.force) then
+                        Log.warn "[ProductPicking] picked %A" id
+                        true, Seq.ofList[PickProduct (sceneHit, (id))]
+                    else
+                        false, Seq.ofList[])
+            ]
+        
+
+    let getPickables (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (picking:IMod<bool>) =
+        let test = 
+          aset {
+            let! points = sgfeatures.positions
+            let! names = sgfeatures.names
+            let tt = Array.map2( fun (p:V3d) (n:string) ->
+                            pickableSgEmpty p sgfeatures.trafo n picking pointSize 
+                        ) points names
+            yield tt |> Sg.ofArray
+          } |> Sg.set
+        test 
+
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:V3d) (size:IMod<float>) (hfov:IMod<float>) =
         adaptive {
             //let! p = p

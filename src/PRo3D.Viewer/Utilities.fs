@@ -254,7 +254,6 @@ module Sg =
                 | None -> [||])       
                             
     let lines (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
-      
       let edges = edgeLines false points trafo
       edges
         |> Sg.lines color

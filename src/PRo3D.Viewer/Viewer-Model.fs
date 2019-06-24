@@ -39,6 +39,7 @@ type Interactions =
     | PlaceSurface          = 5
     | PickAnnotation        = 6
     | PickSurface           = 7
+    | PickMinervaProduct    = 8
     //| DrawLog               = 7
     //| AlignPick             = 5
 

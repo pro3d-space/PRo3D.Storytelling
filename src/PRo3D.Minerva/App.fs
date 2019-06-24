@@ -197,6 +197,11 @@ module App =
         |> PList.toArray
 
   let updateSgFeatures (features:plist<Feature>) =
+    let names =
+      features
+        |> PList.map(fun f -> f.id)            
+        |> PList.toArray
+
     let positions = 
       features
         |> PList.map(fun f -> f.geometry.positions.Head)            
@@ -213,6 +218,7 @@ module App =
         |> PList.toArray
                      
     {
+        names = names
         positions = positions
         colors = colors
         trafo = trafo
@@ -223,6 +229,18 @@ module App =
         |> PList.filter( fun x -> HSet.contains x.id selected)
         |> updateSgFeatures
      
+  let updateSelection (name:string) (model:Model) =
+    let selection = model.selection.selectedProducts
+    let newSelection = 
+        if HSet.contains name selection
+            then 
+                HSet.remove name selection
+            else
+                HSet.add name selection
+    //let colors = updateSgFeatureColors model.filteredFeatures newSelection
+    let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
+    { model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
+                     //sgFeatures = { model.sgFeatures with colors = colors}}
 
   let updateFeaturesForRendering (pos :V3d) (model:Model) =
     Log.startTimed "[Minerva] building sgs"
@@ -334,8 +352,10 @@ module App =
         Log.startTimed "[Minerva] Fetching full dataset from data file"
         let data = Files.loadDataFile
         Log.stop()        
-        Log.line "[Minerva] found %d entries" data.features.Count        
-        { model with data = data; filteredFeatures = data.features} |> updateFeaturesForRendering view.Location
+        Log.line "[Minerva] found %d entries" data.features.Count   
+        //let filtered = QueryApp.applyFilterQueries model.data.features model.queryFilter view
+        
+        { model with data = data; filteredFeatures = data.features} |> updateFeaturesForRendering view.Location //
       | SetPointSize s ->
         let size = Numeric.update model.featureProperties.pointSize s
         { model with featureProperties = { model.featureProperties with pointSize = size }}
@@ -345,17 +365,13 @@ module App =
       | SingleSelectProduct name ->
         { model with selection = { model.selection with singleSelectProduct = Some name }}
       | AddProductToSelection name ->
-        let selection = model.selection.selectedProducts
-        let newSelection =
-            if HSet.contains name selection
-            then 
-                HSet.remove name selection
-            else
-                HSet.add name selection 
-        //let colors = updateSgFeatureColors model.filteredFeatures newSelection
-        let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
-        { model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
-                     //sgFeatures = { model.sgFeatures with colors = colors}}
+        updateSelection name model
+        ////let colors = updateSgFeatureColors model.filteredFeatures newSelection
+        //let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
+        //{ model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
+        //             //sgFeatures = { model.sgFeatures with colors = colors}}
+      | PickProduct (hit, name) -> updateSelection name model
+      
 
       //| ChangeInstrumentColor (c,instrument) -> 
       //  let color' = ColorPicker.update model.featureProperties.instrumentColor.color c
@@ -507,6 +523,8 @@ module App =
                 |> List.sortBy(fun x -> V3d.DistanceSquared(pos, x.geometry.coordinates.Head)) 
                 |> take'(20)
 
+           
+
             yield div [clazz "ui inverted item"][
                 yield accordion header "Content" false [                    
                   div [clazz "ui list"] (viewFeatures model instr g)
@@ -568,7 +586,8 @@ module App =
   let viewFeaturesSg (model : MModel) =
     let selectedPoints = Drawing.outlinePoints model.selectedSgFeatures model.featureProperties.pointSize.value
     let points = Drawing.drawIndexedGeometryPoints model.sgFeatures model.featureProperties.pointSize.value false
-    Sg.ofList [points; selectedPoints] 
+    let pickables = Drawing.getPickables model.sgFeatures model.featureProperties.pointSize.value model.picking
+    Sg.ofList [points; selectedPoints; pickables] 
   
   let threads (m : Model) = m.vplMessages
 
