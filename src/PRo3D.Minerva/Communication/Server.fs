@@ -34,7 +34,7 @@ type Socket with
     Async.FromBeginEnd(buffer, offset, count, beginSend, socket.EndSend)
 
 
-
+open Aardvark.Base
 type Server(converter : string -> string, responder : string -> string) =
     
     let mutable internalServer : IDisposable = Unchecked.defaultof<_>
@@ -52,29 +52,47 @@ type Server(converter : string -> string, responder : string -> string) =
         listener <- new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
         listener.Bind(endpoint)
         listener.Listen(int SocketOptionName.MaxConnections)
-        printfn "Started listening on port %d" port
+        Log.line "[Minerva] Started listening on port %d" port
     
         let rec loop() = async {
-            printfn "Waiting for request ..."
+            Log.line "[Minerva] Waiting for request ..."
             let! socket = listener.AsyncAccept()
-            printfn "Received request"
+            Log.line "[Minerva] Received request"
 
             let buffer : byte[] = Array.zeroCreate 65536
-            
-            let! res = socket.AsyncReceive(buffer, 0, buffer.Length)
-            let page = Encoding.ASCII.GetString(buffer, 0, res)
-
-            printfn "Message: %A" page
-
-            let msg = (page |> converter) |> responder
-            let response = Encoding.ASCII.GetBytes(msg)
+            let headerBuffer : byte[] = Array.zeroCreate 100
 
             try
-                let! bytesSent = socket.AsyncSend(response)
-                printfn "Sent response: %A (%A)" msg bytesSent
-                socket.Shutdown(SocketShutdown.Both)
+              //header
+              let! headLength = socket.AsyncReceive(headerBuffer, 0, headerBuffer.Length)
+              let headString = Encoding.ASCII.GetString(headerBuffer, 0, headLength)
+              let commandLength = (headString.Split(' ').[1]) |> Int32.Parse //write functional!
+              
+              Log.line "[Minerva] Found Command of length: %d" commandLength
+              
+              let mutable msg = ""
+              let mutable bytesRead = 0
+              
+              //body loop
+              while bytesRead < commandLength do 
+                let! chunkSize = socket.AsyncReceive(buffer, bytesRead, buffer.Length)
+                let chunkString = Encoding.ASCII.GetString(buffer, 0, chunkSize)
+                
+                Log.line "[Minerva] read %d bytes of %d" chunkSize commandLength
+                msg <- msg + chunkString
+                bytesRead <- bytesRead + chunkSize
 
-            with e -> printfn "An error occurred: %s" e.Message
+              //conversion and response
+              msg <- ((msg |> converter) |> responder)
+
+              let response = Encoding.ASCII.GetBytes(msg)
+              
+              try
+                  let! bytesSent = socket.AsyncSend(response)
+                  Log.line "[Minerva] Sent response: %A (%A)" msg bytesSent
+                  socket.Shutdown(SocketShutdown.Both)              
+              with e -> Log.line "[Minerva] An error occurred responding: %s" e.Message
+            with e -> Log.line "[Minerva] An error occurred receiving: %s" e.Message
 
             socket.Shutdown(SocketShutdown.Both)
             socket.Close()

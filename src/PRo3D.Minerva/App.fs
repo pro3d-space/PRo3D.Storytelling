@@ -62,26 +62,7 @@ module App =
   open System.Net.Sockets
   open Aardvark.SceneGraph.Opc
   open System.Threading  
-
-  //coords  -4831.341805
-
-  //let _featureProps = Model.Lens.featureProperties 
-  //let _instColors   = _featureProps |. FeatureProperties.Lens.instrumentColor
-  //let _color        = _instColors |. InstrumentColor.Lens.color
-
-  let computeXYZFeatures (features : FeatureCollection) : FeatureCollection =
-    let a = 
-      features.features 
-        |> PList.map(fun feature ->
-          let pos =
-            feature.geometry.coordinates 
-              |> List.map(fun c -> 
-                    let sc = { longitude = 360.0 - c.Y; latitude = c.X; altitude = -4831.341805; radian = 0.0 }
-                    CooTransformation.getXYZFromLatLonAlt sc Planet.Mars)
-          { feature with geometry = { feature.geometry with positions = pos }})
-
-    { features with features = a }
-
+  
   let instrumentText (instr : Instrument) =
     match instr with
     | Instrument.MAHLI        -> "MAHLI"
@@ -135,8 +116,7 @@ module App =
     let cql = [("cql", cqlStringSol)] |> HMap.ofList
     (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)   
   
-  let sendReplaceSelectionRequest (idList : array<string>) (comm : Communicator.Communicator) = 
-        
+  let sendReplaceSelectionRequest (idList : array<string>) (comm : Communicator.Communicator) =         
     let name : string = "MinervaReplaceSelection"
     let para : JsonNetworkCommand.Params = {names = [|"IdList"|]; numOfLists = 1; numOfEntries = (idList |> Array.length); image = None; imageResolution = None; messageID = "SelectionMessageID"}
     let data : JsonNetworkCommand.Data = {ids = Some(idList); positions = None; colors = None}
@@ -296,12 +276,13 @@ module App =
         //with e ->
         //  Log.error "%A" e.Message
         //  model
-      | PerformIdQuery idList -> failwith "[Minerva] not implemented"
+      | PerformIdQuery idList -> //failwith "[Minerva] not implemented"
         //Log.startTimed "fetching %d entries by ids" idList.Length
         //let data = idList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
         //Log.stop()
-
+        Log.line "%A" idList
         //{ model with data = data }     
+        model
       | ConnectVisplore -> 
         if model.vplMessages.store.IsEmpty then          
           Log.line "[Minerva] connecting to visplore"
