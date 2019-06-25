@@ -272,7 +272,7 @@ module Drawing =
         adaptive
             {
                 let! w = width
-                return (w + 3.0)
+                return (w + 10.0)
             }
 
     let read a =

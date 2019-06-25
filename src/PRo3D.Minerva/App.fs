@@ -218,10 +218,14 @@ module App =
                 HSet.remove name selection
             else
                 HSet.add name selection
-    //let colors = updateSgFeatureColors model.filteredFeatures newSelection
+    
     let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
-    { model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
-                     //sgFeatures = { model.sgFeatures with colors = colors}}
+    { model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}   
+    
+  let updateSelection2 (selection:list<string>) (model:Model) =
+    let selection = selection |> HSet.ofList
+    let selectedSgs = updateSelectedSgFeature model.filteredFeatures selection
+    { model with selection = { model.selection with selectedProducts = selection}; selectedSgFeatures = selectedSgs} 
 
   let updateFeaturesForRendering (pos :V3d) (model:Model) =
     Log.startTimed "[Minerva] building sgs"
@@ -272,13 +276,20 @@ module App =
         //with e ->
         //  Log.error "%A" e.Message
         //  model
-      | PerformIdQuery idList -> //failwith "[Minerva] not implemented"
+      | UpdateSelection selectionIds ->
+        model |> updateSelection2 selectionIds
+      | UpdateFiltering idList -> //failwith "[Minerva] not implemented"
         //Log.startTimed "fetching %d entries by ids" idList.Length
         //let data = idList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
         //Log.stop()
-        Log.line "%A" idList
-        //{ model with data = data }     
-        model
+        
+        Log.line "[Minervar] filtering data to set of %d" idList.Length
+
+        let filterSet = idList |> HSet.ofList
+        let filtered = model.data.features |> PList.filter(fun x -> x.id |> filterSet.Contains)
+        
+        { model with filteredFeatures = filtered } |> updateFeaturesForRendering view.Location
+
       | ConnectVisplore -> 
         if model.vplMessages.store.IsEmpty then          
           Log.line "[Minerva] connecting to visplore"
@@ -289,14 +300,15 @@ module App =
                comm.Start(fun cmd ->
                  match cmd.name with
                  | "MinervaReplaceSelection" ->
-                    Log.line "[Minerva] received vpl message"
-                    // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
-                    // cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand 
-                                        
-                    let action = cmd.data.idList |> PerformIdQuery
+                    Log.line "[Minerva] received vpl selection message"                                        
+                    let action = cmd.data.idList |> UpdateSelection
                     bc.Enqueue action
-                                                            
                     cmd.parameters.messageID
+                 | "MinervaReplaceFilter" ->
+                   Log.line "[Minerva] received vpl filter message"
+                   let action = cmd.data.idList |> UpdateFiltering
+                   bc.Enqueue action
+                   cmd.parameters.messageID
                  | "Shutdown" -> 
                     //bc.CompleteAdding()
                     "todo"
@@ -338,34 +350,8 @@ module App =
         { model with featureProperties = { model.featureProperties with textSize = size }}   
       | SingleSelectProduct name ->
         { model with selection = { model.selection with singleSelectProduct = Some name }}
-      | AddProductToSelection name ->
-        updateSelection name model
-        ////let colors = updateSgFeatureColors model.filteredFeatures newSelection
-        //let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
-        //{ model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
-        //             //sgFeatures = { model.sgFeatures with colors = colors}}
-      | PickProduct (hit, name) -> updateSelection name model
-      
-
-      //| ChangeInstrumentColor (c,instrument) -> 
-      //  let color' = ColorPicker.update model.featureProperties.instrumentColor.color c
-      //  let m' = _color.Set(model, color')
-      //  let instC = _instColors.Get(m')
-      //  let instC' =
-      //      match instrument with
-      //      | Instrument.MAHLI -> { instC with mahli = color'.c }
-      //      | Instrument.FrontHazcam -> { instC with mahli = color'.c }
-      //      | Instrument.Mastcam -> { instC with mahli = color'.c }
-      //      | Instrument.APXS -> { instC with mahli = color'.c }
-      //      | Instrument.FrontHazcamR -> { instC with mahli = color'.c }
-      //      | Instrument.FrontHazcamL -> { instC with mahli = color'.c }
-      //      | Instrument.MastcamR -> { instC with mahli = color'.c }
-      //      | Instrument.MastcamL -> { instC with mahli = color'.c }
-      //      | Instrument.ChemLib -> { instC with mahli = color'.c }
-      //      | Instrument.ChemRmi -> { instC with mahli = color'.c }
-      //      | _ -> sprintf "unknown instrument" |> failwith
-
-  // GUI
+      | AddProductToSelection name -> updateSelection name model
+      | PickProduct (hit, name) -> updateSelection name model            
 
   let mkColor (model :MModel) (feature : Feature) =
     model.selection

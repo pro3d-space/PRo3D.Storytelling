@@ -135,7 +135,8 @@ type MinervaAction =
   | Reset
   | SendSelection
   | SendScreenSpaceCoordinates
-  | PerformIdQuery of list<string>
+  | UpdateFiltering of list<string>
+  | UpdateSelection of list<string>
   | ConnectVisplore
   | FlyToProduct of V3d
   | QueryMessage of QueryAction
