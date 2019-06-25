@@ -69,6 +69,7 @@
     <None Include="App.config" />
     <None Include="paket.references" />
     <Compile Include="Communication/JsonNetworkCmd.fs" />
+    <Compile Include="Communication\JsonNetworkCommand2.fs" />
     <Compile Include="Communication/Server.fs" />
     <Compile Include="Communication/Client.fs" />
     <Compile Include="Communication/NetworkCommunication.fs" />

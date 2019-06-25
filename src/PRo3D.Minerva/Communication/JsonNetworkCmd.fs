@@ -5,9 +5,6 @@ open FSharp.Data
 
 module JsonNetworkCommand =
 
-
-
-
     type V2d(x, y) =
         let mutable internalX : float = x
         let mutable internalY : float = y
