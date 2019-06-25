@@ -1,4 +1,4 @@
-﻿namespace PRo3D.Minerva.Communication
+﻿namespace PRo3D.Minerva.Communication.Deprecated
 
 open System
 open FSharp.Data

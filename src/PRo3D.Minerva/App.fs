@@ -62,6 +62,7 @@ module App =
   open System.Net.Sockets
   open Aardvark.SceneGraph.Opc
   open System.Threading  
+  open PRo3D.Minerva.Communication.JsonNetworkCommand
   
   let instrumentText (instr : Instrument) =
     match instr with
@@ -116,39 +117,39 @@ module App =
     let cql = [("cql", cqlStringSol)] |> HMap.ofList
     (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)   
   
-  let sendReplaceSelectionRequest (idList : array<string>) (comm : Communicator.Communicator) =         
-    let name : string = "MinervaReplaceSelection"
-    let para : JsonNetworkCommand.Params = {names = [|"IdList"|]; numOfLists = 1; numOfEntries = (idList |> Array.length); image = None; imageResolution = None; messageID = "SelectionMessageID"}
-    let data : JsonNetworkCommand.Data = {ids = Some(idList); positions = None; colors = None}
+  let sendReplaceSelectionRequest (idList : list<string>) (comm : Communicator.Communicator) =         
+    let name = "MinervaReplaceSelection"
+    let para = {
+      names           = [JsonNetworkCommand.Channel.IdList]
+      numOfLists      = 1
+      numOfEntries    = idList |> List.length
+      image           = None
+      imageResolution = None
+      messageID       = "SelectionMessageID"
+    }
 
-    let jsonMessage = JsonNetworkCommand.createJsonNetworkCommand {name = name; para = para; data = data}
+    let data = { idList = idList; positions = List.empty; colors = List.empty}
+
+    let jsonMessage = {name = name; parameters = para; data = data} |> JsonNetworkCommand.toJson
     
     comm.GetClient().SendMessageWaitForResponse(jsonMessage)
 
-  let sendReplaceProjectionRequest (idList : array<string>) (positions : array<V2d>) (comm : Communicator.Communicator) =
-    /// Minerva Example --> Replace Projection
-
-    //let IdList = [|"APB_494375951RWP10910491876_______P1"; "APB_493587808RWP10820491216_______P1"; "APB_494212310RWP10900491876_______P1"|]
-    let positions = positions |> Array.map(fun x -> (x.X,x.Y) |> JsonNetworkCommand.V2d) |> Some
-
-    //let positions = [| JsonNetworkCommand.V2d(0.1, 0.01); JsonNetworkCommand.V2d(0.23, 0.1); JsonNetworkCommand.V2d(0.1, 0.005)|]
-    let imagepath = "This/is/some/path/to/an/image.png"
-    let imageresolution = JsonNetworkCommand.V2i(1024, 768)
-
-    let name : string = "MinervaReplaceProjection"
-    let para : JsonNetworkCommand.Params = 
+  let sendReplaceProjectionRequest (idList : list<string>) (positions : list<V2d>) (comm : Communicator.Communicator) =
+                    
+    let name = "MinervaReplaceProjection"
+    let para = 
       { 
-        names           = [|"IdList";"Positions"|]
+        names           = [ JsonNetworkCommand.Channel.IdList; JsonNetworkCommand.Channel.Positions]
         numOfLists      = 2
-        numOfEntries    = (idList |> Array.length)
-        image           = Some imagepath 
-        imageResolution = Some imageresolution
+        numOfEntries    = idList |> List.length
+        image           = "This/is/some/path/to/an/image.png" |> Some
+        imageResolution = V2i(1024, 768) |> Some     
         messageID       = ""
       }
 
-    let data : JsonNetworkCommand.Data = {ids = Some idList; positions = positions; colors = None}
+    let data = { idList = idList; positions = positions; colors = List.empty }
 
-    let jsonMessage = JsonNetworkCommand.createJsonNetworkCommand {name = name; para = para; data = data}    
+    let jsonMessage = {name = name; parameters = para; data = data} |> JsonNetworkCommand.toJson
 
     comm.GetClient().SendMessage(jsonMessage)
     
@@ -234,7 +235,7 @@ module App =
       match msg with     
       | SendSelection -> 
         match model.comm with
-          | Some c -> sendReplaceSelectionRequest (model.data.features |> PList.map(fun x -> x.id) |> PList.toArray) c
+          | Some c -> sendReplaceSelectionRequest (model.data.features |> PList.map(fun x -> x.id) |> PList.toList) c
           | None   -> ()
         model
       | SendScreenSpaceCoordinates -> 
@@ -252,14 +253,9 @@ module App =
         let height = ((float)width / (frustum |> Frustum.aspect)) |> int
 
         PRo3D.Base.Utilities.takeScreenshot "http://localhost:54321" width height "overview.jpg" @"c:\Users\ortner\Documents\visplore\Minerva"
-      /// points |> Log.line "trafo points minerva %A"                                 
-      //Log.line "[Viewer] writing minerva screespace coords"
-      //points 
-      //    |> List.map(fun (id,v) -> sprintf "%s,%f,%f" id v.X v.Y) 
-      //    |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates.csv"
-      //m
+      
         match model.comm with
-        | Some c -> sendReplaceProjectionRequest (coords |> List.map fst |> List.toArray) (coords |> List.map snd |> List.toArray) c
+        | Some c -> sendReplaceProjectionRequest (coords |> List.map fst) (coords |> List.map snd) c
         | None   -> ()
         model
       | PerformQueries -> failwith "[Minerva] not implemented"
@@ -296,14 +292,11 @@ module App =
                     Log.line "[Minerva] received vpl message"
                     // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
                     // cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand 
-                    match cmd.data.ids with 
-                    | Some ids -> 
-                        let action = ids |> Array.toList |> PerformIdQuery 
-                        bc.Enqueue action
-                        ///|> MailboxAction.MiniAction |> model.minervaMessagingMailbox.Post
-                    | None -> ()
-                    
-                    cmd.para.messageID
+                                        
+                    let action = cmd.data.idList |> PerformIdQuery
+                    bc.Enqueue action
+                                                            
+                    cmd.parameters.messageID
                  | "Shutdown" -> 
                     //bc.CompleteAdding()
                     "todo"

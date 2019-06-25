@@ -103,7 +103,7 @@ type Server(converter : string -> string, responder : string -> string) =
                 
               // invariant: remaining = 0, buffer is full
               let fullString =  Encoding.ASCII.GetString(resultBuffer, 0, payloadSize)
-              let parsed = PRo3D.Minerva.Communication2.JsonNetworkCommand.fromJson fullString
+              let parsed = PRo3D.Minerva.Communication.JsonNetworkCommand.fromJson fullString
 
               Log.line "[Minerva] %A" parsed
 
