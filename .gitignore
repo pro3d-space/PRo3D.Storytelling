@@ -1,5 +1,6 @@
 bin/Release
 bin/Debug
+*.g.fs
 *.swp
 *.userprefs
 **/obj
@@ -27,6 +28,7 @@ src\Aardvark.OpcViewer.psess
 **/out
 /src/Fable.UI/npm-debug.log
 /src/PRo3D.DomainModel/bin/Release
+/src/PRo3D.Base/bin/Release
 /.paket/Paket.Restore.targets
 /src/Aardvark.Opc.Viewer/bin/Debug/Aardvark.Opc.Viewer.XML
 /src/Aardvark.Opc.Viewer/bin/Debug/Aardvark.Opc.Viewer.exe
