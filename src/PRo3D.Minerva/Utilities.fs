@@ -355,7 +355,7 @@ module Drawing =
                     fun sceneHit ->
                     if (picking |> Mod.force) then
                         Log.warn "[ProductPicking] picked %A" id
-                        true, Seq.ofList[PickProduct (sceneHit, (id))]
+                        true, Seq.ofList[PickProducts (sceneHit, [id])]
                     else
                         false, Seq.ofList[])
             ]
