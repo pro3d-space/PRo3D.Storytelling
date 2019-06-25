@@ -560,8 +560,8 @@ module App =
   let viewFeaturesSg (model : MModel) =
     let selectedPoints = Drawing.outlinePoints model.selectedSgFeatures model.featureProperties.pointSize.value
     let points = Drawing.drawIndexedGeometryPoints model.sgFeatures model.featureProperties.pointSize.value false
-    let pickables = Drawing.getPickables model.sgFeatures model.featureProperties.pointSize.value model.picking
-    Sg.ofList [points; selectedPoints; pickables] 
+    //let pickables = Drawing.getPickables model.sgFeatures model.featureProperties.pointSize.value model.picking
+    Sg.ofList [points; selectedPoints] //; pickables] 
   
   let threads (m : Model) = m.vplMessages
 

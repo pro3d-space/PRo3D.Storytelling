@@ -40,7 +40,7 @@ let (|IntegerParse|_|) (s : string) =
         | _ -> None
 
 open Aardvark.Base
-type Server(converter : string -> string, responder : string -> string) =
+type Server(convertEval : string -> string, responder : string -> string) =
     
     let mutable internalServer : IDisposable = Unchecked.defaultof<_>
     let mutable listener : Socket = Unchecked.defaultof<_>
@@ -103,14 +103,13 @@ type Server(converter : string -> string, responder : string -> string) =
                 
               // invariant: remaining = 0, buffer is full
               let fullString =  Encoding.ASCII.GetString(resultBuffer, 0, payloadSize)
-              let parsed = PRo3D.Minerva.Communication.JsonNetworkCommand.fromJson fullString
+              //let parsed = PRo3D.Minerva.Communication.JsonNetworkCommand.fromJson fullString
 
-              Log.line "[Minerva] %A" parsed
+              //Log.line "[Minerva] %A" parsed
 
-              ()
-
+              
               //conversion and response
-              //msg <- ((msg |> converter) |> responder)
+              fullString |> convertEval |> ignore //|> responder
               //
               //let response = Encoding.ASCII.GetBytes(msg)
               

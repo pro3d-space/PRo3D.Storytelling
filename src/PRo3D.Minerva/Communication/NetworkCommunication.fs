@@ -52,11 +52,11 @@ module Communicator =
   
         // construct new server --> to receive commands from Visplore
         let responder (msg : string) : string = JsonNetworkCommand.toJsonNetworkResponse msg
-        let converter (msg : string) : string =
+        let convertEval (msg : string) : string =
             let tmp = msg |> JsonNetworkCommand.fromJson
             let a = tmp|> evalCommand
             a
-        server <- new Server(converter, responder)
+        server <- new Server(convertEval, responder)
     
     member this.GetClient() = client
   
