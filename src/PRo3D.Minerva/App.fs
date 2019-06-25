@@ -134,7 +134,7 @@ module App =
     
     comm.GetClient().SendMessageWaitForResponse(jsonMessage)
 
-  let sendReplaceProjectionRequest (idList : list<string>) (positions : list<V2d>) (comm : Communicator.Communicator) =
+  let sendReplaceProjectionRequest (idList : list<string>) (positions : list<V2d>) (imageResolution : V2i) (imagePath : string) (comm : Communicator.Communicator) =
                     
     let name = "MinervaReplaceProjection"
     let para = 
@@ -142,8 +142,8 @@ module App =
         names           = [ JsonNetworkCommand.Channel.IdList; JsonNetworkCommand.Channel.Positions]
         numOfLists      = 2
         numOfEntries    = idList |> List.length
-        image           = "This/is/some/path/to/an/image.png" |> Some
-        imageResolution = V2i(1024, 768) |> Some     
+        image           = imagePath |> Some
+        imageResolution = imageResolution |> Some
         messageID       = ""
       }
 
@@ -245,7 +245,7 @@ module App =
       | SendScreenSpaceCoordinates -> 
         let viewProj = view.ViewTrafo * Frustum.projTrafo frustum
         let coords = 
-          model.data.features
+          model.filteredFeatures
             |> PList.toList 
             |> List.map(fun feat -> (feat.id, feat.geometry.positions.Head))
             |> List.map(fun (id,p) ->  
@@ -256,10 +256,17 @@ module App =
         let width = 1920
         let height = ((float)width / (frustum |> Frustum.aspect)) |> int
 
-        PRo3D.Base.Utilities.takeScreenshot "http://localhost:54321" width height "overview.jpg" @"c:\Users\ortner\Documents\visplore\Minerva"
+        let imagePath = @"C:\Users\ortner\Documents\visplore\Minerva"
+        let filename = "overview.jpg"
+        PRo3D.Base.Utilities.takeScreenshot "http://localhost:54321" width height filename imagePath
       
         match model.comm with
-        | Some c -> sendReplaceProjectionRequest (coords |> List.map fst) (coords |> List.map snd) c
+        | Some c -> 
+          sendReplaceProjectionRequest 
+            (coords |> List.map fst) 
+            (coords |> List.map snd) 
+            (V2i(width, height)) (Path.combine[imagePath; filename]) 
+            c
         | None   -> ()
         model
       | PerformQueries -> failwith "[Minerva] not implemented"

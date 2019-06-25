@@ -321,7 +321,7 @@ module Initial =
     }
   let minS = 
         {
-            value = 751.0
+            value = 1050.0
             min =  0.0
             max = 10000.0
             step = 1.0
@@ -329,7 +329,7 @@ module Initial =
         }
   let maxS = 
         {
-            value = 926.0
+            value = 1100.0
             min =  0.0
             max = 10000.0
             step = 1.0

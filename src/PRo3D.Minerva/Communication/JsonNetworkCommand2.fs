@@ -129,7 +129,7 @@ module JsonNetworkCommand =
     let mutable jsonData = "{\"Data\": {\""
     
     if par.names |> List.contains Channel.IdList then
-      jsonData <- jsonData + Channel.IdList.ToString() + "\": ["
+      jsonData <- jsonData + Channel.IdList.ToString() + "\": ["    
       for id in data.idList do
           jsonData <- jsonData + "\"" + (id) + "\","
       jsonData <- jsonData.Remove(jsonData.Length - 1) + "]"
@@ -148,18 +148,85 @@ module JsonNetworkCommand =
         
     jsonData <- jsonData + "}}"
     jsonData
-  
     
-  let toJson (cmd : JsonCommand) : string =
-    let cmdName = cmd.name |> createJsonName
-    let cmdPara = cmd.parameters |> createJsonParam
-    let cmdData = cmd.data |> createJsonData cmd.parameters
+  
+  open Newtonsoft.Json
+  open System.Text
+  open System.IO
 
-    let header = "JsonNetworkCommand"
-    let command = "{\"JsonCommand\": [" + cmdName + ", " + cmdPara + ", " + cmdData + "]}"
-    let numberOfBytes = command.Length
-    let message = header + " " + (numberOfBytes |> string) + " " + command
-    message
+  type JsonTextWriter with
+    member x.Object(action : unit -> unit) =
+        x.WriteStartObject() 
+        action()
+        x.WriteEndObject() 
+    member x.Array(action : unit -> unit) =
+        x.WriteStartArray() 
+        action()
+        x.WriteEndArray() 
+        
+
+  let toJson (cmd : JsonCommand) : string =
+    let sb = new StringBuilder()
+    let sw = new StringWriter(sb)
+    use writer = new JsonTextWriter(sw)
+    
+    writer.Formatting <- Formatting.None
+
+    writer.Object(fun () ->
+        writer.WritePropertyName("JsonCommand")
+        writer.Array (fun () ->
+            writer.Object(fun () -> //name
+                writer.WritePropertyName("Name")
+                writer.WriteValue(cmd.name)
+            )
+            writer.Object(fun () -> //param
+                writer.WritePropertyName("Param")
+                writer.Object(fun () ->
+                    writer.WritePropertyName "Names"
+                    writer.Array (fun () ->
+                        for n in cmd.parameters.names do
+                            writer.WriteValue (string n)
+                    )
+                    writer.WritePropertyName "NumOfLists"
+                    writer.WriteValue cmd.parameters.numOfLists
+                    writer.WritePropertyName "NumOfEntries"
+                    writer.WriteValue cmd.parameters.numOfEntries
+                )
+            )
+            writer.Object(fun () -> //data
+                writer.WritePropertyName("IdList")
+                writer.Array (fun () ->
+                    for c in cmd.data.idList do
+                        writer.WriteValue c
+                )
+                writer.WritePropertyName("Positions")
+                writer.Array (fun () ->
+                    for c in cmd.data.positions do
+                        writer.WriteValue c.X
+                        writer.WriteValue c.Y
+                )
+                writer.WritePropertyName("Colors")
+                writer.Array (fun () ->
+                    for c in cmd.data.colors do
+                        writer.WriteValue c.R
+                        writer.WriteValue c.G
+                        writer.WriteValue c.B
+                        writer.WriteValue c.A
+                )                
+            )
+        )
+    )
+
+    //let cmdName = cmd.name |> createJsonName
+    //let cmdPara = cmd.parameters |> createJsonParam
+    //let cmdData = cmd.data |> createJsonData cmd.parameters
+
+    //let header = "JsonNetworkCommand"
+    //let command = "{\"JsonCommand\": [" + cmdName + ", " + cmdPara + ", " + cmdData + "]}"
+    //let numberOfBytes = command.Length
+    //let message = header + " " + (numberOfBytes |> string) + " " + command
+    //message
+    sb.ToString()
 
   let toJsonNetworkResponse (msg : string) : string = 
     let cmdName = "{ \"Name\": \"" + msg + "\"}"
