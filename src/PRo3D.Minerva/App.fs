@@ -450,6 +450,7 @@ module App =
                         yield div [clazz "ui description"] [
                                 f.sol |> sprintf "Sol: %A" |> text
                                 i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
+                                i [clazz "download icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
                                 ]
                         //yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][] //|> UI.wrapToolTip "FlyTo"
                          
