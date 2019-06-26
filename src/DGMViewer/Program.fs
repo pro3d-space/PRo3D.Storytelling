@@ -294,7 +294,7 @@ module Viewer =
                     DefaultSurfaces.diffuseTexture |> toEffect
                     DefaultSurfaces.simpleLighting        |> toEffect
                   ]
-               |> Sg.cullMode (Mod.constant CullMode.Clockwise)
+               |> Sg.cullMode (Mod.constant CullMode.Back)
                //|> Sg.fillMode (Mod.constant FillMode.Line)
                |> Sg.viewTrafo (viewTrafo   |> Mod.map CameraView.viewTrafo )
                |> Sg.projTrafo (perspective |> Mod.map Frustum.projTrafo    )
