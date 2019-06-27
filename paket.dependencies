@@ -23,6 +23,7 @@ nuget Aardvark.Base.IO                      ~> 4.5.2
 nuget Aardvark.Base.Incremental             ~> 4.5.2
 nuget Aardvark.Base.FSharp                  ~> 4.5.2
 nuget Aardvark.Base.Essentials              ~> 4.5.2
+nuget Aardvark.Geometry                     ~> 4.5.2
 												  
 nuget Aardvark.Compiler.DomainTypes         ~> 4.2.7
 nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 4.2.7
@@ -31,6 +32,7 @@ nuget Uncodium.Eigensystems                 ~> 1.0.1
 
 
 nuget Aardvark.Geometry.Intersection        ~> 4.7.1
+nuget Aardvark.Geometry.PointTree           ~> 4.7.1
 
 nuget Aardvark.GeoSpatial.Opc               ~> 0.0.10
 
