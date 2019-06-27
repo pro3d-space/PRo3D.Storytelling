@@ -327,76 +327,16 @@ module Drawing =
     let pickable' (pick :IMod<Pickable>) (sg: ISg) =
         Sg.PickableApplicator (pick, Mod.constant sg)
 
-
     let featureMousePick (model : MModel) =
       
       model.kdTreeBounds |> Mod.map(fun x -> 
         let shape = x |> PickShape.Box
-        //let s0 =
-        //  Sg.box' C4b.Red x
-        //    |> Sg.noEvents
-        //    |> Sg.shader {
-        //      do! DefaultSurfaces.trafo
-        //      do! DefaultSurfaces.vertexColor
-        //      do! DefaultSurfaces.simpleLighting
-        //      }
-            
-        
-        //let s1 = 
         Sg.empty 
           |> Sg.pickable shape
           |> Sg.withEvents [
               SceneEventKind.Down, (
                 fun sceneHit -> true, Seq.ofList[PickProducts sceneHit])  
-            ]
-        //Sg.ofList [s0; s1] 
-              ) |> Sg.dynamic 
-
-    //let pickableSgEmpty (point: V3d) (trafo : IMod<Trafo3d>) (id: string) (picking: IMod<bool>) (pointSize:IMod<float>) =
-    //    let pickable = 
-    //      adaptive {
-    //        let! size = pointSize
-    //        let sphere = Sphere3d(point, 0.001)
-    //        let! trafo = trafo
-    //        //return { 
-    //        //    shape = sphere |> PickShape.Sphere
-    //        //    trafo = trafo
-    //        //} 
-    //        return (sphere |> PickShape.Sphere)
-    //      }
-        
-
-    //    let sg = 
-    //        aset {
-    //            yield Sg.empty
-    //        }  |> Sg.set
-        
-    //    sg 
-    //    |> Sg.trafo trafo
-    //    |> Sg.pickable' pickable
-    //    //|> Sg.noEvents
-    //    |> Sg.withEvents [
-    //            SceneEventKind.Down, (
-    //                fun sceneHit ->
-    //                if (picking |> Mod.force) then
-    //                    Log.warn "[ProductPicking] picked %A" id
-    //                    true, Seq.ofList[PickProducts (sceneHit, [id])]
-    //                else
-    //                    false, Seq.ofList[])
-    //        ]
-        
-
-    //let getPickables (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (picking:IMod<bool>) =
-    //    let test = 
-    //      aset {
-    //        let! points = sgfeatures.positions
-    //        let! names = sgfeatures.names
-    //        let tt = Array.map2( fun (p:V3d) (n:string) ->
-    //                        pickableSgEmpty p sgfeatures.trafo n picking pointSize 
-    //                    ) points names
-    //        yield tt |> Sg.ofArray
-    //      } |> Sg.set
-    //    test 
+            ]) |> Sg.dynamic 
 
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:V3d) (size:IMod<float>) (hfov:IMod<float>) =
         adaptive {

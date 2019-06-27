@@ -16,6 +16,7 @@ open System
 open Aardvark.SceneGraph
 open Aardvark.UI
 open PRo3D.Base.AnnotationDraft
+open KdTreeHelper
 
 [<AutoOpen>]
 module MissingInBase = 
@@ -353,10 +354,8 @@ module App =
         let flatList = data.features |> PList.map(fun x -> x.geometry.positions |> List.head, x.id) |> PList.toArray
         let input = flatList |> Array.map fst
         let kdTree = PointKdTreeExtensions.CreateKdTree(input, Metric.Euclidean, 1e-5)
-        //let index = kdTree.GetClosest(V3d.Zero).Index |> int
-        //let queryPoint = data.features.[index]
-
-        { model with data = data; filteredFeatures = data.features; kdTreeBounds = Box3d(input); selection = {model.selection with kdTree = kdTree; flatPosID = flatList }} |> updateFeaturesForRendering view.Location //
+        let kdTreeBounds = Box3d(input)
+        { model with data = data; filteredFeatures = data.features; kdTreeBounds = kdTreeBounds; selection = {model.selection with kdTree = kdTree; flatPosID = flatList }} |> updateFeaturesForRendering view.Location //
       | SetPointSize s ->
         let size = Numeric.update model.featureProperties.pointSize s
         { model with featureProperties = { model.featureProperties with pointSize = size }}
@@ -368,29 +367,47 @@ module App =
       | AddProductToSelection name ->
         updateSelection [name] model
       | PickProducts hit -> 
-          printf "woho!  %A" hit
-
-          let ray = hit.globalRay.Ray.Ray
-          let minDist = model.selection.selectionMinDist
-
-          let withinDistance = 
-            model.selection.flatPosID 
-              |> Array.choose(fun (pos, id) -> 
-                let dist = ray.GetMinimalDistanceTo pos
-                if dist < minDist then
-                  Some (dist, id)
-                else 
-                  None)
           
-          match withinDistance.IsEmpty() with
+          let viewPort = V2d hit.event.evtViewport
+          let center = 
+            let t = V2d hit.event.evtPixel / viewPort
+            V2d(2.0 * t.X - 1.0, 1.0 - 2.0 * t.Y)
+          let viewProj = hit.event.evtView * hit.event.evtProj
+          
+          let size = 5.0 * 2.0 / viewPort
+
+          let input = model.selection.flatPosID |> Array.map fst
+          let ellipse = Ellipse2d(center, V2d.IO * size, V2d.OI * size)
+          let closestPoints = KdTreeQuery.FindPoints(model.selection.kdTree, model.kdTreeBounds, input, viewProj, ellipse)
+
+          match closestPoints.IsEmpty() with
           | true -> model
           | false -> 
-            let closestID = 
-              withinDistance
-                |> Array.sortBy fst
-                |> Array.map snd
-                |> Array.head
+            let index = closestPoints |> Seq.map (fun (depth, pos, index) -> index) |> Seq.head
+            let wpos, closestID = model.selection.flatPosID.[index]
+            printf "found this %A" closestID
             updateSelection [closestID] model
+
+          //let ray = hit.globalRay.Ray.Ray
+          //let minDist = model.selection.selectionMinDist
+
+          //model.selection.flatPosID 
+          //  |> Seq.choose(fun (pos, id) -> 
+          //    let dist = ray.GetMinimalDistanceTo pos
+          //    if dist < minDist then
+          //      Some (dist, id)
+          //    else 
+          //      None)
+          //  |> fun withinRange -> 
+          //    if withinRange.IsEmpty() then
+          //      model
+          //    else
+          //      let closestID = 
+          //        withinRange
+          //          |> Seq.sortBy fst
+          //          |> Seq.map snd
+          //          |> Seq.head
+          //      updateSelection [closestID] model
       
   let mkColor (model :MModel) (feature : Feature) =
     model.selection

@@ -141,15 +141,16 @@ type KdTreeQuery () =
             let pp = query.viewProj.Forward.TransformPosProj pt
             pp
 
-        let compare (l : V3d, _) (r : V3d, _) = compare l.Z r.Z
+        let compare (l : V3d, _, _) (r : V3d, _, _) = compare l.Z r.Z
 
         let rec traverse (box : Box3d) (node : int) =
             if node >= data.PermArray.Length then
                 Seq.empty
             else
-                let pt = positions.[int data.PermArray.[node]]
+                let index = int data.PermArray.[node]
+                let pt = positions.[index]
                 let self = 
-                    if Region3d.contains pt query.region then Seq.singleton (getScreenSpacePos pt, pt)
+                    if Region3d.contains pt query.region then Seq.singleton (getScreenSpacePos pt, pt, index)
                     else Seq.empty
 
                 if isInner node then
@@ -217,7 +218,7 @@ type KdTreeQuery () =
     [<Extension>]
     static member FindPoints(self :  PointKdTreeD<(V3d[]), V3d>, worldBox : Box3d, positions : V3d[], viewProj : Trafo3d, box : Box2d) =
         KdTreeQuery.FindPointsInternal(self, worldBox, positions, viewProj, box)
-        |> Seq.map (fun (pp,w) -> pp.Z, w)
+        |> Seq.map (fun (pp,w, index) -> pp.Z, w, index)
         
     [<Extension>]
     static member FindPoints(self :  PointKdTreeD<(V3d[]), V3d>, worldBox : Box3d, positions : V3d[], viewProj : Trafo3d, ellipse : Ellipse2d) =
@@ -232,6 +233,6 @@ type KdTreeQuery () =
         let m = M22d.FromCols(ellipse.Axis0, ellipse.Axis1).Inverse
             
         KdTreeQuery.FindPointsInternal(self, worldBox, positions, viewProj, box)
-        |> Seq.filter (fun (pp,w) -> Vec.lengthSquared (m * (pp.XY - ellipse.Center)) <= 1.0)
-        |> Seq.map (fun (pp,w) -> pp.Z, w)
+        |> Seq.filter (fun (pp,w, index) -> Vec.lengthSquared (m * (pp.XY - ellipse.Center)) <= 1.0)
+        |> Seq.map (fun (pp,w, index) -> pp.Z, w, index)
 
