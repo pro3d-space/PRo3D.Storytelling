@@ -58,8 +58,12 @@ module SurfaceProperties =
                 { model with priority = Numeric.update model.priority a }
             | SetScaling a ->
                 { model with scaling = Numeric.update model.scaling a }
-            | SetScalarMap a ->                
-                { model with selectedScalar = a } |> Console.print
+            | SetScalarMap a -> 
+                match a with
+                  | Some s -> 
+                    let scs = model.scalarLayers |> HMap.alter s.index (Option.map(fun _ -> s))
+                    { model with selectedScalar = Some s; scalarLayers = scs } |> Console.print
+                  | None -> model
             | SetTexturesMap a ->                
                 { model with selectedTexture = a } |> Console.print
             | SetHomePosition -> model
