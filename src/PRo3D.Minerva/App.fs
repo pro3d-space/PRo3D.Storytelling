@@ -13,6 +13,7 @@ open PRo3D.Base
 open PRo3D.Minerva.Communication
 open Aardvark.GeoSpatial.Opc
 open System
+open Aardvark.SceneGraph
 open Aardvark.UI
 open PRo3D.Base.AnnotationDraft
 
@@ -63,6 +64,7 @@ module App =
   open Aardvark.SceneGraph.Opc
   open System.Threading  
   open PRo3D.Minerva.Communication.JsonNetworkCommand
+  open Aardvark.Geometry
   
   let instrumentText (instr : Instrument) =
     match instr with
@@ -348,9 +350,13 @@ module App =
         let data = Files.loadDataFile
         Log.stop()        
         Log.line "[Minerva] found %d entries" data.features.Count   
-        //let filtered = QueryApp.applyFilterQueries model.data.features model.queryFilter view
-        
-        { model with data = data; filteredFeatures = data.features} |> updateFeaturesForRendering view.Location //
+        let flatList = data.features |> PList.map(fun x -> x.geometry.positions |> List.head, x.id) |> PList.toArray
+        let input = flatList |> Array.map fst
+        let kdTree = PointKdTreeExtensions.CreateKdTree(input, Metric.Euclidean, 1e-5)
+        //let index = kdTree.GetClosest(V3d.Zero).Index |> int
+        //let queryPoint = data.features.[index]
+
+        { model with data = data; filteredFeatures = data.features; kdTreeBounds = Box3d(input); selection = {model.selection with kdTree = kdTree; flatPosID = flatList }} |> updateFeaturesForRendering view.Location //
       | SetPointSize s ->
         let size = Numeric.update model.featureProperties.pointSize s
         { model with featureProperties = { model.featureProperties with pointSize = size }}
@@ -361,11 +367,30 @@ module App =
         { model with selection = { model.selection with singleSelectProduct = Some name }}
       | AddProductToSelection name ->
         updateSelection [name] model
-        ////let colors = updateSgFeatureColors model.filteredFeatures newSelection
-        //let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
-        //{ model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
-        //             //sgFeatures = { model.sgFeatures with colors = colors}}
-      | PickProducts (hit, names) -> updateSelection names model
+      | PickProducts hit -> 
+          printf "woho!  %A" hit
+
+          let ray = hit.globalRay.Ray.Ray
+          let minDist = model.selection.selectionMinDist
+
+          let withinDistance = 
+            model.selection.flatPosID 
+              |> Array.choose(fun (pos, id) -> 
+                let dist = ray.GetMinimalDistanceTo pos
+                if dist < minDist then
+                  Some (dist, id)
+                else 
+                  None)
+          
+          match withinDistance.IsEmpty() with
+          | true -> model
+          | false -> 
+            let closestID = 
+              withinDistance
+                |> Array.sortBy fst
+                |> Array.map snd
+                |> Array.head
+            updateSelection [closestID] model
       
   let mkColor (model :MModel) (feature : Feature) =
     model.selection
@@ -561,7 +586,9 @@ module App =
     let selectedPoints = Drawing.outlinePoints model.selectedSgFeatures model.featureProperties.pointSize.value
     let points = Drawing.drawIndexedGeometryPoints model.sgFeatures model.featureProperties.pointSize.value false
     //let pickables = Drawing.getPickables model.sgFeatures model.featureProperties.pointSize.value model.picking
-    Sg.ofList [points; selectedPoints] //; pickables] 
+    let pickables = Drawing.featureMousePick model
+
+    Sg.ofList [points; selectedPoints; pickables]
   
   let threads (m : Model) = m.vplMessages
 
