@@ -191,6 +191,22 @@ module JsonNetworkCommand =
                     writer.WriteValue cmd.parameters.numOfLists
                     writer.WritePropertyName "NumOfEntries"
                     writer.WriteValue cmd.parameters.numOfEntries
+
+                    // missing image and image resolution
+                    match cmd.parameters.image with
+                    | Some(image) ->
+                        writer.WritePropertyName "Image"
+                        writer.WriteValue image
+                    | None -> ()
+
+                    match cmd.parameters.imageResolution with
+                    | Some(resolution) ->
+                        writer.WritePropertyName "ImageResolution"
+                        writer.Array (fun () ->
+                            writer.WriteValue (string resolution.X)
+                            writer.WriteValue (string resolution.Y)
+                        )
+                    | None -> ()
                 )
             )
             writer.Object(fun () -> //data
@@ -226,7 +242,11 @@ module JsonNetworkCommand =
     //let numberOfBytes = command.Length
     //let message = header + " " + (numberOfBytes |> string) + " " + command
     //message
-    sb.ToString()
+    let jsonCommand = sb.ToString()
+    let header = "JsonNetworkCommand"
+    let numberOfBytes = jsonCommand.Length
+    let msg = System.String.Format ("{0} {1} {2}", header, numberOfBytes, jsonCommand)
+    msg
 
   let toJsonNetworkResponse (msg : string) : string = 
     let cmdName = "{ \"Name\": \"" + msg + "\"}"

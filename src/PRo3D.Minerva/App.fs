@@ -148,7 +148,7 @@ module App =
       }
 
     let data = { idList = idList; positions = positions; colors = List.empty }
-
+    printfn "names: %A, names: %A" name para.names 
     let jsonMessage = {name = name; parameters = para; data = data} |> JsonNetworkCommand.toJson
 
     comm.GetClient().SendMessage(jsonMessage)
@@ -256,7 +256,9 @@ module App =
         let width = 1920
         let height = ((float)width / (frustum |> Frustum.aspect)) |> int
 
-        let imagePath = @"C:\Users\ortner\Documents\visplore\Minerva"
+        let docPath = System.Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+        let imagePathTmp = @"visplore\Minerva"
+        let imagePath = Path.combine[docPath; imagePathTmp]
         let filename = "overview.jpg"
         PRo3D.Base.Utilities.takeScreenshot "http://localhost:54321" width height filename imagePath
       
