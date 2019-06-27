@@ -144,7 +144,7 @@ type MinervaAction =
   | SetTextSize of Numeric.Action
   | SingleSelectProduct of string
   | AddProductToSelection of string
-  | PickProduct  of SceneHit * string
+  | PickProducts  of SceneHit * list<string>
   //| ChangeInstrumentColor of ColorPicker.Action * Instrument
   
 //[<DomainType>]

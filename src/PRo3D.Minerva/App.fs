@@ -210,18 +210,18 @@ module App =
         |> PList.filter( fun x -> HSet.contains x.id selected)
         |> updateSgFeatures
      
-  let updateSelection (name:string) (model:Model) =
-    let selection = model.selection.selectedProducts
+  let updateSelection (names:list<string>) (model:Model) =
     let newSelection = 
-        if HSet.contains name selection
-            then 
-                HSet.remove name selection
-            else
-                HSet.add name selection
+      List.fold(fun set name -> 
+        if set |> HSet.contains name then
+          set |> HSet.remove name
+        else 
+          set |> HSet.add name) model.selection.selectedProducts names
+
     
     let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
-    { model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}   
-    
+    { model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
+
   let updateSelection2 (selection:list<string>) (model:Model) =
     let selection = selection |> HSet.ofList
     let selectedSgs = updateSelectedSgFeature model.filteredFeatures selection
@@ -359,9 +359,14 @@ module App =
         { model with featureProperties = { model.featureProperties with textSize = size }}   
       | SingleSelectProduct name ->
         { model with selection = { model.selection with singleSelectProduct = Some name }}
-      | AddProductToSelection name -> updateSelection name model
-      | PickProduct (hit, name) -> updateSelection name model            
-
+      | AddProductToSelection name ->
+        updateSelection [name] model
+        ////let colors = updateSgFeatureColors model.filteredFeatures newSelection
+        //let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
+        //{ model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
+        //             //sgFeatures = { model.sgFeatures with colors = colors}}
+      | PickProducts (hit, names) -> updateSelection names model
+      
   let mkColor (model :MModel) (feature : Feature) =
     model.selection
         |> Mod.map( fun s ->
