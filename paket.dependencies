@@ -39,10 +39,10 @@ nuget Aardvark.GeoSpatial.Opc               ~> 0.0.10
 nuget FSharp.Core                           ~> 4.3.0
 nuget FSharp.Data                           ~> 3.0.0
 
-nuget Aardvark.UI                           ~> 4.5.5
-nuget Aardvark.UI.Primitives                ~> 4.5.5
-nuget Aardvark.Service                      ~> 4.5.5
-nuget Aardvark.Cef.WinForms                 ~> 4.5.5
+nuget Aardvark.UI                           ~> 4.5.10
+nuget Aardvark.UI.Primitives                ~> 4.5.10
+nuget Aardvark.Service                      ~> 4.5.10
+nuget Aardvark.Cef.WinForms                 ~> 4.5.10
 
 nuget Aardium  ~> 1.0.18
 
