@@ -334,9 +334,9 @@ module App =
         let data = Files.loadDataFile
         Log.stop()        
         Log.line "[Minerva] found %d entries" data.features.Count   
-        //let filtered = QueryApp.applyFilterQueries model.data.features model.queryFilter view
+        let filtered = QueryApp.applyFilterQueries model.data.features model.queryFilter view
         
-        { model with data = data; filteredFeatures = data.features} |> updateFeaturesForRendering view.Location //
+        { model with data = data; filteredFeatures = filtered} |> updateFeaturesForRendering view.Location //data.features
       | SetPointSize s ->
         let size = Numeric.update model.featureProperties.pointSize s
         { model with featureProperties = { model.featureProperties with pointSize = size }}
@@ -352,6 +352,8 @@ module App =
         //{ model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
         //             //sgFeatures = { model.sgFeatures with colors = colors}}
       | PickProduct (hit, name) -> updateSelection name model
+      | OpenTif id -> Files.loadTif id model
+                           
       
 
       //| ChangeInstrumentColor (c,instrument) -> 
@@ -450,7 +452,7 @@ module App =
                         yield div [clazz "ui description"] [
                                 f.sol |> sprintf "Sol: %A" |> text
                                 i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
-                                i [clazz "download icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
+                                i [clazz "download icon"; onClick (fun _ -> OpenTif f.id)][]
                                 ]
                         //yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][] //|> UI.wrapToolTip "FlyTo"
                          
