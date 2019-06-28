@@ -9,6 +9,7 @@ open FSharp.Data
 open FSharp.Data.JsonExtensions
 open Aardvark.Application
 open PRo3D.Minerva.Communication
+open Aardvark.Geometry
 
 type FeatureId = FeatureId of string
 
@@ -135,7 +136,8 @@ type MinervaAction =
   | Reset
   | SendSelection
   | SendScreenSpaceCoordinates
-  | PerformIdQuery of list<string>
+  | UpdateFiltering of list<string>
+  | UpdateSelection of list<string>
   | ConnectVisplore
   | FlyToProduct of V3d
   | QueryMessage of QueryAction
@@ -143,7 +145,8 @@ type MinervaAction =
   | SetTextSize of Numeric.Action
   | SingleSelectProduct of string
   | AddProductToSelection of string
-  | PickProduct  of SceneHit * string
+  | PickProducts  of SceneHit
+  | HoverProducts of SceneHit
   | OpenTif of string
   //| ChangeInstrumentColor of ColorPicker.Action * Instrument
   
@@ -208,6 +211,9 @@ type QueryModel = {
 type SelectionModel = {
     selectedProducts     : hset<string> 
     singleSelectProduct  : option<string>
+    kdTree               : PointKdTreeD<V3d[],V3d>
+    flatPosID            : array<V3d * string>
+    selectionMinDist     : float
     //selectedSgFeatures   : SgFeatures
 }
 
@@ -246,7 +252,8 @@ type Model =
     minervaMailboxState     : MailboxState
     featureProperties       : FeatureProperties
     selection               : SelectionModel
-
+    kdTreeBounds         : Box3d
+    hoveredProduct       : Option<V3d>
     solLabels            : hmap<string,V3d>
     sgFeatures           : SgFeatures
     selectedSgFeatures   : SgFeatures
@@ -321,7 +328,7 @@ module Initial =
     }
   let minS = 
         {
-            value = 751.0
+            value = 1050.0
             min =  0.0
             max = 10000.0
             step = 1.0
@@ -329,7 +336,7 @@ module Initial =
         }
   let maxS = 
         {
-            value = 926.0
+            value = 1100.0
             min =  0.0
             max = 10000.0
             step = 1.0
@@ -423,6 +430,9 @@ module Initial =
         selectedProducts     = hset.Empty
         singleSelectProduct  = None
         //selectedSgFeatures = sgSelfeatures
+        kdTree = Unchecked.defaultof<_>
+        flatPosID = Array.empty
+        selectionMinDist = 0.05
     }
           
   let sites = [
@@ -448,7 +458,8 @@ module Initial =
       featureProperties = fProps
       selection = selectionM
       filteredFeatures = data.features
-
+      kdTreeBounds = Box3d.Invalid
+      hoveredProduct = None
       solLabels = HMap.empty
       sgFeatures =  sgfeatures
       selectedSgFeatures = sgSelfeatures

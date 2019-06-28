@@ -477,6 +477,8 @@ module Mutable =
         let _minervaMailboxState = ResetMod.Create(__initial.minervaMailboxState)
         let _featureProperties = MFeatureProperties.Create(__initial.featureProperties)
         let _selection = ResetMod.Create(__initial.selection)
+        let _kdTreeBounds = ResetMod.Create(__initial.kdTreeBounds)
+        let _hoveredProduct = MOption.Create(__initial.hoveredProduct)
         let _solLabels = MMap.Create(__initial.solLabels)
         let _sgFeatures = MSgFeatures.Create(__initial.sgFeatures)
         let _selectedSgFeatures = MSgFeatures.Create(__initial.selectedSgFeatures)
@@ -492,6 +494,8 @@ module Mutable =
         member x.minervaMailboxState = _minervaMailboxState :> IMod<_>
         member x.featureProperties = _featureProperties
         member x.selection = _selection :> IMod<_>
+        member x.kdTreeBounds = _kdTreeBounds :> IMod<_>
+        member x.hoveredProduct = _hoveredProduct :> IMod<_>
         member x.solLabels = _solLabels :> amap<_,_>
         member x.sgFeatures = _sgFeatures
         member x.selectedSgFeatures = _selectedSgFeatures
@@ -511,6 +515,8 @@ module Mutable =
                 ResetMod.Update(_minervaMailboxState,v.minervaMailboxState)
                 MFeatureProperties.Update(_featureProperties, v.featureProperties)
                 ResetMod.Update(_selection,v.selection)
+                ResetMod.Update(_kdTreeBounds,v.kdTreeBounds)
+                MOption.Update(_hoveredProduct, v.hoveredProduct)
                 MMap.Update(_solLabels, v.solLabels)
                 MSgFeatures.Update(_sgFeatures, v.sgFeatures)
                 MSgFeatures.Update(_selectedSgFeatures, v.selectedSgFeatures)
@@ -590,6 +596,18 @@ module Mutable =
                     override x.Get(r) = r.selection
                     override x.Set(r,v) = { r with selection = v }
                     override x.Update(r,f) = { r with selection = f r.selection }
+                }
+            let kdTreeBounds =
+                { new Lens<PRo3D.Minerva.Model, Aardvark.Base.Box3d>() with
+                    override x.Get(r) = r.kdTreeBounds
+                    override x.Set(r,v) = { r with kdTreeBounds = v }
+                    override x.Update(r,f) = { r with kdTreeBounds = f r.kdTreeBounds }
+                }
+            let hoveredProduct =
+                { new Lens<PRo3D.Minerva.Model, Microsoft.FSharp.Core.Option<Aardvark.Base.V3d>>() with
+                    override x.Get(r) = r.hoveredProduct
+                    override x.Set(r,v) = { r with hoveredProduct = v }
+                    override x.Update(r,f) = { r with hoveredProduct = f r.hoveredProduct }
                 }
             let solLabels =
                 { new Lens<PRo3D.Minerva.Model, Aardvark.Base.hmap<System.String,Aardvark.Base.V3d>>() with

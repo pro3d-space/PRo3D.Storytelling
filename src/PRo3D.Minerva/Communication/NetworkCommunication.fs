@@ -44,70 +44,19 @@ module Communicator =
     let mutable server : Server = Unchecked.defaultof<_>
   
     let mutable cnt = 0
-    let mutable evalCommand : CommandData -> string = fun _ -> "no eval set"
-  
-    // incoming requests
-    //let evaluateCommand (cmd : CommandData) : string =
-    //  match cmd.name with
-    //  | "MinervaReplaceSelection" ->
-    //     // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
-    //     cmd |> printCommand
-    //     cmd.para.messageID
-  
-    //  | "MinervaRequestProjection" ->
-    //    // Visplore requests new projection data --> send them
-    //    // get the new data
-    //    let positions, idLength =
-    //        match cmd.data.ids with
-    //        | Some(ids) ->
-    //            // since this is a prototype --> generate random values between 0 and 1
-    //            let mutable posArray : V2d[] = [||]
-    //            for id in ids do
-    //                let pX = generateRandomNumber()
-    //                let pY = generateRandomNumber()
-    //                posArray <- [| V2d(pX, pY) |] |> Array.append posArray
-    //            Some(posArray), ids.Length
-    //        | None -> None, 0
-  
-    //    // these are just some dummy data
-        
-    //    let mutable imagepath = "C:/Users/schimkowitsch/Pictures/donauweg.jpg"
-    //    let mutable imageresolution = V2i(1033, 944)
-  
-    //    if cnt = 0 then
-    //        imagepath <- "C:/Users/schimkowitsch/Pictures/lastofus.jpg"
-    //        imageresolution <- V2i(1920, 1040)
-    //        cnt <- 1
-    //    else
-    //        cnt <- 0
-  
-    //    // get the new command
-    //    let name = "MinervaReplaceProjection"
-    //    let para : Params = {names = [|"IdList";"Positions"|]; numOfLists = 2; numOfEntries = idLength;
-    //                         image = Some(imagepath); imageResolution = Some(imageresolution); messageID = ""}
-    //    let data : Data = {ids = cmd.data.ids; positions = positions; colors = None}
-  
-    //    // transform to jsonMessage
-    //    let jsonMessage = createJsonNetworkCommand {name = name; para = para; data = data}
-  
-    //    // send it
-    //    client.SendMessage(jsonMessage)
-  
-    //    // return messageID ... required for response, in case one is required
-    //    cmd.para.messageID
-    //  | _ -> ""
-    
+    let mutable evalCommand : JsonCommand -> string = fun _ -> "no eval set"
+         
     do
         // construct new client --> to send commands to Visplore
         client <- new Client(address, sendingPort)
   
         // construct new server --> to receive commands from Visplore
-        let responder (msg : string) : string = createJsonNetworkResponse msg
-        let converter (msg : string) : string =
-            let tmp = msg |> convertMessageToCommand
+        let responder (msg : string) : string = JsonNetworkCommand.toJsonNetworkResponse msg
+        let convertEval (msg : string) : string =
+            let tmp = msg |> JsonNetworkCommand.fromJson
             let a = tmp|> evalCommand
             a
-        server <- new Server(converter, responder)
+        server <- new Server(convertEval, responder)
     
     member this.GetClient() = client
   

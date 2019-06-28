@@ -1,12 +1,9 @@
-﻿namespace PRo3D.Minerva.Communication
+﻿namespace PRo3D.Minerva.Communication.Deprecated
 
 open System
 open FSharp.Data
 
 module JsonNetworkCommand =
-
-
-
 
     type V2d(x, y) =
         let mutable internalX : float = x

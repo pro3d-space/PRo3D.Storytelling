@@ -34,8 +34,13 @@ type Socket with
     Async.FromBeginEnd(buffer, offset, count, beginSend, socket.EndSend)
 
 
+let (|IntegerParse|_|) (s : string) =
+    match System.Int32.TryParse s with
+        | (true,v) -> Some v
+        | _ -> None
+
 open Aardvark.Base
-type Server(converter : string -> string, responder : string -> string) =
+type Server(convertEval : string -> string, responder : string -> string) =
     
     let mutable internalServer : IDisposable = Unchecked.defaultof<_>
     let mutable listener : Socket = Unchecked.defaultof<_>
@@ -59,39 +64,60 @@ type Server(converter : string -> string, responder : string -> string) =
             let! socket = listener.AsyncAccept()
             Log.line "[Minerva] Received request"
 
-            let buffer : byte[] = Array.zeroCreate 65536
             let headerBuffer : byte[] = Array.zeroCreate 100
 
             try
               //header
-              let! headLength = socket.AsyncReceive(headerBuffer, 0, headerBuffer.Length)
-              let headString = Encoding.ASCII.GetString(headerBuffer, 0, headLength)
-              let commandLength = (headString.Split(' ').[1]) |> Int32.Parse //write functional!
+              let mutable position = 0
+              let mutable spaces = 0
+              let mutable inHeader = true
+              while inHeader && position < 100 do
+                let! readBytes = socket.AsyncReceive(headerBuffer, position, 1)
+                if readBytes <> 1 then failwithf "invalid header, so far: %s" (Encoding.ASCII.GetString(headerBuffer, 0, position))
+                let c = Convert.ToChar(headerBuffer.[position]);
+                if c = ' ' then 
+                    spaces <- spaces + 1
+                if spaces = 2 then inHeader <- false
+                else position <- position + 1
               
-              Log.line "[Minerva] Found Command of length: %d" commandLength
-              
-              let mutable msg = ""
-              let mutable bytesRead = 0
-              
-              //body loop
-              while bytesRead < commandLength do 
-                let! chunkSize = socket.AsyncReceive(buffer, bytesRead, buffer.Length)
-                let chunkString = Encoding.ASCII.GetString(buffer, 0, chunkSize)
+              if inHeader then failwith "header rage"
+
+
+              // stream behind space. e.g. JsonNetworkCommand 10 xxx-payload-xxx....
+              let header = Encoding.ASCII.GetString(headerBuffer, 0, position)
+
+              let messageLength = 
+                  match header.Split(' ') with
+                    | [|"JsonNetworkCommand"; IntegerParse len|] -> len
+                    | _ ->  failwithf "could not parse header: %s" header
+
+              let payloadSize = messageLength
+              let mutable remaining = payloadSize
+              let resultBuffer = Array.zeroCreate remaining
+
+              let mutable read = 0
+              while remaining > 0 do
+                let! received =  socket.AsyncReceive(resultBuffer, read, remaining)
+                read <- read + received
+                remaining <- remaining - received
                 
-                Log.line "[Minerva] read %d bytes of %d" chunkSize commandLength
-                msg <- msg + chunkString
-                bytesRead <- bytesRead + chunkSize
+              // invariant: remaining = 0, buffer is full
+              let fullString =  Encoding.ASCII.GetString(resultBuffer, 0, payloadSize)
+              //let parsed = PRo3D.Minerva.Communication.JsonNetworkCommand.fromJson fullString
 
-              //conversion and response
-              msg <- ((msg |> converter) |> responder)
+              //Log.line "[Minerva] %A" parsed
 
-              let response = Encoding.ASCII.GetBytes(msg)
               
-              try
-                  let! bytesSent = socket.AsyncSend(response)
-                  Log.line "[Minerva] Sent response: %A (%A)" msg bytesSent
-                  socket.Shutdown(SocketShutdown.Both)              
-              with e -> Log.line "[Minerva] An error occurred responding: %s" e.Message
+              //conversion and response
+              fullString |> convertEval |> ignore //|> responder
+              //
+              //let response = Encoding.ASCII.GetBytes(msg)
+              
+              //try
+              //    let! bytesSent = socket.AsyncSend(response)
+              //    Log.line "[Minerva] Sent response: %A (%A)" msg bytesSent
+              //    socket.Shutdown(SocketShutdown.Both)              
+              //with e -> Log.line "[Minerva] An error occurred responding: %s" e.Message
             with e -> Log.line "[Minerva] An error occurred receiving: %s" e.Message
 
             socket.Shutdown(SocketShutdown.Both)
