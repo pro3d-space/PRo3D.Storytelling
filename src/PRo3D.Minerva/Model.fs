@@ -146,6 +146,7 @@ type MinervaAction =
   | SingleSelectProduct of string
   | AddProductToSelection of string
   | PickProducts  of SceneHit
+  | HoverProducts of SceneHit
   //| ChangeInstrumentColor of ColorPicker.Action * Instrument
   
 //[<DomainType>]
@@ -251,6 +252,7 @@ type Model =
     featureProperties       : FeatureProperties
     selection               : SelectionModel
     kdTreeBounds         : Box3d
+    hoveredProduct       : Option<V3d>
     solLabels            : hmap<string,V3d>
     sgFeatures           : SgFeatures
     selectedSgFeatures   : SgFeatures
@@ -456,6 +458,7 @@ module Initial =
       selection = selectionM
       filteredFeatures = data.features
       kdTreeBounds = Box3d.Invalid
+      hoveredProduct = None
       solLabels = HMap.empty
       sgFeatures =  sgfeatures
       selectedSgFeatures = sgSelfeatures

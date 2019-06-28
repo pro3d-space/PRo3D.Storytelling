@@ -129,7 +129,7 @@ module private KdTreeQueryHelpers =
 [<AbstractClass; Sealed; Extension>]
 type KdTreeQuery () = 
      
-    static let tesasdasdt (query : RegionQuery) (t : PointKdTreeD<V3d[], V3d>) (bounds : Box3d) (positions : V3d[]) =
+    static let traversePointKdTree (query : RegionQuery) (t : PointKdTreeD<V3d[], V3d>) (bounds : Box3d) (positions : V3d[]) =
         let data = t.Data
      
 
@@ -213,7 +213,7 @@ type KdTreeQuery () =
                     override x.Intersects (box : Box3d) = hull.Intersects box
             }
 
-        tesasdasdt { region = region; cam = cam; viewProj = viewProj } self worldBox positions
+        traversePointKdTree { region = region; cam = cam; viewProj = viewProj } self worldBox positions
  
     [<Extension>]
     static member FindPoints(self :  PointKdTreeD<(V3d[]), V3d>, worldBox : Box3d, positions : V3d[], viewProj : Trafo3d, box : Box2d) =

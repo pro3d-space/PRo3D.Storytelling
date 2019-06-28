@@ -1,8 +1,6 @@
 ﻿namespace PRo3D.Minerva
 
-//open Aardvark.UI
-open Aardvark.UI.Primitives
-open Aardvark.UI.Events
+open System
 
 open Aardvark.Base
 open Aardvark.Base.Incremental
@@ -12,9 +10,10 @@ open Aardvark.Rendering.Text
 open PRo3D.Base
 open PRo3D.Minerva.Communication
 open Aardvark.GeoSpatial.Opc
-open System
+
 open Aardvark.SceneGraph
 open Aardvark.UI
+open Aardvark.UI.Primitives
 open PRo3D.Base.AnnotationDraft
 open KdTreeHelper
 
@@ -59,7 +58,6 @@ type HarriSchirchWrongBlockingCollection<'a>() =
 
     member x.IsCompleted = finished
         
-
 module App =
   open System.Net.Sockets
   open Aardvark.SceneGraph.Opc
@@ -163,43 +161,31 @@ module App =
     features 
       |> PList.toList      
       |> List.map(fun x -> x.sol |> string, x.geometry.positions.Head) 
-      |> HMap.ofList
-      |> HMap.toList
       |> List.sortBy(fun (_,p) -> V3d.DistanceSquared(position, p))
       |> take' 50
       |> HMap.ofList
       
   let updateSgFeatureColors (features:plist<Feature>) (selected:hset<string>) =
-
     features
-        |> PList.map( fun x -> 
-            if HSet.contains x.id selected
-            then 
-                C4b.VRVisGreen
-            else
-                x.instrument |> Model.instrumentColor )
-        |> PList.toArray
+      |> PList.map( fun x -> 
+        if HSet.contains x.id selected then 
+          C4b.VRVisGreen
+        else
+          x.instrument |> Model.instrumentColor )
+      |> PList.toArray
 
   let updateSgFeatures (features:plist<Feature>) =
-    let names =
-      features
-        |> PList.map(fun f -> f.id)            
-        |> PList.toArray
-
-    let positions = 
-      features
-        |> PList.map(fun f -> f.geometry.positions.Head)            
-        |> PList.toArray
     
-    let trafo = 
+    let array = features |> PList.toArray
+    
+    let names     = array |> Array.map(fun f -> f.id)            
+    let positions = array |> Array.map(fun f -> f.geometry.positions.Head)            
+    let colors    = array |> Array.map(fun f -> f.instrument |> Model.instrumentColor )
+    
+    let trafo =
       match positions |> Array.tryHead with
         | Some p -> Trafo3d.Translation p
         | _ -> Trafo3d.Identity
-    
-    let colors = 
-      features
-        |> PList.map( fun x -> x.instrument |> Model.instrumentColor )
-        |> PList.toArray
                      
     {
         names = names
@@ -221,7 +207,6 @@ module App =
         else 
           set |> HSet.add name) model.selection.selectedProducts names
 
-    
     let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
     { model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
 
@@ -237,6 +222,21 @@ module App =
     Log.line "[Minerva] showing %d labels and %d products" solLabels.Count sgFeatures.positions.Length
     Log.stop()
     { model with solLabels = solLabels; sgFeatures = sgFeatures }
+
+  let queryClosestPoint model hit = 
+    //Report.BeginTimed("kdTreeQuery") |> ignore
+    let viewProj = hit.event.evtView * hit.event.evtProj
+    let viewPort = V2d hit.event.evtViewport
+    let size = 5.0 * 2.0 / viewPort
+    let centerNDC = 
+      let t = V2d hit.event.evtPixel / viewPort
+      V2d(2.0 * t.X - 1.0, 1.0 - 2.0 * t.Y)
+
+    let input = model.selection.flatPosID |> Array.map fst
+    let ellipse = Ellipse2d(centerNDC, V2d.IO * size, V2d.OI * size)
+    let closestPoints = KdTreeQuery.FindPoints(model.selection.kdTree, model.kdTreeBounds, input, viewProj, ellipse)
+    //Report.EndTimed() |> ignore
+    closestPoints
 
   let update (view:CameraView) frustum (model : Model) (msg : MinervaAction) : Model =
       match msg with     
@@ -367,30 +367,19 @@ module App =
       | AddProductToSelection name ->
         updateSelection [name] model
       | PickProducts hit -> 
-          
-          let viewPort = V2d hit.event.evtViewport
-          let center = 
-            let t = V2d hit.event.evtPixel / viewPort
-            V2d(2.0 * t.X - 1.0, 1.0 - 2.0 * t.Y)
-          let viewProj = hit.event.evtView * hit.event.evtProj
-          
-          let size = 5.0 * 2.0 / viewPort
+          let closestPoints = queryClosestPoint model hit
 
-          let input = model.selection.flatPosID |> Array.map fst
-          let ellipse = Ellipse2d(center, V2d.IO * size, V2d.OI * size)
-          let closestPoints = KdTreeQuery.FindPoints(model.selection.kdTree, model.kdTreeBounds, input, viewProj, ellipse)
-
-          match closestPoints.IsEmpty() with
-          | true -> model
-          | false -> 
-            let index = closestPoints |> Seq.map (fun (depth, pos, index) -> index) |> Seq.head
+          match closestPoints with
+          | emptySeq when Seq.isEmpty emptySeq -> model
+          | seq -> 
+            let index = seq |> Seq.map (fun (depth, pos, index) -> index) |> Seq.head
             let wpos, closestID = model.selection.flatPosID.[index]
-            printf "found this %A" closestID
+            //printf "found this %A" closestID
             updateSelection [closestID] model
-
+            
+          ////bruteForce
           //let ray = hit.globalRay.Ray.Ray
           //let minDist = model.selection.selectionMinDist
-
           //model.selection.flatPosID 
           //  |> Seq.choose(fun (pos, id) -> 
           //    let dist = ray.GetMinimalDistanceTo pos
@@ -408,91 +397,107 @@ module App =
           //          |> Seq.map snd
           //          |> Seq.head
           //      updateSelection [closestID] model
+
+      | HoverProducts hit ->
+          //Report.BeginTimed("update") |> ignore
+          //let closestPoints = queryClosestPoint model hit
+
+          //let updateModel = 
+          //  match closestPoints with
+          //  | emptySeq when Seq.isEmpty emptySeq -> 
+          //    match model.hoveredProduct with
+          //    | None -> model
+          //    | Some _ -> { model with hoveredProduct = None}
+          //  | seq -> 
+          //    let depth, pos, index = seq |> Seq.head
+          //    //let wpos, closestID = model.selection.flatPosID.[index]
+          //    //printf "hovered this %A at %A" closestID wpos
+          //    { model with hoveredProduct = Some pos }
+
+          //Report.EndTimed() |> ignore
+
+          //updateModel
+
+          model
       
   let mkColor (model :MModel) (feature : Feature) =
     model.selection
-        |> Mod.map( fun s ->
-            s.selectedProducts
-            |> HSet.map(fun x -> x = feature.id)
-            |> HSet.contains true
-        )
-        |> Mod.map (function x -> if x then C4b.VRVisGreen else (feature.instrument |> Model.instrumentColor))
+      |> Mod.map( fun s ->
+        s.selectedProducts
+          |> HSet.map(fun x -> x = feature.id)
+          |> HSet.contains true)
+      |> Mod.map (function x -> if x then C4b.VRVisGreen else (feature.instrument |> Model.instrumentColor))
 
   let isSingleSelect (model :MModel) (feature : Feature) =
-    model.selection |> Mod.map( fun x -> 
-        let selection = x.singleSelectProduct
-        match selection with 
+    model.selection 
+      |> Mod.map( fun x -> 
+        match x.singleSelectProduct with 
         | Some s -> s = feature.id
         | None -> false )
 
   let selectionColor (model :MModel) (feature : Feature) =
-    model.selection |> Mod.map( fun s -> 
-         s.selectedProducts
-            |> HSet.map(fun x -> x = feature.id)
-            |> HSet.contains true
-        )
-        |> Mod.map (function x -> if x then C4b.VRVisGreen else C4b.White)
+    model.selection 
+      |> Mod.map( fun s -> 
+        s.selectedProducts
+          |> HSet.map(fun x -> x = feature.id)
+          |> HSet.contains true)
+      |> Mod.map (function x -> if x then C4b.VRVisGreen else C4b.White)
 
   let viewFeatures (model :MModel) (instr : Instrument) (features : list<Feature>) = 
-    [
-      let ac = sprintf "color: %s" (Html.ofC4b C4b.White)
+    let ac = sprintf "color: %s" (Html.ofC4b C4b.White)
 
-      for f in features do      
-         //selection
-        //let headerColor = 
-        //    (isSingleSelect model f) 
-        //        |> Mod.map(fun x -> 
-        //        (if x then C4b.VRVisGreen else C4b.White) 
-        //            |> Html.ofC4b 
-        //            |> sprintf "color: %s"
-        //        ) 
+    features |> List.map(fun f -> 
+      //selection
+      //let headerColor = 
+      //    (isSingleSelect model f) 
+      //        |> Mod.map(fun x -> 
+      //        (if x then C4b.VRVisGreen else C4b.White) 
+      //            |> Html.ofC4b 
+      //            |> sprintf "color: %s"
+      //        ) 
 
-        let headerAttributes =
-            amap {
-                //yield onClick (fun _ -> SingleSelectProduct f.id)
-                yield  onClick(fun _ -> AddProductToSelection f.id)
-            } |> AttributeMap.ofAMap
+      let headerAttributes =
+          amap {
+              //yield onClick (fun _ -> SingleSelectProduct f.id)
+              yield  onClick(fun _ -> AddProductToSelection f.id)
+          } |> AttributeMap.ofAMap
 
-        //let iconAttr = 
-        //  [
-        //    clazz "ui map pin inverted middle aligned icon"; 
-        //    style (sprintf "color: %s" (f.instrument |> Model.instrumentColor |> Html.ofC4b))
-        //    onClick(fun _ -> AddProductToSelection f.id)
-        //    //onClick(fun _ -> FlyToProduct f.geometry.positions.Head)
-        //  ]  
+      //let iconAttr = 
+      //  [
+      //    clazz "ui map pin inverted middle aligned icon"; 
+      //    style (sprintf "color: %s" (f.instrument |> Model.instrumentColor |> Html.ofC4b))
+      //    onClick(fun _ -> AddProductToSelection f.id)
+      //    //onClick(fun _ -> FlyToProduct f.geometry.positions.Head)
+      //  ]  
           
-        let iconAttributes =
-              amap {                  
-                yield clazz "ui map pin inverted middle aligned icon"
-                //yield  onClick(fun _ -> AddProductToSelection f.id)
+      let iconAttributes =
+        amap {                  
+          yield clazz "ui map pin inverted middle aligned icon"
+          //yield  onClick(fun _ -> AddProductToSelection f.id)
 
-                yield style (sprintf "color: %s" (Html.ofC4b (f.instrument |> Model.instrumentColor)))
-              } |> AttributeMap.ofAMap
+          yield style (sprintf "color: %s" (Html.ofC4b (f.instrument |> Model.instrumentColor)))
+        } |> AttributeMap.ofAMap
 
-        let headerAttr : AttributeMap<_> = [clazz "ui header small"] |> AttributeMap.ofList
-                        
-        let item =             
-          div [clazz "ui inverted item"][
-            Incremental.i iconAttributes AList.empty //i iconAttributes []
-            div [clazz "ui content"] [
-              Incremental.div (AttributeMap.ofList [style ac]) (
-                alist {
-                        let! hc = selectionColor model f
-                        let c = hc |> Html.ofC4b |> sprintf "color: %s"
-                        yield div[clazz "header"; style c][
-                             Incremental.div (headerAttributes) (AList.single (instr |> instrumentText |> text))
-                        ]
-                        yield div [clazz "ui description"] [
-                                f.sol |> sprintf "Sol: %A" |> text
-                                i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
-                                ]
-                        //yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][] //|> UI.wrapToolTip "FlyTo"
-                         
-                } )
-              ]            
-          ]
-        yield item 
-    ]
+      let headerAttr : AttributeMap<_> = [clazz "ui header small"] |> AttributeMap.ofList
+                                    
+      div [clazz "ui inverted item"][
+        Incremental.i iconAttributes AList.empty //i iconAttributes []
+        div [clazz "ui content"] [
+          Incremental.div (AttributeMap.ofList [style ac]) (
+            alist {
+              let! hc = selectionColor model f
+              let c = hc |> Html.ofC4b |> sprintf "color: %s"
+              yield div[clazz "header"; style c][
+                    Incremental.div (headerAttributes) (AList.single (instr |> instrumentText |> text))
+              ]
+              yield div [clazz "ui description"] [
+                      f.sol |> sprintf "Sol: %A" |> text
+                      i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
+                      ]
+              //yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][] //|> UI.wrapToolTip "FlyTo"       
+            } )
+          ]            
+      ]) 
 
   let accordion text' icon active content' =
      let title = if active then "title active inverted" else "title inverted"
@@ -504,8 +509,7 @@ module App =
                  div [clazz title; style "background-color: #282828"] [
                          i [clazz ("dropdown icon")][]
                          text text'                                
-                         div[style "float:right"][i [clazz (icon + " icon")][]]
-                         
+                         div[style "float:right"][i [clazz (icon + " icon")][]]     
                  ]
                  div [clazz content;  style "overflow-y : auto; "] content' //max-height: 35%
              ]
@@ -539,13 +543,11 @@ module App =
                 |> List.sortBy(fun x -> V3d.DistanceSquared(pos, x.geometry.coordinates.Head)) 
                 |> take'(20)
 
-           
-
             yield div [clazz "ui inverted item"][
                 yield accordion header "Content" false [                    
                   div [clazz "ui list"] (viewFeatures model instr g)
                 ]
-              ]
+            ]
         }
 
      div [clazz "ui inverted segment"] [
@@ -568,7 +570,6 @@ module App =
          button [clazz "ui button"; onClick (fun _ -> ApplyFilters)][text "Filter"]         
        ]
 
-       
        queryGui model               
        propertiesGui          
        Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) listOfFeatures //AList.empty  
@@ -596,16 +597,22 @@ module App =
            ) 
         |> AMap.toASet  
         |> ASet.map(fun x -> snd x)
-        |> Aardvark.UI.``F# Sg``.Sg.set
+        |> Sg.set
     lables
           
   let viewFeaturesSg (model : MModel) =
     let selectedPoints = Drawing.outlinePoints model.selectedSgFeatures model.featureProperties.pointSize.value
-    let points = Drawing.drawIndexedGeometryPoints model.sgFeatures model.featureProperties.pointSize.value false
-    //let pickables = Drawing.getPickables model.sgFeatures model.featureProperties.pointSize.value model.picking
+    let points = Drawing.drawIndexedGeometryFeaturePoints model.sgFeatures model.featureProperties.pointSize.value false
     let pickables = Drawing.featureMousePick model
+    let hoveredPoint = 
+      model.hoveredProduct |> Mod.map(fun x ->  
+        match x with 
+        | None -> [||]
+        | Some a -> [|V3f a|])
+        
+    let hoveredPoint = Drawing.drawIndexedGeometryPoints hoveredPoint (Mod.constant([|C4b.Yellow|])) (Mod.constant 10.0)
 
-    Sg.ofList [points; selectedPoints; pickables]
+    Sg.ofList [points; selectedPoints; pickables; hoveredPoint]
   
   let threads (m : Model) = m.vplMessages
 
@@ -641,5 +648,3 @@ module App =
         update    = update (CameraView.lookAt V3d.Zero V3d.One V3d.OOI) (Frustum.perspective 90.0 0.001 100000.0 1.0)
         initial   = Initial.model mailbox
     }
-
-    
