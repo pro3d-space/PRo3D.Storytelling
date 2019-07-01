@@ -6,7 +6,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{eeac5c2e-f7b2-47e7-903a-89df421ddd0c}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <RootNamespace>PRo3D.Minerva</RootNamespace>
     <AssemblyName>PRo3D.Minerva</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
@@ -37,7 +37,8 @@
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DocumentationFile>bin\$(Configuration)\$(AssemblyName).XML</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
     <StartArguments>perjen</StartArguments>
   </PropertyGroup>
@@ -69,7 +70,6 @@
     <None Include="App.config" />
     <None Include="paket.references" />
     <Compile Include="KdTreeFinds.fs" />
-    <Compile Include="Communication/JsonNetworkCmd.fs" />
     <Compile Include="Communication\JsonNetworkCommand2.fs" />
     <Compile Include="Communication/Server.fs" />
     <Compile Include="Communication/Client.fs" />

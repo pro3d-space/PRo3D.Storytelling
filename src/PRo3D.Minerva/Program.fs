@@ -1,10 +1,11 @@
-﻿open System
-open Suave
+﻿namespace super
+//open System
+//open Suave
 
-open Aardvark
-open Aardvark.Base
-open Aardvark.Base.Incremental
-open Aardium
+//open Aardvark
+//open Aardvark.Base
+//open Aardvark.Base.Incremental
+//open Aardium
 open Aardvark.Application.WinForms
 open Aardvark.UI
 open FSharp.Data

@@ -1,4 +1,6 @@
-﻿module PRo3D.Config
+﻿namespace PRo3D
 
-let useAsyncIntersections = false
-let sampleCount = 100
+module Config =
+
+  let useAsyncIntersections = false
+  let sampleCount = 100

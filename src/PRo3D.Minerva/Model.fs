@@ -112,7 +112,7 @@ type FeatureCollection =
     features    : plist<Feature>
   }
 
-  type QueryAction =
+type QueryAction =
   | SetMinSol of Numeric.Action
   | SetMaxSol of Numeric.Action
   | SetDistance of Numeric.Action
@@ -150,13 +150,6 @@ type MinervaAction =
   | HoverProducts of SceneHit
   | OpenTif of string
   //| ChangeInstrumentColor of ColorPicker.Action * Instrument
-  
-//[<DomainType>]
-//type SgFeatures = {
-//    positions   : V3d[]
-//    colors      : C4b[]
-//    trafo       : Trafo3d
-//}
 
 [<DomainType>]
 type SgFeatures = {
@@ -188,7 +181,6 @@ type FeatureProperties = {
     //instrumentColor : InstrumentColor
 }
 
-
 [<DomainType>]
 type QueryModel = {
     minSol               : NumericInput
@@ -209,11 +201,14 @@ type QueryModel = {
     checkChemRmi         : bool        
 }
 
+[<DomainType>]
 type SelectionModel = {
     selectedProducts     : hset<string> 
     singleSelectProduct  : option<string>
+    [<NonIncremental>]
     kdTree               : PointKdTreeD<V3d[],V3d>
-    flatPosID            : array<V3d * string>
+    flatPos              : hmap<int, V3d>
+    flatID               : hmap<int, string>
     selectionMinDist     : float
     //selectedSgFeatures   : SgFeatures
 }
@@ -432,7 +427,8 @@ module Initial =
         singleSelectProduct  = None
         //selectedSgFeatures = sgSelfeatures
         kdTree = Unchecked.defaultof<_>
-        flatPosID = Array.empty
+        flatPos = hmap.Empty
+        flatID = hmap.Empty
         selectionMinDist = 0.05
     }
           

@@ -15,7 +15,6 @@ Aardvark.UI.Primitives
 
 Aardvark.Geometry.Intersection
 Aardvark.Geometry.PointTree
-
 Aardvark.GeoSpatial.Opc
 
 FSharp.Core
