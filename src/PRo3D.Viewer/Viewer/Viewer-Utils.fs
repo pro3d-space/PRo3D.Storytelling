@@ -90,8 +90,22 @@ module ViewerUtils =
                 let! s = surf
                 let! scalar = s.selectedScalar
                 return scalar.IsSome
-            }        
+            }  
+      
         let scalar = surf |> Mod.bind( fun x -> x.selectedScalar )
+
+        //let texturLayer =  
+        //    adaptive {
+        //        let! scalar = scalar
+        //        let! s = surf
+        //        match scalar with
+        //         | Some sc -> 
+        //            return s.textureLayers |> AList.toList
+        //                                   |> List.find( fun (tl:TextureLayer) -> tl.label = (Mod.force sc.label ))
+        //         | None -> return list.Empty
+               
+        //    }  
+      
 
         let interval = scalar |> Mod.bind ( fun x ->
                         match x with 
