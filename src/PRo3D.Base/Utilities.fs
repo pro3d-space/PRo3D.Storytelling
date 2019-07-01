@@ -23,7 +23,7 @@ module Utilities =
         
         let clientStatistic = 
             let path = sprintf "%s/rendering/stats.json" baseAddress //sprintf "%s/rendering/stats.json" baseAddress
-            Log.line "[RemoteControl] querying rendering stats at: %s" path
+            Log.line "[Screenshot] querying rendering stats at: %s" path
             let result = wc.DownloadString(path)
             let clientBla : list<ClientStatistics> =
                 Pickler.unpickleOfJson  result
@@ -34,7 +34,7 @@ module Utilities =
         for cs in clientStatistic do
             let screenshot =            
                 sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress cs.name width height
-            Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
+            Log.line "[Screenshot] Running screenshot on: %s" screenshot    
 
             match System.IO.Directory.Exists folder with
               | true -> ()

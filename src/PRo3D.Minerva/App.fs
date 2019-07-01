@@ -258,10 +258,14 @@ module App =
 
         let imagePath = @"C:\Users\ortner\Documents\visplore\Minerva"
         let filename = "overview.jpg"
+
+        Log.startTimed "[Minerva taking] Screenshot %A" (V2i(width, height))
         PRo3D.Base.Utilities.takeScreenshot "http://localhost:54321" width height filename imagePath
+        Log.stop()
       
         match model.comm with
         | Some c -> 
+          Log.line "[Minerva] Sending coords %d" coords.Length
           sendReplaceProjectionRequest 
             (coords |> List.map fst) 
             (coords |> List.map snd) 
