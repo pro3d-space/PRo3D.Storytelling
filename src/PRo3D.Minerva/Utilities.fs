@@ -240,21 +240,16 @@ module Drawing =
     let drawIndexedGeometryFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (outline:bool) = 
 
         let pointsF = 
-          sgfeatures.positions |> Mod.map(fun x -> x |> Array.map(fun p -> V3f p))
+          sgfeatures.positions 
+            |> Mod.map2(fun (t : Trafo3d) x -> 
+              x |> Array.map(fun p -> (t.Backward.TransformPos(p)) |> V3f)) sgfeatures.trafo
 
         let color = 
           match outline with
           | true -> pointsF |> Mod.map( fun p -> p |> Array.map(fun _ -> C4b.VRVisGreen ))
           | false -> sgfeatures.colors
 
-        drawIndexedGeometryPoints pointsF color pointSize
-    
-    let drawPoint color size (pos : IMod<V3d>) = 
-        Sg.sphere 4 color size
-            |> Sg.noEvents
-            |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
-            //|> Sg.uniform "PointSize" size
-            //|> Sg.uniform "WorldPos" pos
+        drawIndexedGeometryPoints pointsF color pointSize |> Sg.trafo sgfeatures.trafo
 
     let mkDotISg color (size : IMod<float>) (pos : IMod<V3d>) = 
         Sg.sphere 2 color (Mod.constant 1.0)
@@ -276,37 +271,7 @@ module Drawing =
     let pass1 = RenderPass.after "outline" RenderPassOrder.Arbitrary pass0
 
     let outlinePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) =
-
-        //let masks = 
-        //    drawIndexedGeometryFeaturePoints sgfeatures pointSize false
-        //     |> Sg.pass pass0
-        //     |> Sg.stencilMode (Mod.constant (write 1))
-        //     |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Stencil])
-        //     |> Sg.shader {
-        //           do! Shader.screenSpaceScale
-        //           do! Shader.stableTrafo
-        //           do! DefaultSurfaces.vertexColor
-        //        }
-
-        //let outls = 
-        //    drawIndexedGeometryFeaturePoints sgfeatures (outlineSize pointSize) true 
-        //     |> Sg.stencilMode (Mod.constant (read 1))
-        //     |> Sg.depthTest (Mod.constant DepthTestMode.None)
-        //     |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Colors])
-        //     |> Sg.pass pass1
-        //     |> Sg.uniform "LineWidth" (outlineSize pointSize)
-        //     |> Sg.shader {
-        //            do! Shader.screenSpaceScale
-        //            do! Shader.stableTrafo
-        //            do! DefaultSurfaces.vertexColor
-        //            //do! Shader.lines
-        //            do! DefaultSurfaces.thickLine
-        //            //do! DefaultSurfaces.thickLineRoundCaps
-        //            //do! DefaultSurfaces.constantColor C4f.VRVisGreen
-        //        }
-
-        //Sg.ofSeq [masks; outls] |> Sg.noEvents //regular; mask; 
-
+     
         let sg = 
           drawIndexedGeometryFeaturePoints sgfeatures pointSize false
           |> Sg.pass pass1

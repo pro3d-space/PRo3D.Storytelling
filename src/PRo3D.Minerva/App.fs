@@ -217,7 +217,7 @@ module App =
 
   let updateFeaturesForRendering (pos :V3d) (model:Model) =
     Log.startTimed "[Minerva] building sgs"
-    let solLabels = updateSolLabels model.filteredFeatures pos //view frustum culling AND distance culling
+    let solLabels  = updateSolLabels model.filteredFeatures pos //view frustum culling AND distance culling
     let sgFeatures = updateSgFeatures model.filteredFeatures
     Log.line "[Minerva] showing %d labels and %d products" solLabels.Count sgFeatures.positions.Length
     Log.stop()
@@ -354,12 +354,27 @@ module App =
         Log.startTimed "[Minerva] Fetching full dataset from data file"
         let data = Files.loadDataFile
         Log.stop()        
+
         Log.line "[Minerva] found %d entries" data.features.Count   
-        let flatList = data.features |> PList.map(fun x -> x.geometry.positions |> List.head, x.id) |> PList.toArray
+        let flatList = 
+          data.features 
+            |> PList.map(fun x -> x.geometry.positions |> List.head, x.id) 
+            |> PList.toArray
+
         let input = flatList |> Array.map fst
         let kdTree = PointKdTreeExtensions.CreateKdTree(input, Metric.Euclidean, 1e-5)
         let kdTreeBounds = Box3d(input)
-        { model with data = data; filteredFeatures = data.features; kdTreeBounds = kdTreeBounds; selection = {model.selection with kdTree = kdTree; flatPosID = flatList }} |> updateFeaturesForRendering view.Location //
+
+        { 
+          model with 
+            data             = data; 
+            filteredFeatures = data.features; 
+            kdTreeBounds     = kdTreeBounds; 
+            selection        = 
+              { 
+                model.selection with kdTree = kdTree; flatPosID = flatList 
+              }
+         } |> updateFeaturesForRendering view.Location //
       | SetPointSize s ->
         let size = Numeric.update model.featureProperties.pointSize s
         { model with featureProperties = { model.featureProperties with pointSize = size }}
@@ -368,6 +383,8 @@ module App =
         { model with featureProperties = { model.featureProperties with textSize = size }}   
       | SingleSelectProduct name ->
         { model with selection = { model.selection with singleSelectProduct = Some name }}
+      | ClearSelection -> 
+        { model with selection = { model.selection with singleSelectProduct = None; selectedProducts = HSet.empty} }
       | AddProductToSelection name ->
         updateSelection [name] model
       | PickProducts hit -> 
@@ -384,33 +401,7 @@ module App =
         //{ model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
         //             //sgFeatures = { model.sgFeatures with colors = colors}}
       //| PickProduct (hit, name) -> updateSelection name model
-      | OpenTif id -> Files.loadTif id model
-                           
-      
-
-         
-            
-          ////bruteForce
-          //let ray = hit.globalRay.Ray.Ray
-          //let minDist = model.selection.selectionMinDist
-          //model.selection.flatPosID 
-          //  |> Seq.choose(fun (pos, id) -> 
-          //    let dist = ray.GetMinimalDistanceTo pos
-          //    if dist < minDist then
-          //      Some (dist, id)
-          //    else 
-          //      None)
-          //  |> fun withinRange -> 
-          //    if withinRange.IsEmpty() then
-          //      model
-          //    else
-          //      let closestID = 
-          //        withinRange
-          //          |> Seq.sortBy fst
-          //          |> Seq.map snd
-          //          |> Seq.head
-          //      updateSelection [closestID] model
-
+      | OpenTif id -> Files.loadTif id model                                                            
       | HoverProducts hit ->
           //Report.BeginTimed("update") |> ignore
           //let closestPoints = queryClosestPoint model hit
@@ -594,17 +585,18 @@ module App =
          button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
          button [clazz "ui button"; onClick (fun _ -> SendSelection)][text "Send Selection"]
          button [clazz "ui button"; onClick (fun _ -> SendScreenSpaceCoordinates)][text "Send Coords"]
-         button [
-           clazz "ui button"; 
-           onEvent "onGetRenderId" [] (fun args -> Reset)
-           clientEvent "onclick" "aardvark.processEvent(__ID__,'onGetRenderId', document.getElementsByClassName('mainrendercontrol')[0].id)"
-         ] [text "SCREAM SHOT"]
+         //button [
+         //  clazz "ui button"; 
+         //  onEvent "onGetRenderId" [] (fun args -> Reset)
+         //  clientEvent "onclick" "aardvark.processEvent(__ID__,'onGetRenderId', document.getElementsByClassName('mainrendercontrol')[0].id)"
+         //] [text "SCREAM SHOT"]
        ]
 
        h4 [clazz "ui"] [text "Data:"]
        div [clazz "ui buttons"] [         
          button [clazz "ui button"; onClick (fun _ -> LoadProducts)][text "Load"]
          button [clazz "ui button"; onClick (fun _ -> Reset)][text "Reset"]         
+         button [clazz "ui button"; onClick (fun _ -> ClearSelection)][text "Clear Selection"]         
          button [clazz "ui button"; onClick (fun _ -> ApplyFilters)][text "Filter"]         
        ]
 
@@ -638,10 +630,11 @@ module App =
         |> Sg.set
     lables
           
+  /// Why not save sg directly in model, or build in view?
   let viewFeaturesSg (model : MModel) =
     let selectedPoints = Drawing.outlinePoints model.selectedSgFeatures model.featureProperties.pointSize.value
-    let points = Drawing.drawIndexedGeometryFeaturePoints model.sgFeatures model.featureProperties.pointSize.value false
-    let pickables = Drawing.featureMousePick model
+    let points         = Drawing.drawIndexedGeometryFeaturePoints model.sgFeatures model.featureProperties.pointSize.value false
+    let pickables      = Drawing.featureMousePick model
     let hoveredPoint = 
       model.hoveredProduct |> Mod.map(fun x ->  
         match x with 

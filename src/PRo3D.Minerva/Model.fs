@@ -134,6 +134,7 @@ type MinervaAction =
   | ApplyFilters
   | PerformQueries  
   | Reset
+  | ClearSelection
   | SendSelection
   | SendScreenSpaceCoordinates
   | UpdateFiltering of list<string>
