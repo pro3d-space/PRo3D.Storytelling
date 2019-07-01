@@ -207,8 +207,10 @@ type SelectionModel = {
     singleSelectProduct  : option<string>
     [<NonIncremental>]
     kdTree               : PointKdTreeD<V3d[],V3d>
-    flatPos              : hmap<int, V3d>
-    flatID               : hmap<int, string>
+    [<NonIncremental>]
+    flatPos              : array<V3d>
+    [<NonIncremental>]
+    flatID               : array<string>
     selectionMinDist     : float
     //selectedSgFeatures   : SgFeatures
 }
@@ -427,8 +429,8 @@ module Initial =
         singleSelectProduct  = None
         //selectedSgFeatures = sgSelfeatures
         kdTree = Unchecked.defaultof<_>
-        flatPos = hmap.Empty
-        flatID = hmap.Empty
+        flatPos = Array.empty
+        flatID = Array.empty
         selectionMinDist = 0.05
     }
           

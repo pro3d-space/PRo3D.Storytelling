@@ -232,7 +232,7 @@ module App =
       let t = V2d hit.event.evtPixel / viewPort
       V2d(2.0 * t.X - 1.0, 1.0 - 2.0 * t.Y)
 
-    let input = (model.selection.flatPos |> HMap.toArray) |> Array.map snd
+    let input = model.selection.flatPos
 
     let ellipse = Ellipse2d(centerNDC, V2d.IO * size, V2d.OI * size)
     let closestPoints = KdTreeQuery.FindPoints(model.selection.kdTree, model.kdTreeBounds, input, viewProj, ellipse)
@@ -363,11 +363,12 @@ module App =
             |> PList.toArray
 
         let input = flatList |> Array.map fst
+        let flatId = flatList |> Array.map snd
         let kdTree = PointKdTreeExtensions.CreateKdTree(input, Metric.Euclidean, 1e-5)
         let kdTreeBounds = Box3d(input)
-        let flatIndexID = flatList |> Array.mapi(fun i (pos, id) -> i, id) |> HMap.ofArray
-        let flatIndexPos = flatList |> Array.mapi(fun i (pos, id) -> i, pos) |> HMap.ofArray
-        { model with data = data; filteredFeatures = data.features; kdTreeBounds = kdTreeBounds; selection = {model.selection with kdTree = kdTree; flatPos = flatIndexPos; flatID = flatIndexID}} |> updateFeaturesForRendering view.Location //
+        //let flatIndexID = flatList |> Array.mapi(fun i (pos, id) -> i, id) |> HMap.ofArray
+        //let flatIndexPos = flatList |> Array.mapi(fun i (pos, id) -> i, pos) |> HMap.ofArray
+        { model with data = data; filteredFeatures = data.features; kdTreeBounds = kdTreeBounds; selection = {model.selection with kdTree = kdTree; flatPos = input; flatID = flatId}} |> updateFeaturesForRendering view.Location //
       | SetPointSize s ->
         let size = Numeric.update model.featureProperties.pointSize s
         { model with featureProperties = { model.featureProperties with pointSize = size }}
