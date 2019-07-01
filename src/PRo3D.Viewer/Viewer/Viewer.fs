@@ -1038,7 +1038,7 @@ module ViewerApp =
                 |> Sg.map ViewPlanMessage
 
             let minervaFeatures = 
-              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions
+              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions 
 
             let solText = 
                 PRo3D.Minerva.App.getSolBillboards m.minervaModel m.scene.navigation.camera.view m.scene.config.nearPlane.value |> Sg.map MinervaActions

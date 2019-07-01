@@ -1,13 +1,9 @@
 ﻿namespace PRo3D.Minerva
 
-//open Aardvark.UI
-open Aardvark.UI.Primitives
-open Aardvark.UI.Events
-
+open System
+open System.Diagnostics
 
 open Aardvark.GeoSpatial.Opc
-open System
-
 
 open Aardvark.Base
 open Aardvark.Base.Rendering
@@ -123,7 +119,32 @@ module Files =
          | (_, true) -> Serialization.loadAs cachePath
          | _ -> 
             Log.error "[Minerva] sth. went wrong with dump.csv"
-            Initial.data        
+            Initial.data  
+            
+    let loadTif (featureId:string) (model:Model) =
+        // https://minerva.eox.at/store/datafile/FRB_495137799RADLF0492626FHAZ00323M1/frb_495137799radlf0492626fhaz00323m1.tif
+        let filename = featureId.ToLower() + ".tif" //"frb_495137799radlf0492626fhaz00323m1.tif"
+        let imagePath = @".\MinervaData\" + filename
+        let path = "https://minerva.eox.at/store/datafile/" + featureId + "/" + filename
+        match (File.Exists imagePath) with
+         | true -> 
+            let argument = sprintf "/select, \"%s\"" imagePath
+            Process.Start("explorer.exe", argument) |> ignore
+            model
+         |  false -> 
+            let mutable client = new System.Net.WebClient()
+            client.UseDefaultCredentials <- true       
+            let credentials = System.Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes("minerva:tai8Ies7"))   
+            client.Headers.[System.Net.HttpRequestHeader.Authorization] <- "Basic " + credentials  
+            //try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
+            try (client.DownloadFile(path, imagePath) |> ignore) with e -> Log.error "[Minerva] error: %A" e
+            match (File.Exists imagePath) with
+                | true -> let argument = sprintf "/select, \"%s\"" imagePath
+                          Process.Start("explorer.exe", argument) |> ignore
+                | _ -> Log.error "[Minerva] sth. went wrong with tif file"
+            model
+         
+       
 
 module Shader = 
 
@@ -188,56 +209,46 @@ module Shader =
             restartStrip()
         }
 
-
 module Drawing =
 
     let createHarrisPoints (positions : V3d[]) (size : IMod<float>) = // (color : C4b) =
-        //let colors = Array.create positions.Length color
-        let pointSize = Mod.constant 50.0
-        //let c = V4d((float)color.R/255.0, (float)color.G/255.0, (float)color.B/255.0, (float)color.A/255.0)
+      
+      //let colors = Array.create positions.Length color
+      //let c = V4d((float)color.R/255.0, (float)color.G/255.0, (float)color.B/255.0, (float)color.A/255.0)
 
-        Aardvark.UI.``F# Sg``.Sg.ofList [
-                 Sg.draw IndexedGeometryMode.PointList
-            ]
-             |> Sg.vertexAttribute DefaultSemantic.Positions (positions |> Mod.constant)
-             //|> Sg.vertexAttribute DefaultSemantic.Colors (colors |> Mod.constant)
-             //|> Sg.vertexAttribute "Positions" vertices
-             |> Sg.uniform "PointSize" size
-            |> Sg.shader {
-                do! Shader.pointTrafo
-                do! Shader.constantColor V4d.OIOI //c 
-                //do! DefaultSurfaces.vertexColor |> toEffect
-            }
+      Sg.draw IndexedGeometryMode.PointList
+        |> Sg.vertexAttribute DefaultSemantic.Positions (positions |> Mod.constant)
+        //|> Sg.vertexAttribute DefaultSemantic.Colors (colors |> Mod.constant)
+        |> Sg.uniform "PointSize" size
+        |> Sg.shader {
+            do! Shader.pointTrafo
+            do! Shader.constantColor V4d.OIOI //c 
+            //do! DefaultSurfaces.vertexColor |> toEffect
+        } 
+
+    let drawIndexedGeometryPoints pointsF color pointSize = 
+      Sg.draw IndexedGeometryMode.PointList
+      |> Sg.vertexAttribute DefaultSemantic.Positions pointsF
+      |> Sg.vertexAttribute DefaultSemantic.Colors color
+      |> Sg.effect [
+          DefaultSurfaces.stableTrafo |> toEffect; 
+          DefaultSurfaces.pointSprite |> toEffect;
+          Shader.pointSpriteFragment |> toEffect
+        ]
+      |> Sg.uniform "PointSize" pointSize
             
-            
-    let drawIndexedGeometryPoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (outline:bool) = 
+    let drawIndexedGeometryFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (outline:bool) = 
 
         let pointsF = 
-            sgfeatures.positions
-                |> Mod.map2(
-                fun (h:Trafo3d) points -> 
-                    points |> Array.map(fun (x:V3d) -> (h.Backward.TransformPos x).ToV3f() ) 
-                    ) sgfeatures.trafo
+          sgfeatures.positions |> Mod.map(fun x -> x |> Array.map(fun p -> V3f p))
 
         let color = 
-            match outline with
-             | true -> pointsF
-                        |> Mod.map( fun points -> points |> Array.map(fun (p:V3f) -> C4b.VRVisGreen ))
-             | false -> sgfeatures.colors
+          match outline with
+          | true -> pointsF |> Mod.map( fun p -> p |> Array.map(fun _ -> C4b.VRVisGreen ))
+          | false -> sgfeatures.colors
 
-        Sg.draw IndexedGeometryMode.PointList
-            |> Sg.vertexAttribute DefaultSemantic.Positions (pointsF )
-            |> Sg.vertexAttribute DefaultSemantic.Colors (color)
-            |> Sg.effect [
-                 DefaultSurfaces.stableTrafo |> toEffect; 
-                DefaultSurfaces.pointSprite |> toEffect;
-                Shader.pointSpriteFragment |> toEffect
-                ]
-            |> Sg.trafo sgfeatures.trafo
-            |> Sg.uniform "PointSize" pointSize
+        drawIndexedGeometryPoints pointsF color pointSize
     
- 
-
     let drawPoint color size (pos : IMod<V3d>) = 
         Sg.sphere 4 color size
             |> Sg.noEvents
@@ -252,28 +263,8 @@ module Drawing =
             |> Sg.uniform "Size" size
             |> Sg.uniform "WorldPos" pos
 
-    let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) = //TODO TO refactor, put into base prj
-    //let dots (pts : IMod<V3d[]>) (size:IMod<float>) (color : IMod<C4b>) = 
-        aset {
-            //let! points = pts 
-            //for p in points do
-            for p in points |> ASet.ofAList do
-               // let scale = computeScale view (Mod.constant p) 5.0                               
-                yield mkDotISg color (size) (Mod.constant p)
-        } 
-        |> Sg.set
-        |> Sg.effect [
-            toEffect <| Shader.screenSpaceScale
-            toEffect <| Shader.stableTrafo
-            toEffect <| DefaultSurfaces.vertexColor          
-        ]
-
     let outlineSize (width:IMod<float>) =
-        adaptive
-            {
-                let! w = width
-                return (w + 10.0)
-            }
+        width |> Mod.map(fun x -> x + 10.0)
 
     let read a =
         StencilMode(StencilOperationFunction.Keep, StencilOperationFunction.Keep, StencilOperationFunction.Keep, StencilCompareFunction.Greater, a, 0xffu)
@@ -286,92 +277,71 @@ module Drawing =
 
     let outlinePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) =
 
-        let sg = drawIndexedGeometryPoints sgfeatures pointSize false //Sg.dots points width color 
-        let sgo = drawIndexedGeometryPoints sgfeatures (outlineSize pointSize) true  //Sg.dots points (outlineSize width) (Mod.constant C4b.VRVisGreen) 
-        let regulars = 
-            sg
-             |> Sg.pass pass0
-             |> Sg.shader {
-                    do! Shader.screenSpaceScale
-                    do! Shader.stableTrafo
-                    do! DefaultSurfaces.vertexColor
-                }
-        let masks = 
-            sg
-             |> Sg.pass pass0
-             |> Sg.stencilMode (Mod.constant (write 1))
-             |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Stencil])
-             |> Sg.shader {
-                   do! Shader.screenSpaceScale
-                   do! Shader.stableTrafo
-                   do! DefaultSurfaces.vertexColor
-                }
+        //let masks = 
+        //    drawIndexedGeometryFeaturePoints sgfeatures pointSize false
+        //     |> Sg.pass pass0
+        //     |> Sg.stencilMode (Mod.constant (write 1))
+        //     |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Stencil])
+        //     |> Sg.shader {
+        //           do! Shader.screenSpaceScale
+        //           do! Shader.stableTrafo
+        //           do! DefaultSurfaces.vertexColor
+        //        }
 
-        let outls = 
-            sgo
-             |> Sg.stencilMode (Mod.constant (read 1))
-             |> Sg.depthTest (Mod.constant DepthTestMode.None)
-             |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Colors])
-             |> Sg.pass pass1
-             |> Sg.uniform "LineWidth" (outlineSize pointSize)
-             |> Sg.shader {
-                    do! Shader.screenSpaceScale
-                    do! Shader.stableTrafo
-                    do! Shader.lines
-                    do! DefaultSurfaces.thickLine
-                    do! DefaultSurfaces.thickLineRoundCaps
-                    do! DefaultSurfaces.constantColor C4f.VRVisGreen
-                }
-        Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [masks; outls] |> Sg.noEvents //regular; mask; 
+        //let outls = 
+        //    drawIndexedGeometryFeaturePoints sgfeatures (outlineSize pointSize) true 
+        //     |> Sg.stencilMode (Mod.constant (read 1))
+        //     |> Sg.depthTest (Mod.constant DepthTestMode.None)
+        //     |> Sg.writeBuffers' (Set.ofList [DefaultSemantic.Colors])
+        //     |> Sg.pass pass1
+        //     |> Sg.uniform "LineWidth" (outlineSize pointSize)
+        //     |> Sg.shader {
+        //            do! Shader.screenSpaceScale
+        //            do! Shader.stableTrafo
+        //            do! DefaultSurfaces.vertexColor
+        //            //do! Shader.lines
+        //            do! DefaultSurfaces.thickLine
+        //            //do! DefaultSurfaces.thickLineRoundCaps
+        //            //do! DefaultSurfaces.constantColor C4f.VRVisGreen
+        //        }
+
+        //Sg.ofSeq [masks; outls] |> Sg.noEvents //regular; mask; 
+
+        let sg = 
+          drawIndexedGeometryFeaturePoints sgfeatures pointSize false
+          |> Sg.pass pass1
+          |> Sg.shader {
+                 do! Shader.screenSpaceScale
+                 do! Shader.stableTrafo
+                 do! DefaultSurfaces.vertexColor
+             }
+        
+        let sgo = 
+          drawIndexedGeometryFeaturePoints sgfeatures (outlineSize pointSize) true 
+          |> Sg.pass pass0
+          |> Sg.shader {
+                 do! Shader.screenSpaceScale
+                 do! Shader.stableTrafo
+                 do! DefaultSurfaces.vertexColor
+             }
+
+        Sg.ofList [sg; sgo]
 
     let pickable' (pick :IMod<Pickable>) (sg: ISg) =
         Sg.PickableApplicator (pick, Mod.constant sg)
 
-    let pickableSgEmpty (point: V3d) (trafo : IMod<Trafo3d>) (id: string) (picking: IMod<bool>) (pointSize:IMod<float>) =
-        let pickable = 
-          adaptive {
-            let! size = pointSize
-            let sphere = Sphere3d(point, 0.001)
-            let! trafo = trafo
-            //return { 
-            //    shape = sphere |> PickShape.Sphere
-            //    trafo = trafo
-            //} 
-            return (sphere |> PickShape.Sphere)
-          }
-        
-
-        let sg = 
-            aset {
-                yield Sg.empty
-            }  |> Sg.set
-        
-        sg 
-        |> Sg.trafo trafo
-        |> Sg.pickable' pickable
-        //|> Sg.noEvents
-        |> Sg.withEvents [
-                SceneEventKind.Down, (
-                    fun sceneHit ->
-                    if (picking |> Mod.force) then
-                        Log.warn "[ProductPicking] picked %A" id
-                        true, Seq.ofList[PickProduct (sceneHit, (id))]
-                    else
-                        false, Seq.ofList[])
-            ]
-        
-
-    let getPickables (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (picking:IMod<bool>) =
-        let test = 
-          aset {
-            let! points = sgfeatures.positions
-            let! names = sgfeatures.names
-            let tt = Array.map2( fun (p:V3d) (n:string) ->
-                            pickableSgEmpty p sgfeatures.trafo n picking pointSize 
-                        ) points names
-            yield tt |> Sg.ofArray
-          } |> Sg.set
-        test 
+    let featureMousePick (model : MModel) =
+      
+      model.kdTreeBounds |> Mod.map(fun x -> 
+        let shape = x |> PickShape.Box
+        Sg.empty 
+          |> Sg.pickable shape
+          |> Sg.withEvents [
+              SceneEventKind.Click, (
+                fun sceneHit -> true, Seq.ofList[PickProducts sceneHit]) 
+              SceneEventKind.Move, (
+                fun sceneHit -> true, Seq.ofList[HoverProducts sceneHit])
+            ]) |> Sg.dynamic 
 
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:V3d) (size:IMod<float>) (hfov:IMod<float>) =
         adaptive {
