@@ -119,8 +119,8 @@ module Files =
          | (_, true) -> Serialization.loadAs cachePath
          | _ -> 
             Log.error "[Minerva] sth. went wrong with dump.csv"
-            Initial.data  
-            
+            Initial.data        
+
     let loadTif (featureId:string) (model:Model) =
         // https://minerva.eox.at/store/datafile/FRB_495137799RADLF0492626FHAZ00323M1/frb_495137799radlf0492626fhaz00323m1.tif
         let filename = featureId.ToLower() + ".tif" //"frb_495137799radlf0492626fhaz00323m1.tif"
@@ -181,8 +181,6 @@ module Shader =
             }
         }
 
-    //type PSVertex = { [<TexCoord; Interpolation(InterpolationMode.Sample)>] tc : V2d }
-
     let pointSpriteFragment (v : pointVertex) =
         fragment {
             let tc = v.tc // + 0.00000001 * v.sp
@@ -211,101 +209,65 @@ module Shader =
 
 module Drawing =
 
-    let createHarrisPoints (positions : V3d[]) (size : IMod<float>) = // (color : C4b) =
-      
-      //let colors = Array.create positions.Length color
-      //let c = V4d((float)color.R/255.0, (float)color.G/255.0, (float)color.B/255.0, (float)color.A/255.0)
-
-      Sg.draw IndexedGeometryMode.PointList
-        |> Sg.vertexAttribute DefaultSemantic.Positions (positions |> Mod.constant)
-        //|> Sg.vertexAttribute DefaultSemantic.Colors (colors |> Mod.constant)
-        |> Sg.uniform "PointSize" size
-        |> Sg.shader {
-            do! Shader.pointTrafo
-            do! Shader.constantColor V4d.OIOI //c 
-            //do! DefaultSurfaces.vertexColor |> toEffect
-        } 
-
-    let drawIndexedGeometryPoints pointsF color pointSize = 
+    let drawSingleColorPoints pointsF color pointSize = 
       Sg.draw IndexedGeometryMode.PointList
       |> Sg.vertexAttribute DefaultSemantic.Positions pointsF
-      |> Sg.vertexAttribute DefaultSemantic.Colors color
-      |> Sg.effect [
-          DefaultSurfaces.stableTrafo |> toEffect; 
-          DefaultSurfaces.pointSprite |> toEffect;
-          Shader.pointSpriteFragment |> toEffect
-        ]
       |> Sg.uniform "PointSize" pointSize
-            
-    let drawIndexedGeometryFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (outline:bool) = 
+      |> Sg.effect [
+            toEffect Shader.pointTrafo 
+            toEffect (Shader.constantColor color)
+            toEffect DefaultSurfaces.pointSprite
+            toEffect Shader.pointSpriteFragment
+      ]
+    
+    let drawColoredPoints pointsF colors pointSize = 
+      Sg.draw IndexedGeometryMode.PointList
+      |> Sg.vertexAttribute DefaultSemantic.Positions pointsF
+      |> Sg.vertexAttribute DefaultSemantic.Colors colors
+      |> Sg.uniform "PointSize" pointSize
+      |> Sg.effect [
+          toEffect Shader.pointTrafo 
+          toEffect Shader.differentColor
+          toEffect DefaultSurfaces.pointSprite
+          toEffect Shader.pointSpriteFragment
+        ]
+  
+    let drawFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (outline:bool) = 
 
         let pointsF = 
           sgfeatures.positions 
             |> Mod.map2(fun (t : Trafo3d) x -> 
               x |> Array.map(fun p -> (t.Backward.TransformPos(p)) |> V3f)) sgfeatures.trafo
 
-        let color = 
-          match outline with
-          | true -> pointsF |> Mod.map( fun p -> p |> Array.map(fun _ -> C4b.VRVisGreen ))
-          | false -> sgfeatures.colors
-
-        drawIndexedGeometryPoints pointsF color pointSize |> Sg.trafo sgfeatures.trafo
-
-    let mkDotISg color (size : IMod<float>) (pos : IMod<V3d>) = 
-        Sg.sphere 2 color (Mod.constant 1.0)
-            |> Sg.noEvents
-            |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
-            |> Sg.uniform "Size" size
-            |> Sg.uniform "WorldPos" pos
-
-    let outlineSize (width:IMod<float>) =
-        width |> Mod.map(fun x -> x + 10.0)
-
-    let read a =
-        StencilMode(StencilOperationFunction.Keep, StencilOperationFunction.Keep, StencilOperationFunction.Keep, StencilCompareFunction.Greater, a, 0xffu)
-
-    let write a =
-        StencilMode(StencilOperationFunction.Replace, StencilOperationFunction.Replace, StencilOperationFunction.Keep, StencilCompareFunction.Greater, a, 0xffu)
+        if outline then
+          drawSingleColorPoints pointsF (C4f.VRVisGreen.ToV4d()) pointSize
+        else 
+          drawColoredPoints pointsF sgfeatures.colors pointSize
 
     let pass0 = RenderPass.main
     let pass1 = RenderPass.after "outline" RenderPassOrder.Arbitrary pass0
 
-    let outlinePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) =
-     
-        let sg = 
-          drawIndexedGeometryFeaturePoints sgfeatures pointSize false
-          |> Sg.pass pass1
-          |> Sg.shader {
-                 do! Shader.screenSpaceScale
-                 do! Shader.stableTrafo
-                 do! DefaultSurfaces.vertexColor
-             }
-        
-        let sgo = 
-          drawIndexedGeometryFeaturePoints sgfeatures (outlineSize pointSize) true 
+    let drawOutlinePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) =
+
+        let outline =
+          drawFeaturePoints sgfeatures (pointSize |> Mod.map(fun x -> x + 5.0)) true 
           |> Sg.pass pass0
-          |> Sg.shader {
-                 do! Shader.screenSpaceScale
-                 do! Shader.stableTrafo
-                 do! DefaultSurfaces.vertexColor
-             }
 
-        Sg.ofList [sg; sgo]
+        let inside = 
+          drawFeaturePoints sgfeatures pointSize false
+          |> Sg.pass pass1
+          |> Sg.depthTest (Mod.constant(DepthTestMode.Always))
 
-    let pickable' (pick :IMod<Pickable>) (sg: ISg) =
-        Sg.PickableApplicator (pick, Mod.constant sg)
+        Sg.ofList [inside; outline]
 
     let featureMousePick (model : MModel) =
       
-      model.kdTreeBounds |> Mod.map(fun x -> 
-        let shape = x |> PickShape.Box
+      model.kdTreeBounds |> Mod.map(fun box ->  
         Sg.empty 
-          |> Sg.pickable shape
+          |> Sg.pickable (PickShape.Box box)
           |> Sg.withEvents [
-              SceneEventKind.Click, (
-                fun sceneHit -> true, Seq.ofList[PickProducts sceneHit]) 
-              SceneEventKind.Move, (
-                fun sceneHit -> true, Seq.ofList[HoverProducts sceneHit])
+              SceneEventKind.Click, (fun sceneHit -> true, Seq.ofList[PickProducts sceneHit]) 
+              SceneEventKind.Move,  (fun sceneHit -> true, Seq.ofList[HoverProducts sceneHit])
             ]) |> Sg.dynamic 
 
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:V3d) (size:IMod<float>) (hfov:IMod<float>) =

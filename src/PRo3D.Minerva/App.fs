@@ -604,8 +604,8 @@ module App =
           
   /// Why not save sg directly in model, or build in view?
   let viewFeaturesSg (model : MModel) =
-    let selectedPoints = Drawing.outlinePoints model.selectedSgFeatures model.featureProperties.pointSize.value
-    let points = Drawing.drawIndexedGeometryFeaturePoints model.sgFeatures model.featureProperties.pointSize.value false
+    let selectedPoints = Drawing.drawOutlinePoints model.selectedSgFeatures model.featureProperties.pointSize.value
+    let points = Drawing.drawFeaturePoints model.sgFeatures model.featureProperties.pointSize.value false
     let pickables = Drawing.featureMousePick model
     let hoveredPoint = 
       model.hoveredProduct |> Mod.map(fun x ->  
@@ -613,7 +613,7 @@ module App =
         | None -> [||]
         | Some a -> [|V3f a|])
         
-    let hoveredPoint = Drawing.drawIndexedGeometryPoints hoveredPoint (Mod.constant([|C4b.Yellow|])) (Mod.constant 10.0)
+    let hoveredPoint = Drawing.drawSingleColorPoints hoveredPoint (C4f.Yellow.ToV4d()) (Mod.constant 10.0)
 
     Sg.ofList [points; selectedPoints; pickables; hoveredPoint]
   
