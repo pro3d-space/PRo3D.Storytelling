@@ -337,7 +337,7 @@ module App =
         let filtered = QueryApp.applyFilterQueries model.data.features model.queryFilter view
         { model with filteredFeatures = filtered } |> updateFeaturesForRendering view.Location
       | Reset ->
-        { model with filteredFeatures = model.data.features; queryFilter = Initial.queryFilter }        
+        { model with filteredFeatures = model.data.features; queryFilter = Initial.queryFilter }   
       | LoadProducts ->                            
         Log.startTimed "[Minerva] Fetching full dataset from data file"
         let data = Files.loadDataFile
@@ -373,8 +373,8 @@ module App =
         { model with featureProperties = { model.featureProperties with textSize = size }}   
       | SingleSelectProduct name ->
         { model with selection = { model.selection with singleSelectProduct = Some name }}
-      | ClearSelection -> 
-        { model with selection = { model.selection with singleSelectProduct = None; selectedProducts = HSet.empty} }
+      | ClearSelection ->
+        { model with selection = { model.selection with singleSelectProduct = None; selectedProducts = HSet.empty}; selectedSgFeatures = updateSgFeatures PList.empty}
       | AddProductToSelection name ->
         updateSelectionToggle [name] model
       | PickProducts hit -> 
