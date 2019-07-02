@@ -630,18 +630,14 @@ module App =
           
   /// Why not save sg directly in model, or build in view?
   let viewFeaturesSg (model : MModel) =
-    let selectedPoints = Drawing.drawOutlinePoints model.selectedSgFeatures model.featureProperties.pointSize.value
-    let points = Drawing.drawFeaturePoints model.sgFeatures model.featureProperties.pointSize.value false
-    let pickables = Drawing.featureMousePick model
-    let hoveredPoint = 
-      model.hoveredProduct |> Mod.map(fun x ->  
-        match x with 
-        | None -> [||]
-        | Some a -> [|V3f a|])  
-        
-    let hoveredPoint = Drawing.drawSingleColorPoints hoveredPoint (C4f.Yellow.ToV4d()) (Mod.constant 10.0) // todo...precission fix of V3d -> V3f
+    let pointSize = model.featureProperties.pointSize.value
 
-    Sg.ofList [points; selectedPoints; pickables; hoveredPoint]
+    Sg.ofList [
+      Drawing.featureMousePick model.kdTreeBounds
+      Drawing.drawFeaturePoints model.sgFeatures pointSize
+      Drawing.drawSelectedFeaturePoints model.selectedSgFeatures pointSize
+      Drawing.drawHoveredFeaturePoint model.hoveredProduct pointSize model.sgFeatures.trafo
+    ]
   
   let threads (m : Model) = m.vplMessages
 

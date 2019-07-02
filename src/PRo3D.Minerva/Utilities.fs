@@ -229,47 +229,55 @@ module Drawing =
           toEffect DefaultSurfaces.pointSprite
           toEffect Shader.pointSpriteFragment
         ]
-  
-    let drawFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (outline:bool) = 
-        
-        let stableOffset = sgfeatures.positions |> Mod.map(fun x -> x |> Array.tryHead |> Option.defaultValue V3d.Zero)
 
-        let pointsF = 
-          Mod.map2(fun points (offset:V3d) ->
-            points |> Array.map(fun (p:V3d) -> V3f (p-offset))) sgfeatures.positions stableOffset
+    let stablePoints (sgfeatures : MSgFeatures) =
+      sgfeatures.positions 
+        |> Mod.map2(fun (t : Trafo3d) x -> 
+          x |> Array.map(fun p -> (t.Backward.TransformPos(p)) |> V3f)) sgfeatures.trafo
 
-        if outline then
-          drawSingleColorPoints pointsF (C4f.VRVisGreen.ToV4d()) pointSize |> Sg.translate' stableOffset
-        else 
-          drawColoredPoints pointsF sgfeatures.colors pointSize |> Sg.translate' stableOffset
+    let drawSingleColoredFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (color:C4f) = 
+        let pointsF = stablePoints sgfeatures
+        drawSingleColorPoints pointsF (color.ToV4d()) pointSize |> Sg.trafo sgfeatures.trafo
+
+    let drawFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) = 
+        let pointsF = stablePoints sgfeatures
+        drawColoredPoints pointsF sgfeatures.colors pointSize |> Sg.trafo sgfeatures.trafo
+
+    let drawHoveredFeaturePoint hoveredProduct pointSize trafo =
+      let hoveredPoint = 
+        Mod.map2(fun (x:Option<V3d>) (t:Trafo3d) ->  
+          match x with 
+          | None -> [||]
+          | Some a ->  [|t.Backward.TransformPos(a)|]) hoveredProduct trafo 
+
+      drawSingleColorPoints hoveredPoint (C4f.Yellow.ToV4d()) (pointSize |> Mod.map(fun x -> x + 5.0)) |> Sg.trafo trafo
 
     let pass0 = RenderPass.main
     let pass1 = RenderPass.after "outline" RenderPassOrder.Arbitrary pass0
 
-    let drawOutlinePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) =
+    let drawSelectedFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) =
 
         let outline =
-          drawFeaturePoints sgfeatures (pointSize |> Mod.map(fun x -> x + 5.0)) true 
+          drawSingleColoredFeaturePoints sgfeatures (pointSize |> Mod.map(fun x -> x + 4.0)) C4f.VRVisGreen 
           |> Sg.pass pass0
 
         let inside = 
-          drawFeaturePoints sgfeatures pointSize false
+          drawFeaturePoints sgfeatures pointSize
           |> Sg.pass pass1
           |> Sg.depthTest (Mod.constant(DepthTestMode.Always))
 
         Sg.ofList [inside; outline]
 
-    let featureMousePick (model : MModel) =
-      
-      model.kdTreeBounds 
-      |> Mod.map(fun box ->  
-        Sg.empty 
-          |> Sg.pickable (PickShape.Box box)
-          |> Sg.withEvents [
-              SceneEventKind.Click, (fun sceneHit -> true, Seq.ofList[PickProducts sceneHit]) 
-              SceneEventKind.Move,  (fun sceneHit -> true, Seq.ofList[HoverProducts sceneHit])
-          ])
-      |> Sg.dynamic 
+    let featureMousePick (boundingBox : IMod<Box3d>) =
+      boundingBox 
+        |> Mod.map(fun box ->  
+          Sg.empty 
+            |> Sg.pickable (PickShape.Box box)
+            |> Sg.withEvents [
+                SceneEventKind.Click, (fun sceneHit -> true, Seq.ofList[PickProducts sceneHit]) 
+                SceneEventKind.Move,  (fun sceneHit -> true, Seq.ofList[HoverProducts sceneHit])
+            ])
+        |> Sg.dynamic 
 
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:V3d) (size:IMod<float>) (hfov:IMod<float>) =
         adaptive {
