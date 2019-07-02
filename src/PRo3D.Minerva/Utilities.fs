@@ -174,16 +174,16 @@ module Shader =
 
     let pointTrafo (v : pointVertex) =
         vertex {
-            let wp = uniform.ModelTrafo * v.pos
+            let vp = uniform.ModelViewTrafo * v.pos
             return { 
                 v with 
-                    pos = uniform.ViewProjTrafo * wp
+                    pos = uniform.ProjTrafo * vp
             }
         }
 
     let pointSpriteFragment (v : pointVertex) =
         fragment {
-            let tc = v.tc // + 0.00000001 * v.sp
+            let tc = v.tc
 
             let c = 2.0 * tc - V2d.II
             if c.Length > 1.0 then
@@ -214,7 +214,7 @@ module Drawing =
       |> Sg.vertexAttribute DefaultSemantic.Positions pointsF
       |> Sg.uniform "PointSize" pointSize
       |> Sg.effect [
-            toEffect Shader.pointTrafo 
+            toEffect Shader.pointTrafo
             toEffect (Shader.constantColor color)
             toEffect DefaultSurfaces.pointSprite
             toEffect Shader.pointSpriteFragment
@@ -233,16 +233,15 @@ module Drawing =
         ]
   
     let drawFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (outline:bool) = 
-
+        
+        let stableOffset = sgfeatures.positions |> Mod.map(fun x -> x |> Array.tryHead |> Option.defaultValue V3d.Zero)
         let pointsF = 
-          sgfeatures.positions 
-            |> Mod.map2(fun (t : Trafo3d) x -> 
-              x |> Array.map(fun p -> (t.Backward.TransformPos(p)) |> V3f)) sgfeatures.trafo
+           Mod.map2(fun x (offset:V3d) -> x |> Array.map(fun (p:V3d) -> V3f (p-offset))) sgfeatures.positions stableOffset
 
         if outline then
-          drawSingleColorPoints pointsF (C4f.VRVisGreen.ToV4d()) pointSize
+          drawSingleColorPoints pointsF (C4f.VRVisGreen.ToV4d()) pointSize |> Sg.translate' stableOffset
         else 
-          drawColoredPoints pointsF sgfeatures.colors pointSize
+          drawColoredPoints pointsF sgfeatures.colors pointSize |> Sg.translate' stableOffset
 
     let pass0 = RenderPass.main
     let pass1 = RenderPass.after "outline" RenderPassOrder.Arbitrary pass0
@@ -262,13 +261,15 @@ module Drawing =
 
     let featureMousePick (model : MModel) =
       
-      model.kdTreeBounds |> Mod.map(fun box ->  
+      model.kdTreeBounds 
+      |> Mod.map(fun box ->  
         Sg.empty 
           |> Sg.pickable (PickShape.Box box)
           |> Sg.withEvents [
               SceneEventKind.Click, (fun sceneHit -> true, Seq.ofList[PickProducts sceneHit]) 
               SceneEventKind.Move,  (fun sceneHit -> true, Seq.ofList[HoverProducts sceneHit])
-            ]) |> Sg.dynamic 
+          ])
+      |> Sg.dynamic 
 
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:V3d) (size:IMod<float>) (hfov:IMod<float>) =
         adaptive {

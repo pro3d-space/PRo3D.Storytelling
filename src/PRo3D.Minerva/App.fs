@@ -199,7 +199,7 @@ module App =
         |> PList.filter( fun x -> HSet.contains x.id selected)
         |> updateSgFeatures
      
-  let updateSelection (names:list<string>) (model:Model) =
+  let updateSelectionToggle (names:list<string>) (model:Model) =
     let newSelection = 
       List.fold(fun set name -> 
         if set |> HSet.contains name then
@@ -380,7 +380,7 @@ module App =
       | ClearSelection -> 
         { model with selection = { model.selection with singleSelectProduct = None; selectedProducts = HSet.empty} }
       | AddProductToSelection name ->
-        updateSelection [name] model
+        updateSelectionToggle [name] model
       | PickProducts hit -> 
           let closestPoints = queryClosestPoint model hit
           match closestPoints with
@@ -388,16 +388,35 @@ module App =
           | seq -> 
             let index = seq |> Seq.map (fun (depth, pos, index) -> index) |> Seq.head
             let closestID = model.selection.flatID.[index]
-            //printf "found this %A" closestID
-            updateSelection [closestID] model
-        ////let colors = updateSgFeatureColors model.filteredFeatures newSelection
-        //let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
-        //{ model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
-        //             //sgFeatures = { model.sgFeatures with colors = colors}}
-      //| PickProduct (hit, name) -> updateSelection name model
-      | OpenTif id -> Files.loadTif id model                                                            
+            updateSelectionToggle [closestID] model
+            
+          //Report.BeginTimed("bruteforce") |> ignore
+          //let updateModel = 
+          //  let ray = hit.globalRay.Ray.Ray
+          //  let minDist = model.selection.selectionMinDist
+          //  Array.zip model.selection.flatPos model.selection.flatID
+          //    |> Seq.choose(fun (pos, id) -> 
+          //      let dist = ray.GetMinimalDistanceTo pos
+          //      if dist < minDist then
+          //        Some (dist, id)
+          //      else 
+          //        None)
+          //    |> fun withinRange -> 
+          //      if withinRange.IsEmpty() then
+          //        model
+          //      else
+          //        let closestID = 
+          //          withinRange
+          //            |> Seq.sortBy fst
+          //            |> Seq.map snd
+          //            |> Seq.head
+          //        updateSelectionToggle [closestID] model
+          //Report.EndTimed() |> ignore
+          //updateModel
+
       | HoverProducts hit ->
-          Report.BeginTimed("update") |> ignore
+          Report.BeginTimed("hover-update") |> ignore
+          
           let closestPoints = queryClosestPoint model hit
 
           let updateModel = 
@@ -408,10 +427,7 @@ module App =
               | Some _ -> { model with hoveredProduct = None}
             | seq -> 
               let depth, pos, index = seq |> Seq.head
-              //let wpos, closestID = model.selection.flatPosID.[index]
-              //printf "hovered this %A at %A" closestID wpos
               { model with hoveredProduct = Some pos }
-
           Report.EndTimed() |> ignore
 
           updateModel
@@ -611,9 +627,9 @@ module App =
       model.hoveredProduct |> Mod.map(fun x ->  
         match x with 
         | None -> [||]
-        | Some a -> [|V3f a|])
+        | Some a -> [|V3f a|])  
         
-    let hoveredPoint = Drawing.drawSingleColorPoints hoveredPoint (C4f.Yellow.ToV4d()) (Mod.constant 10.0)
+    let hoveredPoint = Drawing.drawSingleColorPoints hoveredPoint (C4f.Yellow.ToV4d()) (Mod.constant 10.0) // todo...precission fix of V3d -> V3f
 
     Sg.ofList [points; selectedPoints; pickables; hoveredPoint]
   

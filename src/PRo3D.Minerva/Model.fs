@@ -212,7 +212,6 @@ type SelectionModel = {
     [<NonIncremental>]
     flatID               : array<string>
     selectionMinDist     : float
-    //selectedSgFeatures   : SgFeatures
 }
 
 
@@ -427,7 +426,6 @@ module Initial =
     {
         selectedProducts     = hset.Empty
         singleSelectProduct  = None
-        //selectedSgFeatures = sgSelfeatures
         kdTree = Unchecked.defaultof<_>
         flatPos = Array.empty
         flatID = Array.empty
