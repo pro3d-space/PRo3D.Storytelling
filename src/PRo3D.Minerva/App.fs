@@ -343,6 +343,7 @@ module App =
         else
           model
       | FlyToProduct _ -> model //handled in higher level app
+      | OpenTif id -> Files.loadTif id model     
       | QueryMessage msg -> 
         let filters = QueryApp.update model.queryFilter msg        
         { model with queryFilter = filters}
@@ -366,9 +367,18 @@ module App =
         let flatId = flatList |> Array.map snd
         let kdTree = PointKdTreeExtensions.CreateKdTree(input, Metric.Euclidean, 1e-5)
         let kdTreeBounds = Box3d(input)
-        //let flatIndexID = flatList |> Array.mapi(fun i (pos, id) -> i, id) |> HMap.ofArray
-        //let flatIndexPos = flatList |> Array.mapi(fun i (pos, id) -> i, pos) |> HMap.ofArray
-        { model with data = data; filteredFeatures = data.features; kdTreeBounds = kdTreeBounds; selection = {model.selection with kdTree = kdTree; flatPos = input; flatID = flatId}} |> updateFeaturesForRendering view.Location //
+        { 
+          model with
+            data = data
+            filteredFeatures = data.features
+            kdTreeBounds = kdTreeBounds
+            selection = 
+              { model.selection with
+                  kdTree = kdTree
+                  flatPos = input
+                  flatID = flatId
+              }
+        } |> updateFeaturesForRendering view.Location
       | SetPointSize s ->
         let size = Numeric.update model.featureProperties.pointSize s
         { model with featureProperties = { model.featureProperties with pointSize = size }}
@@ -486,7 +496,7 @@ module App =
               yield div [clazz "ui description"] [
                       f.sol |> sprintf "Sol: %A" |> text
                       i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
-                                i [clazz "download icon"; onClick (fun _ -> OpenTif f.id)][]
+                      i [clazz "download icon"; onClick (fun _ -> OpenTif f.id)][]
                       ]
               //yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][] //|> UI.wrapToolTip "FlyTo"       
                          

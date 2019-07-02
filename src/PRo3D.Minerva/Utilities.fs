@@ -144,8 +144,6 @@ module Files =
                 | _ -> Log.error "[Minerva] sth. went wrong with tif file"
             model
          
-       
-
 module Shader = 
 
     type UniformScope with
@@ -235,8 +233,10 @@ module Drawing =
     let drawFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (outline:bool) = 
         
         let stableOffset = sgfeatures.positions |> Mod.map(fun x -> x |> Array.tryHead |> Option.defaultValue V3d.Zero)
+
         let pointsF = 
-           Mod.map2(fun x (offset:V3d) -> x |> Array.map(fun (p:V3d) -> V3f (p-offset))) sgfeatures.positions stableOffset
+          Mod.map2(fun points (offset:V3d) ->
+            points |> Array.map(fun (p:V3d) -> V3f (p-offset))) sgfeatures.positions stableOffset
 
         if outline then
           drawSingleColorPoints pointsF (C4f.VRVisGreen.ToV4d()) pointSize |> Sg.translate' stableOffset
@@ -324,5 +324,5 @@ module Drawing =
             |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
             do! Shader.stableTrafo
             }                  
-            |> Aardvark.UI.``F# Sg``.Sg.trafo billboardTrafo  
+            |> Sg.trafo billboardTrafo  
 
