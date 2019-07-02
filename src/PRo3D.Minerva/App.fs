@@ -164,15 +164,6 @@ module App =
       |> List.sortBy(fun (_,p) -> V3d.DistanceSquared(position, p))
       |> take' 50
       |> HMap.ofList
-      
-  let updateSgFeatureColors (features:plist<Feature>) (selected:hset<string>) =
-    features
-      |> PList.map( fun x -> 
-        if HSet.contains x.id selected then 
-          C4b.VRVisGreen
-        else
-          x.instrument |> Model.instrumentColor )
-      |> PList.toArray
 
   let updateSgFeatures (features:plist<Feature>) =
     
@@ -210,11 +201,6 @@ module App =
     let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
     { model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
 
-  let updateSelection2 (selection:list<string>) (model:Model) =
-    let selection = selection |> HSet.ofList
-    let selectedSgs = updateSelectedSgFeature model.filteredFeatures selection
-    { model with selection = { model.selection with selectedProducts = selection}; selectedSgFeatures = selectedSgs} 
-
   let updateFeaturesForRendering (pos :V3d) (model:Model) =
     Log.startTimed "[Minerva] building sgs"
     let solLabels = updateSolLabels model.filteredFeatures pos //view frustum culling AND distance culling
@@ -232,10 +218,8 @@ module App =
       let t = V2d hit.event.evtPixel / viewPort
       V2d(2.0 * t.X - 1.0, 1.0 - 2.0 * t.Y)
 
-    let input = model.selection.flatPos
-
     let ellipse = Ellipse2d(centerNDC, V2d.IO * size, V2d.OI * size)
-    let closestPoints = KdTreeQuery.FindPoints(model.selection.kdTree, model.kdTreeBounds, input, viewProj, ellipse)
+    let closestPoints = KdTreeQuery.FindPoints(model.selection.kdTree, model.kdTreeBounds, model.selection.flatPos, viewProj, ellipse)
     //Report.EndTimed() |> ignore
     closestPoints
 
@@ -294,7 +278,9 @@ module App =
         //  Log.error "%A" e.Message
         //  model
       | UpdateSelection selectionIds ->
-        model |> updateSelection2 selectionIds
+        let selection = selectionIds |> HSet.ofList
+        let selectedSgs = updateSelectedSgFeature model.filteredFeatures selection
+        { model with selection = { model.selection with selectedProducts = selection}; selectedSgFeatures = selectedSgs} 
       | UpdateFiltering idList -> //failwith "[Minerva] not implemented"
         //Log.startTimed "fetching %d entries by ids" idList.Length
         //let data = idList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
@@ -441,114 +427,83 @@ module App =
           Report.EndTimed() |> ignore
 
           updateModel
-      
-  let mkColor (model :MModel) (feature : Feature) =
-    model.selection.selectedProducts
-      |> ASet.map(fun x -> x = feature.id)
-      |> ASet.contains true
-      |> Mod.map (function x -> if x then C4b.VRVisGreen else (feature.instrument |> Model.instrumentColor))
 
-  let selectionColor (model :MModel) (feature : Feature) =
-    model.selection.selectedProducts
-      |> ASet.map(fun x -> x = feature.id)
-      |> ASet.contains true
-      |> Mod.map (function x -> if x then C4b.VRVisGreen else C4b.White)
+  let viewFeaturesGui (model :MModel) =
+     
+    let viewFeatures (instr : Instrument) (features : list<Feature>) = 
 
-  let viewFeatures (model :MModel) (instr : Instrument) (features : list<Feature>) = 
-    let ac = sprintf "color: %s" (Html.ofC4b C4b.White)
+      let selectionColor (model :MModel) (feature : Feature) =
+        model.selection.selectedProducts
+          |> ASet.map(fun x -> x = feature.id)
+          |> ASet.contains true
+          |> Mod.map (function x -> if x then C4b.VRVisGreen else C4b.White)
 
-    features |> List.map(fun f -> 
-      let headerAttributes =
-          amap {
-              //yield onClick (fun _ -> SingleSelectProduct f.id)
-              yield  onClick(fun _ -> AddProductToSelection f.id)
+      let ac = sprintf "color: %s" (Html.ofC4b C4b.White)
+
+      features |> List.map(fun f -> 
+        let headerAttributes =
+            amap {
+                //yield onClick (fun _ -> SingleSelectProduct f.id)
+                yield  onClick(fun _ -> AddProductToSelection f.id)
+            } |> AttributeMap.ofAMap
+
+        //let iconAttr = 
+        //  [
+        //    clazz "ui map pin inverted middle aligned icon"; 
+        //    style (sprintf "color: %s" (f.instrument |> Model.instrumentColor |> Html.ofC4b))
+        //    onClick(fun _ -> AddProductToSelection f.id)
+        //    //onClick(fun _ -> FlyToProduct f.geometry.positions.Head)
+        //  ]  
+          
+        let iconAttributes =
+          amap {                  
+            yield clazz "ui map pin inverted middle aligned icon"
+            //yield  onClick(fun _ -> AddProductToSelection f.id)
+
+            yield style (sprintf "color: %s" (Html.ofC4b (f.instrument |> Model.instrumentColor)))
           } |> AttributeMap.ofAMap
 
-      //let iconAttr = 
-      //  [
-      //    clazz "ui map pin inverted middle aligned icon"; 
-      //    style (sprintf "color: %s" (f.instrument |> Model.instrumentColor |> Html.ofC4b))
-      //    onClick(fun _ -> AddProductToSelection f.id)
-      //    //onClick(fun _ -> FlyToProduct f.geometry.positions.Head)
-      //  ]  
-          
-      let iconAttributes =
-        amap {                  
-          yield clazz "ui map pin inverted middle aligned icon"
-          //yield  onClick(fun _ -> AddProductToSelection f.id)
-
-          yield style (sprintf "color: %s" (Html.ofC4b (f.instrument |> Model.instrumentColor)))
-        } |> AttributeMap.ofAMap
-
-      let headerAttr : AttributeMap<_> = [clazz "ui header small"] |> AttributeMap.ofList
-                                    
-        //let item =             
-      div [clazz "ui inverted item"][
-        Incremental.i iconAttributes AList.empty //i iconAttributes []
-        div [clazz "ui content"] [
-          Incremental.div (AttributeMap.ofList [style ac]) (
-            alist {
-              let! hc = selectionColor model f
-              let c = hc |> Html.ofC4b |> sprintf "color: %s"
-              yield div[clazz "header"; style c][
-                    Incremental.div (headerAttributes) (AList.single (instr |> instrumentText |> text))
-              ]
-              yield div [clazz "ui description"] [
-                      f.sol |> sprintf "Sol: %A" |> text
-                      i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
-                      i [clazz "download icon"; onClick (fun _ -> OpenTif f.id)][]
-                      ]
-              //yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][] //|> UI.wrapToolTip "FlyTo"       
+        let headerAttr : AttributeMap<_> = [clazz "ui header small"] |> AttributeMap.ofList
+                                                
+        div [clazz "ui inverted item"][
+          Incremental.i iconAttributes AList.empty //i iconAttributes []
+          div [clazz "ui content"] [
+            Incremental.div (AttributeMap.ofList [style ac]) (
+              alist {
+                let! hc = selectionColor model f
+                let c = hc |> Html.ofC4b |> sprintf "color: %s"
+                yield div[clazz "header"; style c][
+                      Incremental.div (headerAttributes) (AList.single (instr |> instrumentText |> text))
+                ]
+                yield div [clazz "ui description"] [
+                        f.sol |> sprintf "Sol: %A" |> text
+                        i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
+                        i [clazz "download icon"; onClick (fun _ -> OpenTif f.id)][]
+                        ]
+                //yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][] //|> UI.wrapToolTip "FlyTo"       
                          
-            } )
-          ]            
-      ]) 
-    //    yield item 
-    //]
-    //let headerAttr : AttributeMap<_> = [clazz "ui header small"] |> AttributeMap.ofList
+              } )
+            ]            
+        ])
 
-    //  div [clazz "ui inverted item"][
-    //    Incremental.i iconAttributes AList.empty //i iconAttributes []
-    //    div [clazz "ui content"] [
-    //      Incremental.div (AttributeMap.ofList [style ac]) (
-    //        alist {
-    //          let! hc = selectionColor model f
-    //          let c = hc |> Html.ofC4b |> sprintf "color: %s"
-    //          yield div[clazz "header"; style c][
-    //                Incremental.div (headerAttributes) (AList.single (instr |> instrumentText |> text))
-    //          ]
-    //          yield div [clazz "ui description"] [
-    //                  f.sol |> sprintf "Sol: %A" |> text
-    //                  i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
-    //                  ]
-    //          //yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][] //|> UI.wrapToolTip "FlyTo"       
-    //        } )
-    //      ]            
-    //  ]) 
-
-  let accordion text' icon active content' =
-     let title = if active then "title active inverted" else "title inverted"
-     let content = if active then "content active" else "content"     
+    let accordion text' icon active content' =
+       let title = if active then "title active inverted" else "title inverted"
+       let content = if active then "content active" else "content"     
                              
-     onBoot "$('#__ID__').accordion();" (
-         div [clazz "ui inverted segment"] [
-             div [clazz "ui inverted accordion fluid"] [
-                 div [clazz title; style "background-color: #282828"] [
-                         i [clazz ("dropdown icon")][]
-                         text text'                                
-                         div[style "float:right"][i [clazz (icon + " icon")][]]     
-                 ]
-                 div [clazz content;  style "overflow-y : auto; "] content' //max-height: 35%
-             ]
-         ]
-     )  
-  
-  let viewFeaturesGui (model :MModel) =
-     let queryGui (model:MModel) = 
-          QueryApp.viewQueryFilters model.queryFilter
-            |> UI.map QueryMessage 
+       onBoot "$('#__ID__').accordion();" (
+           div [clazz "ui inverted segment"] [
+               div [clazz "ui inverted accordion fluid"] [
+                   div [clazz title; style "background-color: #282828"] [
+                           i [clazz ("dropdown icon")][]
+                           text text'                                
+                           div[style "float:right"][i [clazz (icon + " icon")][]]     
+                   ]
+                   div [clazz content;  style "overflow-y : auto; "] content' //max-height: 35%
+               ]
+           ]
+       )
      
-     let propertiesGui =
+    let propertiesGui =
         require Html.semui ( 
             Html.table [ 
                 Html.row "point size:" [Numeric.view' [NumericInputType.Slider] model.featureProperties.pointSize |> UI.map (fun x -> SetPointSize x)] 
@@ -556,7 +511,7 @@ module App =
             ]        
         )      
        
-     let listOfFeatures =
+    let listOfFeatures =
         alist {           
           let! features = model.filteredFeatures |> AList.toMod
           let groupedFeatures = features |> PList.toList |> List.groupBy(fun x -> x.instrument)
@@ -572,12 +527,12 @@ module App =
 
             yield div [clazz "ui inverted item"][
                 yield accordion header "Content" false [                    
-                  div [clazz "ui list"] (viewFeatures model instr g)
+                  div [clazz "ui list"] (viewFeatures instr g)
                 ]
             ]
         }
 
-     div [clazz "ui inverted segment"] [
+    div [clazz "ui inverted segment"] [
        h4 [clazz "ui"] [text "Comm:"]
        div [clazz "ui buttons"] [
          button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
@@ -598,17 +553,12 @@ module App =
          button [clazz "ui button"; onClick (fun _ -> ApplyFilters)][text "Filter"]         
        ]
 
-       queryGui model               
+       // QUERYAPP included
+       QueryApp.viewQueryFilters model.queryFilter |> UI.map QueryMessage
+       
        propertiesGui          
        Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) listOfFeatures //AList.empty  
      ]
-
-  // GUI Standalone
-  let myCss = [
-    { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
-    { kind = Stylesheet;  name = "semui-overrides"; url = "semui-overrides.css" }
-    { kind = Script;      name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
-  ]  
 
   let viewWrapped pos (model : MModel) =
     require Html.semui (
