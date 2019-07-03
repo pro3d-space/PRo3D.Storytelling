@@ -158,22 +158,22 @@ module FalseColorsModel =
         value   = 5.0
         min     = 0.0
         max     = 90.0
-        step    = 1.0
-        format  = "{000:0}"
+        step    = 0.0001
+        format  = "{0:0.0000}"
     } 
     let initlb (range: Range1d) = {
         value   = range.Min
         min     = range.Min
         max     = range.Max
-        step    = 1.0
-        format  = "{0:0.0}"
+        step    = 0.0001
+        format  = "{0:0.0000}"
     }
     let initub (range: Range1d) = {
         value   = range.Max
         min     = range.Min
         max     = range.Max
-        step    = 1.0
-        format  = "{0:0.0}"
+        step    = 0.0001
+        format  = "{0:0.0000}"
     }
     let initDefinedScalarsLegend (range: Range1d) = 
         {
