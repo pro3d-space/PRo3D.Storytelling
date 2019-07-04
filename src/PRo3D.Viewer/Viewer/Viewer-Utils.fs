@@ -191,7 +191,7 @@ module ViewerUtils =
                 match scalar with
                 | Some m -> m.index |> Mod.map Some
                 | None -> Mod.constant None //scalar |> Option.map(fun x -> x.index) //option<IMod<int>>
-
+            
             let! texture = s.selectedTexture 
             let attr : AttributeParameters = 
                 {

@@ -159,7 +159,7 @@ module FalseColorsModel =
         min     = 0.0
         max     = 90.0
         step    = 0.0001
-        format = "{0:0.0000}"
+        format  = "{0:0.0000}"
     } 
     let initlb (range: Range1d) = {
         value   = range.Min
