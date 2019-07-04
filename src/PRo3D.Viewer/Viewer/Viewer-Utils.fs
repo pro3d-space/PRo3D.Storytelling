@@ -186,15 +186,19 @@ module ViewerUtils =
     let attributeParameters (surf:IMod<MSurface>) =
          adaptive {
             let! s = surf
-            let! texture = s.selectedTexture 
             let! scalar = s.selectedScalar
-            
+            let! scalar' = 
+                match scalar with
+                | Some m -> m.index |> Mod.map Some
+                | None -> Mod.constant None //scalar |> Option.map(fun x -> x.index) //option<IMod<int>>
+
+            let! texture = s.selectedTexture 
             let attr : AttributeParameters = 
                 {
                     selectedTexture = texture |> Option.map(fun x -> x.index)
-                    selectedScalar  = scalar  |> Option.map(fun x -> x.index |> Mod.force)
+                    selectedScalar  = scalar'//scalar  |> Option.map(fun x -> x.index |> Mod.force)
                 }
-            
+
             return attr
         }
 
