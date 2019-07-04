@@ -690,12 +690,16 @@ module ViewerApp =
                   | Aardvark.Application.Keys.D0 -> Drawing.Action.SetSemantic Semantic.Horizon0
                   | Aardvark.Application.Keys.D1 -> Drawing.Action.SetSemantic Semantic.Horizon1
                   | Aardvark.Application.Keys.D2 -> Drawing.Action.SetSemantic Semantic.Horizon2
-                  | Aardvark.Application.Keys.D3 -> Drawing.Action.SetSemantic Semantic.Horizon3       
+                  | Aardvark.Application.Keys.D3 -> Drawing.Action.SetSemantic Semantic.Horizon3 
                   | _  -> Drawing.Action.Nop
 
               let m =
                 match k with 
-                  | Aardvark.Application.Keys.LeftCtrl -> { m with ctrlFlag = true }
+                  | Aardvark.Application.Keys.LeftCtrl ->
+                    match m.interaction with
+                         | Interactions.PickMinervaProduct ->
+                            { m with minervaModel = { m.minervaModel with picking = true }}
+                         |_ -> { m with ctrlFlag = true}
                   | _ -> m
 
               let m =
@@ -789,6 +793,7 @@ module ViewerApp =
                             let view = m.scene.navigation.camera.view
                             let d = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopPicking 
                             { m with drawing = d; ctrlFlag = false; picking = false }
+                        | Interactions.PickMinervaProduct -> { m with minervaModel = { m.minervaModel with picking = false }}
                         |_-> { m with ctrlFlag = false; picking = false }
                   | _ -> m                                  
             | SetInteraction t,_,_ -> { m with interaction = t }
@@ -896,24 +901,10 @@ module ViewerApp =
                  let currentView = m.scene.navigation.camera.view
                  let newForward = (v - currentView.Location).Normalized
                                     
-                 { m with animations = createAnimation v newForward m.animations }
-              | Minerva.WriteScreenCoordsDebug -> 
-                let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
-                let points = 
-                  m.minervaModel.data.features
-                    |> PList.toList 
-                    |> List.map(fun feat -> (feat.id, feat.geometry.positions.[0]))                    
-                    |> List.map(fun (id,p) ->  (id, ((viewProj.Forward.TransformPosProj p) + V3d.One) * 0.5))
-                
-               // points |> Log.line "trafo points minerva %A"                                 
-                Log.line "[Viewer] writing minerva screespace coords"
-                points 
-                    |> List.map(fun (id,v) -> sprintf "%s,%f,%f" id v.X v.Y) 
-                    |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates.csv"
-                m
+                 { m with animations = createAnimation v newForward m.animations }              
               | _ ->                
                  let currentView = m.scene.navigation.camera.view
-                 let minerva' = PRo3D.Minerva.App.update currentView m.minervaModel a                                                                               
+                 let minerva' = PRo3D.Minerva.App.update currentView m.frustum m.minervaModel a                                                                               
                  //MailboxAction.ViewerAction
                  //ViewerAction.MinervaActions
                  //a |> ViewerAction.MinervaActions |> MailboxAction.ViewerAction
@@ -957,6 +948,7 @@ module ViewerApp =
              // attribute "data-renderalways" "true"
                 onKeyDown (KeyDown)
                 onKeyUp   (KeyUp)        
+                clazz "mainrendercontrol"
               //  onResize  (OnResize)
             ] 
         ]            
@@ -1046,7 +1038,8 @@ module ViewerApp =
                 |> Sg.map ViewPlanMessage
 
             let minervaFeatures = 
-              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions
+              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions 
+
             let solText = 
                 PRo3D.Minerva.App.getSolBillboards m.minervaModel m.scene.navigation.camera.view m.scene.config.nearPlane.value |> Sg.map MinervaActions
 
@@ -1095,16 +1088,16 @@ module ViewerApp =
 
         page (fun request -> 
           match Map.tryFind "page" request.queryParams with
-            | Some "instrumentview" ->
-                require (myCss) (
-                    body [ style "background: #1B1C1E; width:100%; height:100%; overflow-y:auto; overflow-x:auto;"] [
-                      Incremental.div instrumentViewAttributes (
-                        alist {
-                            yield viewInstrumentView m 
-                            yield Viewer.Gui.textOverlaysInstrumentView m.scene.viewPlans
-                        } )
-                    ]
-                )
+            //| Some "instrumentview" ->
+            //    require (myCss) (
+            //        body [ style "background: #1B1C1E; width:100%; height:100%; overflow-y:auto; overflow-x:auto;"] [
+            //          Incremental.div instrumentViewAttributes (
+            //            alist {
+            //                yield viewInstrumentView m 
+            //                yield Viewer.Gui.textOverlaysInstrumentView m.scene.viewPlans
+            //            } )
+            //        ]
+            //    )
             | Some "render" -> 
                 require (myCss) (
                   body renderViewAttributes [ //[ style "background: #1B1C1E; height:100%; width:100%"] [
@@ -1130,8 +1123,8 @@ module ViewerApp =
             | Some "viewplanner" -> 
                 require (myCss) (body bodyAttributes [Gui.ViewPlanner.viewPlannerUI m])
             | Some "minerva" -> 
-               let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
-               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])            
+               //let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
+               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui m.minervaModel |> UI.map MinervaActions])            
             | None -> 
                 require (myCss) (
                   body [][                    

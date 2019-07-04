@@ -9,6 +9,7 @@ open FSharp.Data
 open FSharp.Data.JsonExtensions
 open Aardvark.Application
 open PRo3D.Minerva.Communication
+open Aardvark.Geometry
 
 type FeatureId = FeatureId of string
 
@@ -111,10 +112,11 @@ type FeatureCollection =
     features    : plist<Feature>
   }
 
-  type QueryAction =
+type QueryAction =
   | SetMinSol of Numeric.Action
   | SetMaxSol of Numeric.Action
   | SetDistance of Numeric.Action
+  | UpdateDistance
   | CheckMAHLI
   | CheckFrontHazcam
   | CheckMastcam
@@ -125,39 +127,68 @@ type FeatureCollection =
   | CheckMastcamL
   | CheckChemLib
   | CheckChemRmi
-  | SetPointSize of Numeric.Action
-  | UseQueriesForDataFile
+  //| UseQueriesForDataFile
 
 type MinervaAction =
-  | PerformQueries
-  | SaveFeatureCollection
-  | LoadFeatureCollection
+  | LoadProducts
+  | ApplyFilters
+  | PerformQueries  
   | Reset
-  | WriteScreenCoordsDebug
-  | PerformIdQuery of list<string>
+  | ClearSelection
+  | SendSelection
+  | SendScreenSpaceCoordinates
+  | UpdateFiltering of list<string>
+  | UpdateSelection of list<string>
   | ConnectVisplore
   | FlyToProduct of V3d
   | QueryMessage of QueryAction
-  | QueryDataFile
-      
+  | SetPointSize of Numeric.Action
+  | SetTextSize of Numeric.Action
+  | SingleSelectProduct of string
+  | AddProductToSelection of string
+  | PickProducts  of SceneHit
+  | HoverProducts of SceneHit
+  | OpenTif of string
+  //| ChangeInstrumentColor of ColorPicker.Action * Instrument
 
 [<DomainType>]
 type SgFeatures = {
+    names       : string[]
     positions   : V3d[]
     colors      : C4b[]
+    trafo       : Trafo3d
+}
+
+[<DomainType>]
+type InstrumentColor = {
+    mahli        : C4b    
+    frontHazcam  : C4b 
+    mastcam      : C4b  
+    apxs         : C4b  
+    frontHazcamR : C4b 
+    frontHazcamL : C4b 
+    mastcamR     : C4b 
+    mastcamL     : C4b 
+    chemLib      : C4b 
+    chemRmi      : C4b  
+    color        : ColorInput
+}
+
+[<DomainType>]
+type FeatureProperties = {
+    pointSize   : NumericInput
+    textSize    : NumericInput
+    //instrumentColor : InstrumentColor
 }
 
 [<DomainType>]
 type QueryModel = {
     minSol               : NumericInput
     maxSol               : NumericInput
-
-    instrument           : Instrument
+    
     distance             : NumericInput
-    filteredFeatures     : plist<Feature>
-
-    solLables            : hmap<string,V3d>
-
+    filterLocation       : V3d
+    
     checkMAHLI           : bool
     checkFrontHazcam     : bool
     checkMastcam         : bool
@@ -167,13 +198,22 @@ type QueryModel = {
     checkMastcamR        : bool
     checkMastcamL        : bool
     checkChemLib         : bool
-    checkChemRmi         : bool
-
-    pointSize            : NumericInput
-    sgFeatures           : SgFeatures
-
-    useFileQueries       : bool
+    checkChemRmi         : bool        
 }
+
+[<DomainType>]
+type SelectionModel = {
+    selectedProducts     : hset<string> 
+    singleSelectProduct  : option<string>
+    [<NonIncremental>]
+    kdTree               : PointKdTreeD<V3d[],V3d>
+    [<NonIncremental>]
+    flatPos              : array<V3d>
+    [<NonIncremental>]
+    flatID               : array<string>
+    selectionMinDist     : float
+}
+
 
 type MessagingMailbox = MailboxProcessor<MailboxAction>
 
@@ -195,8 +235,10 @@ module MailboxState =
 [<DomainType>]
 type Model = 
   {
-    data     : FeatureCollection
-    queries  : list<string>
+    data             : FeatureCollection
+    queries          : list<string>
+    queryFilter      : QueryModel
+    filteredFeatures : plist<Feature>
 
     [<NonIncremental>]
     comm     : option<Communicator.Communicator>
@@ -205,7 +247,14 @@ type Model =
 
     minervaMessagingMailbox : MessagingMailbox
     minervaMailboxState     : MailboxState
-    queryFilter             : QueryModel
+    featureProperties       : FeatureProperties
+    selection               : SelectionModel
+    kdTreeBounds         : Box3d
+    hoveredProduct       : Option<V3d>
+    solLabels            : hmap<string,V3d>
+    sgFeatures           : SgFeatures
+    selectedSgFeatures   : SgFeatures
+    picking              : bool
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
@@ -276,7 +325,7 @@ module Initial =
     }
   let minS = 
         {
-            value = 751.0
+            value = 1050.0
             min =  0.0
             max = 10000.0
             step = 1.0
@@ -284,7 +333,7 @@ module Initial =
         }
   let maxS = 
         {
-            value = 926.0
+            value = 1100.0
             min =  0.0
             max = 10000.0
             step = 1.0
@@ -308,20 +357,59 @@ module Initial =
             format = "{0:0.00}"
         }
 
+  let tSize = 
+        {
+            value = 10.0
+            min = 0.001
+            max = 30.0
+            step = 0.001
+            format = "{0:0.000}"
+        }
+  //let instrumentC =
+  //  {
+  //      mahli        = { c = C4b(255,127,0)  }   
+  //      frontHazcam  = { c = C4b(255,255,255)} 
+  //      mastcam      = { c = C4b(255,255,255)} 
+  //      apxs         = { c = C4b(230,171,2)  } 
+  //      frontHazcamR = { c = C4b(31,120,180) } 
+  //      frontHazcamL = { c = C4b(166,206,227)} 
+  //      mastcamR     = { c = C4b(227,26,28)  } 
+  //      mastcamL     = { c = C4b(251,154,153)} 
+  //      chemLib      = { c = C4b(173,221,142)} 
+  //      chemRmi      = { c = C4b(49,163,84)  } 
+  //  }
+
+  let fProps = 
+    {
+        pointSize = pSize
+        textSize = tSize
+        //instrumentColor = instrumentC
+    }
+
   let sgfeatures =
     {
+        names     = Array.empty
         positions = Array.empty
         colors    = Array.empty
+        trafo     = Trafo3d.Identity
+    }
+
+  let sgSelfeatures =
+    {
+        names     = Array.empty
+        positions = Array.empty
+        colors    = Array.empty
+        trafo     = Trafo3d.Identity
     }
 
   let queryFilter = 
     {
         minSol                = minS
         maxSol                = maxS
-        instrument            = Instrument.NotImplemented
+       
         distance              = dist
-        filteredFeatures      = PList.empty
-        solLables             = hmap.Empty
+        filterLocation        = V3d.Zero
+        
         checkMAHLI            = true
         checkFrontHazcam      = true
         checkMastcam          = true
@@ -331,10 +419,17 @@ module Initial =
         checkMastcamR         = true
         checkMastcamL         = true
         checkChemLib          = true
-        checkChemRmi          = true
-        pointSize             = pSize
-        sgFeatures            = sgfeatures
-        useFileQueries        = false
+        checkChemRmi          = true              
+    }
+
+  let selectionM =
+    {
+        selectedProducts     = hset.Empty
+        singleSelectProduct  = None
+        kdTree = Unchecked.defaultof<_>
+        flatPos = Array.empty
+        flatID = Array.empty
+        selectionMinDist = 0.05
     }
           
   let sites = [
@@ -349,12 +444,21 @@ module Initial =
 
   let model mailbox = 
     {
-      data = data
+      data    = data
       queries = sites
-      comm = None
+      comm    = None
       vplMessages = ThreadPool.Empty
 
       minervaMailboxState = MailboxState.empty
       minervaMessagingMailbox = mailbox
       queryFilter = queryFilter
+      featureProperties = fProps
+      selection = selectionM
+      filteredFeatures = data.features
+      kdTreeBounds = Box3d.Invalid
+      hoveredProduct = None
+      solLabels = HMap.empty
+      sgFeatures =  sgfeatures
+      selectedSgFeatures = sgSelfeatures
+      picking = false
     }

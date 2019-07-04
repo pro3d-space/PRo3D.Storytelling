@@ -1,13 +1,9 @@
 ﻿namespace PRo3D.Minerva
 
-//open Aardvark.UI
-open Aardvark.UI.Primitives
-open Aardvark.UI.Events
-
+open System
+open System.Diagnostics
 
 open Aardvark.GeoSpatial.Opc
-open System
-
 
 open Aardvark.Base
 open Aardvark.Base.Rendering
@@ -101,30 +97,53 @@ module Files =
                 } 
             Some feature
 
-    let loadDataFile = 
-        let directory = @".\MinervaData"
-        let path = ".\MinervaData\dump.csv"
-        match System.IO.File.Exists path with
-         | true -> 
-            let allData = CsvFile.Load(@".\MinervaData\dump.csv").Cache()
+    open System.IO    
+    open PRo3D.Base
+    let loadDataFile =
+        let cachePath = @".\MinervaData\dump.cache"
+        let path = @".\MinervaData\dump.csv"
+        match (File.Exists path, File.Exists cachePath) with
+         | (true, false) -> 
+            let allData = CsvFile.Load(path).Cache()
 
             let features = 
                 allData.Rows
                     |> Seq.choose( fun x -> getFeature x )
                 
-
             {
               name        = "dump"
               typus       = Typus.FeatureCollection    
               boundingBox = Box2d.Invalid
               features    = features |> PList.ofSeq
-            }
-         | false -> 
-            Log.line "wrong filename"
-            Initial.data
+            } |> Serialization.save cachePath
+         | (_, true) -> Serialization.loadAs cachePath
+         | _ -> 
+            Log.error "[Minerva] sth. went wrong with dump.csv"
+            Initial.data        
 
-        //allData
-
+    let loadTif (featureId:string) (model:Model) =
+        // https://minerva.eox.at/store/datafile/FRB_495137799RADLF0492626FHAZ00323M1/frb_495137799radlf0492626fhaz00323m1.tif
+        let filename = featureId.ToLower() + ".tif" //"frb_495137799radlf0492626fhaz00323m1.tif"
+        let imagePath = @".\MinervaData\" + filename
+        let path = "https://minerva.eox.at/store/datafile/" + featureId + "/" + filename
+        match (File.Exists imagePath) with
+         | true -> 
+            let argument = sprintf "/select, \"%s\"" imagePath
+            Process.Start("explorer.exe", argument) |> ignore
+            model
+         |  false -> 
+            let mutable client = new System.Net.WebClient()
+            client.UseDefaultCredentials <- true       
+            let credentials = System.Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes("minerva:tai8Ies7"))   
+            client.Headers.[System.Net.HttpRequestHeader.Authorization] <- "Basic " + credentials  
+            //try takeScreenshot baseAddress sh.col sh.row sh.id sh.folder with e -> printfn "error: %A" e
+            try (client.DownloadFile(path, imagePath) |> ignore) with e -> Log.error "[Minerva] error: %A" e
+            match (File.Exists imagePath) with
+                | true -> let argument = sprintf "/select, \"%s\"" imagePath
+                          Process.Start("explorer.exe", argument) |> ignore
+                | _ -> Log.error "[Minerva] sth. went wrong with tif file"
+            model
+         
 module Shader = 
 
     type UniformScope with
@@ -136,6 +155,7 @@ module Shader =
             [<PointSize>] p : float
             [<Color>] c : V4d
             [<TexCoord; Interpolation(InterpolationMode.Sample)>] tc : V2d
+            [<SourceVertexIndex>] i : int
         }
 
     let constantColor (color : V4d) (v : pointVertex) =
@@ -152,18 +172,16 @@ module Shader =
 
     let pointTrafo (v : pointVertex) =
         vertex {
-            let wp = uniform.ModelTrafo * v.pos
+            let vp = uniform.ModelViewTrafo * v.pos
             return { 
                 v with 
-                    pos = uniform.ViewProjTrafo * wp
+                    pos = uniform.ProjTrafo * vp
             }
         }
 
-    type PSVertex = { [<TexCoord; Interpolation(InterpolationMode.Sample)>] tc : V2d }
-
     let pointSpriteFragment (v : pointVertex) =
         fragment {
-            let tc = v.tc // + 0.00000001 * v.sp
+            let tc = v.tc
 
             let c = 2.0 * tc - V2d.II
             if c.Length > 1.0 then
@@ -172,157 +190,95 @@ module Shader =
             return v
         }
 
+    let lines (t : Triangle<pointVertex>) =
+        line {
+            yield t.P0
+            yield t.P1
+            restartStrip()
+            
+            yield t.P1
+            yield t.P2
+            restartStrip()
+
+            yield t.P2
+            yield t.P0
+            restartStrip()
+        }
 
 module Drawing =
 
-    let createHarrisPoints (positions : V3d[]) (size : IMod<float>) = // (color : C4b) =
-        //let colors = Array.create positions.Length color
-        let pointSize = Mod.constant 50.0
-        //let c = V4d((float)color.R/255.0, (float)color.G/255.0, (float)color.B/255.0, (float)color.A/255.0)
-
-        Aardvark.UI.``F# Sg``.Sg.ofList [
-                 Sg.draw IndexedGeometryMode.PointList
-            ]
-             |> Sg.vertexAttribute DefaultSemantic.Positions (positions |> Mod.constant)
-             //|> Sg.vertexAttribute DefaultSemantic.Colors (colors |> Mod.constant)
-             //|> Sg.vertexAttribute "Positions" vertices
-             |> Sg.uniform "PointSize" size
-            |> Sg.shader {
-                do! Shader.pointTrafo
-                do! Shader.constantColor V4d.OIOI //c 
-                //do! DefaultSurfaces.vertexColor |> toEffect
-            }
-
-       
-
-    let createHarrisPoints2 (positions : IMod<V3d[]>)  (colors : IMod<C4b[]>) (size : IMod<float>) =
-        //let pointSize = Mod.constant 80.0
-
-        Aardvark.UI.``F# Sg``.Sg.ofList [
-                 Sg.draw IndexedGeometryMode.PointList
-            ]
-             |> Sg.vertexAttribute DefaultSemantic.Positions (positions)
-             |> Sg.vertexAttribute DefaultSemantic.Colors (colors)
-             |> Sg.uniform "PointSize" size
-            |> Sg.shader {
-                do! Shader.pointTrafo
-                do! Shader.differentColor 
-                do! DefaultSurfaces.vertexColor |> toEffect
-            }
-
-    let testPoints (positions : V3d[])  (colors : V4d[]) =
-
-        let pointSize = Mod.constant 70.0
-
-        Sg.draw IndexedGeometryMode.PointList
-            |> Sg.vertexAttribute DefaultSemantic.Positions (positions |> Mod.constant)
-            |> Sg.vertexAttribute DefaultSemantic.Colors (colors |> Mod.constant)
-            |> Sg.effect [
-                DefaultSurfaces.trafo |> toEffect; 
-                //Shader.pointTrafo |> toEffect; 
-                //Shader.differentColor |> toEffect; 
-                DefaultSurfaces.pointSprite |> toEffect; 
-                DefaultSurfaces.vertexColor |> toEffect;
-                Shader.pointSpriteFragment |> toEffect
-                ]
-            |> Sg.uniform "PointSize" pointSize
-
-    let testPoints' (positions : IMod<V3d[]>)  (colors : IMod<C4b[]>) =
-
-        let pointSize = Mod.constant 10.0
-
-        Sg.draw IndexedGeometryMode.PointList
-            |> Sg.vertexAttribute DefaultSemantic.Positions (positions )
-            |> Sg.vertexAttribute DefaultSemantic.Colors (colors)
-            |> Sg.effect [
-                DefaultSurfaces.trafo |> toEffect; 
-                //Shader.pointTrafo |> toEffect; 
-                //Shader.differentColor |> toEffect; 
-                DefaultSurfaces.pointSprite |> toEffect; 
-                DefaultSurfaces.vertexColor |> toEffect;
-                Shader.pointSpriteFragment |> toEffect
-                ]
-            |> Sg.uniform "PointSize" pointSize
-        
-
-    let createIndexedGeometry (positions : V3f[])  (colors : C4b[]) =
-        let index = [|0..positions.Length|]
-        let indexAttributes =
-            let def = [
-                DefaultSemantic.Positions, (positions) :> Array
-                DefaultSemantic.Colors, (colors |> Array.map (fun x -> x)) :> Array
-             ]
-
-            def |> SymDict.ofList 
-
-
-        let geometry =
-            IndexedGeometry(
-                Mode              = IndexedGeometryMode.PointList,
-                IndexArray        = index,
-                IndexedAttributes = indexAttributes
-            )  
-            
-        let pointSize = Mod.constant 70.0
-
-        geometry
-         |> Sg.ofIndexedGeometry
-         |> Sg.effect [
-                DefaultSurfaces.trafo |> toEffect; 
-                //Shader.pointTrafo |> toEffect; 
-                //Shader.differentColor |> toEffect; 
-                DefaultSurfaces.pointSprite |> toEffect; 
-                DefaultSurfaces.vertexColor |> toEffect;
-                Shader.pointSpriteFragment |> toEffect
-                ]
-         |> Sg.uniform "PointSize" pointSize
-           
-
-    let drawPoint color size (pos : IMod<V3d>) = 
-        Sg.sphere 4 color size
-            |> Sg.noEvents
-            |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
-            //|> Sg.uniform "PointSize" size
-            //|> Sg.uniform "WorldPos" pos
-
-    let mkDotISg color (size : IMod<float>) (pos : IMod<V3d>) = 
-        Sg.sphere 2 color (Mod.constant 1.0)
-            |> Sg.noEvents
-            |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
-            |> Sg.uniform "Size" size
-            |> Sg.uniform "WorldPos" pos
-
-    let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) = //TODO TO refactor, put into base prj
-    //let dots (pts : IMod<V3d[]>) (size:IMod<float>) (color : IMod<C4b>) = 
-        aset {
-            //let! points = pts 
-            //for p in points do
-            for p in points |> ASet.ofAList do
-               // let scale = computeScale view (Mod.constant p) 5.0                               
-                yield mkDotISg color (size) (Mod.constant p)
-        } 
-        |> Sg.set
-        |> Sg.effect [
-            toEffect <| Shader.screenSpaceScale
-            toEffect <| Shader.stableTrafo
-            toEffect <| DefaultSurfaces.vertexColor          
+    let drawSingleColorPoints pointsF color pointSize = 
+      Sg.draw IndexedGeometryMode.PointList
+      |> Sg.vertexAttribute DefaultSemantic.Positions pointsF
+      |> Sg.uniform "PointSize" pointSize
+      |> Sg.effect [
+            toEffect Shader.pointTrafo
+            toEffect (Shader.constantColor color)
+            toEffect DefaultSurfaces.pointSprite
+            toEffect Shader.pointSpriteFragment
+      ]
+    
+    let drawColoredPoints pointsF colors pointSize = 
+      Sg.draw IndexedGeometryMode.PointList
+      |> Sg.vertexAttribute DefaultSemantic.Positions pointsF
+      |> Sg.vertexAttribute DefaultSemantic.Colors colors
+      |> Sg.uniform "PointSize" pointSize
+      |> Sg.effect [
+          toEffect Shader.pointTrafo 
+          toEffect Shader.differentColor
+          toEffect DefaultSurfaces.pointSprite
+          toEffect Shader.pointSpriteFragment
         ]
 
-    let indexedGeometryDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =       
-        let points' = points |> AList.toMod |> Mod.map(fun x -> x |> PList.toArray)
-        let colors = points' |> Mod.map2(fun c x -> Array.create x.Length c) color
-      
-        Sg.draw IndexedGeometryMode.PointList
-        |> Sg.vertexAttribute DefaultSemantic.Positions points'         
-        |> Sg.vertexAttribute DefaultSemantic.Colors colors
-        |> Sg.effect [
-            toEffect Shader.stableTrafo
-            toEffect DefaultSurfaces.vertexColor
-            //toEffect DefaultSurfaces.pointSprite
-        ]
-        |> Sg.uniform "PointSize" size
-  
- 
+    let stablePoints (sgfeatures : MSgFeatures) =
+      sgfeatures.positions 
+        |> Mod.map2(fun (t : Trafo3d) x -> 
+          x |> Array.map(fun p -> (t.Backward.TransformPos(p)) |> V3f)) sgfeatures.trafo
+
+    let drawSingleColoredFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) (color:C4f) = 
+        let pointsF = stablePoints sgfeatures
+        drawSingleColorPoints pointsF (color.ToV4d()) pointSize |> Sg.trafo sgfeatures.trafo
+
+    let drawFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) = 
+        let pointsF = stablePoints sgfeatures
+        drawColoredPoints pointsF sgfeatures.colors pointSize |> Sg.trafo sgfeatures.trafo
+
+    let drawHoveredFeaturePoint hoveredProduct pointSize trafo =
+      let hoveredPoint = 
+        Mod.map2(fun (x:Option<V3d>) (t:Trafo3d) ->  
+          match x with 
+          | None -> [||]
+          | Some a ->  [|t.Backward.TransformPos(a)|]) hoveredProduct trafo 
+
+      drawSingleColorPoints hoveredPoint (C4f.Yellow.ToV4d()) (pointSize |> Mod.map(fun x -> x + 5.0)) |> Sg.trafo trafo
+
+    let pass0 = RenderPass.main
+    let pass1 = RenderPass.after "outline" RenderPassOrder.Arbitrary pass0
+
+    let drawSelectedFeaturePoints (sgfeatures : MSgFeatures) (pointSize:IMod<float>) =
+
+        let outline =
+          drawSingleColoredFeaturePoints sgfeatures (pointSize |> Mod.map(fun x -> x + 4.0)) C4f.VRVisGreen 
+          |> Sg.pass pass0
+
+        let inside = 
+          drawFeaturePoints sgfeatures pointSize
+          |> Sg.pass pass1
+          |> Sg.depthTest (Mod.constant(DepthTestMode.Always))
+
+        Sg.ofList [inside; outline]
+
+    let featureMousePick (boundingBox : IMod<Box3d>) =
+      boundingBox 
+        |> Mod.map(fun box ->  
+          Sg.empty 
+            |> Sg.pickable (PickShape.Box box)
+            |> Sg.withEvents [
+                SceneEventKind.Click, (fun sceneHit -> true, Seq.ofList[PickProducts sceneHit]) 
+                SceneEventKind.Move,  (fun sceneHit -> true, Seq.ofList[HoverProducts sceneHit])
+            ])
+        |> Sg.dynamic 
+
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:V3d) (size:IMod<float>) (hfov:IMod<float>) =
         adaptive {
             //let! p = p
@@ -355,17 +311,18 @@ module Drawing =
                     0.0,     0.0,     0.0,     1.0
                 )
         )
-        rotTrafo * modelt
-        
+        rotTrafo * modelt        
 
     let text (view : IMod<CameraView>) (near : IMod<float>) (hfov:IMod<float>) (pos:V3d) (modelTrafo:Trafo3d) (text:IMod<string>) (size:IMod<float>) =
-        let invScaleTrafo = //Trafo3d.Scale(0.5)
-            computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
+        let invScaleTrafo = computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale
+        //    //computeInvariantScale view near pos (Mod.constant 0.05) hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
       
         let billboardTrafo = 
             adaptive {
                 let! v = view
-                let modelt = modelTrafo
+                //let! size = size
+                let! scaleTrafo = invScaleTrafo
+                let modelt = scaleTrafo * modelTrafo
       
                 return screenAligned v.Forward v.Up modelt
             }      
@@ -374,7 +331,6 @@ module Drawing =
             |> Sg.noEvents
             |> Aardvark.UI.FShadeSceneGraph.Sg.shader {
             do! Shader.stableTrafo
-            }            
-            |> Aardvark.UI.``F# Sg``.Sg.trafo invScaleTrafo //(Mod.constant invScaleTrafo)
-            |> Aardvark.UI.``F# Sg``.Sg.trafo billboardTrafo  
+            }                  
+            |> Sg.trafo billboardTrafo  
 

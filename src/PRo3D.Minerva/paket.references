@@ -8,11 +8,13 @@ Aardvark.Application.WinForms.GL
 Aardvark.SceneGraph
 Aardvark.SceneGraph.Opc
 Aardvark.Rendering.Text
+Aardvark.Geometry 
 
 Aardvark.UI
 Aardvark.UI.Primitives
 
 Aardvark.Geometry.Intersection
+Aardvark.Geometry.PointTree
 Aardvark.GeoSpatial.Opc
 
 FSharp.Core

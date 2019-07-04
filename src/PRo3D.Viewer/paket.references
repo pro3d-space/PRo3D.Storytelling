@@ -1,4 +1,5 @@
 Aardvark.Base
+Aardvark.Base.IO
 Aardvark.Base.Incremental
 Aardvark.Base.FSharp
 
@@ -8,10 +9,13 @@ Aardvark.Application.WinForms.Vulkan
 Aardvark.SceneGraph
 Aardvark.SceneGraph.IO
 Aardvark.SceneGraph.Opc
+Aardvark.Rendering.Text
+Aardvark.Geometry 
 
 Aardvark.Rendering.Text
 
 Aardvark.Geometry.Intersection
+Aardvark.Geometry.PointTree
 Aardvark.GeoSpatial.Opc
        
 Aardvark.UI.Primitives
@@ -22,6 +26,8 @@ Aardvark.Compiler.DomainTypes
 Aardvark.Compiler.DomainTypes.MSBuild
 
 FSharp.Core
+FsPickler
+FSharp.Data
 
 Uncodium.Eigensystems
 

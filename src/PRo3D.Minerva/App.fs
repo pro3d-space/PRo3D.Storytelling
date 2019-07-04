@@ -1,8 +1,6 @@
 ﻿namespace PRo3D.Minerva
 
-//open Aardvark.UI
-open Aardvark.UI.Primitives
-open Aardvark.UI.Events
+open System
 
 open Aardvark.Base
 open Aardvark.Base.Incremental
@@ -12,8 +10,12 @@ open Aardvark.Rendering.Text
 open PRo3D.Base
 open PRo3D.Minerva.Communication
 open Aardvark.GeoSpatial.Opc
-open System
+
+open Aardvark.SceneGraph
 open Aardvark.UI
+open Aardvark.UI.Primitives
+open PRo3D.Base.AnnotationDraft
+open KdTreeHelper
 
 [<AutoOpen>]
 module MissingInBase = 
@@ -56,27 +58,13 @@ type HarriSchirchWrongBlockingCollection<'a>() =
 
     member x.IsCompleted = finished
         
-
 module App =
   open System.Net.Sockets
   open Aardvark.SceneGraph.Opc
   open System.Threading  
-
-  //coords  -4831.341805
-
-  let computeXYZFeatures (features : FeatureCollection) : FeatureCollection =
-    let a = 
-      features.features 
-        |> PList.map(fun feature ->
-          let pos =
-            feature.geometry.coordinates 
-              |> List.map(fun c -> 
-                    let sc = { longitude = 360.0 - c.Y; latitude = c.X; altitude = -4831.341805; radian = 0.0 }
-                    CooTransformation.getXYZFromLatLonAlt sc Planet.Mars)
-          { feature with geometry = { feature.geometry with positions = pos }})
-
-    { features with features = a }
-
+  open PRo3D.Minerva.Communication.JsonNetworkCommand
+  open Aardvark.Geometry
+  
   let instrumentText (instr : Instrument) =
     match instr with
     | Instrument.MAHLI        -> "MAHLI"
@@ -102,23 +90,12 @@ module App =
     stream.Write(data, 0, data.Length)
     
     printfn "Sending message: %A" message
-    
-    //let bytes = stream.Read(data, 0, data.Length);
-    //let responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
-    
-    //printfn "Receiving response: %A" responseData
-    
+        
     stream.Close()
     client.Close()
-
-  //https://minerva.eox.at/opensearch/collections/all/json/?cql=(identifier%20IN%20(%271092ML0047930090500286E01_DRCX%27))
-  //271092ML0047930090500286E01_DRCX
-  //1092MR0047900090600628I01_DRCX
-  //https://minerva.eox.at/opensearch/collections/all/json/?cql=(identifier%20IN%20(%271092ML0047930090500286E01_DRCX%27,%271092MR0047900090600628I01_DRCX%27))
-
+  
   let idTestList = [ "271092ML0047930090500286E01_DRCX"; "1092MR0047900090600628I01_DRCX"]
-   
-   
+      
   let getInstrumentQuery (filter:QueryModel) =
     let mutable cqlStringInst = []
     if filter.checkMAHLI then cqlStringInst <- (cqlStringInst @ ["MAHLI"])
@@ -132,8 +109,6 @@ module App =
     let groupString = cqlStringInst |> String.concat("','")
     sprintf @"(instrumentId IN ('" + groupString + "'))"
 
-    
-
   let getIdQuerySite (filter:QueryModel) (ids:list<string>)  = 
     let groupString = ids |> String.concat("','")
     //let cql1 = [("cql", @"(identifier IN ('" + groupString + "'))")] |> HMap.ofList
@@ -141,76 +116,202 @@ module App =
     let cqlStringInst = getInstrumentQuery filter
     let cqlStringAll = sprintf @"(" + cqlStringSol + " AND " + cqlStringInst + ")"
     let cql = [("cql", cqlStringSol)] |> HMap.ofList
-    (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)
-
+    (@"https://minerva.eox.at/opensearch/collections/all/json/", cql)   
   
+  let sendReplaceSelectionRequest (idList : list<string>) (comm : Communicator.Communicator) =         
+    let name = "MinervaReplaceSelection"
+    let para = {
+      names           = [JsonNetworkCommand.Channel.IdList]
+      numOfLists      = 1
+      numOfEntries    = idList |> List.length
+      image           = None
+      imageResolution = None
+      messageID       = "SelectionMessageID"
+    }
 
-  let update (view:CameraView) (model : Model) (msg : MinervaAction) : Model =
-      match msg with
-      | Reset ->
-        let m' = { model with data = Initial.data }
-        { m' with queryFilter = Initial.queryFilter }
-      | WriteScreenCoordsDebug -> model
-      | PerformQueries -> 
-        try
-          //let data = model.queries |> MinervaGeoJSON.loadMultiple        
-          Log.startTimed "[Minerva] Fetching full dataset from Server"
-          let data = idTestList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
-          //let features = data.features |> PList.sortBy(fun x -> x.sol)    
-          Log.stop()
+    let data = { idList = idList; positions = List.empty; colors = List.empty}
 
-          let queryM = QueryApp.updateFeaturesForRendering model.queryFilter data.features
-          { model with data = data; queryFilter = queryM }
+    let jsonMessage = {name = name; parameters = para; data = data} |> JsonNetworkCommand.toJson
+    
+    comm.GetClient().SendMessageWaitForResponse(jsonMessage)
 
-        with e ->
-          Log.error "%A" e.Message
-          model
-      | PerformIdQuery idList ->
-        Log.startTimed "fetching %d entries by ids" idList.Length
-        let data = idList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
-        Log.stop()
+  let sendReplaceProjectionRequest (idList : list<string>) (positions : list<V2d>) (imageResolution : V2i) (imagePath : string) (comm : Communicator.Communicator) =
+                    
+    let name = "MinervaReplaceProjection"
+    let para = 
+      { 
+        names           = [ JsonNetworkCommand.Channel.IdList; JsonNetworkCommand.Channel.Positions]
+        numOfLists      = 2
+        numOfEntries    = idList |> List.length
+        image           = imagePath |> Some
+        imageResolution = imageResolution |> Some
+        messageID       = ""
+      }
 
-        { model with data = data }
-      | SaveFeatureCollection -> 
-        Log.startTimed "[Minerva] saving %d products" model.data.features.Count
-        PRo3D.Base.Serialization.save ".\data.minerva" model.data |> ignore
-        Log.stop()
+    let data = { idList = idList; positions = positions; colors = List.empty }
+    printfn "names: %A, names: %A" name para.names 
+    let jsonMessage = {name = name; parameters = para; data = data} |> JsonNetworkCommand.toJson
+
+    comm.GetClient().SendMessage(jsonMessage)
+    
+  let take' (n : int) (input : list<'a>) : list<'a> =
+       if n >= input.Length then input else input |> List.take n
+
+  let updateSolLabels (features:plist<Feature>) (position : V3d) = 
+    features 
+      |> PList.toList      
+      |> List.map(fun x -> x.sol |> string, x.geometry.positions.Head) 
+      |> List.sortBy(fun (_,p) -> V3d.DistanceSquared(position, p))
+      |> take' 50
+      |> HMap.ofList
+
+  let updateSgFeatures (features:plist<Feature>) =
+    
+    let array = features |> PList.toArray
+    
+    let names     = array |> Array.map(fun f -> f.id)            
+    let positions = array |> Array.map(fun f -> f.geometry.positions.Head)            
+    let colors    = array |> Array.map(fun f -> f.instrument |> Model.instrumentColor )
+    
+    let trafo =
+      match positions |> Array.tryHead with
+        | Some p -> Trafo3d.Translation p
+        | _ -> Trafo3d.Identity
+                     
+    {
+        names = names
+        positions = positions
+        colors = colors
+        trafo = trafo
+    }
+
+  let updateSelectedSgFeature (features:plist<Feature>) (selected:hset<string>) =
+    features
+        |> PList.filter( fun x -> HSet.contains x.id selected)
+        |> updateSgFeatures
+     
+  let updateSelectionToggle (names:list<string>) (model:Model) =
+    let newSelection = 
+      List.fold(fun set name -> 
+        if set |> HSet.contains name then
+          set |> HSet.remove name
+        else 
+          set |> HSet.add name) model.selection.selectedProducts names
+
+    let selectedSgs = updateSelectedSgFeature model.filteredFeatures newSelection
+    { model with selection = { model.selection with selectedProducts = newSelection}; selectedSgFeatures = selectedSgs}
+
+  let updateFeaturesForRendering (pos :V3d) (model:Model) =
+    Log.startTimed "[Minerva] building sgs"
+    let solLabels = updateSolLabels model.filteredFeatures pos //view frustum culling AND distance culling
+    let sgFeatures = updateSgFeatures model.filteredFeatures
+    Log.line "[Minerva] showing %d labels and %d products" solLabels.Count sgFeatures.positions.Length
+    Log.stop()
+    { model with solLabels = solLabels; sgFeatures = sgFeatures }
+
+  let queryClosestPoint model hit = 
+    //Report.BeginTimed("kdTreeQuery") |> ignore
+    let viewProj = hit.event.evtView * hit.event.evtProj
+    let viewPort = V2d hit.event.evtViewport
+    let size = 5.0 * 2.0 / viewPort
+    let centerNDC = 
+      let t = V2d hit.event.evtPixel / viewPort
+      V2d(2.0 * t.X - 1.0, 1.0 - 2.0 * t.Y)
+
+    let ellipse = Ellipse2d(centerNDC, V2d.IO * size, V2d.OI * size)
+    let closestPoints = KdTreeQuery.FindPoints(model.selection.kdTree, model.kdTreeBounds, model.selection.flatPos, viewProj, ellipse)
+    //Report.EndTimed() |> ignore
+    closestPoints
+
+  let update (view:CameraView) frustum (model : Model) (msg : MinervaAction) : Model =
+      match msg with     
+      | SendSelection -> 
+        match model.comm with
+          | Some c -> sendReplaceSelectionRequest (model.data.features |> PList.map(fun x -> x.id) |> PList.toList) c
+          | None   -> ()
         model
-      | LoadFeatureCollection -> 
-        Log.startTimed "[Minerva] loading products"
-        let data = PRo3D.Base.Serialization.loadAs ".\data.minerva"
-        Log.stop()
-        Log.line "[Minerva] found %d entries" model.data.features.Count
-        { model with data = data }
-      | ConnectVisplore -> 
-        if model.vplMessages.store.IsEmpty then
+      | SendScreenSpaceCoordinates -> 
+        let viewProj = view.ViewTrafo * Frustum.projTrafo frustum
+        let coords = 
+          model.filteredFeatures
+            |> PList.toList 
+            |> List.map(fun feat -> (feat.id, feat.geometry.positions.Head))
+            |> List.map(fun (id,p) ->  
+              let coord = (viewProj.Forward.TransformPosProj p)
+              let coord = (V2d(coord.X, coord.Y) + V2d.One) * 0.5
+              (id, coord))
+        
+        let width = 1920
+        let height = ((float)width / (frustum |> Frustum.aspect)) |> int
 
-          //let evaluateCommand (cmd : PRo3D.Minerva.Communication.JsonNetworkCommand.CommandData) : string =
-          //  match cmd.name with
-          //  | "MinervaReplaceSelection" ->
-          //     // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
-          //     cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand
-          //     cmd.para.messageID
-          //  | _ -> sprintf "dont know %A" cmd
+        let docPath = System.Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+        let imagePathTmp = @"visplore\Minerva"
+        let imagePath = Path.combine[docPath; imagePathTmp]
+        let filename = "overview.jpg"
+
+        Log.startTimed "[Minerva taking] Screenshot %A" (V2i(width, height))
+        PRo3D.Base.Utilities.takeScreenshot "http://localhost:54321" width height filename imagePath
+        Log.stop()
+      
+        match model.comm with
+        | Some c -> 
+          Log.line "[Minerva] Sending coords %d" coords.Length
+          sendReplaceProjectionRequest 
+            (coords |> List.map fst) 
+            (coords |> List.map snd) 
+            (V2i(width, height)) (Path.combine[imagePath; filename]) 
+            c
+        | None   -> ()
+        model
+      | PerformQueries -> failwith "[Minerva] not implemented"
+        //try
+        //  //let data = model.queries |> MinervaGeoJSON.loadMultiple        
+        //  Log.startTimed "[Minerva] Fetching full dataset from Server"
+        //  let data = idTestList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
+        //  //let features = data.features |> PList.sortBy(fun x -> x.sol)    
+        //  Log.stop()
+
+        //  let queryM = QueryApp.updateFeaturesForRendering model.queryFilter data.features
+        //  { model with data = data; queryFilter = queryM }
+
+        //with e ->
+        //  Log.error "%A" e.Message
+        //  model
+      | UpdateSelection selectionIds ->
+        let selection = selectionIds |> HSet.ofList
+        let selectedSgs = updateSelectedSgFeature model.filteredFeatures selection
+        { model with selection = { model.selection with selectedProducts = selection}; selectedSgFeatures = selectedSgs} 
+      | UpdateFiltering idList -> //failwith "[Minerva] not implemented"
+        //Log.startTimed "fetching %d entries by ids" idList.Length
+        //let data = idList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
+        //Log.stop()
+        
+        Log.line "[Minervar] filtering data to set of %d" idList.Length
+
+        let filterSet = idList |> HSet.ofList
+        let filtered = model.data.features |> PList.filter(fun x -> x.id |> filterSet.Contains)
+        
+        { model with filteredFeatures = filtered } |> updateFeaturesForRendering view.Location
+
+      | ConnectVisplore -> 
+        if model.vplMessages.store.IsEmpty then          
           Log.line "[Minerva] connecting to visplore"
+          let comm = if model.comm.IsSome then model.comm.Value else new Communicator.Communicator()
           let createWorker () =
              proclist {
-               let bc = new HarriSchirchWrongBlockingCollection<_>()
-               let comm = new Communicator.Communicator()
+               let bc = new HarriSchirchWrongBlockingCollection<_>()               
                comm.Start(fun cmd ->
                  match cmd.name with
                  | "MinervaReplaceSelection" ->
-                    Log.line "[Minerva] received vpl message"
-                    // Visplore sends Pro3D the selected ids --> do something with them (here: print them)
-                   // cmd |> PRo3D.Minerva.Communication.JsonNetworkCommand.printCommand 
-                    match cmd.data.ids with 
-                    | Some ids -> 
-                        let action = ids |> Array.toList |> PerformIdQuery 
-                        bc.Enqueue action
-                        ///|> MailboxAction.MiniAction |> model.minervaMessagingMailbox.Post
-                    | None -> ()
-                    
-                    cmd.para.messageID
+                    Log.line "[Minerva] received vpl selection message"                                        
+                    let action = cmd.data.idList |> UpdateSelection
+                    bc.Enqueue action
+                    cmd.parameters.messageID
+                 | "MinervaReplaceFilter" ->
+                   Log.line "[Minerva] received vpl filter message"
+                   let action = cmd.data.idList |> UpdateFiltering
+                   bc.Enqueue action
+                   cmd.parameters.messageID
                  | "Shutdown" -> 
                     //bc.CompleteAdding()
                     "todo"
@@ -222,188 +323,272 @@ module App =
                  match action with
                     | Some a -> yield a
                     | None -> ()
-               yield FlyToProduct V3d.Zero
-
-               comm.Close()
-             }
-          //comm.Start()
-          //Thread.Sleep(60 * 100000)
-          //comm.Close()        
-          { model with vplMessages = ThreadPool.add "vpl server" (createWorker()) model.vplMessages }
+               yield FlyToProduct V3d.Zero              
+             }          
+          { model with vplMessages = ThreadPool.add "vpl server" (createWorker()) model.vplMessages; comm = Some comm}
         else
           model
-      | FlyToProduct _ ->         
-        model
-      | QueryMessage msg ->
-        let querymodel = QueryApp.update view model.queryFilter model.data.features msg
-        { model with queryFilter = querymodel }
-      | QueryDataFile ->
+      | FlyToProduct _ -> model //handled in higher level app
+      | OpenTif id -> Files.loadTif id model     
+      | QueryMessage msg -> 
+        let filters = QueryApp.update model.queryFilter msg        
+        { model with queryFilter = filters}
+      | ApplyFilters ->
+        let filtered = QueryApp.applyFilterQueries model.data.features model.queryFilter view
+        { model with filteredFeatures = filtered } |> updateFeaturesForRendering view.Location
+      | Reset ->
+        { model with filteredFeatures = model.data.features; queryFilter = Initial.queryFilter }   
+      | LoadProducts ->                            
         Log.startTimed "[Minerva] Fetching full dataset from data file"
         let data = Files.loadDataFile
-        Log.stop()
+        Log.stop()        
 
-        let queryM = QueryApp.useQueriesForData data.features model.queryFilter view
-        { model with data = data; queryFilter = queryM}
+        Log.line "[Minerva] found %d entries" data.features.Count   
+        let flatList = 
+          data.features 
+            |> PList.map(fun x -> x.geometry.positions |> List.head, x.id) 
+            |> PList.toArray
 
+        let input = flatList |> Array.map fst
+        let flatId = flatList |> Array.map snd
+        let kdTree = PointKdTreeExtensions.CreateKdTree(input, Metric.Euclidean, 1e-5)
+        let kdTreeBounds = Box3d(input)
+        { 
+          model with
+            data = data
+            filteredFeatures = data.features
+            kdTreeBounds = kdTreeBounds
+            selection = 
+              { model.selection with
+                  kdTree = kdTree
+                  flatPos = input
+                  flatID = flatId
+              }
+        } |> updateFeaturesForRendering view.Location
+      | SetPointSize s ->
+        let size = Numeric.update model.featureProperties.pointSize s
+        { model with featureProperties = { model.featureProperties with pointSize = size }}
+      | SetTextSize s ->
+        let size = Numeric.update model.featureProperties.textSize s
+        { model with featureProperties = { model.featureProperties with textSize = size }}   
+      | SingleSelectProduct name ->
+        { model with selection = { model.selection with singleSelectProduct = Some name }}
+      | ClearSelection ->
+        { model with selection = { model.selection with singleSelectProduct = None; selectedProducts = HSet.empty}; selectedSgFeatures = updateSgFeatures PList.empty}
+      | AddProductToSelection name ->
+        updateSelectionToggle [name] model
+      | PickProducts hit -> 
+          let closestPoints = queryClosestPoint model hit
+          match closestPoints with
+          | emptySeq when Seq.isEmpty emptySeq -> model
+          | seq -> 
+            let index = seq |> Seq.map (fun (depth, pos, index) -> index) |> Seq.head
+            let closestID = model.selection.flatID.[index]
+            updateSelectionToggle [closestID] model
+            
+          //Report.BeginTimed("bruteforce") |> ignore
+          //let updateModel = 
+          //  let ray = hit.globalRay.Ray.Ray
+          //  let minDist = model.selection.selectionMinDist
+          //  Array.zip model.selection.flatPos model.selection.flatID
+          //    |> Seq.choose(fun (pos, id) -> 
+          //      let dist = ray.GetMinimalDistanceTo pos
+          //      if dist < minDist then
+          //        Some (dist, id)
+          //      else 
+          //        None)
+          //    |> fun withinRange -> 
+          //      if withinRange.IsEmpty() then
+          //        model
+          //      else
+          //        let closestID = 
+          //          withinRange
+          //            |> Seq.sortBy fst
+          //            |> Seq.map snd
+          //            |> Seq.head
+          //        updateSelectionToggle [closestID] model
+          //Report.EndTimed() |> ignore
+          //updateModel
 
-  let viewFeatures (pos : IMod<V3d>)(instr : Instrument) (features : list<Feature>) = 
-    [
-      for f in features do                                            
-        let iconAttr = 
-          [
-            clazz "ui map pin inverted middle aligned icon"; 
-            style (sprintf "color: %s" (f.instrument |> Model.instrumentColor |> Html.ofC4b))
-            onClick(fun _ -> FlyToProduct f.geometry.positions.Head)
-          ]            
+      | HoverProducts hit ->
+          Report.BeginTimed("hover-update") |> ignore
+          
+          let closestPoints = queryClosestPoint model hit
+
+          let updateModel = 
+            match closestPoints with
+            | emptySeq when Seq.isEmpty emptySeq -> 
+              match model.hoveredProduct with
+              | None -> model
+              | Some _ -> { model with hoveredProduct = None}
+            | seq -> 
+              let depth, pos, index = seq |> Seq.head
+              { model with hoveredProduct = Some pos }
+          Report.EndTimed() |> ignore
+
+          updateModel
+
+  let viewFeaturesGui (model :MModel) =
+     
+    let viewFeatures (instr : Instrument) (features : list<Feature>) = 
+
+      let selectionColor (model :MModel) (feature : Feature) =
+        model.selection.selectedProducts
+          |> ASet.map(fun x -> x = feature.id)
+          |> ASet.contains true
+          |> Mod.map (function x -> if x then C4b.VRVisGreen else C4b.White)
+
+      let ac = sprintf "color: %s" (Html.ofC4b C4b.White)
+
+      features |> List.map(fun f -> 
+        let headerAttributes =
+            amap {
+                //yield onClick (fun _ -> SingleSelectProduct f.id)
+                yield  onClick(fun _ -> AddProductToSelection f.id)
+            } |> AttributeMap.ofAMap
+
+        //let iconAttr = 
+        //  [
+        //    clazz "ui map pin inverted middle aligned icon"; 
+        //    style (sprintf "color: %s" (f.instrument |> Model.instrumentColor |> Html.ofC4b))
+        //    onClick(fun _ -> AddProductToSelection f.id)
+        //    //onClick(fun _ -> FlyToProduct f.geometry.positions.Head)
+        //  ]  
+          
+        let iconAttributes =
+          amap {                  
+            yield clazz "ui map pin inverted middle aligned icon"
+            //yield  onClick(fun _ -> AddProductToSelection f.id)
+
+            yield style (sprintf "color: %s" (Html.ofC4b (f.instrument |> Model.instrumentColor)))
+          } |> AttributeMap.ofAMap
+
         let headerAttr : AttributeMap<_> = [clazz "ui header small"] |> AttributeMap.ofList
-                        
-        let item =             
-          div [clazz "ui inverted item"][
-            i iconAttr []
-            div [clazz "ui content"] [
-              Incremental.div (headerAttr) (AList.single (instr |> instrumentText |> text))
-              div [clazz "ui description"] [
-                f.sol |> sprintf "Sol: %A" |> text                               
-              ] //[text (id.Replace('_',' '))]
-            ]            
-          ]
-        yield item 
-    ]
-
-  let accordion text' icon active content' =
-     let title = if active then "title active inverted" else "title inverted"
-     let content = if active then "content active" else "content"     
-                             
-     onBoot "$('#__ID__').accordion();" (
-         div [clazz "ui inverted segment"] [
-             div [clazz "ui inverted accordion fluid"] [
-                 div [clazz title; style "background-color: #282828"] [
-                         i [clazz ("dropdown icon")][]
-                         text text'                                
-                         div[style "float:right"][i [clazz (icon + " icon")][]]
+                                                
+        div [clazz "ui inverted item"][
+          Incremental.i iconAttributes AList.empty //i iconAttributes []
+          div [clazz "ui content"] [
+            Incremental.div (AttributeMap.ofList [style ac]) (
+              alist {
+                let! hc = selectionColor model f
+                let c = hc |> Html.ofC4b |> sprintf "color: %s"
+                yield div[clazz "header"; style c][
+                      Incremental.div (headerAttributes) (AList.single (instr |> instrumentText |> text))
+                ]
+                yield div [clazz "ui description"] [
+                        f.sol |> sprintf "Sol: %A" |> text
+                        i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][]
+                        i [clazz "download icon"; onClick (fun _ -> OpenTif f.id)][]
+                        ]
+                //yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToProduct f.geometry.positions.Head)][] //|> UI.wrapToolTip "FlyTo"       
                          
-                 ]
-                 div [clazz content;  style "overflow-y : auto; "] content' //max-height: 35%
-             ]
-         ]
-     )  
-  
+              } )
+            ]            
+        ])
 
-  let viewFeaturesGui (pos : IMod<V3d>)(model :MModel) =
-     let queryGui (model:MModel) = 
-          QueryApp.viewQueryFilters model.queryFilter
-            |> UI.map QueryMessage 
-            //|> Mod.constant
-    
-     let content =
-        alist { 
-          //let! features = model.data.features |> AList.toMod
-          let! features = model.queryFilter.filteredFeatures |> AList.toMod
+    let accordion text' icon active content' =
+       let title = if active then "title active inverted" else "title inverted"
+       let content = if active then "content active" else "content"     
+                             
+       onBoot "$('#__ID__').accordion();" (
+           div [clazz "ui inverted segment"] [
+               div [clazz "ui inverted accordion fluid"] [
+                   div [clazz title; style "background-color: #282828"] [
+                           i [clazz ("dropdown icon")][]
+                           text text'                                
+                           div[style "float:right"][i [clazz (icon + " icon")][]]     
+                   ]
+                   div [clazz content;  style "overflow-y : auto; "] content' //max-height: 35%
+               ]
+           ]
+       )
+     
+    let propertiesGui =
+        require Html.semui ( 
+            Html.table [ 
+                Html.row "point size:" [Numeric.view' [NumericInputType.Slider] model.featureProperties.pointSize |> UI.map (fun x -> SetPointSize x)] 
+                Html.row "text size:" [Numeric.view' [NumericInputType.InputBox] model.featureProperties.textSize |> UI.map (fun x -> SetTextSize x)] 
+            ]        
+        )      
+       
+    let listOfFeatures =
+        alist {           
+          let! features = model.filteredFeatures |> AList.toMod
           let groupedFeatures = features |> PList.toList |> List.groupBy(fun x -> x.instrument)
+          let! pos = model.queryFilter.filterLocation
 
           for (instr, group) in groupedFeatures do
+
             let header = sprintf "%s (%d)" (instr |> instrumentText) group.Length
+            let g = 
+              group 
+                |> List.sortBy(fun x -> V3d.DistanceSquared(pos, x.geometry.coordinates.Head)) 
+                |> take'(20)
+
             yield div [clazz "ui inverted item"][
-                //i [clazz "ui folder inverted middle aligned icon"] []
-            //    yield div [clazz "ui header small"] [header |> text]
-                //div [clazz "ui description"] ["description" |> text]
-                yield accordion header "Content" false [
-                  div [clazz "ui list"] (viewFeatures pos instr group)
+                yield accordion header "Content" false [                    
+                  div [clazz "ui list"] (viewFeatures instr g)
                 ]
-              ]
+            ]
         }
 
-     div [clazz "ui inverted segment"] [
+    div [clazz "ui inverted segment"] [
+       h4 [clazz "ui"] [text "Comm:"]
        div [clazz "ui buttons"] [
-         button [clazz "ui button"; onClick (fun _ -> PerformQueries)][text "Query DB"]
-         button [clazz "ui button"; onClick (fun _ -> SaveFeatureCollection)][text "Save"]
-         button [clazz "ui button"; onClick (fun _ -> LoadFeatureCollection)][text "Load"]
-         button [clazz "ui button"; onClick (fun _ -> Reset)][text "Clear"]
-         button [clazz "ui button"; onClick (fun _ -> WriteScreenCoordsDebug)][text "Export"]
          button [clazz "ui button"; onClick (fun _ -> ConnectVisplore)][text "Connect"]
-         button [clazz "ui button"; onClick (fun _ -> QueryDataFile)][text "Query csv"]
+         button [clazz "ui button"; onClick (fun _ -> SendSelection)][text "Send Selection"]
+         button [clazz "ui button"; onClick (fun _ -> SendScreenSpaceCoordinates)][text "Send Coords"]
+         //button [
+         //  clazz "ui button"; 
+         //  onEvent "onGetRenderId" [] (fun args -> Reset)
+         //  clientEvent "onclick" "aardvark.processEvent(__ID__,'onGetRenderId', document.getElementsByClassName('mainrendercontrol')[0].id)"
+         //] [text "SCREAM SHOT"]
        ]
+
+       h4 [clazz "ui"] [text "Data:"]
+       div [clazz "ui buttons"] [         
+         button [clazz "ui button"; onClick (fun _ -> LoadProducts)][text "Load"]
+         button [clazz "ui button"; onClick (fun _ -> Reset)][text "Reset"]         
+         button [clazz "ui button"; onClick (fun _ -> ClearSelection)][text "Clear Selection"]         
+         button [clazz "ui button"; onClick (fun _ -> ApplyFilters)][text "Filter"]         
+       ]
+
+       // QUERYAPP included
+       QueryApp.viewQueryFilters model.queryFilter |> UI.map QueryMessage
        
-       queryGui model               
-                     
-       Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) content  
+       propertiesGui          
+       Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) listOfFeatures //AList.empty  
      ]
-
-
-  let getSolBillboards (model : MModel) (view:IMod<CameraView>) (near:IMod<float>) =
-        let lables =
-            model.queryFilter.solLables
-             |> AMap.map(fun txt pos ->
-                Drawing.text view near (Mod.constant 60.0) pos (Trafo3d.Translation(pos)) (Mod.constant txt) (Mod.constant 10.05)
-                ) 
-             |> AMap.toASet  
-             |> ASet.map(fun x -> snd x)
-             |> Aardvark.UI.``F# Sg``.Sg.set
-        lables
-        
-
-  let viewFeaturesSg (model : MModel) =
-    
-
-    model.queryFilter.filteredFeatures 
-        |> AList.map(fun f -> 
-            let size = model.queryFilter.pointSize.value
-            Drawing.dots (f.geometry.positions |> AList.ofList) size  (f.instrument |> Model.instrumentColor |> Mod.constant)
-        ) 
-        |> AList.toASet 
-        |> Aardvark.UI.``F# Sg``.Sg.set 
-
-    //let points = model.queryFilter.sgFeatures.positions
-    //Drawing.dots (positions |> AList.ofArray) model.queryFilter.pointSize.value  (C4b.Red |> Mod.constant)
-    //Drawing.dots points model.queryFilter.pointSize.value  (C4b.Red |> Mod.constant)
-        //|> AList.toASet 
-        //|> Aardvark.UI.``F# Sg``.Sg.set 
-       
-  let viewFeaturesSg1 (model : MModel) =
-    //let positions = 
-    //    model.queryFilter.filteredFeatures
-    //     |> AList.map(fun f -> f.geometry.positions |> AList.ofList)
-    //     |> AList.concat
-    //     |> AList.toArray
-    //let colors =
-    //    model.queryFilter.filteredFeatures
-    //     |> AList.map(fun f -> let c = f.instrument |> Model.instrumentColor
-    //                           V4d((float)c.R/255.0, (float)c.G/255.0, (float)c.B/255.0, (float)c.A/255.0))
-    //     |> AList.toArray
-
-    //let colors1 =
-    //    model.queryFilter.filteredFeatures
-    //     |> AList.map(fun f -> f.instrument |> Model.instrumentColor)
-    //     |> AList.toArray
-
-    //let pos = 
-    //    positions
-    //     |> Array.map( fun x -> V3f(x))
-    
-    //Drawing.createIndexedGeometry pos colors1
-    Drawing.createHarrisPoints2 model.queryFilter.sgFeatures.positions model.queryFilter.sgFeatures.colors model.queryFilter.pointSize.value
-    //Drawing.testPoints' model.queryFilter.sgFeatures.positions model.queryFilter.sgFeatures.colors
-    //Drawing.createHarrisPoints positions 
-        //|> Sg.effect [
-        //DefaultSurfaces.stableTrafo |> toEffect
-        ////DefaultSurfaces.vertexColor |> toEffect
-        ////   DefaultSurfaces.pointSprite |> toEffect
-        //]
-
-  let myCss = [
-    { kind = Stylesheet;  name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css" }
-    { kind = Stylesheet;  name = "semui-overrides"; url = "semui-overrides.css" }
-    { kind = Script;      name = "semui";           url = "https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js" }
-  ]
-
-  //let bodyAttributes = [style "background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden;"]
 
   let viewWrapped pos (model : MModel) =
     require Html.semui (
       body [style "width: 100%; height:100%; background: #252525; overflow-x: hidden; overflow-y: scroll"] [
-        div [clazz "ui inverted segment"] [viewFeaturesGui (pos)(model)]
+        div [clazz "ui inverted segment"] [viewFeaturesGui model]
       ])
 
+  // SG  
+  let getSolBillboards (model : MModel) (view:IMod<CameraView>) (near:IMod<float>) =
+    let lables =
+      model.solLabels
+        |> AMap.map(fun txt pos ->
+           Drawing.text view near (Mod.constant 60.0) pos (Trafo3d.Translation(pos)) (Mod.constant txt) (model.featureProperties.textSize.value)
+           ) 
+        |> AMap.toASet  
+        |> ASet.map(fun x -> snd x)
+        |> Sg.set
+    lables
+          
+  /// Why not save sg directly in model, or build in view?
+  let viewFeaturesSg (model : MModel) =
+    let pointSize = model.featureProperties.pointSize.value
+
+    Sg.ofList [
+      Drawing.featureMousePick model.kdTreeBounds
+      Drawing.drawFeaturePoints model.sgFeatures pointSize
+      Drawing.drawSelectedFeaturePoints model.selectedSgFeatures pointSize
+      Drawing.drawHoveredFeaturePoint model.hoveredProduct pointSize model.sgFeatures.trafo
+    ]
+  
   let threads (m : Model) = m.vplMessages
 
   let processMailboxAction (state:MailboxState) (cancelTokenSrc:CancellationTokenSource) (inbox:MessagingMailbox) (action : MailboxAction) =
@@ -414,7 +599,6 @@ module App =
         a |> Seq.singleton |> state.update 
         state      
         
-
   let messagingMailbox (cancelTokenSrc:CancellationTokenSource) (inbox:MessagingMailbox) =
         let rec messageLoop state = async {
             let! msg = inbox.Receive()
@@ -436,8 +620,6 @@ module App =
         unpersist = Unpersist.instance
         threads   = fun m -> m.vplMessages
         view      = viewWrapped (Mod.constant V3d.Zero) //localhost
-        update    = update (CameraView.lookAt V3d.Zero V3d.One V3d.OOI)
+        update    = update (CameraView.lookAt V3d.Zero V3d.One V3d.OOI) (Frustum.perspective 90.0 0.001 100000.0 1.0)
         initial   = Initial.model mailbox
     }
-
-    
