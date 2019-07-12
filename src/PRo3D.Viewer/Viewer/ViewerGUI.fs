@@ -532,7 +532,7 @@ module Gui =
     let viewDipAndStrike (model:MModel) = 
         let view = (fun leaf ->
             match leaf with
-              | MAnnotations ann -> DipAndStrike.viewUI ann
+              | MAnnotations' ann -> DipAndStrike.viewUI ann
               | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
 
         model.drawing.annotations |> Groups.viewSelected view DnSProperties    
