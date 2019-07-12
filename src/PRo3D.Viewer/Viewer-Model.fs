@@ -39,6 +39,7 @@ type Interactions =
     | PlaceSurface          = 5
     | PickAnnotation        = 6
     | PickSurface           = 7
+    | PickMinervaProduct    = 8
     //| DrawLog               = 7
     //| AlignPick             = 5
 
@@ -270,10 +271,10 @@ module Viewer =
               horizontal 1.0 [                                                        
                 stack 0.7 None [
                     {id = "render"; title = Some " Main View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
-                    {id = "instrumentview"; title = Some " Instrument View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
+                //    {id = "instrumentview"; title = Some " Instrument View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
                 ]                            
                 vertical 0.3 [
-                  stack 0.5 None [                    
+                  stack 0.5 (Some "minerva") [                    
                     {id = "surfaces"; title = Some " Surfaces "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "annotations"; title = Some " Annotations "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "minerva"; title = Some " Minerva "; weight = 0.4; deleteInvisible = None; isCloseable = None }

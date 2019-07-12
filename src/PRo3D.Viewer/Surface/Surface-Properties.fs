@@ -62,8 +62,8 @@ module SurfaceProperties =
                 match a with
                   | Some s -> 
                     let scs = model.scalarLayers |> HMap.alter s.index (Option.map(fun _ -> s))
-                    { model with selectedScalar = Some s; scalarLayers = scs } |> Console.print
-                  | None -> model
+                    { model with selectedScalar = Some s} |> Console.print //; scalarLayers = scs 
+                  | None -> { model with selectedScalar = None }
             | SetTexturesMap a ->                
                 { model with selectedTexture = a } |> Console.print
             | SetHomePosition -> model
@@ -93,6 +93,16 @@ module SurfaceProperties =
     
     let scalarLayerList (m:MSurface) = 
         (m.scalarLayers |> mapTolist)
+
+    //let getSelectedScalar (layer:IMod<Option<MScalarLayer>>) = //: Option<ScalarLayer> =
+    //    adaptive {
+    //            let! layer = layer
+    //            match layer with
+    //             | Some l ->  let! current = l.Current
+    //                          return SetScalarMap (Some current)
+    //             | _-> return SetScalarMap None
+    //        } |> Mod.force
+
           
     let view (model : MSurface) =        
       require GuiEx.semui (
@@ -107,6 +117,7 @@ module SurfaceProperties =
           Html.row "Scale:"       [Numeric.view' [NumericInputType.InputBox]   model.scaling  |> UI.map SetScaling ]
           Html.row "Fillmode:"    [Html.SemUi.dropDown model.fillMode SetFillMode]                
           Html.row "Scalars:"     [UI.dropDown'' (model |> scalarLayerList)  model.selectedScalar   (fun x -> SetScalarMap (x |> Option.map(fun y -> y.Current |> Mod.force)))   (fun x -> x.label |> Mod.force)]
+          //Html.row "Scalars:"     [UI.dropDown'' (model |> scalarLayerList)  model.selectedScalar   (fun x -> SetScalarMap (x |> Option.map(fun y -> y.Current ))) (fun x -> x.label |> Mod.force)]
           Html.row "Textures:"    [UI.dropDown'' model.textureLayers model.selectedTexture  (fun x -> SetTexturesMap x) (fun x -> x.label)]
           Html.row "Cull Faces:"  [Html.SemUi.dropDown model.cullMode SetCullMode]
           Html.row "Set Homeposition:"  [button [clazz "ui button tiny"; onClick (fun _ -> SetHomePosition )][]] //[text "DiscoverOpcs" ]  

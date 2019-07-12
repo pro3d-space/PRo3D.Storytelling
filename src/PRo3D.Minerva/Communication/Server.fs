@@ -34,8 +34,13 @@ type Socket with
     Async.FromBeginEnd(buffer, offset, count, beginSend, socket.EndSend)
 
 
+let (|IntegerParse|_|) (s : string) =
+    match System.Int32.TryParse s with
+        | (true,v) -> Some v
+        | _ -> None
 
-type Server(converter : string -> string, responder : string -> string) =
+open Aardvark.Base
+type Server(convertEval : string -> string, responder : string -> string) =
     
     let mutable internalServer : IDisposable = Unchecked.defaultof<_>
     let mutable listener : Socket = Unchecked.defaultof<_>
@@ -52,29 +57,68 @@ type Server(converter : string -> string, responder : string -> string) =
         listener <- new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
         listener.Bind(endpoint)
         listener.Listen(int SocketOptionName.MaxConnections)
-        printfn "Started listening on port %d" port
+        Log.line "[Minerva] Started listening on port %d" port
     
         let rec loop() = async {
-            printfn "Waiting for request ..."
+            Log.line "[Minerva] Waiting for request ..."
             let! socket = listener.AsyncAccept()
-            printfn "Received request"
+            Log.line "[Minerva] Received request"
 
-            let buffer : byte[] = Array.zeroCreate 65536
-            
-            let! res = socket.AsyncReceive(buffer, 0, buffer.Length)
-            let page = Encoding.ASCII.GetString(buffer, 0, res)
-
-            printfn "Message: %A" page
-
-            let msg = (page |> converter) |> responder
-            let response = Encoding.ASCII.GetBytes(msg)
+            let headerBuffer : byte[] = Array.zeroCreate 100
 
             try
-                let! bytesSent = socket.AsyncSend(response)
-                printfn "Sent response: %A (%A)" msg bytesSent
-                socket.Shutdown(SocketShutdown.Both)
+              //header
+              let mutable position = 0
+              let mutable spaces = 0
+              let mutable inHeader = true
+              while inHeader && position < 100 do
+                let! readBytes = socket.AsyncReceive(headerBuffer, position, 1)
+                if readBytes <> 1 then failwithf "invalid header, so far: %s" (Encoding.ASCII.GetString(headerBuffer, 0, position))
+                let c = Convert.ToChar(headerBuffer.[position]);
+                if c = ' ' then 
+                    spaces <- spaces + 1
+                if spaces = 2 then inHeader <- false
+                else position <- position + 1
+              
+              if inHeader then failwith "header rage"
 
-            with e -> printfn "An error occurred: %s" e.Message
+
+              // stream behind space. e.g. JsonNetworkCommand 10 xxx-payload-xxx....
+              let header = Encoding.ASCII.GetString(headerBuffer, 0, position)
+
+              let messageLength = 
+                  match header.Split(' ') with
+                    | [|"JsonNetworkCommand"; IntegerParse len|] -> len
+                    | _ ->  failwithf "could not parse header: %s" header
+
+              let payloadSize = messageLength
+              let mutable remaining = payloadSize
+              let resultBuffer = Array.zeroCreate remaining
+
+              let mutable read = 0
+              while remaining > 0 do
+                let! received =  socket.AsyncReceive(resultBuffer, read, remaining)
+                read <- read + received
+                remaining <- remaining - received
+                
+              // invariant: remaining = 0, buffer is full
+              let fullString =  Encoding.ASCII.GetString(resultBuffer, 0, payloadSize)
+              //let parsed = PRo3D.Minerva.Communication.JsonNetworkCommand.fromJson fullString
+
+              //Log.line "[Minerva] %A" parsed
+
+              
+              //conversion and response
+              fullString |> convertEval |> ignore //|> responder
+              //
+              //let response = Encoding.ASCII.GetBytes(msg)
+              
+              //try
+              //    let! bytesSent = socket.AsyncSend(response)
+              //    Log.line "[Minerva] Sent response: %A (%A)" msg bytesSent
+              //    socket.Shutdown(SocketShutdown.Both)              
+              //with e -> Log.line "[Minerva] An error occurred responding: %s" e.Message
+            with e -> Log.line "[Minerva] An error occurred receiving: %s" e.Message
 
             socket.Shutdown(SocketShutdown.Both)
             socket.Close()

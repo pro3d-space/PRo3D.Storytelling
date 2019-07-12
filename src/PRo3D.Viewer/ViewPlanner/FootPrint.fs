@@ -17,60 +17,14 @@ open PRo3D.Versioned
 open Chiron
 
 open PRo3d
+open PRo3D.Base
 
 module FootPrint = 
-    
-    type ClientStatistics =
-        {
-            session         : System.Guid
-            name            : string
-            frameCount      : int
-            invalidateTime  : float
-            renderTime      : float
-            compressTime    : float
-            frameTime       : float
-        }
-    
-
+        
     let getFootprintsPath (scenePath:string) =
         let path = Path.GetDirectoryName scenePath
         path + "\\FootPrints"
-    
-    let takeScreenshot baseAddress (width:int) (height:int) name folder =
-        let wc = new System.Net.WebClient()
-        
-        let clientStatistic = 
-            let path = sprintf "%s/rendering/stats.json" baseAddress //sprintf "%s/rendering/stats.json" baseAddress
-            Log.line "[RemoteControl] querying rendering stats at: %s" path
-            let result = wc.DownloadString(path)
-            let clientBla : list<ClientStatistics> =
-                Pickler.unpickleOfJson  result
-            match clientBla.Length with
-                | 2 -> clientBla // clientBla.[1] 
-                | _ -> failwith "no client bla"
-
-        for cs in clientStatistic do
-            let screenshot =            
-                sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress cs.name width height
-            Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
-
-            match System.IO.Directory.Exists folder with
-              | true -> ()
-              | false -> System.IO.Directory.CreateDirectory folder |> ignore
-            
-            let filename = cs.name + name
-            wc.DownloadFile(screenshot,Path.combine [folder; filename])
-         
-        //let screenshot =            
-        //    sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress clientStatistic.[0].name width height
-        //Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
-
-        //match System.IO.Directory.Exists folder with
-        //  | true -> ()
-        //  | false -> System.IO.Directory.CreateDirectory folder |> ignore
-               
-        //wc.DownloadFile(screenshot,Path.combine [folder; name])
-
+       
     let createFootprintData (vp:ViewPlanModel) (scenePath:string) =
 
         let fpPath = getFootprintsPath scenePath
@@ -100,7 +54,7 @@ module FootPrint =
                                             int(horRes), int(vertRes)
                                 | None -> 512, 512
                 // save png file
-                try takeScreenshot "http://localhost:54321" width height pngName fpPath with e -> printfn "error: %A" e
+                try Utilities.takeScreenshot "http://localhost:54321" width height pngName fpPath with e -> printfn "error: %A" e
 
                
                 let fileInfo = {
