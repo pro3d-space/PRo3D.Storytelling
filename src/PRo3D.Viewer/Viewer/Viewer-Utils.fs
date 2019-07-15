@@ -489,8 +489,8 @@ module ViewerUtils =
                             fixAlpha |> toEffect
                             Shader.selectionColor          |> toEffect       
                             Shader.LoDColor                |> toEffect                             
-                            //PRo3D.Shader.falseColorLegend2 |> toEffect
-                            PRo3D.Shader.falseColorLegendTest |> toEffect
+                            PRo3D.Shader.falseColorLegend2 |> toEffect
+                            //PRo3D.Shader.falseColorLegendTest |> toEffect
                             //PRo3D.Shader.mapContrast       |> toEffect
                             //PRo3D.Shader.mapBrightness     |> toEffect
                             //PRo3D.Shader.mapGamma          |> toEffect                            

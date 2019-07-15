@@ -100,20 +100,30 @@ module QueryApp =
 
         Incremental.i attributes AList.empty
 
+    let mkColAttributeMap icon instrument = //action
+        amap {
+            let! icon = icon
+            yield style (sprintf "color: %s" (Html.ofC4b (instrument |> Model.instrumentColor)))
+            yield clazz icon
+            //yield onClick (fun _ -> action)
+        } |> AttributeMap.ofAMap
+
+    let gp instrument = Incremental.i (mkColAttributeMap (Mod.constant "circle icon") instrument) AList.empty //|> UI.wrapToolTip "Set active"
+
     let iconCheckBox (dings : IMod<bool>) action =
         iconToggle dings "check square outline icon" "square icon" action
         
     let viewQueryInstruments (model :MQueryModel) =
         require Html.semui (
             Html.table [  
-                Html.row ("MAHLI")         [iconCheckBox model.checkMAHLI CheckMAHLI]                
-                Html.row ("APXS")          [iconCheckBox model.checkAPXS CheckAPXS]
-                Html.row ("FrontHazcamR")  [iconCheckBox model.checkFrontHazcamR CheckFrontHazcamR]
-                Html.row ("FrontHazcamL")  [iconCheckBox model.checkFrontHazcamL CheckFrontHazcamL]
-                Html.row ("MastcamR")      [iconCheckBox model.checkMastcamR CheckMastcamR]
-                Html.row ("MastcamL")      [iconCheckBox model.checkMastcamL CheckMastcamL]
-                Html.row ("ChemLib")       [iconCheckBox model.checkChemLib CheckChemLib]
-                Html.row ("ChemRmi")       [iconCheckBox model.checkChemRmi CheckChemRmi]
+                Html.row ("MAHLI")         [gp Instrument.MAHLI; iconCheckBox model.checkMAHLI CheckMAHLI]                
+                Html.row ("APXS")          [gp Instrument.APXS;iconCheckBox model.checkAPXS CheckAPXS]
+                Html.row ("FrontHazcamR")  [gp Instrument.FrontHazcamR;iconCheckBox model.checkFrontHazcamR CheckFrontHazcamR]
+                Html.row ("FrontHazcamL")  [gp Instrument.FrontHazcamL;iconCheckBox model.checkFrontHazcamL CheckFrontHazcamL]
+                Html.row ("MastcamR")      [gp Instrument.MastcamR;iconCheckBox model.checkMastcamR CheckMastcamR]
+                Html.row ("MastcamL")      [gp Instrument.MastcamL;iconCheckBox model.checkMastcamL CheckMastcamL]
+                Html.row ("ChemLib")       [gp Instrument.ChemLib;iconCheckBox model.checkChemLib CheckChemLib]
+                Html.row ("ChemRmi")       [gp Instrument.ChemRmi;iconCheckBox model.checkChemRmi CheckChemRmi]
             ]
         )
     
