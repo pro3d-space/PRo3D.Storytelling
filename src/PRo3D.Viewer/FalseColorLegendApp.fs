@@ -224,9 +224,15 @@ module FalseColorLegendApp =
 
                         let range = fcUpperBound - fcLowerBound
                         let numOfRangeGaps = int (System.Math.Round (range / fcInterval))
+                        //let numOfBuckets = if (numOfRangeGaps + 2) > 200 then 200 else (numOfRangeGaps + 2)
+                        //let numOfLabels =   if numOfBuckets > 200 then 50
+                        //                    else if numOfBuckets > 100 then 25
+                                        
+                        //                    else if numOfBuckets > 25 then (numOfBuckets / 4)
+                        //                    else numOfBuckets - 2 
+
                         let numOfBuckets = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
                         let numOfLabels =   if numOfBuckets > 100 then 25
-                                        
                                             else if numOfBuckets > 25 then (numOfBuckets / 4)
                                             else numOfBuckets - 2 
                 
@@ -294,7 +300,7 @@ module FalseColorLegendApp =
                             let a = ((List.item (numOfLabels - i) labelPosList) * 0.95f) + 0.03f
                             let output = fcLowerBound + (labelInterval * (float i))
                             let toPercent value = sprintf ("%f") value + "%"
-                            let label = sprintf "%.2f" output
+                            let label = sprintf "%.4f" output
                       
                             yield Svg.text ([ "x" => "25px"; "y" => toPercent (a * 100.0f); "text-anchor" => "left"; "font-size" => "10"; "fill" => "#ffffff"]) label
                 }

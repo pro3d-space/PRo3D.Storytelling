@@ -90,8 +90,22 @@ module ViewerUtils =
                 let! s = surf
                 let! scalar = s.selectedScalar
                 return scalar.IsSome
-            }        
+            }  
+      
         let scalar = surf |> Mod.bind( fun x -> x.selectedScalar )
+
+        //let texturLayer =  
+        //    adaptive {
+        //        let! scalar = scalar
+        //        let! s = surf
+        //        match scalar with
+        //         | Some sc -> 
+        //            return s.textureLayers |> AList.toList
+        //                                   |> List.find( fun (tl:TextureLayer) -> tl.label = (Mod.force sc.label ))
+        //         | None -> return list.Empty
+               
+        //    }  
+      
 
         let interval = scalar |> Mod.bind ( fun x ->
                         match x with 
@@ -184,7 +198,7 @@ module ViewerUtils =
                     selectedTexture = texture |> Option.map(fun x -> x.index)
                     selectedScalar  = scalar'//scalar  |> Option.map(fun x -> x.index |> Mod.force)
                 }
-            
+
             return attr
         }
 
@@ -475,7 +489,8 @@ module ViewerUtils =
                             fixAlpha |> toEffect
                             Shader.selectionColor          |> toEffect       
                             Shader.LoDColor                |> toEffect                             
-                            PRo3D.Shader.falseColorLegend2 |> toEffect 
+                            PRo3D.Shader.falseColorLegend2 |> toEffect
+                            //PRo3D.Shader.falseColorLegendTest |> toEffect
                             //PRo3D.Shader.mapContrast       |> toEffect
                             //PRo3D.Shader.mapBrightness     |> toEffect
                             //PRo3D.Shader.mapGamma          |> toEffect                            

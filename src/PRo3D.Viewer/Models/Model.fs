@@ -125,8 +125,8 @@ module FalseColorsModel =
         value   = 5.0
         min     = 0.0
         max     = 90.0
-        step    = 1.0
-        format  = "{000:0}"
+        step    = 0.1
+        format = "{0:0.00}"
     } 
     let initMinAngle = {
         value   = 0.0

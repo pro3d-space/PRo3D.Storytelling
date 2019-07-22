@@ -640,6 +640,7 @@ module Shader =
         let range = fcUpperBound - fcLowerBound
         let numOfRangeGaps = int(round (range / fcInterval)) //round
         let numOfStops = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
+        //let numOfStops = if (numOfRangeGaps + 2) > 200 then 200 else (numOfRangeGaps + 2)
 
         let startColor = startColorHue *255.0
         let endColor = endColorHue *255.0
@@ -685,9 +686,23 @@ module Shader =
 
           if (uniform?falseColors) 
           then
-              let hue = mapFalseColors2 v.scalar
+              let hue = mapFalseColors v.scalar //mapFalseColors2 v.scalar
               let c = hsv2rgb ((clamp 0.0 255.0 hue)/ 255.0 ) 1.0 1.0 // 
               return v.c * V4d(c.X, c.Y, c.Z, 1.0)
+          else
+              return v.c
+      }
+
+  let falseColorLegendTest (v : Vertex) =
+      fragment {    
+
+          if (uniform?falseColors) 
+          then
+             let fcUpperBound     = uniform?upperBound
+             let fcLowerBound     = uniform?lowerBound
+             let k = (v.scalar - fcLowerBound) / (fcUpperBound-fcLowerBound) 
+             let value = clamp 0.0 1.0 k
+             return V4d(value, value, value, 1.0) //value // V4d(value, value, value, 1.0)
           else
               return v.c
       }

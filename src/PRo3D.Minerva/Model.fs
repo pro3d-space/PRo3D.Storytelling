@@ -214,6 +214,10 @@ type SelectionModel = {
     selectionMinDist     : float
 }
 
+//type Selection = {
+//    selectedProducts        : hset<string> 
+//    singleSelectProduct     : option<string>
+//}
 
 type MessagingMailbox = MailboxProcessor<MailboxAction>
 
@@ -255,6 +259,7 @@ type Model =
     sgFeatures           : SgFeatures
     selectedSgFeatures   : SgFeatures
     picking              : bool
+    //selection               : Selection
   }
 
 [<StructuredFormatDisplay("{AsString}"); Struct>]
