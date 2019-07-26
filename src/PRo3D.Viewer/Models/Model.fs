@@ -389,6 +389,7 @@ type ViewConfigModel = {
    // offset                  : NumericInput
     lodColoring             : bool
     drawOrientationCube     : bool
+    useSurfaceHighlighting  : bool
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -465,6 +466,7 @@ module ViewConfigModel =
         importTriangleSize  = initImportTriangleSize        
         drawOrientationCube = false
         //offset = depthOffset
+        useSurfaceHighlighting = true
     }
 
 

@@ -46,7 +46,7 @@ module FalseColorLegendApp =
                     { model with upperColor = ColorPicker.update model.upperColor uc }        
             
             
-    let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "semui-overrides.css" }
+    //let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "semui-overrides.css" }
 
     module UI =
         let viewDnSLegendTools (model:MFalseColorsModel)= 

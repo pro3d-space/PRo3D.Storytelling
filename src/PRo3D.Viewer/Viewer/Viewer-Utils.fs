@@ -203,7 +203,8 @@ module ViewerUtils =
         }
 
     let viewSingleSurfaceSg (surface : MSgSurface) (blarg : amap<Guid, IMod<MLeaf>>) (frustum : IMod<Frustum>) (selectedId : IMod<Option<Guid>>)
-                            (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) (fp:MFootPrint) (vp:IMod<Option<MViewPlan>>) =
+                            (isctrl:IMod<bool>) (globalBB : IMod<Box3d>) (refsys:MReferenceSystem) (fp:MFootPrint) (vp:IMod<Option<MViewPlan>>) 
+                            (useHighlighting:IMod<bool>) =
         adaptive {
           let! exists = (blarg |> AMap.keys) |> ASet.contains surface.surface
           if exists then
@@ -211,10 +212,10 @@ module ViewerUtils =
             let surf = lookUp (surface.surface) blarg
                 //Mod.bind(fun x -> lookUp (x.surface) blarg )
             
-            let isSelected = Mod.map(fun x ->
+            let isSelected = Mod.map2(fun x y ->
               match x with
-                | Some id -> id = surface.surface
-                | None -> false) selectedId 
+                | Some id -> (id = surface.surface) && y
+                | None -> false) selectedId useHighlighting
             
             let createSg (sg : ISg) =
                 sg 
@@ -461,6 +462,7 @@ module ViewerUtils =
         }
 
     let renderCommands (sgGrouped:alist<amap<Guid,MSgSurface>>) overlayed depthTested (m:MModel) =
+        let usehighlighting = m.scene.config.useSurfaceHighlighting
         let selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
         let refSystem = m.scene.referenceSystem
         let grouped = 
@@ -468,7 +470,7 @@ module ViewerUtils =
                 fun x -> ( x 
                     |> AMap.map(fun _ sf -> 
                         let bla = m.scene.surfacesModel.surfaces.flat
-                        viewSingleSurfaceSg sf bla m.frustum selected m.ctrlFlag sf.globalBB refSystem m.footPrint m.scene.viewPlans.selectedViewPlan )
+                        viewSingleSurfaceSg sf bla m.frustum selected m.ctrlFlag sf.globalBB refSystem m.footPrint m.scene.viewPlans.selectedViewPlan usehighlighting )
                     |> AMap.toASet 
                     |> ASet.map snd                     
                 )                
