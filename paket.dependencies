@@ -34,7 +34,7 @@ nuget Uncodium.Eigensystems                 ~> 1.0.1
 nuget Aardvark.Geometry.Intersection        ~> 4.7.1
 nuget Aardvark.Geometry.PointTree           ~> 4.7.1
 
-nuget Aardvark.GeoSpatial.Opc               ~> 0.0.10
+nuget Aardvark.GeoSpatial.Opc               ~> 0.1.2
 
 nuget FSharp.Core                           ~> 4.3.0
 nuget FSharp.Data                           ~> 3.0.0
@@ -61,4 +61,4 @@ framework: net45
 content: none
 source https://api.nuget.org/v3/index.json
 
-github aardvark-platform/aardvark.fake:v4
+github aardvark-platform/aardvark.fake:v4-temp

@@ -189,7 +189,7 @@ module ViewerUtils =
             let! scalar = s.selectedScalar
             let! scalar' = 
                 match scalar with
-                | Some m -> m.index |> Mod.map Some
+                | Some m -> m.label |> Mod.map Some
                 | None -> Mod.constant None //scalar |> Option.map(fun x -> x.index) //option<IMod<int>>
             
             let! texture = s.selectedTexture 

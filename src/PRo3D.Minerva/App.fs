@@ -285,12 +285,17 @@ module App =
         //Log.startTimed "fetching %d entries by ids" idList.Length
         //let data = idList |> (getIdQuerySite model.queryFilter) |> fun (a,b) -> MinervaGeoJSON.loadPaged a b
         //Log.stop()
+
         
-        Log.line "[Minervar] filtering data to set of %d" idList.Length
+        Log.line "[Minerva] filtering data to set of %d" idList.Length
 
         let filterSet = idList |> HSet.ofList
         let filtered = model.data.features |> PList.filter(fun x -> x.id |> filterSet.Contains)
         
+        let blarg = filtered |> PList.toList |> List.map (fun x -> sprintf "%A %A %A %A" x.id x.instrument x.sol x.geometry.positions.[0])
+
+        System.IO.File.WriteAllLines(@".\minervaIds",blarg)
+
         { model with filteredFeatures = filtered } |> updateFeaturesForRendering view.Location
 
       | ConnectVisplore -> 
