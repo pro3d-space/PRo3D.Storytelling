@@ -29,7 +29,7 @@
     <DocumentationFile>
     </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
-    <StartArguments>-empty</StartArguments>
+    <StartArguments>scene="H:\PRo3D_LaptopData\Correlation\20190730_annodebugging.scn"</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>

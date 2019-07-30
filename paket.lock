@@ -876,7 +876,7 @@ NUGET
     WindowsAPICodePack-ShellExtensions (1.1.1)
       WindowsAPICodePack-Shell (>= 1.1.1)
   remote: https://vrvis.myget.org/F/aardvark/auth/11394d4d-4fe9-44ec-87c8-f3e98909f975/api/v3/index.json
-    Aardvark.GeoSpatial.Opc (0.1.2)
+    Aardvark.GeoSpatial.Opc (0.1.3)
       Aardvark.Base (>= 4.5.2 < 4.6)
       Aardvark.Base.FSharp (>= 4.5.2 < 4.6)
       Aardvark.Base.Incremental (>= 4.5.2 < 4.6)

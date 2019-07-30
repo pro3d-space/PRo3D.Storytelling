@@ -13,17 +13,7 @@ module AnnotationGroupsImporter =
     open PRo3D.ReferenceSystem
     open PRo3D.Base
 
-    let xname s = XName.Get(s)
-
-    //let rec flatten (g:Node) : hset<Guid> =
-    //    match ((PList.toList g.leaves ), (PList.toList g.subNodes)) with
-    //        | ([], []) -> HSet.empty
-    //        | (c, [] ) -> c |> HSet.ofList
-    //        | ([], sg) -> sg |> HSet.ofList |> HSet.collect flatten
-    //        | (c, sg)  -> 
-    //            let sga = 
-    //                sg |> HSet.ofList |> HSet.collect flatten
-    //            HSet.union (c |> HSet.ofList) sga
+    let xname s = XName.Get(s)    
 
     let rec getGroups (trafo:Trafo3d) (fileName : string) up north (m:XElement) : (Node * hmap<Guid,Leaf> * hmap<Guid,string>) = 
       let name    = (m.Element(xname "Name")).Value.ToString()

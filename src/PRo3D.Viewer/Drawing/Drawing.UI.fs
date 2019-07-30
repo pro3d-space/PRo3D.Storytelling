@@ -209,7 +209,7 @@ module UI =
                   return if (active = group) then "circle icon" else "circle thin icon"
               }
                 
-          let map = Groups.mkGroupAttributeMap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+          let map = Groups.mkGroupAttributeMap icon (GroupsMessage(Groups.SetActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
              
           let toggleIcon = Mod.constant "unhide icon"
               //adaptive {
