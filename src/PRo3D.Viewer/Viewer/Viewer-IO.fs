@@ -107,19 +107,21 @@ module ViewerIO =
             HMap.empty
 
         //hmap union converted and versioned
-        let flat' = annos |> HMap.union flat'                
+        let flat' = annos |> HMap.union flat'
 
         let flatGroupIds = annotationGroups.annotations.rootGroup |> Group.flatten
         let floatingLeaves = 
           flat'.Values 
             |> Seq.toList            
-            |> List.filter(fun x -> (HSet.contains x.id flatGroupIds))
-            |> PList.ofList
+            |> List.filter(fun x -> (HSet.contains x.id flatGroupIds) |> not)
+            
 
-        Log.error "[ViewerIO] found %d floating leaves" (floatingLeaves |> PList.count)
+        Log.error "[ViewerIO] found %d floating leaves" (floatingLeaves.Length)
+
+        //Log.warn "[ViewerIO] floating leaves %A" (floatingLeaves |> List.map(fun x -> x.id))
 
         let annoModel = 
-          { annotationGroups.annotations with flat = flat' } |> Groups.addLeaves List.empty floatingLeaves
+          { annotationGroups.annotations with flat = flat' } |> Groups.addLeaves List.empty (floatingLeaves |> PList.ofList)
 
         Some { annotationGroups with annotations = annoModel }
       with e ->

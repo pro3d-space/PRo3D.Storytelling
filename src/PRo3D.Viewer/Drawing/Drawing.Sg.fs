@@ -437,18 +437,32 @@ module Sg =
            
       let selectionGeometry = 
         aset
-            {
-                let! picked = picked
-                if picked then
-                  yield outline points 1 c anno.modelTrafo anno.thickness.value (anno.key |> Mod.constant)                  
-            } |> Sg.set
+         {
+             let! picked = picked
+             if picked then
+               yield outline points 1 c anno.modelTrafo anno.thickness.value (anno.key |> Mod.constant)                  
+         } |> Sg.set
+
+      //let sg = 
+      //  anno.visible 
+      //    |> Mod.map(fun x ->
+      //      if x then 
+      //        Sg.ofList [
+      //          selectionGeometry
+      //          //azimuthText
+      //          pickingLines
+      //          Sg.set sgs]
+      //      else Sg.empty          
+      //    )
+
+      //sg |> Sg.dynamic
 
       Sg.ofList [
           //Sg.lines points c anno.thickness.value anno.modelTrafo
           selectionGeometry
           //azimuthText
           pickingLines
-          Sg.set sgs 
+          Sg.set sgs
       ] |> Sg.onOff anno.visible
  
   let finishedAnnotationDiscs (anno : MAnnotation') (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =

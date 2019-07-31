@@ -371,6 +371,7 @@ module Sg =
             toEffect <| Shader.stableTrafo
             toEffect <| DefaultSurfaces.vertexColor          
         ]
+
     let getDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) =
         aset {
             let! geometry = geometry
@@ -386,12 +387,13 @@ module Sg =
             
             let! geometry = geometry
             match geometry with
-              | Geometry.Point -> match points|> AList.toList |> List.tryHead with
-                                    | Some p -> 
-                                        let scaledSize = 
-                                            computeInvariantScale view near (Mod.constant p) size hfov 
-                                        yield dot (Mod.constant p) scaledSize color
-                                    | _-> yield Sg.empty
+              | Geometry.Point -> 
+                match points|> AList.toList |> List.tryHead with
+                  | Some p -> 
+                      let scaledSize = 
+                          computeInvariantScale view near (Mod.constant p) size hfov 
+                      yield dot (Mod.constant p) scaledSize color
+                  | _-> yield Sg.empty
               |_-> yield scaledDots points size color view near hfov 
         } |> Sg.set
 
@@ -417,10 +419,10 @@ module Sg =
         )
         rotTrafo * modelt
     
-    let text (view : IMod<CameraView>) near hfov pos modelTrafo text size =
+    let text (view : IMod<CameraView>) near hfov pos modelTrafo text (size : IMod<double>) =
          
-      let invScaleTrafo = 
-          computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
+      let invScaleTrafo = size |> Mod.map Trafo3d.Scale
+          //computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
       
       let billboardTrafo = 
           adaptive {
