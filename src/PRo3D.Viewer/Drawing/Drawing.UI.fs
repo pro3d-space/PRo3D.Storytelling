@@ -78,10 +78,10 @@ module UI =
               text "Annotations"
               i [clazz "dropdown icon"][] 
               div [ clazz "menu"] [                    
-                  //div [ clazz "ui inverted item"; Dialogs.onChooseFiles Load;
-                  //clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));" )][
-                  //        text "Load"
-                  //]
+                  div [ clazz "ui inverted item"; Dialogs.onChooseFiles LoadAnnotations;
+                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));" )][
+                          text "Load"
+                  ]
                   div [ clazz "ui inverted item"; onMouseClick (fun _ -> Clear)][
                           text "Clear List"
                   ]

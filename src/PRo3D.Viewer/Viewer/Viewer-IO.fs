@@ -124,6 +124,7 @@ module ViewerIO =
           { annotationGroups.annotations with flat = flat' } |> Groups.addLeaves List.empty (floatingLeaves |> PList.ofList)
 
         Some { annotationGroups with annotations = annoModel }
+        
       with e ->
         Log.error "[ViewerIO] couldn't load %s" paths.annotationGroups
         Log.error "[ViewerIO] couldn't load %A" e

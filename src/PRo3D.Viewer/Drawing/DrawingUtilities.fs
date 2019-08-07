@@ -1,6 +1,10 @@
 ﻿namespace PRo3D
 
 open PRo3D.Versioned
+open PRo3D.Base
+open PRo3D.Groups
+open Chiron
+open Chiron.Mapping
 
 module DrawingUtilities =
 
@@ -101,3 +105,84 @@ module DrawingUtilities =
                  | _ -> Some r
              | None -> None
 
+    module IO = 
+      let changeExtension (ext:string) (scenePath:string) = 
+        let p = System.IO.Path.GetDirectoryName(scenePath)
+        let name = System.IO.Path.GetFileNameWithoutExtension(scenePath) + ext
+        p + "\\" + name
+
+      type AnnotationsPaths =
+        {
+           groups    : string
+           versioned : string
+           depr      : string
+        }
+      module AnnotationsPaths =
+        let create(annotationPath : string) =
+          {
+            groups    = annotationPath
+            versioned = annotationPath |> changeExtension ".ann.json"
+            depr      = annotationPath |> changeExtension ".ann_old" 
+          }
+
+      let loadAnnotations path = 
+        let annoPaths = AnnotationsPaths.create path
+
+        let annotationGroups = annoPaths.groups |> Serialization.loadAs<PRo3D.Groups.saveAnnotations>
+          
+        //if hmap non empty convert from legacy to versioned
+        let flat = annotationGroups.annotations.flat
+        let flat' =
+          if flat |> HMap.isEmpty then flat
+          else 
+            let k = 
+              flat 
+              |> HMap.map(fun _ v -> 
+                match v with 
+                  | Leaf.Annotations a -> //convert
+                    Log.warn "[ViewerIO] encountered legacy annotations; converting to v%d" Annotation'.current
+                    a |> Annotation'.convert |> Leaf.Annotations' 
+                  | _ -> v |> sprintf "[ViewerIO] encountered invalid type in anno groups %A" |> failwith
+                )
+            //save legacy annotation data
+            annotationGroups |> Serialization.save annoPaths.depr |> ignore
+            k
+            
+        //load .ann.json
+        let annos =
+          if (System.IO.File.Exists annoPaths.versioned) then
+            Log.startTimed "[ViewerIO] Reading annotations"
+            let (annos : list<Annotation'>) = 
+              annoPaths.versioned 
+                |> IO.readFromFile 
+                |> Json.parse 
+                |> Json.deserialize
+        
+            Log.stop()
+        
+            annos |> List.map(fun x -> (x.key,x |> Leaf.Annotations')) |> HMap.ofList
+          else
+            HMap.empty
+        
+        //hmap union converted and versioned
+        let flat' = annos |> HMap.union flat'
+        
+        Log.line "[DrawingIO] loaded %d annotations" flat'.Count
+
+        let flatGroupIds = annotationGroups.annotations.rootGroup |> Group.flatten
+        let floatingLeaves = 
+          flat'.Values 
+            |> Seq.toList            
+            |> List.filter(fun x -> (HSet.contains x.id flatGroupIds) |> not)
+            
+        
+        Log.error "[ViewerIO] found %d floating leaves" (floatingLeaves.Length)
+        
+        //Log.warn "[ViewerIO] floating leaves %A" (floatingLeaves |> List.map(fun x -> x.id))
+        
+        let annoModel = 
+          { annotationGroups.annotations with flat = flat' } |> Groups.addLeaves List.empty (floatingLeaves |> PList.ofList)
+        
+        annoModel
+         
+      

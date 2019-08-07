@@ -48,6 +48,7 @@ type Action =
   | GroupsMessage       of Groups.Action
   | ColorLegendMessage  of FalseColorLegendApp.Action
   | SaveCSV             of string
+  | LoadAnnotations     of list<string>
   | PickAnnotation      of SceneHit * Guid
 
 [<DomainType>]

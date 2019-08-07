@@ -31,6 +31,7 @@ open PRo3D.Groups
 open MBrace.FsPickler.Json   
 open PRo3D.Versioned
 open Chiron
+open PRo3D.DrawingUtilities
 
 module DrawingApp =
     open PRo3D.Base
@@ -372,7 +373,7 @@ module DrawingApp =
           model.annotations.flat 
               |> HMap.toList 
               |> List.map(fun (_,b) -> b |> Leaf.toAnnotation) // |> Annotation'.convert)
-              |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty |> IO.writeToFile path
+              |> Json.serialize |> Json.formatWith JsonFormattingOptions.SingleLine |> IO.writeToFile path
           
           Log.line "[Drawing] Writing grouping"
           let annotations' = { model.annotations with flat = HMap.empty } |> Serialization.save pathgGrouping
@@ -392,6 +393,10 @@ module DrawingApp =
           let grouping = { grouping with flat = annos }
 
           { model with annotations = grouping }
+        | LoadAnnotations p, _,_ ->
+          let annos = DrawingUtilities.IO.loadAnnotations (p |> List.head)
+          Log.line "[Drawing] Updating datamodel"
+          { model with annotations = annos }
         | _ -> model
                                     
     let threads (m : DrawingModel) = m.pendingIntersections
@@ -430,7 +435,10 @@ module DrawingApp =
                 a.geometry 
                   |> Mod.map(function | Geometry.Point | Geometry.DnS -> true | _ -> false)
               
-              Sg.finishedAnnotation a c config view showPoints picked
+              Log.startTimed "[Drawing] creating finished annotation geometry %s" (a.key.ToString())
+              let sg = Sg.finishedAnnotation a c config view showPoints picked
+              Log.stop()
+              sg
               )
             |> Sg.set               
                             

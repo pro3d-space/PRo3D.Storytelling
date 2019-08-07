@@ -51,7 +51,7 @@ type Leaf =
           | Surfaces    s -> s.isActive
           | Bookmarks   b -> false
                 
-[<DomainType>]
+[<DomainType;ReferenceEquality>]
 type Node = {
     key         : Guid
     name        : string
@@ -106,7 +106,7 @@ module Group =
 type SelectedItem = Child = 0 | Group = 1
 
 
-[<DomainType>]
+[<DomainType; ReferenceEquality>]
 type GroupsModel = {
     rootGroup            : Node
     activeGroup          : TreeSelection

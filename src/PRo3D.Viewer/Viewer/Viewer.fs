@@ -671,7 +671,7 @@ module ViewerApp =
                 Scene.loadScene path m runtime signature 
                     |> Model.stashAndSaveRecent path
                     |> ViewerIO.loadRoverData
-                    |> ViewerIO.loadLastAnnotations  
+                  //  |> ViewerIO.loadLastAnnotations  
                     |> ViewerIO.loadLastFootPrint
             | NewScene,_,_ ->
                 let initialModel = Viewer.initial m.messagingMailbox m.minervaModel.minervaMessagingMailbox
@@ -1176,7 +1176,7 @@ module ViewerApp =
             PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox
               |> Scene.loadLastScene runtime signature
               |> ViewerIO.loadRoverData
-              |> ViewerIO.loadLastAnnotations
+            //  |> ViewerIO.loadLastAnnotations
               |> ViewerIO.loadLastFootPrint
           else
             PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> ViewerIO.loadRoverData
