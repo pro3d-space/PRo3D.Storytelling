@@ -724,11 +724,11 @@ module Surface =
 
             let setActive = Groups.SetActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)
             let activeAttributes = 
-                Groups.mkGroupAttributeMap activeIcon (GroupsMessage setActive)
+                Groups.clickIconAttributes activeIcon (GroupsMessage setActive)
                                    
             let toggleIcon = Mod.constant "unhide icon" //group.visible |> Mod.map(fun toggle -> if toggle then "unhide icon" else "hide icon")                
 
-            let toggleAttributes = Groups.mkGroupAttributeMap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+            let toggleAttributes = Groups.clickIconAttributes toggleIcon (GroupsMessage(Groups.ToggleGroup path))
                
             let desc =
                 div [style color] [       

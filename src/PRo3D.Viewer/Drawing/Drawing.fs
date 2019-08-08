@@ -426,6 +426,7 @@ module DrawingApp =
                 offset         = msmallConfig.getOffset         mbigConfig
             }
        
+        Log.startTimed "[Drawing] creating finished annotation geometry"
         let annotations =              
           annoSet 
             |> ASet.map(fun (_,a) -> 
@@ -435,12 +436,11 @@ module DrawingApp =
                 a.geometry 
                   |> Mod.map(function | Geometry.Point | Geometry.DnS -> true | _ -> false)
               
-              Log.startTimed "[Drawing] creating finished annotation geometry %s" (a.key.ToString())
               let sg = Sg.finishedAnnotation a c config view showPoints picked
-              Log.stop()
               sg
               )
             |> Sg.set               
+        Log.stop()
                             
         let overlay = 
           Sg.ofList [

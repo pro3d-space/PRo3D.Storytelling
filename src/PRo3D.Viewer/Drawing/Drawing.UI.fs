@@ -200,7 +200,7 @@ module UI =
             
       let rec viewTree path (group : MNode) (model : MGroupsModel) (lookup : amap<Guid, MAnnotation'>) : DomNode<Action> =
                                                   
-          let icon =
+          let iconName =
               adaptive {
                   let! s = model.activeGroup    
                   let active = s.id
@@ -209,15 +209,16 @@ module UI =
                   return if (active = group) then "circle icon" else "circle thin icon"
               }
                 
-          let map = Groups.mkGroupAttributeMap icon (GroupsMessage(Groups.SetActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
-             
-          let toggleIcon = Mod.constant "unhide icon"
-              //adaptive {
-              //    let! toggle = group.visible
-              //    return if toggle then "unhide icon" else "hide icon"
-              //}
+          let setActiveAction = 
+            Groups.SetActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)
+              |> GroupsMessage
+          let map = Groups.clickIconAttributes iconName setActiveAction
+                       
+          let visibleIconAttributes = 
+            Groups.clickIconAttributes ("unhide icon" |> Mod.constant) (GroupsMessage(Groups.SetVisibility(path,true)))
 
-          let toggleMap = Groups.mkGroupAttributeMap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+          let invisibleIconAttributes = 
+            Groups.clickIconAttributes ("hide icon" |> Mod.constant) (GroupsMessage(Groups.SetVisibility(path,false)))
           
           let color = sprintf "color: %s" (Html.ofC4b C4b.White)
           let desc =
@@ -230,7 +231,8 @@ module UI =
                        GroupsMessage(Groups.AddGroup path))] [] 
                   |> UI.wrapToolTip "Add Group"                        
 
-                  Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
+                  Incremental.i visibleIconAttributes AList.empty |> UI.wrapToolTip "Show Group"
+                  Incremental.i invisibleIconAttributes AList.empty |> UI.wrapToolTip "Hide Group"
               ]
            
           let itemAttributes =

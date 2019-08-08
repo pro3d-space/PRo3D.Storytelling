@@ -36,6 +36,7 @@ module Groups =
         | AddLeafToSelection    of list<Index>*Guid*string 
         | SingleSelectLeaf      of list<Index>*Guid*string 
         | ToggleGroup           of list<Index>
+        | SetVisibility         of path : list<Index> * isVisible : bool
         | MoveChilds      
         | ClearSelection
         | UpdateCam             of Guid
@@ -99,6 +100,7 @@ module Groups =
             |> List.fold (fun a b -> HMap.union a b) model.flat
 
         { model with flat = flat }
+
     
     let updateNodeAt (p : list<Index>) (f : Node -> Node) (t : Node) = 
         let rec go (p : list<Index>) (t : Node) =
@@ -109,6 +111,15 @@ module Groups =
                       | Some c -> { t with subNodes = PList.set x (go rest c) t.subNodes } //potentially slow                              
                       | None   -> t
         go (List.rev p) t 
+
+    //let updateLeaf path (updateFunction : Node -> Node) model = 
+    //  let leaves = 
+    //      getNode path model.rootGroup |> collectLeaves
+     
+    //  let m' = {model with rootGroup = updateNodeAt path updateFunction model.rootGroup }
+
+    //  let f = (fun (k:Leaf) -> (k.setVisible (not k.visible)))
+    //  updateLeaves leaves f m'
 
     let updateGroupsLookup (m:GroupsModel) =
         let rec go (n:Node) =
@@ -386,13 +397,20 @@ module Groups =
                 let leaves = 
                     getNode p model.rootGroup |> collectLeaves
 
-                let func = 
-                    fun (x:Node) -> { x with visible = not x.visible }
+                let func = fun (x:Node) -> { x with visible = not x.visible }
                 let m' = {model with rootGroup = updateNodeAt p func model.rootGroup }
 
                 let f = (fun (k:Leaf) -> (k.setVisible (not k.visible)))
                 updateLeaves leaves f m'
-                
+            | SetVisibility (p, isVisible) ->    
+              let leaves = 
+                    getNode p model.rootGroup |> collectLeaves
+
+              let func = fun (x:Node) -> { x with visible = isVisible }
+              let m' = {model with rootGroup = updateNodeAt p func model.rootGroup }
+
+              let f = (fun (k:Leaf) -> (k.setVisible isVisible))
+              updateLeaves leaves f m'              
             | MoveChilds  -> 
                 let m = moveChildren model
                 m
@@ -404,7 +422,7 @@ module Groups =
     let mkColor (activeId : Guid) (groupId : Guid) = 
         if activeId = groupId then Mod.constant C4b.VRVisGreen else Mod.constant C4b.White
     
-    let mkGroupAttributeMap icon action =
+    let clickIconAttributes icon action =
         amap {
             let! icon = icon
             yield clazz icon

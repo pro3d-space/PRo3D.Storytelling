@@ -67,7 +67,7 @@ module ViewerIO =
 
       model
         
-    let tryLoadAnnotations (paths : ScenePaths) =
+    let tryLoadAnnotations (paths : ScenePaths) : option<saveAnnotations> =
      try
         //load groups.ann
         let annotationGroups = paths.annotationGroups |> Serialization.loadAs<PRo3D.Groups.saveAnnotations>
