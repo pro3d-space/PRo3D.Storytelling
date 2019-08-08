@@ -286,7 +286,7 @@ type Len(meter : float) =
       elif x.Centimeter > 1.0 then sprintf "%.2fcm" x.Centimeter
       elif x.Millimeter > 1.0 then sprintf "%.0fmm" x.Millimeter
       elif x.Micrometer > 1.0 then sprintf "%.0fµm" x.Micrometer
-      elif x.Nanometer > 1.0 then sprintf "%.0fµm" x.Nanometer
+      elif x.Nanometer > 1.0 then sprintf "%.0fnm" x.Nanometer
       elif meter > 0.0 then sprintf "%.0f" x.Angstrom
       else "0"
 

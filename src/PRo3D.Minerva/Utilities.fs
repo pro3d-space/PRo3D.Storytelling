@@ -275,7 +275,7 @@ module Drawing =
             |> Sg.pickable (PickShape.Box box)
             |> Sg.withEvents [
                 SceneEventKind.Click, (fun sceneHit -> true, Seq.ofList[PickProducts sceneHit]) 
-                SceneEventKind.Move,  (fun sceneHit -> true, Seq.ofList[HoverProducts sceneHit])
+                //SceneEventKind.Move,  (fun sceneHit -> true, Seq.ofList[HoverProducts sceneHit])
             ])
         |> Sg.dynamic 
 
