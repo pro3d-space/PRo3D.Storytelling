@@ -397,6 +397,7 @@ module UI =
     open Aardvark.UI
     open Aardvark.Base.Incremental
 
+    //TODO LF ... remove code duplication. make alignment union type top, right, bottom, left
     let wrapToolTip (text:string) (dom:DomNode<'a>) : DomNode<'a> =
         //dom
         let attr = 
@@ -479,6 +480,8 @@ module Lenses =
     let set'   (lens : Lens<'s,'a>) (s:'s) (v : 'a)  : 's    = lens.Set(s,v)
     let update (lens : Lens<'s,'a>) (f : 'a->'a) (s:'s) : 's = lens.Update(s,f)
 
+
+//TODO LF ... move shaders to PRo3D.Base Shaders.fs
 module Shader =
   
   open Aardvark.GeoSpatial.Opc.Shader
@@ -585,20 +588,20 @@ module Shader =
   [<ReflectedDefinition>]
   let mapFalseColors2 value : float =
         let fcInterval     = uniform?interval
-        let startColorHue     = uniform?startC
-        let endColorHue       = uniform?endC
+        let startColorHue  = uniform?startC
+        let endColorHue    = uniform?endC
         let invertMapping  = uniform?inverted
         let fcUpperBound   = uniform?upperBound
         let fcLowerBound   = uniform?lowerBound
 
-        let range = fcUpperBound - fcLowerBound
+        let range          = fcUpperBound - fcLowerBound
         let numOfRangeGaps = int(round (range / fcInterval)) //round
-        let numOfStops = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
+        let numOfStops     = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
         //let numOfStops = if (numOfRangeGaps + 2) > 200 then 200 else (numOfRangeGaps + 2)
 
         let startColor = startColorHue *255.0
-        let endColor = endColorHue *255.0
-        let hStepSize =
+        let endColor   = endColorHue *255.0
+        let hStepSize  =
             if startColor < endColor then 
                 (endColor - startColor) / ((float)(numOfStops-1))
             else 
@@ -606,12 +609,13 @@ module Shader =
                 
         let pos = 
             match fcLowerBound < value with
-                    | true -> (int ( round(value - fcLowerBound) / fcInterval )) //+1//round
-                    | _ -> 0
+            | true -> (int ( round(value - fcLowerBound) / fcInterval )) //+1//round
+            | _ -> 0
+
         let pos1 = 
             match fcUpperBound < value with
-                | true -> numOfRangeGaps
-                | _ -> pos
+            | true -> numOfRangeGaps
+            | _ -> pos
                      
         let currColorH = 
             if invertMapping then
@@ -665,6 +669,8 @@ module Shader =
   let myTrunc (value : float) =
     clamp 0.0 255.0 value
   
+
+  //TODO LF ... put all color adaptation mechanisms into 1 shader. Shader code produced by FShade has a ridiculous size ~6500 lines of code
   let mapContrast (v : Vertex) =
     fragment { 
         if (uniform?useContrastS) then
@@ -786,25 +792,7 @@ module Shader =
 
           } 
       } 
-
-  //let footPrintF (v : FootPrintVertex) =
-  //    fragment {           
-  //        if uniform?footprintVisible then
-  //          let col = v.c * 0.7 //V4d(1.0, 0.0, 0.0, 1.0)
-  //          let t = v.tc0.XY / v.tc0.W
-  //          let c = 
-  //              if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
-  //                 v.c //(v.c * 0.7) //darkened
-  //              else
-  //                 col 
-  //          if (v.tc0.Z <= 0.0) then
-  //              return col
-  //          else
-  //              return c 
-             
-  //        else
-  //          return v.c
-  //    }
+  
   let footPrintF (v : FootPrintVertex) =
       fragment {           
           if uniform?footprintVisible then
