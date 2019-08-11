@@ -203,24 +203,7 @@ module Sg =
                     pos = uniform.ViewProjTrafo * wp
             }
         }
-
-    let createHarrisPoints (positions : V3d[])  (color : C4b) (size : IMod<float>) =
-        let colors = Array.create positions.Length color
-        let pointSize = Mod.constant 5.0
-        let c = V4d((float)color.R, (float)color.G, (float)color.B, (float)color.A)
-
-        Aardvark.UI.``F# Sg``.Sg.ofList [
-                 Sg.draw IndexedGeometryMode.PointList
-            ]
-             |> Sg.vertexAttribute DefaultSemantic.Positions (positions |> Mod.constant)
-             |> Sg.vertexAttribute DefaultSemantic.Colors (colors |> Mod.constant)
-             |> Sg.uniform "PointSize" size //pointSize
-            |> Sg.shader {
-                do! pointTrafo
-                do! constantColor c
-                do! DefaultSurfaces.vertexColor |> toEffect
-            }
-
+           
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
       adaptive {
           let! p = p
@@ -308,7 +291,7 @@ module Sg =
     
     //## POINTS ##
 
-    let mkDotISg color (size : IMod<float>) (pos : IMod<V3d>) = 
+    let drawSphere color (size : IMod<float>) (pos : IMod<V3d>) = 
         Sg.sphere 2 color (Mod.constant 1.0)
             |> Sg.noEvents
             |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
@@ -316,7 +299,7 @@ module Sg =
             |> Sg.uniform "WorldPos" pos
 
     let dot (point : IMod<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
-        let isgDot = mkDotISg color size point
+        let isgDot = drawSphere color size point
         isgDot
         |> Sg.effect [
             toEffect <| Shader.screenSpaceScale
@@ -338,32 +321,10 @@ module Sg =
        ]
        |> Sg.uniform "PointSize" size
     
-    let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
+    let drawSpheres (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
         aset {
             for p in points |> ASet.ofAList do                        
-                yield mkDotISg color (size) (Mod.constant p)
-        } 
-        |> Sg.set
-        |> Sg.effect [
-            toEffect <| Shader.screenSpaceScale
-            toEffect <| Shader.stableTrafo
-            toEffect <| DefaultSurfaces.vertexColor          
-        ]
-    
-    let dots1 (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
-        let ps = points |> AList.toArray
-        color 
-        |> Mod.map( fun c -> createHarrisPoints ps c size )
-        |> Mod.toASet
-        |> Sg.set
-        
-
-    let scaledDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (view : IMod<CameraView>) (near : IMod<float>) (hfov : IMod<float>) =
-        aset {
-            for p in points |> ASet.ofAList do   
-                let scaledSize = 
-                        computeInvariantScale view near (Mod.constant p) size hfov //(Mod.constant 0.05)
-                yield mkDotISg color scaledSize (Mod.constant p)
+                yield drawSphere color (size) (Mod.constant p)
         } 
         |> Sg.set
         |> Sg.effect [
@@ -372,30 +333,24 @@ module Sg =
             toEffect <| DefaultSurfaces.vertexColor          
         ]
 
-    let getDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) =
-        aset {
-            let! geometry = geometry
-            match geometry with
-              | Geometry.Point -> match points|> AList.toList |> List.tryHead with
-                                    | Some p -> yield dot (Mod.constant p) size color
-                                    | _-> yield Sg.empty
-              |_-> yield dots points size color    
-        } |> Sg.set
+    let drawPointList (positions : alist<V3d>) (color : C4b) (pointSize : IMod<double>) (offset : IMod<double>)= 
+        let positions = positions |> AList.toMod |> Mod.map PList.toArray
+        let (pointsF, trafo) = PRo3D.Base.Sg.stablePoints' positions
 
-    let getScaledDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) (view : IMod<CameraView>) (near : IMod<float>) (hfov : IMod<float>) =
+        PRo3D.Base.Sg.drawSingleColorPoints pointsF (color.ToC4f().ToV4d()) pointSize offset
+        |> Sg.trafo trafo
+        //failwith ""
+                   
+    let getDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) (offset : IMod<float>) =
         aset {
-            
             let! geometry = geometry
             match geometry with
-              | Geometry.Point -> 
+            | Geometry.Point -> 
                 match points|> AList.toList |> List.tryHead with
-                  | Some p -> 
-                      let scaledSize = 
-                          computeInvariantScale view near (Mod.constant p) size hfov 
-                      yield dot (Mod.constant p) scaledSize color
-                  | _-> yield Sg.empty
-              |_-> yield scaledDots points size color view near hfov 
-        } |> Sg.set
+                | Some p -> yield dot (Mod.constant p) size color
+                | _ -> yield Sg.empty
+            | _ -> yield drawPointList points (C4b.VRVisGreen) size (offset |> Mod.map(fun x -> x + 1.0))
+        } |> Sg.set   
 
     //## TEXT ##
         
@@ -421,8 +376,7 @@ module Sg =
     
     let text (view : IMod<CameraView>) near hfov pos modelTrafo text (size : IMod<double>) =
          
-      let invScaleTrafo = size |> Mod.map Trafo3d.Scale
-          //computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
+      let invScaleTrafo = computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale           
       
       let billboardTrafo = 
           adaptive {
@@ -433,14 +387,12 @@ module Sg =
           }      
       
       Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
-          |> Sg.noEvents
-          |> Sg.shader {
-            do! Shader.stableTrafo
-          }            
-          |> Sg.trafo invScaleTrafo
-          |> Sg.trafo billboardTrafo  
-
-    
+      |> Sg.noEvents
+      |> Sg.shader {
+        do! Shader.stableTrafo
+      }            
+      |> Sg.trafo invScaleTrafo
+      |> Sg.trafo billboardTrafo      
 module UI =
     open Aardvark.UI
     open Aardvark.Base.Incremental

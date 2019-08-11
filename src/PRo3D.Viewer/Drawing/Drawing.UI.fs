@@ -50,16 +50,7 @@ module UI =
                 |> ASet.map(fun x -> x.id = a.key)
                 |> ASet.contains true
                 |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
-        color
-        //adaptive
-        //    {
-        //        let! singleSelected = model.singleSelectLeaf
-        //        let! color = color
-        //        match singleSelected with
-        //            | Some id -> if id = a.key then return C4b.VRVisGreen else return color
-        //            | None -> return color
-        //    }
-      
+        color              
       
       let mkCubeColor (model : MGroupsModel) (a : MAnnotation') =
         model.selectedLeaves
@@ -78,12 +69,12 @@ module UI =
               text "Annotations"
               i [clazz "dropdown icon"][] 
               div [ clazz "menu"] [                    
-                  div [ clazz "ui inverted item"; Dialogs.onChooseFiles LoadAnnotations;
+                  div [ clazz "ui inverted item"; Dialogs.onChooseFiles AddAnnotations;
                     clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));" )][
-                          text "Load"
+                          text "Import"
                   ]
                   div [ clazz "ui inverted item"; onMouseClick (fun _ -> Clear)][
-                          text "Clear List"
+                          text "Clear"
                   ]
                   div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveCSV;
                       clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")][

@@ -42,3 +42,109 @@ module Utilities =
             
            // let filename = cs.name + name
             wc.DownloadFile(screenshot,Path.combine [folder; name])
+
+module Shader = 
+    open FShade
+    open Aardvark.Base.Rendering
+
+    type UniformScope with
+        member x.PointSize : float = uniform?PointSize
+
+    type pointVertex =
+        {
+            [<Position>] pos : V4d
+            [<PointSize>] p : float
+            [<Color>] c : V4d
+            [<TexCoord; Interpolation(InterpolationMode.Sample)>] tc : V2d
+            [<SourceVertexIndex>] i : int
+        }
+
+    let constantColor (color : V4d) (v : pointVertex) =
+        vertex {
+            let ps : float = uniform?PointSize
+            return { v with c = color; p = ps }
+        }
+
+    let differentColor (v : pointVertex) =
+        vertex {
+            let ps : float = uniform?PointSize
+            return { v with c = v.c; p = ps }
+        }
+
+    let pointTrafo (v : pointVertex) =
+        vertex {
+            let vp = uniform.ModelViewTrafo * v.pos
+            return { 
+                v with 
+                    pos = uniform.ProjTrafo * vp
+            }
+        }
+
+    let pointSpriteFragment (v : pointVertex) =
+        fragment {
+            let tc = v.tc
+
+            let c = 2.0 * tc - V2d.II
+            if c.Length > 1.0 then
+                discard()
+
+            return v
+        }
+
+    let lines (t : Triangle<pointVertex>) =
+        line {
+            yield t.P0
+            yield t.P1
+            restartStrip()
+            
+            yield t.P1
+            yield t.P2
+            restartStrip()
+
+            yield t.P2
+            yield t.P0
+            restartStrip()
+        }
+
+module Sg =
+    open Aardvark.Base.Incremental
+    open Aardvark.Base.Rendering
+
+    let drawColoredPoints pointsF colors pointSize = 
+        Sg.draw IndexedGeometryMode.PointList
+        |> Sg.vertexAttribute DefaultSemantic.Positions pointsF
+        |> Sg.vertexAttribute DefaultSemantic.Colors colors
+        |> Sg.uniform "PointSize" pointSize
+        |> Sg.effect [
+            toEffect Shader.pointTrafo 
+            toEffect Shader.differentColor
+            toEffect DefaultSurfaces.pointSprite
+            toEffect Shader.pointSpriteFragment
+          ]
+
+    let drawSingleColorPoints (pointsF : IMod<V3f[]>) color pointSize offset = 
+      Sg.draw IndexedGeometryMode.PointList
+      |> Sg.vertexAttribute DefaultSemantic.Positions pointsF
+      |> Sg.uniform "PointSize" pointSize
+      |> Sg.uniform "DepthOffset" (
+            offset |> Mod.map (fun depthWorld -> depthWorld / (100.0 - 0.1)))
+      |> Sg.effect [
+            toEffect Shader.pointTrafo
+            toEffect (Shader.constantColor color)
+            toEffect DefaultSurfaces.pointSprite
+            toEffect Shader.pointSpriteFragment
+            toEffect Aardvark.GeoSpatial.Opc.Shader.Shaders.depthOffsetFS
+      ]
+    
+    let stablePoints (trafo : IMod<Trafo3d>) (positions : IMod<V3d[]>) =
+        positions 
+        |> Mod.map2(fun (t : Trafo3d) x -> 
+            x |> Array.map(fun p -> (t.Backward.TransformPos(p)) |> V3f)) trafo
+
+    let stablePoints' (positions : IMod<V3d[]>) : (IMod<V3f[]> * IMod<Trafo3d>) = 
+        let trafo =
+            positions |> Mod.map Array.head |> Mod.map Trafo3d.Translation
+
+        stablePoints trafo positions, trafo
+
+        

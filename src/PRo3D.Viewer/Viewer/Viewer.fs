@@ -671,7 +671,7 @@ module ViewerApp =
                 Scene.loadScene path m runtime signature 
                     |> Model.stashAndSaveRecent path
                     |> ViewerIO.loadRoverData
-                  //  |> ViewerIO.loadLastAnnotations  
+                    |> ViewerIO.loadAnnotations  
                     |> ViewerIO.loadLastFootPrint
             | NewScene,_,_ ->
                 let initialModel = Viewer.initial m.messagingMailbox m.minervaModel.minervaMessagingMailbox
@@ -944,8 +944,8 @@ module ViewerApp =
                 attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
                 attribute "data-samples" "4"
                 attribute "useMapping" "true"
-             // attribute "showFPS" "true"        
-             // attribute "data-renderalways" "true"
+                attribute "showFPS" "true"        
+                attribute "data-renderalways" "true"
                 onKeyDown (KeyDown)
                 onKeyUp   (KeyUp)        
                 clazz "mainrendercontrol"
@@ -1176,7 +1176,7 @@ module ViewerApp =
             PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox
               |> Scene.loadLastScene runtime signature
               |> ViewerIO.loadRoverData
-            //  |> ViewerIO.loadLastAnnotations
+              |> ViewerIO.loadAnnotations
               |> ViewerIO.loadLastFootPrint
           else
             PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> ViewerIO.loadRoverData

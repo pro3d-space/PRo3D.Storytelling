@@ -50,118 +50,53 @@ module ViewerIO =
         }
 
     let saveVersioned (model : DrawingModel) (paths : ScenePaths) =      
-      
-      Log.startTimed "[Drawing] Writing annotations"
-      model.annotations.flat 
-          |> HMap.toList 
-          |> List.map(fun (_,b) -> b |> Leaf.toAnnotation) // |> Annotation'.convert)
-          |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty |> IO.writeToFile paths.annotationVersioned
-      Log.stop()
-      
-      Log.startTimed "[Drawing] Writing grouping"
-      {
-        annotations = { model.annotations with flat = HMap.empty }  //clears flat annotations from pickled
-        colorLegend = model.colorLegend
-      } |> Serialization.save paths.annotationGroups |> ignore
-      Log.stop()
-
-      model
         
-    let tryLoadAnnotations (paths : ScenePaths) : option<saveAnnotations> =
-     try
-        //load groups.ann
-        let annotationGroups = paths.annotationGroups |> Serialization.loadAs<PRo3D.Groups.saveAnnotations>
-          
-        //if hmap non empty convert from legacy to versioned
-        let flat = annotationGroups.annotations.flat
-        let flat' =
-          if flat |> HMap.isEmpty then flat
-          else 
-            let k = 
-              flat 
-              |> HMap.map(fun _ v -> 
-                match v with 
-                  | Leaf.Annotations a -> //convert
-                    Log.warn "[ViewerIO] encountered legacy annotations; converting to v%d" Annotation'.current
-                    a |> Annotation'.convert |> Leaf.Annotations' 
-                  | _ -> v |> sprintf "[ViewerIO] encountered invalid type in anno groups %A" |> failwith
-                )
-            //save legacy annotation data
-            annotationGroups |> Serialization.save paths.annotationDepr |> ignore
-            k
-            
-        //load .ann.json
-        let annos =
-          if (File.Exists paths.annotationVersioned) then
-            Log.startTimed "[ViewerIO] Reading annotations"
-            let (annos : list<Annotation'>) = 
-              paths.annotationVersioned 
-                |> IO.readFromFile 
-                |> Json.parse 
-                |> Json.deserialize
-
-            Log.stop()
-
-            annos |> List.map(fun x -> (x.key,x |> Leaf.Annotations')) |> HMap.ofList
-          else
-            HMap.empty
-
-        //hmap union converted and versioned
-        let flat' = annos |> HMap.union flat'
-
-        let flatGroupIds = annotationGroups.annotations.rootGroup |> Group.flatten
-        let floatingLeaves = 
-          flat'.Values 
-            |> Seq.toList            
-            |> List.filter(fun x -> (HSet.contains x.id flatGroupIds) |> not)
-            
-
-        Log.error "[ViewerIO] found %d floating leaves" (floatingLeaves.Length)
-
-        //Log.warn "[ViewerIO] floating leaves %A" (floatingLeaves |> List.map(fun x -> x.id))
-
-        let annoModel = 
-          { annotationGroups.annotations with flat = flat' } |> Groups.addLeaves List.empty (floatingLeaves |> PList.ofList)
-
-        Some { annotationGroups with annotations = annoModel }
+        Log.startTimed "[Drawing] Writing annotations"
+        model.annotations.flat 
+        |> HMap.toList 
+        |> List.map(fun (_,b) -> b |> Leaf.toAnnotation) // |> Annotation'.convert)
+        |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty |> IO.writeToFile paths.annotationVersioned
+        Log.stop()
         
-      with e ->
-        Log.error "[ViewerIO] couldn't load %s" paths.annotationGroups
-        Log.error "[ViewerIO] couldn't load %A" e
-        None       
+        Log.startTimed "[Drawing] Writing grouping"
+        {
+            annotations = { model.annotations with flat = HMap.empty }  //clears flat annotations from pickled
+            colorLegend = model.colorLegend
+        } |> Serialization.save paths.annotationGroups |> ignore
+        Log.stop()
+        
+        model
+        
+    let tryLoadAnnotations (scenePath : string) : option<saveAnnotations> =
+        try        
+            (DrawingUtilities.IO.loadAnnotations scenePath) |> Some
+        with e ->        
+            Log.error "[ViewerIO] couldn't load %A" e
+            None
     
-    let loadLastAnnotations (m:Model) = 
-      match m.scene.scenePath with
+    let loadAnnotations (m:Model) = 
+        match m.scene.scenePath with
         | Some p ->           
-          let groups = p |> ScenePaths.create |> tryLoadAnnotations
-          match groups with          
-              | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; colorLegend = g.colorLegend } }
-              | None -> m
+            let scenePaths = p |> ScenePaths.create
+            let groups = scenePaths.annotationGroups |> tryLoadAnnotations
+            match groups with          
+            | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; colorLegend = g.colorLegend } }
+            | None -> m
         |None -> m
-    
+
+      
     let loadLastFootPrint (m:Model) = 
-        match m.scene.viewPlans.selectedViewPlan with
-            | Some vp -> match vp.selectedInstrument with
-                            | Some i -> 
-                                let fp = FootPrint.updateFootprint i vp.position m.scene.viewPlans 
-                                { m with footPrint = fp}
-                            | None -> { m with footPrint = PRo3d.ViewPlanModel.initFootPrint}
-            | None -> { m with footPrint = PRo3d.ViewPlanModel.initFootPrint}
-
-    //let saveAnnotationGroups (model:DrawingModel) (path:string) = 
-    //  if path.IsEmptyOrNull() then model
-    //  else
-    //    //prohibit writing pickled flat annotations        
-    //    let sa = 
-    //        {
-    //            annotations = { model.annotations with flat = HMap.empty }
-    //            colorLegend = model.colorLegend
-    //        }            
-    //    let saveA = Serialization.save path sa
-    //    { model with annotations = saveA.annotations; colorLegend = saveA.colorLegend }        
-    
-    
-
+        let fp = 
+            m.scene.viewPlans.selectedViewPlan 
+            |> Option.bind(fun vp -> 
+                vp.selectedInstrument |> Option.map(fun instr -> (instr,vp)))
+            |> Option.map(fun (instr, vp) -> 
+                FootPrint.updateFootprint instr vp.position m.scene.viewPlans)
+            |> Option.defaultValue PRo3d.ViewPlanModel.initFootPrint
+       
+        { m with footPrint = fp }
+        
+        
     let saveSceneAndAnnotationGroups (path:string) (m:Model) = 
         if path.IsEmptyOrNull() then m
         else

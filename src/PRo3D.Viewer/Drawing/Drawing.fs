@@ -238,7 +238,7 @@ module DrawingApp =
         | _ -> None
 
     let update<'a> (bigConfig : 'a) (smallConfig : SmallConfig<'a> ) (webSocket : BlockingCollection<string>) (view: CameraView) (model : DrawingModel) (act : Action) =
-      match (act, model.draw, model.pick) with
+        match (act, model.draw, model.pick) with
         | StartDrawing, _, false ->                     
                 { model with draw = true }
         | StopDrawing, _, false -> 
@@ -344,64 +344,68 @@ module DrawingApp =
           model
         | PickAnnotation (hit, id), false, true ->             
             match (model.annotations.flat.TryFind id) with
-                | Some (Leaf.Annotations' ann) ->                   
-                  match ann.geometry with
-                  | Geometry.Line | Geometry.Point when ann.projection = Projection.Linear -> //picking shapes are fine for these
-                    { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
-                  | _ -> 
-                    Log.startTimed "PolyAnnotationPicking"
-                    let mutable hit2 = RayHit3d.MaxRange
-                    let r = hit.globalRay.Ray.Ray
-                    let result = 
+            | Some (Leaf.Annotations' ann) ->                   
+                match ann.geometry with
+                | Geometry.Line | Geometry.Point when ann.projection = Projection.Linear -> //picking shapes are fine for these
+                  { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
+                | _ -> 
+                  Log.startTimed "PolyAnnotationPicking"
+                  let mutable hit2 = RayHit3d.MaxRange
+                  let r = hit.globalRay.Ray.Ray
+                  let result = 
                       ann.points 
-                        |> PList.toArray 
-                        |> Sg.cylinders 0.05 
-                        |> Array.tryFind(fun x -> r.HitsCylinder(x, 0.0, 100.0, &hit2))
+                      |> PList.toArray 
+                      |> Sg.cylinders 0.05 
+                      |> Array.tryFind(fun x -> r.HitsCylinder(x, 0.0, 100.0, &hit2))
 
-                    match result with
-                    | Some _ -> 
+                  match result with
+                  | Some _ -> 
                       Log.line "hit %A at %A" ann.key hit2.Point
                       Log.stop()
                       { model with annotations = Groups.addSingleSelectedLeaf model.annotations list.Empty ann.key ""}
-                    | None ->Log.stop(); model                    
-                | _ -> model        
+                  | None ->Log.stop(); model                    
+            | _ -> model        
         | SaveVersioned, _,_ ->
-          let path = "./annotations.json"
-          let pathgGrouping = "./annotations.grouping"
-          
-          Log.line "[Drawing] Writing annotations"
-          model.annotations.flat 
-              |> HMap.toList 
-              |> List.map(fun (_,b) -> b |> Leaf.toAnnotation) // |> Annotation'.convert)
-              |> Json.serialize |> Json.formatWith JsonFormattingOptions.SingleLine |> IO.writeToFile path
-          
-          Log.line "[Drawing] Writing grouping"
-          let annotations' = { model.annotations with flat = HMap.empty } |> Serialization.save pathgGrouping
+            let path = "./annotations.json"
+            let pathgGrouping = "./annotations.grouping"
+            
+            Log.line "[Drawing] Writing annotations"
+            model.annotations.flat 
+                |> HMap.toList 
+                |> List.map(fun (_,b) -> b |> Leaf.toAnnotation) // |> Annotation'.convert)
+                |> Json.serialize |> Json.formatWith JsonFormattingOptions.SingleLine |> IO.writeToFile path
+            
+            Log.line "[Drawing] Writing grouping"
+            let annotations' = 
+              { model.annotations with flat = HMap.empty } 
+              |> Serialization.save pathgGrouping
 
-          { model with annotations = annotations' }
-          //model
+            { model with annotations = annotations' }
+            //model
         | LoadVersioned, _,_ ->
-          let path = "./annotations.json"
-          let pathgGrouping = "./annotations.grouping"
+            let path = "./annotations.json"
+            let pathgGrouping = "./annotations.grouping"
 
-          Log.line "[Drawing] Reading annotations"
-          let (annos : list<Annotation'>) = path |> IO.readFromFile |> Json.parse |> Json.deserialize
-          let annos = annos |> List.map(fun x -> (x.key,x |> Leaf.Annotations')) |> HMap.ofList
-          
-          Log.line "[Drawing] Reading grouping"
-          let grouping = Serialization.loadAs<GroupsModel> pathgGrouping
-          let grouping = { grouping with flat = annos }
+            Log.line "[Drawing] Reading annotations"
+            let (annos : list<Annotation'>) = path |> IO.readFromFile |> Json.parse |> Json.deserialize
+            let annos = annos |> List.map(fun x -> (x.key,x |> Leaf.Annotations')) |> HMap.ofList
+            
+            Log.line "[Drawing] Reading grouping"
+            let grouping = Serialization.loadAs<GroupsModel> pathgGrouping
+            let grouping = { grouping with flat = annos }
 
-          { model with annotations = grouping }
-        | LoadAnnotations p, _,_ ->
+            { model with annotations = grouping }
+        | AddAnnotations p, _,_ ->
           let annos = DrawingUtilities.IO.loadAnnotations (p |> List.head)
-          Log.line "[Drawing] Updating datamodel"
-          { model with annotations = annos }
+          Log.line "[Drawing] Merging annotations"
+
+          let merged = Groups.union model.annotations annos.annotations
+          { model with annotations = merged }
         | _ -> model
                                     
     let threads (m : DrawingModel) = m.pendingIntersections
     
-    let toAnnotationOpt = 
+    let tryToAnnotation = 
       fun y -> 
         match y with
           //| MAnnotations ann -> Some ann
@@ -413,8 +417,8 @@ module DrawingApp =
         // since set provides more degrees of freedom for the compiler           
         let annoSet = 
             model.annotations.flat 
-                |> AMap.chooseM(fun _ y -> y |> Mod.map toAnnotationOpt) 
-                |> AMap.toASet                        
+            |> AMap.chooseM(fun _ y -> y |> Mod.map tryToAnnotation) 
+            |> AMap.toASet
 
         let config : Sg.innerViewConfig = 
             {
@@ -428,29 +432,29 @@ module DrawingApp =
        
         Log.startTimed "[Drawing] creating finished annotation geometry"
         let annotations =              
-          annoSet 
+            annoSet 
             |> ASet.map(fun (_,a) -> 
-              let c = UI.mkColor model.annotations a
-              let picked = UI.isSingleSelect model.annotations a
-              let showPoints = 
-                a.geometry 
-                  |> Mod.map(function | Geometry.Point | Geometry.DnS -> true | _ -> false)
-              
-              let sg = Sg.finishedAnnotation a c config view showPoints picked
-              sg
-              )
+                let c = UI.mkColor model.annotations a
+                let picked = UI.isSingleSelect model.annotations a
+                let showPoints = 
+                  a.geometry 
+                    |> Mod.map(function | Geometry.Point | Geometry.DnS -> true | _ -> false)
+                
+                let sg = Sg.finishedAnnotation a c config view showPoints picked
+                sg
+                )
             |> Sg.set               
         Log.stop()
                             
         let overlay = 
-          Sg.ofList [
-           // brush model.hoverPosition; 
-            annotations
-            Sg.drawWorkingAnnotation config.offset model.working
-          ]
+            Sg.ofList [
+             // brush model.hoverPosition; 
+              annotations
+              Sg.drawWorkingAnnotation config.offset model.working
+            ]
 
         let depthTest = 
-          annoSet 
+            annoSet 
             |> ASet.map(fun (_,a) -> Sg.finishedAnnotationDiscs a config model.colorLegend view) |> Sg.set
 
         (overlay, depthTest)
