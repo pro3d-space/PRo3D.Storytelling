@@ -376,11 +376,11 @@ module ViewerUtils =
                         Shader.selectionColor          |> toEffect       
                         Shader.LoDColor                |> toEffect                             
                         PRo3D.Shader.falseColorLegend2 |> toEffect                            
-                        //PRo3D.Shader.mapContrast       |> toEffect
-                        //PRo3D.Shader.mapBrightness     |> toEffect
-                        //PRo3D.Shader.mapGamma          |> toEffect                            
-                        //PRo3D.Shader.grayscale         |> toEffect
-                        //PRo3D.Shader.addColor          |> toEffect
+                        PRo3D.Shader.mapContrast       |> toEffect
+                        PRo3D.Shader.mapBrightness     |> toEffect
+                        PRo3D.Shader.mapGamma          |> toEffect                            
+                        PRo3D.Shader.grayscale         |> toEffect
+                        PRo3D.Shader.addColor          |> toEffect
                         PRo3D.Shader.footprintV        |> toEffect
                         PRo3D.Shader.footPrintF        |> toEffect
                     ]
