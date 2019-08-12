@@ -65,6 +65,13 @@ module Shader =
             return { v with c = color; p = ps }
         }
 
+    let singleColor (v : pointVertex) =
+        vertex {
+            let ps : float = uniform?PointSize
+            let c  : V4d   = uniform?SingleColor
+            return { v with c = c; p = ps }
+        }
+
     let differentColor (v : pointVertex) =
         vertex {
             let ps : float = uniform?PointSize
@@ -122,15 +129,16 @@ module Sg =
             toEffect Shader.pointSpriteFragment
           ]
 
-    let drawSingleColorPoints (pointsF : IMod<V3f[]>) color pointSize offset = 
+    let drawSingleColorPoints (pointsF : IMod<V3f[]>) (color : IMod<V4d>) pointSize offset = 
       Sg.draw IndexedGeometryMode.PointList
       |> Sg.vertexAttribute DefaultSemantic.Positions pointsF
       |> Sg.uniform "PointSize" pointSize
+      |> Sg.uniform "SingleColor" color
       |> Sg.uniform "DepthOffset" (
             offset |> Mod.map (fun depthWorld -> depthWorld / (100.0 - 0.1)))
       |> Sg.effect [
             toEffect Shader.pointTrafo
-            toEffect (Shader.constantColor color)
+            toEffect Shader.singleColor
             toEffect DefaultSurfaces.pointSprite
             toEffect Shader.pointSpriteFragment
             toEffect Aardvark.GeoSpatial.Opc.Shader.Shaders.depthOffsetFS
@@ -143,7 +151,9 @@ module Sg =
 
     let stablePoints' (positions : IMod<V3d[]>) : (IMod<V3f[]> * IMod<Trafo3d>) = 
         let trafo =
-            positions |> Mod.map Array.head |> Mod.map Trafo3d.Translation
+            positions 
+            |> Mod.map Array.tryHead 
+            |> Mod.map (function | Some p -> Trafo3d.Translation p | None -> Trafo3d.Identity)
 
         stablePoints trafo positions, trafo
 

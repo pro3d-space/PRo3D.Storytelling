@@ -270,8 +270,7 @@ module Sg =
                  do! Shader.Shaders.thickLine
              }                               
              |> Sg.trafo trafo
-             |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" (Mod.constant 0.0)
+             |> Sg.uniform "LineWidth" width             
     
     //## PICKING ##
 
@@ -333,11 +332,27 @@ module Sg =
             toEffect <| DefaultSurfaces.vertexColor          
         ]
 
-    let drawPointList (positions : alist<V3d>) (color : C4b) (pointSize : IMod<double>) (offset : IMod<double>)= 
+    let createSecondaryColor (c : C4b) : C4b = 
+
+       let primary = c.ToC3f().ToHSVf()
+
+       let h = primary.H + 0.3f
+       let h = if h >= 1.0f then h - 1.0f else h
+
+       let secondary = HSVf(h, primary.S, primary.V).ToC3f().ToC3b()
+       let secondary = C4b(secondary, c.A)       
+       Log.line "primary: %A secondary: %A" c secondary
+       secondary
+       
+    let drawPointList (positions : alist<V3d>) (color : IMod<C4b>) (pointSize : IMod<double>) (offset : IMod<double>)= 
         let positions = positions |> AList.toMod |> Mod.map PList.toArray
         let (pointsF, trafo) = PRo3D.Base.Sg.stablePoints' positions
 
-        PRo3D.Base.Sg.drawSingleColorPoints pointsF (color.ToC4f().ToV4d()) pointSize offset
+        PRo3D.Base.Sg.drawSingleColorPoints 
+            pointsF 
+            (color |> Mod.map(fun x -> x.ToC4f().ToV4d()))
+            pointSize 
+            offset
         |> Sg.trafo trafo
         //failwith ""
                    
@@ -347,9 +362,13 @@ module Sg =
             match geometry with
             | Geometry.Point -> 
                 match points|> AList.toList |> List.tryHead with
-                | Some p -> yield dot (Mod.constant p) size color
-                | _ -> yield Sg.empty
-            | _ -> yield drawPointList points (C4b.VRVisGreen) size (offset |> Mod.map(fun x -> x + 1.0))
+                | Some p -> 
+                    yield dot (Mod.constant p) size color
+                | _ -> 
+                    yield Sg.empty
+            | _ -> 
+                //let color = color |> Mod.map(fun x -> (x |> createSecondaryColor))
+                yield drawPointList points (C4b.VRVisGreen |> Mod.constant) size (offset |> Mod.map(fun x -> x * 1.1))
         } |> Sg.set   
 
     //## TEXT ##
@@ -796,45 +815,45 @@ module Shader =
   let footPrintF (v : FootPrintVertex) =
       fragment {           
           if uniform?footprintVisible then
-            let outside = v.c * 0.7 
-            let t = v.tc0.XY / v.tc0.W
-            let c = 
-                if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
-                   v.c 
-                elif t.X > -1.01 && t.X < 1.01 && t.Y > -1.01 && t.Y < 1.01 then
-                   v.c * V4d(1.0, 0.0, 0.0, 1.0)
-                else
-                   outside 
-
-            if (v.tc0.Z <= 0.0) then
-                return outside
-            else
-                return c 
+              let outside = v.c * 0.7 
+              let t = v.tc0.XY / v.tc0.W
+              let c = 
+                  if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
+                     v.c 
+                  elif t.X > -1.01 && t.X < 1.01 && t.Y > -1.01 && t.Y < 1.01 then
+                     v.c * V4d(1.0, 0.0, 0.0, 1.0)
+                  else
+                     outside 
+              
+              if (v.tc0.Z <= 0.0) then
+                  return outside
+              else
+                  return c 
              
           else
-            return v.c
+              return v.c
       }
 
   let footPrintF2 (v : FootPrintVertex) =
       fragment {           
           if uniform?footprintVisible then
-            //let col = v.c * V4d(1.0, 0.0, 0.0, 1.0)
-            let proTex0 = v.tc0.XY / v.tc0.W
-            let c = footprintmap.Sample(proTex0)
-            let col = 
-                if (c.W <= 0.50) then
-                    (v.c * 0.7)
-                elif (c.W <= 0.999) then
-                    v.c * V4d(1.0, 0.0, 0.0, 1.0)
-                else
-                    v.c
-           
-            if (v.tc0.Z <= 0.0) then
-                return (v.c * 0.7)
-            else
-                return col 
+              //let col = v.c * V4d(1.0, 0.0, 0.0, 1.0)
+              let proTex0 = v.tc0.XY / v.tc0.W
+              let c = footprintmap.Sample(proTex0)
+              let col = 
+                  if (c.W <= 0.50) then
+                      (v.c * 0.7)
+                  elif (c.W <= 0.999) then
+                      v.c * V4d(1.0, 0.0, 0.0, 1.0)
+                  else
+                      v.c
+              
+              if (v.tc0.Z <= 0.0) then
+                  return (v.c * 0.7)
+              else
+                  return col 
           else
-            return v.c
+              return v.c
       }
 
 module PRo3DNumeric = 

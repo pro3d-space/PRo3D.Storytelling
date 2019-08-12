@@ -222,8 +222,8 @@ module UI =
                        GroupsMessage(Groups.AddGroup path))] [] 
                   |> UI.wrapToolTip "Add Group"                        
 
-                  Incremental.i visibleIconAttributes AList.empty |> UI.wrapToolTip "Show Group"
-                  Incremental.i invisibleIconAttributes AList.empty |> UI.wrapToolTip "Hide Group"
+                  Incremental.i visibleIconAttributes AList.empty |> UI.wrapToolTip "Show All"
+                  Incremental.i invisibleIconAttributes AList.empty |> UI.wrapToolTip "Hide All"
               ]
            
           let itemAttributes =

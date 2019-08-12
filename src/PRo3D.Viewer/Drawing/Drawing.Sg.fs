@@ -258,8 +258,7 @@ module Sg =
                  do! Shader.Shaders.thickLine
              }                               
              |> Sg.trafo trafo
-             |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
+             |> Sg.uniform "LineWidth" width             
 
         let outl = 
             sg
@@ -275,18 +274,13 @@ module Sg =
                 do! DefaultSurfaces.thickLineRoundCaps
                 do! DefaultSurfaces.constantColor C4f.VRVisGreen
             }
-            |> Sg.uniform "LineWidth" (outlineSize width)
-            |> Sg.uniform "DepthOffset" (Mod.constant 0.0)
+            |> Sg.uniform "LineWidth" (outlineSize width)            
        
         Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents 
   
   let outlinePoint (points : alist<V3d>) (v:int) (color:IMod<C4b>) (width : IMod<float>) =
-    //let p = 
-    //    points
-    //    |> AList.toMod
-    //    |> Mod.map( fun x -> x.AsArray.[0])
         
-    let sg = Sg.drawSpheres points width color
+    let sg  = Sg.drawSpheres points width color
     let sgo = Sg.drawSpheres points (outlineSize width) (Mod.constant C4b.VRVisGreen)
 
     let regulars = 
@@ -325,7 +319,7 @@ module Sg =
             }
     Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regulars; masks; outls] |> Sg.noEvents //regular; mask; 
 
-  //TODO LF ... make a nice enum/union type for v, what is v?  
+  //TODO LF ... improve clarity ... make a nice enum/union type for v, what is v?
   let outline (points : alist<V3d>) (v:int) (color:IMod<C4b>) (trafo : IMod<Trafo3d>) (width : IMod<float>) (id: IMod<Guid>) =
     aset{
         let! length = points |> AList.count
@@ -351,26 +345,23 @@ module Sg =
               match anno with
                   | Some a -> yield! a.points
                   | None -> ()
-          }
-
-      //let id = 
-      //    adaptive {
-      //        let! anno = anno
-      //        match anno with
-      //            | Some a -> return a.key
-      //            | None -> return Guid.Empty
-      //    }
+          }    
           
       let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color.c) 
       let thickness = Mod.bindOption anno 1.0              (fun a -> a.thickness.value)             
-      let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)
-                             
+      let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)                      
+      
       Sg.ofList [
           Sg.lines polyPoints offset color thickness trafo //polyline
           //Sg.dots polyPoints (Mod.constant C4b.VRVisGreen) // debug sample points
-          Sg.drawSpheres points thickness color                     //support points
+          //Sg.drawSpheres points thickness color                     //support points
+          PRo3D.Sg.drawPointList 
+            points 
+            (C4b.VRVisGreen |> Mod.constant)//(color     |> Mod.map (fun x -> (x |> PRo3D.Sg.createSecondaryColor)))
+            (thickness |> Mod.map (fun x -> x * 1.5)) 
+            (offset    |> Mod.map (fun x -> x * 1.1))
       ]         
-  
+    
   let drawText' (view : IMod<CameraView>) conf (text:IMod<string>)(anno : MAnnotation') = 
     let points = anno.points |> AList.toMod
     let pos = 
