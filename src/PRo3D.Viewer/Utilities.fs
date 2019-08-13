@@ -203,24 +203,7 @@ module Sg =
                     pos = uniform.ViewProjTrafo * wp
             }
         }
-
-    let createHarrisPoints (positions : V3d[])  (color : C4b) (size : IMod<float>) =
-        let colors = Array.create positions.Length color
-        let pointSize = Mod.constant 5.0
-        let c = V4d((float)color.R, (float)color.G, (float)color.B, (float)color.A)
-
-        Aardvark.UI.``F# Sg``.Sg.ofList [
-                 Sg.draw IndexedGeometryMode.PointList
-            ]
-             |> Sg.vertexAttribute DefaultSemantic.Positions (positions |> Mod.constant)
-             |> Sg.vertexAttribute DefaultSemantic.Colors (colors |> Mod.constant)
-             |> Sg.uniform "PointSize" size //pointSize
-            |> Sg.shader {
-                do! pointTrafo
-                do! constantColor c
-                do! DefaultSurfaces.vertexColor |> toEffect
-            }
-
+           
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
       adaptive {
           let! p = p
@@ -287,8 +270,7 @@ module Sg =
                  do! Shader.Shaders.thickLine
              }                               
              |> Sg.trafo trafo
-             |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" (Mod.constant 0.0)
+             |> Sg.uniform "LineWidth" width             
     
     //## PICKING ##
 
@@ -308,7 +290,7 @@ module Sg =
     
     //## POINTS ##
 
-    let mkDotISg color (size : IMod<float>) (pos : IMod<V3d>) = 
+    let drawSphere color (size : IMod<float>) (pos : IMod<V3d>) = 
         Sg.sphere 2 color (Mod.constant 1.0)
             |> Sg.noEvents
             |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
@@ -316,7 +298,7 @@ module Sg =
             |> Sg.uniform "WorldPos" pos
 
     let dot (point : IMod<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
-        let isgDot = mkDotISg color size point
+        let isgDot = drawSphere color size point
         isgDot
         |> Sg.effect [
             toEffect <| Shader.screenSpaceScale
@@ -338,10 +320,10 @@ module Sg =
        ]
        |> Sg.uniform "PointSize" size
     
-    let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
+    let drawSpheres (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
         aset {
             for p in points |> ASet.ofAList do                        
-                yield mkDotISg color (size) (Mod.constant p)
+                yield drawSphere color (size) (Mod.constant p)
         } 
         |> Sg.set
         |> Sg.effect [
@@ -349,51 +331,45 @@ module Sg =
             toEffect <| Shader.stableTrafo
             toEffect <| DefaultSurfaces.vertexColor          
         ]
-    
-    let dots1 (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
-        let ps = points |> AList.toArray
-        color 
-        |> Mod.map( fun c -> createHarrisPoints ps c size )
-        |> Mod.toASet
-        |> Sg.set
-        
 
-    let scaledDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (view : IMod<CameraView>) (near : IMod<float>) (hfov : IMod<float>) =
-        aset {
-            for p in points |> ASet.ofAList do   
-                let scaledSize = 
-                        computeInvariantScale view near (Mod.constant p) size hfov //(Mod.constant 0.05)
-                yield mkDotISg color scaledSize (Mod.constant p)
-        } 
-        |> Sg.set
-        |> Sg.effect [
-            toEffect <| Shader.screenSpaceScale
-            toEffect <| Shader.stableTrafo
-            toEffect <| DefaultSurfaces.vertexColor          
-        ]
-    let getDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) =
+    let createSecondaryColor (c : C4b) : C4b = 
+
+       let primary = c.ToC3f().ToHSVf()
+
+       let h = primary.H + 0.3f
+       let h = if h >= 1.0f then h - 1.0f else h
+
+       let secondary = HSVf(h, primary.S, primary.V).ToC3f().ToC3b()
+       let secondary = C4b(secondary, c.A)       
+       Log.line "primary: %A secondary: %A" c secondary
+       secondary
+       
+    let drawPointList (positions : alist<V3d>) (color : IMod<C4b>) (pointSize : IMod<double>) (offset : IMod<double>)= 
+        let positions = positions |> AList.toMod |> Mod.map PList.toArray
+        let (pointsF, trafo) = PRo3D.Base.Sg.stablePoints' positions
+
+        PRo3D.Base.Sg.drawSingleColorPoints 
+            pointsF 
+            (color |> Mod.map(fun x -> x.ToC4f().ToV4d()))
+            pointSize 
+            offset
+        |> Sg.trafo trafo
+        //failwith ""
+                   
+    let getDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) (offset : IMod<float>) =
         aset {
             let! geometry = geometry
             match geometry with
-              | Geometry.Point -> match points|> AList.toList |> List.tryHead with
-                                    | Some p -> yield dot (Mod.constant p) size color
-                                    | _-> yield Sg.empty
-              |_-> yield dots points size color    
-        } |> Sg.set
-
-    let getScaledDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) (view : IMod<CameraView>) (near : IMod<float>) (hfov : IMod<float>) =
-        aset {
-            
-            let! geometry = geometry
-            match geometry with
-              | Geometry.Point -> match points|> AList.toList |> List.tryHead with
-                                    | Some p -> 
-                                        let scaledSize = 
-                                            computeInvariantScale view near (Mod.constant p) size hfov 
-                                        yield dot (Mod.constant p) scaledSize color
-                                    | _-> yield Sg.empty
-              |_-> yield scaledDots points size color view near hfov 
-        } |> Sg.set
+            | Geometry.Point -> 
+                match points|> AList.toList |> List.tryHead with
+                | Some p -> 
+                    yield dot (Mod.constant p) size color
+                | _ -> 
+                    yield Sg.empty
+            | _ -> 
+                //let color = color |> Mod.map(fun x -> (x |> createSecondaryColor))
+                yield drawPointList points (C4b.VRVisGreen |> Mod.constant) size (offset |> Mod.map(fun x -> x * 1.1))
+        } |> Sg.set   
 
     //## TEXT ##
         
@@ -417,10 +393,9 @@ module Sg =
         )
         rotTrafo * modelt
     
-    let text (view : IMod<CameraView>) near hfov pos modelTrafo text size =
+    let text (view : IMod<CameraView>) near hfov pos modelTrafo text (size : IMod<double>) =
          
-      let invScaleTrafo = 
-          computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
+      let invScaleTrafo = computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale           
       
       let billboardTrafo = 
           adaptive {
@@ -431,18 +406,17 @@ module Sg =
           }      
       
       Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
-          |> Sg.noEvents
-          |> Sg.shader {
-            do! Shader.stableTrafo
-          }            
-          |> Sg.trafo invScaleTrafo
-          |> Sg.trafo billboardTrafo  
-
-    
+      |> Sg.noEvents
+      |> Sg.shader {
+        do! Shader.stableTrafo
+      }            
+      |> Sg.trafo invScaleTrafo
+      |> Sg.trafo billboardTrafo      
 module UI =
     open Aardvark.UI
     open Aardvark.Base.Incremental
 
+    //TODO LF ... remove code duplication. make alignment union type top, right, bottom, left
     let wrapToolTip (text:string) (dom:DomNode<'a>) : DomNode<'a> =
         //dom
         let attr = 
@@ -525,6 +499,8 @@ module Lenses =
     let set'   (lens : Lens<'s,'a>) (s:'s) (v : 'a)  : 's    = lens.Set(s,v)
     let update (lens : Lens<'s,'a>) (f : 'a->'a) (s:'s) : 's = lens.Update(s,f)
 
+
+//TODO LF ... move shaders to PRo3D.Base Shaders.fs
 module Shader =
   
   open Aardvark.GeoSpatial.Opc.Shader
@@ -631,20 +607,20 @@ module Shader =
   [<ReflectedDefinition>]
   let mapFalseColors2 value : float =
         let fcInterval     = uniform?interval
-        let startColorHue     = uniform?startC
-        let endColorHue       = uniform?endC
+        let startColorHue  = uniform?startC
+        let endColorHue    = uniform?endC
         let invertMapping  = uniform?inverted
         let fcUpperBound   = uniform?upperBound
         let fcLowerBound   = uniform?lowerBound
 
-        let range = fcUpperBound - fcLowerBound
+        let range          = fcUpperBound - fcLowerBound
         let numOfRangeGaps = int(round (range / fcInterval)) //round
-        let numOfStops = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
+        let numOfStops     = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
         //let numOfStops = if (numOfRangeGaps + 2) > 200 then 200 else (numOfRangeGaps + 2)
 
         let startColor = startColorHue *255.0
-        let endColor = endColorHue *255.0
-        let hStepSize =
+        let endColor   = endColorHue *255.0
+        let hStepSize  =
             if startColor < endColor then 
                 (endColor - startColor) / ((float)(numOfStops-1))
             else 
@@ -652,12 +628,13 @@ module Shader =
                 
         let pos = 
             match fcLowerBound < value with
-                    | true -> (int ( round(value - fcLowerBound) / fcInterval )) //+1//round
-                    | _ -> 0
+            | true -> (int ( round(value - fcLowerBound) / fcInterval )) //+1//round
+            | _ -> 0
+
         let pos1 = 
             match fcUpperBound < value with
-                | true -> numOfRangeGaps
-                | _ -> pos
+            | true -> numOfRangeGaps
+            | _ -> pos
                      
         let currColorH = 
             if invertMapping then
@@ -711,6 +688,8 @@ module Shader =
   let myTrunc (value : float) =
     clamp 0.0 255.0 value
   
+
+  //TODO LF ... put all color adaptation mechanisms into 1 shader. Shader code produced by FShade has a ridiculous size ~6500 lines of code
   let mapContrast (v : Vertex) =
     fragment { 
         if (uniform?useContrastS) then
@@ -832,67 +811,49 @@ module Shader =
 
           } 
       } 
-
-  //let footPrintF (v : FootPrintVertex) =
-  //    fragment {           
-  //        if uniform?footprintVisible then
-  //          let col = v.c * 0.7 //V4d(1.0, 0.0, 0.0, 1.0)
-  //          let t = v.tc0.XY / v.tc0.W
-  //          let c = 
-  //              if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
-  //                 v.c //(v.c * 0.7) //darkened
-  //              else
-  //                 col 
-  //          if (v.tc0.Z <= 0.0) then
-  //              return col
-  //          else
-  //              return c 
-             
-  //        else
-  //          return v.c
-  //    }
+  
   let footPrintF (v : FootPrintVertex) =
       fragment {           
           if uniform?footprintVisible then
-            let outside = v.c * 0.7 
-            let t = v.tc0.XY / v.tc0.W
-            let c = 
-                if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
-                   v.c 
-                elif t.X > -1.01 && t.X < 1.01 && t.Y > -1.01 && t.Y < 1.01 then
-                   v.c * V4d(1.0, 0.0, 0.0, 1.0)
-                else
-                   outside 
-
-            if (v.tc0.Z <= 0.0) then
-                return outside
-            else
-                return c 
+              let outside = v.c * 0.7 
+              let t = v.tc0.XY / v.tc0.W
+              let c = 
+                  if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
+                     v.c 
+                  elif t.X > -1.01 && t.X < 1.01 && t.Y > -1.01 && t.Y < 1.01 then
+                     v.c * V4d(1.0, 0.0, 0.0, 1.0)
+                  else
+                     outside 
+              
+              if (v.tc0.Z <= 0.0) then
+                  return outside
+              else
+                  return c 
              
           else
-            return v.c
+              return v.c
       }
 
   let footPrintF2 (v : FootPrintVertex) =
       fragment {           
           if uniform?footprintVisible then
-            //let col = v.c * V4d(1.0, 0.0, 0.0, 1.0)
-            let proTex0 = v.tc0.XY / v.tc0.W
-            let c = footprintmap.Sample(proTex0)
-            let col = 
-                if (c.W <= 0.50) then
-                    (v.c * 0.7)
-                elif (c.W <= 0.999) then
-                    v.c * V4d(1.0, 0.0, 0.0, 1.0)
-                else
-                    v.c
-           
-            if (v.tc0.Z <= 0.0) then
-                return (v.c * 0.7)
-            else
-                return col 
+              //let col = v.c * V4d(1.0, 0.0, 0.0, 1.0)
+              let proTex0 = v.tc0.XY / v.tc0.W
+              let c = footprintmap.Sample(proTex0)
+              let col = 
+                  if (c.W <= 0.50) then
+                      (v.c * 0.7)
+                  elif (c.W <= 0.999) then
+                      v.c * V4d(1.0, 0.0, 0.0, 1.0)
+                  else
+                      v.c
+              
+              if (v.tc0.Z <= 0.0) then
+                  return (v.c * 0.7)
+              else
+                  return col 
           else
-            return v.c
+              return v.c
       }
 
 module PRo3DNumeric = 

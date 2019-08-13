@@ -148,7 +148,7 @@ module Bookmarks =
                 }
                       
             let map = 
-                Groups.mkGroupAttributeMap icon (BookmarkAction.GroupsMessage(Groups.SetActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+                Groups.clickIconAttributes icon (BookmarkAction.GroupsMessage(Groups.SetActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                
             let desc =
                 div [style color] [       

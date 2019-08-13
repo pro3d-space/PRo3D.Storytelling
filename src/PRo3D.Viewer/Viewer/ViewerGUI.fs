@@ -273,10 +273,11 @@ module Gui =
                   clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
                   text "Save as..."
             ]
-            div [ clazz "ui inverted item"; Dialogs.onChooseFiles(fun x -> match (x |> List.tryHead) with | Some y -> LoadScene y | None -> NoAction "no scene selected");
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({ filters: [{ name: 'Scene', extensions: ['scn']},], properties: ['openFile']}));")][ 
-                                                    
-                  text "Open"
+            div [ 
+              clazz "ui inverted item"; 
+              Dialogs.onChooseFiles(fun x -> match (x |> List.tryHead) with | Some y -> LoadScene y | None -> NoAction "no scene selected");
+              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({ filters: [{ name: 'Scene', extensions: ['scn']},], properties: ['openFile']}));")][                                       
+              text "Open"
             ]
             div [ clazz "ui inverted item"; onMouseClick (fun _ -> NewScene)][
                   text "New"
@@ -291,9 +292,11 @@ module Gui =
                         alist {
                             let! recentScenes = m.recent.recentScenes
                             //let sortedList = recentScenes |> List.sortBy( fun sh -> sh.writeDate.DayOfYear ) |> List.sortBy( fun sh -> sh.writeDate.Year )
-                            let smallList = match recentScenes.Length > 10 with
-                                              | true -> recentScenes.[0..9] |>  List.toArray
-                                              | _-> recentScenes |> List.toArray
+                            let smallList =
+                              match recentScenes.Length > 10 with
+                                | true -> recentScenes.[0..9] |>  List.toArray
+                                | _-> recentScenes |> List.toArray
+
                             for s in smallList do
                                  yield a [clazz "item inverted";
                                           onClick (fun _ -> LoadScene s.path)] [

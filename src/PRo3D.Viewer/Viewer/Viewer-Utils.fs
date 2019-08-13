@@ -313,121 +313,7 @@ module ViewerUtils =
           else
             return Sg.empty
         } |> Sg.dynamic
-
-        //let isSelected = Mod.map(fun x ->
-        //  match x with
-        //    | Some id -> id = surface.surface
-        //    | None -> false) selectedId 
-
-        //let createSg (sg : ISg) =
-        //    sg 
-        //    |> Sg.noEvents 
-        //    |> Sg.cullMode(surf |> Mod.bind(fun x -> x.cullMode))
-        //    |> Sg.fillMode(surf |> Mod.bind(fun x -> x.fillMode))
-
-        //let pickable = 
-        //  Mod.map2( fun (a:Box3d) (b:Trafo3d) -> 
-        //    { shape = PickShape.Box (a.Transformed(b)); trafo = Trafo3d.Identity }) globalBB (Transformations.fullTrafo surf refsys)
-
-        //let pickBox = 
-        //  pickable 
-        //    |> Mod.map(fun k ->
-        //      match k.shape with
-        //        | PickShape.Box bb -> bb
-        //        | _ -> Box3d.Invalid)
-
-        //let triangleFilter = surf |> Mod.bind(fun s -> s.triangleSize.value)
-
-        //let trafo =
-        //   adaptive {
-        //        let! fullTrafo = Transformations.fullTrafo surf refsys
-        //        let! s = surf
-        //        let! sc = s.scaling.value
-        //        let! t = s.preTransform
-        //        return (t * fullTrafo ) // * Trafo3d.Scale(sc))
-        //    }
-
-        //let bla : SamplerStateDescription -> SamplerStateDescription = 
-        //  (fun x -> 
-        //    x.Filter <- new TextureFilter(TextureFilterMode.Linear, TextureFilterMode.Point, TextureFilterMode.Linear, true ); 
-        //    x)
         
-        
-        //let footprintVisible = //Mod.map2 (fun (vp:Option<MViewPlan>) vis -> (vp.IsSome && vis)) vp, fp.isVisible
-        //    adaptive {
-        //        let! vp = vp
-        //        let! visible = fp.isVisible
-        //        let! id = fp.vpId
-        //        return (vp.IsSome && visible)
-        //    }
-
-        //let footprintMatrix = 
-        //    adaptive {
-        //        let! t = trafo
-        //        let! fppm = fp.projectionMatrix
-        //        let! fpvm = fp.instViewMatrix
-        //        let! s = surf
-        //        let! ts = s.preTransform 
-        //        let testfppm = fppm * t.Backward 
-        //        let testfpvm = fpvm * t.Backward
-        //        //return (t.Forward * fpvm * fppm) //* t.Forward 
-        //        //return (fppm * fpvm) // * ts.Forward
-        //        return (testfppm * testfpvm)
-        //    } 
-        
-        //let projMTest = 
-        //    adaptive {
-        //        let! fppm = fp.projectionMatrix
-        //        let! t = trafo
-        //        return fppm/t.Forward
-        //    }
-        //let instVMMTest = 
-        //    adaptive {
-        //        let! fppm = fp.projectionMatrix
-        //        let! t = trafo
-        //        return fppm/t.Forward
-        //    }
-        //let test =             
-        //  surface.sceneGraph
-        //    |> Mod.map createSg
-        //    |> Sg.dynamic
-        //    |> Sg.trafo trafo //(Transformations.fullTrafo surf refsys)
-        //    |> Sg.modifySamplerState (DefaultSemantic.DiffuseColorTexture)(Mod.constant(bla))
-        //    |> Sg.uniform "selected"      (isSelected) // isSelected
-        //    |> Sg.uniform "selectionColor" (Mod.constant (C4b (200uy,200uy,255uy,255uy)))
-        //    |> addAttributeFalsecolorMappingParameters surf
-        //    |> Sg.uniform "TriangleSize"   triangleFilter  //triangle filter
-        //    |> addImageCorrectionParameters surf
-        //    |> Sg.uniform "footprintVisible" footprintVisible
-        //    |> Sg.uniform "instrumentMVP" footprintMatrix
-        //    |> Sg.uniform "projMVP" fp.projectionMatrix
-        //    |> Sg.uniform "globalToLocal" fp.globalToLocalPos
-        //    |> Sg.uniform "instViewMVP" fp.instViewMatrix
-        //    |> Sg.texture (Sym.ofString "FootPrintTexture") fp.projTex
-        //    |> Sg.onOff(surf |> Mod.bind(fun x -> x.isVisible))
-        //    |> Sg.LodParameters( getLodParameters surf frustum )
-        //    |> Sg.AttributeParameters( attributeParameters surf )
-        //    |> pickable' pickable
-        //    |> Sg.noEvents 
-        //    |> Sg.withEvents [
-        //         SceneEventKind.Down, (
-        //           fun sceneHit -> 
-        //             let surfM = surf       |> Mod.force
-        //             let name  = surfM.name |> Mod.force                                                  
-        //             Log.warn "spawning picksurface %s" name
-        //             true, Seq.ofList [PickSurface (sceneHit,name)])                         
-        //       ]                                               
-        //  |> Sg.andAlso (
-        //    (Sg.wireBox (C4b.VRVisGreen |> Mod.constant) pickBox) 
-        //      |> Sg.noEvents
-        //      |> Sg.effect [              
-        //          Shader.stableTrafo |> toEffect 
-        //          DefaultSurfaces.vertexColor |> toEffect
-        //        ] |> Sg.onOff (Mod.constant false)
-        //    )
-
-        //test
-
     let frustum (m:MModel) =
         let near = m.scene.config.nearPlane.value
         let far = m.scene.config.farPlane.value
@@ -483,26 +369,25 @@ module ViewerUtils =
                 i <- i + 1
                 let sg = 
                     set 
-                        |> Sg.set
-                        |> Sg.effect [
-                            Shader.stableTrafo             |> toEffect                          
-                            triangleFilterX                |> toEffect                               
-                            PRo3D.Shader.improvedDiffuseTexture |> toEffect
-                            fixAlpha |> toEffect
-                            Shader.selectionColor          |> toEffect       
-                            Shader.LoDColor                |> toEffect                             
-                            PRo3D.Shader.falseColorLegend2 |> toEffect
-                            //PRo3D.Shader.falseColorLegendTest |> toEffect
-                            //PRo3D.Shader.mapContrast       |> toEffect
-                            //PRo3D.Shader.mapBrightness     |> toEffect
-                            //PRo3D.Shader.mapGamma          |> toEffect                            
-                            //PRo3D.Shader.grayscale         |> toEffect
-                            //PRo3D.Shader.addColor          |> toEffect
-                            PRo3D.Shader.footprintV        |> toEffect
-                            PRo3D.Shader.footPrintF        |> toEffect
-                        ]
-                        |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
-                        |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()                        
+                    |> Sg.set
+                    |> Sg.effect [
+                        Shader.stableTrafo             |> toEffect                          
+                        triangleFilterX                |> toEffect                               
+                        PRo3D.Shader.improvedDiffuseTexture |> toEffect
+                        fixAlpha |> toEffect
+                        Shader.selectionColor          |> toEffect       
+                        Shader.LoDColor                |> toEffect                             
+                        PRo3D.Shader.falseColorLegend2 |> toEffect                            
+                        PRo3D.Shader.mapContrast       |> toEffect
+                        PRo3D.Shader.mapBrightness     |> toEffect
+                        PRo3D.Shader.mapGamma          |> toEffect                            
+                        PRo3D.Shader.grayscale         |> toEffect
+                        PRo3D.Shader.addColor          |> toEffect
+                        PRo3D.Shader.footprintV        |> toEffect
+                        PRo3D.Shader.footPrintF        |> toEffect
+                    ]
+                    |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
+                    |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()                        
 
                 yield RenderCommand.SceneGraph sg
 

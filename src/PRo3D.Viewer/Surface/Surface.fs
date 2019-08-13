@@ -724,11 +724,11 @@ module Surface =
 
             let setActive = Groups.SetActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)
             let activeAttributes = 
-                Groups.mkGroupAttributeMap activeIcon (GroupsMessage setActive)
+                Groups.clickIconAttributes activeIcon (GroupsMessage setActive)
                                    
             let toggleIcon = Mod.constant "unhide icon" //group.visible |> Mod.map(fun toggle -> if toggle then "unhide icon" else "hide icon")                
 
-            let toggleAttributes = Groups.mkGroupAttributeMap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+            let toggleAttributes = Groups.clickIconAttributes toggleIcon (GroupsMessage(Groups.ToggleGroup path))
                
             let desc =
                 div [style color] [       
@@ -914,23 +914,25 @@ module Surface =
 
     let showColorLegend (model:MSurfaceModel) =
         alist {
-            let! guid = model.surfaces.singleSelectLeaf
-            
+            let! guid = model.surfaces.singleSelectLeaf            
             match guid with
-                | Some i -> 
-                    let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
-                    if exists then
-                      let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                      let! surf = leaf 
-                      let scalar = match surf with | MSurfaces s -> s.selectedScalar | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
-                      let! scalar = scalar
-                      match scalar with
-                          | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
-                          | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
-                    else
-                      yield div[ style "font-style:italic"][ text "no scalar selected" ]
-                                  
-                | None -> yield div[ style "font-style:italic"][ text "no surface selected" ]
+            | Some i -> 
+                let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
+                if exists then
+                    let leaf = model.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                    let! surf = leaf 
+                    let scalar = 
+                        match surf with 
+                        | MSurfaces s -> s.selectedScalar 
+                        | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                    let! scalar = scalar
+                    match scalar with
+                    | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
+                    | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
+                else
+                    yield div[ style "font-style:italic"][ text "no scalar selected" ]
+                              
+            | None -> yield div[ style "font-style:italic"][ text "no surface selected" ]
         }  
 
     let surfacesLeafButtonns (model:MSurfaceModel) = 
@@ -940,8 +942,8 @@ module Surface =
             let! ts = ts
             let! sel = sel
             match sel with
-                | Some x -> return (Groups.viewLeafButtons ts |> UI.map GroupsMessage)
-                | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map GroupsMessage
+            | Some _ -> return (Groups.viewLeafButtons ts |> UI.map GroupsMessage)
+            | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map GroupsMessage
         } 
 
     let surfacesGroupButtons (model:MSurfaceModel) = 
@@ -976,19 +978,19 @@ module Surface =
               )
             ]
             yield GuiEx.accordion "Actions" "Asterisk" false [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
-                ]  
+                Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
+            ]  
             yield GuiEx.accordion "Transformation" "expand arrows alternate " false [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle(viewTranslationTools model))
-                ]  
+                Incremental.div AttributeMap.empty (AList.ofModSingle(viewTranslationTools model))
+            ]  
                 
-            yield GuiEx.accordion "Color Correction" "file image outline" false [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle(viewColorCorrectionTools model))] 
+            yield GuiEx.accordion "Color Adaptation" "file image outline" false [
+                Incremental.div AttributeMap.empty (AList.ofModSingle(viewColorCorrectionTools model))
+            ] 
 
             yield GuiEx.accordion "Scalars ColorLegend" "paint brush" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle(viewColorLegendTools model))] 
-
-            
+                Incremental.div AttributeMap.empty (AList.ofModSingle(viewColorLegendTools model))
+            ] 
         ]
     
     
