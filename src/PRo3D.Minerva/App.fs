@@ -381,7 +381,8 @@ module App =
       | ClearSelection ->
         { model with selection = { model.selection with singleSelectProduct = None; selectedProducts = HSet.empty}; selectedSgFeatures = updateSgFeatures PList.empty}
       | AddProductToSelection name ->
-        updateSelectionToggle [name] model
+        let m' = updateSelectionToggle [name] model
+        { m' with selection = { m'.selection with singleSelectProduct = Some name }}
       | PickProducts hit -> 
           let closestPoints = queryClosestPoint model hit
           match closestPoints with
@@ -514,7 +515,29 @@ module App =
                 Html.row "point size:" [Numeric.view' [NumericInputType.Slider] model.featureProperties.pointSize |> UI.map (fun x -> SetPointSize x)] 
                 Html.row "text size:" [Numeric.view' [NumericInputType.InputBox] model.featureProperties.textSize |> UI.map (fun x -> SetTextSize x)] 
             ]        
-        )      
+        )     
+        
+    let viewFeatureProperties = 
+        model.selection.singleSelectProduct
+        |> Mod.map( fun selected ->
+                        match selected with
+                            | Some id ->
+                                let feat = 
+                                    model.filteredFeatures
+                                    |> AList.toList
+                                    |> List.find(fun x -> x.id = id)
+
+                                require Html.semui (
+                                    Html.table [   
+                                        Html.row "Instrument:"    [Incremental.text (feat.instrument |> instrumentText |> Mod.constant)] 
+                                        Html.row "Sol:"           [Incremental.text (feat.sol.ToString() |> Mod.constant)]   
+                                        Html.row "FlyTo:"         [button [clazz "ui button tiny"; onClick (fun _ -> FlyToProduct feat.geometry.positions.Head )][]]
+                                        Html.row "Get tif:"       [button [clazz "ui button tiny"; onClick (fun _ -> OpenTif feat.id )][]]
+                                        ]
+                                    )
+                            | None ->  div[style "font-style:italic"][ text "no product selected" ]
+        )
+                       
        
     let listOfFeatures =
         alist {           
@@ -563,6 +586,12 @@ module App =
        
        propertiesGui          
        Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) listOfFeatures //AList.empty  
+       div[][
+                accordion "Properties" "Content" false [ 
+                  Incremental.div AttributeMap.empty (viewFeatureProperties |> AList.ofModSingle)
+                ]                                   
+          ]
+       
      ]
 
   let viewWrapped pos (model : MModel) =

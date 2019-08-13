@@ -451,7 +451,7 @@ module Surface =
             let groups = Groups.update model.surfaces msg
 
             match msg with
-              | Groups.Action.RemoveGroup _ | Groups.Action.RemoveChild _ ->
+              | Groups.Action.RemoveGroup _ | Groups.Action.RemoveLeaf _ ->
                 let sgs = 
                     model.sgSurfaces 
                         |> HMap.filter(fun k _ -> groups.flat |> HMap.containsKey k)
@@ -722,7 +722,7 @@ module Surface =
                     return if (s.id = group) then "circle icon" else "circle thin icon"
                 }
 
-            let setActive = Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)
+            let setActive = Groups.SetActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)
             let activeAttributes = 
                 Groups.mkGroupAttributeMap activeIcon (GroupsMessage setActive)
                                    

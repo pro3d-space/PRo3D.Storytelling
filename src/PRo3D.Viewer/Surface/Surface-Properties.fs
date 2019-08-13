@@ -30,13 +30,6 @@ module SurfaceProperties =
         | SetScalarMap   of Option<ScalarLayer>
         | SetTexturesMap of Option<TextureLayer>
         | SetHomePosition //of Guid //of Option<CameraView>
-        //| SetContrast    of Numeric.Action
-        //| UseContrast    of bool
-        //| SetBrightness  of Numeric.Action
-        //| UseBrightness  of bool
-        //| SetGamma       of Numeric.Action
-        //| UseGamma       of bool
-        //| SetColor       of ColorPicker.Action
 
     let update (model : PRo3D.Surfaces.Surface) (act : Action) =
         match act with

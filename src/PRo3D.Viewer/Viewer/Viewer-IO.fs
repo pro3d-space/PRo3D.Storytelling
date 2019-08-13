@@ -51,17 +51,19 @@ module ViewerIO =
 
     let saveVersioned (model : DrawingModel) (paths : ScenePaths) =      
       
-      Log.line "[Drawing] Writing annotations"
+      Log.startTimed "[Drawing] Writing annotations"
       model.annotations.flat 
           |> HMap.toList 
           |> List.map(fun (_,b) -> b |> Leaf.toAnnotation) // |> Annotation'.convert)
           |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty |> IO.writeToFile paths.annotationVersioned
+      Log.stop()
       
-      Log.line "[Drawing] Writing grouping"
+      Log.startTimed "[Drawing] Writing grouping"
       {
         annotations = { model.annotations with flat = HMap.empty }  //clears flat annotations from pickled
         colorLegend = model.colorLegend
       } |> Serialization.save paths.annotationGroups |> ignore
+      Log.stop()
 
       model
         
@@ -88,14 +90,18 @@ module ViewerIO =
             annotationGroups |> Serialization.save paths.annotationDepr |> ignore
             k
             
-        //load ann.json
+        //load .ann.json
         let annos =
           if (File.Exists paths.annotationVersioned) then
-            Log.line "[ViewerIO] Reading annotations"
-            let (annos : list<Annotation'>) = paths.annotationVersioned 
-                                                |> IO.readFromFile 
-                                                |> Json.parse 
-                                                |> Json.deserialize
+            Log.startTimed "[ViewerIO] Reading annotations"
+            let (annos : list<Annotation'>) = 
+              paths.annotationVersioned 
+                |> IO.readFromFile 
+                |> Json.parse 
+                |> Json.deserialize
+
+            Log.stop()
+
             annos |> List.map(fun x -> (x.key,x |> Leaf.Annotations')) |> HMap.ofList
           else
             HMap.empty
@@ -103,7 +109,18 @@ module ViewerIO =
         //hmap union converted and versioned
         let flat' = annos |> HMap.union flat'                
 
-        let annoModel = { annotationGroups.annotations with flat = flat' }
+        let flatGroupIds = annotationGroups.annotations.rootGroup |> Group.flatten
+        let floatingLeaves = 
+          flat'.Values 
+            |> Seq.toList            
+            |> List.filter(fun x -> (HSet.contains x.id flatGroupIds))
+            |> PList.ofList
+
+        Log.error "[ViewerIO] found %d floating leaves" (floatingLeaves |> PList.count)
+
+        let annoModel = 
+          { annotationGroups.annotations with flat = flat' } |> Groups.addLeaves List.empty floatingLeaves
+
         Some { annotationGroups with annotations = annoModel }
       with e ->
         Log.error "[ViewerIO] couldn't load %s" paths.annotationGroups

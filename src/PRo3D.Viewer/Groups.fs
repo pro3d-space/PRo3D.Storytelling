@@ -21,15 +21,15 @@ module Groups =
     
        
     type Action =
-        | ActiveGroup           of Guid*list<Index>*string
         | ToggleExpand          of list<Index>
+        | SetActiveGroup        of Guid*list<Index>*string
         | AddGroup              of list<Index>
+        | AddLeaves             of list<Index>*plist<Leaf>    
         | RemoveGroup           of list<Index>
-        | AddChildren           of list<Index>*plist<Leaf>    
-        | RemoveChild           of Guid*list<Index> 
+        | RemoveLeaf            of Guid*list<Index> 
         | ToggleChildVisibility of Guid*list<Index> 
         | ActiveChild           of Guid*list<Index>*string
-        | UpdateChildProperties of Leaf
+        | UpdateLeafProperties  of Leaf
         | SetGroupName          of string
         | SetChildName          of string
         | ClearGroup            of list<Index>
@@ -119,9 +119,7 @@ module Groups =
 
         (go m.rootGroup)
           |> PList.toList
-          |> HMap.ofList    
-        
-     
+          |> HMap.ofList                 
     
     let updateActiveGroup (f : Node -> Node) (m : GroupsModel) =
         let root = updateNodeAt m.activeGroup.path f m.rootGroup        
@@ -230,34 +228,45 @@ module Groups =
 
     let checkLastSelected model = 
         match model.singleSelectLeaf with
-            | Some x -> if isEmpty (model.selectedLeaves |> HSet.filter ( fun y -> y.id = x)) then
-                            None
-                        else Some x
+            | Some x -> 
+              if isEmpty (model.selectedLeaves |> HSet.filter ( fun y -> y.id = x)) then None
+              else Some x
             | _ -> None 
 
     let addSingleSelectedLeaf (model:GroupsModel) (p : list<Index>) (id : Guid) (s: string) = 
-        let treeSelection = {
-                id = id
-                path = p
-                name = s
-                }
+        let treeSelection = { id = id; path = p; name = s }
         let single = 
             match model.singleSelectLeaf with
                 | Some s -> if s = id then None else Some id
                 | None -> Some id
 
-        { model with singleSelectLeaf = single; 
-                     activeChild = treeSelection; 
-                     lastSelectedItem = SelectedItem.Child }
+        { model with 
+            singleSelectLeaf = single; 
+            activeChild      = treeSelection; 
+            lastSelectedItem = SelectedItem.Child }
         
+    let addNewGroup path model = 
+      let newGroup = 
+          {    
+              name      = "newGroup" 
+              key       = Guid.NewGuid()
+              leaves    = plist.Empty
+              subNodes  = plist.Empty
+              visible   = true
+              expanded  = true
+          }
+
+      let func = 
+          (fun (x:Node) -> { x with subNodes = PList.append newGroup x.subNodes })
+
+      { model with rootGroup = updateNodeAt path func model.rootGroup }
+
     let update (model : GroupsModel) (action : Action) =
-        printfn "action: %A" action
+        
         match action with
-            | ActiveGroup (g, p, s) -> 
-                let selection = {
-                    id   = g
-                    path = p
-                    name = s}
+            | SetActiveGroup (g, p, s) -> 
+                let selection = { id = g; path = p; name = s}
+
                 { model with 
                     activeGroup      = selection
                     lastSelectedItem = SelectedItem.Group } 
@@ -269,25 +278,9 @@ module Groups =
                 let func = (fun (x:Node) -> { x with expanded = not x.expanded })
                 { model with rootGroup = updateNodeAt p func model.rootGroup }
             | AddGroup p -> 
-                let newGroup = 
-                    {    
-                        name      = "newGroup" 
-                        key       = Guid.NewGuid()
-                        leaves    = plist.Empty
-                        subNodes  = plist.Empty
-                        visible   = true
-                        expanded  = true
-                    }
-
-                let func = 
-                    (fun (x:Node) -> { x with subNodes = PList.append newGroup x.subNodes })
-
-                { model with rootGroup = updateNodeAt p func model.rootGroup }
+                addNewGroup p model                
             | RemoveGroup p -> 
-
-                let node = 
-                    model.rootGroup 
-                      |> getNode p
+                
                 //delete from flat
                 let flat' = 
                     model.rootGroup 
@@ -306,7 +299,7 @@ module Groups =
                 let selection = checkSelection m'
                 let last = checkLastSelected m'
 
-                // update active group (use root group)
+                // update selection
                 let newSelection = {
                     id   = m'.rootGroup.key
                     path = list.Empty
@@ -314,15 +307,15 @@ module Groups =
                
                 { m' with selectedLeaves = selection ; singleSelectLeaf = last; activeGroup = newSelection; lastSelectedItem = SelectedItem.Group }
 
-            | AddChildren (p,cs) ->
+            | AddLeaves (p,cs) ->
                 failwith "addchildren"
                 //AddChildren p cs model
                 model
-            | RemoveChild (k,p) ->
+            | RemoveLeaf (k,p) ->
                 removeLeaf model k p true
             | ToggleChildVisibility (c,p) -> 
                 model |> updateLeaf c (fun x -> Leaf.toggleVisibility x)
-            | UpdateChildProperties a ->
+            | UpdateLeafProperties a ->
                 replaceLeaf a model
             | SetGroupName t -> 
                 let func = 
@@ -468,7 +461,7 @@ module Groups =
         Html.table [                            
                 div [clazz "ui buttons inverted"] [
                     onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
-                        button [clazz "ui icon button"; onMouseClick (fun _ -> RemoveChild (ts.id,ts.path))] [
+                        button [clazz "ui icon button"; onMouseClick (fun _ -> RemoveLeaf (ts.id,ts.path))] [
                                 i [clazz "remove icon red"] [] ] |> UI.wrapToolTipRight "Remove"
                     )
                 ] 

@@ -78,11 +78,13 @@ module Group =
         visible = true
         expanded = true
         }
+
     let initChildSelection =  { 
         id = Guid.Empty
         path = list.Empty
         name = "" 
         }
+
     let initGroupSelection =  { 
         id = initRoot.key
         path = list.Empty
@@ -91,6 +93,16 @@ module Group =
 
     let tryGet' (ans:hset<Leaf>) id = 
             ans |> Seq.tryFind(fun x -> x.id = id)
+
+    let rec flatten (g:Node) : hset<Guid> =
+        match ((PList.toList g.leaves ), (PList.toList g.subNodes)) with
+            | ([], []) -> HSet.empty
+            | (c, [] ) -> c |> HSet.ofList
+            | ([], sg) -> sg |> HSet.ofList |> HSet.collect flatten
+            | (c, sg)  -> 
+                let sga = 
+                    sg |> HSet.ofList |> HSet.collect flatten
+                HSet.union (c |> HSet.ofList) sga
 
 type SelectedItem = Child = 0 | Group = 1
 
@@ -183,8 +195,8 @@ module GroupsModel =
         
 [<DomainType>]
 type AnnotationGroupsImporterModel = {
-    rootGroupI       : plist<Node>
-    flatI             : hmap<Guid,Leaf>
+    rootGroupI : plist<Node>
+    flatI      : hmap<Guid,Leaf>
 }
 
 [<DomainType>]
@@ -195,8 +207,8 @@ type BookmarksModel = {
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module BookmarksModel =
     let initial = {
-        bookmarks        = GroupsModel.initial
-        }
+        bookmarks = GroupsModel.initial
+    }
 
 [<DomainType>]
 type SurfaceModel = {
