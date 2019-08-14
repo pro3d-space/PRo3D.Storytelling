@@ -32,6 +32,7 @@ open PRo3D.Surfaces
 module Gui = 
   open PRo3d.Mutable
   open PRo3D.Base
+  //open PRo3D.Mutable.FalseColorsModelModule
 
   let pitchAndBearing (r:MReferenceSystem) (view:IMod<CameraView>) =
           adaptive {
@@ -43,18 +44,59 @@ module Gui =
           }
 
   let dnsColorLegend (m:MModel) =
-          FalseColorLegendApp.Draw.createColorLegendDnS m.drawing.colorLegend (V2d(100.0, 200.0))
+    let legend =
+        alist {
+            yield FalseColorLegendApp.Draw.createColorLegend m.drawing.colorLegend 
+        } 
+
+    let attributes =
+            AttributeMap.ofList[
+                "clazz"                 => "falsecolorlegend"
+                "display"               => "block"; 
+                "width"                 => "55px"; 
+                "height"                => "75%"; 
+                "preserveAspectRatio"   => "xMidYMid meet"; 
+                "viewBox"               => "0 0 5% 100%" 
+                "style"                 => "position:absolute; left: 0%; top: 25%"
+            ]
+   
+    Incremental.Svg.svg attributes (legend), m.drawing.colorLegend.useFalseColors
+          
                 
   let scalarsColorLegend (m:MModel) =
-        let attr = 
-            AttributeMap.ofList[ 
-                "display"               => "block"; 
+        let visible = 
+            adaptive {
+                let! guid = m.scene.surfacesModel.surfaces.singleSelectLeaf            
+                match guid with
+                | Some i -> 
+                    let! exists = (m.scene.surfacesModel.surfaces.flat |> AMap.keys) |> ASet.contains i
+                    if exists then
+                        let leaf = m.scene.surfacesModel.surfaces.flat |> AMap.find i |> Mod.bind(id)
+                        let! surf = leaf 
+                        let scalar = 
+                            match surf with 
+                            | MSurfaces s -> s.selectedScalar 
+                            | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
+                        let! scalar = scalar
+                        match scalar with
+                        | Some s -> 
+                            let! useFC = s.colorLegend.useFalseColors
+                            return useFC
+                        | None -> return false
+                    else return false
+                | None -> return false
+            } 
+        
+        let attributes =
+            AttributeMap.ofList[
                 "width"                 => "90px"; 
-                "height"                => "75%"; //100%
+                "height"                => "75%"; 
                 "preserveAspectRatio"   => "xMidYMid meet"; 
                 "style"                 => "position:absolute; right: 5px; top: 25%"
             ]
-        Incremental.Svg.svg attr (SurfaceApp.showColorLegend m.scene.surfacesModel)   
+        Incremental.Svg.svg attributes (SurfaceApp.showColorLegend m.scene.surfacesModel), visible
+
+        
         
   
 

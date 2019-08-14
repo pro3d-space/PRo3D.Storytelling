@@ -927,13 +927,13 @@ module Surface =
                         | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
                     let! scalar = scalar
                     match scalar with
-                    | Some s -> yield FalseColorLegendApp.Draw.createColorLegendScalars s.colorLegend
-                    | None -> yield div[ style "font-style:italic"][ text "no scalar selected" ]
+                    | Some s ->  
+                        yield FalseColorLegendApp.Draw.createColorLegend s.colorLegend
+                    | None -> yield div[][]
                 else
-                    yield div[ style "font-style:italic"][ text "no scalar selected" ]
-                              
-            | None -> yield div[ style "font-style:italic"][ text "no surface selected" ]
-        }  
+                    yield div[][]
+            | None -> yield div[][]
+        } 
 
     let surfacesLeafButtonns (model:MSurfaceModel) = 
         let ts = model.surfaces.activeChild

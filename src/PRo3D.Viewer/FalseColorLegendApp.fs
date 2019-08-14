@@ -218,110 +218,95 @@ module FalseColorLegendApp =
                     let! invertMapping  = falseColor.invertMapping
 
 
-                    if not enabled then
-                        yield div[][]
-                    else
+                    //if not enabled then
+                    //    yield div[][]
+                    //else
 
-                        let range = fcUpperBound - fcLowerBound
-                        let numOfRangeGaps = int (System.Math.Round (range / fcInterval))
-                        //let numOfBuckets = if (numOfRangeGaps + 2) > 200 then 200 else (numOfRangeGaps + 2)
-                        //let numOfLabels =   if numOfBuckets > 200 then 50
-                        //                    else if numOfBuckets > 100 then 25
+                    let range = fcUpperBound - fcLowerBound
+                    let numOfRangeGaps = int (System.Math.Round (range / fcInterval))
+                    //let numOfBuckets = if (numOfRangeGaps + 2) > 200 then 200 else (numOfRangeGaps + 2)
+                    //let numOfLabels =   if numOfBuckets > 200 then 50
+                    //                    else if numOfBuckets > 100 then 25
                                         
-                        //                    else if numOfBuckets > 25 then (numOfBuckets / 4)
-                        //                    else numOfBuckets - 2 
+                    //                    else if numOfBuckets > 25 then (numOfBuckets / 4)
+                    //                    else numOfBuckets - 2 
 
-                        let numOfBuckets = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
-                        let numOfLabels =   if numOfBuckets > 100 then 25
-                                            else if numOfBuckets > 25 then (numOfBuckets / 4)
-                                            else numOfBuckets - 2 
+                    let numOfBuckets = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
+                    let numOfLabels =   if numOfBuckets > 100 then 25
+                                        else if numOfBuckets > 25 then (numOfBuckets / 4)
+                                        else numOfBuckets - 2 
                 
-                        let stopList = createStopps numOfBuckets startColor endColor invertMapping
+                    let stopList = createStopps numOfBuckets startColor endColor invertMapping
 
-                        let svgstopList = stopList
-                                            |> List.map (fun a ->
-                                                    let (off, col) = a
-                                                    buildSvgStop off col)                                                    
-                                            |> AList.ofList
+                    let svgstopList = stopList
+                                        |> List.map (fun a ->
+                                                let (off, col) = a
+                                                buildSvgStop off col)                                                    
+                                        |> AList.ofList
 
-                        yield Svg.defs [][
-                            onBoot "$('#__ID__').attr('id','falseColorLegend')" (
-                                Incremental.Svg.linearGradient 
-                                    (AttributeMap.ofList [  "x1" => "0%"; "y1" => "0%"; 
-                                                            "x2" => "0%"; "y2" => "100%"; ]) // x1 = x2 => vertical Gradient
-                                    svgstopList
-                            )]
+                    yield Svg.defs [][
+                        onBoot "$('#__ID__').attr('id','falseColorLegend')" (
+                            Incremental.Svg.linearGradient 
+                                (AttributeMap.ofList [  "x1" => "0%"; "y1" => "0%"; 
+                                                        "x2" => "0%"; "y2" => "100%"; ]) // x1 = x2 => vertical Gradient
+                                svgstopList
+                        )]
                         
-                        yield Svg.rect ["fill"          => "#EEEEEE";
-                                        "width"         => "42px";
-                                        "height"        => "95%"; //95%
-                                        "x"             => "8px";    
-                                        "y"             => "1.75%";
-                                        "rx"            => "5";       
-                                        "ry"            => "5";
-                                        "stroke"        => "black";
-                                        "stroke-width"  => "1px";
-                                        "opacity"       => "0.5";
-                                        ]
+                    yield Svg.rect ["fill"          => "#EEEEEE";
+                                    "width"         => "42px";
+                                    "height"        => "95%"; //95%
+                                    "x"             => "8px";    
+                                    "y"             => "1.75%";
+                                    "rx"            => "5";       
+                                    "ry"            => "5";
+                                    "stroke"        => "black";
+                                    "stroke-width"  => "1px";
+                                    "opacity"       => "0.5";
+                                    ]
 
 
-                        // SVG-RECT applies previously defined gradient (by #id)
-                        yield Svg.rect ["style"         => "fill:url(#falseColorLegend)";
-                                        "width"         => "10px";  
-                                        "height"        => "95%"//95%
-                                        "x"             => "12px";      
-                                        "y"             => "2.5%"; 
-                                        "stroke"        => "white";
-                                        "stroke-width"  => "1px";
-                                        "rx"            => "3";
-                                        "ry"            => "3";
-                                        ]
+                    // SVG-RECT applies previously defined gradient (by #id)
+                    yield Svg.rect ["style"         => "fill:url(#falseColorLegend)";
+                                    "width"         => "10px";  
+                                    "height"        => "95%"//95%
+                                    "x"             => "12px";      
+                                    "y"             => "2.5%"; 
+                                    "stroke"        => "white";
+                                    "stroke-width"  => "1px";
+                                    "rx"            => "3";
+                                    "ry"            => "3";
+                                    ]
 
-                        let labelInterval = range / (float numOfLabels)
+                    let labelInterval = range / (float numOfLabels)
 
-                        let filteri f s = 
-                            s
-                            |> List.mapi (fun i v -> (i,v))
-                            |> List.filter (fun v -> f (fst v) (snd v))
-                            |> List.map (fun v -> snd v)
+                    let filteri f s = 
+                        s
+                        |> List.mapi (fun i v -> (i,v))
+                        |> List.filter (fun v -> f (fst v) (snd v))
+                        |> List.map (fun v -> snd v)
                     
-                        let mapOffset (l : list<float32 * C3b>) = 
-                            l |> List.map (fun a ->
-                                            let (off, col) = a
-                                            off)    
+                    let mapOffset (l : list<float32 * C3b>) = 
+                        l |> List.map (fun a ->
+                                        let (off, col) = a
+                                        off)    
 
-                        let labelPosList = if (numOfBuckets < 26) then
-                                                mapOffset stopList          
-                                                |> filteri (fun i _ -> i % 2 = 1)
-                                           else [0 .. numOfLabels]
-                                                |> List.map (fun a -> (single a) / (single numOfLabels))
+                    let labelPosList = if (numOfBuckets < 26) then
+                                            mapOffset stopList          
+                                            |> filteri (fun i _ -> i % 2 = 1)
+                                        else [0 .. numOfLabels]
+                                            |> List.map (fun a -> (single a) / (single numOfLabels))
                    
-                        for i in 0..numOfLabels do 
-                            let a = ((List.item (numOfLabels - i) labelPosList) * 0.95f) + 0.03f
-                            let output = fcLowerBound + (labelInterval * (float i))
-                            let toPercent value = sprintf ("%f") value + "%"
-                            let label = sprintf "%.4f" output
+                    for i in 0..numOfLabels do 
+                        let a = ((List.item (numOfLabels - i) labelPosList) * 0.95f) + 0.03f
+                        let output = fcLowerBound + (labelInterval * (float i))
+                        let toPercent value = sprintf ("%f") value + "%"
+                        let label = sprintf "%.4f" output
                       
-                            yield Svg.text ([ "x" => "25px"; "y" => toPercent (a * 100.0f); "text-anchor" => "left"; "font-size" => "10"; "fill" => "#ffffff"]) label
+                        yield Svg.text ([ "x" => "25px"; "y" => toPercent (a * 100.0f); "text-anchor" => "left"; "font-size" => "10"; "fill" => "#ffffff"]) label
                 }
+                
 
-        let createColorLegendDnS (falseColorValues : MFalseColorsModel) (boxSize : V2d) = 
-            let falseColorSvg = createFalseColorLegendBasics falseColorValues boxSize
-         
-            let attr = 
-              AttributeMap.ofList[ 
-                "clazz"                 => "falsecolorlegend"
-                "display"               => "block"; 
-                "width"                 => "55px"; 
-                "height"                => "75%"; //100%
-                "preserveAspectRatio"   => "xMidYMid meet"; 
-                "viewBox"               => "0 0 5% 100%" 
-                "style"                 => "position:absolute; left: 0%; top: 25%"
-              ] // "0 0 5% 100%";
-
-            Incremental.Svg.svg attr falseColorSvg
-
-        let createColorLegendScalars (falseColorValues : MFalseColorsModel) = 
+        let createColorLegend (falseColorValues : MFalseColorsModel) = 
             let falseColorSvg = createFalseColorLegendBasics falseColorValues (Aardvark.Base.V2d(100.0, 200.0))
             Incremental.Svg.svg AttributeMap.empty falseColorSvg
 

@@ -1099,14 +1099,26 @@ module ViewerApp =
             //        ]
             //    )
             | Some "render" -> 
+                let scalarCL, visibleScalar = Viewer.Gui.scalarsColorLegend m
+                let dnsCL, visibleDns = Viewer.Gui.dnsColorLegend m
                 require (myCss) (
                   body renderViewAttributes [ //[ style "background: #1B1C1E; height:100%; width:100%"] [
-                      div [style "background:#000;"] [
-                          viewRenderView m
-                          Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
-                          Viewer.Gui.textOverlaysUserFeedback m.scene
-                          Viewer.Gui.dnsColorLegend m
-                          Viewer.Gui.scalarsColorLegend m]
+                      //div [style "background:#000;"] [
+                      Incremental.div (AttributeMap.ofList[style "background:#000;"]) (
+                        alist {
+                          yield viewRenderView m
+                          yield Viewer.Gui.textOverlays m.scene.referenceSystem m.scene.navigation.camera.view
+                          yield Viewer.Gui.textOverlaysUserFeedback m.scene
+
+                          let! visibleDns = visibleDns
+                          if visibleDns then
+                            yield dnsCL
+
+                          let! visibleScalar = visibleScalar
+                          if visibleScalar then 
+                                yield scalarCL
+                          
+                        })
                   ]                
                 )
             | Some "surfaces" -> 
