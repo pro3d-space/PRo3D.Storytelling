@@ -30,27 +30,27 @@ open PRo3D.ReferenceSystem
 open PRo3D.Surfaces
 
 module Gui = 
-  open PRo3d.Mutable
-  open PRo3D.Base
-  //open PRo3D.Mutable.FalseColorsModelModule
+    open PRo3d.Mutable
+    open PRo3D.Base
+    //open PRo3D.Mutable.FalseColorsModelModule
+    
+    let pitchAndBearing (r:MReferenceSystem) (view:IMod<CameraView>) =
+        adaptive {
+          let! up    = r.up.value
+          let! north = r.northO//r.north.value   
+          let! v     = view
+        
+          return (DipAndStrike.pitch up v.Forward, DipAndStrike.bearing up north v.Forward)
+        }
+    
+    let dnsColorLegend (m:MModel) =
 
-  let pitchAndBearing (r:MReferenceSystem) (view:IMod<CameraView>) =
-          adaptive {
-            let! up    = r.up.value
-            let! north = r.northO//r.north.value   
-            let! v     = view
+        let falseColorSvg = FalseColorLegendApp.Draw.createFalseColorLegendBasics m.drawing.colorLegend
 
-            return (DipAndStrike.pitch up v.Forward, DipAndStrike.bearing up north v.Forward)
-          }
-
-  let dnsColorLegend (m:MModel) =
-    let legend =
-        alist {
-            yield FalseColorLegendApp.Draw.createColorLegend m.drawing.colorLegend 
-        } 
-
-    let attributes =
-            AttributeMap.ofList[
+        //let legend = FalseColorLegendApp.Draw.createColorLegend m.drawing.colorLegend
+        
+        let attributes =
+            [
                 "clazz"                 => "falsecolorlegend"
                 "display"               => "block"; 
                 "width"                 => "55px"; 
@@ -58,704 +58,612 @@ module Gui =
                 "preserveAspectRatio"   => "xMidYMid meet"; 
                 "viewBox"               => "0 0 5% 100%" 
                 "style"                 => "position:absolute; left: 0%; top: 25%"
-            ]
-   
-    Incremental.Svg.svg attributes (legend), m.drawing.colorLegend.useFalseColors
+                "pointer-events"        => "None"
+            ] |> AttributeMap.ofList
+        
+        Incremental.Svg.svg attributes falseColorSvg
+                            
+    let scalarsColorLegend (m:MModel) =
           
-                
-  let scalarsColorLegend (m:MModel) =
-        let visible = 
-            adaptive {
-                let! guid = m.scene.surfacesModel.surfaces.singleSelectLeaf            
-                match guid with
-                | Some i -> 
-                    let! exists = (m.scene.surfacesModel.surfaces.flat |> AMap.keys) |> ASet.contains i
-                    if exists then
-                        let leaf = m.scene.surfacesModel.surfaces.flat |> AMap.find i |> Mod.bind(id)
-                        let! surf = leaf 
-                        let scalar = 
-                            match surf with 
-                            | MSurfaces s -> s.selectedScalar 
-                            | _ -> leaf |> sprintf "wrong type %A; expected MSurfaces" |> failwith
-                        let! scalar = scalar
-                        match scalar with
-                        | Some s -> 
-                            let! useFC = s.colorLegend.useFalseColors
-                            return useFC
-                        | None -> return false
-                    else return false
-                | None -> return false
-            } 
+          let attributes =
+              [
+                  "width"                 => "90px"; 
+                  "height"                => "75%"; 
+                  "preserveAspectRatio"   => "xMidYMid meet"; 
+                  "style"                 => "position:absolute; right: 5px; top: 25%"
+                  "pointer-events"        => "None"
+              ] |> AttributeMap.ofList
+    
+          Incremental.div attributes (SurfaceApp.showColorLegend m.scene.surfacesModel)
+    
+    let textOverlays (m : MReferenceSystem) (cv : IMod<CameraView>) = 
+      div [js "oncontextmenu" "event.preventDefault();"] [ 
+        let planet = m.planet |> Mod.map(fun x -> sprintf "%s" (x.ToString()))  
         
-        let attributes =
-            AttributeMap.ofList[
-                "width"                 => "90px"; 
-                "height"                => "75%"; 
-                "preserveAspectRatio"   => "xMidYMid meet"; 
-                "style"                 => "position:absolute; right: 5px; top: 25%"
-            ]
-        Incremental.Svg.svg attributes (SurfaceApp.showColorLegend m.scene.surfacesModel), visible
-
+        let pnb = pitchAndBearing m cv
+      
+        let pitch    = pnb |> Mod.map(fun (p,_) -> sprintf "%s deg" (p.ToString("0.00")))
+        let bearing  = pnb |> Mod.map(fun (_,b) -> sprintf "%s deg" (b.ToString("0.00")))
         
+        let position = cv |> Mod.map(fun x -> x.Location.ToString("0.00"))
+      
+        let spericalc = 
+          Mod.map2 (fun (a : CameraView) b -> 
+            CooTransformation.getLatLonAlt(a.Location) b ) cv m.planet
+    
+        let alt2 = 
+          Mod.map2 (fun (a : CameraView) b -> 
+            CooTransformation.getAltitude a.Location a.Up b ) cv m.planet
         
-  
-
-  let textOverlays (m : MReferenceSystem) (cv : IMod<CameraView>) = 
-    div [js "oncontextmenu" "event.preventDefault();"] [ 
-      let planet = m.planet |> Mod.map(fun x -> sprintf "%s" (x.ToString()))  
+        let lon = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.longitude).ToString("0.00")))
+        let lat = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.latitude).ToString("0.00")))
+        //let alt = spericalc |> Mod.map(fun x -> sprintf "%s m" ((x.altitude).ToString("0.00")))
+        let alt2 = alt2 |> Mod.map(fun x -> sprintf "%s m" ((x).ToString("0.00")))
+                                   
+        let style' = "color: white; font-family:Consolas;"
       
-      let pnb = pitchAndBearing m cv
-    
-      let pitch    = pnb |> Mod.map(fun (p,_) -> sprintf "%s deg" (p.ToString("0.00")))
-      let bearing  = pnb |> Mod.map(fun (_,b) -> sprintf "%s deg" (b.ToString("0.00")))
-      
-      let position = cv |> Mod.map(fun x -> x.Location.ToString("0.00"))
-    
-      let spericalc = 
-        Mod.map2 (fun (a : CameraView) b -> 
-          CooTransformation.getLatLonAlt(a.Location) b ) cv m.planet
-
-      let alt2 = 
-        Mod.map2 (fun (a : CameraView) b -> 
-          CooTransformation.getAltitude a.Location a.Up b ) cv m.planet
-      
-      let lon = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.longitude).ToString("0.00")))
-      let lat = spericalc |> Mod.map(fun x -> sprintf "%s deg" ((x.latitude).ToString("0.00")))
-      //let alt = spericalc |> Mod.map(fun x -> sprintf "%s m" ((x.altitude).ToString("0.00")))
-      let alt2 = alt2 |> Mod.map(fun x -> sprintf "%s m" ((x).ToString("0.00")))
-                                 
-      let style' = "color: white; font-family:Consolas;"
-    
-      yield div [clazz "ui"; style "position: absolute; top: 15px; left: 15px; float:left" ] [
-          //arrowOverlay
-          yield table [] [
-              tr[][
-                  td[style style'][Incremental.text planet]
-              ]
-              tr[][
-                  td[style style'][text "Bearing: "]
-                  td[style style'][Incremental.text bearing]
-              ]
-              tr[][
-                  td[style style'][text "Pitch: "]
-                  td[style style'][Incremental.text pitch]
-              ]
-              tr[][
-                  td[style style'][text "Position: "]
-                  td[style style'][Incremental.text position]
-              ]
-              tr[][
-                  td[style style'][text "Longitude: "]
-                  td[style style'][Incremental.text lon]
-              ]
-              tr[][
-                  td[style style'][text "Latitude: "]
-                  td[style style'][Incremental.text lat]
-              ]
-              //tr[][
-              //    td[style style'][text "Altitude: "]
-              //    td[style style'][Incremental.text alt]
-              //]
-              tr[][
-                  td[style style'][text "Altitude: "]
-                  td[style style'][Incremental.text alt2]
-              ]
-          ]
-      ]                              
-    ]
-
-  let textOverlaysInstrumentView (m : MViewPlanModel)  = 
-    let instrument =
-        adaptive {
-            let! vp = m.selectedViewPlan
-            let! inst = 
-                    match vp with
-                            | Some v -> Mod.bindOption v.selectedInstrument "No instrument selected" (fun a -> a.id)
-                            | None -> Mod.constant("")
-
-            return inst
-        }
-    div [js "oncontextmenu" "event.preventDefault();"] [ 
-      let style' = "color: white; font-family:Consolas;"
-    
-      yield div [clazz "ui"; style "position: absolute; top: 15px; left: 15px; float:left" ] [
-          //arrowOverlay
-          yield table [] [
-              tr[][
-                  td[style style'][Incremental.text instrument]
-              ]
-          ]
-      ]                              
-    ]
-
-  let textOverlaysUserFeedback (m : MScene)  = 
-    div [js "oncontextmenu" "event.preventDefault();"] [ 
-      let style' = "color: white; font-family:Consolas; font-size:18;"
-    
-      yield div [clazz "ui"; style "text-align: right; width: 200px; position: absolute; top: 15px; right: 15px; float:right" ] [ //float:left
-          //arrowOverlay
-          yield table [] [
-              tr[][
-                  td[style style'][Incremental.text m.userFeedback]
-              ]
-          ]
-      ]                              
-    ]
-  module TopMenu =
-
-    //let save (m:MModel) = 
-    //    adaptive
-    //        {
-    //            let! path = m.scene.scenePath
-    //            return match path with
-    //                        | Some p ->
-    //                             div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
-    //                              text "Save"
-    //                            ]
-    //                        | None ->
-    //                            div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
-    //                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog());")][
-    //                              text "Save"
-    //                            ]
-    //        }
-    //let save (m:MModel) = 
-    //    adaptive
-    //        {
-    //            let! path = m.scene.scenePath
-    //            return match path with
-    //                        | Some p ->
-    //                             div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][
-    //                              text "Save"
-    //                            ]
-    //                        | None ->
-    //                            div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
-    //                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
-    //                              text "Save"
-    //                            ]
-    //        }
-    
-  //  let viewOpcPaths (model:MModel) = 
-  //      Incremental.div ([clazz "ui very compact stackable inverted relaxed divided list"] |> AttributeMap.ofList) (
-  //        alist {
-  //          for (folder,opclist) in model.opcPaths |> AMap.toASet |> ASet.toAList do
-  //            //yield Html.SemUi.accordion "blub" "boxes" true [
-  //            yield h3 [][text (Path.GetFileName folder)]
-  //            for opc in opclist do
-  //              yield div [clazz "ui inverted item"][
-  //                  i [clazz "ui middle aligned box icon"] []
-  //                  div [clazz "ui content"] [
-  //                    div [clazz "ui header tiny"] [text opc]                
-  //                  ]
-  //                ]
-  //            //]
-  //        }
-  //      )
-  
-  //let discoverOpcsView (model : MModel) =
-  //  require Html.semui (
-  //    body [style "width: 100%; height:100%; background: #252525; overflow-x: hidden; overflow-y: scroll"] [
-  //      div [clazz "ui inverted segment"] [
-  //          h1 [clazz "ui"][text "Discover Opcs"]
-  //          br []
-  //          button [ 
-  //            clazz "ui button tiny"
-  //            Dialogs.onChooseFiles SetPaths;
-  //            clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-  //            text "Select Path"
-  //          ]
-  //         // Html.SemUi.accordion "Paths" "files" true [viewPaths model]
-                                
-  //         // button [clazz "ui button tiny"; onClick (fun _ -> Discover)] [text "DiscoverOpcs" ]                
-  
-  //          //Html.SemUi.accordion "Opcs" "boxes" true [viewOpcPaths model]
-  //          viewOpcPaths model
-  //      ]
-  //    ])
-    let private importSurface (m:MModel) =
-      [
-         text "Import"
-         i [clazz "dropdown icon"][] 
-         div [ clazz "menu"] [             
-             div [ clazz "ui inverted item";
-               Dialogs.onChooseFiles  ImportDiscoveredSurfacesThreads;
-               clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-               text "OPC"
-             ]
-             div [ clazz "ui inverted item"; 
-               Dialogs.onChooseFiles ImportObject;
-               clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
-               text "OBJ"
-             ]
-             ]
-         ]
-
-    let private scene (m:MModel) = 
-      let save (m:MModel) = 
-        adaptive
-          {
-            let! path = m.scene.scenePath
-            return 
-              match path with
-              | Some p ->
-                div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][text "Save"]
-              | None ->
-                div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
-                  //clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));")][
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
-                  text "Save"
+        yield div [clazz "ui"; style "position: absolute; top: 15px; left: 15px; float:left; pointer-events:None" ] [
+            //arrowOverlay
+            yield table [] [
+                tr[][
+                    td[style style'][Incremental.text planet]
                 ]
-          }
-      [
-        text "Scene" 
-        i [clazz "dropdown icon"][]
-      
-        div [ clazz "menu"] [
-            Incremental.div AttributeMap.empty (AList.ofModSingle (save m))
-            div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveAs;
-                  clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
-                  text "Save as..."
+                tr[][
+                    td[style style'][text "Bearing: "]
+                    td[style style'][Incremental.text bearing]
+                ]
+                tr[][
+                    td[style style'][text "Pitch: "]
+                    td[style style'][Incremental.text pitch]
+                ]
+                tr[][
+                    td[style style'][text "Position: "]
+                    td[style style'][Incremental.text position]
+                ]
+                tr[][
+                    td[style style'][text "Longitude: "]
+                    td[style style'][Incremental.text lon]
+                ]
+                tr[][
+                    td[style style'][text "Latitude: "]
+                    td[style style'][Incremental.text lat]
+                ]
+                //tr[][
+                //    td[style style'][text "Altitude: "]
+                //    td[style style'][Incremental.text alt]
+                //]
+                tr[][
+                    td[style style'][text "Altitude: "]
+                    td[style style'][Incremental.text alt2]
+                ]
             ]
-            div [ 
-              clazz "ui inverted item"; 
-              Dialogs.onChooseFiles(fun x -> match (x |> List.tryHead) with | Some y -> LoadScene y | None -> NoAction "no scene selected");
-              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({ filters: [{ name: 'Scene', extensions: ['scn']},], properties: ['openFile']}));")][                                       
-              text "Open"
-            ]
-            div [ clazz "ui inverted item"; onMouseClick (fun _ -> NewScene)][
-                  text "New"
-            ]
-            div[ clazz "ui inverted item" ] [
-                onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
-                    text "Recent"
-                )
-     
-                div [clazz "ui flowing popup bottom left transition hidden"] [
-                    Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
-                        alist {
-                            let! recentScenes = m.recent.recentScenes
-                            //let sortedList = recentScenes |> List.sortBy( fun sh -> sh.writeDate.DayOfYear ) |> List.sortBy( fun sh -> sh.writeDate.Year )
-                            let smallList =
-                              match recentScenes.Length > 10 with
-                                | true -> recentScenes.[0..9] |>  List.toArray
-                                | _-> recentScenes |> List.toArray
-
-                            for s in smallList do
-                                 yield a [clazz "item inverted";
-                                          onClick (fun _ -> LoadScene s.path)] [
-                                    span [style "color:black"] [Incremental.text (Mod.constant s.name)]
-                                 ]
-                            
-                        } 
-                    )
-                ] 
-            ] 
-         ]
-      ]
-
-    let surfaceUiThing (m : MModel)=
-      let blarg =
-        amap {
-          let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
-          
-          match selected with
-          | Some s ->
-            yield clazz "ui item"
-            yield Dialogs.onChooseDirectory s SurfaceApp.Action.ChangeImportDirectory
-            yield clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openDirectory','multiSelections']}));")
-          | None -> ()
-        }
-
-      let blurg = 
-        alist {
-          let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
-          match selected with
-          | Some s -> yield text "fix broken path"
-          | None -> ()
-        }
-
-      Incremental.div(AttributeMap.ofAMap blarg) blurg |> UI.map SurfaceActions
-
-    let fixAllBrokenPaths =
-        let ui = 
-            alist {
-                yield
-                 div [ clazz "ui item";
-                        Dialogs.onChooseFiles  SurfaceApp.Action.ChangeImportDirectories;
-                        clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
-                        text "fix all broken paths"
-                        ]
-            }
-
-        Incremental.div(AttributeMap.Empty) ui |> UI.map SurfaceActions
-
-
-      //div [ clazz "ui item";
-      //    Dialogs.onChooseDirectory Guid.Empty SurfaceApp.Action.ChangeImportDirectory;
-      //    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
-      //    text "fix broken path"
-      //] |> UI.map SurfaceActions
-
-    let menu (m : MModel) = 
-      div [clazz "menu-bar"] [
-        // menu
-        div [ clazz "ui top menu"; style "z-index: 10000; padding:0px; margin:0px"] [
-          onBoot "$('#__ID__').dropdown('on', 'hover');" (
-            div [ clazz "ui dropdown item"; style "padding:0px 5px"] [
-              i [clazz "large sidebar icon"; style "margin:0px 2px"][] 
-              
-              div [ clazz "ui menu"] [
-                  //div [ clazz "ui dropdown item"; style "width: 150px"] [] //spacer as workaround for tab overdraw
-                  div [ clazz "ui dropdown item"; style "width: 150px"] (importSurface m)                  
-
-                  div [ clazz "ui dropdown item"] (scene m)
-                            
-                  DrawingApp.UI.annotationMenu  |> UI.map DrawingMessage;
-                  
-                  div[ clazz "ui item" ] [
-                      onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
-                          text "Closed Pages"
-                      )
-              
-                      div [clazz "ui flowing popup bottom left transition hidden"] [
-                          Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
-                              alist {
-                                  let! closedP = m.scene.closedPages
-                                  for cp in closedP do
-                                       yield a [clazz "item inverted";
-                                                onClick (fun _ -> AddPage cp)] [
-                                          span [style "color:black"] [Incremental.text (cp.id |> Mod.constant)]
-                                       ]
-                              } 
-                          )
-                      ]
-                  ]
-
-                  div [ clazz "ui dropdown item"] [
-                      text "Extras"
-                      i [clazz "dropdown icon"][] 
-                      div [ clazz "menu"] [
-                          div [ clazz "ui item";
-                              Dialogs.onChooseFiles ImportAnnotationGroups;
-                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'xml', extensions: ['xml']},], properties: ['openFile']}));") ][
-                              text "Import Annotations Groups"
-                          ]
-                          div [ clazz "ui item";
-                              Dialogs.onChooseFiles ImportSurfaceTrafo;
-                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'xml', extensions: ['xml']},],properties: ['openFile']}));") ] [
-                              text "Import Surface Trafos"
-                          ]
-                          div [ clazz "ui item";
-                              Dialogs.onChooseFiles ImportRoverPlacement;
-                              clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
-                              text "Rover Placement"
-                          ]
-
-                          fixAllBrokenPaths
-
-                          surfaceUiThing m
-                      ]
-                  ]
-              ] 
-            ]
-          )
-        ]
+        ]                              
       ]
     
-    let dynamicTop (m:MModel) =
+    let textOverlaysInstrumentView (m : MViewPlanModel)  = 
+      let instrument =
           adaptive {
-            let! interaction = m.interaction
-            match interaction with
-              | Interactions.DrawAnnotation -> 
-                return DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
-              | Interactions.PlaceRover ->
-                return ViewPlan.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
-              | Interactions.PlaceCoordinateSystem -> 
-                return Html.Layout.horizontal [
-                    Html.Layout.boxH [ Html.SemUi.dropDown' m.scene.referenceSystem.scaleChart m.scene.referenceSystem.selectedScale ReferenceSystemApp.Action.SetScale id ]
-                    //Html.Layout.boxH [ i [clazz "unhide icon"][] ]
-                    Html.Layout.boxH [ GuiEx.iconToggle m.scene.referenceSystem.isVisible "unhide icon" "hide icon" ReferenceSystemApp.Action.ToggleVisible  ]                        
-                    ] |> UI.map ReferenceSystemMessage
-              | _ -> 
-                return div[][]
+              let! vp = m.selectedViewPlan
+              let! inst = 
+                      match vp with
+                              | Some v -> Mod.bindOption v.selectedInstrument "No instrument selected" (fun a -> a.id)
+                              | None -> Mod.constant("")
+    
+              return inst
           }
-        
-    let style' = "color: white; font-family:Consolas;"
-    let scenepath (m:MModel) = 
-        Incremental.div (AttributeMap.Empty) (
-            alist {
-                let! scenePath = m.scene.scenePath 
-                let icon = 
-                    match scenePath with
-                        | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
-                        | None -> div[][]  
-                      
-                let scenePath   = Mod.bindOption m.scene.scenePath "" (fun sp -> Mod.constant sp)
-                yield  div [] [ 
-                //Html.Layout.boxH [ text "Scene Path:" ]
-                    Html.Layout.boxH [ icon ]
-                    Html.Layout.boxH [ 
-                        Incremental.text (scenePath 
-                            |> Mod.map(fun x -> 
-                                if x.IsEmpty() then "*new scene" else Path.GetFileName x))  
-                    ]
-                ]
-            }
-
-    )
-        
-    let interactionText (i : Interactions) =
-        match i with 
-        | Interactions.PickExploreCenter     -> "CTRL+click to place arcball center"
-        | Interactions.PlaceCoordinateSystem -> "CTRL+click to place coordinate cross"
-        | Interactions.DrawAnnotation        -> "CTRL+click to pick point on surface"
-        | Interactions.PickAnnotation        -> "CTRL+click on annotation to select"
-        | Interactions.PickSurface           -> "CTRL+click on surface to select"
-        | Interactions.PlaceRover            -> "CTRL+click to (1) place rover and (2) pick lookat"
-        | Interactions.TrafoControls         -> "not implemented"
-        | Interactions.PlaceSurface          -> "not implemented"
-        | _ -> ""
-
-    let topMenuItems (m:MModel) = [ 
-        
-        Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
-          
-        Html.Layout.horizontal [
-            Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
-            Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                                         
-            Incremental.div  AttributeMap.empty (AList.ofModSingle (dynamicTop m))
-            Html.Layout.boxH [ 
-                div[style "font-style:italic; width:100%; text-align:right"] [
-                    Incremental.text (m.interaction |> Mod.map interactionText)
-                ]]
-        ]
-          
-        Html.Layout.horizontal [
-            Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
-            Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
-        ] 
-        Html.Layout.horizontal [
-            scenepath m
-        ] 
-        //[ Html.Layout.finish ]
-        //Html.Layout.horizontal [
-        //  Html.Layout.boxH [ Incremental.text (m.interaction |> Mod.map interactionText) ]
-        //] 
-        //Html.Layout.horizontal [
-        //  Html.Layout.boxH [ Incremental.text (m.scene.userFeedback) ]
-        //] 
-    ]        
-
-    let getTopMenu (m:MModel) =
-        div[clazz "ui menu"; style "padding:0; margin:0; border:0"] [
-            yield (menu m)
-            for t in (topMenuItems m) do
-                yield div [clazz "item topmenu"] [t]
-        ]
-
-
-  module Annotations =
-    
-    let viewAnnotationProperties (model :MModel) =
-            let view = (fun leaf ->
-                match leaf with
-                  | MAnnotations' ann -> AnnotationProperties.view ann
-                  | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
-            
-            model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
-
-            
-    let viewAnnotationResults (model :MModel) =
-            let view = (fun leaf ->
-                match leaf with
-                  | MAnnotations' ann -> AnnotationProperties.viewResults ann model.scene.referenceSystem.up.value
-                  | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
-            
-            model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
-
-               
-
-    let viewDipAndStrike (model:MModel) = 
-        let view = (fun leaf ->
-            match leaf with
-              | MAnnotations' ann -> DipAndStrike.viewUI ann
-              | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
-
-        model.drawing.annotations |> Groups.viewSelected view DnSProperties    
-        
-    let viewDnSColorLegendUI (model:MModel) = 
-      model.drawing.colorLegend 
-        |> FalseColorLegendApp.viewDnSLegendProperties DnSColorLegendMessage 
-        |> Mod.constant
-
-
-    let annotationLeafButtonns' (model:MModel) = 
-        let ts = model.drawing.annotations.activeChild
-        let sel = model.drawing.annotations.singleSelectLeaf
-        adaptive {  
-            let! ts = ts
-            let! sel = sel
-            match sel with
-                | Some x -> return (Groups.viewLeafButtons ts |> UI.map AnnotationGroupsMessageViewer)
-                | None -> return div[style "font-style:italic"][ text "no annotation group selected" ]
-        }      
-        
-    let annotationLeafButtonns (model:MModel) =           
-      Mod.map2(fun ts sel -> 
-        match sel with
-         | Some _ -> (Groups.viewLeafButtons ts |> UI.map AnnotationGroupsMessageViewer)
-         | None -> div[style "font-style:italic"][ text "no annotation group selected" ]
-        ) model.drawing.annotations.activeChild model.drawing.annotations.singleSelectLeaf
-        
-    let annotationGroupProperties (model:MModel) =                            
-      Groups.viewUI model.drawing.annotations 
-        |> UI.map AnnotationGroupsMessageViewer 
-        |> Mod.constant
-    
-    let annotationGroupButtons (model:MModel) = 
-      model.drawing.annotations.activeGroup 
-        |> Mod.map (fun x -> Groups.viewGroupButtons x |> UI.map AnnotationGroupsMessageViewer)            
-        
-    let annotationUI (m : MModel) = 
-      let prop = 
-          m.drawing.annotations.lastSelectedItem
-              |> Mod.bind (fun x -> 
-                  match x with 
-                    | SelectedItem.Group -> annotationGroupProperties m
-                    | _ -> viewAnnotationProperties m 
-              )
-      let results = 
-          m.drawing.annotations.lastSelectedItem
-              |> Mod.bind (fun x -> 
-                  match x with 
-                    | SelectedItem.Group -> annotationGroupProperties m
-                    | _ -> viewAnnotationResults m 
-              )
-      let buttons = 
-          m.drawing.annotations.lastSelectedItem
-              |> Mod.bind (fun x -> 
-                  match x with 
-                    | SelectedItem.Group -> annotationGroupButtons m
-                    | _ -> annotationLeafButtonns m 
-              ) 
+      div [js "oncontextmenu" "event.preventDefault();"] [ 
+        let style' = "color: white; font-family:Consolas;"
       
-      div [][                
-          GuiEx.accordion "Annotations" "Write" true [
-              Groups.viewSelectionButtons |> UI.map AnnotationGroupsMessageViewer
-              DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
-          ]
-          GuiEx.accordion "Properties" "Content" true [
-              Incremental.div AttributeMap.empty (AList.ofModSingle prop)                                        
-          ]
-         
-          GuiEx.accordion "Actions" "Asterisk" true [
-            Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
-          ]     
-          
-          GuiEx.accordion "Measurements" "Content" true [
-              Incremental.div AttributeMap.empty (AList.ofModSingle results)                                        
-          ]
-
-          GuiEx.accordion "Dip&Strike" "Calculator" false [
-              Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))] 
-         
-          GuiEx.accordion "Dip&Strike ColorLegend" "paint brush" false [
-              Incremental.div AttributeMap.empty (AList.ofModSingle(viewDnSColorLegendUI m))] 
-          ]    
-  module Config =
-    let config (model:MModel) = 
-          ConfigProperties.view model.scene.config 
-            |> UI.map ConfigPropertiesMessage 
-            |> Mod.constant
-          
-    let configUI (m:MModel) =
-        div[][
-            GuiEx.accordion "ViewerConfig" "Settings" true [
-                    Incremental.div AttributeMap.empty (AList.ofModSingle (config m))
+        yield div [clazz "ui"; style "position: absolute; top: 15px; left: 15px; float:left" ] [
+            //arrowOverlay
+            yield table [] [
+                tr[][
+                    td[style style'][Incremental.text instrument]
+                ]
             ]
-            GuiEx.accordion "Coordinate System" "Map Signs" false [
-                ReferenceSystemApp.UI.view m.scene.referenceSystem m.scene.navigation.camera |> UI.map ReferenceSystemMessage
+        ]                              
+      ]
+    
+    let textOverlaysUserFeedback (m : MScene)  = 
+      div [js "oncontextmenu" "event.preventDefault();"] [ 
+        let style' = "color: white; font-family:Consolas; font-size:18;"
+      
+        yield div [clazz "ui"; style "text-align: right; width: 200px; position: absolute; top: 15px; right: 15px; float:right" ] [ //float:left
+            //arrowOverlay
+            yield table [] [
+                tr[][
+                    td[style style'][Incremental.text m.userFeedback]
+                ]
             ]
-            GuiEx.accordion "Camera" "Camera Retro" false [
-                CameraProperties.view m.scene.navigation.camera
-            ]
-        ] 
+        ]                              
+      ]
+    module TopMenu =
+   
+      let private importSurface (m:MModel) =
+        [
+           text "Import"
+           i [clazz "dropdown icon"][] 
+           div [ clazz "menu"] [             
+               div [ clazz "ui inverted item";
+                 Dialogs.onChooseFiles  ImportDiscoveredSurfacesThreads;
+                 clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
+                 text "OPC"
+               ]
+               div [ clazz "ui inverted item"; 
+                 Dialogs.onChooseFiles ImportObject;
+                 clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ][
+                 text "OBJ"
+               ]
+               ]
+           ]
+    
+      let private scene (m:MModel) = 
+        let save (m:MModel) = 
+          adaptive
+            {
+              let! path = m.scene.scenePath
+              return 
+                match path with
+                | Some p ->
+                  div [ clazz "ui inverted item"; onMouseClick (fun _ -> SaveScene p)][text "Save"]
+                | None ->
+                  div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveScene;
+                    //clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));")][
+                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
+                    text "Save"
+                  ]
+            }
+        [
+          text "Scene" 
+          i [clazz "dropdown icon"][]
         
-  module ViewPlanner = 
-    let viewPlanProperties (model:MModel) =
-            //model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage 
-            model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage model.footPrint.isVisible
-
-    let viewPlannerUI (m:MModel) =             
-        div [][
-            GuiEx.accordion "ViewPlans" "Write" true [
-                ViewPlan.UI.viewViewPlans m.scene.viewPlans |> UI.map ViewPlanMessage
-            ]
-            GuiEx.accordion "Properties" "Content" true [
-                Incremental.div AttributeMap.empty (viewPlanProperties m |> AList.ofModSingle)
-            ]
-        ]                
-  module Bookmarks =
-    let bookmarkGroupProperties (model:MModel) =                                       
-          Groups.viewUI model.scene.bookmarksModel.bookmarks 
-            |> UI.map BookmarkUIMessage 
-            |> Mod.constant
+          div [ clazz "menu"] [
+              Incremental.div AttributeMap.empty (AList.ofModSingle (save m))
+              div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveAs;
+                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({filters: [{ name: 'Scene', extensions: ['scn']},]}));") ][
+                    text "Save as..."
+              ]
+              div [ 
+                clazz "ui inverted item"; 
+                Dialogs.onChooseFiles(fun x -> match (x |> List.tryHead) with | Some y -> LoadScene y | None -> NoAction "no scene selected");
+                clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({ filters: [{ name: 'Scene', extensions: ['scn']},], properties: ['openFile']}));")][                                       
+                text "Open"
+              ]
+              div [ clazz "ui inverted item"; onMouseClick (fun _ -> NewScene)][
+                    text "New"
+              ]
+              div[ clazz "ui inverted item" ] [
+                  onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
+                      text "Recent"
+                  )
+       
+                  div [clazz "ui flowing popup bottom left transition hidden"] [
+                      Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
+                          alist {
+                              let! recentScenes = m.recent.recentScenes
+                              //let sortedList = recentScenes |> List.sortBy( fun sh -> sh.writeDate.DayOfYear ) |> List.sortBy( fun sh -> sh.writeDate.Year )
+                              let smallList =
+                                match recentScenes.Length > 10 with
+                                  | true -> recentScenes.[0..9] |>  List.toArray
+                                  | _-> recentScenes |> List.toArray
+    
+                              for s in smallList do
+                                   yield a [clazz "item inverted";
+                                            onClick (fun _ -> LoadScene s.path)] [
+                                      span [style "color:black"] [Incremental.text (Mod.constant s.name)]
+                                   ]
+                              
+                          } 
+                      )
+                  ] 
+              ] 
+           ]
+        ]
+    
+      let surfaceUiThing (m : MModel)=
+        let blarg =
+          amap {
+            let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
             
-        
+            match selected with
+            | Some s ->
+              yield clazz "ui item"
+              yield Dialogs.onChooseDirectory s SurfaceApp.Action.ChangeImportDirectory
+              yield clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openDirectory','multiSelections']}));")
+            | None -> ()
+          }
+    
+        let blurg = 
+          alist {
+            let! selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
+            match selected with
+            | Some s -> yield text "fix broken path"
+            | None -> ()
+          }
+    
+        Incremental.div(AttributeMap.ofAMap blarg) blurg |> UI.map SurfaceActions
+    
+      let fixAllBrokenPaths =
+          let ui = 
+              alist {
+                  yield
+                   div [ clazz "ui item";
+                          Dialogs.onChooseFiles  SurfaceApp.Action.ChangeImportDirectories;
+                          clientEvent "onclick" ("parent.aardvark.processEvent('__ID__', 'onchoose', parent.aardvark.dialog.showOpenDialog({properties: ['openDirectory', 'multiSelections']}));") ][
+                          text "fix all broken paths"
+                          ]
+              }
+    
+          Incremental.div(AttributeMap.Empty) ui |> UI.map SurfaceActions
+    
+    
+        //div [ clazz "ui item";
+        //    Dialogs.onChooseDirectory Guid.Empty SurfaceApp.Action.ChangeImportDirectory;
+        //    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+        //    text "fix broken path"
+        //] |> UI.map SurfaceActions
+    
+      let menu (m : MModel) = 
+        div [clazz "menu-bar"] [
+          // menu
+          div [ clazz "ui top menu"; style "z-index: 10000; padding:0px; margin:0px"] [
+            onBoot "$('#__ID__').dropdown('on', 'hover');" (
+              div [ clazz "ui dropdown item"; style "padding:0px 5px"] [
+                i [clazz "large sidebar icon"; style "margin:0px 2px"][] 
+                
+                div [ clazz "ui menu"] [
+                    //div [ clazz "ui dropdown item"; style "width: 150px"] [] //spacer as workaround for tab overdraw
+                    div [ clazz "ui dropdown item"; style "width: 150px"] (importSurface m)                  
+    
+                    div [ clazz "ui dropdown item"] (scene m)
+                              
+                    DrawingApp.UI.annotationMenu  |> UI.map DrawingMessage;
+                    
+                    div[ clazz "ui item" ] [
+                        onBoot """$('#__ID__').popup({inline:true,hoverable:true, position   : 'right center'});""" (
+                            text "Closed Pages"
+                        )
+                
+                        div [clazz "ui flowing popup bottom left transition hidden"] [
+                            Incremental.div (AttributeMap.ofList [clazz "ui link list"]) (
+                                alist {
+                                    let! closedP = m.scene.closedPages
+                                    for cp in closedP do
+                                         yield a [clazz "item inverted";
+                                                  onClick (fun _ -> AddPage cp)] [
+                                            span [style "color:black"] [Incremental.text (cp.id |> Mod.constant)]
+                                         ]
+                                } 
+                            )
+                        ]
+                    ]
+    
+                    div [ clazz "ui dropdown item"] [
+                        text "Extras"
+                        i [clazz "dropdown icon"][] 
+                        div [ clazz "menu"] [
+                            div [ clazz "ui item";
+                                Dialogs.onChooseFiles ImportAnnotationGroups;
+                                clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'xml', extensions: ['xml']},], properties: ['openFile']}));") ][
+                                text "Import Annotations Groups"
+                            ]
+                            div [ clazz "ui item";
+                                Dialogs.onChooseFiles ImportSurfaceTrafo;
+                                clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'xml', extensions: ['xml']},],properties: ['openFile']}));") ] [
+                                text "Import Surface Trafos"
+                            ]
+                            div [ clazz "ui item";
+                                Dialogs.onChooseFiles ImportRoverPlacement;
+                                clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+                                text "Rover Placement"
+                            ]
+    
+                            fixAllBrokenPaths
+    
+                            surfaceUiThing m
+                        ]
+                    ]
+                ] 
+              ]
+            )
+          ]
+        ]
+      
+      let dynamicTop (m:MModel) =
+            adaptive {
+              let! interaction = m.interaction
+              match interaction with
+                | Interactions.DrawAnnotation -> 
+                  return DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
+                | Interactions.PlaceRover ->
+                  return ViewPlan.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
+                | Interactions.PlaceCoordinateSystem -> 
+                  return Html.Layout.horizontal [
+                      Html.Layout.boxH [ Html.SemUi.dropDown' m.scene.referenceSystem.scaleChart m.scene.referenceSystem.selectedScale ReferenceSystemApp.Action.SetScale id ]
+                      //Html.Layout.boxH [ i [clazz "unhide icon"][] ]
+                      Html.Layout.boxH [ GuiEx.iconToggle m.scene.referenceSystem.isVisible "unhide icon" "hide icon" ReferenceSystemApp.Action.ToggleVisible  ]                        
+                      ] |> UI.map ReferenceSystemMessage
+                | _ -> 
+                  return div[][]
+            }
+          
+      let style' = "color: white; font-family:Consolas;"
+      let scenepath (m:MModel) = 
+          Incremental.div (AttributeMap.Empty) (
+              alist {
+                  let! scenePath = m.scene.scenePath 
+                  let icon = 
+                      match scenePath with
+                          | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
+                          | None -> div[][]  
                         
-    let viewBookmarkProperties (model:MModel) = 
-        let view = (fun leaf ->
-            match leaf with
-              | MBookmarks bm -> Bookmarks.UI.view bm
-              | _ -> div[style "font-style:italic"][ text "no bookmark selected" ])
-
-        model.scene.bookmarksModel.bookmarks |> Groups.viewSelected view BookmarkUIMessage
-
-    let bookmarksLeafButtonns (model:MModel) = 
-        let ts = model.scene.bookmarksModel.bookmarks.activeChild
-        let sel = model.scene.bookmarksModel.bookmarks.singleSelectLeaf
-        adaptive {  
-            let! ts = ts
-            let! sel = sel
-            match sel with
-                | Some _ -> return (Groups.viewLeafButtons ts |> UI.map BookmarkUIMessage)
-                | None -> return div[style "font-style:italic"][ text "no bookmark selected" ]            
-        } 
+                  let scenePath   = Mod.bindOption m.scene.scenePath "" (fun sp -> Mod.constant sp)
+                  yield  div [] [ 
+                  //Html.Layout.boxH [ text "Scene Path:" ]
+                      Html.Layout.boxH [ icon ]
+                      Html.Layout.boxH [ 
+                          Incremental.text (scenePath 
+                              |> Mod.map(fun x -> 
+                                  if x.IsEmpty() then "*new scene" else Path.GetFileName x))  
+                      ]
+                  ]
+              }
     
-    let bookmarksGroupButtons (model:MModel) = 
-        let ts = model.scene.bookmarksModel.bookmarks.activeGroup
-        adaptive {  
-            let! ts = ts
-            return (Groups.viewGroupButtons ts |> UI.map BookmarkUIMessage)
-        } 
+      )
+          
+      let interactionText (i : Interactions) =
+          match i with 
+          | Interactions.PickExploreCenter     -> "CTRL+click to place arcball center"
+          | Interactions.PlaceCoordinateSystem -> "CTRL+click to place coordinate cross"
+          | Interactions.DrawAnnotation        -> "CTRL+click to pick point on surface"
+          | Interactions.PickAnnotation        -> "CTRL+click on annotation to select"
+          | Interactions.PickSurface           -> "CTRL+click on surface to select"
+          | Interactions.PlaceRover            -> "CTRL+click to (1) place rover and (2) pick lookat"
+          | Interactions.TrafoControls         -> "not implemented"
+          | Interactions.PlaceSurface          -> "not implemented"
+          | _ -> ""
     
-    let bookmarkUI (m:MModel) = 
-        let item2 = 
-            m.scene.bookmarksModel.bookmarks.lastSelectedItem 
-                |> Mod.map (fun x -> 
-                    match x with 
-                      | SelectedItem.Group -> bookmarkGroupProperties m
-                      | _ -> viewBookmarkProperties m 
-                )
-        let buttons = 
-            m.scene.bookmarksModel.bookmarks.lastSelectedItem 
+      let topMenuItems (m:MModel) = [ 
+          
+          Navigation.UI.viewNavigationModes m.scene.navigation  |> UI.map NavigationMessage 
+            
+          Html.Layout.horizontal [
+              Html.Layout.boxH [ i [clazz "large wizard icon"][] ]
+              Html.Layout.boxH [ Html.SemUi.dropDown m.interaction SetInteraction ]                                         
+              Incremental.div  AttributeMap.empty (AList.ofModSingle (dynamicTop m))
+              Html.Layout.boxH [ 
+                  div[style "font-style:italic; width:100%; text-align:right"] [
+                      Incremental.text (m.interaction |> Mod.map interactionText)
+                  ]]
+          ]
+            
+          Html.Layout.horizontal [
+              Html.Layout.boxH [ i [clazz "large Globe icon"][] ]
+              Html.Layout.boxH [ Html.SemUi.dropDown m.scene.referenceSystem.planet ReferenceSystemApp.Action.SetPlanet ] |> UI.map ReferenceSystemMessage
+          ] 
+          Html.Layout.horizontal [
+              scenepath m
+          ] 
+          //[ Html.Layout.finish ]
+          //Html.Layout.horizontal [
+          //  Html.Layout.boxH [ Incremental.text (m.interaction |> Mod.map interactionText) ]
+          //] 
+          //Html.Layout.horizontal [
+          //  Html.Layout.boxH [ Incremental.text (m.scene.userFeedback) ]
+          //] 
+      ]        
+    
+      let getTopMenu (m:MModel) =
+          div[clazz "ui menu"; style "padding:0; margin:0; border:0"] [
+              yield (menu m)
+              for t in (topMenuItems m) do
+                  yield div [clazz "item topmenu"] [t]
+          ]
+    
+    
+    module Annotations =
+      
+      let viewAnnotationProperties (model :MModel) =
+              let view = (fun leaf ->
+                  match leaf with
+                    | MAnnotations' ann -> AnnotationProperties.view ann
+                    | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
+              
+              model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
+    
+              
+      let viewAnnotationResults (model :MModel) =
+              let view = (fun leaf ->
+                  match leaf with
+                    | MAnnotations' ann -> AnnotationProperties.viewResults ann model.scene.referenceSystem.up.value
+                    | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
+              
+              model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
+    
+                 
+    
+      let viewDipAndStrike (model:MModel) = 
+          let view = (fun leaf ->
+              match leaf with
+                | MAnnotations' ann -> DipAndStrike.viewUI ann
+                | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
+    
+          model.drawing.annotations |> Groups.viewSelected view DnSProperties    
+          
+      let viewDnSColorLegendUI (model:MModel) = 
+        model.drawing.colorLegend 
+          |> FalseColorLegendApp.viewDnSLegendProperties DnSColorLegendMessage 
+          |> Mod.constant
+    
+    
+      let annotationLeafButtonns' (model:MModel) = 
+          let ts = model.drawing.annotations.activeChild
+          let sel = model.drawing.annotations.singleSelectLeaf
+          adaptive {  
+              let! ts = ts
+              let! sel = sel
+              match sel with
+                  | Some x -> return (Groups.viewLeafButtons ts |> UI.map AnnotationGroupsMessageViewer)
+                  | None -> return div[style "font-style:italic"][ text "no annotation group selected" ]
+          }      
+          
+      let annotationLeafButtonns (model:MModel) =           
+        Mod.map2(fun ts sel -> 
+          match sel with
+           | Some _ -> (Groups.viewLeafButtons ts |> UI.map AnnotationGroupsMessageViewer)
+           | None -> div[style "font-style:italic"][ text "no annotation group selected" ]
+          ) model.drawing.annotations.activeChild model.drawing.annotations.singleSelectLeaf
+          
+      let annotationGroupProperties (model:MModel) =                            
+        Groups.viewUI model.drawing.annotations 
+          |> UI.map AnnotationGroupsMessageViewer 
+          |> Mod.constant
+      
+      let annotationGroupButtons (model:MModel) = 
+        model.drawing.annotations.activeGroup 
+          |> Mod.map (fun x -> Groups.viewGroupButtons x |> UI.map AnnotationGroupsMessageViewer)            
+          
+      let annotationUI (m : MModel) = 
+        let prop = 
+            m.drawing.annotations.lastSelectedItem
                 |> Mod.bind (fun x -> 
                     match x with 
-                      | SelectedItem.Group -> bookmarksGroupButtons m
-                      | _ -> bookmarksLeafButtonns m 
+                      | SelectedItem.Group -> annotationGroupProperties m
+                      | _ -> viewAnnotationProperties m 
                 )
-        div [][
-            br []
-            Bookmarks.UI.viewGUI |> UI.map BookmarkMessage
-    
-            GuiEx.accordion "Bookmarks" "Write" true [
-                //Groups.viewSelectionButtons |> UI.map BookmarkUIMessage
-                Bookmarks.viewBookmarksGroups m.scene.bookmarksModel |> UI.map BookmarkMessage 
-            ]                
-            GuiEx.accordion "Properties" "Content" true [
-                Incremental.div AttributeMap.empty ( item2 |> Mod.bind id |> AList.ofModSingle)
-            ] 
-            GuiEx.accordion "Actions" "Asterisk" true [
-                Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
+        let results = 
+            m.drawing.annotations.lastSelectedItem
+                |> Mod.bind (fun x -> 
+                    match x with 
+                      | SelectedItem.Group -> annotationGroupProperties m
+                      | _ -> viewAnnotationResults m 
+                )
+        let buttons = 
+            m.drawing.annotations.lastSelectedItem
+                |> Mod.bind (fun x -> 
+                    match x with 
+                      | SelectedItem.Group -> annotationGroupButtons m
+                      | _ -> annotationLeafButtonns m 
+                ) 
+        
+        div [][                
+            GuiEx.accordion "Annotations" "Write" true [
+                Groups.viewSelectionButtons |> UI.map AnnotationGroupsMessageViewer
+                DrawingApp.UI.viewAnnotationGroups m.drawing |> UI.map DrawingMessage
             ]
-        ]
+            GuiEx.accordion "Properties" "Content" true [
+                Incremental.div AttributeMap.empty (AList.ofModSingle prop)                                        
+            ]
+           
+            GuiEx.accordion "Actions" "Asterisk" true [
+              Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
+            ]     
+            
+            GuiEx.accordion "Measurements" "Content" true [
+                Incremental.div AttributeMap.empty (AList.ofModSingle results)                                        
+            ]
+    
+            GuiEx.accordion "Dip&Strike" "Calculator" false [
+                Incremental.div AttributeMap.empty (AList.ofModSingle(viewDipAndStrike m))] 
+           
+            GuiEx.accordion "Dip&Strike ColorLegend" "paint brush" false [
+                Incremental.div AttributeMap.empty (AList.ofModSingle(viewDnSColorLegendUI m))] 
+            ]    
+    module Config =
+      let config (model:MModel) = 
+            ConfigProperties.view model.scene.config 
+              |> UI.map ConfigPropertiesMessage 
+              |> Mod.constant
+            
+      let configUI (m:MModel) =
+          div[][
+              GuiEx.accordion "ViewerConfig" "Settings" true [
+                      Incremental.div AttributeMap.empty (AList.ofModSingle (config m))
+              ]
+              GuiEx.accordion "Coordinate System" "Map Signs" false [
+                  ReferenceSystemApp.UI.view m.scene.referenceSystem m.scene.navigation.camera |> UI.map ReferenceSystemMessage
+              ]
+              GuiEx.accordion "Camera" "Camera Retro" false [
+                  CameraProperties.view m.scene.navigation.camera
+              ]
+          ] 
+          
+    module ViewPlanner = 
+      let viewPlanProperties (model:MModel) =
+              //model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage 
+              model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage model.footPrint.isVisible
+    
+      let viewPlannerUI (m:MModel) =             
+          div [][
+              GuiEx.accordion "ViewPlans" "Write" true [
+                  ViewPlan.UI.viewViewPlans m.scene.viewPlans |> UI.map ViewPlanMessage
+              ]
+              GuiEx.accordion "Properties" "Content" true [
+                  Incremental.div AttributeMap.empty (viewPlanProperties m |> AList.ofModSingle)
+              ]
+          ]                
+    module Bookmarks =
+      let bookmarkGroupProperties (model:MModel) =                                       
+            Groups.viewUI model.scene.bookmarksModel.bookmarks 
+              |> UI.map BookmarkUIMessage 
+              |> Mod.constant
+              
+          
+                          
+      let viewBookmarkProperties (model:MModel) = 
+          let view = (fun leaf ->
+              match leaf with
+                | MBookmarks bm -> Bookmarks.UI.view bm
+                | _ -> div[style "font-style:italic"][ text "no bookmark selected" ])
+    
+          model.scene.bookmarksModel.bookmarks |> Groups.viewSelected view BookmarkUIMessage
+    
+      let bookmarksLeafButtonns (model:MModel) = 
+          let ts = model.scene.bookmarksModel.bookmarks.activeChild
+          let sel = model.scene.bookmarksModel.bookmarks.singleSelectLeaf
+          adaptive {  
+              let! ts = ts
+              let! sel = sel
+              match sel with
+                  | Some _ -> return (Groups.viewLeafButtons ts |> UI.map BookmarkUIMessage)
+                  | None -> return div[style "font-style:italic"][ text "no bookmark selected" ]            
+          } 
+      
+      let bookmarksGroupButtons (model:MModel) = 
+          let ts = model.scene.bookmarksModel.bookmarks.activeGroup
+          adaptive {  
+              let! ts = ts
+              return (Groups.viewGroupButtons ts |> UI.map BookmarkUIMessage)
+          } 
+      
+      let bookmarkUI (m:MModel) = 
+          let item2 = 
+              m.scene.bookmarksModel.bookmarks.lastSelectedItem 
+                  |> Mod.map (fun x -> 
+                      match x with 
+                        | SelectedItem.Group -> bookmarkGroupProperties m
+                        | _ -> viewBookmarkProperties m 
+                  )
+          let buttons = 
+              m.scene.bookmarksModel.bookmarks.lastSelectedItem 
+                  |> Mod.bind (fun x -> 
+                      match x with 
+                        | SelectedItem.Group -> bookmarksGroupButtons m
+                        | _ -> bookmarksLeafButtonns m 
+                  )
+          div [][
+              br []
+              Bookmarks.UI.viewGUI |> UI.map BookmarkMessage
+      
+              GuiEx.accordion "Bookmarks" "Write" true [
+                  //Groups.viewSelectionButtons |> UI.map BookmarkUIMessage
+                  Bookmarks.viewBookmarksGroups m.scene.bookmarksModel |> UI.map BookmarkMessage 
+              ]                
+              GuiEx.accordion "Properties" "Content" true [
+                  Incremental.div AttributeMap.empty ( item2 |> Mod.bind id |> AList.ofModSingle)
+              ] 
+              GuiEx.accordion "Actions" "Asterisk" true [
+                  Incremental.div AttributeMap.empty (AList.ofModSingle (buttons))
+              ]
+          ]
     

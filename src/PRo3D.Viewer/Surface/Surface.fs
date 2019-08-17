@@ -912,7 +912,9 @@ module Surface =
                 | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ScalarsColorLegendMessage 
         }                          
 
-    let showColorLegend (model:MSurfaceModel) =
+    //TODO LF refactor and simplify, use option.map, bind, default value as described in
+    //https://hackmd.io/C3putqB_QNCwpxWO_oKZJQ#Working-with-Optionmap-Optionbind-and-OptiondefaultValue
+    let showColorLegend (model:MSurfaceModel) = 
         alist {
             let! guid = model.surfaces.singleSelectLeaf            
             match guid with
@@ -928,7 +930,7 @@ module Surface =
                     let! scalar = scalar
                     match scalar with
                     | Some s ->  
-                        yield FalseColorLegendApp.Draw.createColorLegend s.colorLegend
+                        yield Incremental.Svg.svg AttributeMap.empty (FalseColorLegendApp.Draw.createFalseColorLegendBasics s.colorLegend)
                     | None -> yield div[][]
                 else
                     yield div[][]

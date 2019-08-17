@@ -207,21 +207,18 @@ module FalseColorLegendApp =
                 //printfn "offset : %s  style : %s" offset color
                 Svg.stop ["offset" => offset; style color]
     
-        let createFalseColorLegendBasics (falseColor : MFalseColorsModel) (boxSize : V2d) =
+        let createFalseColorLegendBasics (falseColor : MFalseColorsModel) =
             alist { 
-                    let! enabled        = falseColor.useFalseColors                    
-                    let! fcUpperBound   = falseColor.upperBound.value
-                    let! fcLowerBound   = falseColor.lowerBound.value
-                    let! fcInterval     = falseColor.interval.value
-                    let! startColor     = falseColor.upperColor.c
-                    let! endColor       = falseColor.lowerColor.c
-                    let! invertMapping  = falseColor.invertMapping
+                let! enabled        = falseColor.useFalseColors                    
+                let! fcUpperBound   = falseColor.upperBound.value
+                let! fcLowerBound   = falseColor.lowerBound.value
+                let! fcInterval     = falseColor.interval.value
+                let! startColor     = falseColor.upperColor.c
+                let! endColor       = falseColor.lowerColor.c
+                let! invertMapping  = falseColor.invertMapping
 
 
-                    //if not enabled then
-                    //    yield div[][]
-                    //else
-
+                if enabled then
                     let range = fcUpperBound - fcLowerBound
                     let numOfRangeGaps = int (System.Math.Round (range / fcInterval))
                     //let numOfBuckets = if (numOfRangeGaps + 2) > 200 then 200 else (numOfRangeGaps + 2)
@@ -230,20 +227,20 @@ module FalseColorLegendApp =
                                         
                     //                    else if numOfBuckets > 25 then (numOfBuckets / 4)
                     //                    else numOfBuckets - 2 
-
+                    
                     let numOfBuckets = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
                     let numOfLabels =   if numOfBuckets > 100 then 25
                                         else if numOfBuckets > 25 then (numOfBuckets / 4)
                                         else numOfBuckets - 2 
-                
+                    
                     let stopList = createStopps numOfBuckets startColor endColor invertMapping
-
+                    
                     let svgstopList = stopList
                                         |> List.map (fun a ->
                                                 let (off, col) = a
                                                 buildSvgStop off col)                                                    
                                         |> AList.ofList
-
+                    
                     yield Svg.defs [][
                         onBoot "$('#__ID__').attr('id','falseColorLegend')" (
                             Incremental.Svg.linearGradient 
@@ -263,8 +260,8 @@ module FalseColorLegendApp =
                                     "stroke-width"  => "1px";
                                     "opacity"       => "0.5";
                                     ]
-
-
+                    
+                    
                     // SVG-RECT applies previously defined gradient (by #id)
                     yield Svg.rect ["style"         => "fill:url(#falseColorLegend)";
                                     "width"         => "10px";  
@@ -276,9 +273,9 @@ module FalseColorLegendApp =
                                     "rx"            => "3";
                                     "ry"            => "3";
                                     ]
-
+                    
                     let labelInterval = range / (float numOfLabels)
-
+                    
                     let filteri f s = 
                         s
                         |> List.mapi (fun i v -> (i,v))
@@ -286,16 +283,16 @@ module FalseColorLegendApp =
                         |> List.map (fun v -> snd v)
                     
                     let mapOffset (l : list<float32 * C3b>) = 
-                        l |> List.map (fun a ->
-                                        let (off, col) = a
-                                        off)    
-
-                    let labelPosList = if (numOfBuckets < 26) then
-                                            mapOffset stopList          
-                                            |> filteri (fun i _ -> i % 2 = 1)
-                                        else [0 .. numOfLabels]
-                                            |> List.map (fun a -> (single a) / (single numOfLabels))
-                   
+                        l |> List.map fst    
+                    
+                    let labelPosList = 
+                        if (numOfBuckets < 26) then
+                            mapOffset stopList          
+                            |> filteri (fun i _ -> i % 2 = 1)
+                        else 
+                            [0 .. numOfLabels]
+                            |> List.map (fun a -> (single a) / (single numOfLabels))
+                    
                     for i in 0..numOfLabels do 
                         let a = ((List.item (numOfLabels - i) labelPosList) * 0.95f) + 0.03f
                         let output = fcLowerBound + (labelInterval * (float i))
@@ -304,11 +301,6 @@ module FalseColorLegendApp =
                       
                         yield Svg.text ([ "x" => "25px"; "y" => toPercent (a * 100.0f); "text-anchor" => "left"; "font-size" => "10"; "fill" => "#ffffff"]) label
                 }
-                
-
-        let createColorLegend (falseColorValues : MFalseColorsModel) = 
-            let falseColorSvg = createFalseColorLegendBasics falseColorValues (Aardvark.Base.V2d(100.0, 200.0))
-            Incremental.Svg.svg AttributeMap.empty falseColorSvg
 
     let viewDnSLegendProperties lifter (model : MFalseColorsModel) = 
         UI.viewDnSLegendTools model |> UI.map lifter
