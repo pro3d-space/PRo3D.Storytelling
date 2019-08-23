@@ -45,13 +45,13 @@ module Gui =
     
     let dnsColorLegend (m:MModel) =
 
-        let falseColorSvg = FalseColorLegendApp.Draw.createFalseColorLegendBasics m.drawing.colorLegend
+        let falseColorSvg = FalseColorLegendApp.Draw.createFalseColorLegendBasics "DnsLegend" m.drawing.dnsColorLegend
 
         //let legend = FalseColorLegendApp.Draw.createColorLegend m.drawing.colorLegend
         
         let attributes =
             [
-                "clazz"                 => "falsecolorlegend"
+        //        "clazz"                 => "falsecolorlegend"
                 "display"               => "block"; 
                 "width"                 => "55px"; 
                 "height"                => "75%"; 
@@ -65,16 +65,19 @@ module Gui =
                             
     let scalarsColorLegend (m:MModel) =
           
-          let attributes =
-              [
-                  "width"                 => "90px"; 
-                  "height"                => "75%"; 
-                  "preserveAspectRatio"   => "xMidYMid meet"; 
-                  "style"                 => "position:absolute; right: 5px; top: 25%"
-                  "pointer-events"        => "None"
-              ] |> AttributeMap.ofList
+        let attributes =
+            [
+            //    "clazz"                 => "falsecolorlegend"
+                "display"               => "block"; 
+                "width"                 => "55px"; 
+                "height"                => "75%"; 
+                "preserveAspectRatio"   => "xMidYMid meet"; 
+                "viewBox"               => "0 0 5% 100%" 
+                "style"                 => "position:absolute; right: 0px; top: 25%"
+                "pointer-events"        => "None"
+            ] |> AttributeMap.ofList
     
-          Incremental.div attributes (SurfaceApp.showColorLegend m.scene.surfacesModel)
+        Incremental.Svg.svg attributes (SurfaceApp.showColorLegend m.scene.surfacesModel)
     
     let textOverlays (m : MReferenceSystem) (cv : IMod<CameraView>) = 
       div [js "oncontextmenu" "event.preventDefault();"] [ 
@@ -295,8 +298,7 @@ module Gui =
               }
     
           Incremental.div(AttributeMap.Empty) ui |> UI.map SurfaceActions
-    
-    
+        
         //div [ clazz "ui item";
         //    Dialogs.onChooseDirectory Guid.Empty SurfaceApp.Action.ChangeImportDirectory;
         //    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
@@ -459,8 +461,7 @@ module Gui =
               for t in (topMenuItems m) do
                   yield div [clazz "item topmenu"] [t]
           ]
-    
-    
+        
     module Annotations =
       
       let viewAnnotationProperties (model :MModel) =
@@ -470,7 +471,6 @@ module Gui =
                     | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
               
               model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
-    
               
       let viewAnnotationResults (model :MModel) =
               let view = (fun leaf ->
@@ -479,9 +479,7 @@ module Gui =
                     | _ -> div[style "font-style:italic"][ text "no annotation selected" ])
               
               model.drawing.annotations |> Groups.viewSelected view AnnotationMessage
-    
-                 
-    
+                     
       let viewDipAndStrike (model:MModel) = 
           let view = (fun leaf ->
               match leaf with
@@ -491,11 +489,10 @@ module Gui =
           model.drawing.annotations |> Groups.viewSelected view DnSProperties    
           
       let viewDnSColorLegendUI (model:MModel) = 
-        model.drawing.colorLegend 
+        model.drawing.dnsColorLegend 
           |> FalseColorLegendApp.viewDnSLegendProperties DnSColorLegendMessage 
           |> Mod.constant
-    
-    
+        
       let annotationLeafButtonns' (model:MModel) = 
           let ts = model.drawing.annotations.activeChild
           let sel = model.drawing.annotations.singleSelectLeaf
@@ -569,6 +566,7 @@ module Gui =
             GuiEx.accordion "Dip&Strike ColorLegend" "paint brush" false [
                 Incremental.div AttributeMap.empty (AList.ofModSingle(viewDnSColorLegendUI m))] 
             ]    
+
     module Config =
       let config (model:MModel) = 
             ConfigProperties.view model.scene.config 
@@ -602,14 +600,13 @@ module Gui =
                   Incremental.div AttributeMap.empty (viewPlanProperties m |> AList.ofModSingle)
               ]
           ]                
+
     module Bookmarks =
       let bookmarkGroupProperties (model:MModel) =                                       
             Groups.viewUI model.scene.bookmarksModel.bookmarks 
               |> UI.map BookmarkUIMessage 
               |> Mod.constant
               
-          
-                          
       let viewBookmarkProperties (model:MModel) = 
           let view = (fun leaf ->
               match leaf with

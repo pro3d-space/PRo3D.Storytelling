@@ -49,29 +49,18 @@ module FalseColorLegendApp =
     //let myCss = { kind = Stylesheet; name = "semui-overrides"; url = "semui-overrides.css" }
 
     module UI =
-        let viewDnSLegendTools (model:MFalseColorsModel)= 
-                Html.table [  
-                    Html.row "show legend:"             [GuiEx.iconCheckBox model.useFalseColors UseFalseColors ]
-                    Html.row "max dipping angle:"       [Numeric.view' [InputBox] model.upperBound |> UI.map SetUpperBound ]
-                    Html.row "min dipping angle:"       [Numeric.view' [InputBox] model.lowerBound |> UI.map SetLowerBound ]
-                    Html.row "interval:"                [Numeric.view' [InputBox] model.interval |> UI.map SetInterval ]
-                    Html.row "upper color:"             [ColorPicker.view model.upperColor |> UI.map SetUpperColor ]
-                    Html.row "lower color:"             [ColorPicker.view model.lowerColor |> UI.map SetLowerColor ]
-                    Html.row "invert mapping:"          [GuiEx.iconCheckBox model.invertMapping InvertMapping ]
-                ]                    
-           
-        let viewDefinedScalarsLegendTools (model:MFalseColorsModel)= 
+        let viewScalarMappingProperties (model:MFalseColorsModel) = 
             require GuiEx.semui (
                 Html.table [  
                     Html.row "show legend:"             [GuiEx.iconCheckBox model.useFalseColors UseFalseColors ]
-                    Html.row "upper bound:"             [Numeric.view' [InputBox] model.upperBound |> UI.map SetUpperBound ]
-                    Html.row "lower bound:"             [Numeric.view' [InputBox] model.lowerBound |> UI.map SetLowerBound ]
+                    Html.row "max:"                     [Numeric.view' [InputBox] model.upperBound |> UI.map SetUpperBound ]
+                    Html.row "min:"                     [Numeric.view' [InputBox] model.lowerBound |> UI.map SetLowerBound ]
                     Html.row "interval:"                [Numeric.view' [InputBox] model.interval |> UI.map SetInterval ]
                     Html.row "upper color:"             [ColorPicker.view model.upperColor |> UI.map SetUpperColor ]
                     Html.row "lower color:"             [ColorPicker.view model.lowerColor |> UI.map SetLowerColor ]
                     Html.row "invert mapping:"          [GuiEx.iconCheckBox model.invertMapping InvertMapping ]
-                ] 
-            )
+                ]                
+            )                   
 
     module Draw =
 
@@ -154,7 +143,6 @@ module FalseColorLegendApp =
                 }
             }
            
-
         let createStopps (numOfStops : int) (startColor : C4b) (endColor : C4b) (inverted : bool) =
             let inverted = (not inverted)
             let hsvStart = HSVf.FromC3f (startColor.ToC3f())
@@ -207,7 +195,7 @@ module FalseColorLegendApp =
                 //printfn "offset : %s  style : %s" offset color
                 Svg.stop ["offset" => offset; style color]
     
-        let createFalseColorLegendBasics (falseColor : MFalseColorsModel) =
+        let createFalseColorLegendBasics (id : string) (falseColor : MFalseColorsModel) =
             alist { 
                 let! enabled        = falseColor.useFalseColors                    
                 let! fcUpperBound   = falseColor.upperBound.value
@@ -219,60 +207,57 @@ module FalseColorLegendApp =
 
 
                 if enabled then
-                    let range = fcUpperBound - fcLowerBound
-                    let numOfRangeGaps = int (System.Math.Round (range / fcInterval))
-                    //let numOfBuckets = if (numOfRangeGaps + 2) > 200 then 200 else (numOfRangeGaps + 2)
-                    //let numOfLabels =   if numOfBuckets > 200 then 50
-                    //                    else if numOfBuckets > 100 then 25
-                                        
-                    //                    else if numOfBuckets > 25 then (numOfBuckets / 4)
-                    //                    else numOfBuckets - 2 
+                    let range = (fcUpperBound - fcLowerBound) |> abs
+                    let numOfRangeGaps = int (System.Math.Round (range / fcInterval))                    
                     
                     let numOfBuckets = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
-                    let numOfLabels =   if numOfBuckets > 100 then 25
-                                        else if numOfBuckets > 25 then (numOfBuckets / 4)
-                                        else numOfBuckets - 2 
+                    let numOfLabels =  
+                        if numOfBuckets > 100 then 25
+                        else if numOfBuckets > 25 then (numOfBuckets / 4)
+                        else numOfBuckets - 2
                     
                     let stopList = createStopps numOfBuckets startColor endColor invertMapping
                     
-                    let svgstopList = stopList
-                                        |> List.map (fun a ->
-                                                let (off, col) = a
-                                                buildSvgStop off col)                                                    
-                                        |> AList.ofList
+                    let svgstopList = 
+                        stopList
+                        |> List.map (fun a ->
+                            let (off, col) = a
+                            buildSvgStop off col)
+                        |> AList.ofList
                     
                     yield Svg.defs [][
-                        onBoot "$('#__ID__').attr('id','falseColorLegend')" (
+                        onBoot ("$('#__ID__').attr('id','" + id + "')") (
                             Incremental.Svg.linearGradient 
                                 (AttributeMap.ofList [  "x1" => "0%"; "y1" => "0%"; 
                                                         "x2" => "0%"; "y2" => "100%"; ]) // x1 = x2 => vertical Gradient
                                 svgstopList
                         )]
                         
-                    yield Svg.rect ["fill"          => "#EEEEEE";
-                                    "width"         => "42px";
-                                    "height"        => "95%"; //95%
-                                    "x"             => "8px";    
-                                    "y"             => "1.75%";
-                                    "rx"            => "5";       
-                                    "ry"            => "5";
-                                    "stroke"        => "black";
-                                    "stroke-width"  => "1px";
-                                    "opacity"       => "0.5";
-                                    ]
-                    
-                    
+                    yield Svg.rect [
+                        "fill"          => "#EEEEEE";
+                        "width"         => "42px";
+                        "height"        => "95%"; //95%
+                        "x"             => "8px";    
+                        "y"             => "1.75%";
+                        "rx"            => "5";       
+                        "ry"            => "5";
+                        "stroke"        => "black";
+                        "stroke-width"  => "1px";
+                        "opacity"       => "0.5";
+                    ]
+                                        
                     // SVG-RECT applies previously defined gradient (by #id)
-                    yield Svg.rect ["style"         => "fill:url(#falseColorLegend)";
-                                    "width"         => "10px";  
-                                    "height"        => "95%"//95%
-                                    "x"             => "12px";      
-                                    "y"             => "2.5%"; 
-                                    "stroke"        => "white";
-                                    "stroke-width"  => "1px";
-                                    "rx"            => "3";
-                                    "ry"            => "3";
-                                    ]
+                    yield Svg.rect [
+                        "style"         => "fill:url(#" + id + ")";
+                        "width"         => "10px";  
+                        "height"        => "95%"//95%
+                        "x"             => "12px";      
+                        "y"             => "2.5%"; 
+                        "stroke"        => "white";
+                        "stroke-width"  => "1px";
+                        "rx"            => "3";
+                        "ry"            => "3";
+                    ]
                     
                     let labelInterval = range / (float numOfLabels)
                     
@@ -303,9 +288,9 @@ module FalseColorLegendApp =
                 }
 
     let viewDnSLegendProperties lifter (model : MFalseColorsModel) = 
-        UI.viewDnSLegendTools model |> UI.map lifter
+        UI.viewScalarMappingProperties model |> UI.map lifter
 
     let viewScalarsLegendProperties lifter (model : MFalseColorsModel) = 
-        UI.viewDefinedScalarsLegendTools model |> UI.map lifter
+        UI.viewScalarMappingProperties model |> UI.map lifter
 
    

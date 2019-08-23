@@ -325,8 +325,8 @@ module DrawingApp =
         | GroupsMessage msg,_, _ ->
             let m = { model with annotations = Groups.update model.annotations msg}
             m
-        | ColorLegendMessage msg,_, _ -> 
-            { model with colorLegend = FalseColorLegendApp.update model.colorLegend msg }
+        | DnsColorLegendMessage msg,_, _ -> 
+            { model with dnsColorLegend = FalseColorLegendApp.update model.dnsColorLegend msg }
         | FlyToAnnotation msg, _, _ ->               
             model
         | SaveCSV p, _, _ -> 
@@ -455,7 +455,7 @@ module DrawingApp =
 
         let depthTest = 
             annoSet 
-            |> ASet.map(fun (_,a) -> Sg.finishedAnnotationDiscs a config model.colorLegend view) |> Sg.set
+            |> ASet.map(fun (_,a) -> Sg.finishedAnnotationDiscs a config model.dnsColorLegend view) |> Sg.set
 
         (overlay, depthTest)
             

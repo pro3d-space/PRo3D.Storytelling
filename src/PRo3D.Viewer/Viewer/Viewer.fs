@@ -92,7 +92,7 @@ module ViewerApp =
     // drawing
     let _drawing         = Model.Lens.drawing
     let _annotations     = _drawing |. DrawingModel.Lens.annotations
-    let _dnsColorLegend  = _drawing |. DrawingModel.Lens.colorLegend
+    let _dnsColorLegend  = _drawing |. DrawingModel.Lens.dnsColorLegend
     let _flat            = _annotations  |. GroupsModel.Lens.flat    
     let _lookUp          = _annotations  |. GroupsModel.Lens.groupsLookup
     let _groups          = _annotations  |. GroupsModel.Lens.rootGroup |. Node.Lens.subNodes
@@ -464,8 +464,8 @@ module ViewerApp =
                 let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation _footprint m.scene.scenePath m
                 { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }; footPrint = model.footPrint} 
             | DnSColorLegendMessage msg,_,_ ->
-                let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
-                { m with drawing = { m.drawing with colorLegend = cm } }
+                let cm = FalseColorLegendApp.update m.drawing.dnsColorLegend msg
+                { m with drawing = { m.drawing with dnsColorLegend = cm } }
             | ImportSurface sl,_,_ ->                 
                 match sl with
                     | [] -> m
