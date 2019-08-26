@@ -887,6 +887,8 @@ module Surface =
                 | None -> return empty 
         }                          
 
+    //TODO LF refactor and simplify, use option.map, bind, default value as described in
+    //https://hackmd.io/C3putqB_QNCwpxWO_oKZJQ#Working-with-Optionmap-Optionbind-and-OptiondefaultValue
     let viewColorLegendTools (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
@@ -904,7 +906,7 @@ module Surface =
                       
                       let! scalar = scalar
                       match scalar with
-                          | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
+                          | Some s -> return FalseColorLegendApp.UI.viewScalarMappingProperties s.colorLegend |> UI.map ScalarsColorLegendMessage
                           | None -> return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
                     else
                       return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
@@ -930,7 +932,7 @@ module Surface =
                     let! scalar = scalar
                     match scalar with
                     | Some s ->  
-                        yield Incremental.Svg.svg AttributeMap.empty (FalseColorLegendApp.Draw.createFalseColorLegendBasics s.colorLegend)
+                        yield Incremental.Svg.svg AttributeMap.empty (FalseColorLegendApp.Draw.createFalseColorLegendBasics "ScalarLegend" s.colorLegend)
                     | None -> yield div[][]
                 else
                     yield div[][]

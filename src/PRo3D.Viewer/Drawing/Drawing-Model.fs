@@ -34,22 +34,22 @@ type Action =
   | Clear
   | SaveVersioned
   | LoadVersioned
-  | SetSegment          of int * Segment
-  | Finish                
-  | Undo
-  | Redo
-  | FlyToAnnotation     of Guid
-  //| RemoveAnnotation        of list<Index>*Guid       
-  | Send
-  | Export  
-  | Nop
-  | UpVectorChanged     of V3d
-  | NorthVectorChanged  of V3d
-  | GroupsMessage       of Groups.Action
-  | ColorLegendMessage  of FalseColorLegendApp.Action
-  | SaveCSV             of string
-  | AddAnnotations     of list<string>
-  | PickAnnotation      of SceneHit * Guid
+  | SetSegment             of int * Segment
+  | Finish                   
+  | Undo                   
+  | Redo                   
+  | FlyToAnnotation        of Guid
+  //| RemoveAnnotation           of list<Index>*Guid       
+  | Send                   
+  | Export                 
+  | Nop                    
+  | UpVectorChanged        of V3d
+  | NorthVectorChanged     of V3d
+  | GroupsMessage          of Groups.Action
+  | DnsColorLegendMessage  of FalseColorLegendApp.Action
+  | SaveCSV                of string
+  | AddAnnotations         of list<string>
+  | PickAnnotation         of SceneHit * Guid
 
 [<DomainType>]
 type DrawingModel = {
@@ -76,7 +76,7 @@ type DrawingModel = {
     [<TreatAsValue>]
     future : Option<DrawingModel>
 
-    colorLegend : FalseColorsModel
+    dnsColorLegend : FalseColorsModel
 }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]    
@@ -114,5 +114,5 @@ module DrawingModel =
         past    = None
         future  = None
         
-        colorLegend = FalseColorsModel.initDnSLegend
+        dnsColorLegend = FalseColorsModel.initDnSLegend
     }

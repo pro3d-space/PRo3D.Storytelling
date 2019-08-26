@@ -61,7 +61,7 @@ module ViewerIO =
         Log.startTimed "[Drawing] Writing grouping"
         {
             annotations = { model.annotations with flat = HMap.empty }  //clears flat annotations from pickled
-            colorLegend = model.colorLegend
+            colorLegend = model.dnsColorLegend
         } |> Serialization.save paths.annotationGroups |> ignore
         Log.stop()
         
@@ -80,7 +80,7 @@ module ViewerIO =
             let scenePaths = p |> ScenePaths.create
             let groups = scenePaths.annotationGroups |> tryLoadAnnotations
             match groups with          
-            | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; colorLegend = g.colorLegend } }
+            | Some g -> { m with drawing = { m.drawing with annotations = g.annotations; dnsColorLegend = g.colorLegend } }
             | None -> m
         |None -> m
 
