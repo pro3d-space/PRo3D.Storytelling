@@ -248,7 +248,8 @@ module FalseColorLegendApp =
                         onBoot "$('#__ID__').attr('id','falseColorLegend')" (
                             Incremental.Svg.linearGradient 
                                 (AttributeMap.ofList [  "x1" => "0%"; "y1" => "0%"; 
-                                                        "x2" => "0%"; "y2" => "100%"; ]) // x1 = x2 => vertical Gradient
+                                                        "x2" => "0%"; "y2" => "100%";
+                                                        "pointer-events" => "none";]) // x1 = x2 => vertical Gradient
                                 svgstopList
                         )]
                         
@@ -262,6 +263,7 @@ module FalseColorLegendApp =
                                     "stroke"        => "black";
                                     "stroke-width"  => "1px";
                                     "opacity"       => "0.5";
+                                    "pointer-events" => "none";
                                     ]
 
 
@@ -275,6 +277,7 @@ module FalseColorLegendApp =
                                     "stroke-width"  => "1px";
                                     "rx"            => "3";
                                     "ry"            => "3";
+                                    "pointer-events" => "none"
                                     ]
 
                     let labelInterval = range / (float numOfLabels)
@@ -302,7 +305,10 @@ module FalseColorLegendApp =
                         let toPercent value = sprintf ("%f") value + "%"
                         let label = sprintf "%.4f" output
                       
-                        yield Svg.text ([ "x" => "25px"; "y" => toPercent (a * 100.0f); "text-anchor" => "left"; "font-size" => "10"; "fill" => "#ffffff"]) label
+                        yield Svg.text ([ "x" => "25px"; "y" => toPercent (a * 100.0f); "text-anchor" => "left";
+                                                                                        "font-size" => "10"; 
+                                                                                        "fill" => "#ffffff";
+                                                                                        "pointer-events" => "none";]) label
                 }
                 
 

@@ -56,8 +56,9 @@ module Gui =
                 "width"                 => "55px"; 
                 "height"                => "75%"; 
                 "preserveAspectRatio"   => "xMidYMid meet"; 
-                "viewBox"               => "0 0 5% 100%" 
-                "style"                 => "position:absolute; left: 0%; top: 25%"
+                "viewBox"               => "0 0 5% 100%";
+                "style"                 => "position:absolute; left: 0%; top: 25%";
+                "pointer-events"        => "none";
             ]
    
     Incremental.Svg.svg attributes (legend), m.drawing.colorLegend.useFalseColors
@@ -93,6 +94,7 @@ module Gui =
                 "height"                => "75%"; 
                 "preserveAspectRatio"   => "xMidYMid meet"; 
                 "style"                 => "position:absolute; right: 5px; top: 25%"
+                "pointer-events"        => "none"
             ]
         Incremental.Svg.svg attributes (SurfaceApp.showColorLegend m.scene.surfacesModel), visible
 
@@ -126,7 +128,7 @@ module Gui =
                                  
       let style' = "color: white; font-family:Consolas;"
     
-      yield div [clazz "ui"; style "position: absolute; top: 15px; left: 15px; float:left" ] [
+      yield div [clazz "ui"; style "position: absolute; top: 15px; left: 15px; float:left; pointer-events: none;" ] [
           //arrowOverlay
           yield table [] [
               tr[][
