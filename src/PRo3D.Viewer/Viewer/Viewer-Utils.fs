@@ -27,6 +27,7 @@ open PRo3D.Viewer
 open PRo3D.Groups
 open PRo3d.Mutable
 open Aardvark.UI.Trafos
+open PRo3D.Base
 open Aardvark.UI.Animation
 
 
@@ -373,18 +374,19 @@ module ViewerUtils =
                     |> Sg.effect [
                         Shader.stableTrafo             |> toEffect                          
                         triangleFilterX                |> toEffect                               
-                        PRo3D.Shader.improvedDiffuseTexture |> toEffect
+                        PRo3D.Base.Shader.improvedDiffuseTexture |> toEffect
                         fixAlpha |> toEffect
                         Shader.selectionColor          |> toEffect       
                         Shader.LoDColor                |> toEffect                             
-                        PRo3D.Shader.falseColorLegend2 |> toEffect                            
-                        PRo3D.Shader.mapContrast       |> toEffect
-                        PRo3D.Shader.mapBrightness     |> toEffect
-                        PRo3D.Shader.mapGamma          |> toEffect                            
-                        PRo3D.Shader.grayscale         |> toEffect
-                        PRo3D.Shader.addColor          |> toEffect
-                        PRo3D.Shader.footprintV        |> toEffect
-                        PRo3D.Shader.footPrintF        |> toEffect
+                        PRo3D.Base.Shader.falseColorLegend2 |> toEffect
+                        PRo3D.Base.Shader.mapColorAdaption  |> toEffect
+                        //PRo3D.Base.Shader.mapContrast       |> toEffect
+                        //PRo3D.Base.Shader.mapBrightness     |> toEffect
+                        //PRo3D.Base.Shader.mapGamma          |> toEffect                            
+                        //PRo3D.Base.Shader.grayscale         |> toEffect
+                        //PRo3D.Base.Shader.addColor          |> toEffect
+                        PRo3D.Base.Shader.footprintV        |> toEffect
+                        PRo3D.Base.Shader.footPrintF        |> toEffect
                     ]
                     |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                     |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()                        

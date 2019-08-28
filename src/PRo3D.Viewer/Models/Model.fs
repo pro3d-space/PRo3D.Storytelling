@@ -1,7 +1,6 @@
 ﻿namespace PRo3D
 
 
-
 open System
 open Aardvark.Base
 open Aardvark.Base.Incremental
@@ -61,6 +60,12 @@ module Option =
           | false -> None
 
 type Points = list<V3d>
+
+type TTAlignment =
+    | Top    = 0
+    | Right  = 1
+    | Bottom = 2
+    | Left   = 3
 
 type Projection = Linear = 0 | Viewpoint = 1 | Sky = 2
 type Geometry = Point = 0 | Line = 1 | Polyline = 2 | Polygon = 3 | DnS = 4

@@ -73,8 +73,8 @@
     <Compile Include="Model.fs" />
     <Compile Include="CooTransformation.fs" />
     <Compile Include="Serialization.fs" />
-    <Compile Include="Utilities.fs" />
     <Compile Include="Shaders.fs" />
+    <Compile Include="Utilities.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

@@ -445,13 +445,13 @@ module Groups =
             div [clazz "ui buttons inverted"] [
                 //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "Move Selection"; onMouseClick (fun _ -> MoveChilds)] [
-                            i [clazz "Move icon"] [] ] |> UI.wrapToolTip "Move Selection"
+                            i [clazz "Move icon"] [] ] |> UI.wrapToolTip "Move Selection" TTAlignment.Top
                 //)
                 ]
             div [clazz "ui buttons inverted"] [
                 //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                     button [clazz "ui icon button"; attribute "data-content" "Clear Selection"; onMouseClick (fun _ -> ClearSelection)] [
-                            i [clazz "Remove icon"] [] ] |> UI.wrapToolTip "Clear Selection"
+                            i [clazz "Remove icon"] [] ] |> UI.wrapToolTip "Clear Selection" TTAlignment.Top
                 //)
                 ] 
             ]
@@ -490,7 +490,7 @@ module Groups =
                 div [clazz "ui buttons inverted"] [
                     onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                         button [clazz "ui icon button"; onMouseClick (fun _ -> RemoveLeaf (ts.id,ts.path))] [
-                                i [clazz "remove icon red"] [] ] |> UI.wrapToolTipRight "Remove"
+                                i [clazz "remove icon red"] [] ] |> UI.wrapToolTip "Remove" TTAlignment.Right
                     )
                 ] 
             ]
@@ -500,13 +500,13 @@ module Groups =
                 div [clazz "ui buttons inverted"] [
                     //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                         button [clazz "ui icon button"; attribute "data-content" "Remove Group"; onMouseClick (fun _ -> RemoveGroup ts.path)] [ //
-                                i [clazz "remove icon red"] [] ] |> UI.wrapToolTipRight "Remove Group"
+                                i [clazz "remove icon red"] [] ] |> UI.wrapToolTip "Remove Group" TTAlignment.Right
                     //)
                 ] 
                 div [clazz "ui buttons inverted"] [
                     //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                         button [clazz "ui icon button"; attribute "data-content" "Clear Group"; onMouseClick (fun _ -> ClearGroup ts.path)] [ //
-                                i [clazz "remove circle icon"] [] ] |> UI.wrapToolTipRight "Clear Group"
+                                i [clazz "remove circle icon"] [] ] |> UI.wrapToolTip "Clear Group" TTAlignment.Right
                     //)
                 ] 
             ]

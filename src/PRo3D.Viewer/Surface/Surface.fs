@@ -745,10 +745,10 @@ module Surface =
                              //    yield div[onClick singleSelect][Incremental.text desc]
  
                              yield i [clazz "home icon"                                                
-                                      onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "Fly to surface"                                                     
+                                      onClick (fun _ -> FlyToSurface key) ][] |> UI.wrapToolTip "Fly to surface" TTAlignment.Top                                                    
 
                              yield i [clazz "folder icon"                                                
-                                      onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "Open Folder"
+                                      onClick (fun _ -> OpenFolder key) ][] |> UI.wrapToolTip "Open Folder" TTAlignment.Top
 
                              //yield i [
                              //  clazz "microchip icon"
@@ -756,8 +756,8 @@ module Surface =
                              //][] |> UI.wrapToolTip "process kdtrees"
 
                              yield Incremental.i (absRelIcons) (AList.empty)
-                             yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
-                             yield GuiEx.iconCheckBox s.isActive (ToggleActiveFlag key) |> UI.wrapToolTip "Toggle IsActive"
+                             yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible" TTAlignment.Top
+                             yield GuiEx.iconCheckBox s.isActive (ToggleActiveFlag key) |> UI.wrapToolTip "Toggle IsActive" TTAlignment.Top
 
                              let! path = s.importPath
                              let isobj = Path.GetExtension path = ".obj"
@@ -806,14 +806,14 @@ module Surface =
             let desc =
                 div [style color] [       
                     Incremental.text group.name
-                    Incremental.i activeAttributes AList.empty |> UI.wrapToolTip "Set active"
+                    Incremental.i activeAttributes AList.empty |> UI.wrapToolTip "Set active" TTAlignment.Top
                         
                     i [clazz "plus icon"
                        onMouseClick (fun _ -> 
                          GroupsMessage(Groups.AddGroup path))] []
-                    |> UI.wrapToolTip "Add Group"                                          
+                    |> UI.wrapToolTip "Add Group" TTAlignment.Top                                          
 
-                    Incremental.i toggleAttributes AList.empty |> UI.wrapToolTip "Toggle Group"
+                    Incremental.i toggleAttributes AList.empty |> UI.wrapToolTip "Toggle Group" TTAlignment.Top
                    // GuiEx.iconCheckBox group.visible (GroupsMessage(Groups.ToggleGroup path))
                 ]
                  

@@ -112,23 +112,12 @@ type FeatureCollection =
     features    : plist<Feature>
   }
 
-
-//TODO LF ... instead of 10 actions use 1 with parameters InstrumentType * bool
 type QueryAction =
   | SetMinSol of Numeric.Action
   | SetMaxSol of Numeric.Action
   | SetDistance of Numeric.Action
   | UpdateDistance
-  | CheckMAHLI
-  | CheckFrontHazcam
-  | CheckMastcam
-  | CheckAPXS
-  | CheckFrontHazcamR
-  | CheckFrontHazcamL
-  | CheckMastcamR
-  | CheckMastcamL
-  | CheckChemLib
-  | CheckChemRmi
+  | CheckInstrumentType of Instrument
   //| UseQueriesForDataFile
 
 type MinervaAction =

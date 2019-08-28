@@ -17,7 +17,6 @@ open Aardvark.UI.Operators
 open Aardvark.UI.Trafos  
 
 open PRo3D
-open PRo3D.Base
 open PRo3D.Groups
 
 module Sg =
@@ -50,14 +49,14 @@ module Sg =
         let patchHierarchies = 
           scene.patchHierarchies 
             |> Seq.map Prinziple.registerIfZipped 
-            |> Seq.map (fun x -> PatchHierarchy.load Serialization.binarySerializer.Pickle Serialization.binarySerializer.UnPickle (OpcPaths x))
+            |> Seq.map (fun x -> PatchHierarchy.load PRo3D.Base.Serialization.binarySerializer.Pickle PRo3D.Base.Serialization.binarySerializer.UnPickle (OpcPaths x))
             |> Seq.toList
                             
         let kdTreesPerHierarchy =
           [| 
             for h in patchHierarchies do
               if createKdTrees then   
-                  yield KdTrees.loadKdTrees h Trafo3d.Identity ViewerModality.XYZ Serialization.binarySerializer                    
+                  yield KdTrees.loadKdTrees h Trafo3d.Identity ViewerModality.XYZ PRo3D.Base.Serialization.binarySerializer                    
               else 
                   yield HMap.empty
           |]

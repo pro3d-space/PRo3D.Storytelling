@@ -396,7 +396,7 @@ module Gui =
                   let! scenePath = m.scene.scenePath 
                   let icon = 
                       match scenePath with
-                          | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
+                          | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder" TTAlignment.Top 
                           | None -> div[][]  
                         
                   let scenePath   = Mod.bindOption m.scene.scenePath "" (fun sp -> Mod.constant sp)
