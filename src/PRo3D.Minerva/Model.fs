@@ -112,6 +112,8 @@ type FeatureCollection =
     features    : plist<Feature>
   }
 
+
+//TODO LF ... instead of 10 actions use 1 with parameters InstrumentType * bool
 type QueryAction =
   | SetMinSol of Numeric.Action
   | SetMaxSol of Numeric.Action
@@ -159,6 +161,7 @@ type SgFeatures = {
     trafo       : Trafo3d
 }
 
+//TODO LF ... model with hmap<instrument,c4b>
 [<DomainType>]
 type InstrumentColor = {
     mahli        : C4b    
@@ -181,6 +184,7 @@ type FeatureProperties = {
     //instrumentColor : InstrumentColor
 }
 
+//TODO LF ... model with hmap or list instead of bools
 [<DomainType>]
 type QueryModel = {
     minSol               : NumericInput
