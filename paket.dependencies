@@ -3,46 +3,46 @@ framework: netstandard2.0, net471, netcoreapp2.0
 source https://api.nuget.org/v3/index.json
 source https://vrvis.myget.org/F/aardvark/auth/11394d4d-4fe9-44ec-87c8-f3e98909f975/api/v3/index.json
 
-nuget Aardvark.Base.Rendering              ~> 4.9.2
-nuget Aardvark.Application.WinForms.GL     ~> 4.9.2
-nuget Aardvark.Application.WinForms.Vulkan ~> 4.9.2
-nuget Aardvark.SceneGraph                  ~> 4.9.2
-nuget Aardvark.SceneGraph.IO               ~> 4.9.2
-nuget Aardvark.SceneGraph.Opc              ~> 4.9.2
-nuget Aardvark.Rendering.Text              ~> 4.9.2
-nuget Aardvark.Rendering.Vulkan            ~> 4.9.2
-nuget Aardvark.Rendering.GL                ~> 4.9.2
+nuget Aardvark.Base.Rendering              ~> 4.11.0
+nuget Aardvark.Application.WinForms.GL     ~> 4.11.0
+nuget Aardvark.Application.WinForms.Vulkan ~> 4.11.0
+nuget Aardvark.SceneGraph                  ~> 4.11.0
+nuget Aardvark.SceneGraph.IO               ~> 4.11.0
+nuget Aardvark.SceneGraph.Opc              ~> 4.11.0
+nuget Aardvark.Rendering.Text              ~> 4.11.0
+nuget Aardvark.Rendering.Vulkan            ~> 4.11.0
+nuget Aardvark.Rendering.GL                ~> 4.11.0
 
 nuget Unofficial.OpenTK                  ~> 3.0.16
 
 nuget FShade        ~> 4.3.6
 nuget FShade.Debug  ~> 4.3.6
 
-nuget Aardvark.Base                         ~> 4.5.5
-nuget Aardvark.Base.IO                      ~> 4.5.5
-nuget Aardvark.Base.Incremental             ~> 4.5.5
-nuget Aardvark.Base.FSharp                  ~> 4.5.5
-nuget Aardvark.Base.Essentials              ~> 4.5.5
-nuget Aardvark.Geometry                     ~> 4.5.5
+nuget Aardvark.Base                         ~> 4.5.11
+nuget Aardvark.Base.IO                      ~> 4.5.11
+nuget Aardvark.Base.Incremental             ~> 4.5.11
+nuget Aardvark.Base.FSharp                  ~> 4.5.11
+nuget Aardvark.Base.Essentials              ~> 4.5.11
+nuget Aardvark.Geometry                     ~> 4.5.11
 												  
-nuget Aardvark.Compiler.DomainTypes         ~> 4.2.7
-nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 4.2.7
+nuget Aardvark.Compiler.DomainTypes         ~> 4.3.0
+nuget Aardvark.Compiler.DomainTypes.MSBuild ~> 4.3.0
 
-nuget Uncodium.Eigensystems                 ~> 1.0.1
+nuget Uncodium.Eigensystems                 ~> 1.0.2
 
 
-nuget Aardvark.Geometry.Intersection        ~> 4.7.1
-nuget Aardvark.Geometry.PointTree           ~> 4.7.1
+nuget Aardvark.Geometry.Intersection        ~> 4.9.10
+nuget Aardvark.Geometry.PointTree           ~> 4.9.10
 
-nuget Aardvark.GeoSpatial.Opc               ~> 0.1.3
+nuget Aardvark.GeoSpatial.Opc               ~> 0.1.4
 
-nuget FSharp.Core                           ~> 4.3.0
+nuget FSharp.Core                           ~> 4.6.2
 nuget FSharp.Data                           ~> 3.0.0
 
-nuget Aardvark.UI                           ~> 4.5.10
-nuget Aardvark.UI.Primitives                ~> 4.5.10
-nuget Aardvark.Service                      ~> 4.5.10
-nuget Aardvark.Cef.WinForms                 ~> 4.5.10
+nuget Aardvark.UI                           ~> 4.6.0
+nuget Aardvark.UI.Primitives                ~> 4.6.0
+nuget Aardvark.Service                      ~> 4.6.0
+nuget Aardvark.Cef.WinForms                 ~> 4.6.0
 
 nuget Aardium  ~> 1.0.18
 

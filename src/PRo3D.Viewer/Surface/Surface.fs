@@ -12,6 +12,7 @@ open Aardvark.SceneGraph.IO
 open Aardvark.SceneGraph.Opc
 
 open Aardvark.VRVis.Opc
+open Aardvark.VRVis.Opc.KdTrees
 
 open Aardvark.UI.Operators
 open Aardvark.UI.Trafos  
@@ -62,58 +63,129 @@ module Surface =
 
     module ObjectFiles =        
         open Aardvark.Geometry
+        open Aardvark.Base.Coder
+
+        let saveKdTree (path, kdTree : Aardvark.Geometry.KdIntersectionTree) =
+            // serialize
+            use stream = new MemoryStream()
+            use coder = new BinaryWritingCoder(stream)
+            coder.CodeT(ref kdTree)
+      
+            // write to file
+            use fileStream = File.Create(path)
+            //stream.Position <- int64 0
+            stream.Seek(int64 0, SeekOrigin.Begin) |> ignore
+            stream.CopyTo(fileStream)
+            fileStream.Close ()
 
         let loadObject (surface : PRo3D.Surfaces.Surface) : SgSurface =                        
-            let obj = Loader.Assimp.load (surface.importPath)  
-            let mutable count = 0
-            let kdTrees = 
-              obj.meshes 
-                |> Array.map(fun x ->
-                  let dir = Path.GetDirectoryName(surface.importPath)
-                  let filename = Path.GetFileNameWithoutExtension(surface.importPath) + count.ToString() + ".aakd"
-                  let kdTreePath = dir + "\\" + filename //Path.ChangeExtension(s.importPath, name)
-                  count <- count + 1
-                  let tree' = 
-                    if File.Exists(kdTreePath) |> not then
+            //let obj = Loader.Assimp.load (surface.importPath)  
+            //let mutable count = 0
+            //let kdTrees = 
+            //  obj.meshes 
+            //    |> Array.map(fun x ->
+            //      let dir = Path.GetDirectoryName(surface.importPath)
+            //      let filename = Path.GetFileNameWithoutExtension(surface.importPath) + count.ToString() + ".aakd"
+            //      let kdTreePath = dir + "\\" + filename //Path.ChangeExtension(s.importPath, name)
+            //      count <- count + 1
+            //      let tree' = 
+            //        if File.Exists(kdTreePath) |> not then
                         
-                          let pos = x.geometry.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
+            //              let pos = x.geometry.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
                       
-                          //let indices = x.geometry.IndexArray |> unbox<int[]> potential problem with indices
-                          let t = DebugKdTreesX.getTriangleSet3f pos
+            //              //let indices = x.geometry.IndexArray |> unbox<int[]> potential problem with indices
+            //              let t = DebugKdTreesX.getTriangleSet3f pos
                                         
-                          Log.startTimed "Building kdtrees for %s" (surface.importPath |> Path.GetFileName)
-                          let tree = 
-                            KdIntersectionTree(t, 
-                              KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical) //|> PRo3D.Serialization.save kdTreePath                  
-                          Log.stop()
+            //              Log.startTimed "Building kdtrees for %s" (surface.importPath |> Path.GetFileName)
+            //              let tree = 
+            //                KdIntersectionTree(t, 
+            //                  KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical) //|> PRo3D.Serialization.save kdTreePath                  
+            //              Log.stop()
                                             
 
-                          let kd : KdTrees.InCoreKdTree = {
-                            kdTree = tree.ToConcreteKdIntersectionTree();
-                            boundingBox = tree.BoundingBox3d
-                          }
+            //              let kd : KdTrees.InCoreKdTree = {
+            //                kdTree = tree.ToConcreteKdIntersectionTree();
+            //                boundingBox = tree.BoundingBox3d
+            //              }
                         
                           
-                          kd // |> PRo3D.Serialization.save kdTreePath // Serialization crashes, maybe use texture converter
-                    else
-                        Serialization.loadAs<KdTrees.InCoreKdTree> kdTreePath
-                      //let t = PRo3D.Serialization.loadAs<KdTrees.Level0KdTree> kdTreePath
-                      //match t with
-                      //  | KdTrees.Level0KdTree.InCoreKdTree kd -> kd
-                      //  | _ -> failwith "wrong type"
+            //              kd // |> PRo3D.Serialization.save kdTreePath // Serialization crashes, maybe use texture converter
+            //        else
+            //            Serialization.loadAs<KdTrees.InCoreKdTree> kdTreePath
+            //          //let t = PRo3D.Serialization.loadAs<KdTrees.Level0KdTree> kdTreePath
+            //          //match t with
+            //          //  | KdTrees.Level0KdTree.InCoreKdTree kd -> kd
+            //          //  | _ -> failwith "wrong type"
 
                       
 
                   
                   
-                  tree'.boundingBox, (KdTrees.Level0KdTree.InCoreKdTree tree')
-                  ) |> HMap.ofArray
+            //      tree'.boundingBox, (KdTrees.Level0KdTree.InCoreKdTree tree')
+            //      ) |> HMap.ofArray
+            let obj = Loader.Assimp.load (surface.importPath)  
+    
+            let dir = Path.GetDirectoryName(surface.importPath)
+            let filename = Path.GetFileNameWithoutExtension surface.importPath
+            let kdTreePath = dir + "\\" + filename + ".aakd" //Path.ChangeExtension(s.importPath, name)
+            let mutable count = 0
+            let kdTrees = 
+              if File.Exists(kdTreePath) |> not then
+                obj.meshes 
+                |> Array.map(fun x ->
+                  let kdPath = sprintf "%s_%i.kd" surface.importPath count          
+                  let pos = x.geometry.IndexedAttributes.[DefaultSemantic.Positions] |> unbox<V3f[]>
+          
+                  //let indices = x.geometry.IndexArray |> unbox<int[]> potential problem with indices
+                  let t = 
+                    pos                      
+                      |> Seq.map(fun x -> x.ToV3d())
+                      |> Seq.chunkBySize 3
+                      |> Seq.filter(fun x -> x.Length = 3)
+                      |> Seq.map(fun x -> Triangle3d x)
+                      |> Seq.filter(fun x -> (Aardvark.VRVis.Opc.KdTrees.triangleIsNan x |> not)) |> Seq.toArray
+                      |> TriangleSet
+                                        
+                  Log.startTimed "Building kdtrees for %s" (Path.GetFileName surface.importPath |> Path.GetFileName)
+                  let tree = 
+                    KdIntersectionTree(t, 
+                      KdIntersectionTree.BuildFlags.MediumIntersection + KdIntersectionTree.BuildFlags.Hierarchical) //|> PRo3D.Serialization.save kdTreePath                  
+                  Log.stop()
+
+                  saveKdTree (kdPath, tree) |> ignore  
+          
+                  let kd : KdTrees.LazyKdTree = {
+                      kdTree        = Some (tree.ToConcreteKdIntersectionTree());
+                      affine        = Trafo3d.Identity
+                      boundingBox   = tree.BoundingBox3d
+                      kdtreePath    = kdPath
+                      objectSetPath = ""
+                    } 
+          
+                  count <- count + 1
+
+                  kd.boundingBox, (KdTrees.Level0KdTree.LazyKdTree kd)
+                ) 
+                |> Array.toList
+                |> Serialization.save kdTreePath
+
+              else
+                Serialization.loadAs<List<Box3d*KdTrees.Level0KdTree>> kdTreePath
+                  |> List.map(fun kd -> 
+                     match kd with 
+                        | _, KdTrees.Level0KdTree.InCoreKdTree tree -> (tree.boundingBox, (KdTrees.Level0KdTree.InCoreKdTree tree))
+                        | _, KdTrees.Level0KdTree.LazyKdTree tree -> 
+                            let loadedTree = if File.Exists(tree.kdtreePath) then Some (tree.kdtreePath |> KdTrees.loadKdtree) else None
+                            (tree.boundingBox, (KdTrees.Level0KdTree.LazyKdTree {tree with kdTree = loadedTree}))
+                        )
+
+            let tree = kdTrees |> HMap.ofList
 
             let bb = obj.bounds
             let sg = 
                 obj
                 |> Sg.adapter
-              //  |> Sg.requirePicking
+                |> Sg.requirePicking
                 |> Sg.noEvents
                 |> Sg.scale 1.0
 
@@ -125,7 +197,7 @@ module Surface =
                 trafo       = trafo
                 globalBB    = bb
                 sceneGraph  = sg
-                picking     = Picking.KdTree kdTrees //Picking.PickMesh meshes
+                picking     = Picking.KdTree tree //Picking.PickMesh meshes
                 //transformation = Init.Transformations
             }
                  
@@ -688,9 +760,10 @@ module Surface =
                              yield GuiEx.iconCheckBox s.isActive (ToggleActiveFlag key) |> UI.wrapToolTip "Toggle IsActive"
 
                              let! path = s.importPath
+                             let isobj = Path.GetExtension path = ".obj"
                              //
                              //  yield i 
-                             if (Directory.Exists path) |> not || (path |> Files.isSurfaceFolder |> not) then
+                             if ((Directory.Exists path) |> not || (path |> Files.isSurfaceFolder |> not)) && (isobj |> not) then
                                yield i [
                                  clazz "exclamation red icon"
                                  //Dialogs.onChooseDirectory key ChangeImportDirectory;
@@ -887,10 +960,12 @@ module Surface =
                 | None -> return empty 
         }                          
 
+    //TODO LF refactor and simplify, use option.map, bind, default value as described in
+    //https://hackmd.io/C3putqB_QNCwpxWO_oKZJQ#Working-with-Optionmap-Optionbind-and-OptiondefaultValue
     let viewColorLegendTools (model:MSurfaceModel) =
         adaptive {
             let! guid = model.surfaces.singleSelectLeaf
-            
+
             match guid with
                 | Some i -> 
                     let! exists = (model.surfaces.flat |> AMap.keys) |> ASet.contains i
@@ -904,7 +979,7 @@ module Surface =
                       
                       let! scalar = scalar
                       match scalar with
-                          | Some s -> return FalseColorLegendApp.UI.viewDefinedScalarsLegendTools s.colorLegend |> UI.map ScalarsColorLegendMessage
+                          | Some s -> return FalseColorLegendApp.UI.viewScalarMappingProperties s.colorLegend |> UI.map ScalarsColorLegendMessage
                           | None -> return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
                     else
                       return div[ style "font-style:italic"][ text "no scalar in properties selected" ] |> UI.map ScalarsColorLegendMessage 
@@ -912,7 +987,9 @@ module Surface =
                 | None -> return div[ style "font-style:italic"][ text "no surface selected" ] |> UI.map ScalarsColorLegendMessage 
         }                          
 
-    let showColorLegend (model:MSurfaceModel) =
+    //TODO LF refactor and simplify, use option.map, bind, default value as described in
+    //https://hackmd.io/C3putqB_QNCwpxWO_oKZJQ#Working-with-Optionmap-Optionbind-and-OptiondefaultValue
+    let showColorLegend (model:MSurfaceModel) = 
         alist {
             let! guid = model.surfaces.singleSelectLeaf            
             match guid with
@@ -928,7 +1005,7 @@ module Surface =
                     let! scalar = scalar
                     match scalar with
                     | Some s ->  
-                        yield FalseColorLegendApp.Draw.createColorLegend s.colorLegend
+                        yield Incremental.Svg.svg AttributeMap.empty (FalseColorLegendApp.Draw.createFalseColorLegendBasics "ScalarLegend" s.colorLegend)
                     | None -> yield div[][]
                 else
                     yield div[][]

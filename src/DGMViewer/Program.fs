@@ -300,7 +300,7 @@ module Viewer =
                |> Sg.projTrafo (perspective |> Mod.map Frustum.projTrafo    )
 
         //let bb = sg.LocalBoundingBox().GetValue() |> printfn "%A"
-        let task = app.Runtime.CompileRender(win.FramebufferSignature, BackendConfiguration.ManagedOptimized, sg.RenderObjects())
+        let task = app.Runtime.CompileRender(win.FramebufferSignature, BackendConfiguration.Default, sg.RenderObjects()) //BackendConfiguration.ManagedOptimized
 
         win.Keyboard.KeyDown(Keys.PageUp).Values.Subscribe(fun _ ->   
             transact (fun () -> speed.Value <- speed.Value * 2.0) 

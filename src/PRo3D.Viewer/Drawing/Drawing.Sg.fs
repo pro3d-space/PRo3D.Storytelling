@@ -422,13 +422,6 @@ module Sg =
 
       let pickingLines = 
         pickableLine points conf.offset c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
-        //aset
-        //    {
-        //        let! picked = picked
-        //        match picked with //TODO LF ... if then else is okay for bools
-        //            | true -> yield outline points 1 c anno.modelTrafo anno.thickness.value (anno.key |> Mod.constant)
-        //            |_-> yield pickingLine points c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
-        //    } |> Sg.set
            
       let selectionGeometry = 
         aset
