@@ -349,7 +349,7 @@ module ViewerUtils =
         }
 
     let renderCommands (sgGrouped:alist<amap<Guid,MSgSurface>>) overlayed depthTested (m:MModel) =
-        let usehighlighting = m.scene.config.useSurfaceHighlighting
+        let usehighlighting = true |> Mod.constant //m.scene.config.useSurfaceHighlighting
         let selected = m.scene.surfacesModel.surfaces.singleSelectLeaf
         let refSystem = m.scene.referenceSystem
         let grouped = 
