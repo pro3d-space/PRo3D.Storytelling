@@ -67,7 +67,7 @@ type ViewerAction =
     | BookmarkMessage           of BookmarkAction
     | BookmarkUIMessage         of Groups.Action
     | RoverMessage              of RoverApp.Action
-    | ViewPlanMessage           of ViewPlan.Action
+    | ViewPlanMessage           of ViewPlanApp.Action
     | DnSColorLegendMessage     of FalseColorLegendApp.Action
     | SetCamera                 of CameraView        
     | SetCameraAndFrustum       of CameraView * double * double        

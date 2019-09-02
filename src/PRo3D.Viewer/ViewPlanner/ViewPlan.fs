@@ -20,8 +20,8 @@ open PRo3D.Navigation2
 open Aardvark.UI.Primitives
 open CSharpUtils
 
-module ViewPlan = 
-    open ViewPlanner
+module ViewPlanApp = 
+    open IPWrappers
     open Aardvark.Base.MultimethodTest
     open Aardvark.Geometry
     
@@ -39,14 +39,12 @@ module ViewPlan =
       | ToggleFootprint
       | SaveFootPrint
       | OpenFootprintFolder
-    
-    
-    
+            
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =      
       match path with
       | Some _ ->
         let directory = @".\InstrumentStuff"
-        let errorCode = IPWrapper.Init(directory, directory)
+        let errorCode = ViewPlanner.Init(directory, directory)
         printfn "%A" errorCode
 
         let names = RoverProvider.platformNames()    
@@ -162,7 +160,6 @@ module ViewPlan =
       | false -> 
         trafoFromTranslatedBase working.[0] newTiltVec forward newRightVec
         
-
     let createViewPlan (working:list<V3d>) (rover:Rover) (ref:ReferenceSystem) (camState:CameraControllerState) 
       (kdTree:hmap<string, ConcreteKdIntersectionTree>) (surfaceModel:SurfaceModel) =
 
@@ -292,10 +289,10 @@ module ViewPlan =
                 instrumentCam     = { model.instrumentCam with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }
                 instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0 }
       
-    let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan) (fp:FootPrint)  : ('a*ViewPlanModel)=
+    let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan) (fp:FootPrint) =
         let r = roverModel.rovers  |> HMap.find vp.rover.id
         let i = 
-          match vp.selectedInstrument with
+            match vp.selectedInstrument with
             | Some i -> Some (r.instruments |> HMap.find i.id)
             | None   -> None
 
@@ -668,9 +665,7 @@ module ViewPlan =
                 viewPlans
                 drawWorking model
             ]
-
     
-
     module UI =
 
         let viewHeader (m:MViewPlan) (id:Guid) toggleMap = 
@@ -843,7 +838,6 @@ module ViewPlan =
                                                   (fun x -> RoverApp.Action.SelectRover (x |> Option.map(fun y -> y.Current |> Mod.force))) 
                                                   (fun x -> (x.id |> Mod.force) ) ]                
             ]
-
 
         let viewRoverProperties lifter (fpVisible:IMod<bool>) (model : MViewPlanModel) = 
             model.selectedViewPlan 

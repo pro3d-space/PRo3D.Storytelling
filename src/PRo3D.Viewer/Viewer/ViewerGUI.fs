@@ -378,7 +378,7 @@ module Gui =
                 | Interactions.DrawAnnotation -> 
                   return DrawingApp.UI.viewAnnotationToolsHorizontal m.drawing |> UI.map DrawingMessage
                 | Interactions.PlaceRover ->
-                  return ViewPlan.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
+                  return ViewPlanApp.UI.viewSelectRover m.scene.viewPlans.roverModel |> UI.map RoverMessage
                 | Interactions.PlaceCoordinateSystem -> 
                   return Html.Layout.horizontal [
                       Html.Layout.boxH [ Html.SemUi.dropDown' m.scene.referenceSystem.scaleChart m.scene.referenceSystem.selectedScale ReferenceSystemApp.Action.SetScale id ]
@@ -589,12 +589,12 @@ module Gui =
     module ViewPlanner = 
       let viewPlanProperties (model:MModel) =
               //model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage 
-              model.scene.viewPlans |> ViewPlan.UI.viewRoverProperties ViewPlanMessage model.footPrint.isVisible
+              model.scene.viewPlans |> ViewPlanApp.UI.viewRoverProperties ViewPlanMessage model.footPrint.isVisible
     
       let viewPlannerUI (m:MModel) =             
           div [][
               GuiEx.accordion "ViewPlans" "Write" true [
-                  ViewPlan.UI.viewViewPlans m.scene.viewPlans |> UI.map ViewPlanMessage
+                  ViewPlanApp.UI.viewViewPlans m.scene.viewPlans |> UI.map ViewPlanMessage
               ]
               GuiEx.accordion "Properties" "Content" true [
                   Incremental.div AttributeMap.empty (viewPlanProperties m |> AList.ofModSingle)

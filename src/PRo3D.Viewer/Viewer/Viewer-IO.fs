@@ -18,7 +18,7 @@ module ViewerIO =
 
     //rover data
     let loadRoverData (m:Model) =
-      let vps = ViewPlan.loadRoverData m.scene.viewPlans m.scene.scenePath
+      let vps = ViewPlanApp.loadRoverData m.scene.viewPlans m.scene.scenePath
       { m with scene = { m.scene with viewPlans = vps } }
     
     let changeExtension (ext:string) (scenePath:string) = 

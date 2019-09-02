@@ -323,10 +323,10 @@ module ViewerApp =
             | Interactions.PlaceRover, ViewerMode.Standard ->
                 let ref = m.scene.referenceSystem 
 
-                let addPointMsg = ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))
+                let addPointMsg = ViewPlanApp.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))
 
                 let outerModel, viewPlans' = 
-                  ViewPlan.update m.scene.viewPlans addPointMsg _navigation _footprint m.scene.scenePath m 
+                  ViewPlanApp.update m.scene.viewPlans addPointMsg _navigation _footprint m.scene.scenePath m 
 
                 let m' = { m with scene = {m.scene with viewPlans = viewPlans' }; footPrint = outerModel.footPrint }
                 match m.scene.viewPlans.working.IsEmpty with
@@ -457,11 +457,11 @@ module ViewerApp =
             | RoverMessage msg,_,_ ->
                 let roverModel = RoverApp.update m.scene.viewPlans.roverModel msg
 
-                let viewPlanModel = ViewPlan.updateViewPlanFromRover roverModel m.scene.viewPlans
+                let viewPlanModel = ViewPlanApp.updateViewPlanFromRover roverModel m.scene.viewPlans
 
                 { m with scene = { m.scene with viewPlans = viewPlanModel}} 
             | ViewPlanMessage msg,_,_ ->
-                let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation _footprint m.scene.scenePath m
+                let model, viewPlanModel = ViewPlanApp.update m.scene.viewPlans msg _navigation _footprint m.scene.scenePath m
                 { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }; footPrint = model.footPrint} 
             | DnSColorLegendMessage msg,_,_ ->
                 let cm = FalseColorLegendApp.update m.drawing.dnsColorLegend msg
@@ -594,7 +594,7 @@ module ViewerApp =
                 | Some path -> 
                   let importedData = RoverPlacementImporter.startRPImporter path 
                   match m.scene.viewPlans.roverModel.selectedRover with
-                    | Some r -> let vp = ViewPlan.createViewPlanFromFile importedData m.scene.viewPlans r m.scene.referenceSystem m.scene.navigation.camera
+                    | Some r -> let vp = ViewPlanApp.createViewPlanFromFile importedData m.scene.viewPlans r m.scene.referenceSystem m.scene.navigation.camera
                                 { m with scene = { m.scene with viewPlans = vp}} 
                     | None -> Log.error "no rover selected"; m
                 | None -> m
@@ -1030,7 +1030,7 @@ module ViewerApp =
                 Surfaces.Sg.viewHomePosition m.scene.surfacesModel
                                  
             let viewPlans =
-                ViewPlan.Sg.view 
+                ViewPlanApp.Sg.view 
                     m.scene.config 
                     mrefConfig 
                     m.scene.viewPlans 
@@ -1079,7 +1079,7 @@ module ViewerApp =
        
         let instrumentViewAttributes =
                 amap {
-                    let! hor, vert = ViewPlan.getInstrumentResolution m.scene.viewPlans
+                    let! hor, vert = ViewPlanApp.getInstrumentResolution m.scene.viewPlans
                     let height = "height:" + (vert/uint32(2)).ToString() + ";" ///uint32(2)
                     let width = "width:" + (hor/uint32(2)).ToString() + ";" ///uint32(2)
                     yield style ("background: #1B1C1E;" + height + width)

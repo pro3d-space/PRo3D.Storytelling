@@ -110,38 +110,7 @@ module FootPrint =
                 //Serialization.writeToFile (Path.Combine(fpPath, svxName)) json 
                 vp
             | None -> vp 
-
-
-    //let projTrafo (near : float) (far : float) (focalLength:float) (aspect:float) (principalPoint:V2d) =
-    //    let tnf = 2.0 * far * near
-    //    let a = (far + near) / (far - near)
-    //    let b = tnf / (near - far)
-
-    //    let A = far / (far - near)
-    //    let B = near * far / (near - far)
-
-    //    Trafo3d(
-    //        M44d(
-    //            focalLength,                0.0,                               -principalPoint.X,       0.0,
-    //            0.0,                        focalLength * aspect,              -principalPoint.Y,       0.0,
-    //            0.0,                        0.0,                               -a,                      b,
-    //            0.0,                        0.0,                               -1.0,                    0.0
-    //        ),
-    //        //M44d(
-    //        //    focalLength,                0.0,                               principalPoint.X,  0.0,
-    //        //    0.0,                        focalLength * aspect,              principalPoint.Y,  0.0,
-    //        //    0.0,                        0.0,                               A,                      B,
-    //        //    0.0,                        0.0,                               1.0,                    0.0
-    //        //),
-    //        M44d(
-    //            1.0/focalLength,        0.0,                                    0.0,       -principalPoint.X / focalLength,
-    //            0.0,                    1.0 / (aspect * focalLength),           0.0,       -principalPoint.Y / (focalLength * aspect),
-    //            0.0,                    0.0,                                    0.0,       -1.0,
-    //            0.0,                    0.0,                                    1.0/b,     -a/b
-
-    //        )
-    //    )
-
+    
     let updateFootprint (instrument:Instrument) (roverpos:V3d) (model:ViewPlanModel) =
         
         let id = match model.selectedViewPlan with
@@ -155,19 +124,9 @@ module FootPrint =
         let pi = PixImage<byte>(Col.Format.RGBA, res)
         pi.GetMatrix<C4b>().SetByCoord(fun (c : V2l) -> C4b.White) |> ignore
         let tex = PixTexture2d(PixImageMipMap [| (pi.ToPixImage(Col.Format.RGBA)) |], true) :> ITexture
-
-        //let focal = instrument.focal.value
+        
         let projectionTrafo = model.instrumentFrustum |> Frustum.projTrafo
-        //|> Frustum.aspect
-        //let frust    = model.instrumentFrustum
-        //let hfov     = instrument.intrinsics.horizontalFieldOfView
-        //let resh     = float(instrument.intrinsics.horizontalResolution)
-        //let resv     = float(instrument.intrinsics.verticalResolution)
-        //let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far (resh/resv)
-        //let aspect = frust |> Frustum.aspect
-        //let pP = V2d(instrument.intrinsics.horizontalPrinciplePoint, instrument.intrinsics.verticalPrinciplePoint)
-
-        //let projectionTrafo = projTrafo model.instrumentFrustum.near model.instrumentFrustum.far focal aspect pP
+        
 
         let location = model.instrumentCam.view.Location - roverpos //transformenExt.position
         let testview = model.instrumentCam.view.WithLocation location

@@ -22,7 +22,7 @@ module RemoteControlApp =
     open MBrace
     open MBrace.FsPickler.Json
     open System.Diagnostics
-    open ViewPlanner
+    open IPWrappers
     open PRo3d
     
         
@@ -92,7 +92,7 @@ module RemoteControlApp =
 
     let loadRoverData (m : RemoteModel) =      
       let directory = @".\InstrumentStuff"
-      let errorCode = IPWrapper.Init(directory, directory)
+      let errorCode = IPWrappers.ViewPlanner.Init(directory, directory)
       printfn "%A" errorCode
 
       let names = RoverProvider.platformNames()    

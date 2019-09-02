@@ -6,7 +6,7 @@ open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.UI.Primitives
 open Aardvark.UI
-open ViewPlanner
+open IPWrappers
 open Aardvark.Base.CameraView
 
 type PickSurfacePair = {

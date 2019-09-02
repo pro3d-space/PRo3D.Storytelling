@@ -6,7 +6,7 @@ open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.UI.Primitives
 open Aardvark.UI
-open ViewPlanner
+open IPWrappers
 open FShade.Intrinsics
 open Aardvark.Base.CameraView
 
@@ -107,7 +107,7 @@ type Rover = {
 [<DomainType>]
 type RoverModel = {
     rovers             : hmap<string, Rover>
-    platforms          : hmap<string, IPWrapper.SPlatform>
+    platforms          : hmap<string, ViewPlanner.SPlatform>
     selectedRover      : option<Rover>
     //selectedInstrument : option<Instrument>
     //selectedAxis       : option<Axis>

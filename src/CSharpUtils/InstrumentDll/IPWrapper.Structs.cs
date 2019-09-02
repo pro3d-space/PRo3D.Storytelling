@@ -6,9 +6,9 @@ using Aardvark.Base;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ViewPlanner
+namespace IPWrappers
 {
-    public static partial class IPWrapper
+    public static partial class ViewPlanner
     {
         public const string NotSet = "NotSet";
 

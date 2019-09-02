@@ -22,7 +22,7 @@ open PRo3D.Surfaces.Mutable
 open PRo3D.Surfaces
 open RemoteControlModel
 open PRo3D
-open ViewPlanner
+open IPWrappers
 
 open Suave.Json
 open System.Runtime.Serialization
