@@ -20,7 +20,6 @@ Aardvark.GeoSpatial.Opc
        
 Aardvark.UI.Primitives
 Aardvark.Service      
-Aardvark.Cef.WinForms
 
 Aardvark.Compiler.DomainTypes        
 Aardvark.Compiler.DomainTypes.MSBuild
