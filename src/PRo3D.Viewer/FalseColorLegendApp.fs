@@ -229,12 +229,14 @@ module FalseColorLegendApp =
                         onBoot ("$('#__ID__').attr('id','" + id + "')") (
                             Incremental.Svg.linearGradient 
                                 (AttributeMap.ofList [  "x1" => "0%"; "y1" => "0%"; 
-                                                        "x2" => "0%"; "y2" => "100%"; ]) // x1 = x2 => vertical Gradient
+                                                        "x2" => "0%"; "y2" => "100%";
+                                                        "pointer-events" => "none";]) // x1 = x2 => vertical Gradient
                                 svgstopList
                         )]
                         
                     yield Svg.rect [
                         "fill"          => "#EEEEEE";
+                                    "width"         => "42px";
                         "width"         => "42px";
                         "height"        => "95%"; //95%
                         "x"             => "8px";    
@@ -245,7 +247,9 @@ module FalseColorLegendApp =
                         "stroke-width"  => "1px";
                         "opacity"       => "0.5";
                     ]
-                                        
+                               
+
+
                     // SVG-RECT applies previously defined gradient (by #id)
                     yield Svg.rect [
                         "style"         => "fill:url(#" + id + ")";
@@ -258,7 +262,7 @@ module FalseColorLegendApp =
                         "rx"            => "3";
                         "ry"            => "3";
                     ]
-                    
+                   
                     let labelInterval = range / (float numOfLabels)
                     
                     let filteri f s = 
@@ -284,7 +288,10 @@ module FalseColorLegendApp =
                         let toPercent value = sprintf ("%f") value + "%"
                         let label = sprintf "%.4f" output
                       
-                        yield Svg.text ([ "x" => "25px"; "y" => toPercent (a * 100.0f); "text-anchor" => "left"; "font-size" => "10"; "fill" => "#ffffff"]) label
+                        yield Svg.text ([ "x" => "25px"; "y" => toPercent (a * 100.0f); "text-anchor" => "left";
+                                                                                        "font-size" => "10"; 
+                                                                                        "fill" => "#ffffff";
+                                                                                        "pointer-events" => "none";]) label
                 }
 
     let viewDnSLegendProperties lifter (model : MFalseColorsModel) = 

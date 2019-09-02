@@ -506,10 +506,16 @@ module ViewerApp =
                          
 
             | ImportDiscoveredSurfacesThreads sl,_,_ -> 
-                
+                let textoutput = 
+                    if sl.IsEmpty then
+                        ""
+                    else
+                        "Importing OPCs..."
+
+
                 let feedback = {
                   id      = System.Guid.NewGuid().ToString()
-                  text    = "Importing OPCs..."
+                  text    = textoutput //"Importing OPCs..."
                   timeout = 5000
                   msg     = (ImportDiscoveredSurfaces sl)
                 }

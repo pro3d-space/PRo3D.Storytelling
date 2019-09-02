@@ -47,7 +47,7 @@ module ConfigProperties =
             | ToggleLodColors ->
                 { model with lodColoring = not model.lodColoring}
             | ToggleOrientationCube  -> {model with drawOrientationCube = not model.drawOrientationCube}
-            | ToggleSurfaceHighlighting  -> {model with useSurfaceHighlighting = not model.useSurfaceHighlighting}
+            | ToggleSurfaceHighlighting  -> model // {model with useSurfaceHighlighting = not model.useSurfaceHighlighting}
            
 
     let view (model : MViewConfigModel) =    
@@ -63,7 +63,7 @@ module ConfigProperties =
              //   Html.row "Offset:"                  [Numeric.view' [InputBox] model.offset          |> UI.map SetOffset ]   
                 Html.row "Lod colors:"              [GuiEx.iconCheckBox model.lodColoring ToggleLodColors]
                 Html.row "Orientation Cube: "       [GuiEx.iconCheckBox model.drawOrientationCube ToggleOrientationCube]
-                Html.row "Surface highlighting: "   [GuiEx.iconCheckBox model.useSurfaceHighlighting ToggleSurfaceHighlighting]
+              //  Html.row "Surface highlighting: "   [GuiEx.iconCheckBox model.useSurfaceHighlighting ToggleSurfaceHighlighting]
             ]
         )
 

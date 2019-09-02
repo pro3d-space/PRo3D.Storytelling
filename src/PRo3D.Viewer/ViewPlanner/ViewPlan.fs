@@ -674,13 +674,13 @@ module ViewPlanApp =
 
                 i [clazz "home icon";                                                
                     onClick (fun _ -> FlyToViewPlan id)
-                ][] |> UI.wrapToolTip "FlyTo"                                                                                
+                ][] |> UI.wrapToolTip "FlyTo" TTAlignment.Top                                                                               
 
-                Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Arrows"                                                                     
+                Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Arrows" TTAlignment.Top                                                                    
 
                 i [clazz "Remove icon red";                                             
                     onClick (fun _ -> RemoveViewPlan id)
-                ][] |> UI.wrapToolTip "Remove"                                         
+                ][] |> UI.wrapToolTip "Remove" TTAlignment.Top                                        
             ]    
 
         let viewViewPlans (m:MViewPlanModel) = 

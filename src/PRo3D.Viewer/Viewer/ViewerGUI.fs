@@ -56,8 +56,8 @@ module Gui =
                 "width"                 => "55px"; 
                 "height"                => "75%"; 
                 "preserveAspectRatio"   => "xMidYMid meet"; 
-                "viewBox"               => "0 0 5% 100%" 
-                "style"                 => "position:absolute; left: 0%; top: 25%"
+                "viewBox"               => "0 0 5% 100%";
+                "style"                 => "position:absolute; left: 0%; top: 25%";
                 "pointer-events"        => "None"
             ] |> AttributeMap.ofList
         
@@ -396,7 +396,7 @@ module Gui =
                   let! scenePath = m.scene.scenePath 
                   let icon = 
                       match scenePath with
-                          | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder"  
+                          | Some p ->  i [clazz "large folder icon" ; onClick (fun _ -> OpenSceneFileLocation p) ][] |> UI.wrapToolTip "open folder" TTAlignment.Top 
                           | None -> div[][]  
                         
                   let scenePath   = Mod.bindOption m.scene.scenePath "" (fun sp -> Mod.constant sp)

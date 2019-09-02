@@ -117,16 +117,7 @@ type QueryAction =
   | SetMaxSol of Numeric.Action
   | SetDistance of Numeric.Action
   | UpdateDistance
-  | CheckMAHLI
-  | CheckFrontHazcam
-  | CheckMastcam
-  | CheckAPXS
-  | CheckFrontHazcamR
-  | CheckFrontHazcamL
-  | CheckMastcamR
-  | CheckMastcamL
-  | CheckChemLib
-  | CheckChemRmi
+  | CheckInstrumentType of Instrument
   //| UseQueriesForDataFile
 
 type MinervaAction =
@@ -159,6 +150,7 @@ type SgFeatures = {
     trafo       : Trafo3d
 }
 
+//TODO LF ... model with hmap<instrument,c4b>
 [<DomainType>]
 type InstrumentColor = {
     mahli        : C4b    
@@ -181,6 +173,7 @@ type FeatureProperties = {
     //instrumentColor : InstrumentColor
 }
 
+//TODO LF ... model with hmap or list instead of bools
 [<DomainType>]
 type QueryModel = {
     minSol               : NumericInput

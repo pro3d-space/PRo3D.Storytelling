@@ -24,15 +24,15 @@ module ReferenceSystemApp =
     //open Aardvark.UI.ChoiceModule
    
     type Action =
-        | InferCoordSystem of V3d
-        | UpdateUpNorth    of V3d
-        | SetUp            of Vector3d.Action
-        | SetNorth         of Vector3d.Action
-        | SetNOffset       of Numeric.Action
+        | InferCoordSystem   of V3d
+        | UpdateUpNorth      of V3d
+        | SetUp              of Vector3d.Action
+        | SetNorth           of Vector3d.Action
+        | SetNOffset         of Numeric.Action
         | ToggleVisible
-        | SetScale         of string
-        | SetArrowSize     of double
-        | SetPlanet        of Planet
+        | SetScale           of string
+        | SetArrowSize       of double
+        | SetPlanet          of Planet
 
     type InnerConfig<'a> =
         {
@@ -108,6 +108,7 @@ module ReferenceSystemApp =
         let n  = match planet with | Planet.None -> V3d.IOO | _ -> northVector up
         let no = Rot3d(up, model.noffset.value |> Double.radiansFromDegrees).TransformDir(n) //updateVectorInDegree up n model.origin model.noffset.value 
         { model with north = ReferenceSystem.setV3d n; up = ReferenceSystem.setV3d up; northO = no }
+
    
     let update<'a> (bigConfig : 'a) (config : ReferenceSystemConfig<'a>) (model : ReferenceSystem) (act : Action) =
         match act with

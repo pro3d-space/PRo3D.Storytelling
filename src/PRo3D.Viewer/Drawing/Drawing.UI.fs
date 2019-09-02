@@ -175,8 +175,8 @@ module UI =
                           yield div[clazz "header"; style hc][
                                 Incremental.span headerAttributes ([Incremental.text headerText] |> AList.ofList)
                             ]
-                          yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
-                          yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation a.key)][] |> UI.wrapToolTip "FlyTo"
+                          yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible" TTAlignment.Top
+                          yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation a.key)][] |> UI.wrapToolTip "FlyTo" TTAlignment.Top
                           //Incremental.span headerAttributes ([Incremental.text headerText] |> AList.ofList)
                           
                         //]
@@ -215,15 +215,15 @@ module UI =
           let desc =
               div [style color] [       
                   Incremental.text group.name
-                  Incremental.i map AList.empty |> UI.wrapToolTip "Set active"
+                  Incremental.i map AList.empty |> UI.wrapToolTip "Set active" TTAlignment.Top
                   
                   i [clazz "plus icon"
                      onMouseClick (fun _ -> 
                        GroupsMessage(Groups.AddGroup path))] [] 
-                  |> UI.wrapToolTip "Add Group"                        
+                  |> UI.wrapToolTip "Add Group" TTAlignment.Top                       
 
-                  Incremental.i visibleIconAttributes AList.empty |> UI.wrapToolTip "Show All"
-                  Incremental.i invisibleIconAttributes AList.empty |> UI.wrapToolTip "Hide All"
+                  Incremental.i visibleIconAttributes AList.empty |> UI.wrapToolTip "Show All" TTAlignment.Top
+                  Incremental.i invisibleIconAttributes AList.empty |> UI.wrapToolTip "Hide All" TTAlignment.Top
               ]
            
           let itemAttributes =

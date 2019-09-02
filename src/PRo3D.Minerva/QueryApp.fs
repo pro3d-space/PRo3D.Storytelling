@@ -67,26 +67,19 @@ module QueryApp =
         let dist = Numeric.update model.distance d
         { model with distance = dist }        
       | UpdateDistance -> msg |> sprintf "[Minerva] not implemented %A" |> failwith
-      | CheckMAHLI -> 
-        { model with checkMAHLI = not model.checkMAHLI }        
-      | CheckFrontHazcam -> 
-        { model with checkFrontHazcam = not model.checkFrontHazcam }        
-      | CheckMastcam -> 
-        { model with checkMastcam = not model.checkMastcam }        
-      | CheckAPXS -> 
-        { model with checkAPXS = not model.checkAPXS }        
-      | CheckFrontHazcamR -> 
-        { model with checkFrontHazcamR = not model.checkFrontHazcamR }        
-      | CheckFrontHazcamL -> 
-        { model with checkFrontHazcamL = not model.checkFrontHazcamL }        
-      | CheckMastcamR -> 
-        { model with checkMastcamR = not model.checkMastcamR }        
-      | CheckMastcamL -> 
-        { model with checkMastcamL = not model.checkMastcamL }        
-      | CheckChemLib -> 
-        { model with checkChemLib = not model.checkChemLib }        
-      | CheckChemRmi -> 
-        { model with checkChemRmi = not model.checkChemRmi }        
+      | CheckInstrumentType inst -> 
+        match inst with
+            | Instrument.MAHLI -> { model with checkMAHLI = not model.checkMAHLI }  
+            | Instrument.FrontHazcam -> { model with checkFrontHazcam = not model.checkFrontHazcam }  
+            | Instrument.Mastcam -> { model with checkMastcam = not model.checkMastcam }
+            | Instrument.APXS -> { model with checkAPXS = not model.checkAPXS }
+            | Instrument.FrontHazcamR -> { model with checkFrontHazcamR = not model.checkFrontHazcamR }
+            | Instrument.FrontHazcamL -> { model with checkFrontHazcamL = not model.checkFrontHazcamL }
+            | Instrument.MastcamR -> { model with checkMastcamR = not model.checkMastcamR } 
+            | Instrument.MastcamL -> { model with checkMastcamL = not model.checkMastcamL }
+            | Instrument.ChemRmi  -> { model with checkChemRmi = not model.checkChemRmi }
+            | Instrument.ChemLib  -> { model with checkChemLib = not model.checkChemLib }
+            |_ -> failwith "unknown instrument"
 
     let iconToggle (dings : IMod<bool>) onIcon offIcon action =
         let toggleIcon = dings |> Mod.map(fun isOn -> if isOn then onIcon else offIcon)
@@ -116,14 +109,14 @@ module QueryApp =
     let viewQueryInstruments (model :MQueryModel) =
         require Html.semui (
             Html.table [  
-                Html.row ("MAHLI")         [gp Instrument.MAHLI; iconCheckBox model.checkMAHLI CheckMAHLI]                
-                Html.row ("APXS")          [gp Instrument.APXS;iconCheckBox model.checkAPXS CheckAPXS]
-                Html.row ("FrontHazcamR")  [gp Instrument.FrontHazcamR;iconCheckBox model.checkFrontHazcamR CheckFrontHazcamR]
-                Html.row ("FrontHazcamL")  [gp Instrument.FrontHazcamL;iconCheckBox model.checkFrontHazcamL CheckFrontHazcamL]
-                Html.row ("MastcamR")      [gp Instrument.MastcamR;iconCheckBox model.checkMastcamR CheckMastcamR]
-                Html.row ("MastcamL")      [gp Instrument.MastcamL;iconCheckBox model.checkMastcamL CheckMastcamL]
-                Html.row ("ChemLib")       [gp Instrument.ChemLib;iconCheckBox model.checkChemLib CheckChemLib]
-                Html.row ("ChemRmi")       [gp Instrument.ChemRmi;iconCheckBox model.checkChemRmi CheckChemRmi]
+                Html.row ("MAHLI")         [gp Instrument.MAHLI; iconCheckBox model.checkMAHLI (CheckInstrumentType Instrument.MAHLI)]                
+                Html.row ("APXS")          [gp Instrument.APXS;iconCheckBox model.checkAPXS (CheckInstrumentType Instrument.APXS)]
+                Html.row ("FrontHazcamR")  [gp Instrument.FrontHazcamR;iconCheckBox model.checkFrontHazcamR (CheckInstrumentType Instrument.FrontHazcamR)]
+                Html.row ("FrontHazcamL")  [gp Instrument.FrontHazcamL;iconCheckBox model.checkFrontHazcamL (CheckInstrumentType Instrument.FrontHazcamL)]
+                Html.row ("MastcamR")      [gp Instrument.MastcamR;iconCheckBox model.checkMastcamR (CheckInstrumentType Instrument.MastcamR)]
+                Html.row ("MastcamL")      [gp Instrument.MastcamL;iconCheckBox model.checkMastcamL (CheckInstrumentType Instrument.MastcamL)]
+                Html.row ("ChemLib")       [gp Instrument.ChemLib;iconCheckBox model.checkChemLib (CheckInstrumentType Instrument.ChemLib)]
+                Html.row ("ChemRmi")       [gp Instrument.ChemRmi;iconCheckBox model.checkChemRmi (CheckInstrumentType Instrument.ChemRmi)]
             ]
         )
     

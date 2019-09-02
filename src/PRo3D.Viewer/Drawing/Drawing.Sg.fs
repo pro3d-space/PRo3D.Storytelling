@@ -25,6 +25,7 @@ open Aardvark.GeoSpatial.Opc
 open Aardvark.UI
 open Aardvark.UI.Primitives    
 open PRo3D
+open PRo3D.Base
 open PRo3D.Drawing
 open PRo3D.Groups
 open PRo3D.Versioned
@@ -312,7 +313,7 @@ module Sg =
          |> Sg.shader {
                 do! Shader.screenSpaceScale
                 do! Shader.stableTrafo
-                do! PRo3D.Shader.lines
+                do! PRo3D.Base.Shader.lines
                 do! DefaultSurfaces.thickLine
                 do! DefaultSurfaces.thickLineRoundCaps
                 do! DefaultSurfaces.constantColor C4f.VRVisGreen
