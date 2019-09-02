@@ -372,8 +372,8 @@ module ViewerUtils =
                     set 
                     |> Sg.set
                     |> Sg.effect [
-                        Shader.stableTrafo             |> toEffect                          
-                        triangleFilterX                |> toEffect                               
+                        Shader.stableTrafo             |> toEffect
+                        triangleFilterX                |> toEffect
                         PRo3D.Base.Shader.improvedDiffuseTexture |> toEffect
                         fixAlpha |> toEffect
                         Shader.selectionColor          |> toEffect       

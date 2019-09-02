@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.28721.148
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.757
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpUtils", "CSharpUtils\CSharpUtils.csproj", "{64CDE4E5-F90A-40C0-93B9-30B1AD02855C}"
 EndProject
@@ -9,6 +9,8 @@ EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PRo3D.Minerva", "PRo3D.Minerva\PRo3D.Minerva.fsproj", "{EEAC5C2E-F7B2-47E7-903A-89DF421DDD0C}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PRo3D.Base", "PRo3D.Base\PRo3D.Base.fsproj", "{E96ACF20-D554-407D-BF77-F67A8F60FDB3}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PRo3D.Viewplanner", "PRo3D.Viewplanner\PRo3D.Viewplanner.fsproj", "{2C82E737-21DC-4DE1-BFAE-19E7F826F66A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,6 +34,10 @@ Global
 		{E96ACF20-D554-407D-BF77-F67A8F60FDB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E96ACF20-D554-407D-BF77-F67A8F60FDB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E96ACF20-D554-407D-BF77-F67A8F60FDB3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C82E737-21DC-4DE1-BFAE-19E7F826F66A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C82E737-21DC-4DE1-BFAE-19E7F826F66A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C82E737-21DC-4DE1-BFAE-19E7F826F66A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C82E737-21DC-4DE1-BFAE-19E7F826F66A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

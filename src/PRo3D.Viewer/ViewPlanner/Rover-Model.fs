@@ -288,8 +288,6 @@ type ViewPlanModel = {
     //footPrint           : FootPrint 
     }
 
-
-
 module ViewPlanModel =
     let currentAngle = 
         {
