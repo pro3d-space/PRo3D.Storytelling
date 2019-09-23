@@ -116,6 +116,7 @@
     <Compile Include="ViewPlanner\Rover.fs" />
     <Compile Include="ViewPlanner\ViewPlan.fs" />
     <Compile Include="Viewer-Model.fs" />
+    <Compile Include="VersionedScene.fs" />
     <Compile Include="Bookmarks.fs" />
     <Compile Include="Scene.fs" />
     <Compile Include="LensConfigs.fs" />

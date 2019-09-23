@@ -140,14 +140,14 @@ and MailboxAction =
 type Scene = {
     navigation        : NavigationModel
     interaction       : InteractionMode
-    surfacesModel     : SurfaceModel  
+    surfacesModel     : SurfaceModel
     config            : ViewConfigModel
     scenePath         : Option<string>
-    referenceSystem   : ReferenceSystem
-    //orientationSystem : ReferenceSystem
+    referenceSystem   : ReferenceSystem    
     bookmarksModel    : BookmarksModel
     viewPlans         : ViewPlanModel
     dockConfig        : DockConfig
+
     closedPages       : list<DockElement>
     firstImport       : bool
     userFeedback      : string
@@ -190,8 +190,7 @@ type MessagingMailbox = MailboxProcessor<MailboxAction>
 type Model = { 
    
     scene            : Scene
-    drawing          : Drawing.DrawingModel   
-    properties       : Properties
+    drawing          : Drawing.DrawingModel    
     interaction      : Interactions
     picking          : bool
     ctrlFlag         : bool
@@ -343,8 +342,7 @@ module Viewer =
             feedbackThreads = ThreadPool.empty
         }
 
-        drawing         = Drawing.DrawingModel.initialdrawing
-        properties      = NoProperties
+        drawing         = Drawing.DrawingModel.initialdrawing        
         interaction     = Interactions.PlaceCoordinateSystem
         picking         = false
         ctrlFlag        = false
