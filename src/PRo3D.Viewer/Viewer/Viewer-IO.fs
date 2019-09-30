@@ -49,7 +49,7 @@ module ViewerIO =
           annotationDepr      = scenepath |> changeExtension ".ann_old" 
         }
 
-    let saveVersioned (model : DrawingModel) (paths : ScenePaths) =      
+    let saveVersionedAnnotations (model : DrawingModel) (paths : ScenePaths) =      
         
         Log.startTimed "[Drawing] Writing annotations"
         model.annotations.flat 
@@ -100,7 +100,13 @@ module ViewerIO =
     let saveSceneAndAnnotationGroups (path:string) (m:Model) = 
         if path.IsEmptyOrNull() then m
         else
-          let s' = { m.scene with scenePath = Some path}
-          let drawing = (path |> ScenePaths.create) |> saveVersioned m.drawing
-          { m with scene = Serialization.save path s'; drawing = drawing } |> Model.stashAndSaveRecent path
+            let s' = { m.scene with scenePath = Some path}
+            let drawing = 
+                (path |> ScenePaths.create) 
+                    |> saveVersionedAnnotations m.drawing
+
+            let scene = s' |> Serialization.save path
+
+            { m with scene = scene; drawing = drawing } 
+            |> Model.stashAndSaveRecent path
 
