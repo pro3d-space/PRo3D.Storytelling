@@ -10,6 +10,7 @@ open PRo3D.Groups
 open PRo3D.Drawing
 open PRo3D.Viewer
 open PRo3D.Versioned
+open PRo3D.Scene.Versioned
 
 module ViewerIO =  
     open Chiron
