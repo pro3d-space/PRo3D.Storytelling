@@ -374,7 +374,7 @@ module DrawingApp =
             model.annotations.flat 
                 |> HMap.toList 
                 |> List.map(fun (_,b) -> b |> Leaf.toAnnotation) // |> Annotation'.convert)
-                |> Json.serialize |> Json.formatWith JsonFormattingOptions.SingleLine |> IO.writeToFile path
+                |> Json.serialize |> Json.formatWith JsonFormattingOptions.SingleLine |> Serialization.writeToFile path
             
             Log.line "[Drawing] Writing grouping"
             let annotations' = 
