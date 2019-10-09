@@ -165,7 +165,7 @@ module DrawingUtilities =
                     Log.startTimed "[ViewerIO] Reading annotations ann.json"
                     let (annos : list<Annotation'>) = 
                         annoPaths.versioned 
-                        |> IO.readFromFile 
+                        |> Serialization.readFromFile 
                         |> Json.parse 
                         |> Json.deserialize
                     
