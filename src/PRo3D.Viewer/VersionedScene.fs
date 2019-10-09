@@ -1,4 +1,4 @@
-﻿namespace PRo3D.Versioned
+﻿namespace PRo3D.Scene.Versioned
 
 open System
 open Aardvark.Base
@@ -8,6 +8,7 @@ open Aardvark.UI.Primitives
 
 open PRo3D
 open PRo3D.Base
+open PRo3D.Versioned
 open Chiron
 
 #nowarn "0686"
