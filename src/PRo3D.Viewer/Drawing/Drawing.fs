@@ -25,6 +25,7 @@ open Aardvark.VRVis.Opc
 open Aardvark.UI
 open Aardvark.UI.Primitives    
 open PRo3D
+open PRo3D.Base
 open PRo3D.Drawing
 open PRo3D.DrawingApp
 open PRo3D.Groups
@@ -387,7 +388,7 @@ module DrawingApp =
             let pathgGrouping = "./annotations.grouping"
 
             Log.line "[Drawing] Reading annotations"
-            let (annos : list<Annotation'>) = path |> IO.readFromFile |> Json.parse |> Json.deserialize
+            let (annos : list<Annotation'>) = path |> Serialization.readFromFile |> Json.parse |> Json.deserialize
             let annos = annos |> List.map(fun x -> (x.key,x |> Leaf.Annotations')) |> HMap.ofList
             
             Log.line "[Drawing] Reading grouping"

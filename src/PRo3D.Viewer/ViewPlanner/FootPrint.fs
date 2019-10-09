@@ -106,7 +106,7 @@ module FootPrint =
                         acquisition = acquisition
                     }
                 //Serialization.save (Path.Combine(fpPath, svxName)) simulatedViewData |> ignore
-                let json = simulatedViewData |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty |> IO.writeToFile (Path.Combine(fpPath, svxName))
+                let json = simulatedViewData |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty |> Serialization.writeToFile (Path.Combine(fpPath, svxName))
                 //Serialization.writeToFile (Path.Combine(fpPath, svxName)) json 
                 vp
             | None -> vp 
