@@ -34,6 +34,7 @@ type Label = {
     width : int
     position : V2i
     text : string
+    fontSize : int
 }
 
 // An annotation is a label and optionally a target
@@ -53,23 +54,25 @@ type Annotations = {
 }
 
 type AnnotationAction =
-    | LabelChanged  of AnnotationId * string
-    | LabelMoved    of AnnotationId * V2i
-    | LabelResized  of AnnotationId * int
-    | LabelClicked  of AnnotationId
-    | Focus         of AnnotationId
+    | LabelChanged          of AnnotationId * string
+    | LabelMoved            of AnnotationId * V2i
+    | LabelResized          of AnnotationId * int
+    | LabelClicked          of AnnotationId
+    | ChangeLabelFontSize
+    | Focus                 of AnnotationId
     | Blur
-    | Add           of string
-    | Remove        of AnnotationId
+    | Add                   of string
+    | Remove                of AnnotationId
     | Target
-    | SaveTarget    of V3d
+    | SaveTarget            of V3d
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Label =
     let create (text : string) (position : V2i) = {
-        width = 300;
+        width = 300
         position = position
         text = text
+        fontSize = 32
     }
 
 [<AutoOpen>]
@@ -98,6 +101,13 @@ module Annotation =
 
     let setLabelWidth (width : int) (a : Annotation) =
         { a with label = { a.label with width = width }}
+
+    let changeLabelFontSize (a : Annotation) =
+        let sizes = [|16 .. 4 .. 64|]
+        let current = sizes |> Array.tryFindIndex ((=) a.label.fontSize)
+                            |> Option.defaultValue 0
+
+        { a with label = { a.label with fontSize = sizes.[(current + 1) % sizes.Length] }}
 
     let setTarget (target : V3d option) (a : Annotation) =
         { a with target = target }

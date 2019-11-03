@@ -82,6 +82,12 @@ function setText(elem, text) {
     autosize(elem.parent());
 }
 
+// Sets the font size for the given label textarea
+function setFontSize(elem, size) {
+    elem.css('font-size', `${size}px`);
+    autosize(elem.parent());
+}
+
 // Sets the width of the given label
 function setWidth(elem, width) {
     elem.width(width);

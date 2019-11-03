@@ -283,6 +283,7 @@ let overlayView (model : MModel) =
                                 Incremental.div (AttributeMap.ofAMap <| amap {
                                     let! focus = focus
                                     yield clazz <| "ui icon button" + if focus then "" else " disabled"
+                                    yield onClick (fun _ -> ChangeLabelFontSize |> AnnotationAction)
                                 }) <| AList.ofList [
                                     i [clazz "font icon"] []
                                 ]

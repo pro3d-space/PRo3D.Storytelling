@@ -60,6 +60,8 @@ let update (msg : AnnotationAction) (a : Annotations) =
                       |> Lens.set Annotations.Lens.targeting false
                 | _ ->
                     a
+        | ChangeLabelFontSize ->
+            a |> mapById Annotation.changeLabelFontSize a.focus.Value.id
         | Focus id ->
             { a with focus = a |> tryFindById id |> Option.map snd }
         | Blur ->
@@ -179,6 +181,7 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
         let setText = onBootInitial "textData" a.label.text "setText($('#__ID__'), __DATA__)"
         let setWidth = onBootInitial "widthData" a.label.width "setWidth($('#__ID__'), __DATA__)"
         let setPosition = onBootInitial "positionData" a.label.position "setPosition($('#__ID__'), __DATA__)"
+        let setFontSize = onBootInitial "fontSizeData" a.label.fontSize "setFontSize($('#__ID__'), __DATA__)"
 
         let setData =
             setWidth >> setPosition
@@ -213,7 +216,7 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
                             i [clazz "remove icon"] []
                         ]
 
-                    yield setText (
+                    yield (setText >> setFontSize) (
                         Incremental.textarea (AttributeMap.ofAMap <| amap {
                             let! id = a.id
 
