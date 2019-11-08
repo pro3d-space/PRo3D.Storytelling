@@ -19,6 +19,14 @@
     stroke: rgb(200, 200, 200);
 }
 
+.presentation.annotations .arrowHead {
+    fill: white;
+}
+
+.presentation.annotations .arrowLine {
+    stroke: white;
+}
+
 .annotations .label {
 	position: absolute;
     border-radius: 8px;
@@ -56,8 +64,20 @@
     resize: none;
 }
 
-.annotations .disabled.label {
+.presentation.annotations .label textarea {
+    color: white;
+    /* Not a perfect solution for outlines but looks good enough */
+    text-shadow:
+        0 0 1px black,
+        -1px -1px 0.5px black,
+        1px -1px 0.5px black,
+        -1px 1px 0.5px black,
+        1px 1px 0.5px black;
+}
+
+.presentation.annotations .label {
     opacity: 1.0;
+    background: none;
     z-index: auto;
     pointer-events: none;
 }

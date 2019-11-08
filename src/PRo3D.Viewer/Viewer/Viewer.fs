@@ -611,13 +611,14 @@ module ViewerApp =
                 File.Delete("./last") |> ignore
                 m
             | HoverSurface p, _, _  when m.scene.targeting.enabled ->
-                // TODO: Use cache?
                 let r = p.globalRay.Ray
 
                 match SurfaceApp.doKdTreeIntersection (_surfacesModel.Get(m)) m.scene.referenceSystem r cache with
-                    | Some (t, _), _ ->
+                    | Some (t, _), c ->
+                        cache <- if cache.Count < 32 then HMap.union cache c else c
                         m |> Lens.set (Model.Lens.scene |. Scene.Lens.targeting |. Targeting.Lens.lastHit) (r.Ray.GetPointOnRay t)
-                    | None, _ ->
+                    | None, c ->
+                        cache <- if cache.Count < 32 then HMap.union cache c else c
                         m                
             | PickSurface (p,name), _ ,true ->              
               let fray = p.globalRay.Ray

@@ -80,7 +80,7 @@ let update (msg : AnnotationAction) (a : Annotations) =
             a |> mapById (Annotation.setTarget <| Some p) a.focus.Value.id
               |> Lens.set Annotations.Lens.targeting false
 
-let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod<V3d>) (disabled : bool) (annotations : MAnnotations) =
+let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod<V3d>) (presentation : bool) (annotations : MAnnotations) =
 
     let preventBlur (x : DomNode<'a>) =
         onBoot "$('#__ID__').on('mousedown', function (event) { event.preventDefault(); });" x
@@ -120,7 +120,7 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
                 if targeting then 
                     sceneHit
                 else
-                    a.target |> Mod.map (Option.defaultValue V3d.Zero) // FIXME: This line causes issues for some reason
+                    a.target |> Mod.map (Option.defaultValue V3d.Zero)
 
             let! vp = viewProjTrafo |> Mod.map (fun t -> t.Forward)
             return vp.TransformPosProjFull t
@@ -152,11 +152,11 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
                 Svg.defs [] [
                     Svg.marker [
                         clazz "arrowHead"
-                        attribute "orient" "auto-start-reverse"
+                        attribute "orient" "auto"
                     ] [ Svg.path [] ]
                 ]
 
-                Incremental.Svg.path (AttributeMap.ofAMap <| amap {
+                Incremental.Svg.polyline (AttributeMap.ofAMap <| amap {
                     yield clazz "arrowLine"
 
                     let! hasTarget = hasTarget a
@@ -189,7 +189,7 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
         init (
             setData (
                 Incremental.div (AttributeMap.ofAMap <| amap {
-                    yield clazz <| "label" + if disabled then " disabled" else ""
+                    yield clazz <| "label"
 
                     let! id = a.id
                     yield attribute "data-pos" <| Pickler.jsonToString V2i.Zero
@@ -198,7 +198,7 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
                     yield onClick (fun _ -> LabelClicked id)
 
                 }) <| AList.ofList [
-                    if not disabled then
+                    if not presentation then
                         yield div [clazz "grabber"] []
 
                         yield preventBlur (
@@ -221,7 +221,10 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
                             let! id = a.id
 
                             yield attribute "rows" "1"
-                            yield attribute "placeholder" "Add text here..."
+
+                            if not presentation then
+                                yield attribute "placeholder" "Add text here..."
+
                             yield onChange (fun s -> LabelChanged (id, s))
                             yield onFocus (fun _ -> Focus id)
 
@@ -233,7 +236,7 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
                             else
                                 yield onBlur (fun _ -> Blur)
 
-                            if disabled then
+                            if presentation then
                                 yield attribute "disabled" ""
                         }) a.label.text
                     )
@@ -261,7 +264,7 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
         setViewport (
             setBaseSize (
                 Incremental.Svg.svg (AttributeMap.ofList [
-                    clazz "annotations"
+                    yield clazz <| "annotations" + if presentation then " presentation" else ""
                 ]) <| AList.map mkAnnotation annotations.list
             )
         )
