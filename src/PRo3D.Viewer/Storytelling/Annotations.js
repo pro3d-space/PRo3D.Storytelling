@@ -1,9 +1,4 @@
-﻿var baseSize = Point.new(1, 1);
-var viewport = Point.new(1, 1);
-var drag = { elem: null, prev: null };
-var resize = { elem: null, prev: null };
-
-var Point = {
+﻿var Point = {
     new: function(x, y) {
         return { X: x, Y: y };
     },
@@ -37,6 +32,11 @@ var Point = {
         return this.new(p.X / l, p.Y / l);
     }
 }
+
+var baseSize = Point.new(1, 1);
+var viewport = Point.new(1, 1);
+var drag = { elem: null, prev: null };
+var resize = { elem: null, prev: null };
 
 // Sets the viewport size
 function setViewport(size) {
