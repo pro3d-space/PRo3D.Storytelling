@@ -220,13 +220,16 @@ module ViewerApp =
           //      | None -> m
           //  | None -> m
 
-    let animateFowardAndLocation (pos : V3d) (dir : V3d) (duration : RelativeTime) (name : string) = 
+    let animateFowardAndLocation (pos : V3d) (dir : V3d) (up : V3d) (duration : RelativeTime) (name : string) = 
       {
         (CameraAnimations.initial name) with 
           sample = fun (localTime, globalTime) (state : CameraView) -> // given the state and t since start of the animation, compute a state and the cameraview
             if localTime < duration then                  
               let rot      = Rot3d(state.Forward, dir) * localTime / duration
               let forward' = rot.TransformDir(state.Forward)
+
+              let uprot     = Rot3d(state.Up, up) * localTime / duration
+              let up'       = uprot.TransformDir(state.Up)
               
               let vec       = pos - state.Location
               let velocity  = vec.Length / duration                  
@@ -236,14 +239,15 @@ module ViewerApp =
               let view = 
                 state 
                   |> CameraView.withForward forward'
+                  |> CameraView.withUp up'
                   |> CameraView.withLocation location'
       
               Some (state,view)
             else None
       }
 
-    let createAnimation pos forward (animationsOld: AnimationModel) : AnimationModel =                                    
-      animateFowardAndLocation pos forward 3.5 "ForwardAndLocation2s"
+    let createAnimation pos forward up (animationsOld: AnimationModel) : AnimationModel =                                    
+      animateFowardAndLocation pos forward up 3.5 "ForwardAndLocation2s"
         |> AnimationAction.PushAnimation 
         |> AnimationApp.update animationsOld
 
@@ -383,7 +387,7 @@ module ViewerApp =
                       | Some a ->                                                
                           //m |> lookAtBoundingBox (Box3d(a.points |> PList.toList))
                           let animationMessage = 
-                            animateFowardAndLocation a.view.Location a.view.Forward 2.0 "ForwardAndLocation2s"
+                            animateFowardAndLocation a.view.Location a.view.Forward a.view.Up 2.0 "ForwardAndLocation2s"
                           let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                           { m with  animations = a'}
                       | None -> m               
@@ -408,7 +412,7 @@ module ViewerApp =
                     //let pos = trafo'.TransformPos(hp.Location)
                     //let forward = trafo'.TransformDir(hp.Forward)
                     let animationMessage = 
-                        animateFowardAndLocation hp.Location hp.Forward 2.0 "ForwardAndLocation2s"
+                        animateFowardAndLocation hp.Location hp.Forward hp.Up 2.0 "ForwardAndLocation2s"
                     AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                   | None ->
                     let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
@@ -417,7 +421,7 @@ module ViewerApp =
                       let bb = s.globalBB.Transformed(surface.preTransform.Forward * superTrafo.Forward)
                       let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
                       let animationMessage = 
-                          animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                          animateFowardAndLocation view.Location view.Forward view.Up 2.0 "ForwardAndLocation2s"
                       let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                       a'
                     | None -> m.animations
@@ -437,7 +441,7 @@ module ViewerApp =
                   | None -> m       
             | BookmarkMessage msg,_,_ ->  
                 let m', bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
-               
+
                 let animation = 
                   match msg with
                   | BookmarkAction.GroupsMessage k ->
@@ -446,6 +450,7 @@ module ViewerApp =
                         createAnimation 
                           m'.scene.navigation.camera.view.Location
                           m'.scene.navigation.camera.view.Forward
+                          m'.scene.navigation.camera.view.Up
                           m.animations                      
                     | _ -> m.animations
                   | _ -> m.animations
@@ -907,7 +912,7 @@ module ViewerApp =
                  let currentView = m.scene.navigation.camera.view
                  let newForward = (v - currentView.Location).Normalized
                                     
-                 { m with animations = createAnimation v newForward m.animations }              
+                 { m with animations = createAnimation v newForward currentView.Up m.animations }              
               | _ ->                
                  let currentView = m.scene.navigation.camera.view
                  let minerva' = PRo3D.Minerva.App.update currentView m.frustum m.minervaModel a                                                                               
@@ -1094,16 +1099,16 @@ module ViewerApp =
 
         page (fun request -> 
           match Map.tryFind "page" request.queryParams with
-            //| Some "instrumentview" ->
-            //    require (myCss) (
-            //        body [ style "background: #1B1C1E; width:100%; height:100%; overflow-y:auto; overflow-x:auto;"] [
-            //          Incremental.div instrumentViewAttributes (
-            //            alist {
-            //                yield viewInstrumentView m 
-            //                yield Viewer.Gui.textOverlaysInstrumentView m.scene.viewPlans
-            //            } )
-            //        ]
-            //    )
+            | Some "instrumentview" ->
+                require (myCss) (
+                    //body [ style "background: #1B1C1E; width:100%; height:100%; overflow-y:auto; overflow-x:auto;"] [
+                      Incremental.div instrumentViewAttributes (
+                        alist {
+                            yield viewInstrumentView m 
+                            yield Viewer.Gui.textOverlaysInstrumentView m.scene.viewPlans
+                        } )
+                    
+                )
             | Some "render" -> 
                 
                  

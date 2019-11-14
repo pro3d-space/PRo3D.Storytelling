@@ -160,8 +160,8 @@ module Surface =
                       boundingBox   = tree.BoundingBox3d
                       kdtreePath    = kdPath
                       objectSetPath = ""
-                      coordinatesPath = ""
-                      texturePath = ""
+                      //coordinatesPath = ""
+                      //texturePath = ""
                     } 
           
                   count <- count + 1

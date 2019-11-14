@@ -40,7 +40,7 @@ module FootPrint =
                 
                
                 let pngName = System.String.Format(
-                                        "{0:0000}{1:00}{2:00}_{3:00}{4:00}{5:00}_{6}_{7}.png",
+                                        "{0:0000}{1:00}{2:00}_{3:00}{4:00}{5:00}_{6}_{7}",
                                         now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, roverName, instrumentName)
 
                 let svxName = System.String.Format(

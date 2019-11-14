@@ -28,7 +28,7 @@ module Utilities =
             let clientBla : list<ClientStatistics> =
                 Pickler.unpickleOfJson  result
             match clientBla.Length with
-                | 1 -> clientBla // clientBla.[1] 
+                | 2 -> clientBla // clientBla.[1] 
                 | _ -> failwith "no client bla"
 
         for cs in clientStatistic do
@@ -41,7 +41,7 @@ module Utilities =
               | false -> System.IO.Directory.CreateDirectory folder |> ignore
             
            // let filename = cs.name + name
-            wc.DownloadFile(screenshot,Path.combine [folder; name])
+            wc.DownloadFile(screenshot,Path.combine [folder; name + "_" + cs.name + ".png"])
 
 
 
