@@ -30,6 +30,8 @@ module Sg =
       kdtree : hmap<Box3d,KdTrees.Level0KdTree>
     }
 
+
+
     let mutable hackRunner = None
 
     let createPlainSceneGraph (runtime : IRuntime) (signature : IFramebufferSignature) (scene : OpcScene) (createKdTrees)
@@ -74,14 +76,39 @@ module Sg =
                 )
                 |> Array.fold (fun a b -> HMap.union a b) HMap.empty
         
+
+        let createContext (f : Aardvark.GeoSpatial.Opc.PatchLod.PatchNode) =
+            match Ag.tryGetInhAttribute f "RoverVP" with
+                | None -> Option<IMod<Trafo3d>>.None :> obj
+                | Some v -> Some (v |> unbox<IMod<Trafo3d>>) :> obj
+
+        let uniforms = 
+            Map.ofList [    
+                "RoverMVP", fun scope (rp : Aardvark.GeoSpatial.Opc.PatchLod.RenderPatch) -> 
+                    let vp : Option<IMod<Trafo3d>> = unbox scope
+                    match vp with
+                    | Some vp -> 
+                        Mod.map2 (fun (m : Trafo3d) (vp : Trafo3d) -> (m * vp).Forward) rp.trafo vp :> IMod
+                    | None -> 
+                        Log.error "did not provideRover VP but shader wanted it."
+                        (Mod.constant M44f.Identity) :> IMod
+                "HasRoverMVP", fun scope _ -> 
+                    let vp : Option<IMod<Trafo3d>> = unbox scope
+                    match vp with
+                        | Some _ -> Mod.constant true :> IMod
+                        | _ -> Mod.constant false :> IMod
+            ]
+
         // create level of detail hierarchy (Sg)        
         let g = 
           patchHierarchies 
           |> List.map (fun h ->                                  
-               Sg.patchLod signature runner h.opcPaths.Opc_DirAbsPath
+               Sg.patchLod' signature runner h.opcPaths.Opc_DirAbsPath
                   scene.lodDecider scene.useCompressedTextures
                   ViewerModality.XYZ
-                  (PatchLod.toRoseTree h.tree))
+                  (PatchLod.toRoseTree h.tree)
+                  uniforms
+                  createContext)
           |> Sg.ofList                
                                                 
         g, patchHierarchies, kdTrees

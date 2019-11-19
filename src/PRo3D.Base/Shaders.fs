@@ -347,6 +347,14 @@ module Shader =
 
         }
 
+    type RoverVertex =
+        {
+            [<Position>]                  pos         : V4d    
+            [<Semantic("RoverPosProj")>]  posProj     : V4d
+            [<Color>]                     c       : V4d
+        }
+
+
       
     let private footprintmap =
         sampler2d {
@@ -358,22 +366,38 @@ module Shader =
             addressW WrapMode.Border
     }
 
-    let footprintV (v : FootPrintVertex) =
+    type UniformScope with
+        member x.RoverMVP : M44d = uniform?RoverMVP
+        member x.HasRoverMVP : bool = uniform?HasRoverMVP
+
+    let footprintV (v : RoverVertex) =
         vertex {
-            let vp = uniform.ModelViewTrafo * v.pos
-            let p = uniform.ProjTrafo * v.pos
-            
-            let instrumentMatrix    : M44d   = uniform?instrumentMVP
-            let projectionMatrix    : M44d   = uniform?projMVP
-            let instrumentView      : M44d   = uniform?instViewMVP
-            let globalToLocal       : V3d   = uniform?globalToLocal
-           
-            //let test = forwardMatrix * v.wp |> Vec.normalize
-            let test = v.wp - V4d(globalToLocal, 0.0) |> Vec.normalize
-            let v1 = instrumentView * test |> Vec.normalize
-            let v2 = projectionMatrix * v1 |> Vec.normalize
-            //let tt = instrumentMatrix * test
-            return { v with tc0 = v2 ; sv = 0 } //v.wp
+            let roverProjSpace = uniform.RoverMVP * v.pos
+
+            return { v with posProj = roverProjSpace  } //v.wp
+        }
+
+    let footPrintF (v : RoverVertex) =
+        fragment {           
+            if uniform?footprintVisible && uniform.HasRoverMVP then
+                let outside = v.c * 0.7 
+                let pos = v.posProj
+                let t = pos.XY / pos.W
+                let c = 
+                    if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
+                        v.c 
+                    elif t.X > -1.01 && t.X < 1.01 && t.Y > -1.01 && t.Y < 1.01 then
+                        v.c * V4d(1.0, 0.0, 0.0, 1.0)
+                    else
+                        outside 
+              
+                if (pos.Z <= 0.0) then
+                    return outside
+                else
+                    return c 
+             
+            else
+                return v.c
         }
 
     let footprintV2 (v : FootPrintVertex) =
@@ -393,9 +417,9 @@ module Shader =
             } 
         } 
   
-    let footPrintF (v : FootPrintVertex) =
+    let footPrintFOld (v : FootPrintVertex) =
         fragment {           
-            if uniform?footprintVisible then
+            if uniform?footprintVisible && uniform.HasRoverMVP then
                 let outside = v.c * 0.7 
                 let t = v.tc0.XY / v.tc0.W
                 let c = 

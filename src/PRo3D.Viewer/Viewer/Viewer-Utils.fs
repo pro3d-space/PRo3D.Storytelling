@@ -325,11 +325,13 @@ module ViewerUtils =
            return V4d(v.c.X, v.c.Y,v.c.Z, 1.0)           
         }
 
+    //type TriangleVertex =
+
     let triangleFilterX (input : Triangle<Vertex>) =
         triangle {
-            let p0 = input.P0.wp.XYZ
-            let p1 = input.P1.wp.XYZ
-            let p2 = input.P2.wp.XYZ
+            let p0 = input.P0.pos.XYZ
+            let p1 = input.P1.pos.XYZ
+            let p2 = input.P2.pos.XYZ
 
             let maxSize = uniform?TriangleSize
 
@@ -362,6 +364,18 @@ module ViewerUtils =
                     |> ASet.map snd                     
                 )                
             )
+
+        let roverVP = 
+            //m.scene.viewPlans.selectedViewPlan |> Mod.map (fun plan -> 
+            //    match plan with
+            //        | None -> Trafo3d.Identity
+            //        | Some plan -> 
+            //            plan.roverTrafo
+            //)
+            1 // what is right here???
+            Mod.map2 (fun (view : CameraView) frustum -> view.ViewTrafo * (Frustum.projTrafo frustum)) 
+                m.scene.viewPlans.instrumentCam.view m.scene.viewPlans.instrumentFrustum
+
         //grouped   
         alist {        
             let! c = grouped |> AList.count
@@ -372,8 +386,9 @@ module ViewerUtils =
                     set 
                     |> Sg.set
                     |> Sg.effect [
-                        Shader.stableTrafo             |> toEffect
                         triangleFilterX                |> toEffect
+                        PRo3D.Base.Shader.footprintV   |> toEffect
+                        Shader.stableTrafo             |> toEffect
                         PRo3D.Base.Shader.improvedDiffuseTexture |> toEffect
                         fixAlpha |> toEffect
                         Shader.selectionColor          |> toEffect       
@@ -385,9 +400,9 @@ module ViewerUtils =
                         //PRo3D.Base.Shader.mapGamma          |> toEffect                            
                         //PRo3D.Base.Shader.grayscale         |> toEffect
                         //PRo3D.Base.Shader.addColor          |> toEffect
-                        PRo3D.Base.Shader.footprintV        |> toEffect
                         PRo3D.Base.Shader.footPrintF        |> toEffect
                     ]
+                    |> Sg.applyRoverVP roverVP
                     |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
                     |> Sg.uniform "LodVisEnabled" m.scene.config.lodColoring //()                        
 

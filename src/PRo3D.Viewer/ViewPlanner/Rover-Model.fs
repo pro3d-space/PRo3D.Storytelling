@@ -333,3 +333,29 @@ module ViewPlanModel =
         }
 
   
+
+namespace Aardvark.SceneGraph
+
+open Aardvark.Base
+open Aardvark.Base.Incremental
+open Aardvark.Base.Ag
+open Aardvark.SceneGraph
+    
+type RoverVPApplicator(roverVP : IMod<Trafo3d>, sg : ISg) =
+    inherit Sg.AbstractApplicator(sg)
+    member x.RoverVP = roverVP
+    
+  
+module Sem = 
+    [<Semantic>]
+    type RoverVPSem() = 
+        member x.RoverVP(r : RoverVPApplicator) =
+            r.Child?RoverVP <- r.RoverVP
+
+module Sg =
+    open Aardvark.UI
+
+
+    /// applies inherited attribute "RoverVP" to a given scenegraph.
+    let applyRoverVP (vp : IMod<Trafo3d>) (sg : ISg) =
+        RoverVPApplicator(vp,sg) |> Sg.noEvents
