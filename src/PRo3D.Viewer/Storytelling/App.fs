@@ -16,6 +16,7 @@ open Provenance
 open Abstraction.State
 open Abstraction.Message
 open Story
+open Annotations
 open View
 open Preview
 
@@ -158,6 +159,9 @@ let update (runtime : IRuntime) (signature: IFramebufferSignature)
             | KeyDown Keys.Back ->
                 model |> StoryApp.update Backward
 
+            | Click ->
+                model |> StoryApp.update (model |> (Model.getSceneHit >> SaveTarget >> AnnotationAction))
+
             | RenderControlResized s ->
                 { model with renderControlSize = s }
 
@@ -205,6 +209,7 @@ let renderView (model : MModel) =
         body [ 
             style "background: #1B1C1E"; 
             onKeyDown KeyDown; onKeyUp KeyUp
+            onClick (fun _ -> Click)
             onResize' [RenderControlResized; ViewerAction.OnResize >> AppAction]
             onFocus' [ViewerAction.OnResize >> AppAction]
         ] [

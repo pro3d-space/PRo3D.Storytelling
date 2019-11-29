@@ -16,13 +16,24 @@ open View
 [<AutoOpen>]
 module private Helpers =
 
+    let getViewProjTrafo' (size : V2i) (frustum : Frustum) (camera : CameraView) =
+        let cfg = RenderControlConfig.standard
+
+        frustum
+        |> cfg.adjustAspect size
+        |> Camera.create (CameraView.restore camera)
+        |> Camera.viewProjTrafo
+
+    let getViewProjTrafoFromModel' (model : Model) =
+        getViewProjTrafo' model.renderControlSize (Model.getFrustum model) (View.camera model.view)
+
     module Annotations =
         // Updates the annotations
         let update (msg : AnnotationAction) (model : Model) =
-
             let updateContent = function
                 | FrameContent (n, v, a) ->
-                    FrameContent (n, v, a |> AnnotationApp.update msg)
+                    let vp = getViewProjTrafoFromModel' model
+                    FrameContent (n, v, a |> AnnotationApp.update vp msg)
                 | x -> x
 
             let sel = model.story |> Story.trySelected
@@ -103,16 +114,12 @@ module private Helpers =
         model.view.Current |> Mod.map View.camera
 
     let getViewProjTrafo (size : IMod<V2i>) (frustum : IMod<Frustum>) (camera : IMod<CameraView>) =
-        let cfg = RenderControlConfig.standard
-
         adaptive {
             let! s = size
             let! f = frustum
             let! c = camera
 
-            return f |> cfg.adjustAspect s
-                     |> Camera.create (CameraView.restore c)
-                     |> Camera.viewProjTrafo
+            return getViewProjTrafo' s f c
         }
         
     let getViewProjTrafoFromModel (model : MModel) =
@@ -234,13 +241,12 @@ let threads (model : Model) =
 
 let overlayView (model : MModel) =
 
-    // We don't want buttons to take away the focus from
-    // the textareas of the labels
-    let preventBlur (x : DomNode<'a>) =
-        onBoot "$('#__ID__').on('mousedown', function (event) { event.preventDefault(); });" x
+    // We don't want buttons to trigger other click events
+    let preventClickPropagation =
+        onBoot "$('#__ID__').on('click', function (event) { event.stopPropagation(); });"
 
     let overlay (a : MAnnotations) =
-        let focus = a.focus |> Mod.map Option.isSome
+        let selected = a.selected |> Mod.map Option.isSome
 
         div [clazz "frame"] [
             i [clazz "huge camera icon"] []
@@ -254,57 +260,78 @@ let overlayView (model : MModel) =
                     Mod.map2 (<>) s.current.Current s.modified.Current
                 )
 
-                yield i [
-                    clazz "huge checkmark icon"
-                    onClick' (fun _ -> if modified then [Commit; DeselectSlide] else [DeselectSlide])
-                ] []
+                yield preventClickPropagation (
+                    i [
+                        clazz "huge checkmark icon"
+                        onClick' (fun _ -> if modified then [Commit; DeselectSlide] else [DeselectSlide])
+                    ] []
+                )
 
                 if modified then
-                    yield i [
-                        clazz "huge remove icon"
-                        onClick (fun _ -> DeselectSlide)
-                    ] []
+                    yield preventClickPropagation (
+                        i [
+                            clazz "huge remove icon"
+                            onClick (fun _ -> DeselectSlide)
+                        ] []
+                    )
             }
 
             Incremental.div (AttributeMap.ofList [clazz "annotation menu"]) <|
                 alist {
                     let! hidden = model.story.showAnnotations |> Mod.map not
 
-                    yield div [
-                        clazz ("ui icon toggle button" + if hidden then "" else " active")
-                        onClick (fun _ -> ToggleAnnotations)
-                    ] [
-                        i [clazz "comments icon"] []
-                    ]
+                    yield preventClickPropagation (
+                        div [
+                            clazz ("ui icon toggle button" + if hidden then "" else " active")
+                            onClick (fun _ -> ToggleAnnotations)
+                        ] [
+                            i [clazz "comments icon"] []
+                        ]
+                    )
 
                     if not hidden then
                         yield div [ clazz "ui vertical buttons" ] [
-                            preventBlur (
+                            preventClickPropagation (
                                 Incremental.div (AttributeMap.ofAMap <| amap {
-                                    let! focus = focus
-                                    yield clazz <| "ui icon button" + if focus then "" else " disabled"
+                                    let! selected = selected
+                                    yield clazz <| "ui icon button" + if selected then "" else " disabled"
                                     yield onClick (fun _ -> ChangeLabelFontSize |> AnnotationAction)
                                 }) <| AList.ofList [
                                     i [clazz "font icon"] []
                                 ]
                             )
 
-                            preventBlur (
+                            preventClickPropagation (
                                 Incremental.div (AttributeMap.ofAMap <| amap {
-                                    let! focus = focus
+                                    let! selected = selected
                                     let! targeting = a.targeting
 
                                     yield clazz <| "ui icon button" +
-                                                   (if focus then "" else " disabled") +
+                                                   (if selected then "" else " disabled") +
                                                    (if targeting then " active" else "")
 
-                                    yield onClick (fun _ -> Target |> AnnotationAction)
+                                    yield onClick (fun _ -> (Target <| Point None) |> AnnotationAction)
                                 }) <| AList.ofList [
                                     i [clazz "flag icon"] []
                                 ]
                             )
 
-                            preventBlur (
+                            preventClickPropagation (
+                                Incremental.div (AttributeMap.ofAMap <| amap {
+                                    let! selected = selected
+                                    let! targeting = a.targeting
+
+                                    yield clazz <| "ui icon button" +
+                                                   (if selected then "" else " disabled") +
+                                                   (if targeting then " active" else "")
+
+                                    yield onClick (fun _ -> (Target <| Scale (None, None)) |> AnnotationAction)
+                                }) <| AList.ofList [
+                                    i [clazz "vertical resize icon"] []
+                                ]
+                            )
+
+                            preventClickPropagation (
                                 div [
                                     clazz "ui icon button"
                                     onClick (fun _ -> Add "" |> AnnotationAction)

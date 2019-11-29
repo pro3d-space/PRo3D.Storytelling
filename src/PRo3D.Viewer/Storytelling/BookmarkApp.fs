@@ -83,7 +83,7 @@ let update (msg : BookmarkAction) (model : Model) =
         | CreateStory ->
             let slides =
                 model.bookmarks.list |> PList.map (fun b ->
-                    let a = AnnotationApp.init |> AnnotationApp.update (Annotations.Add b.title)
+                    let a = AnnotationApp.init |> AnnotationApp.update Trafo3d.Identity (Annotations.Add b.title)
 
                     { id = SlideId.generate()
                       content = FrameContent (b.node, b.view, a)

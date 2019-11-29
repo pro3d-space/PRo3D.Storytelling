@@ -39,54 +39,78 @@ module private Helpers =
 
         a |> updateById g id
 
+    let pendingTarget (a : Annotations) =
+        a.selected
+        |> Option.bind (fun id -> tryFindById id a)
+        |> Option.map (snd >> Annotation.hasPendingTarget)
+        |> Option.defaultValue false
+
+    let autoPosition (trafo : Trafo3d) (offset : V2i) (x : V3d) (y : V3d) =
+        let center = (x + y) / 2.0
+        let cp = trafo.Forward.TransformPosProjFull center
+        let u = (cp.XY / cp.W + V2d.II) * 0.5
+
+        V2i (V2d (u.X, 1.0 - u.Y) * V2d baseSize) + offset
+
 let init = {
     list = PList.empty
-    focus = None
+    selected = None
     targeting = false
 }
 
-let update (msg : AnnotationAction) (a : Annotations) =
+let update (viewProj : Trafo3d) (msg : AnnotationAction) (a : Annotations) =
     match msg with
         | LabelChanged (id, text) ->
             a |> mapById (Annotation.setLabelText text) id
         | LabelMoved (id, pos) ->
-            a |> mapById (Annotation.setLabelPosition pos) id
+            a |> mapById (Annotation.setLabelPosition (autoPosition viewProj V2i.Zero) pos) id
         | LabelResized (id, w) ->
             a |> mapById (Annotation.setLabelWidth w) id
         | LabelClicked id ->
-            match a.targeting, a.focus with
-                | (true, Some f) when f.id = id ->
-                    a |> mapById (Annotation.setTarget None) id
-                      |> Lens.set Annotations.Lens.targeting false
-                | _ ->
-                    a
+            if a.selected |> Option.contains id then
+                a
+            else
+                { a with selected = Some id; targeting = false }
         | ChangeLabelFontSize ->
-            a |> mapById Annotation.changeLabelFontSize a.focus.Value.id
-        | Focus id ->
-            { a with focus = a |> tryFindById id |> Option.map snd }
-        | Blur ->
-            { a with focus = None }   
+            a |> mapById Annotation.changeLabelFontSize a.selected.Value
         | Add s ->
             let r = rnd.UniformV2d (Box2d (0.25, 0.25, 0.75, 0.75))
             let pos = V2i (r * V2d (baseSize))
-            let x = pos |> Label.create s |> Annotation.create None
+            let x = pos |> Label.create s |> Annotation.create (Point None)
 
-            { a with list = a.list |> PList.append x }
+            { a with list = a.list |> PList.append x
+                     selected = Some x.id
+                     targeting = false }
         | Remove id ->
-            a |> deleteById id
-        | Target ->
-            { a with targeting = not a.targeting }
+            if a.selected |> Option.contains id then
+                { a with selected = None; targeting = false }
+            else
+                a
+            |> deleteById id
+        | Target initial ->
+            match a.targeting, a.selected with
+            | _, Some id ->
+                a |> mapById (Annotation.setTarget initial) id
+            | _ ->
+                a
+            |> Lens.update Annotations.Lens.targeting not
         | SaveTarget p ->
-            a |> mapById (Annotation.setTarget <| Some p) a.focus.Value.id
-              |> Lens.set Annotations.Lens.targeting false
+            let n =
+                match a.targeting, a.selected with
+                | true, Some id ->
+                    a |> mapById (Annotation.saveTarget p) id
+                | _ ->
+                    { a with selected = None }
+
+            n |> Lens.set Annotations.Lens.targeting (pendingTarget n)
 
 let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod<V3d>) (presentation : bool) (annotations : MAnnotations) =
 
-    let preventBlur (x : DomNode<'a>) =
-        onBoot "$('#__ID__').on('mousedown', function (event) { event.preventDefault(); });" x
+    let preventBlurAndPropagation =
+        let blur = "$('#__ID__').on('mousedown', function (e) { e.preventDefault(); });"
+        let propagation = "$('#__ID__').on('click', function(e) { e.stopPropagation(); } );"
 
-    let onBlur' (cb : unit -> 'msg list) =
-        onEvent' "onblur" [] (ignore >> cb >> Seq.ofList)
+        onBoot (blur + propagation)
     
     let setBaseSize =
         onBoot (sprintf "setBaseSize(%s);" <| Pickler.jsonToString baseSize)
@@ -94,79 +118,126 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
     let setViewport =
         onBootInitial "viewportData" viewport "setViewport(__DATA__)"
 
+    let isSelected (a : MAnnotation) =
+        annotations.selected |> Mod.map2 Option.contains a.id
+
+    let getPosition (a : MAnnotation) =
+        adaptive {
+            let! target = a.target
+            match target with
+            | MScale (x, y) ->
+                let! x = x
+                let! y = y
+
+                match x, y with
+                | Some x, Some y ->
+                    let! vp = viewProjTrafo
+                    let! offset = a.label.offset
+                    return autoPosition vp offset x y
+                | _ ->
+                    return! a.label.position
+            | _ ->
+                return! a.label.position 
+        }
+
     // Returns if the given annotation is currently
     // focused and targeting
     let isTargeting (a : MAnnotation) =
         adaptive {
-            let! focus = annotations.focus
             let! targeting = annotations.targeting
 
-            match targeting, focus with
-                | true, Some f ->
-                    return! Mod.map2 (=) f.id a.id
-                | _ -> 
-                    return false
+            if targeting then
+                return! annotations.selected |> Mod.map2 (Option.contains) a.id
+            else
+                return false
         }
 
-    let hasTarget (a : MAnnotation) =
-        a.target |> Mod.map Option.isSome
-                 |> Mod.map2 (||) (isTargeting a)
+    let getAnchors (a : MAnnotation) =
+        a.target |> Mod.bind (fun t ->
+            match t with
+                | MPoint p ->
+                    p |> Mod.map List.singleton
+                | MScale(x, y) ->
+                    Mod.map2 (fun x y -> [x; y]) x y
+        )
 
     let mkArrow (a : MAnnotation) =
+
         let clipPos = adaptive {
+            let! anchors = getAnchors a
             let! targeting = isTargeting a
+            let! sceneHit = sceneHit
+            let! vp = viewProjTrafo
 
-            let! t = 
-                if targeting then 
-                    sceneHit
-                else
-                    a.target |> Mod.map (Option.defaultValue V3d.Zero)
+            let filtered =
+                match anchors with
+                    | [_]
+                    | None::[_] when targeting ->
+                        [sceneHit]
+                    | (Some x)::[_] when targeting ->
+                        [x; sceneHit]
+                    | xs ->
+                        xs |> List.filter Option.isSome
+                           |> List.map Option.get
 
-            let! vp = viewProjTrafo |> Mod.map (fun t -> t.Forward)
-            return vp.TransformPosProjFull t
+            return filtered |> List.map vp.Forward.TransformPosProjFull
         }
 
-        let targetPos = clipPos |> Mod.map (fun cp ->
-            let u = (cp.XY / cp.W + V2d.II) * 0.5
-            V2d (u.X, 1.0 - u.Y) * V2d baseSize
+        let targetPos = clipPos |> Mod.map (fun pts ->
+            pts |> List.map (fun cp ->
+                let u = (cp.XY / cp.W + V2d.II) * 0.5
+                V2d (u.X, 1.0 - u.Y) * V2d baseSize
+            )
         )
 
-        let arrowHeadSize = clipPos |> Mod.map (fun cp ->
-            (64.0 / cp.W) |> max 2.0
-                          |> min 64.0
+        // TODO: This should probably depend on the scale of the
+        // loaded OPC instead of using some magic numbers
+        let arrowHeadSize = clipPos |> Mod.map (fun pts ->
+            pts |> List.map (fun cp ->
+                (24.0 / cp.W)
+                    |> max 2.0
+                    |> min 4.0
+            )
         )
-
-        let setArrowTarget = onBootInitial "targetData" targetPos "setArrowTarget($('#__ID__'), __DATA__)"
+        
+        let setArrowTargets = onBootInitial "targetData" targetPos "setArrowTargets($('#__ID__'), __DATA__)"
         let setArrowHeadSize = onBootInitial "sizeData" arrowHeadSize "setArrowHeadSize($('#__ID__'), __DATA__)"
+        let setArrowOutline = onBoot "setArrowOutline($('#__ID__'))"
+        let setArrowData = setArrowOutline >> setArrowTargets
 
-        let setData =
-            setArrowTarget >> setArrowHeadSize
+        Svg.g [
+            clazz "arrow"
+        ] [
+            let marker =
+                Svg.marker [
+                    clazz "arrowHead"
+                    attribute "orient" "auto-start-reverse"
+                ] [ Svg.path [] ]
 
-        setData (
-            Svg.g [
-                clazz "arrow"
-                attribute "data-origin" <| Pickler.jsonToString V2i.Zero
-                attribute "data-midpoint" <| Pickler.jsonToString V2i.Zero
-                attribute "data-target" <| Pickler.jsonToString V2i.Zero
-            ] [
-                Svg.defs [] [
-                    Svg.marker [
-                        clazz "arrowHead"
-                        attribute "orient" "auto"
-                    ] [ Svg.path [] ]
-                ]
+            setArrowHeadSize (
+                Svg.defs [] [marker; marker]
+            )
 
+            setArrowData (
                 Incremental.Svg.polyline (AttributeMap.ofAMap <| amap {
                     yield clazz "arrowLine"
 
-                    let! hasTarget = hasTarget a
-                    let! behindCamera = clipPos |> Mod.map (fun p -> p.W < 0.0)
+                    let! behindCamera =
+                        clipPos |> Mod.map (List.exists (fun p -> p.W < 0.0))
 
-                    if not hasTarget || behindCamera then
+                    let! emptyTargets =
+                        targetPos |> Mod.map List.isEmpty
+
+                    // We could also check this in an incremental div and
+                    // decide not to add it to the DOM. But this would have to be done
+                    // at the same level as the label (see mkAnnotation) resulting in recomputations of the label
+                    // This is problematic since a new element is created and focus is not preserved.
+                    // There are certainly more elegant solutions but this one seems to be the simplest one.
+                    if behindCamera || emptyTargets then
                         yield style "visibility: hidden"
                 })
-            ]
-        )
+            )
+        ]
 
     let mkLabel (a : MAnnotation) =
         let disablePropagation event =
@@ -176,11 +247,12 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
             onBoot ("initLabel($('#__ID__')); " + 
                     disablePropagation "keydown" +
                     disablePropagation "keypress" +
-                    disablePropagation "keyup") x
+                    disablePropagation "keyup" +
+                    disablePropagation "click") x
 
         let setText = onBootInitial "textData" a.label.text "setText($('#__ID__'), __DATA__)"
         let setWidth = onBootInitial "widthData" a.label.width "setWidth($('#__ID__'), __DATA__)"
-        let setPosition = onBootInitial "positionData" a.label.position "setPosition($('#__ID__'), __DATA__)"
+        let setPosition = onBootInitial "positionData" (getPosition a) "setPosition($('#__ID__'), __DATA__)"
         let setFontSize = onBootInitial "fontSizeData" a.label.fontSize "setFontSize($('#__ID__'), __DATA__)"
 
         let setData =
@@ -189,7 +261,8 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
         init (
             setData (
                 Incremental.div (AttributeMap.ofAMap <| amap {
-                    yield clazz <| "label"
+                    let! selected = isSelected a
+                    yield clazz <| "label" + if selected && not presentation then " selected" else ""
 
                     let! id = a.id
                     yield attribute "data-pos" <| Pickler.jsonToString V2i.Zero
@@ -199,22 +272,26 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
 
                 }) <| AList.ofList [
                     if not presentation then
-                        yield div [clazz "grabber"] []
+                        yield preventBlurAndPropagation (
+                            div [clazz "grabber"] []
+                        )
 
-                        yield preventBlur (
+                        yield preventBlurAndPropagation (
                             div [clazz "ui icon move button"] [
                                 i [clazz "move icon"] []
                             ]
                         )
 
-                        yield Incremental.div (AttributeMap.ofAMap <| amap {
-                            let! id = a.id
+                        yield preventBlurAndPropagation (
+                            Incremental.div (AttributeMap.ofAMap <| amap {
+                                let! id = a.id
 
-                            yield clazz "ui icon remove button"
-                            yield onClick (fun _ -> id |> Remove)
-                        }) <| AList.ofList [
-                            i [clazz "remove icon"] []
-                        ]
+                                yield clazz "ui icon remove button"
+                                yield onClick (fun _ -> id |> Remove)
+                            }) <| AList.ofList [
+                                i [clazz "remove icon"] []
+                            ]
+                        )
 
                     yield (setText >> setFontSize) (
                         Incremental.textarea (AttributeMap.ofAMap <| amap {
@@ -222,22 +299,11 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
 
                             yield attribute "rows" "1"
 
-                            if not presentation then
-                                yield attribute "placeholder" "Add text here..."
-
-                            yield onChange (fun s -> LabelChanged (id, s))
-                            yield onFocus (fun _ -> Focus id)
-
-                            let! targeting = annotations.targeting
-
-                            if targeting then
-                                let! p = sceneHit
-                                yield onBlur' (fun _ -> [SaveTarget p; Blur])
-                            else
-                                yield onBlur (fun _ -> Blur)
-
                             if presentation then
                                 yield attribute "disabled" ""
+                            else
+                                yield attribute "placeholder" "Add text here..."
+                                yield onChange (fun s -> LabelChanged (id, s))                                
                         }) a.label.text
                     )
                 ]
@@ -247,11 +313,41 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
     let mkAnnotation (a : MAnnotation) =
         Svg.g [
             clazz "annotation"
-        ] [
+        ][
             mkArrow a
 
             Svg.foreignObject [] [
                 mkLabel a
+            ]
+        ]
+
+    // FIXME: This looks pretty decent on the arrows, unfortunately doesn't work
+    // when the line is completely horizontal or vertical
+    let outlineFilter =
+        Svg.filter [
+            clazz "outlineFilter"
+            attribute "x" "-50%"
+            attribute "y" "-50%"
+            attribute "width" "500%"
+            attribute "height" "500%"
+        ] [
+            Svg.feColorMatrix [
+                attribute "type" "matrix"
+                attribute "result" "blackOut"
+                attribute "in" "SourceGraphic"
+                attribute "values" "0 0 0 0 0, 0 0 0 0 0, 0 0 0 0 0, 0 0 0 1 0"
+            ]
+
+            Svg.feGaussianBlur [
+                attribute "result" "blurOut"
+                attribute "in" "blackOut"
+                attribute "stdDeviation" "2"
+            ]
+
+            Svg.feBlend [
+                attribute "in" "SourceGraphic"
+                attribute "in2" "blurOut"
+                attribute "mode" "normal"
             ]
         ]
 
@@ -263,9 +359,13 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
     require dependencies (
         setViewport (
             setBaseSize (
-                Incremental.Svg.svg (AttributeMap.ofList [
-                    yield clazz <| "annotations" + if presentation then " presentation" else ""
-                ]) <| AList.map mkAnnotation annotations.list
+                Svg.svg [] [
+                    Svg.defs [] [outlineFilter]
+
+                    Incremental.Svg.g (AttributeMap.ofList [
+                        yield clazz <| "annotations" + if presentation then " presentation" else ""
+                    ]) <| AList.map mkAnnotation annotations.list
+                ]
             )
         )
     )

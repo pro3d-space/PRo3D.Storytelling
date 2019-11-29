@@ -29,6 +29,7 @@ type Action =
     | SessionAction         of SessionAction
     | KeyDown               of Keys
     | KeyUp                 of Keys
+    | Click
     | RenderControlResized  of V2i
 
 [<DomainType>]
@@ -94,6 +95,13 @@ module AppModel =
 
     let getTargeting (model : AppModel) =
         model.scene.targeting
+
+    let getSceneHit (model : AppModel) =
+        let t = getTargeting model
+        t.lastHit
+
+    let getFrustum (model : AppModel) =
+        model.frustum
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module InnerModel =
@@ -162,6 +170,12 @@ module InnerModel =
     let getTargeting (model : InnerModel) =
         model.current |> AppModel.getTargeting
 
+    let getSceneHit (model : InnerModel) =
+        model.current |> AppModel.getSceneHit
+
+    let getFrustum (model : InnerModel) =
+        model.current |> AppModel.getFrustum
+
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Model =
 
@@ -215,6 +229,12 @@ module Model =
 
     let getTargeting (model : Model) =
         model.inner |> InnerModel.getTargeting
+
+    let getSceneHit (model : Model) =
+        model.inner |> InnerModel.getSceneHit
+
+    let getFrustum (model : Model) =
+        model.inner |> InnerModel.getFrustum
 
     let isAnimating (model : Model) =
         model.view.animation |> Animation.isAnimating

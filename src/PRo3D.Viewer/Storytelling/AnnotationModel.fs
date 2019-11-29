@@ -32,26 +32,43 @@ type AnnotationId =
 [<DomainType>]
 type Label = {
     width : int
-    position : V2i
+    position : V2i  // Absolute position in screen space
+    offset : V2i    // Relative offset in screen space when using a scale target
     text : string
     fontSize : int
 }
+
+// An annotation can target either a single point
+// or a scale represented by two points
+[<DomainType>]
+type AnnotationTarget =
+    | Point of V3d option
+    | Scale of V3d option * V3d option
 
 // An annotation is a label and optionally a target
 // in world space that is to be annotated
 [<DomainType>]
 type Annotation = {
     id : AnnotationId
-    target : V3d option
+    target : AnnotationTarget
     label : Label
 }
 
-[<DomainType>]
-type Annotations = {
-    list : Annotation plist
-    focus : Annotation option
-    targeting : bool
-}
+[<DomainType; CustomEquality; NoComparison>]
+type Annotations = 
+    {
+        list : Annotation plist
+        selected : AnnotationId option
+        targeting : bool
+    }
+
+    override x.GetHashCode () =
+        hash x.list
+
+    override x.Equals y =
+        match y with
+            | :? Annotations as y -> x.list = y.list
+            | _ -> false
 
 type AnnotationAction =
     | LabelChanged          of AnnotationId * string
@@ -59,11 +76,9 @@ type AnnotationAction =
     | LabelResized          of AnnotationId * int
     | LabelClicked          of AnnotationId
     | ChangeLabelFontSize
-    | Focus                 of AnnotationId
-    | Blur
     | Add                   of string
     | Remove                of AnnotationId
-    | Target
+    | Target                of AnnotationTarget
     | SaveTarget            of V3d
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -71,6 +86,7 @@ module Label =
     let create (text : string) (position : V2i) = {
         width = 300
         position = position
+        offset = V2i.Zero
         text = text
         fontSize = 32
     }
@@ -87,17 +103,32 @@ module Label =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Annotation =
-    let create (target : V3d option) (label : Label) = {
+    let create (target : AnnotationTarget) (label : Label) = {
         id = AnnotationId.generate ()
         target = target
         label = label
     }
 
+    let hasPendingTarget (a : Annotation) =
+        match a.target with
+            | Point None -> true
+            | Scale (None, _) -> true
+            | Scale (_, None) -> true
+            | _ -> false
+
     let setLabelText (text : string) (a : Annotation) =
         { a with label = { a.label with text = text }}
 
-    let setLabelPosition (pos : V2i) (a : Annotation) =
-        { a with label = { a.label with position = pos }}
+    let setLabelPosition (autoPosition : V3d -> V3d -> V2i) (pos : V2i) (a : Annotation) =
+        let label =
+            match a.target with
+            | Scale (Some x, Some y) ->
+                let center = autoPosition x y
+                { a.label with offset = pos - center }
+            | _ ->
+                { a.label with position = pos }
+
+        { a with label = label }
 
     let setLabelWidth (width : int) (a : Annotation) =
         { a with label = { a.label with width = width }}
@@ -109,5 +140,17 @@ module Annotation =
 
         { a with label = { a.label with fontSize = sizes.[(current + 1) % sizes.Length] }}
 
-    let setTarget (target : V3d option) (a : Annotation) =
+    let setTarget (target : AnnotationTarget) (a : Annotation) =
+        { a with target = target }
+
+    let saveTarget (target : V3d) (a : Annotation) =
+        let target =
+            match a.target with
+                | Point _ ->
+                    Point (Some target)
+                | Scale (None, y) ->
+                    Scale (Some target, y)
+                | Scale (x, _) ->
+                    Scale (x, Some target)
+
         { a with target = target }

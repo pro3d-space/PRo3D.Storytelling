@@ -147,76 +147,96 @@ function setTop(elem) {
 // Arrows
 function setArrowOrigin(arrow) {
     var label = getLabel(arrow);
-    if (label.length === 0) {
-        return;
-    }
-
     var scale = getScale();
     var globalScale = Math.min(scale.X, scale.Y);
 
-    var p = label.data('pos');
-    var w = label.width() * globalScale / scale.X;
-    var h = label.height() * globalScale / scale.Y;
+    var points = [];
+    var targets = arrow.data('targets');
 
-    var target = arrow.data('target');
-    var center = Point.new(p.X + w / 2, p.Y + h / 2);
+    if (targets.length == 1 && label.length == 1) {
+        var p = label.data('pos');
+        var w = label.width() * globalScale / scale.X;
+        var h = label.height() * globalScale / scale.Y;
 
-    var anchors = [];
-    anchors.push( Point.new(center.X - w / 2, center.Y) );
-    anchors.push( Point.new(center.X + w / 2, center.Y) );
-    anchors.push( Point.new(center.X, center.Y - h / 2) );
-    anchors.push( Point.new(center.X, center.Y + h / 2) );
+        var target = targets[0];
+        var center = Point.new(p.X + w / 2, p.Y + h / 2);
+    
+        var anchors = [];
+        anchors.push( Point.new(center.X - w / 2, center.Y) );
+        anchors.push( Point.new(center.X + w / 2, center.Y) );
+        anchors.push( Point.new(center.X, center.Y - h / 2) );
+        anchors.push( Point.new(center.X, center.Y + h / 2) );
+    
+        points[0] = anchors.map(function (a) {
+            var dc = Point.sub(a, center);
+            var dt = Point.sub(a, target);
+    
+            if (dc.X != 0) {
+                dc = dc.X; dt = dt.X;
+            } else {
+                dc = dc.Y; dt = dt.Y;
+            }
+    
+            if (Math.sign(dc) != Math.sign(dt)) {
+                return { a:a, d:Math.abs(dt) };
+            } else {
+                return { a:a, d:-1 };
+            }
+        }).reduce(function (max, x) {
+            return (x.d > max.d) ? x : max;
+        }).a
+    
+        points[1] = Point.new(points[0].X + 10 * Math.sign(points[0].X - center.X),
+                              points[0].Y + 10 * Math.sign(points[0].Y - center.Y));
 
-    var origin = anchors.map(function (a) {
-        var dc = Point.sub(a, center);
-        var dt = Point.sub(a, target);
+        points[2] = target;
+    } else if (targets.length == 2) {
+        points[0] = targets[0];
+        points[1] = targets[1];
+    }
 
-        if (dc.X != 0) {
-            dc = dc.X; dt = dt.X;
-        } else {
-            dc = dc.Y; dt = dt.Y;
-        }
-
-        if (Math.sign(dc) != Math.sign(dt)) {
-            return { a:a, d:Math.abs(dt) };
-        } else {
-            return { a:a, d:-1 };
-        }
-    }).reduce(function (max, x) {
-        return (x.d > max.d) ? x : max;
-    }).a
-
-    var midpoint = Point.new(origin.X + 10 * Math.sign(origin.X - center.X),
-                             origin.Y + 10 * Math.sign(origin.Y - center.Y));
-
-    arrow.data('origin', origin)
-         .data('midpoint', midpoint);
+    arrow.data('points', points);
     transformArrow(arrow);
 }
 
-function setArrowTarget(arrow, t) {
-    arrow.data('target', t);
+function setArrowTargets(polyline, t) {
+    var arrow = polyline.parent('.arrow');
+    arrow.data('targets', t);
     setArrowOrigin(arrow);
-
-    transformArrow(arrow);
 }
 
-function setArrowHeadSize(arrow, s) {
-    var marker = arrow.children('defs')
-                      .children('.arrowHead');
+function setArrowHeadSize(defs, s) {
+    var arrow = defs.parent('.arrow');
+    var marker = defs.children('.arrowHead');
 
-    marker.attr('viewBox', `0 0 ${s} ${s}`)
-          .attr('markerWidth', s)
-          .attr('markerHeight', s)
-          .attr('refX', 0)
-          .attr('refY', s / 2)
-          .children('path')
-          .attr('d', `M 0 0 L ${s} ${s / 2} L 0 ${s} z`);
+    marker.each(function (i) {
+        if (i < s.length) {
+            $(this)
+                .data('marker-size', s[i])
+                .attr('viewBox', `0 0 ${s[i]} ${s[i]}`)
+                .attr('markerWidth', s[i])
+                .attr('markerHeight', s[i])
+                .attr('refX', 0)
+                .attr('refY', s[i] / 2)
+                .children('path')
+                .attr('d', `M 0 0 L ${s[i]} ${s[i] / 2} L 0 ${s[i]} z`);
+        }
+    });
 
-    arrow.data('marker-size', s);
+    if (s.length == 1) {
+        arrow.children('.arrowLine')
+             .attr('marker-start', 'none')
+             .attr('marker-end', `url(#${marker.eq(0).attr('id')})`);
+    } else if (s.length == 2) {
+        arrow.children('.arrowLine')
+             .attr('marker-start', `url(#${marker.eq(0).attr('id')})`)
+             .attr('marker-end', `url(#${marker.eq(1).attr('id')})`);
+    }
+}
 
-    arrow.children('.arrowLine')
-         .attr('marker-end', `url(#${marker.attr('id')})`);
+function setArrowOutline(polyline) {
+    var id = $('filter.outlineFilter').attr('id');
+    polyline.attr('filter', `url(#${id})`);
 }
 
 function transformArrow(arrow) {
@@ -224,46 +244,68 @@ function transformArrow(arrow) {
     var scale = getScale();
     var lineWidth = 3 * Math.min(scale.X, scale.Y, 1.0);
     
-    var pts = [];
-    pts.push(arrow.data('origin'));
-    pts.push(arrow.data('midpoint'));
-    pts.push(arrow.data('target'));
+    var pts = Array.from(arrow.data('points')); // Need a new copy since we want to modify it
+    if (pts.length == 0) {
+        return;
+    }
 
     pts.forEach(function (a, i) {
         pts[i] = Point.mul(a, scale);
     });
 
-    // Compute the direction and length of the two segments
-    // and the direct one
-    var dir = [];
-    var len = [];
-
-    dir[0] = Point.sub(pts[1], pts[0]);
-    dir[1] = Point.sub(pts[2], pts[1]);
-    dir[2] = Point.add(dir[0], dir[1]);
-
-    dir.forEach(function (a, i) {
-        len[i] = Point.length(a);
-        dir[i] = Point.scale(a, 1 / len[i]);
-    });
-
-    // Get the size of the arrow head (scaled by the line width since
-    // "markerWidth" is "strokeWidth" by default)
-    var headSize = arrow.data('marker-size') * lineWidth;
-
-    // Compute the actual points of the polyline. We want
-    // the end point to be shifted by the marker size so that the
-    // end of the marker points exactly on the given end point
     var points = null;
+    var marker = arrow.children('defs')
+                      .children('.arrowHead');
 
-    if (len[1] > headSize && len[0] < len[2]) {
-        var endPoint = Point.add(pts[1], Point.scale(dir[1], len[1] - headSize));
-        points = `${pts[0].X},${pts[0].Y} ${pts[1].X},${pts[1].Y} ${endPoint.X},${endPoint.Y}`;
-    } else if (len[2] > headSize) {
-        // Second segment is too short, or direct line would be shorter than the first segment
-        // Just draw a straigh arrow in these cases
-        var endPoint = Point.add(pts[0], Point.scale(dir[2], len[2] - headSize));
-        points = `${pts[0].X},${pts[0].Y} ${endPoint.X},${endPoint.Y}`;
+    // The arrow of a simply anchored label has three points (i.e. two segments)
+    if (pts.length == 3) {
+        // Compute the direction and length of the two segments
+        // and the direct one
+        var dir = [];
+        var len = [];
+
+        dir[0] = Point.sub(pts[1], pts[0]);
+        dir[1] = Point.sub(pts[2], pts[1]);
+        dir[2] = Point.add(dir[0], dir[1]);
+
+        dir.forEach(function (a, i) {
+            len[i] = Point.length(a);
+            dir[i] = Point.scale(a, 1 / len[i]);
+        });
+
+        // Get the size of the arrow head (scaled by the line width since
+        // "markerUnits" is "strokeWidth" by default)
+        var headSize = marker.eq(0)
+                             .data('marker-size') * lineWidth;
+
+        // Compute the actual points of the polyline. We want
+        // the end point to be shifted by the marker size so that the
+        // end of the marker points exactly on the given end point
+        if (len[1] > headSize && len[0] < len[2]) {
+            var endPoint = Point.add(pts[1], Point.scale(dir[1], len[1] - headSize));
+            points = `${pts[0].X},${pts[0].Y} ${pts[1].X},${pts[1].Y} ${endPoint.X},${endPoint.Y}`;
+        } else if (len[2] > headSize) {
+            // Second segment is too short, or direct line would be shorter than the first segment
+            // Just draw a straigh arrow in these cases
+            var endPoint = Point.add(pts[0], Point.scale(dir[2], len[2] - headSize));
+            points = `${pts[0].X},${pts[0].Y} ${endPoint.X},${endPoint.Y}`;
+        }
+    } else if (pts.length == 2) { // A double arrow has two points
+        // Compute the direction and length of the arrow
+        var dir = Point.sub(pts[1], pts[0]);
+        var len = Point.length(dir);
+        dir = Point.scale(dir, 1 / len);
+
+        var headSize = [];
+        marker.each(function (i) {
+            headSize[i] = $(this).data('marker-size') * lineWidth;
+        });
+
+        if (len > headSize[0] + headSize[1]) {
+            var startPoint = Point.add(pts[0], Point.scale(dir, headSize[0]));
+            var endPoint = Point.add(pts[0], Point.scale(dir, len - headSize[1]));
+            points = `${startPoint.X},${startPoint.Y} ${endPoint.X},${endPoint.Y}`;
+        }
     }
 
     arrow.children('.arrowLine')
@@ -281,6 +323,9 @@ function initLabel (elem) {
     elem.on('mouseenter', function() { if (drag.elem === null) elem.addClass('hovered'); })
         .on('mouseleave', function() { elem.removeClass('hovered'); });
 
+    // We want to change the appearance of the label based on whether
+    // the contained textarea has focus or not. CSS cannot currently describe
+    // this directly as a selector since :has() is not yet supported
     elem.children('textarea')
 		.on('focus', function() { elem.addClass('focused'); })
 		.on('blur', function() { elem.removeClass('focused'); })
@@ -306,7 +351,7 @@ function resizeLabel(ev) {
     var scale = getScale();
 
     var curr = ev.clientX;
-    var delta = (curr - resize.prev) / scale.X;
+    var delta = (curr - resize.prev) / Math.min(scale.X, scale.Y);
     resize.prev = curr;
 
     var w = resize.elem.width();
