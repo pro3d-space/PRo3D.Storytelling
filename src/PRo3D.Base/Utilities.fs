@@ -18,7 +18,7 @@ module Utilities =
         frameTime       : float
     }
 
-  let takeScreenshot baseAddress (width:int) (height:int) name folder =
+  let takeScreenshotFromAllViews baseAddress (width:int) (height:int) name folder =
         let wc = new System.Net.WebClient()
         
         let clientStatistic = 
@@ -42,6 +42,31 @@ module Utilities =
             
            // let filename = cs.name + name
             wc.DownloadFile(screenshot,Path.combine [folder; name + "_" + cs.name + ".png"])
+
+
+  let takeScreenshot baseAddress (width:int) (height:int) name folder =
+        let wc = new System.Net.WebClient()
+        
+        let clientStatistic = 
+            let path = sprintf "%s/rendering/stats.json" baseAddress //sprintf "%s/rendering/stats.json" baseAddress
+            Log.line "[Screenshot] querying rendering stats at: %s" path
+            let result = wc.DownloadString(path)
+            let clientBla : list<ClientStatistics> =
+                Pickler.unpickleOfJson  result
+            match clientBla.Length with
+                | 2 -> clientBla.[1] 
+                | _ -> failwith "no client bla"
+                
+        let screenshot =            
+            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress clientStatistic.name width height
+        Log.line "[Screenshot] Running screenshot on: %s" screenshot    
+
+        match System.IO.Directory.Exists folder with
+            | true -> ()
+            | false -> System.IO.Directory.CreateDirectory folder |> ignore
+            
+        // let filename = cs.name + name
+        wc.DownloadFile(screenshot,Path.combine [folder; name + "_" + clientStatistic.name + ".png"])
 
 
 

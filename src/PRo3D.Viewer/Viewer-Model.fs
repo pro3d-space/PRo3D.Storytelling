@@ -79,6 +79,8 @@ type ViewerAction =
     | ImportAnnotationGroups    of list<string>
     | ImportSurfaceTrafo        of list<string>
     | ImportRoverPlacement      of list<string>
+    | MakeSnapshot              of int*int
+    | ImportSnapshotData        of list<string>
     | SwitchViewerMode          of ViewerMode
     | DnSProperties             of PropertyActions
     | ConfigPropertiesMessage   of ConfigProperties.Action
@@ -113,7 +115,8 @@ type ViewerAction =
     | UpdateUserFeedback        of string
     | StartImportMessaging      of list<string>
     | Logging                   of string * ViewerAction
-    | ThreadsDone               of string    
+    | ThreadsDone               of string   
+    | SnapshotThreadsDone       of string
     | OnResize                  of V2i
 
 
@@ -151,7 +154,7 @@ type Scene = {
     closedPages       : list<DockElement>
     firstImport       : bool
     userFeedback      : string
-    feedbackThreads   : ThreadPool<ViewerAction> 
+    feedbackThreads   : ThreadPool<ViewerAction>  
 }
 
 [<DomainType>] 
@@ -221,6 +224,8 @@ type Model = {
     [<TreatAsValue>]
     future : Option<Drawing.DrawingModel> 
     footPrint           : FootPrint 
+    
+    arnoldSnapshotThreads   : ThreadPool<ViewerAction>
 }
 
 
@@ -340,6 +345,7 @@ module Viewer =
             firstImport     = true
             userFeedback    = ""
             feedbackThreads = ThreadPool.empty
+            
         }
 
         drawing         = Drawing.DrawingModel.initialdrawing        
@@ -380,4 +386,6 @@ module Viewer =
         //instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
         viewerMode = ViewerMode.Standard                
         footPrint = ViewPlanModel.initFootPrint
+
+        arnoldSnapshotThreads = ThreadPool.empty
     }

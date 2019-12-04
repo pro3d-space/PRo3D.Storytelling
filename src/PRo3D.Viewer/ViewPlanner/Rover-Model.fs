@@ -11,7 +11,8 @@ open FShade.Intrinsics
 open Aardvark.Base.CameraView
 
 open Chiron
-open PRo3D
+open PRo3D.Base
+open PRo3D.Versioned
 
 
 type Intrinsics = {
@@ -36,6 +37,7 @@ type Extrinsics = {
     box         : Box3d
 }
 
+
 module Extrinsics =
     let transformed (t:M44d) (ex:Extrinsics)=
         {
@@ -55,6 +57,80 @@ type InstrumentType =
     | DRILL      // Drill
     | RIM        // Rover Inspection Mirror
     | Undefined
+
+
+
+type ArnoldSnapshot = {
+    location      : V3d
+    foward        : V3d
+    up            : V3d
+}
+with 
+  static member current = 0
+  static member private readV0 = 
+      json {
+        let! location    = Json.read "location"
+        let! foward      = Json.read "foward"
+        let! up          = Json.read "up"
+  
+        return {
+          location    = location |> V3d.Parse
+          foward      = foward   |> V3d.Parse
+          up          = up       |> V3d.Parse
+        }
+      }
+
+  static member FromJson(_ : ArnoldSnapshot) = 
+    json {
+        return! ArnoldSnapshot.readV0
+        //let! v = Json.read "version"
+        //match v with            
+        //  | 0 -> return! ArnoldSnapshot.readV0
+        //  | _ -> return! v |> sprintf "don't know version %A  of ArnoldSnapshot" |> Json.error
+    }
+  static member ToJson (x : ArnoldSnapshot) =
+    json {
+      do! Json.write      "location"  (x.location.ToString())
+      do! Json.write      "foward"    (x.foward.ToString())
+      do! Json.write      "up"        (x.up.ToString())
+    }
+
+type ArnoldAnimation = {
+    fieldOfView   : double
+    resolution    : V2i
+    snapshots     : list<ArnoldSnapshot>
+}
+with 
+  static member current = 0
+  static member private readV0 = 
+      json {
+        let! fieldOfView    = Json.read "fieldOfView"
+        let! resolution     = Json.read "resolution"
+        let! snapshots      = Json.read "snapshots"
+
+        //let snapshots' = snapshots |> List.map 
+  
+        return {
+          fieldOfView    = fieldOfView
+          resolution     = resolution |> V2i.Parse
+          snapshots      = snapshots  //|> Serialization.jsonSerializer.UnPickleOfString
+        }
+      }
+
+  static member FromJson(_ : ArnoldAnimation) = 
+    json {
+        let! v = Json.read "version"
+        match v with            
+          | 0 -> return! ArnoldAnimation.readV0
+          | _ -> return! v |> sprintf "don't know version %A  of ArnoldAnimation" |> Json.error
+    }
+  static member ToJson (x : ArnoldAnimation) =
+    json {
+        do! Json.write      "version"        0
+        do! Json.write      "fieldOfView"  (x.fieldOfView)
+        do! Json.write      "resolution"   (x.resolution.ToString())
+        do! Json.write      "snapshots"    (x.snapshots)
+    }
 
 [<DomainType>]
 type Instrument = {

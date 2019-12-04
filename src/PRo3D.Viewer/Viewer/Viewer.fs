@@ -38,7 +38,7 @@ open Aardium
 
 //open Viewer.Mutable.ModelModule.Lens
 //open Mutable.AnnotationGroupModule.Lens
- 
+    
 type UserFeedback<'a> = {
   id      : string
   text    : string
@@ -609,6 +609,38 @@ module ViewerApp =
                                 { m with scene = { m.scene with viewPlans = vp}} 
                     | None -> Log.error "no rover selected"; m
                 | None -> m
+            | MakeSnapshot (w,h),_,_ -> 
+                match m.scene.scenePath with
+                    | Some p -> let sn = SnapshotAnimation.startSnapshots p w h
+                                m
+                    | None -> m
+            | ImportSnapshotData sl,_,_ -> 
+                let viewOld = m.scene.navigation.camera.view
+                let frustumOld = m.frustum
+                match sl |> List.tryHead with
+                | Some p -> //let data = SnapshotAnimation.writeDataToJsonFile
+                //            m
+                            let data = SnapshotAnimation.loadData p
+                            match data with
+                                | Some d ->
+                                    let frustum = SnapshotAnimation.updateSnapshotFrustum m.frustum d
+                                    let positions = d.snapshots
+                                    let res = d.resolution
+                                    let worker =
+                                        proclist {
+                                            for i in 0 .. (positions.Length-1) do
+                                                let view = SnapshotAnimation.updateSnapshotCam positions.[i]
+                                                yield ViewerAction.SetCameraAndFrustum2 (view,frustum)
+                                                do! Proc.Sleep 1000
+                                                yield ViewerAction.MakeSnapshot (res.X, res.Y)
+                                                
+                                            do! Proc.Sleep 300
+                                            yield ViewerAction.SetCameraAndFrustum2 (viewOld,frustumOld) // reset camera parameter
+                                            yield SnapshotThreadsDone "snapshots"
+                                        }          
+                                    { m with arnoldSnapshotThreads = ThreadPool.start worker m.arnoldSnapshotThreads }
+                                | None -> m
+                | None -> m
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
             | QuickLoad2,_,_ ->                                
@@ -905,7 +937,9 @@ module ViewerApp =
               message |> MailboxAction.ViewerAction |> mailbox.Post
               { m with scene = { m.scene with userFeedback = text } }
             | ThreadsDone id,_,_ ->  
-              { m with scene = { m.scene with userFeedback = ""; feedbackThreads = ThreadPool.remove id m.scene.feedbackThreads} }
+              { m with scene = { m.scene with userFeedback = ""; feedbackThreads = ThreadPool.remove id m.scene.feedbackThreads;} }
+            | SnapshotThreadsDone id,_,_ ->  
+              { m with arnoldSnapshotThreads = ThreadPool.remove id m.arnoldSnapshotThreads }
             | MinervaActions a,_,_ ->
               match a with 
               | Minerva.MinervaAction.FlyToProduct v -> 
@@ -1177,7 +1211,7 @@ module ViewerApp =
          
         let minerva = PRo3D.Minerva.App.threads m.minervaModel |> ThreadPool.map MinervaActions
 
-        unionMany [drawing; animation; nav; m.scene.feedbackThreads; minerva]
+        unionMany [drawing; animation; nav; m.scene.feedbackThreads; minerva; m.arnoldSnapshotThreads ]
         
     let loadWaypoints m = 
       match Serialization.fileExists "./waypoints.wps" with

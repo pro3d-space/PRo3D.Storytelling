@@ -363,6 +363,12 @@ module Gui =
                             fixAllBrokenPaths
     
                             surfaceUiThing m
+
+                            div [ clazz "ui item";
+                                Dialogs.onChooseFiles ImportSnapshotData;
+                                clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({properties: ['openFile']}));") ] [
+                                text "Import Snapshot File"
+                            ]
                         ]
                     ]
                 ] 
