@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.17 (MiKTeX 2.9) (preloaded format=pdflatex 2016.10.5)  25 SEP 2019 10:05
+This is pdfTeX, Version 3.14159265-2.6-1.40.17 (MiKTeX 2.9) (preloaded format=pdflatex 2016.10.5)  13 SEP 2019 21:50
 entering extended mode
 **./PRo3D_ShortUserManual.tex
 (PRo3D_ShortUserManual.tex
@@ -204,24 +204,6 @@ File: lstlang1.sty 2015/06/04 1.6 listings language file
 ("C:\Program Files (x86)\MiKTeX 2.9\tex\latex\listings\lstmisc.sty"
 File: lstmisc.sty 2015/06/04 1.6 (Carsten Heinz)
 )
-
-! LaTeX Error: Option clash for package graphicx.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.62 \usepackage
-                {eso-pic} % these two are required to add the little picture...
-The package graphicx has already been loaded with options:
-  []
-There has now been an attempt to load it with options
-  [pdftex]
-Adding the global options:
-  ,pdftex
-to your \documentclass declaration may fix this.
-Try typing  <return>  to proceed.
-
 ("C:\Program Files (x86)\MiKTeX 2.9\tex\latex\ms\everyshi.sty"
 Package: everyshi 2001/05/15 v3.00 EveryShipout Package (MS)
 )
@@ -485,7 +467,7 @@ LaTeX Info: Redefining \nameref on input line 110.
 \@outlinefile=\write3
 \openout3 = `PRo3D_ShortUserManual.out'.
 
- <pics/TitleNew.png, id=107, 597.432pt x 604.659pt>
+ <pics/TitleNew.png, id=139, 597.432pt x 604.659pt>
 File: pics/TitleNew.png Graphic file (type png)
  <use pics/TitleNew.png>
 Package pdftex.def Info: pics/TitleNew.png used on input line 119.
@@ -508,7 +490,7 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 \tf@toc=\write4
 \openout4 = `PRo3D_ShortUserManual.toc'.
 
- <pics/logosSUM.png, id=141, 212.795pt x 39.14626pt>
+ <pics/logosSUM.png, id=181, 212.795pt x 39.14626pt>
 File: pics/logosSUM.png Graphic file (type png)
  <use pics/logosSUM.png>
 Package pdftex.def Info: pics/logosSUM.png used on input line 163.
@@ -524,7 +506,7 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
 \openout2 = `Introduction.aux'.
 
  (Introduction.tex
-<pics/Features.png, id=150, 1304.7144pt x 339.669pt>
+<pics/Features.png, id=190, 1304.7144pt x 339.669pt>
 File: pics/Features.png Graphic file (type png)
  <use pics/Features.png>
 Package pdftex.def Info: pics/Features.png used on input line 8.
@@ -566,31 +548,31 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
 [4]
 \openout2 = `Start.aux'.
 
- (Start.tex <pics/startAI.png, id=162, 952.0368pt x 593.0958pt>
+ (Start.tex <pics/startAI.png, id=202, 952.0368pt x 593.0958pt>
 File: pics/startAI.png Graphic file (type png)
  <use pics/startAI.png>
-Package pdftex.def Info: pics/startAI.png used on input line 9.
+Package pdftex.def Info: pics/startAI.png used on input line 10.
 (pdftex.def)             Requested size: 418.25542pt x 260.55571pt.
 LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <10> not available
-(Font)              Font shape `T1/phv/b/n' tried instead on input line 10.
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 11.
 
-<pics/AddSurface.png, id=168, 947.79094pt x 595.47469pt>
+<pics/AddSurface.png, id=208, 947.79094pt x 595.47469pt>
 File: pics/AddSurface.png Graphic file (type png)
  <use pics/AddSurface.png>
-Package pdftex.def Info: pics/AddSurface.png used on input line 41.
+Package pdftex.def Info: pics/AddSurface.png used on input line 42.
 (pdftex.def)             Requested size: 418.25542pt x 262.782pt.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-<pics/saveScene.png, id=172, 952.30782pt x 595.47469pt>
+<pics/saveScene.png, id=212, 952.30782pt x 595.47469pt>
 File: pics/saveScene.png Graphic file (type png)
  <use pics/saveScene.png>
-Package pdftex.def Info: pics/saveScene.png used on input line 53.
+Package pdftex.def Info: pics/saveScene.png used on input line 54.
 (pdftex.def)             Requested size: 418.25542pt x 261.53719pt.
 File: pics/logosSUM.png Graphic file (type png)
  <use pics/logosSUM.png>
-Package pdftex.def Info: pics/logosSUM.png used on input line 56.
+Package pdftex.def Info: pics/logosSUM.png used on input line 57.
 (pdftex.def)             Requested size: 163.0831pt x 30.0pt.
 
 
@@ -606,19 +588,19 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-<pics/OpenScene.png, id=185, 949.29657pt x 593.21625pt>
+<pics/OpenScene.png, id=225, 949.29657pt x 593.21625pt>
 File: pics/OpenScene.png Graphic file (type png)
  <use pics/OpenScene.png>
-Package pdftex.def Info: pics/OpenScene.png used on input line 70.
+Package pdftex.def Info: pics/OpenScene.png used on input line 71.
 (pdftex.def)             Requested size: 418.25542pt x 261.36897pt.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-<pics/NewSurfaceAI.png, id=186, 1431.9096pt x 718.8456pt>
+<pics/NewSurfaceAI.png, id=226, 1431.9096pt x 718.8456pt>
 File: pics/NewSurfaceAI.png Graphic file (type png)
  <use pics/NewSurfaceAI.png>
-Package pdftex.def Info: pics/NewSurfaceAI.png used on input line 80.
+Package pdftex.def Info: pics/NewSurfaceAI.png used on input line 81.
 (pdftex.def)             Requested size: 418.25542pt x 209.97356pt.
 
 
@@ -663,13 +645,13 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
 [8 <./pics/NewSurfaceAI.png>]
 \openout2 = `ViewerActions.aux'.
 
- (ViewerActions.tex <pics/Interactions.png, id=202, 597.73312pt x 247.67531pt>
+ (ViewerActions.tex <pics/Interactions.png, id=242, 597.73312pt x 247.67531pt>
 File: pics/Interactions.png Graphic file (type png)
 
 <use pics/Interactions.png>
 Package pdftex.def Info: pics/Interactions.png used on input line 8.
 (pdftex.def)             Requested size: 418.25542pt x 173.31105pt.
- <pics/exploreCenterAI.png, id=205, 834.9594pt x 746.79pt>
+ <pics/exploreCenterAI.png, id=245, 834.9594pt x 746.79pt>
 File: pics/exploreCenterAI.png Graphic file (type png)
  <use pics/exploreCenterAI.png>
 Package pdftex.def Info: pics/exploreCenterAI.png used on input line 28.
@@ -692,7 +674,7 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
 [9
 
 
- <./pics/Interactions.png>] <pics/CoordinateSystem.png, id=213, 663.22781pt x 593.96906pt>
+ <./pics/Interactions.png>] <pics/CoordinateSystem.png, id=253, 663.22781pt x 593.96906pt>
 File: pics/CoordinateSystem.png Graphic file (type png)
 
 <use pics/CoordinateSystem.png>
@@ -702,7 +684,7 @@ Package pdftex.def Info: pics/CoordinateSystem.png used on input line 50.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-<pics/drawAnnotationsAI.png, id=217, 658.6206pt x 587.3142pt>
+<pics/drawAnnotationsAI.png, id=257, 658.6206pt x 587.3142pt>
 File: pics/drawAnnotationsAI.png Graphic file (type png)
  <use pics/drawAnnotationsAI.png>
 Package pdftex.def Info: pics/drawAnnotationsAI.png used on input line 67.
@@ -747,7 +729,7 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
  We now make it that large for the rest of the document.
  This may cause the page layout to be inconsistent, however.
 
-[12 <./pics/drawAnnotationsAI.png (PNG copy)>] <pics/projectionAI.png, id=242, 1024.7886pt x 315.0972pt>
+[12 <./pics/drawAnnotationsAI.png (PNG copy)>] <pics/projectionAI.png, id=282, 1024.7886pt x 315.0972pt>
 File: pics/projectionAI.png Graphic file (type png)
 
 <use pics/projectionAI.png>
@@ -783,13 +765,13 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
 [14]
 \openout2 = `ViewerFeatures.aux'.
 
- (ViewerFeatures.tex <pics/SurfacesAI.png, id=263, 1442.5092pt x 709.2096pt>
+ (ViewerFeatures.tex <pics/SurfacesAI.png, id=303, 1442.5092pt x 709.2096pt>
 File: pics/SurfacesAI.png Graphic file (type png)
  <use pics/SurfacesAI.png>
 Package pdftex.def Info: pics/SurfacesAI.png used on input line 8.
 (pdftex.def)             Requested size: 418.25542pt x 205.63304pt.
 
-<pics/SurfaceTranslation.png, id=267, 1438.6247pt x 503.63156pt>
+<pics/SurfaceTranslation.png, id=307, 1438.6247pt x 503.63156pt>
 File: pics/SurfaceTranslation.png Graphic file (type png)
  <use pics/SurfaceTranslation.png>
 Package pdftex.def Info: pics/SurfaceTranslation.png used on input line 38.
@@ -856,7 +838,7 @@ Overfull \hbox (6.0pt too wide) in paragraph at lines 68--69
  [][][][][][] 
  []
 
-<pics/SurfaceColorCorrection.png, id=285, 1442.38875pt x 684.30656pt>
+<pics/SurfaceColorCorrection.png, id=325, 1442.38875pt x 684.30656pt>
 File: pics/SurfaceColorCorrection.png Graphic file (type png)
  <use pics/SurfaceColorCorrection.png>
 Package pdftex.def Info: pics/SurfaceColorCorrection.png used on input line 73.
@@ -866,7 +848,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 78--79
 
  []
 
-<pics/SurfaceColorLegend.png, id=287, 1440.88312pt x 719.68875pt>
+<pics/SurfaceColorLegend.png, id=327, 1440.88312pt x 719.68875pt>
 File: pics/SurfaceColorLegend.png Graphic file (type png)
  <use pics/SurfaceColorLegend.png>
 Package pdftex.def Info: pics/SurfaceColorLegend.png used on input line 82.
@@ -886,7 +868,7 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
  We now make it that large for the rest of the document.
  This may cause the page layout to be inconsistent, however.
 
-[17 <./pics/SurfaceColorCorrection.png>] <pics/AnnotationsAI.png, id=297, 1482.4986pt x 743.4174pt>
+[17 <./pics/SurfaceColorCorrection.png>] <pics/AnnotationsAI.png, id=337, 1482.4986pt x 743.4174pt>
 File: pics/AnnotationsAI.png Graphic file (type png)
 
 <use pics/AnnotationsAI.png>
@@ -929,7 +911,7 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
  We now make it that large for the rest of the document.
  This may cause the page layout to be inconsistent, however.
 
-[19] <pics/DnsAI.png, id=319, 1441.0638pt x 721.2546pt>
+[19] <pics/DnsAI.png, id=359, 1441.0638pt x 721.2546pt>
 File: pics/DnsAI.png Graphic file (type png)
  <use pics/DnsAI.png>
 Package pdftex.def Info: pics/DnsAI.png used on input line 152.
@@ -977,15 +959,154 @@ Package Fancyhdr Warning: \headheight is too small (30.0pt):
 [22]
 \openout2 = `Minerva.aux'.
 
+ (Minerva.tex <pics/MinervaAI.png, id=382, 1459.3722pt x 742.4538pt>
+File: pics/MinervaAI.png Graphic file (type png)
+ <use pics/MinervaAI.png>
+Package pdftex.def Info: pics/MinervaAI.png used on input line 8.
+(pdftex.def)             Requested size: 418.25542pt x 212.77974pt.
+LaTeX Font Info:    Try loading font information for T1+pcr on input line 19.
 
-No file Minerva.tex.
+("C:\Program Files (x86)\MiKTeX 2.9\tex\latex\psnfss\t1pcr.fd"
+File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
+)
+LaTeX Font Info:    Font shape `T1/pcr/bx/n' in size <12> not available
+(Font)              Font shape `T1/pcr/b/n' tried instead on input line 19.
+File: pics/logosSUM.png Graphic file (type png)
+ <use pics/logosSUM.png>
+Package pdftex.def Info: pics/logosSUM.png used on input line 40.
+(pdftex.def)             Requested size: 163.0831pt x 30.0pt.
+
+
+Package Fancyhdr Warning: \headheight is too small (30.0pt): 
+ Make it at least 34.35004pt.
+ We now make it that large for the rest of the document.
+ This may cause the page layout to be inconsistent, however.
+
+[23
+
+
+ <./pics/MinervaAI.png>] <pics/QueryApp.png, id=396, 1431.09656pt x 743.77875pt>
+File: pics/QueryApp.png Graphic file (type png)
+ <use pics/QueryApp.png>
+Package pdftex.def Info: pics/QueryApp.png used on input line 48.
+(pdftex.def)             Requested size: 418.25542pt x 217.38133pt.
+
+<pics/ListingAI.png, id=397, 1429.0188pt x 743.8992pt>
+File: pics/ListingAI.png Graphic file (type png)
+ <use pics/ListingAI.png>
+Package pdftex.def Info: pics/ListingAI.png used on input line 68.
+(pdftex.def)             Requested size: 418.25542pt x 217.723pt.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+File: pics/logosSUM.png Graphic file (type png)
+<use pics/logosSUM.png>
+Package pdftex.def Info: pics/logosSUM.png used on input line 75.
+(pdftex.def)             Requested size: 163.0831pt x 30.0pt.
+
+
+Package Fancyhdr Warning: \headheight is too small (30.0pt): 
+ Make it at least 34.35004pt.
+ We now make it that large for the rest of the document.
+ This may cause the page layout to be inconsistent, however.
+
+[24 <./pics/QueryApp.png>] <pics/MultiSelAI.png, id=406, 1275.8064pt x 468.3096pt>
+File: pics/MultiSelAI.png Graphic file (type png)
+ <use pics/MultiSelAI.png>
+Package pdftex.def Info: pics/MultiSelAI.png used on input line 78.
+(pdftex.def)             Requested size: 418.25542pt x 153.52794pt.
+File: pics/logosSUM.png Graphic file (type png)
+
+<use pics/logosSUM.png>
+Package pdftex.def Info: pics/logosSUM.png used on input line 88.
+(pdftex.def)             Requested size: 163.0831pt x 30.0pt.
+
+
+Package Fancyhdr Warning: \headheight is too small (30.0pt): 
+ Make it at least 34.35004pt.
+ We now make it that large for the rest of the document.
+ This may cause the page layout to be inconsistent, however.
+
+[25 <./pics/ListingAI.png (PNG copy)> <./pics/MultiSelAI.png>]
+<pics/PropertiesAI.png, id=417, 1429.0188pt x 743.8992pt>
+File: pics/PropertiesAI.png Graphic file (type png)
+ <use pics/PropertiesAI.png>
+Package pdftex.def Info: pics/PropertiesAI.png used on input line 99.
+(pdftex.def)             Requested size: 418.25542pt x 217.723pt.
+
+<pics/PickMinervaFilter.png, id=420, 1428.83812pt x 740.7675pt>
+File: pics/PickMinervaFilter.png Graphic file (type png)
+ <use pics/PickMinervaFilter.png>
+Package pdftex.def Info: pics/PickMinervaFilter.png used on input line 120.
+(pdftex.def)             Requested size: 418.25542pt x 216.84033pt.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+<pics/PickLinking1.png, id=421, 1431.84938pt x 741.52031pt>
+File: pics/PickLinking1.png Graphic file (type png)
+ <use pics/PickLinking1.png>
+Package pdftex.def Info: pics/PickLinking1.png used on input line 127.
+(pdftex.def)             Requested size: 418.25542pt x 216.5968pt.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 133--135
+
+ []
+
+
+Overfull \hbox (13.72725pt too wide) in paragraph at lines 138--139
+[]\T1/phv/b/n/12 PickLinking\T1/phv/m/n/12 : Se-lect ``Pick-Link-ing'' in the ac-tions menu and press CTRL+LMB
+ []
+
+File: pics/logosSUM.png Graphic file (type png)
+<use pics/logosSUM.png>
+Package pdftex.def Info: pics/logosSUM.png used on input line 139.
+(pdftex.def)             Requested size: 163.0831pt x 30.0pt.
+
+
+Package Fancyhdr Warning: \headheight is too small (30.0pt): 
+ Make it at least 34.35004pt.
+ We now make it that large for the rest of the document.
+ This may cause the page layout to be inconsistent, however.
+
+[26 <./pics/PropertiesAI.png (PNG copy)>])
+File: pics/logosSUM.png Graphic file (type png)
+ <use pics/logosSUM.png>
+Package pdftex.def Info: pics/logosSUM.png used on input line 183.
+(pdftex.def)             Requested size: 163.0831pt x 30.0pt.
+
+
+Package Fancyhdr Warning: \headheight is too small (30.0pt): 
+ Make it at least 34.35004pt.
+ We now make it that large for the rest of the document.
+ This may cause the page layout to be inconsistent, however.
+
+[27 <./pics/PickMinervaFilter.png>]
+File: pics/logosSUM.png Graphic file (type png)
+ <use pics/logosSUM.png>
+Package pdftex.def Info: pics/logosSUM.png used on input line 183.
+(pdftex.def)             Requested size: 163.0831pt x 30.0pt.
+
+
+Package Fancyhdr Warning: \headheight is too small (30.0pt): 
+ Make it at least 34.35004pt.
+ We now make it that large for the rest of the document.
+ This may cause the page layout to be inconsistent, however.
+
+[28 <./pics/PickLinking1.png>]
 Package atveryend Info: Empty hook `BeforeClearDocument' on input line 187.
 Package atveryend Info: Empty hook `AfterLastShipout' on input line 187.
-(PRo3D_ShortUserManual.aux (Introduction.aux) (Start.aux) (ViewerActions.aux) (ViewerFeatures.aux) (Minerva.aux))
+ (PRo3D_ShortUserManual.aux (Introduction.aux) (Start.aux) (ViewerActions.aux)
+(ViewerFeatures.aux) (Minerva.aux))
 Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 187.
 Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 187.
 Package rerunfilecheck Info: File `PRo3D_ShortUserManual.out' has not changed.
-(rerunfilecheck)             Checksum: 1D12D2434DA160AA0B279D63EFFD0B65;1638.
+(rerunfilecheck)             Checksum: B80FA8964ECEB5D37CD7035BDE517023;2186.
 
 
 LaTeX Warning: There were undefined references.
@@ -993,20 +1114,21 @@ LaTeX Warning: There were undefined references.
 Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 187.
  ) 
 Here is how much of TeX's memory you used:
- 8484 strings out of 493334
- 124036 string characters out of 3136672
- 227263 words of memory out of 3000000
- 11761 multiletter control sequences out of 15000+200000
- 30328 words of font info for 40 fonts, out of 3000000 for 9000
+ 8600 strings out of 493334
+ 125964 string characters out of 3136672
+ 228827 words of memory out of 3000000
+ 11840 multiletter control sequences out of 15000+200000
+ 31570 words of font info for 44 fonts, out of 3000000 for 9000
  1141 hyphenation exceptions out of 8191
  41i,16n,43p,685b,404s stack positions out of 5000i,500n,10000p,200000b,50000s
 {C:/Program Files (x86)/MiKTeX 2.9/fonts/enc/dvips/fontname/8r.enc}<C:/Program Files (x86)/MiKTeX 2.9/fonts/type1/publ
-ic/amsfonts/cm/cmsy10.pfb><C:/Program Files (x86)/MiKTeX 2.9/fonts/type1/urw/helvetic/uhvb8a.pfb><C:/Program Files (x86)
-/MiKTeX 2.9/fonts/type1/urw/helvetic/uhvr8a.pfb><C:/Program Files (x86)/MiKTeX 2.9/fonts/type1/urw/helvetic/uhvro8a.pfb>
-
-Output written on PRo3D_ShortUserManual.pdf (22 pages, 14459914 bytes).
+ic/amsfonts/cm/cmsy10.pfb><C:/Program Files (x86)/MiKTeX 2.9/fonts/type1/urw/courier/ucrb8a.pfb><C:/Program Files (x86)/
+MiKTeX 2.9/fonts/type1/urw/courier/ucrr8a.pfb><C:/Program Files (x86)/MiKTeX 2.9/fonts/type1/urw/helvetic/uhvb8a.pfb><C:
+/Program Files (x86)/MiKTeX 2.9/fonts/type1/urw/helvetic/uhvr8a.pfb><C:/Program Files (x86)/MiKTeX 2.9/fonts/type1/urw/h
+elvetic/uhvro8a.pfb>
+Output written on PRo3D_ShortUserManual.pdf (28 pages, 19263475 bytes).
 PDF statistics:
- 374 PDF objects out of 1000 (max. 8388607)
- 70 named destinations out of 1000 (max. 500000)
- 304 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 485 PDF objects out of 1000 (max. 8388607)
+ 91 named destinations out of 1000 (max. 500000)
+ 403 words of extra memory for PDF output out of 10000 (max. 10000000)
 

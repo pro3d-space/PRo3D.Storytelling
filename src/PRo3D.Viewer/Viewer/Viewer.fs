@@ -609,9 +609,9 @@ module ViewerApp =
                                 { m with scene = { m.scene with viewPlans = vp}} 
                     | None -> Log.error "no rover selected"; m
                 | None -> m
-            | MakeSnapshot (w,h),_,_ -> 
+            | MakeSnapshot (w,h,f),_,_ -> 
                 match m.scene.scenePath with
-                    | Some p -> let sn = SnapshotAnimation.startSnapshots p w h
+                    | Some p -> let sn = SnapshotAnimation.startSnapshots p f w h
                                 m
                     | None -> m
             | ImportSnapshotData sl,_,_ -> 
@@ -619,7 +619,7 @@ module ViewerApp =
                 let frustumOld = m.frustum
                 match sl |> List.tryHead with
                 | Some p -> //let data = SnapshotAnimation.writeDataToJsonFile
-                //            m
+                            //m
                             let data = SnapshotAnimation.loadData p
                             match data with
                                 | Some d ->
@@ -632,7 +632,7 @@ module ViewerApp =
                                                 let view = SnapshotAnimation.updateSnapshotCam positions.[i]
                                                 yield ViewerAction.SetCameraAndFrustum2 (view,frustum)
                                                 do! Proc.Sleep 1000
-                                                yield ViewerAction.MakeSnapshot (res.X, res.Y)
+                                                yield ViewerAction.MakeSnapshot (res.X, res.Y, positions.[i].filename)
                                                 
                                             do! Proc.Sleep 300
                                             yield ViewerAction.SetCameraAndFrustum2 (viewOld,frustumOld) // reset camera parameter

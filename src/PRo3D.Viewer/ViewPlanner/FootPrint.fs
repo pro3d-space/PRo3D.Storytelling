@@ -184,7 +184,7 @@ module SnapshotAnimation =
       }
 
     let updateSnapshotCam (extr:ArnoldSnapshot)  = 
-        CameraView.look extr.location extr.foward.Normalized extr.up.Normalized
+        CameraView.look extr.location extr.forward.Normalized extr.up.Normalized
 
     let updateSnapshotFrustum (frust:Frustum) (dataAnimation:ArnoldAnimation)  =
 
@@ -212,21 +212,21 @@ module SnapshotAnimation =
         //let ex1 =
         //     {
         //        location = V3d(-36924.38, 272515.17, 587.71)
-        //        foward   = V3d(0.44, -0.31, -0.84)
+        //        forward  = V3d(0.44, -0.31, -0.84)
         //        up       = V3d(-0.67, 0.51, -0.54)
         //    }
            
         //let ex2 =
         //    {
         //        location = V3d(-36930.36, 272519.67, 569.74)
-        //        foward   = V3d(0.46, -0.34, 0.82)
+        //        forward  = V3d(0.46, -0.34, 0.82)
         //        up       = V3d(-0.74, -0.66, 0.15)
         //    }
             
         //let ex3 =
         //    {
         //        location = V3d(-36926.17, 272516.11, 584.91)
-        //        foward   = V3d(0.83, -0.51, -0.24)
+        //        forward  = V3d(0.83, -0.51, -0.24)
         //        up       = V3d(-0.39, -0.82, 0.41)
         //    }
             
@@ -241,36 +241,41 @@ module SnapshotAnimation =
         let ex1 =
              {
                 location = V3d(-2486974.23, 2288926.50, -275792.76)
-                foward   = V3d(0.42, -0.63, -0.65)
+                forward  = V3d(0.42, -0.63, -0.65)
                 up       = V3d(-0.54, 0.40, -0.74)
+                filename = ""
             }
            
         let ex2 =
             {
                 location = V3d(-2486973.65, 2288925.99, -275793.60)
-                foward   = V3d(0.34, -0.85, 0.41)
+                forward = V3d(0.34, -0.85, 0.41)
                 up       = V3d(-0.55, 0.18, -0.82)
+                filename = ""
             }
             
         let ex3 =
             {
                 location = V3d(-2486973.72, 2288924.03, -275796.63)
-                foward   = V3d(0.05, 0.51, 0.86)
+                forward  = V3d(0.05, 0.51, 0.86)
                 up       = V3d(-0.07, -0.86, 0.51)
+                filename = ""
             }
 
         let ex4 =
             {
                 location = V3d(-2486971.72, 2288922.95, -275794.30)
-                foward   = V3d(-0.54, 0.82, 0.17)
+                forward  = V3d(-0.54, 0.82, 0.17)
                 up       = V3d(-0.34, -0.40, 0.85)
+                filename = ""
             }
 
         let ex5 =
             {
                 location = V3d(-2486972.34, 2288940.76, -275790.74)
-                foward   = V3d(-0.08, -0.98, -0.19)
+                forward  = V3d(-0.08, -0.98, -0.19)
                 up       = V3d(0.09, -0.20, 0.98)
+                filename = ""
             }
             
         let testdata = 
@@ -286,15 +291,18 @@ module SnapshotAnimation =
          |> Serialization.writeToFile path
         
     
-    let snapshot (fpPath:string) (width : int) (height : int) =
-        let now = DateTime.Now
-        let pngName = System.String.Format(
-                                "{0:0000}{1:00}{2:00}_{3:00}{4:00}{5:00}{6:00}",
-                                now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, now.Millisecond)
+    let snapshot (fpPath:string) (filename:string) (width : int) (height : int) =
+        let pngName =
+            if filename.IsEmpty() then
+                let now = DateTime.Now
+                System.String.Format(
+                        "{0:0000}{1:00}{2:00}_{3:00}{4:00}{5:00}{6:00}",
+                        now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, now.Millisecond)
+            else filename
         try Utilities.takeScreenshotFromAllViews "http://localhost:54321" width height pngName fpPath with e -> printfn "error: %A" e
        
 
     
-    let startSnapshots (scenepath : string) (width : int) (height : int) = 
+    let startSnapshots (scenepath : string) (filename:string) (width : int) (height : int) = 
         let fpPath = FootPrint.getFootprintsPath scenepath
-        snapshot fpPath width height 
+        snapshot fpPath filename width height 

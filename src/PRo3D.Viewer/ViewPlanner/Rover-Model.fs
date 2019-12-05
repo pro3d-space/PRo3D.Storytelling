@@ -62,21 +62,24 @@ type InstrumentType =
 
 type ArnoldSnapshot = {
     location      : V3d
-    foward        : V3d
+    forward       : V3d
     up            : V3d
+    filename      : string
 }
 with 
   static member current = 0
   static member private readV0 = 
       json {
         let! location    = Json.read "location"
-        let! foward      = Json.read "foward"
+        let! forward     = Json.read "forward"
         let! up          = Json.read "up"
+        let! filename    = Json.read "filename"
   
         return {
           location    = location |> V3d.Parse
-          foward      = foward   |> V3d.Parse
+          forward     = forward  |> V3d.Parse
           up          = up       |> V3d.Parse
+          filename    = filename
         }
       }
 
@@ -91,8 +94,9 @@ with
   static member ToJson (x : ArnoldSnapshot) =
     json {
       do! Json.write      "location"  (x.location.ToString())
-      do! Json.write      "foward"    (x.foward.ToString())
+      do! Json.write      "forward"   (x.forward.ToString())
       do! Json.write      "up"        (x.up.ToString())
+      do! Json.write      "filename"  (x.filename.ToString())
     }
 
 type ArnoldAnimation = {

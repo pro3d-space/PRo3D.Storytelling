@@ -79,7 +79,7 @@ type ViewerAction =
     | ImportAnnotationGroups    of list<string>
     | ImportSurfaceTrafo        of list<string>
     | ImportRoverPlacement      of list<string>
-    | MakeSnapshot              of int*int
+    | MakeSnapshot              of int*int*string
     | ImportSnapshotData        of list<string>
     | SwitchViewerMode          of ViewerMode
     | DnSProperties             of PropertyActions
