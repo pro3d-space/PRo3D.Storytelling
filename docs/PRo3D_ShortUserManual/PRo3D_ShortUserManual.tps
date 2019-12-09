@@ -17,8 +17,8 @@ Class=LaTeXView
 Document=PRo3D_ShortUserManual.tex
 
 [Frame0_View0,0]
-TopLine=139
-Cursor=5583
+TopLine=154
+Cursor=7030
 
 [Frame1]
 Flags=0
@@ -53,8 +53,8 @@ Class=LaTeXView
 Document=ViewerFeatures.tex
 
 [Frame2_View0,0]
-TopLine=131
-Cursor=8133
+TopLine=297
+Cursor=19340
 
 [Frame3]
 Flags=0
@@ -130,5 +130,5 @@ Cursor=12918
 
 [SessionInfo]
 FrameCount=7
-ActiveFrame=0
+ActiveFrame=2
 
