@@ -823,7 +823,12 @@ module ViewerApp =
                 //| Aardvark.Application.Keys.F6 -> Interactions.DrawLog
                 | _ -> m.interaction
 
-              { m with scene = { m.scene with config = c' }; interaction = interaction'}                               
+              let showExpPoint =
+                match k with
+                 | Aardvark.Application.Keys.P -> not m.showExplorationPoint
+                 | _-> m.showExplorationPoint
+
+              { m with scene = { m.scene with config = c' }; interaction = interaction'; showExplorationPoint = showExpPoint}                               
             | KeyUp k, _,_ ->               
                 match k with
                   | Aardvark.Application.Keys.LeftCtrl -> 
@@ -1069,7 +1074,7 @@ module ViewerApp =
                 |> Sg.map ReferenceSystemMessage  
 
             let exploreCenter =
-                Navigation.Sg.view m.scene.navigation            
+                Navigation.Sg.view m.scene.navigation |> Sg.onOff m.showExplorationPoint        
           
             let homePosition =
                 Surfaces.Sg.viewHomePosition m.scene.surfacesModel
@@ -1088,7 +1093,7 @@ module ViewerApp =
             let solText = 
                 PRo3D.Minerva.App.getSolBillboards m.minervaModel m.scene.navigation.camera.view m.scene.config.nearPlane.value |> Sg.map MinervaActions
 
-            [exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures; solText] |> Sg.ofList // (*;orientationCube*)
+            [ exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures; solText] |> Sg.ofList // (*;orientationCube*) //
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed annotationSg m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          

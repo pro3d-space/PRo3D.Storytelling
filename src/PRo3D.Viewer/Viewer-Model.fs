@@ -226,6 +226,7 @@ type Model = {
     footPrint           : FootPrint 
     
     arnoldSnapshotThreads   : ThreadPool<ViewerAction>
+    showExplorationPoint  : bool
 }
 
 
@@ -388,4 +389,5 @@ module Viewer =
         footPrint = ViewPlanModel.initFootPrint
 
         arnoldSnapshotThreads = ThreadPool.empty
+        showExplorationPoint = true
     }

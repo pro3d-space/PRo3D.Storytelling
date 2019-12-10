@@ -395,6 +395,7 @@ type ViewConfigModel = {
     lodColoring             : bool
     drawOrientationCube     : bool
     //useSurfaceHighlighting  : bool
+    //showExplorationPoint    : bool
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -472,6 +473,7 @@ module ViewConfigModel =
         drawOrientationCube = false
         //offset = depthOffset
         //useSurfaceHighlighting = true
+        //showExplorationPoint = true
     }
 
 

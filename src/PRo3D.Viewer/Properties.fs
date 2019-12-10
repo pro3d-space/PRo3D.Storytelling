@@ -23,6 +23,7 @@ module ConfigProperties =
         | ToggleLodColors
         | ToggleOrientationCube 
         | ToggleSurfaceHighlighting
+        //| ToggleExplorationPoint
         
 
     let update (model : ViewConfigModel) (act : Action) =
@@ -48,6 +49,7 @@ module ConfigProperties =
                 { model with lodColoring = not model.lodColoring}
             | ToggleOrientationCube  -> {model with drawOrientationCube = not model.drawOrientationCube}
             | ToggleSurfaceHighlighting  -> model // {model with useSurfaceHighlighting = not model.useSurfaceHighlighting}
+            //| ToggleExplorationPoint -> {model with showExplorationPoint = not model.showExplorationPoint}
            
 
     let view (model : MViewConfigModel) =    
@@ -64,6 +66,7 @@ module ConfigProperties =
                 Html.row "Lod colors:"              [GuiEx.iconCheckBox model.lodColoring ToggleLodColors]
                 Html.row "Orientation Cube: "       [GuiEx.iconCheckBox model.drawOrientationCube ToggleOrientationCube]
               //  Html.row "Surface highlighting: "   [GuiEx.iconCheckBox model.useSurfaceHighlighting ToggleSurfaceHighlighting]
+               // Html.row "Exploration Point: "      [GuiEx.iconCheckBox model.showExplorationPoint ToggleExplorationPoint]
             ]
         )
 

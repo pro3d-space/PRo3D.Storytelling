@@ -11,13 +11,13 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=711
+NormalPos.right=1322
+NormalPos.bottom=705
 Class=LaTeXView
 Document=PRo3D_ShortUserManual.tex
 
 [Frame0_View0,0]
-TopLine=154
+TopLine=155
 Cursor=7030
 
 [Frame1]
@@ -29,8 +29,8 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=711
+NormalPos.right=1322
+NormalPos.bottom=705
 Class=LaTeXView
 Document=Start.tex
 
@@ -47,14 +47,14 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=711
+NormalPos.right=1322
+NormalPos.bottom=705
 Class=LaTeXView
 Document=ViewerFeatures.tex
 
 [Frame2_View0,0]
-TopLine=297
-Cursor=19340
+TopLine=326
+Cursor=19482
 
 [Frame3]
 Flags=0
@@ -65,8 +65,8 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=711
+NormalPos.right=1322
+NormalPos.bottom=705
 Class=LaTeXView
 Document=ViewerActions.tex
 
@@ -83,8 +83,8 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=711
+NormalPos.right=1322
+NormalPos.bottom=705
 Class=LaTeXView
 Document=Introduction.tex
 
@@ -101,14 +101,14 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=711
+NormalPos.right=1322
+NormalPos.bottom=705
 Class=LaTeXView
 Document=Minerva.tex
 
 [Frame5_View0,0]
-TopLine=118
-Cursor=7283
+TopLine=0
+Cursor=1185
 
 [Frame6]
 Flags=0
@@ -119,8 +119,8 @@ MaxPos.x=-1
 MaxPos.y=-1
 NormalPos.left=4
 NormalPos.top=26
-NormalPos.right=1562
-NormalPos.bottom=711
+NormalPos.right=1322
+NormalPos.bottom=705
 Class=LaTeXView
 Document=..\..\..\..\..\..\Program Files (x86)\MiKTeX 2.9\tex\latex\fancyhdr\fancyhdr.sty
 
@@ -130,5 +130,5 @@ Cursor=12918
 
 [SessionInfo]
 FrameCount=7
-ActiveFrame=2
+ActiveFrame=0
 
