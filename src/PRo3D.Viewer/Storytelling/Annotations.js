@@ -100,9 +100,9 @@ function autosize(elem) {
         });
 
     var arrow = getArrow(elem);
-    if (arrow.length > 0) {
-        setArrowOrigin(arrow);
-    }     
+    arrow.each(function () {
+        setArrowOrigin($(this));
+    });
 }
 
 // Sets the text of the given label textarea
@@ -131,9 +131,9 @@ function setPosition(elem, pos) {
     transform(elem);
 
     var arrow = getArrow(elem);
-    if (arrow.length > 0) {
-        setArrowOrigin(arrow);
-    }    
+    arrow.each(function () {
+        setArrowOrigin($(this));
+    });
 }
 
 // Makes the given label the top label

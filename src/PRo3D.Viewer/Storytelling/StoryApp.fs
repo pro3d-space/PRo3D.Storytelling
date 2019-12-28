@@ -248,6 +248,50 @@ let overlayView (model : MModel) =
     let overlay (a : MAnnotations) =
         let selected = a.selected |> Mod.map Option.isSome
 
+        let currentTarget = adaptive {
+            let! selected = a.selected
+            let! targeting = a.targeting
+
+            if not targeting then
+                return None
+            else
+                let! result =
+                    a.list
+                    |> AList.filterM (fun x ->
+                        x.id |> Mod.map (fun id -> Option.contains id selected)
+                    )
+                    |> AList.map (fun x ->
+                        x.target |> Mod.map (fun target ->
+                            match target with
+                            | MPoints _ -> Some PointsType
+                            | MScale _ -> Some ScaleType
+                        )
+                    )
+                    |> AList.toMod
+                    |> Mod.map PList.tryHead
+
+                match result with
+                | None -> return None
+                | Some x -> return! x
+        }
+
+        let nextTarget = currentTarget |> Mod.map (fun t ->
+            match t with
+            | None ->
+                Some Annotation.startPointTargeting
+            | Some PointsType ->
+                Some Annotation.startScaleTargeting
+            | Some ScaleType ->
+                None
+        )
+
+        let targetIcon = currentTarget |> Mod.map (fun t ->
+            match t with
+            | None -> "flag"
+            | Some PointsType -> "crosshairs"
+            | Some ScaleType -> "vertical resize"
+        )
+
         div [clazz "frame"] [
             i [clazz "huge camera icon"] []
 
@@ -305,29 +349,23 @@ let overlayView (model : MModel) =
                                 Incremental.div (AttributeMap.ofAMap <| amap {
                                     let! selected = selected
                                     let! targeting = a.targeting
+                                    let! next = nextTarget
 
                                     yield clazz <| "ui icon button" +
                                                    (if selected then "" else " disabled") +
                                                    (if targeting then " active" else "")
 
-                                    yield onClick (fun _ -> (Target <| Point None) |> AnnotationAction)
+                                    match next with
+                                    | None ->
+                                        yield onClick (fun _ -> AnnotationAction StopTargeting)
+                                    | Some n ->
+                                        yield onClick (fun _ -> AnnotationAction (StartTargeting n))
+
                                 }) <| AList.ofList [
-                                    i [clazz "flag icon"] []
-                                ]
-                            )
-
-                            preventClickPropagation (
-                                Incremental.div (AttributeMap.ofAMap <| amap {
-                                    let! selected = selected
-                                    let! targeting = a.targeting
-
-                                    yield clazz <| "ui icon button" +
-                                                   (if selected then "" else " disabled") +
-                                                   (if targeting then " active" else "")
-
-                                    yield onClick (fun _ -> (Target <| Scale (None, None)) |> AnnotationAction)
-                                }) <| AList.ofList [
-                                    i [clazz "vertical resize icon"] []
+                                    Incremental.i (AttributeMap.ofAMap <| amap {
+                                        let! icon = targetIcon
+                                        yield clazz <| "icon " + icon
+                                    }) AList.empty
                                 ]
                             )
 

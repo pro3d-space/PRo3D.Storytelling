@@ -38,11 +38,15 @@ type Label = {
     fontSize : int
 }
 
-// An annotation can target either a single point
+// An annotation can target either separate points
 // or a scale represented by two points
+type AnnotationTargetType =
+    | PointsType
+    | ScaleType
+
 [<DomainType>]
 type AnnotationTarget =
-    | Point of V3d option
+    | Points of V3d list
     | Scale of V3d option * V3d option
 
 // An annotation is a label and optionally a target
@@ -78,7 +82,8 @@ type AnnotationAction =
     | ChangeLabelFontSize
     | Add                   of string
     | Remove                of AnnotationId
-    | Target                of AnnotationTarget
+    | StartTargeting        of (Annotation -> Annotation)
+    | StopTargeting
     | SaveTarget            of V3d
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -109,12 +114,16 @@ module Annotation =
         label = label
     }
 
+    let getTargetType (a : Annotation) =
+        match a.target with
+        | Points _ -> PointsType
+        | Scale _ -> ScaleType
+
     let hasPendingTarget (a : Annotation) =
         match a.target with
-            | Point None -> true
-            | Scale (None, _) -> true
-            | Scale (_, None) -> true
-            | _ -> false
+        | Scale (None, _) -> true
+        | Scale (_, None) -> true
+        | _ -> false
 
     let setLabelText (text : string) (a : Annotation) =
         { a with label = { a.label with text = text }}
@@ -140,17 +149,27 @@ module Annotation =
 
         { a with label = { a.label with fontSize = sizes.[(current + 1) % sizes.Length] }}
 
-    let setTarget (target : AnnotationTarget) (a : Annotation) =
+    let startPointTargeting (a : Annotation) =
+        let target =
+            match a.target with
+            | Scale _ ->
+                Points []
+            | Points xs ->
+                Points xs
+
         { a with target = target }
+
+    let startScaleTargeting (a : Annotation) =
+        { a with target = Scale (None, None) }
 
     let saveTarget (target : V3d) (a : Annotation) =
         let target =
             match a.target with
-                | Point _ ->
-                    Point (Some target)
-                | Scale (None, y) ->
-                    Scale (Some target, y)
-                | Scale (x, _) ->
-                    Scale (x, Some target)
+            | Points xs ->
+                Points (target::xs)
+            | Scale (None, y) ->
+                Scale (Some target, y)
+            | Scale (x, _) ->
+                Scale (x, Some target)
 
         { a with target = target }
