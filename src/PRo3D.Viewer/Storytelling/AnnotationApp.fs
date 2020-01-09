@@ -370,7 +370,7 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
     require dependencies (
         setViewport (
             setBaseSize (
-                Svg.svg [] [
+                Svg.svg [clazz "annotationCanvas"] [
                     Svg.defs [] [outlineFilter]
 
                     Incremental.Svg.g (AttributeMap.ofList [
