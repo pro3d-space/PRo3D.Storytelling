@@ -311,12 +311,12 @@ module Shader =
     //let addColor (v : Vertex) = 
         //fragment { 
             if (uniform?useColorS) then
-                let col : V3d =  uniform?colorS
+                let hue : V3d =  uniform?colorS
                 let nc = V4d(col.X*255.0, col.Y*255.0, col.Z*255.0, 255.0)
 
-                let red   = (myTrunc( nc.X * col.X)) / 255.0
-                let green = (myTrunc( nc.Y * col.Y)) / 255.0
-                let blue  = (myTrunc( nc.Z * col.Z)) / 255.0
+                let red   = (myTrunc( nc.X * hue.X)) / 255.0
+                let green = (myTrunc( nc.Y * hue.Y)) / 255.0
+                let blue  = (myTrunc( nc.Z * hue.Z)) / 255.0
                 V4d(red, green, blue, 1.0)
             else
                 col
@@ -329,8 +329,7 @@ module Shader =
                     |> mapContrast
                     |> mapBrightness
                     |> mapGamma
-                    |> grayscale
-                    
+                    |> grayscale                    
         }
   
     type FootPrintVertex =

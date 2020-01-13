@@ -387,7 +387,7 @@ module ViewerUtils =
                     |> Sg.set
                     |> Sg.effect [
                         triangleFilterX                |> toEffect
-                        PRo3D.Base.Shader.footprintV   |> toEffect
+                        //PRo3D.Base.Shader.footprintV   |> toEffect
                         Shader.stableTrafo             |> toEffect
                         PRo3D.Base.Shader.improvedDiffuseTexture |> toEffect
                         fixAlpha |> toEffect
@@ -400,7 +400,7 @@ module ViewerUtils =
                         //PRo3D.Base.Shader.mapGamma          |> toEffect                            
                         //PRo3D.Base.Shader.grayscale         |> toEffect
                         //PRo3D.Base.Shader.addColor          |> toEffect
-                        PRo3D.Base.Shader.footPrintF        |> toEffect
+                        //PRo3D.Base.Shader.footPrintF        |> toEffect
                     ]
                     |> Sg.applyRoverVP roverVP
                     |> Sg.uniform "LoDColor" (Mod.constant C4b.Gray)
