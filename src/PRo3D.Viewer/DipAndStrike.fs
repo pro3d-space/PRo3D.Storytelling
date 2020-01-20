@@ -1,19 +1,21 @@
 ﻿namespace PRo3D
 
+open Aardvark.Base
+open Aardvark.Application
+open Aardvark.UI
+
+open System
+
+open Aardvark.Base.Incremental    
+
+open Aardvark.UI
+open Aardvark.UI.Primitives    
+open CSharpUtils
 open PRo3D.Versioned
+open PRo3D.Versioned.Mutable
 
 module DipAndStrike =
-    open Aardvark.Base
-    open Aardvark.Application
-    open Aardvark.UI
-
-    open System
     
-    open Aardvark.Base.Incremental    
-
-    open Aardvark.UI
-    open Aardvark.UI.Primitives    
-    open CSharpUtils
 
     let projectOntoPlane (x:V3d) (n:V3d) = (x - (x * n)).Normalized
 
@@ -186,7 +188,7 @@ module DipAndStrike =
             return hsv.ToC3f().ToC4b()
         }
     
-    let viewUI (model : MAnnotation) =
+    let viewUI (model : MAnnotation') =
 
         let da   = Mod.bindOption model.dnsResults Double.NaN (fun a -> a.dipAngle)
         let daz  = Mod.bindOption model.dnsResults Double.NaN (fun a -> a.dipAzimuth)

@@ -1,7 +1,6 @@
 ﻿namespace PRo3D
 
 
-
 open System
 open Aardvark.Base
 open Aardvark.Base.Incremental
@@ -61,6 +60,12 @@ module Option =
           | false -> None
 
 type Points = list<V3d>
+
+type TTAlignment =
+    | Top    = 0
+    | Right  = 1
+    | Bottom = 2
+    | Left   = 3
 
 type Projection = Linear = 0 | Viewpoint = 1 | Sky = 2
 type Geometry = Point = 0 | Line = 1 | Polyline = 2 | Polygon = 3 | DnS = 4
@@ -125,8 +130,8 @@ module FalseColorsModel =
         value   = 5.0
         min     = 0.0
         max     = 90.0
-        step    = 1.0
-        format  = "{000:0}"
+        step    = 0.1
+        format = "{0:0.00}"
     } 
     let initMinAngle = {
         value   = 0.0
@@ -158,22 +163,22 @@ module FalseColorsModel =
         value   = 5.0
         min     = 0.0
         max     = 90.0
-        step    = 1.0
-        format  = "{000:0}"
+        step    = 0.0001
+        format  = "{0:0.0000}"
     } 
     let initlb (range: Range1d) = {
         value   = range.Min
         min     = range.Min
         max     = range.Max
-        step    = 1.0
-        format  = "{0:0.0}"
+        step    = 0.0001
+        format  = "{0:0.0000}"
     }
     let initub (range: Range1d) = {
         value   = range.Max
         min     = range.Min
         max     = range.Max
-        step    = 1.0
-        format  = "{0:0.0}"
+        step    = 0.0001
+        format  = "{0:0.0000}"
     }
     let initDefinedScalarsLegend (range: Range1d) = 
         {
@@ -389,6 +394,8 @@ type ViewConfigModel = {
    // offset                  : NumericInput
     lodColoring             : bool
     drawOrientationCube     : bool
+    //useSurfaceHighlighting  : bool
+    //showExplorationPoint    : bool
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -465,6 +472,8 @@ module ViewConfigModel =
         importTriangleSize  = initImportTriangleSize        
         drawOrientationCube = false
         //offset = depthOffset
+        //useSurfaceHighlighting = true
+        //showExplorationPoint = true
     }
 
 

@@ -39,6 +39,7 @@ type Interactions =
     | PlaceSurface          = 5
     | PickAnnotation        = 6
     | PickSurface           = 7
+    | PickMinervaProduct    = 8
     //| DrawLog               = 7
     //| AlignPick             = 5
 
@@ -66,7 +67,7 @@ type ViewerAction =
     | BookmarkMessage           of BookmarkAction
     | BookmarkUIMessage         of Groups.Action
     | RoverMessage              of RoverApp.Action
-    | ViewPlanMessage           of ViewPlan.Action
+    | ViewPlanMessage           of ViewPlanApp.Action
     | DnSColorLegendMessage     of FalseColorLegendApp.Action
     | SetCamera                 of CameraView        
     | SetCameraAndFrustum       of CameraView * double * double        
@@ -78,6 +79,8 @@ type ViewerAction =
     | ImportAnnotationGroups    of list<string>
     | ImportSurfaceTrafo        of list<string>
     | ImportRoverPlacement      of list<string>
+    | MakeSnapshot              of int*int*string
+    | ImportSnapshotData        of list<string>
     | SwitchViewerMode          of ViewerMode
     | DnSProperties             of PropertyActions
     | ConfigPropertiesMessage   of ConfigProperties.Action
@@ -85,7 +88,7 @@ type ViewerAction =
     | QuickLoad2
     | DeleteLast
     | AddSg                     of ISg
-    | HoverSurface              of SceneHit    
+    | HoverSurface              of SceneHit
     | PickSurface               of SceneHit*string
     | PickObject                of V3d*Guid
     | SaveScene                 of string
@@ -113,7 +116,8 @@ type ViewerAction =
     | UpdateUserFeedback        of string
     | StartImportMessaging      of list<string>
     | Logging                   of string * ViewerAction
-    | ThreadsDone               of string    
+    | ThreadsDone               of string   
+    | SnapshotThreadsDone       of string
     | OnResize                  of V2i
 
 
@@ -148,18 +152,18 @@ type Targeting = {
 type Scene = {
     navigation        : NavigationModel
     interaction       : InteractionMode
-    surfacesModel     : SurfaceModel  
+    surfacesModel     : SurfaceModel
     config            : ViewConfigModel
     scenePath         : Option<string>
-    referenceSystem   : ReferenceSystem
-    //orientationSystem : ReferenceSystem
+    referenceSystem   : ReferenceSystem    
     bookmarksModel    : BookmarksModel
     viewPlans         : ViewPlanModel
     dockConfig        : DockConfig
+
     closedPages       : list<DockElement>
     firstImport       : bool
     userFeedback      : string
-    feedbackThreads   : ThreadPool<ViewerAction> 
+    feedbackThreads   : ThreadPool<ViewerAction>
     targeting         : Targeting
 }
 
@@ -199,8 +203,7 @@ type MessagingMailbox = MailboxProcessor<MailboxAction>
 type Model = { 
    
     scene            : Scene
-    drawing          : Drawing.DrawingModel   
-    properties       : Properties
+    drawing          : Drawing.DrawingModel    
     interaction      : Interactions
     picking          : bool
     ctrlFlag         : bool
@@ -231,6 +234,9 @@ type Model = {
     [<TreatAsValue>]
     future : Option<Drawing.DrawingModel> 
     footPrint           : FootPrint 
+    
+    arnoldSnapshotThreads   : ThreadPool<ViewerAction>
+    showExplorationPoint  : bool
 }
 
 
@@ -274,7 +280,7 @@ module Viewer =
 
     let sceneElm = {id = "scene"; title = (Some "Scene"); weight = 0.4; deleteInvisible = None; isCloseable = None }
     
-    let initialDockConfig = 
+    let dockConfigInitial = 
         config {
             content (
                 vertical 1.0 [
@@ -307,6 +313,7 @@ module Viewer =
             appName "PRo3D"
             useCachedConfig false
         }
+
     let dockConfigFull = 
       config {
           content (                        
@@ -316,7 +323,7 @@ module Viewer =
                     {id = "instrumentview"; title = Some " Instrument View "; weight = 0.6; deleteInvisible = None; isCloseable = None}
                 ]                            
                 vertical 0.3 [
-                  stack 0.5 None [                    
+                  stack 0.5 (Some "surfaces") [                    
                     {id = "surfaces"; title = Some " Surfaces "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "annotations"; title = Some " Annotations "; weight = 0.4; deleteInvisible = None; isCloseable = None }
                     {id = "minerva"; title = Some " Minerva "; weight = 0.4; deleteInvisible = None; isCloseable = None }
@@ -386,8 +393,7 @@ module Viewer =
             targeting       = { enabled = false; lastHit = V3d.Zero }
         }
 
-        drawing         = Drawing.DrawingModel.initialdrawing
-        properties      = NoProperties
+        drawing         = Drawing.DrawingModel.initialdrawing        
         interaction     = Interactions.PlaceCoordinateSystem
         picking         = false
         ctrlFlag        = false
@@ -425,4 +431,7 @@ module Viewer =
         //instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0
         viewerMode = ViewerMode.Standard                
         footPrint = ViewPlanModel.initFootPrint
+
+        arnoldSnapshotThreads = ThreadPool.empty
+        showExplorationPoint = true
     }

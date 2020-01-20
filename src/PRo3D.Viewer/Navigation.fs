@@ -104,7 +104,14 @@ module Navigation =
             ]
 
     module Sg =
-        let view (model:MNavigationModel) =
+        let view (model:MNavigationModel) = //(show:IMod<bool>) 
             let point = PRo3D.Sg.dot model.exploreCenter (Mod.constant 3.0) (Mod.constant C4b.Magenta)
+                //alist {
+                //    let! show = show
+                //    if show then 
+                //        yield PRo3D.Sg.dot model.exploreCenter (Mod.constant 3.0) (Mod.constant C4b.Magenta)
+                //    else yield Sg.empty
+                //} |> AList.toList |> Sg.ofList
+                
             Sg.ofList [point]
            

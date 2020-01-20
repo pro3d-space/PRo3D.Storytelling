@@ -264,3 +264,54 @@ Each group has a context menu:
 	\item \textit{Selection: Move}: Moves all selected leafs (green squares) to the active group.
 	\item \textit{Selection: Clear}: Clears the selection (the leafs were not removed).
 \end{itemize}
+
+%----------------------------------------------------------------------------------------
+%	SubSection: ViewPlanner
+%----------------------------------------------------------------------------------------
+\newpage
+\subsection{View Planner}
+\label{sec:viewplanner}
+
+\begin{figure}[h]
+    	\centering
+    		\includegraphics[width=1\textwidth]{pics/ViewPlanner1.png}
+    	\caption[View Planner]{The view planner. The rover is placed on the surface in the main view (left). All rovers in the scene are listed in the ViewPlanner tab (right).}
+    	\label{fig:viewPlanner}
+   \end{figure}
+To use the View Planner make sure that a \textbf{rover.xml} file is in the \textbf{\path{Release\InstrumentStuff}} folder. Then you can place one or more rover into your scene.
+Therefore set ``PlaceRover'' in the actions menu (Figure~\ref{fig:viewPlanner} A), select a rover model in the rover menu (Figure~\ref{fig:viewPlanner} B), press CTRL+LMB and pick two points on the surface in the main view. The first point (green) is the position and the second point (yellow) the viewing direction of the rover. In the ViewPlanner tab is a listing that shows all ViewPlans in the scene (Figure~\ref{fig:viewPlanner} C). There is a little menu beside each ViewPlan shown in Figure~\ref{fig:viewPlanner} D:
+\begin{itemize}
+	\item FlyTo: clicking on the ``house button'' triggers an animation to the camera position from where the rover placement happened.
+	\item (In)Visible: switch the rover to visible\textbackslash invisible.
+	\item Remove: clicking on the red ``x'' removes the View Plan from the list and the view.
+\end{itemize}
+Select a view plan by clicking on the square icon in front of it to adjust it's properties:
+\begin{itemize}
+	\item ChangeVPName: change the name and press the enter button.
+	\item Name: shows the rover's name.
+	\item Instrument: select an instrument (camera) from the list (Figure~\ref{fig:viewPlanner} E).
+\end{itemize}
+\begin{figure}[h]
+    	\centering
+    		\includegraphics[width=1\textwidth]{pics/ViewPlannerGuiAi.png}
+    	\caption[View PlannerGui]{The footprint for the selected camera is shown in light gray on the surface in the main view. In the properties panel (right) you can adjust the rover and camera parameters.}
+    	\label{fig:viewPlannerGui}
+   \end{figure}
+When a camera is selected you can change the instrument parameters as shown in Figure~\ref{fig:viewPlannerGui} A:
+\begin{itemize}
+	\item Sensor (px): the image size in pixel.
+	\item Focal (mm): the focal length of the camera sensor (zoom).
+\end{itemize}
+You can also change the rover's pan- and tilt axis (in degree) (Figure~\ref{fig:viewPlannerGui} B).
+In the main view the footprint of the selected camera is shown in light gray. For the footprint there are following settings:
+\begin{itemize}
+	\item show footprint: you can enable\textbackslash disable the footprint in the main view.
+	\item export footprint: you get one screenshot from the main view, one from the instrument view (Figure~\ref{fig:instView}) and a \textbf{*.svx} file with diverse meta information.
+	\item open footprint folder: opens the folder with the screenshots and the meta file.
+\end{itemize}
+\begin{figure}[h]
+    	\centering
+    		\includegraphics[width=1\textwidth]{pics/InstrumentView.png}
+    	\caption[Instrument View]{The instrument view (right) shows the instrument's camera view.}
+    	\label{fig:instView}
+   \end{figure}

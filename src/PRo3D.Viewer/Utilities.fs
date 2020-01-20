@@ -66,6 +66,9 @@ module Dialogs =
     // aardium dialogs
 
     open Aardvark.UI
+
+    let inline onEventz (eventType : string) (args : list<string>) (cb : list<string> -> 'msg) : Attribute<'msg> = 
+        eventType, AttributeValue.Event(Event.ofDynamicArgs args (fun args -> Seq.delay (fun () -> args |> cb |> Seq.singleton)))
         
     let onChooseFiles (chosen : list<string> -> 'msg) =
         let cb xs =
@@ -73,7 +76,7 @@ module Dialogs =
                 | [] -> chosen []
                 | x::[] when x <> null -> x |> Aardvark.Service.Pickler.json.UnPickleOfString |> List.map Aardvark.Service.PathUtils.ofUnixStyle |> chosen
                 | _ -> chosen []//failwithf "onChooseFiles: %A" xs
-        onEvent "onchoose" [] cb   
+        onEventz "onchoose" [] cb   
 
     let onChooseDirectory (id:Guid) (chosen : Guid * string -> 'msg) =
         let cb xs =
@@ -91,14 +94,14 @@ module Dialogs =
                     chosen (id, p)
                   | None -> chosen (id,String.Empty)
                 | _ -> chosen (id,String.Empty)//failwithf "onChooseFiles: %A" xs
-        onEvent "onchoose" [] cb   
+        onEventz "onchoose" [] cb   
 
     let onSaveFile (chosen : string -> 'msg) =
         let cb xs =
             match xs with
                 | x::[] when x <> null -> x |> Aardvark.Service.Pickler.json.UnPickleOfString |> Aardvark.Service.PathUtils.ofUnixStyle |> chosen
                 | _ -> chosen String.Empty //failwithf "onSaveFile: %A" xs
-        onEvent "onsave" [] cb
+        onEventz "onsave" [] cb
 
     let onSaveFile1 (chosen : string -> 'msg) (path : Option<string>) =
       let cb xs =
@@ -110,7 +113,7 @@ module Dialogs =
             x |> Aardvark.Service.Pickler.json.UnPickleOfString |> Aardvark.Service.PathUtils.ofUnixStyle |> chosen
           | _ -> 
             String.Empty |> chosen
-      onEvent "onsave" [] cb
+      onEventz "onsave" [] cb
           
 module Double =
     let degreesFromRadians (d:float) =
@@ -203,24 +206,7 @@ module Sg =
                     pos = uniform.ViewProjTrafo * wp
             }
         }
-
-    let createHarrisPoints (positions : V3d[])  (color : C4b) (size : IMod<float>) =
-        let colors = Array.create positions.Length color
-        let pointSize = Mod.constant 5.0
-        let c = V4d((float)color.R, (float)color.G, (float)color.B, (float)color.A)
-
-        Aardvark.UI.``F# Sg``.Sg.ofList [
-                 Sg.draw IndexedGeometryMode.PointList
-            ]
-             |> Sg.vertexAttribute DefaultSemantic.Positions (positions |> Mod.constant)
-             |> Sg.vertexAttribute DefaultSemantic.Colors (colors |> Mod.constant)
-             |> Sg.uniform "PointSize" size //pointSize
-            |> Sg.shader {
-                do! pointTrafo
-                do! constantColor c
-                do! DefaultSurfaces.vertexColor |> toEffect
-            }
-
+           
     let computeInvariantScale (view : IMod<CameraView>) (near : IMod<float>) (p:IMod<V3d>) (size:IMod<float>) (hfov:IMod<float>) =
       adaptive {
           let! p = p
@@ -254,7 +240,6 @@ module Sg =
                 | None -> [||])       
                             
     let lines (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) = 
-      
       let edges = edgeLines false points trafo
       edges
         |> Sg.lines color
@@ -288,8 +273,7 @@ module Sg =
                  do! Shader.Shaders.thickLine
              }                               
              |> Sg.trafo trafo
-             |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" (Mod.constant 0.0)
+             |> Sg.uniform "LineWidth" width             
     
     //## PICKING ##
 
@@ -309,7 +293,7 @@ module Sg =
     
     //## POINTS ##
 
-    let mkDotISg color (size : IMod<float>) (pos : IMod<V3d>) = 
+    let drawSphere color (size : IMod<float>) (pos : IMod<V3d>) = 
         Sg.sphere 2 color (Mod.constant 1.0)
             |> Sg.noEvents
             |> Sg.trafo(pos |> Mod.map Trafo3d.Translation)
@@ -317,7 +301,7 @@ module Sg =
             |> Sg.uniform "WorldPos" pos
 
     let dot (point : IMod<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
-        let isgDot = mkDotISg color size point
+        let isgDot = drawSphere color size point
         isgDot
         |> Sg.effect [
             toEffect <| Shader.screenSpaceScale
@@ -339,10 +323,10 @@ module Sg =
        ]
        |> Sg.uniform "PointSize" size
     
-    let dots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
+    let drawSpheres (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
         aset {
             for p in points |> ASet.ofAList do                        
-                yield mkDotISg color (size) (Mod.constant p)
+                yield drawSphere color (size) (Mod.constant p)
         } 
         |> Sg.set
         |> Sg.effect [
@@ -350,51 +334,45 @@ module Sg =
             toEffect <| Shader.stableTrafo
             toEffect <| DefaultSurfaces.vertexColor          
         ]
-    
-    let dots1 (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) =
-        let ps = points |> AList.toArray
-        color 
-        |> Mod.map( fun c -> createHarrisPoints ps c size )
-        |> Mod.toASet
-        |> Sg.set
-        
 
-    let scaledDots (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (view : IMod<CameraView>) (near : IMod<float>) (hfov : IMod<float>) =
-        aset {
-            for p in points |> ASet.ofAList do   
-                let scaledSize = 
-                        computeInvariantScale view near (Mod.constant p) size hfov //(Mod.constant 0.05)
-                yield mkDotISg color scaledSize (Mod.constant p)
-        } 
-        |> Sg.set
-        |> Sg.effect [
-            toEffect <| Shader.screenSpaceScale
-            toEffect <| Shader.stableTrafo
-            toEffect <| DefaultSurfaces.vertexColor          
-        ]
-    let getDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) =
+    let createSecondaryColor (c : C4b) : C4b = 
+
+       let primary = c.ToC3f().ToHSVf()
+
+       let h = primary.H + 0.3f
+       let h = if h >= 1.0f then h - 1.0f else h
+
+       let secondary = HSVf(h, primary.S, primary.V).ToC3f().ToC3b()
+       let secondary = C4b(secondary, c.A)       
+       Log.line "primary: %A secondary: %A" c secondary
+       secondary
+       
+    let drawPointList (positions : alist<V3d>) (color : IMod<C4b>) (pointSize : IMod<double>) (offset : IMod<double>)= 
+        let positions = positions |> AList.toMod |> Mod.map PList.toArray
+        let (pointsF, trafo) = PRo3D.Base.Sg.stablePoints' positions
+
+        PRo3D.Base.Sg.drawSingleColorPoints 
+            pointsF 
+            (color |> Mod.map(fun x -> x.ToC4f().ToV4d()))
+            pointSize 
+            offset
+        |> Sg.trafo trafo
+        //failwith ""
+                   
+    let getDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) (offset : IMod<float>) =
         aset {
             let! geometry = geometry
             match geometry with
-              | Geometry.Point -> match points|> AList.toList |> List.tryHead with
-                                    | Some p -> yield dot (Mod.constant p) size color
-                                    | _-> yield Sg.empty
-              |_-> yield dots points size color    
-        } |> Sg.set
-
-    let getScaledDotsIsg (points : alist<V3d>) (size:IMod<float>) (color : IMod<C4b>) (geometry: IMod<Geometry>) (view : IMod<CameraView>) (near : IMod<float>) (hfov : IMod<float>) =
-        aset {
-            
-            let! geometry = geometry
-            match geometry with
-              | Geometry.Point -> match points|> AList.toList |> List.tryHead with
-                                    | Some p -> 
-                                        let scaledSize = 
-                                            computeInvariantScale view near (Mod.constant p) size hfov 
-                                        yield dot (Mod.constant p) scaledSize color
-                                    | _-> yield Sg.empty
-              |_-> yield scaledDots points size color view near hfov 
-        } |> Sg.set
+            | Geometry.Point -> 
+                match points|> AList.toList |> List.tryHead with
+                | Some p -> 
+                    yield dot (Mod.constant p) size color
+                | _ -> 
+                    yield Sg.empty
+            | _ -> 
+                //let color = color |> Mod.map(fun x -> (x |> createSecondaryColor))
+                yield drawPointList points (C4b.VRVisGreen |> Mod.constant) size (offset |> Mod.map(fun x -> x * 1.1))
+        } |> Sg.set   
 
     //## TEXT ##
         
@@ -418,10 +396,9 @@ module Sg =
         )
         rotTrafo * modelt
     
-    let text (view : IMod<CameraView>) near hfov pos modelTrafo text size =
+    let text (view : IMod<CameraView>) near hfov pos modelTrafo text (size : IMod<double>) =
          
-      let invScaleTrafo = 
-          computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale //(Mod.constant 0.05)
+      let invScaleTrafo = computeInvariantScale view near pos size hfov |> Mod.map Trafo3d.Scale           
       
       let billboardTrafo = 
           adaptive {
@@ -432,23 +409,29 @@ module Sg =
           }      
       
       Sg.text (Font.create "Consolas" FontStyle.Regular) C4b.White text
-          |> Sg.noEvents
-          |> Sg.shader {
-            do! Shader.stableTrafo
-          }            
-          |> Sg.trafo invScaleTrafo
-          |> Sg.trafo billboardTrafo  
-
-    
+      |> Sg.noEvents
+      |> Sg.shader {
+        do! Shader.stableTrafo
+      }            
+      |> Sg.trafo invScaleTrafo
+      |> Sg.trafo billboardTrafo      
 module UI =
     open Aardvark.UI
     open Aardvark.Base.Incremental
 
-    let wrapToolTip (text:string) (dom:DomNode<'a>) : DomNode<'a> =
+    let toAlignmentString (alignment:TTAlignment ) =
+        match alignment with
+          | TTAlignment.Top      -> "top center"
+          | TTAlignment.Right    -> "right center"
+          | TTAlignment.Bottom   -> "bottom center"   
+          | TTAlignment.Left     -> "left center" 
+          | _ -> alignment |> sprintf "unknown alignment %A" |> failwith
+
+    let wrapToolTip (text:string) (alignment:TTAlignment ) (dom:DomNode<'a>) : DomNode<'a> =
         //dom
         let attr = 
             [ attribute "title" text
-              attribute "data-position" "top center"
+              attribute "data-position" (toAlignmentString alignment) //"top center"
               attribute "data-variation" "mini" ] 
                 |> AttributeMap.ofList
                 //|> AttributeMap.union dom.                
@@ -457,33 +440,7 @@ module UI =
             dom.WithAttributes attr     
         )
 
-    let wrapToolTipRight (text:string) (dom:DomNode<'a>) : DomNode<'a> =
-        //dom
-        let attr = 
-            [ attribute "title" text
-              attribute "data-position" "right center"
-              attribute "data-variation" "mini"] 
-                |> AttributeMap.ofList
-                //|> AttributeMap.union dom.Attributes                
-                
-        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
-            dom.WithAttributes attr     
-        )
-
-    let wrapToolTipBottom (text:string) (dom:DomNode<'a>) : DomNode<'a> =
-        //dom
-        let attr = 
-            [ attribute "title" text
-              attribute "data-position" "bottom center"
-              attribute "data-variation" "mini"] 
-                |> AttributeMap.ofList
-                //|> AttributeMap.union dom.Attributes                
-                
-        onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (       
-            dom.WithAttributes attr     
-        )
-
-
+  
     let dropDown'' (values : alist<'a>)(selected : IMod<Option<'a>>) (change : Option<'a> -> 'msg) (f : 'a ->string)  =
 
         let attributes (name : string) =
@@ -526,361 +483,9 @@ module Lenses =
     let set'   (lens : Lens<'s,'a>) (s:'s) (v : 'a)  : 's    = lens.Set(s,v)
     let update (lens : Lens<'s,'a>) (f : 'a->'a) (s:'s) : 's = lens.Update(s,f)
 
-module Shader =
+
+
   
-  open Aardvark.GeoSpatial.Opc.Shader
-  
-  open Aardvark.Base
-  open Aardvark.Base.Incremental
-  open Aardvark.Base.Rendering
-  open Aardvark.SceneGraph
-  open Aardvark.Rendering
-  open Aardvark.UI
-  open Aardvark.UI.Trafos
-  open Aardvark.UI.Primitives
-  open PRo3D
-  open FShade
-
-
-  type SuperVertex = 
-        {
-            [<Position>] pos :  V4d
-            [<SourceVertexIndex>] i : int
-        }
-
-  let lines (t : Triangle<SuperVertex>) =
-        line {
-            yield t.P0
-            yield t.P1
-            restartStrip()
-            
-            yield t.P1
-            yield t.P2
-            restartStrip()
-
-            yield t.P2
-            yield t.P0
-            restartStrip()
-        }
-  let private colormap =
-        sampler2d {
-            texture uniform?ColorMapTexture
-            filter Filter.MinMagMipLinear
-            addressU WrapMode.Wrap
-            addressV WrapMode.Wrap
-  }
-
-  let falseColor (v : Vertex) =
-      fragment {           
-          if uniform?falseColors then
-              let range : V2d = uniform?MinMax
-              let norm = V2d((v.scalar - range.X)/ (range.Y - range.X), 0.5)
-
-              let c = colormap.Sample(norm).XYZ
-
-              return v.c * V4d(c.X, c.Y, c.Z, 1.0)
-          else
-              return v.c
-      }
-
-  [<ReflectedDefinition>]
-  let hsv2rgb (h : float) (s : float) (v : float) =
-    let h = Fun.Frac(h)
-    let chr = v * s
-    let x = chr * (1.0 - Fun.Abs(Fun.Frac(h * 3.0) * 2.0 - 1.0))
-    let m = v - chr
-    let t = (int)(h * 6.0)
-    match t with
-        | 0 -> V3d(chr + m, x + m, m)
-        | 1 -> V3d(x + m, chr + m, m)
-        | 2 -> V3d(m, chr + m, x + m)
-        | 3 -> V3d(m, x + m, chr + m)
-        | 4 -> V3d(x + m, m, chr + m)
-        | 5 -> V3d(chr + m, m, x + m)
-        | _ -> V3d(chr + m, x + m, m)
-
-  [<ReflectedDefinition>]
-  let mapFalseColors value : float =         
-      let invert           = uniform?inverted
-      let fcUpperBound     = uniform?upperBound
-      let fcLowerBound     = uniform?lowerBound
-      let fcInterval       = uniform?interval
-      let fcUpperHueBound  = uniform?endC
-      let fcLowerHueBound  = uniform?startC
-
-      let low         = if (invert = false) then fcLowerBound else fcUpperBound
-      let up          = if (invert = false) then fcUpperBound else fcLowerBound
-      let interval    = if (invert = false) then fcInterval   else -1.0 * fcInterval        
-
-      let rangeValue = up - low + interval
-      let normInterv = (interval / rangeValue)
-
-      //map range to 0..1 according to lower/upperbound
-      let k = (value - low + interval) / rangeValue
-
-      //discretize lookup
-      let bucket = floor (k / normInterv)
-      let k = ((float) bucket) * normInterv |> clamp 0.0 1.0
-
-      let uH = fcUpperHueBound * 255.0
-      let lH = fcLowerHueBound * 255.0
-      //map values to hue range
-      let fcHueUpperBound = if (uH < lH) then uH + 1.0 else uH
-      let rangeHue = uH - lH // fcHueUpperBound - lH
-      (k * rangeHue) + lH
-
-  [<ReflectedDefinition>]
-  let mapFalseColors2 value : float =
-        let fcInterval     = uniform?interval
-        let startColorHue     = uniform?startC
-        let endColorHue       = uniform?endC
-        let invertMapping  = uniform?inverted
-        let fcUpperBound   = uniform?upperBound
-        let fcLowerBound   = uniform?lowerBound
-
-        let range = fcUpperBound - fcLowerBound
-        let numOfRangeGaps = int(round (range / fcInterval)) //round
-        let numOfStops = if (numOfRangeGaps + 2) > 100 then 100 else (numOfRangeGaps + 2)
-
-        let startColor = startColorHue *255.0
-        let endColor = endColorHue *255.0
-        let hStepSize =
-            if startColor < endColor then 
-                (endColor - startColor) / ((float)(numOfStops-1))
-            else 
-                ((endColor + 1.0) - startColor) / ((float)(numOfStops-1))
-                
-        let pos = 
-            match fcLowerBound < value with
-                    | true -> (int ( round(value - fcLowerBound) / fcInterval )) //+1//round
-                    | _ -> 0
-        let pos1 = 
-            match fcUpperBound < value with
-                | true -> numOfRangeGaps
-                | _ -> pos
-                     
-        let currColorH = 
-            if invertMapping then
-                (endColor - (hStepSize * ((float)(pos1))))
-            else 
-                (startColor + (hStepSize * ((float)(pos1))))
-        currColorH
-
-  let private diffuseSampler =
-      sampler2d {
-          texture uniform?DiffuseColorTexture          
-          filter Filter.Anisotropic
-          maxAnisotropy 16
-          addressU WrapMode.Wrap
-          addressV WrapMode.Wrap
-      }
-
-  let improvedDiffuseTexture (v : Effects.Vertex) =
-    fragment {
-        let texColor = diffuseSampler.Sample(v.tc,-1.0)
-        return texColor
-    }
-            
-  let falseColorLegend2 (v : Vertex) =
-      fragment {    
-
-          if (uniform?falseColors) 
-          then
-              let hue = mapFalseColors2 v.scalar
-              let c = hsv2rgb ((clamp 0.0 255.0 hue)/ 255.0 ) 1.0 1.0 // 
-              return v.c * V4d(c.X, c.Y, c.Z, 1.0)
-          else
-              return v.c
-      }
-      
-  [<ReflectedDefinition>]
-  let myTrunc (value : float) =
-    clamp 0.0 255.0 value
-  
-  let mapContrast (v : Vertex) =
-    fragment { 
-        if (uniform?useContrastS) then
-            let c = uniform?contrastS
-            let nc = V4d(v.c.X*255.0, v.c.Y*255.0,v.c.Z*255.0, 255.0)
-            
-            let factor = (259.0 * (c + 255.0)) / (255.0 * (259.0 - c))
-            let red    = (myTrunc (factor * (nc.X   - 128.0) + 128.0)) / 255.0
-            let green  = (myTrunc (factor * (nc.Y   - 128.0) + 128.0)) / 255.0
-            let blue   = (myTrunc (factor * (nc.Z   - 128.0) + 128.0)) / 255.0
-            return V4d(red, green, blue, 1.0)
-        else
-            return v.c
-    }
-
-  let mapBrightness (v : Vertex) = 
-    fragment { 
-        if (uniform?useBrightnS) then
-            let b = uniform?brightnessS
-            let nc = V4d(v.c.X*255.0, v.c.Y*255.0,v.c.Z*255.0, 255.0)        
-            
-            let red   = (myTrunc(nc.X + b)) / 255.0 
-            let green = (myTrunc(nc.Y + b)) / 255.0 
-            let blue  = (myTrunc(nc.Z + b)) / 255.0 
-            return V4d(red, green, blue, 1.0)
-        else
-            return v.c
-    }
-
-  let mapGamma (v : Vertex) = 
-    fragment { 
-        if (uniform?useGammaS) then
-            let g = uniform?gammaS
-            let gammaCorrection = 1.0 / g
-            return V4d(v.c.X**gammaCorrection, v.c.Y**gammaCorrection, v.c.Z**gammaCorrection, 1.0)
-        else
-            return v.c
-    }
-
-  let grayscale (v : Vertex) = 
-    fragment { 
-        if (uniform?useGrayS) then
-            let value = v.c.X * 0.299 + v.c.Y * 0.587 + v.c.Z * 0.114
-            return V4d(value, value, value, 1.0)
-        else
-            return v.c
-    }
-
-  let addColor (v : Vertex) = 
-    fragment { 
-        if (uniform?useColorS) then
-            let col : V3d =  uniform?colorS
-            let nc = V4d(v.c.X*255.0, v.c.Y*255.0, v.c.Z*255.0, 255.0)
-
-            let red   = (myTrunc( nc.X * col.X)) / 255.0
-            let green = (myTrunc( nc.Y * col.Y)) / 255.0
-            let blue  = (myTrunc( nc.Z * col.Z)) / 255.0
-            return V4d(red, green, blue, 1.0)
-        else
-            return v.c
-    }
-  
-  type FootPrintVertex =
-        {
-            [<Position>]                pos     : V4d            
-            [<WorldPosition>]           wp      : V4d
-            [<TexCoord>]                tc      : V2d
-            [<Color>]                   c       : V4d
-            [<Normal>]                  n       : V3d
-            [<SourceVertexIndex>]       sv      : int
-            [<Semantic("Scalar")>]      scalar  : float
-            [<Semantic("LightDir")>]    ldir    : V3d
-            [<Semantic("Tex0")>]        tc0     : V4d
-
-        }
-
-      
-  let private footprintmap =
-        sampler2d {
-            texture uniform?FootPrintTexture
-            filter Filter.MinMagMipLinear
-            borderColor C4f.Black
-            addressU WrapMode.Border
-            addressV WrapMode.Border
-            addressW WrapMode.Border
-  }
-
-  let footprintV (v : FootPrintVertex) =
-        vertex {
-            let vp = uniform.ModelViewTrafo * v.pos
-            let p = uniform.ProjTrafo * v.pos
-            
-            let instrumentMatrix    : M44d   = uniform?instrumentMVP
-            let projectionMatrix    : M44d   = uniform?projMVP
-            let instrumentView      : M44d   = uniform?instViewMVP
-            let globalToLocal       : V3d   = uniform?globalToLocal
-           
-            //let test = forwardMatrix * v.wp |> Vec.normalize
-            let test = v.wp - V4d(globalToLocal, 0.0) |> Vec.normalize
-            let v1 = instrumentView * test |> Vec.normalize
-            let v2 = projectionMatrix * v1 |> Vec.normalize
-            //let tt = instrumentMatrix * test
-            return { v with tc0 = v2 ; sv = 0 } //v.wp
-        }
-
-  let footprintV2 (v : FootPrintVertex) =
-      vertex {
-          let instrumentMatrix    : M44d   = uniform?instrumentMVP          
-          let vp = uniform.ModelViewTrafo * v.pos
-          let wp = uniform.ModelTrafo * v.pos
-
-          return { 
-              v with
-                  pos  = uniform.ProjTrafo * vp
-                  wp   = wp
-                  n    = transformNormal v.n
-                  ldir = V3d.Zero - vp.XYZ |> Vec.normalize
-                  tc0  = instrumentMatrix * v.pos                  
-
-          } 
-      } 
-
-  //let footPrintF (v : FootPrintVertex) =
-  //    fragment {           
-  //        if uniform?footprintVisible then
-  //          let col = v.c * 0.7 //V4d(1.0, 0.0, 0.0, 1.0)
-  //          let t = v.tc0.XY / v.tc0.W
-  //          let c = 
-  //              if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
-  //                 v.c //(v.c * 0.7) //darkened
-  //              else
-  //                 col 
-  //          if (v.tc0.Z <= 0.0) then
-  //              return col
-  //          else
-  //              return c 
-             
-  //        else
-  //          return v.c
-  //    }
-  let footPrintF (v : FootPrintVertex) =
-      fragment {           
-          if uniform?footprintVisible then
-            let outside = v.c * 0.7 
-            let t = v.tc0.XY / v.tc0.W
-            let c = 
-                if t.X > -1.0 && t.X < 1.0 && t.Y > -1.0 && t.Y < 1.0 then
-                   v.c 
-                elif t.X > -1.01 && t.X < 1.01 && t.Y > -1.01 && t.Y < 1.01 then
-                   v.c * V4d(1.0, 0.0, 0.0, 1.0)
-                else
-                   outside 
-
-            if (v.tc0.Z <= 0.0) then
-                return outside
-            else
-                return c 
-             
-          else
-            return v.c
-      }
-
-  let footPrintF2 (v : FootPrintVertex) =
-      fragment {           
-          if uniform?footprintVisible then
-            //let col = v.c * V4d(1.0, 0.0, 0.0, 1.0)
-            let proTex0 = v.tc0.XY / v.tc0.W
-            let c = footprintmap.Sample(proTex0)
-            let col = 
-                if (c.W <= 0.50) then
-                    (v.c * 0.7)
-                elif (c.W <= 0.999) then
-                    v.c * V4d(1.0, 0.0, 0.0, 1.0)
-                else
-                    v.c
-           
-            if (v.tc0.Z <= 0.0) then
-                return (v.c * 0.7)
-            else
-                return col 
-          else
-            return v.c
-      }
-
 module PRo3DNumeric = 
     open Aardvark.Base.Incremental
     open Aardvark.UI

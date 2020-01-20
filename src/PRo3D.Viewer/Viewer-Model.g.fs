@@ -307,7 +307,6 @@ module Mutable =
         let mutable __current : Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Model> = Aardvark.Base.Incremental.EqModRef<PRo3D.Viewer.Model>(__initial) :> Aardvark.Base.Incremental.IModRef<PRo3D.Viewer.Model>
         let _scene = MScene.Create(__initial.scene)
         let _drawing = PRo3D.Drawing.Mutable.MDrawingModel.Create(__initial.drawing)
-        let _properties = ResetMod.Create(__initial.properties)
         let _interaction = ResetMod.Create(__initial.interaction)
         let _picking = ResetMod.Create(__initial.picking)
         let _ctrlFlag = ResetMod.Create(__initial.ctrlFlag)
@@ -328,10 +327,11 @@ module Mutable =
         let _past = ResetMod.Create(__initial.past)
         let _future = ResetMod.Create(__initial.future)
         let _footPrint = PRo3d.Mutable.MFootPrint.Create(__initial.footPrint)
+        let _arnoldSnapshotThreads = ResetMod.Create(__initial.arnoldSnapshotThreads)
+        let _showExplorationPoint = ResetMod.Create(__initial.showExplorationPoint)
         
         member x.scene = _scene
         member x.drawing = _drawing
-        member x.properties = _properties :> IMod<_>
         member x.interaction = _interaction :> IMod<_>
         member x.picking = _picking :> IMod<_>
         member x.ctrlFlag = _ctrlFlag :> IMod<_>
@@ -352,6 +352,8 @@ module Mutable =
         member x.past = _past :> IMod<_>
         member x.future = _future :> IMod<_>
         member x.footPrint = _footPrint
+        member x.arnoldSnapshotThreads = _arnoldSnapshotThreads :> IMod<_>
+        member x.showExplorationPoint = _showExplorationPoint :> IMod<_>
         
         member x.Current = __current :> IMod<_>
         member x.Update(v : PRo3D.Viewer.Model) =
@@ -360,7 +362,6 @@ module Mutable =
                 
                 MScene.Update(_scene, v.scene)
                 PRo3D.Drawing.Mutable.MDrawingModel.Update(_drawing, v.drawing)
-                ResetMod.Update(_properties,v.properties)
                 ResetMod.Update(_interaction,v.interaction)
                 ResetMod.Update(_picking,v.picking)
                 ResetMod.Update(_ctrlFlag,v.ctrlFlag)
@@ -381,6 +382,8 @@ module Mutable =
                 _past.Update(v.past)
                 _future.Update(v.future)
                 PRo3d.Mutable.MFootPrint.Update(_footPrint, v.footPrint)
+                ResetMod.Update(_arnoldSnapshotThreads,v.arnoldSnapshotThreads)
+                ResetMod.Update(_showExplorationPoint,v.showExplorationPoint)
                 
         
         static member Create(__initial : PRo3D.Viewer.Model) : MModel = MModel(__initial)
@@ -408,12 +411,6 @@ module Mutable =
                     override x.Get(r) = r.drawing
                     override x.Set(r,v) = { r with drawing = v }
                     override x.Update(r,f) = { r with drawing = f r.drawing }
-                }
-            let properties =
-                { new Lens<PRo3D.Viewer.Model, PRo3D.Viewer.Properties>() with
-                    override x.Get(r) = r.properties
-                    override x.Set(r,v) = { r with properties = v }
-                    override x.Update(r,f) = { r with properties = f r.properties }
                 }
             let interaction =
                 { new Lens<PRo3D.Viewer.Model, PRo3D.Viewer.Interactions>() with
@@ -534,4 +531,16 @@ module Mutable =
                     override x.Get(r) = r.footPrint
                     override x.Set(r,v) = { r with footPrint = v }
                     override x.Update(r,f) = { r with footPrint = f r.footPrint }
+                }
+            let arnoldSnapshotThreads =
+                { new Lens<PRo3D.Viewer.Model, Aardvark.Base.Incremental.ThreadPool<PRo3D.Viewer.ViewerAction>>() with
+                    override x.Get(r) = r.arnoldSnapshotThreads
+                    override x.Set(r,v) = { r with arnoldSnapshotThreads = v }
+                    override x.Update(r,f) = { r with arnoldSnapshotThreads = f r.arnoldSnapshotThreads }
+                }
+            let showExplorationPoint =
+                { new Lens<PRo3D.Viewer.Model, System.Boolean>() with
+                    override x.Get(r) = r.showExplorationPoint
+                    override x.Set(r,v) = { r with showExplorationPoint = v }
+                    override x.Update(r,f) = { r with showExplorationPoint = f r.showExplorationPoint }
                 }

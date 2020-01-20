@@ -38,7 +38,7 @@ open Aardium
 
 //open Viewer.Mutable.ModelModule.Lens
 //open Mutable.AnnotationGroupModule.Lens
- 
+    
 type UserFeedback<'a> = {
   id      : string
   text    : string
@@ -92,7 +92,7 @@ module ViewerApp =
     // drawing
     let _drawing         = Model.Lens.drawing
     let _annotations     = _drawing |. DrawingModel.Lens.annotations
-    let _dnsColorLegend  = _drawing |. DrawingModel.Lens.colorLegend
+    let _dnsColorLegend  = _drawing |. DrawingModel.Lens.dnsColorLegend
     let _flat            = _annotations  |. GroupsModel.Lens.flat    
     let _lookUp          = _annotations  |. GroupsModel.Lens.groupsLookup
     let _groups          = _annotations  |. GroupsModel.Lens.rootGroup |. Node.Lens.subNodes
@@ -220,13 +220,16 @@ module ViewerApp =
           //      | None -> m
           //  | None -> m
 
-    let animateFowardAndLocation (pos : V3d) (dir : V3d) (duration : RelativeTime) (name : string) = 
+    let animateFowardAndLocation (pos : V3d) (dir : V3d) (up : V3d) (duration : RelativeTime) (name : string) = 
       {
         (CameraAnimations.initial name) with 
           sample = fun (localTime, globalTime) (state : CameraView) -> // given the state and t since start of the animation, compute a state and the cameraview
             if localTime < duration then                  
               let rot      = Rot3d(state.Forward, dir) * localTime / duration
               let forward' = rot.TransformDir(state.Forward)
+
+              let uprot     = Rot3d(state.Up, up) * localTime / duration
+              let up'       = uprot.TransformDir(state.Up)
               
               let vec       = pos - state.Location
               let velocity  = vec.Length / duration                  
@@ -236,14 +239,15 @@ module ViewerApp =
               let view = 
                 state 
                   |> CameraView.withForward forward'
+                  |> CameraView.withUp up'
                   |> CameraView.withLocation location'
       
               Some (state,view)
             else None
       }
 
-    let createAnimation pos forward (animationsOld: AnimationModel) : AnimationModel =                                    
-      animateFowardAndLocation pos forward 3.5 "ForwardAndLocation2s"
+    let createAnimation pos forward up (animationsOld: AnimationModel) : AnimationModel =                                    
+      animateFowardAndLocation pos forward up 3.5 "ForwardAndLocation2s"
         |> AnimationAction.PushAnimation 
         |> AnimationApp.update animationsOld
 
@@ -323,10 +327,10 @@ module ViewerApp =
             | Interactions.PlaceRover, ViewerMode.Standard ->
                 let ref = m.scene.referenceSystem 
 
-                let addPointMsg = ViewPlan.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))
+                let addPointMsg = ViewPlanApp.Action.AddPoint(p,ref,cache,(_surfacesModel.Get(m)))
 
                 let outerModel, viewPlans' = 
-                  ViewPlan.update m.scene.viewPlans addPointMsg _navigation _footprint m.scene.scenePath m 
+                  ViewPlanApp.update m.scene.viewPlans addPointMsg _navigation _footprint m.scene.scenePath m 
 
                 let m' = { m with scene = {m.scene with viewPlans = viewPlans' }; footPrint = outerModel.footPrint }
                 match m.scene.viewPlans.working.IsEmpty with
@@ -349,11 +353,7 @@ module ViewerApp =
     let update 
       (runtime : IRuntime) (signature: IFramebufferSignature) 
       (sendQueue : BlockingCollection<string>) (mailbox : MessagingMailbox) 
-      (m : Model) (msg : ViewerAction) =
-
-        // Reset saved messages
-        let m = m |> Lens.set (Model.Lens.drawing |. DrawingModel.Lens.processedMessages) []
-
+      (m : Model) (msg : ViewerAction) =        
         //Log.line "[Viewer_update] %A inter:%A pick:%A" msg m.interaction m.picking
         match msg, m.interaction, m.ctrlFlag with
             | NavigationMessage  msg,_,false when (isGrabbed m |> not) && (not (AnimationApp.shouldAnimate m.animations)) ->                              
@@ -387,7 +387,7 @@ module ViewerApp =
                       | Some a ->                                                
                           //m |> lookAtBoundingBox (Box3d(a.points |> PList.toList))
                           let animationMessage = 
-                            animateFowardAndLocation a.view.Location a.view.Forward 2.0 "ForwardAndLocation2s"
+                            animateFowardAndLocation a.view.Location a.view.Forward a.view.Up 2.0 "ForwardAndLocation2s"
                           let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                           { m with  animations = a'}
                       | None -> m               
@@ -412,7 +412,7 @@ module ViewerApp =
                     //let pos = trafo'.TransformPos(hp.Location)
                     //let forward = trafo'.TransformDir(hp.Forward)
                     let animationMessage = 
-                        animateFowardAndLocation hp.Location hp.Forward 2.0 "ForwardAndLocation2s"
+                        animateFowardAndLocation hp.Location hp.Forward hp.Up 2.0 "ForwardAndLocation2s"
                     AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                   | None ->
                     let surf = m |> Lenses.get _sgSurfaces |> HMap.tryFind id
@@ -421,7 +421,7 @@ module ViewerApp =
                       let bb = s.globalBB.Transformed(surface.preTransform.Forward * superTrafo.Forward)
                       let view = CameraView.lookAt bb.Max bb.Center m.scene.referenceSystem.up.value    
                       let animationMessage = 
-                          animateFowardAndLocation view.Location view.Forward 2.0 "ForwardAndLocation2s"
+                          animateFowardAndLocation view.Location view.Forward view.Up 2.0 "ForwardAndLocation2s"
                       let a' = AnimationApp.update m.animations (AnimationAction.PushAnimation(animationMessage))
                       a'
                     | None -> m.animations
@@ -441,7 +441,7 @@ module ViewerApp =
                   | None -> m       
             | BookmarkMessage msg,_,_ ->  
                 let m', bm = Bookmarks.update m.scene.bookmarksModel msg _navigation m
-               
+
                 let animation = 
                   match msg with
                   | BookmarkAction.GroupsMessage k ->
@@ -450,6 +450,7 @@ module ViewerApp =
                         createAnimation 
                           m'.scene.navigation.camera.view.Location
                           m'.scene.navigation.camera.view.Forward
+                          m'.scene.navigation.camera.view.Up
                           m.animations                      
                     | _ -> m.animations
                   | _ -> m.animations
@@ -461,15 +462,15 @@ module ViewerApp =
             | RoverMessage msg,_,_ ->
                 let roverModel = RoverApp.update m.scene.viewPlans.roverModel msg
 
-                let viewPlanModel = ViewPlan.updateViewPlanFromRover roverModel m.scene.viewPlans
+                let viewPlanModel = ViewPlanApp.updateViewPlanFromRover roverModel m.scene.viewPlans
 
                 { m with scene = { m.scene with viewPlans = viewPlanModel}} 
             | ViewPlanMessage msg,_,_ ->
-                let model, viewPlanModel = ViewPlan.update m.scene.viewPlans msg _navigation _footprint m.scene.scenePath m
+                let model, viewPlanModel = ViewPlanApp.update m.scene.viewPlans msg _navigation _footprint m.scene.scenePath m
                 { m with scene = { m.scene with viewPlans = viewPlanModel; navigation = model.scene.navigation }; footPrint = model.footPrint} 
             | DnSColorLegendMessage msg,_,_ ->
-                let cm = FalseColorLegendApp.update m.drawing.colorLegend msg
-                { m with drawing = { m.drawing with colorLegend = cm } }
+                let cm = FalseColorLegendApp.update m.drawing.dnsColorLegend msg
+                { m with drawing = { m.drawing with dnsColorLegend = cm } }
             | ImportSurface sl,_,_ ->                 
                 match sl with
                     | [] -> m
@@ -510,10 +511,16 @@ module ViewerApp =
                          
 
             | ImportDiscoveredSurfacesThreads sl,_,_ -> 
-                
+                let textoutput = 
+                    if sl.IsEmpty then
+                        ""
+                    else
+                        "Importing OPCs..."
+
+
                 let feedback = {
                   id      = System.Guid.NewGuid().ToString()
-                  text    = "Importing OPCs..."
+                  text    = textoutput //"Importing OPCs..."
                   timeout = 5000
                   msg     = (ImportDiscoveredSurfaces sl)
                 }
@@ -598,9 +605,41 @@ module ViewerApp =
                 | Some path -> 
                   let importedData = RoverPlacementImporter.startRPImporter path 
                   match m.scene.viewPlans.roverModel.selectedRover with
-                    | Some r -> let vp = ViewPlan.createViewPlanFromFile importedData m.scene.viewPlans r m.scene.referenceSystem m.scene.navigation.camera
+                    | Some r -> let vp = ViewPlanApp.createViewPlanFromFile importedData m.scene.viewPlans r m.scene.referenceSystem m.scene.navigation.camera
                                 { m with scene = { m.scene with viewPlans = vp}} 
                     | None -> Log.error "no rover selected"; m
+                | None -> m
+            | MakeSnapshot (w,h,f),_,_ -> 
+                match m.scene.scenePath with
+                    | Some p -> let sn = SnapshotAnimation.startSnapshots p f w h
+                                m
+                    | None -> m
+            | ImportSnapshotData sl,_,_ -> 
+                let viewOld = m.scene.navigation.camera.view
+                let frustumOld = m.frustum
+                match sl |> List.tryHead with
+                | Some p -> //let data = SnapshotAnimation.writeDataToJsonFile
+                            //m
+                            let data = SnapshotAnimation.loadData p
+                            match data with
+                                | Some d ->
+                                    let frustum = SnapshotAnimation.updateSnapshotFrustum m.frustum d
+                                    let positions = d.snapshots
+                                    let res = d.resolution
+                                    let worker =
+                                        proclist {
+                                            for i in 0 .. (positions.Length-1) do
+                                                let view = SnapshotAnimation.updateSnapshotCam positions.[i]
+                                                yield ViewerAction.SetCameraAndFrustum2 (view,frustum)
+                                                do! Proc.Sleep 1000
+                                                yield ViewerAction.MakeSnapshot (res.X, res.Y, positions.[i].filename)
+                                                
+                                            do! Proc.Sleep 300
+                                            yield ViewerAction.SetCameraAndFrustum2 (viewOld,frustumOld) // reset camera parameter
+                                            yield SnapshotThreadsDone "snapshots"
+                                        }          
+                                    { m with arnoldSnapshotThreads = ThreadPool.start worker m.arnoldSnapshotThreads }
+                                | None -> m
                 | None -> m
             | QuickLoad1,_,_ ->
                 Scene.loadScene @"E:\Aardwork\Exomars\_NEWVIEWER\Scenes\TestScene\scene.scn" m runtime signature     
@@ -619,7 +658,7 @@ module ViewerApp =
                         m |> Lens.set (Model.Lens.scene |. Scene.Lens.targeting |. Targeting.Lens.lastHit) (r.Ray.GetPointOnRay t)
                     | None, c ->
                         cache <- if cache.Count < 32 then HMap.union cache c else c
-                        m                
+                        m       
             | PickSurface (p,name), _ ,true ->              
               let fray = p.globalRay.Ray
               let r = fray.Ray
@@ -685,7 +724,7 @@ module ViewerApp =
                 Scene.loadScene path m runtime signature 
                     |> Model.stashAndSaveRecent path
                     |> ViewerIO.loadRoverData
-                    |> ViewerIO.loadLastAnnotations  
+                    |> ViewerIO.loadAnnotations  
                     |> ViewerIO.loadLastFootPrint
             | NewScene,_,_ ->
                 let initialModel = Viewer.initial m.messagingMailbox m.minervaModel.minervaMessagingMailbox
@@ -704,12 +743,16 @@ module ViewerApp =
                   | Aardvark.Application.Keys.D0 -> Drawing.Action.SetSemantic Semantic.Horizon0
                   | Aardvark.Application.Keys.D1 -> Drawing.Action.SetSemantic Semantic.Horizon1
                   | Aardvark.Application.Keys.D2 -> Drawing.Action.SetSemantic Semantic.Horizon2
-                  | Aardvark.Application.Keys.D3 -> Drawing.Action.SetSemantic Semantic.Horizon3       
+                  | Aardvark.Application.Keys.D3 -> Drawing.Action.SetSemantic Semantic.Horizon3 
                   | _  -> Drawing.Action.Nop
 
               let m =
                 match k with 
-                  | Aardvark.Application.Keys.LeftCtrl -> { m with ctrlFlag = true }
+                  | Aardvark.Application.Keys.LeftCtrl ->
+                    match m.interaction with
+                         | Interactions.PickMinervaProduct ->
+                            { m with minervaModel = { m.minervaModel with picking = true }}
+                         |_ -> { m with ctrlFlag = true}
                   | _ -> m
 
               let m =
@@ -790,7 +833,12 @@ module ViewerApp =
                 //| Aardvark.Application.Keys.F6 -> Interactions.DrawLog
                 | _ -> m.interaction
 
-              { m with scene = { m.scene with config = c' }; interaction = interaction'}                               
+              let showExpPoint =
+                match k with
+                 | Aardvark.Application.Keys.P -> not m.showExplorationPoint
+                 | _-> m.showExplorationPoint
+
+              { m with scene = { m.scene with config = c' }; interaction = interaction'; showExplorationPoint = showExpPoint}                               
             | KeyUp k, _,_ ->               
                 match k with
                   | Aardvark.Application.Keys.LeftCtrl -> 
@@ -803,6 +851,7 @@ module ViewerApp =
                             let view = m.scene.navigation.camera.view
                             let d = DrawingApp.update m.scene.referenceSystem drawingConfig sendQueue view m.drawing Drawing.Action.StopPicking 
                             { m with drawing = d; ctrlFlag = false; picking = false }
+                        | Interactions.PickMinervaProduct -> { m with minervaModel = { m.minervaModel with picking = false }}
                         |_-> { m with ctrlFlag = false; picking = false }
                   | _ -> m                                  
             | SetInteraction t,_,_ -> { m with interaction = t }
@@ -903,31 +952,19 @@ module ViewerApp =
               message |> MailboxAction.ViewerAction |> mailbox.Post
               { m with scene = { m.scene with userFeedback = text } }
             | ThreadsDone id,_,_ ->  
-              { m with scene = { m.scene with userFeedback = ""; feedbackThreads = ThreadPool.remove id m.scene.feedbackThreads} }
+              { m with scene = { m.scene with userFeedback = ""; feedbackThreads = ThreadPool.remove id m.scene.feedbackThreads;} }
+            | SnapshotThreadsDone id,_,_ ->  
+              { m with arnoldSnapshotThreads = ThreadPool.remove id m.arnoldSnapshotThreads }
             | MinervaActions a,_,_ ->
               match a with 
               | Minerva.MinervaAction.FlyToProduct v -> 
                  let currentView = m.scene.navigation.camera.view
                  let newForward = (v - currentView.Location).Normalized
                                     
-                 { m with animations = createAnimation v newForward m.animations }
-              | Minerva.WriteScreenCoordsDebug -> 
-                let viewProj = m.scene.navigation.camera.view.ViewTrafo * Frustum.projTrafo m.frustum
-                let points = 
-                  m.minervaModel.data.features
-                    |> PList.toList 
-                    |> List.map(fun feat -> (feat.id, feat.geometry.positions.[0]))                    
-                    |> List.map(fun (id,p) ->  (id, ((viewProj.Forward.TransformPosProj p) + V3d.One) * 0.5))
-                
-               // points |> Log.line "trafo points minerva %A"                                 
-                Log.line "[Viewer] writing minerva screespace coords"
-                points 
-                    |> List.map(fun (id,v) -> sprintf "%s,%f,%f" id v.X v.Y) 
-                    |> Serialization.writeLinesToFile @"C:\Users\ortner\Documents\visplore\Minerva\initial_screen_space_coordinates.csv"
-                m
+                 { m with animations = createAnimation v newForward currentView.Up m.animations }              
               | _ ->                
                  let currentView = m.scene.navigation.camera.view
-                 let minerva' = PRo3D.Minerva.App.update currentView m.minervaModel a                                                                               
+                 let minerva' = PRo3D.Minerva.App.update currentView m.frustum m.minervaModel a                                                                               
                  //MailboxAction.ViewerAction
                  //ViewerAction.MinervaActions
                  //a |> ViewerAction.MinervaActions |> MailboxAction.ViewerAction
@@ -967,10 +1004,11 @@ module ViewerApp =
                 attribute "style" "width:100%; height: 100%; float:left; background-color: #222222"
                 attribute "data-samples" "4"
                 attribute "useMapping" "true"
-             // attribute "showFPS" "true"        
-             // attribute "data-renderalways" "true"
+                //attribute "showFPS" "true"        
+                //attribute "data-renderalways" "true"
                 onKeyDown (KeyDown)
                 onKeyUp   (KeyUp)        
+                clazz "mainrendercontrol"
               //  onResize  (OnResize)
             ] 
         ]            
@@ -1046,13 +1084,13 @@ module ViewerApp =
                 |> Sg.map ReferenceSystemMessage  
 
             let exploreCenter =
-                Navigation.Sg.view m.scene.navigation            
+                Navigation.Sg.view m.scene.navigation |> Sg.onOff m.showExplorationPoint        
           
             let homePosition =
                 Surfaces.Sg.viewHomePosition m.scene.surfacesModel
                                  
             let viewPlans =
-                ViewPlan.Sg.view 
+                ViewPlanApp.Sg.view 
                     m.scene.config 
                     mrefConfig 
                     m.scene.viewPlans 
@@ -1060,11 +1098,12 @@ module ViewerApp =
                 |> Sg.map ViewPlanMessage
 
             let minervaFeatures = 
-              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions
+              PRo3D.Minerva.App.viewFeaturesSg m.minervaModel |> Sg.map MinervaActions 
+
             let solText = 
                 PRo3D.Minerva.App.getSolBillboards m.minervaModel m.scene.navigation.camera.view m.scene.config.nearPlane.value |> Sg.map MinervaActions
 
-            [exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures; solText] |> Sg.ofList // (*;orientationCube*)
+            [ exploreCenter; refSystem; viewPlans; homePosition; minervaFeatures; solText] |> Sg.ofList // (*;orientationCube*) //
 
         let cmds    = ViewerUtils.renderCommands m.scene.surfacesModel.sgGrouped overlayed annotationSg m
         let cam     = Mod.map2 Camera.create m.scene.navigation.camera.view m.frustum          
@@ -1079,28 +1118,34 @@ module ViewerApp =
         ]
         
         let bodyAttributes = [style "background: #1B1C1E; height:100%; overflow-y:scroll; overflow-x:hidden;"] //overflow-y : visible
+
+        //let renderViewAttributes =
+        //    amap {
+        //        yield style "background: #1B1C1E; height:100%; width:100%"
+        //        yield onClick (fun _ -> SwitchViewerMode ViewerMode.Standard)
+        //    } |> AttributeMap.ofAMap
        
         let instrumentViewAttributes =
-            amap {
-                let! hor, vert = ViewPlan.getInstrumentResolution m.scene.viewPlans
-                let height = "height:" + (vert/uint32(2)).ToString() + ";" ///uint32(2)
-                let width = "width:" + (hor/uint32(2)).ToString() + ";" ///uint32(2)
-                yield style ("background: #1B1C1E;" + height + width)
-                yield Events.onClick (fun _ -> SwitchViewerMode ViewerMode.Instrument)
-            } |> AttributeMap.ofAMap
-                
+                amap {
+                    let! hor, vert = ViewPlanApp.getInstrumentResolution m.scene.viewPlans
+                    let height = "height:" + (vert/uint32(2)).ToString() + ";" ///uint32(2)
+                    let width = "width:" + (hor/uint32(2)).ToString() + ";" ///uint32(2)
+                    yield style ("background: #1B1C1E;" + height + width)
+                    yield Events.onClick (fun _ -> SwitchViewerMode ViewerMode.Instrument)
+                } |> AttributeMap.ofAMap
+
         match queryParams with
             | Some "instrumentview" ->
                 require (myCss) (
-                    body [ style "background: #1B1C1E; width:100%; height:100%; overflow-y:auto; overflow-x:auto;"] [
+                    //body [ style "background: #1B1C1E; width:100%; height:100%; overflow-y:auto; overflow-x:auto;"] [
                       Incremental.div instrumentViewAttributes (
                         alist {
                             yield viewInstrumentView m 
                             yield Viewer.Gui.textOverlaysInstrumentView m.scene.viewPlans
                         } )
-                    ]
+                    
                 )
-            | Some "render" ->
+            | Some "render" -> 
                 require (myCss) (
                     div [
                         style "background:#000;"
@@ -1134,13 +1179,13 @@ module ViewerApp =
             | Some "viewplanner" -> 
                 require (myCss) (body bodyAttributes [Gui.ViewPlanner.viewPlannerUI m])
             | Some "minerva" -> 
-               let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
-               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui pos m.minervaModel |> UI.map MinervaActions])            
-            | None ->
+               //let pos = m.scene.navigation.camera.view |> Mod.map(fun x -> x.Location)
+               require (myCss) (body bodyAttributes [PRo3D.Minerva.App.viewFeaturesGui m.minervaModel |> UI.map MinervaActions])            
+            | None -> 
                 require (myCss) (                  
                     Gui.TopMenu.getTopMenu m
                 )
-            | _ -> body[][]                                            
+            | _ -> body[][]
                    
     let threadPool (m : Model) =
         let unionMany xs = List.fold ThreadPool.union ThreadPool.empty xs
@@ -1163,7 +1208,7 @@ module ViewerApp =
          
         let minerva = PRo3D.Minerva.App.threads m.minervaModel |> ThreadPool.map MinervaActions
 
-        unionMany [drawing; animation; nav; m.scene.feedbackThreads; minerva]
+        unionMany [drawing; animation; nav; m.scene.feedbackThreads; minerva; m.arnoldSnapshotThreads ]
         
     let loadWaypoints m = 
       match Serialization.fileExists "./waypoints.wps" with
@@ -1172,12 +1217,12 @@ module ViewerApp =
           { m with waypoints = wp }
         | None -> m
     
-    let initial (runtime: IRuntime) (signature: IFramebufferSignature) (startEmpty : bool) messagingMailbox minervaBox =
-      if startEmpty |> not then
-        PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox
-        |> Scene.loadLastScene runtime signature
-        |> ViewerIO.loadRoverData
-        |> ViewerIO.loadLastAnnotations
-        |> ViewerIO.loadLastFootPrint
-      else
-        PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> ViewerIO.loadRoverData
+    let initial (runtime: IRuntime) (signature: IFramebufferSignature)(startEmpty : bool) messagingMailbox minervaBox =
+        if startEmpty |> not then
+            PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox
+            |> Scene.loadLastScene runtime signature
+            |> ViewerIO.loadRoverData
+            |> ViewerIO.loadAnnotations
+            |> ViewerIO.loadLastFootPrint
+        else
+            PRo3D.Viewer.Viewer.initial messagingMailbox minervaBox |> ViewerIO.loadRoverData

@@ -1,4 +1,6 @@
-﻿open System
+﻿module superduperHarri
+
+open System
 open Suave
 
 open Aardvark
@@ -19,6 +21,15 @@ let main argv =
   Ag.initialize()
   Aardvark.Init()
   Aardium.init() 
+
+  //test area
+
+  //let myMsg = "JsonNetworkCommand 254 {\"JsonCommand\":[{\"Name\":\"MinervaReplaceSelection\"},{\"Param\":{\"Names\":[\"IdList\"],\"NumOfLists\":1,\"NumOfEntries\":3}},{\"Data\":{\"IdList\":[\"FAB_517686998RADLF0542202FHAZ00323M1\",\"FLB_517686998RADLF0542202FHAZ00323M1\",\"FRB_517686998RADLF0542202FHAZ00323M1\"]}}]}"
+  //let bla = 
+  //  myMsg 
+  //    |> PRo3D.Minerva.Communication2.JsonNetworkCommand.removeHeader
+  //    |> PRo3D.Minerva.Communication2.JsonNetworkCommand.fromJson
+  //Log.line "%A" bla
 
   use app = new OpenGlApplication()
   let runtime = app.Runtime    

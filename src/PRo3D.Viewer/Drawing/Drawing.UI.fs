@@ -50,16 +50,7 @@ module UI =
                 |> ASet.map(fun x -> x.id = a.key)
                 |> ASet.contains true
                 |> Mod.bind (function x -> if x then Mod.constant C4b.VRVisGreen else a.color.c)
-        color
-        //adaptive
-        //    {
-        //        let! singleSelected = model.singleSelectLeaf
-        //        let! color = color
-        //        match singleSelected with
-        //            | Some id -> if id = a.key then return C4b.VRVisGreen else return color
-        //            | None -> return color
-        //    }
-      
+        color              
       
       let mkCubeColor (model : MGroupsModel) (a : MAnnotation') =
         model.selectedLeaves
@@ -78,12 +69,12 @@ module UI =
               text "Annotations"
               i [clazz "dropdown icon"][] 
               div [ clazz "menu"] [                    
-                  //div [ clazz "ui inverted item"; Dialogs.onChooseFiles Load;
-                  //clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));" )][
-                  //        text "Load"
-                  //]
+                  div [ clazz "ui inverted item"; Dialogs.onChooseFiles AddAnnotations;
+                    clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onchoose', top.aardvark.dialog.showOpenDialog({filters: [{ name: 'Annotation', extensions: ['ann']},],properties: ['openFile']}));" )][
+                          text "Import"
+                  ]
                   div [ clazz "ui inverted item"; onMouseClick (fun _ -> Clear)][
-                          text "Clear List"
+                          text "Clear"
                   ]
                   div [ clazz "ui inverted item"; Dialogs.onSaveFile SaveCSV;
                       clientEvent "onclick" ("top.aardvark.processEvent('__ID__', 'onsave', top.aardvark.dialog.showSaveDialog({options: [{title: 'Save Measurements as .csv'}]}));")][
@@ -184,8 +175,8 @@ module UI =
                           yield div[clazz "header"; style hc][
                                 Incremental.span headerAttributes ([Incremental.text headerText] |> AList.ofList)
                             ]
-                          yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible"
-                          yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation a.key)][] |> UI.wrapToolTip "FlyTo"
+                          yield Incremental.i visibleIcon AList.empty |> UI.wrapToolTip "Toggle Visible" TTAlignment.Top
+                          yield i [clazz "binoculars icon"; onClick (fun _ -> FlyToAnnotation a.key)][] |> UI.wrapToolTip "FlyTo" TTAlignment.Top
                           //Incremental.span headerAttributes ([Incremental.text headerText] |> AList.ofList)
                           
                         //]
@@ -200,7 +191,7 @@ module UI =
             
       let rec viewTree path (group : MNode) (model : MGroupsModel) (lookup : amap<Guid, MAnnotation'>) : DomNode<Action> =
                                                   
-          let icon =
+          let iconName =
               adaptive {
                   let! s = model.activeGroup    
                   let active = s.id
@@ -209,28 +200,30 @@ module UI =
                   return if (active = group) then "circle icon" else "circle thin icon"
               }
                 
-          let map = Groups.mkGroupAttributeMap icon (GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
-             
-          let toggleIcon = Mod.constant "unhide icon"
-              //adaptive {
-              //    let! toggle = group.visible
-              //    return if toggle then "unhide icon" else "hide icon"
-              //}
+          let setActiveAction = 
+            Groups.SetActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)
+              |> GroupsMessage
+          let map = Groups.clickIconAttributes iconName setActiveAction
+                       
+          let visibleIconAttributes = 
+            Groups.clickIconAttributes ("unhide icon" |> Mod.constant) (GroupsMessage(Groups.SetVisibility(path,true)))
 
-          let toggleMap = Groups.mkGroupAttributeMap toggleIcon (GroupsMessage(Groups.ToggleGroup path))
+          let invisibleIconAttributes = 
+            Groups.clickIconAttributes ("hide icon" |> Mod.constant) (GroupsMessage(Groups.SetVisibility(path,false)))
           
           let color = sprintf "color: %s" (Html.ofC4b C4b.White)
           let desc =
               div [style color] [       
                   Incremental.text group.name
-                  Incremental.i map AList.empty |> UI.wrapToolTip "Set active"
+                  Incremental.i map AList.empty |> UI.wrapToolTip "Set active" TTAlignment.Top
                   
                   i [clazz "plus icon"
                      onMouseClick (fun _ -> 
                        GroupsMessage(Groups.AddGroup path))] [] 
-                  |> UI.wrapToolTip "Add Group"                        
+                  |> UI.wrapToolTip "Add Group" TTAlignment.Top                       
 
-                  Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Group"
+                  Incremental.i visibleIconAttributes AList.empty |> UI.wrapToolTip "Show All" TTAlignment.Top
+                  Incremental.i invisibleIconAttributes AList.empty |> UI.wrapToolTip "Hide All" TTAlignment.Top
               ]
            
           let itemAttributes =

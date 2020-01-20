@@ -1,7 +1,7 @@
 ﻿namespace PRo3D.Base
 
 open Aardvark.Base
-open ViewPlanner
+open IPWrappers
 
 module CooTransformation = 
 
@@ -10,6 +10,7 @@ module CooTransformation =
     let initCooTrafo () = 
         let directory = @".\InstrumentStuff" 
         let test = @".\bin" 
+        //let t = System.IO.Path.GetFullPath(test)
         let errorCode = CooTrafo.Init(test, directory)
         printfn "%A" errorCode
 

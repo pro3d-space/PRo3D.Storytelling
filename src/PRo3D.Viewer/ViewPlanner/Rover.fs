@@ -1,24 +1,23 @@
 namespace PRo3D
 
 open System
+open System.Runtime.InteropServices
 
 open Aardvark.Base
 open Aardvark.UI
-open ViewPlanner
+open IPWrappers
 open PRo3d
 
 module RoverProvider =
-    open System.Runtime.InteropServices
-    open ViewPlanner
         
-    let toInstrument i (inst : IPWrapper.SInstrument) = 
+    let toInstrument i (inst : ViewPlanner.SInstrument) = 
         let pos    = inst.m_oInstrumentExtrinsics.m_oPosition.ToV3d()
         let up     = inst.m_oInstrumentExtrinsics.m_oUp.ToV3d()
         let lookAt = inst.m_oInstrumentExtrinsics.m_oLookAt.ToV3d()
         let box    = inst.m_oInstrumentExtrinsics.m_oBoundingBox.ToBox3d()
 
         let focals = 
-            IPWrapper.UnMarshalArray<double>(
+            ViewPlanner.UnMarshalArray<double>(
                     inst.m_pdCalibratedFocalLengths, (int)inst.m_nNrOfCalibratedFocalLengths) 
 
         let extrinsics =
@@ -66,7 +65,7 @@ module RoverProvider =
 
         instrument
 
-    let toInstruments (instruments : IPWrapper.SInstrument[]) : list<Instrument> = 
+    let toInstruments (instruments : ViewPlanner.SInstrument[]) : list<Instrument> = 
         instruments |> Array.mapi toInstrument |> Array.toList
        
     let shiftNumericInput shift (input:NumericInput)= 
@@ -92,7 +91,7 @@ module RoverProvider =
         else 
             axis
 
-    let toAxes (axes : IPWrapper.SAxis[]) : list<Axis> =
+    let toAxes (axes : ViewPlanner.SAxis[]) : list<Axis> =
         axes |> Array.mapi(fun i x->
             { 
                 index        = i
@@ -111,73 +110,78 @@ module RoverProvider =
 
             }) |> Array.map axisHack |> Array.toList
 
-    let toRover (platform : IPWrapper.SPlatform) =
-        let wheels = IPWrapper.UnMarshalArray<IPWrapper.SPoint3D>(
-                        platform.m_poPointsOnGround, (int)platform.m_nNrOfPlatformPointsOnGround).ToV3ds(); 
+    let toRover (platform : ViewPlanner.SPlatform) =
+        let wheels = 
+            ViewPlanner.UnMarshalArray<ViewPlanner.SPoint3D>(
+                platform.m_poPointsOnGround, 
+                (int)platform.m_nNrOfPlatformPointsOnGround
+            ).ToV3ds()
                        
         let axes = 
-            IPWrapper.UnMarshalArray<IPWrapper.SAxis>(platform.m_poPlatformAxes, (int)platform.m_nNrOfPlatformAxes) |> toAxes
+            ViewPlanner.UnMarshalArray<ViewPlanner.SAxis>(
+                platform.m_poPlatformAxes, 
+                (int)platform.m_nNrOfPlatformAxes) 
+            |> toAxes
 
         let instruments = 
-            IPWrapper.UnMarshalArray<IPWrapper.SInstrument>(platform.m_poPlatformInstruments, (int)platform.m_nNrOfPlatformInstruments) |> toInstruments
+            ViewPlanner.UnMarshalArray<ViewPlanner.SInstrument>(
+                platform.m_poPlatformInstruments, 
+                (int)platform.m_nNrOfPlatformInstruments) 
+            |> toInstruments
                 
         {
             id              = platform.m_pcPlatformId.ToStrAnsi()
             platform2Ground = platform.m_oPlatform2Ground.m_oHelmertTransfMatrix.ToM44d()
-            wheelPositions  = wheels |> List.ofSeq
+            wheelPositions  = wheels      |> List.ofSeq
             instruments     = instruments |> List.map(fun x -> x.id, x) |> HMap.ofList
-            axes            = axes |> List.map(fun x -> x.id, x) |> HMap.ofList
+            axes            = axes        |> List.map(fun x -> x.id, x) |> HMap.ofList
             box             = platform.m_oBoundingBox.ToBox3d()
         }
         
     let platformNames () =
-        let numberOfPlatforms = IPWrapper.GetNrOfAvailablePlatforms();
+        let numberOfPlatforms = ViewPlanner.GetNrOfAvailablePlatforms();
         Log.line "Number of Plattforms: %d" numberOfPlatforms
     
         let pointerArray : IntPtr array = Array.zeroCreate (int numberOfPlatforms)
-        IPWrapper.GetAvailablePlatforms(pointerArray, numberOfPlatforms);
+        ViewPlanner.GetAvailablePlatforms(pointerArray, numberOfPlatforms);
        
         pointerArray |> Array.map(fun x -> Marshal.PtrToStringAnsi(x))
 
     let initRover platformId =
         //Get various counts to initialize respective arrays
         let numWheelPoints = uint32 6 // IPWrapper.GetNrOfPlatformPointsOnGround(platformId)
-        let numInstruments = IPWrapper.GetNrOfPlatformInstruments(platformId)
-        let numAxis =        IPWrapper.GetNrOfPlatformAxes(platformId)
+        let numInstruments = ViewPlanner.GetNrOfPlatformInstruments(platformId)
+        let numAxis =        ViewPlanner.GetNrOfPlatformAxes(platformId)
 
         Log.line "Initialising %A" platformId
         Log.line "Wheels: %d, Instruments: %d, Axes: %d" numWheelPoints numInstruments numAxis
 
         //create and empty platform struct to be filled by the backend
         let mutable platform = 
-            IPWrapper.SPlatform.CreateEmpty(numWheelPoints, numInstruments, numAxis)
+            ViewPlanner.SPlatform.CreateEmpty(numWheelPoints, numInstruments, numAxis)
 
         //crucial for backend to know which platform / rover to take
         platform.m_pcPlatformId <- platformId.ToPtr();
 
         //init platform writes values into platform reference
-        let errorCode = IPWrapper.InitPlatform(ref platform, numWheelPoints, numInstruments, numAxis)
+        let errorCode = ViewPlanner.InitPlatform(ref platform, numWheelPoints, numInstruments, numAxis)
         if (errorCode <> 0) then failwith "init platform failed" else ()
 
         //convert initialised platform to rover and add to database
         let rover = platform |> toRover        
         
-        rover, platform   
+        rover, platform
         
 module RoverApp = 
     open Aardvark.Base
     open Aardvark.Base.Incremental
-    open Aardvark.UI.UI                       
+    open Aardvark.UI.UI
 
-    type Action =
-        //| ChangeAngle      of string * Numeric.Action
-        //| ChangeFocal      of string * Numeric.Action
-        | SelectRover      of option<Rover>
-        //| SelectInstrument of option<Instrument>
-        //| SelectAxis       of option<Axis>
+    type Action =        
+        | SelectRover of option<Rover>        
 
     let updateRoversAndPlatforms p m shift =
-        let error = IPWrapper.UpdatePlatform(ref p)
+        let error = ViewPlanner.UpdatePlatform(ref p)
         match error with
           | 0 ->
             let r'         = p |> RoverProvider.toRover
@@ -194,10 +198,10 @@ module RoverApp =
         let r = m.rovers |> HMap.find up.roverId    
         let mutable p = m.platforms |> HMap.find up.roverId       
         let i = r.instruments|> HMap.find up.instrumentId
-        let mutable pInstruments = IPWrapper.UnMarshalArray<IPWrapper.SInstrument>(p.m_poPlatformInstruments)
+        let mutable pInstruments = ViewPlanner.UnMarshalArray<ViewPlanner.SInstrument>(p.m_poPlatformInstruments)
 
         pInstruments.[i.index].m_dCurrentFocalLengthInMm <- up.focal
-        IPWrapper.MarshalArray(pInstruments, p.m_poPlatformInstruments)
+        ViewPlanner.MarshalArray(pInstruments, p.m_poPlatformInstruments)
 
         updateRoversAndPlatforms p m false    
 
@@ -206,7 +210,7 @@ module RoverApp =
         let r = m.rovers |> HMap.find up.roverId    
         let mutable p = m.platforms |> HMap.find up.roverId       
         let a = r.axes |> HMap.find up.axisId
-        let mutable pAxes = IPWrapper.UnMarshalArray<IPWrapper.SAxis>(p.m_poPlatformAxes)
+        let mutable pAxes = ViewPlanner.UnMarshalArray<ViewPlanner.SAxis>(p.m_poPlatformAxes)
 
         //let up = { up with angle = -up.angle}
 
@@ -217,11 +221,10 @@ module RoverApp =
                                 up.angle, false
 
         pAxes.[a.index].m_fCurrentAngle <- angle.GonsFromDegrees() //up.angle.GonsFromDegrees()
-        IPWrapper.MarshalArray(pAxes, p.m_poPlatformAxes)        
+        ViewPlanner.MarshalArray(pAxes, p.m_poPlatformAxes)        
         
         updateRoversAndPlatforms p m shift
             
-
     let updateRovers (r : Rover) (m : RoverModel) = 
         let rovers' = 
             m.rovers 
@@ -234,25 +237,13 @@ module RoverApp =
 
     let update (m : RoverModel) (a:Action) =
         match a with
-          | SelectRover r      -> { m with selectedRover = r }
-          
-    let angle = 
-        {
-            value = 0.0
-            min =  -90.0
-            max = 90.0
-            step = 0.1
-            format = "{0:0.0}"
-        }
+          | SelectRover r -> { m with selectedRover = r }              
 
     let initial =
         {
             rovers = hmap.Empty
-            platforms = hmap.Empty
-            //selectedInstrument = None
-            selectedRover = None
-            //selectedAxis = None
-            //currentAngle = angle
+            platforms = hmap.Empty            
+            selectedRover = None            
         }
 
     let mapTolist (input : amap<_,'a>) : alist<'a> = 

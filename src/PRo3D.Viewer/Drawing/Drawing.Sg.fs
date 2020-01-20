@@ -25,6 +25,7 @@ open Aardvark.GeoSpatial.Opc
 open Aardvark.UI
 open Aardvark.UI.Primitives    
 open PRo3D
+open PRo3D.Base
 open PRo3D.Drawing
 open PRo3D.Groups
 open PRo3D.Versioned
@@ -160,7 +161,6 @@ module Sg =
 
   let pass0 = RenderPass.main
   let pass1 = RenderPass.after "outline" RenderPassOrder.Arbitrary pass0
-
                  
   let pickableLine (points : alist<V3d>) (offset : IMod<float>) (color : IMod<C4b>) (width : IMod<float>) (trafo : IMod<Trafo3d>) (id: IMod<Guid>) (picking: bool) = 
     let edges = Sg.edgeLines false points trafo 
@@ -198,11 +198,7 @@ module Sg =
         |> Sg.trafo trafo
         |> Sg.uniform "LineWidth" width
         |> Sg.uniform "DepthOffset" (
-            offset |> Mod.map (fun depthWorld -> 
-                let dLin = depthWorld / (100.0 - 0.1)
-                printfn "linear depth offset: %A" dLin
-                dLin
-            ))        
+            offset |> Mod.map (fun depthWorld -> depthWorld / (100.0 - 0.1)))
         |> Sg.pickable' pickable
         |> Sg.noEvents
         |> Sg.withEvents [
@@ -263,8 +259,7 @@ module Sg =
                  do! Shader.Shaders.thickLine
              }                               
              |> Sg.trafo trafo
-             |> Sg.uniform "LineWidth" width
-             |> Sg.uniform "DepthOffset" (Mod.constant 0.001)
+             |> Sg.uniform "LineWidth" width             
 
         let outl = 
             sg
@@ -280,20 +275,15 @@ module Sg =
                 do! DefaultSurfaces.thickLineRoundCaps
                 do! DefaultSurfaces.constantColor C4f.VRVisGreen
             }
-            |> Sg.uniform "LineWidth" (outlineSize width)
-            |> Sg.uniform "DepthOffset" (Mod.constant 0.0)
+            |> Sg.uniform "LineWidth" (outlineSize width)            
        
         Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regular; mask; outl] |> Sg.noEvents 
-
   
   let outlinePoint (points : alist<V3d>) (v:int) (color:IMod<C4b>) (width : IMod<float>) =
-    //let p = 
-    //    points
-    //    |> AList.toMod
-    //    |> Mod.map( fun x -> x.AsArray.[0])
         
-    let sg = Sg.dots points width color //Sg.mkDotISg color (Mod.constant 5.0) p 
-    let sgo = Sg.dots points (outlineSize width) (Mod.constant C4b.VRVisGreen) //Sg.mkDotISg color (outlineSize (Mod.constant 5.0)) p
+    let sg  = Sg.drawSpheres points width color
+    let sgo = Sg.drawSpheres points (outlineSize width) (Mod.constant C4b.VRVisGreen)
+
     let regulars = 
         sg
          |> Sg.pass pass0
@@ -323,14 +313,14 @@ module Sg =
          |> Sg.shader {
                 do! Shader.screenSpaceScale
                 do! Shader.stableTrafo
-                do! Shader.lines
+                do! PRo3D.Base.Shader.lines
                 do! DefaultSurfaces.thickLine
                 do! DefaultSurfaces.thickLineRoundCaps
                 do! DefaultSurfaces.constantColor C4f.VRVisGreen
             }
     Aardvark.SceneGraph.SgFSharp.Sg.ofSeq [regulars; masks; outls] |> Sg.noEvents //regular; mask; 
 
-  //TODO LF ... make a nice enum/union type for v, what is v?  
+  //TODO LF ... improve clarity ... make a nice enum/union type for v, what is v?
   let outline (points : alist<V3d>) (v:int) (color:IMod<C4b>) (trafo : IMod<Trafo3d>) (width : IMod<float>) (id: IMod<Guid>) =
     aset{
         let! length = points |> AList.count
@@ -356,26 +346,23 @@ module Sg =
               match anno with
                   | Some a -> yield! a.points
                   | None -> ()
-          }
-
-      let id = 
-          adaptive {
-              let! anno = anno
-              match anno with
-                  | Some a -> return a.key
-                  | None -> return Guid.Empty
-          }
+          }    
           
       let color     = Mod.bindOption anno C4b.VRVisGreen   (fun a -> a.color.c) 
       let thickness = Mod.bindOption anno 1.0              (fun a -> a.thickness.value)             
-      let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)
-                             
+      let trafo     = Mod.bindOption anno Trafo3d.Identity (fun a -> a.modelTrafo)                      
+      
       Sg.ofList [
           Sg.lines polyPoints offset color thickness trafo //polyline
           //Sg.dots polyPoints (Mod.constant C4b.VRVisGreen) // debug sample points
-          Sg.dots points thickness color                     //support points
+          //Sg.drawSpheres points thickness color                     //support points
+          PRo3D.Sg.drawPointList 
+            points 
+            (C4b.VRVisGreen |> Mod.constant)//(color     |> Mod.map (fun x -> (x |> PRo3D.Sg.createSecondaryColor)))
+            (thickness |> Mod.map (fun x -> x * 1.5)) 
+            (offset    |> Mod.map (fun x -> x * 1.1))
       ]         
-  
+    
   let drawText' (view : IMod<CameraView>) conf (text:IMod<string>)(anno : MAnnotation') = 
     let points = anno.points |> AList.toMod
     let pos = 
@@ -397,10 +384,19 @@ module Sg =
         else return Sg.empty
     } |> ASet.ofModSingle
 
-  let finishedAnnotation (anno : MAnnotation') (c : IMod<C4b>) (conf:innerViewConfig) 
-    (view : IMod<CameraView>) (showPoints : IMod<bool>) (picked:IMod<bool>)  =
+  let finishedAnnotation (anno : MAnnotation') (c : IMod<C4b>) (conf:innerViewConfig)
+    (view : IMod<CameraView>) (showPoints : IMod<bool>) (picked:IMod<bool>) =
       let points = getPolylinePoints anno      
-      let dots   = showPoints |> optional (Sg.getDotsIsg anno.points (anno.thickness.value |> Mod.map(fun x -> x+2.0)) c anno.geometry)
+      let dots = 
+          showPoints 
+          |> optional (
+              Sg.getDotsIsg 
+                  anno.points
+                  (anno.thickness.value |> Mod.map(fun x -> x+0.5)) 
+                  c 
+                  anno.geometry 
+                  conf.offset
+          )
      
       let azimuth =
         adaptive { 
@@ -420,35 +416,42 @@ module Sg =
           |> Mod.map (String.IsNullOrEmpty >> not) 
           |> optional (drawText view conf anno)
 
-      let sgs = ASet.unionMany' [dots; texts ]
+      let sgs = ASet.unionMany' [dots; texts] //; texts ]
 
       
       //let selectionColor = Mod.map2(fun x color -> if x then C4b.VRVisGreen else color) picked c
 
       let pickingLines = 
         pickableLine points conf.offset c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
-        //aset
-        //    {
-        //        let! picked = picked
-        //        match picked with //TODO LF ... if then else is okay for bools
-        //            | true -> yield outline points 1 c anno.modelTrafo anno.thickness.value (anno.key |> Mod.constant)
-        //            |_-> yield pickingLine points c anno.thickness.value anno.modelTrafo (anno.key |> Mod.constant) true
-        //    } |> Sg.set
            
       let selectionGeometry = 
         aset
-            {
-                let! picked = picked
-                if picked then
-                  yield outline points 1 c anno.modelTrafo anno.thickness.value (anno.key |> Mod.constant)                  
-            } |> Sg.set
+         {
+             let! picked = picked
+             if picked then
+               yield outline points 1 c anno.modelTrafo anno.thickness.value (anno.key |> Mod.constant)                  
+         } |> Sg.set
+
+      //let sg = 
+      //  anno.visible 
+      //    |> Mod.map(fun x ->
+      //      if x then 
+      //        Sg.ofList [
+      //          selectionGeometry
+      //          //azimuthText
+      //          pickingLines
+      //          Sg.set sgs]
+      //      else Sg.empty          
+      //    )
+
+      //sg |> Sg.dynamic
 
       Sg.ofList [
           //Sg.lines points c anno.thickness.value anno.modelTrafo
           selectionGeometry
           //azimuthText
           pickingLines
-          Sg.set sgs 
+          Sg.set sgs
       ] |> Sg.onOff anno.visible
  
   let finishedAnnotationDiscs (anno : MAnnotation') (conf:innerViewConfig) (cl : MFalseColorsModel) (cam:IMod<CameraView>) =

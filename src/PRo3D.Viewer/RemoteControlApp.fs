@@ -22,7 +22,7 @@ module RemoteControlApp =
     open MBrace
     open MBrace.FsPickler.Json
     open System.Diagnostics
-    open ViewPlanner
+    open IPWrappers
     open PRo3d
     
         
@@ -50,7 +50,7 @@ module RemoteControlApp =
                 | x::[] -> x
                 | _ -> failwith "doent know"
         let screenshot =            
-            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress clientStatistic.name width height
+            sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=8" baseAddress clientStatistic.name width height
         Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
 
         match System.IO.Directory.Exists folder with
@@ -92,7 +92,7 @@ module RemoteControlApp =
 
     let loadRoverData (m : RemoteModel) =      
       let directory = @".\InstrumentStuff"
-      let errorCode = IPWrapper.Init(directory, directory)
+      let errorCode = IPWrappers.ViewPlanner.Init(directory, directory)
       printfn "%A" errorCode
 
       let names = RoverProvider.platformNames()    
@@ -194,10 +194,10 @@ module RemoteControlApp =
                     yield div [clazz "content"] [                                        
                         div [clazz "header"] [
                             text sh.id
-                            i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCameraTest sh)] [] |> UI.wrapToolTip "goto waypoint"
-                            i [clazz "ui inverted icon camera retro"; onClick (fun _ -> UpdateCameraTest sh)] [] |> UI.wrapToolTip "take screenshot"
+                            i [clazz "ui inverted icon map pin"; onClick (fun _ -> UpdateCameraTest sh)] [] |> UI.wrapToolTip "goto waypoint" TTAlignment.Top
+                            i [clazz "ui inverted icon camera retro"; onClick (fun _ -> UpdateCameraTest sh)] [] |> UI.wrapToolTip "take screenshot" TTAlignment.Top
                             // i [clazz "ui inverted icon folder"; onClick (fun _ -> OpenFolder sh.folder)] []
-                            i [clazz "ui inverted icon find"; onClick (fun _ -> UpdatePlatformTest sh)] [] |> UI.wrapToolTip "take platformshot"
+                            i [clazz "ui inverted icon find"; onClick (fun _ -> UpdatePlatformTest sh)] [] |> UI.wrapToolTip "take platformshot" TTAlignment.Top
                         ]
                     ]
                 }

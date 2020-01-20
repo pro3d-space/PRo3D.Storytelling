@@ -76,18 +76,20 @@ module AlignmentApp =
 
     let view (m : MAlignmentModel) (view : IMod<CameraView>) : ISg<AlignmentActions> =
                 
-        aset {
-            //let! align = m.alignment
+        //aset {
+        //    //let! align = m.alignment
             
 
-            //match align with
-            //  | Some a -> 
-            //    let! countB = a.bluePoints |> AList.count
-            //    let! countR = a.redPoints |> AList.count
+        //    //match align with
+        //    //  | Some a -> 
+        //    //    let! countB = a.bluePoints |> AList.count
+        //    //    let! countR = a.redPoints |> AList.count
 
-            //    yield Sg.dots a.redPoints  (Mod.constant C4b.Red)  view
-            //    yield Sg.dots a.bluePoints (Mod.constant C4b.Blue) view
-            //  | None ->
-            let points = m.pickedPoints |> AList.map(fun x -> x.point)
-            yield Sg.dots points (Mod.constant 1.0) (Mod.constant C4b.VRVisGreen)      // TODO THOMAS: maybe use Sg.indexedGeometryDots instead of Sg.dots?
-        } |> Sg.set                                 
+        //    //    yield Sg.dots a.redPoints  (Mod.constant C4b.Red)  view
+        //    //    yield Sg.dots a.bluePoints (Mod.constant C4b.Blue) view
+        //    //  | None ->
+        //    let points = m.pickedPoints |> AList.map(fun x -> x.point)
+        //    yield Sg.dots points (Mod.constant 1.0) (Mod.constant C4b.VRVisGreen)      // TODO THOMAS: maybe use Sg.indexedGeometryDots instead of Sg.dots?
+        //} |> Sg.set                                 
+
+        failwith ""

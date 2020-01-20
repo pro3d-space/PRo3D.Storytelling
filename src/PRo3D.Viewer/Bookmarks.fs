@@ -124,7 +124,7 @@ module Bookmarks =
                             Incremental.span headerAttributes ([Incremental.text b.name] |> AList.ofList)
                         ]
                         yield i [clazz "home icon"; 
-                        onClick (fun _ -> lift <| Groups.UpdateCam key)][] |> UI.wrapToolTipRight "FlyTo"                                            
+                        onClick (fun _ -> lift <| Groups.UpdateCam key)][] |> UI.wrapToolTip "FlyTo" TTAlignment.Right                                           
                       } 
                   ) 
                   
@@ -148,17 +148,17 @@ module Bookmarks =
                 }
                       
             let map = 
-                Groups.mkGroupAttributeMap icon (BookmarkAction.GroupsMessage(Groups.ActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
+                Groups.clickIconAttributes icon (BookmarkAction.GroupsMessage(Groups.SetActiveGroup (group.key |> Mod.force, path, group.name |> Mod.force)))
                
             let desc =
                 div [style color] [       
                     Incremental.text group.name
-                    Incremental.i map AList.empty |> UI.wrapToolTip "Set active"
+                    Incremental.i map AList.empty |> UI.wrapToolTip "Set active" TTAlignment.Top
                         
                     i [clazz "plus icon"
                        onMouseClick (fun _ -> 
                          BookmarkAction.GroupsMessage(Groups.AddGroup path))] [] 
-                    |> UI.wrapToolTip "Add Group"                                 
+                    |> UI.wrapToolTip "Add Group" TTAlignment.Top                                
                 ]
                  
             let itemAttributes =
@@ -234,7 +234,7 @@ module Bookmarks =
          div [clazz "ui buttons inverted"] [
                     //onBoot "$('#__ID__').popup({inline:true,hoverable:true});" (
                         button [clazz "ui icon button"; onMouseClick (fun _ -> AddBookmark )] [ //
-                                i [clazz "plus icon"] [] ] |> UI.wrapToolTipBottom "Add Bookmark"
+                                i [clazz "plus icon"] [] ] |> UI.wrapToolTip "Add Bookmark" TTAlignment.Bottom
                    // )
                 ] 
 

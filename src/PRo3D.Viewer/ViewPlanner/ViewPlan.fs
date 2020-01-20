@@ -20,8 +20,8 @@ open PRo3D.Navigation2
 open Aardvark.UI.Primitives
 open CSharpUtils
 
-module ViewPlan = 
-    open ViewPlanner
+module ViewPlanApp = 
+    open IPWrappers
     open Aardvark.Base.MultimethodTest
     open Aardvark.Geometry
     
@@ -39,14 +39,12 @@ module ViewPlan =
       | ToggleFootprint
       | SaveFootPrint
       | OpenFootprintFolder
-    
-    
-    
+            
     let loadRoverData (model : ViewPlanModel) (path : Option<string>) =      
       match path with
       | Some _ ->
         let directory = @".\InstrumentStuff"
-        let errorCode = IPWrapper.Init(directory, directory)
+        let errorCode = ViewPlanner.Init(directory, directory)
         printfn "%A" errorCode
 
         let names = RoverProvider.platformNames()    
@@ -70,7 +68,9 @@ module ViewPlan =
       | _ -> model
 
     let updateViewPlans (vp:ViewPlan) (vps:hset<ViewPlan>) =
-      vps |> HSet.alter vp (fun x -> x)
+      //vps |> HSet.alter vp (fun x -> x)
+      let viewPlans = vps |> HSet.filter (fun x -> x.id <> vp.id)
+      viewPlans |> HSet.add vp 
     
     let updateViewPlanFromRover (roverModel:RoverModel) (vp:ViewPlanModel) =
       // update rover model
@@ -162,7 +162,6 @@ module ViewPlan =
       | false -> 
         trafoFromTranslatedBase working.[0] newTiltVec forward newRightVec
         
-
     let createViewPlan (working:list<V3d>) (rover:Rover) (ref:ReferenceSystem) (camState:CameraControllerState) 
       (kdTree:hmap<string, ConcreteKdIntersectionTree>) (surfaceModel:SurfaceModel) =
 
@@ -292,18 +291,20 @@ module ViewPlan =
                 instrumentCam     = { model.instrumentCam with view = CameraView.lookAt V3d.Zero V3d.One V3d.OOI }
                 instrumentFrustum = Frustum.perspective 60.0 0.1 10000.0 1.0 }
       
-    let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan) (fp:FootPrint)  : ('a*ViewPlanModel)=
+    let updateRovers (model:ViewPlanModel) (roverModel:RoverModel) (vp:ViewPlan) (fp:FootPrint) =
         let r = roverModel.rovers  |> HMap.find vp.rover.id
         let i = 
-          match vp.selectedInstrument with
+            match vp.selectedInstrument with
             | Some i -> Some (r.instruments |> HMap.find i.id)
             | None   -> None
 
         let vp = { vp with rover = r; selectedInstrument = i }  
+        let viewPlans = model.viewPlans |> HSet.filter (fun x -> x.id <> vp.id)
+        let viewPlans' = viewPlans |> HSet.add vp 
         let m  = {
           model with 
             selectedViewPlan = Some vp
-            viewPlans        = model.viewPlans |> HSet.alter vp id
+            viewPlans        = viewPlans' //model.viewPlans |> HSet.alter vp id
         }
 
         let fp, m = updateInstrumentCam vp m fp
@@ -380,18 +381,21 @@ module ViewPlan =
           let fp', m'       = updateInstrumentCam newVp model fp
           let newOuterModel = footprint.Set(outerModel, fp')
 
-          let viewPlans = model.viewPlans |> HSet.alter newVp id
+          let viewPlans = model.viewPlans |> HSet.filter (fun x -> x.id <> newVp.id)
+          let viewPlans' = viewPlans |> HSet.add newVp 
 
-          newOuterModel, { m' with selectedViewPlan = Some newVp; viewPlans = viewPlans }
+          newOuterModel, { m' with selectedViewPlan = Some newVp; viewPlans = viewPlans' }
         | None -> outerModel, model                                                     
 
       | SelectAxis a       -> 
         match model.selectedViewPlan with
         | Some vp -> 
           let newVp = { vp with selectedAxis = a }
-          let viewPlans = model.viewPlans |> HSet.alter newVp id
+          //let viewPlans = model.viewPlans |> HSet.alter newVp (fun x -> x) //id
+          let viewPlans = model.viewPlans |> HSet.filter (fun x -> x.id <> newVp.id)
+          let viewPlans' = viewPlans |> HSet.add newVp 
 
-          outerModel, { model with selectedViewPlan = Some newVp; viewPlans = viewPlans }
+          outerModel, { model with selectedViewPlan = Some newVp; viewPlans = viewPlans' }
         | None -> outerModel, model    
 
       | ChangeAngle (id,a) -> 
@@ -457,8 +461,10 @@ module ViewPlan =
         match model.selectedViewPlan with
         | Some vp -> 
           let vp' = {vp with name = t}
-          let viewPlans = model.viewPlans |> HSet.alter vp' id
-          outerModel, {model with selectedViewPlan = Some vp'; viewPlans = viewPlans }              
+          //let viewPlans = model.viewPlans |> HSet.alter vp' id
+          let viewPlans = model.viewPlans |> HSet.filter (fun x -> x.id <> vp'.id)
+          let viewPlans' = viewPlans |> HSet.add vp' 
+          outerModel, {model with selectedViewPlan = Some vp'; viewPlans = viewPlans' }              
         | None -> outerModel, model
 
       | ToggleFootprint ->   
@@ -555,14 +561,13 @@ module ViewPlan =
                             (length:IMod<float>) (thickness:IMod<float>) (cam:IMod<CameraView>) =
             alist {
                 let! trafo = viewPlan.roverTrafo
+                let! selInst = viewPlan.selectedInstrument
 
                 for i in instruments do
 
                     let camPosTrans = Mod.map(fun p -> trafo.Forward.TransformPos p) i.extrinsics.position
                     let camLookAtTrans = Mod.map(fun p -> trafo.Forward.TransformDir p) i.extrinsics.camLookAt
                     let camUpTrans = Mod.map(fun p -> trafo.Forward.TransformDir p) i.extrinsics.camUp
-
-                    let! selInst = viewPlan.selectedInstrument
 
                     match selInst with
                         | Some s -> 
@@ -668,9 +673,7 @@ module ViewPlan =
                 viewPlans
                 drawWorking model
             ]
-
     
-
     module UI =
 
         let viewHeader (m:MViewPlan) (id:Guid) toggleMap = 
@@ -679,13 +682,13 @@ module ViewPlan =
 
                 i [clazz "home icon";                                                
                     onClick (fun _ -> FlyToViewPlan id)
-                ][] |> UI.wrapToolTip "FlyTo"                                                                                
+                ][] |> UI.wrapToolTip "FlyTo" TTAlignment.Top                                                                               
 
-                Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Arrows"                                                                     
+                Incremental.i toggleMap AList.empty |> UI.wrapToolTip "Toggle Arrows" TTAlignment.Top                                                                    
 
                 i [clazz "Remove icon red";                                             
                     onClick (fun _ -> RemoveViewPlan id)
-                ][] |> UI.wrapToolTip "Remove"                                         
+                ][] |> UI.wrapToolTip "Remove" TTAlignment.Top                                        
             ]    
 
         let viewViewPlans (m:MViewPlanModel) = 
@@ -843,7 +846,6 @@ module ViewPlan =
                                                   (fun x -> RoverApp.Action.SelectRover (x |> Option.map(fun y -> y.Current |> Mod.force))) 
                                                   (fun x -> (x.id |> Mod.force) ) ]                
             ]
-
 
         let viewRoverProperties lifter (fpVisible:IMod<bool>) (model : MViewPlanModel) = 
             model.selectedViewPlan 

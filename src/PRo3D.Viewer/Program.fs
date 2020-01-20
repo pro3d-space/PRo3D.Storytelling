@@ -22,7 +22,7 @@ open PRo3D.Surfaces.Mutable
 open PRo3D.Surfaces
 open RemoteControlModel
 open PRo3D
-open ViewPlanner
+open IPWrappers
 
 open Suave.Json
 open System.Runtime.Serialization
@@ -65,7 +65,7 @@ type License = {
   institution : string
 }
 
-let viewerVersion       = "2.9.6-prerelease3"
+let viewerVersion       = "2.9.10-prerelease3"
 let mutable licenseText = ""
 let catchDomainErrors   = false
 let licenseCheck        = false

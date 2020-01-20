@@ -6,13 +6,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ViewPlanner
+namespace IPWrappers
 {
     /// <summary>
     /// Contains functions and marshalling structs to call routines from the InstrumentPlatforms.dll 
     /// provided by Joanneum Research. The provided dll 
     /// </summary>
-    public static partial class IPWrapper
+    public static partial class ViewPlanner
     {        
         [DllImport(@".\bin\InstrumentPlatforms.dll")]
         public static extern int Init(string configDir, string logDir);

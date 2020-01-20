@@ -1,6 +1,8 @@
 ﻿namespace PRo3D
 
 open Aardvark.Base
+open Aardvark.UI.Animation
+open Aardvark.UI.Primitives
 open Aardvark.Application
 open Aardvark.UI
 open Aardvark.VRVis
@@ -17,60 +19,14 @@ open PRo3D.Versioned
 open Chiron
 
 open PRo3d
+open PRo3D.Base
 
 module FootPrint = 
-    
-    type ClientStatistics =
-        {
-            session         : System.Guid
-            name            : string
-            frameCount      : int
-            invalidateTime  : float
-            renderTime      : float
-            compressTime    : float
-            frameTime       : float
-        }
-    
-
+        
     let getFootprintsPath (scenePath:string) =
         let path = Path.GetDirectoryName scenePath
         path + "\\FootPrints"
-    
-    let takeScreenshot baseAddress (width:int) (height:int) name folder =
-        let wc = new System.Net.WebClient()
-        
-        let clientStatistic = 
-            let path = sprintf "%s/rendering/stats.json" baseAddress //sprintf "%s/rendering/stats.json" baseAddress
-            Log.line "[RemoteControl] querying rendering stats at: %s" path
-            let result = wc.DownloadString(path)
-            let clientBla : list<ClientStatistics> =
-                Pickler.unpickleOfJson  result
-            match clientBla.Length with
-                | 2 -> clientBla // clientBla.[1] 
-                | _ -> failwith "no client bla"
-
-        for cs in clientStatistic do
-            let screenshot =            
-                sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress cs.name width height
-            Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
-
-            match System.IO.Directory.Exists folder with
-              | true -> ()
-              | false -> System.IO.Directory.CreateDirectory folder |> ignore
-            
-            let filename = cs.name + name
-            wc.DownloadFile(screenshot,Path.combine [folder; filename])
-         
-        //let screenshot =            
-        //    sprintf "%s/rendering/screenshot/%s?w=%d&h=%d&samples=4" baseAddress clientStatistic.[0].name width height
-        //Log.line "[RemoteControl] Running screenshot on: %s" screenshot    
-
-        //match System.IO.Directory.Exists folder with
-        //  | true -> ()
-        //  | false -> System.IO.Directory.CreateDirectory folder |> ignore
-               
-        //wc.DownloadFile(screenshot,Path.combine [folder; name])
-
+       
     let createFootprintData (vp:ViewPlanModel) (scenePath:string) =
 
         let fpPath = getFootprintsPath scenePath
@@ -86,7 +42,7 @@ module FootPrint =
                 
                
                 let pngName = System.String.Format(
-                                        "{0:0000}{1:00}{2:00}_{3:00}{4:00}{5:00}_{6}_{7}.png",
+                                        "{0:0000}{1:00}{2:00}_{3:00}{4:00}{5:00}_{6}_{7}",
                                         now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, roverName, instrumentName)
 
                 let svxName = System.String.Format(
@@ -100,7 +56,7 @@ module FootPrint =
                                             int(horRes), int(vertRes)
                                 | None -> 512, 512
                 // save png file
-                try takeScreenshot "http://localhost:54321" width height pngName fpPath with e -> printfn "error: %A" e
+                try Utilities.takeScreenshotFromAllViews "http://localhost:54321" width height pngName fpPath with e -> printfn "error: %A" e
 
                
                 let fileInfo = {
@@ -152,42 +108,11 @@ module FootPrint =
                         acquisition = acquisition
                     }
                 //Serialization.save (Path.Combine(fpPath, svxName)) simulatedViewData |> ignore
-                let json = simulatedViewData |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty |> IO.writeToFile (Path.Combine(fpPath, svxName))
+                let json = simulatedViewData |> Json.serialize |> Json.formatWith JsonFormattingOptions.Pretty |> Serialization.writeToFile (Path.Combine(fpPath, svxName))
                 //Serialization.writeToFile (Path.Combine(fpPath, svxName)) json 
                 vp
             | None -> vp 
-
-
-    //let projTrafo (near : float) (far : float) (focalLength:float) (aspect:float) (principalPoint:V2d) =
-    //    let tnf = 2.0 * far * near
-    //    let a = (far + near) / (far - near)
-    //    let b = tnf / (near - far)
-
-    //    let A = far / (far - near)
-    //    let B = near * far / (near - far)
-
-    //    Trafo3d(
-    //        M44d(
-    //            focalLength,                0.0,                               -principalPoint.X,       0.0,
-    //            0.0,                        focalLength * aspect,              -principalPoint.Y,       0.0,
-    //            0.0,                        0.0,                               -a,                      b,
-    //            0.0,                        0.0,                               -1.0,                    0.0
-    //        ),
-    //        //M44d(
-    //        //    focalLength,                0.0,                               principalPoint.X,  0.0,
-    //        //    0.0,                        focalLength * aspect,              principalPoint.Y,  0.0,
-    //        //    0.0,                        0.0,                               A,                      B,
-    //        //    0.0,                        0.0,                               1.0,                    0.0
-    //        //),
-    //        M44d(
-    //            1.0/focalLength,        0.0,                                    0.0,       -principalPoint.X / focalLength,
-    //            0.0,                    1.0 / (aspect * focalLength),           0.0,       -principalPoint.Y / (focalLength * aspect),
-    //            0.0,                    0.0,                                    0.0,       -1.0,
-    //            0.0,                    0.0,                                    1.0/b,     -a/b
-
-    //        )
-    //    )
-
+    
     let updateFootprint (instrument:Instrument) (roverpos:V3d) (model:ViewPlanModel) =
         
         let id = match model.selectedViewPlan with
@@ -201,19 +126,9 @@ module FootPrint =
         let pi = PixImage<byte>(Col.Format.RGBA, res)
         pi.GetMatrix<C4b>().SetByCoord(fun (c : V2l) -> C4b.White) |> ignore
         let tex = PixTexture2d(PixImageMipMap [| (pi.ToPixImage(Col.Format.RGBA)) |], true) :> ITexture
-
-        //let focal = instrument.focal.value
+        
         let projectionTrafo = model.instrumentFrustum |> Frustum.projTrafo
-        //|> Frustum.aspect
-        //let frust    = model.instrumentFrustum
-        //let hfov     = instrument.intrinsics.horizontalFieldOfView
-        //let resh     = float(instrument.intrinsics.horizontalResolution)
-        //let resv     = float(instrument.intrinsics.verticalResolution)
-        //let ifrustum = Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far (resh/resv)
-        //let aspect = frust |> Frustum.aspect
-        //let pP = V2d(instrument.intrinsics.horizontalPrinciplePoint, instrument.intrinsics.verticalPrinciplePoint)
-
-        //let projectionTrafo = projTrafo model.instrumentFrustum.near model.instrumentFrustum.far focal aspect pP
+        
 
         let location = model.instrumentCam.view.Location - roverpos //transformenExt.position
         let testview = model.instrumentCam.view.WithLocation location
@@ -230,4 +145,164 @@ module FootPrint =
                 }
         fp //{ model with footPrint = fp }
 
+module SnapshotAnimation = 
 
+    let animateAndScreenshot (scenePath:string) (ex:Extrinsics) (duration : RelativeTime) (name : string) (width : int) (height : int) = 
+      let fpPath = FootPrint.getFootprintsPath scenePath
+      {
+        (CameraAnimations.initial name) with 
+          sample = fun (localTime, globalTime) (state : CameraView) -> // given the state and t since start of the animation, compute a state and the cameraview
+            if localTime < duration then 
+                
+              let now = DateTime.Now
+              let pngName = System.String.Format(
+                                        "{0:0000}{1:00}{2:00}_{3:00}{4:00}{5:00}_{6}",
+                                        now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, now.Millisecond)
+               
+               
+              //try Utilities.takeScreenshot "http://localhost:54321" width height pngName fpPath with e -> printfn "error: %A" e
+
+              let rot      = Rot3d(state.Forward, ex.camLookAt) * localTime / duration
+              let forward' = rot.TransformDir(state.Forward)
+
+              let uprot     = Rot3d(state.Up, ex.camUp) * localTime / duration
+              let up'       = uprot.TransformDir(state.Up)
+              
+              let vec       = ex.position - state.Location
+              let velocity  = vec.Length / duration                  
+              let dir       = vec.Normalized
+              let location' = state.Location + dir * velocity * localTime
+
+              let view = 
+                state 
+                  |> CameraView.withForward forward'
+                  |> CameraView.withUp up'
+                  |> CameraView.withLocation location'
+      
+              Some (state,view)
+            else None
+      }
+
+    let updateSnapshotCam (extr:ArnoldSnapshot)  = 
+        CameraView.look extr.location extr.forward.Normalized extr.up.Normalized
+
+    let updateSnapshotFrustum (frust:Frustum) (dataAnimation:ArnoldAnimation)  =
+
+        let hfov  = dataAnimation.fieldOfView
+        let resh  = float(dataAnimation.resolution.X)
+        let resv  = float(dataAnimation.resolution.Y)
+
+        Frustum.perspective (hfov.DegreesFromGons()) frust.near frust.far (resh/resv)
+
+        
+    let loadData (path : string) =
+        try 
+             let (arnoldanims : ArnoldAnimation) =
+                    path 
+                        |> Serialization.readFromFile
+                        |> Json.parse 
+                        |> Json.deserialize
+             arnoldanims |> Some    
+        with e ->        
+            Log.error "[ViewerIO] couldn't load %A" e
+            None
+
+    let writeDataToJsonFile =   
+        //let path = "C:\Users\laura\VRVis\Data\Donut_medium_georef_compl\donut.snapshots.json"
+        //let ex1 =
+        //     {
+        //        location = V3d(-36924.38, 272515.17, 587.71)
+        //        forward  = V3d(0.44, -0.31, -0.84)
+        //        up       = V3d(-0.67, 0.51, -0.54)
+        //    }
+           
+        //let ex2 =
+        //    {
+        //        location = V3d(-36930.36, 272519.67, 569.74)
+        //        forward  = V3d(0.46, -0.34, 0.82)
+        //        up       = V3d(-0.74, -0.66, 0.15)
+        //    }
+            
+        //let ex3 =
+        //    {
+        //        location = V3d(-36926.17, 272516.11, 584.91)
+        //        forward  = V3d(0.83, -0.51, -0.24)
+        //        up       = V3d(-0.39, -0.82, 0.41)
+        //    }
+            
+        //let testdata = 
+        //    {
+        //        fieldOfView = 26.49
+        //        resolution  = V2i(1600, 1200)
+        //        snapshots   = [ex1; ex2; ex3]
+        //    }
+
+        let path = "C:\Users\laura\VRVis\Data\GardenCitySmall\GardenCitySmall\gardenCity.snapshots.json"
+        let ex1 =
+             {
+                location = V3d(-2486974.23, 2288926.50, -275792.76)
+                forward  = V3d(0.42, -0.63, -0.65)
+                up       = V3d(-0.54, 0.40, -0.74)
+                filename = ""
+            }
+           
+        let ex2 =
+            {
+                location = V3d(-2486973.65, 2288925.99, -275793.60)
+                forward = V3d(0.34, -0.85, 0.41)
+                up       = V3d(-0.55, 0.18, -0.82)
+                filename = ""
+            }
+            
+        let ex3 =
+            {
+                location = V3d(-2486973.72, 2288924.03, -275796.63)
+                forward  = V3d(0.05, 0.51, 0.86)
+                up       = V3d(-0.07, -0.86, 0.51)
+                filename = ""
+            }
+
+        let ex4 =
+            {
+                location = V3d(-2486971.72, 2288922.95, -275794.30)
+                forward  = V3d(-0.54, 0.82, 0.17)
+                up       = V3d(-0.34, -0.40, 0.85)
+                filename = ""
+            }
+
+        let ex5 =
+            {
+                location = V3d(-2486972.34, 2288940.76, -275790.74)
+                forward  = V3d(-0.08, -0.98, -0.19)
+                up       = V3d(0.09, -0.20, 0.98)
+                filename = ""
+            }
+            
+        let testdata = 
+            {
+                fieldOfView = 26.49
+                resolution  = V2i(1600, 1200)
+                snapshots   = [ex1; ex2; ex3; ex4; ex5]
+            }
+          
+        testdata
+         |> Json.serialize 
+         |> Json.formatWith JsonFormattingOptions.Pretty 
+         |> Serialization.writeToFile path
+        
+    
+    let snapshot (fpPath:string) (filename:string) (width : int) (height : int) =
+        let pngName =
+            if filename.IsEmpty() then
+                let now = DateTime.Now
+                System.String.Format(
+                        "{0:0000}{1:00}{2:00}_{3:00}{4:00}{5:00}{6:00}",
+                        now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, now.Millisecond)
+            else filename
+        try Utilities.takeScreenshotFromAllViews "http://localhost:54321" width height pngName fpPath with e -> printfn "error: %A" e
+       
+
+    
+    let startSnapshots (scenepath : string) (filename:string) (width : int) (height : int) = 
+        let fpPath = FootPrint.getFootprintsPath scenepath
+        snapshot fpPath filename width height 
