@@ -44,6 +44,7 @@ type Model = {
     inner : InnerModel
     view : View
     dockConfig : DockConfig
+    dockConfigAuthoring : DockConfig
     provenance : Provenance
     story : Story
     bookmarks : Bookmarks

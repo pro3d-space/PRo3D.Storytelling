@@ -61,6 +61,7 @@ let initial (runtime: IRuntime) (signature: IFramebufferSignature) (startEmpty :
     let model = ViewerApp.initial runtime signature startEmpty messagingMailbox minervaMailbox in {
         inner = { current = model; preview = None; output = model }
         dockConfig = Viewer.dockConfigInitial
+        dockConfigAuthoring = Viewer.dockConfigInitial
         provenance = ProvenanceApp.init <| State.create model
         story = StoryApp.init
         view = ViewApp.init <| AppModel.getViewParams model
@@ -148,7 +149,7 @@ let update (runtime : IRuntime) (signature: IFramebufferSignature)
                     |> StoryApp.update StartPresentation
 
             | KeyDown Keys.Escape ->
-                { model with dockConfig = Viewer.dockConfigInitial }
+                { model with dockConfig = model.dockConfigAuthoring }
                     |> StoryApp.update EndPresentation
 
             | KeyDown Keys.Right
@@ -166,7 +167,8 @@ let update (runtime : IRuntime) (signature: IFramebufferSignature)
                 { model with renderControlSize = s }
 
             | UpdateConfig cfg ->
-                { model with dockConfig = cfg }
+                { model with dockConfig = cfg
+                             dockConfigAuthoring = cfg }
 
             | _ ->
                 model
