@@ -261,9 +261,13 @@ module Story =
         match s |> tryFindInListById id with
             | None -> s
             | Some idx ->
-                { s with slides = s.slides |> PList.update idx f 
-                         selected = s.selected |> Option.filter (fun s -> s.current.id = id)
-                                               |> Option.map (Selection.map f) }
+                { 
+                    s with
+                        slides = s.slides |> PList.update idx f 
+                        selected = s.selected |> Option.map (fun sel ->
+                            if sel.current.id = id then sel |> Selection.map f else sel
+                        )
+                }
 
     let moveBefore (slide : Slide) (before : Slide) (s : Story) =
         { s with slides = s.slides |> PList.remove (s |> findInList slide)

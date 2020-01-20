@@ -107,6 +107,17 @@ module private Helpers =
                     |> Option.map (Selection.current >> Slide.content >> restoreContent)
                     |> Option.defaultValue model
 
+    let private checkLeftRight f model =
+        model.story.selected
+        |> Option.bind (fun sel -> model.story |> f sel.current)
+        |> Option.isNone
+
+    // Checks if selected slide is first
+    let isFirst = checkLeftRight Story.leftOf
+
+    // Checks if selected slide is last
+    let isLast = checkLeftRight Story.rightOf
+
     let getFrustum (model : MModel) =
         model.inner.current.frustum
 
@@ -164,12 +175,14 @@ let update (msg : StoryAction) (model : Model) =
             let m = model |> Annotations.update a
             m |> Model.setTargeting (Annotations.isTargeting m)
 
-        | Forward ->
-            model |> Lens.update Model.Lens.story Story.forward
+        | Forward when not (isLast model) ->
+            model |> commit
+                  |> Lens.update Model.Lens.story Story.forward
                   |> restore true
 
-        | Backward ->
-            model |> Lens.update Model.Lens.story Story.backward
+        | Backward when not (isFirst model) ->
+            model |> commit
+                  |> Lens.update Model.Lens.story Story.backward
                   |> restore true
 
         | Commit ->
@@ -183,7 +196,8 @@ let update (msg : StoryAction) (model : Model) =
             model |> Lens.update Model.Lens.story Story.endPresentation
 
         | SelectSlide id -> 
-            model |> Lens.update Model.Lens.story (Story.selectById <| Some id)
+            model |> commit
+                  |> Lens.update Model.Lens.story (Story.selectById <| Some id)
                   |> restore true
 
         | RemoveSlide id ->
@@ -234,6 +248,9 @@ let update (msg : StoryAction) (model : Model) =
 
         | ToggleAnnotations ->
             model |> Lens.update (Model.Lens.story |. Story.Lens.showAnnotations) not
+
+        | _ ->
+            model
 
 let threads (model : Model) =
     model |> ThumbnailApp.threads
