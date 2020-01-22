@@ -83,6 +83,7 @@
     <Compile Include="Extensions\HMap.fs" />
     <Compile Include="Extensions\Tags.fs" />
     <Compile Include="Extensions\ThreadPool.fs" />
+    <Compile Include="Extensions\Mod.fs" />
     <Compile Include="Extensions\CameraAnimations.fs" />
     <Compile Include="Serialization.fs" />
     <Compile Include="Models\ChironExt.fs" />

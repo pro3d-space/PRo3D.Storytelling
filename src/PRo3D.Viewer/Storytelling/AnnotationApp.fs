@@ -3,6 +3,7 @@
 open Aardvark.Base
 open Aardvark.Base.Incremental
 open Aardvark.UI
+open Aardvark.UI.Primitives.SimplePrimitives
 
 open Annotations
 
@@ -40,8 +41,8 @@ module private Helpers =
         a |> updateById g id
 
     let pendingTarget (a : Annotations) =
-        a.selected
-        |> Option.bind (fun id -> tryFindById id a)
+        a.selection
+        |> Option.bind (fun sel -> tryFindById sel.id a)
         |> Option.map (snd >> Annotation.hasPendingTarget)
         |> Option.defaultValue false
 
@@ -54,65 +55,213 @@ module private Helpers =
 
 let init = {
     list = PList.empty
-    selected = None
-    targeting = false
+    selection = None
 }
 
 let update (viewProj : Trafo3d) (msg : AnnotationAction) (a : Annotations) =
     match msg with
+        | ResetSelection ->
+            { a with selection = None }
+
         | LabelChanged (id, text) ->
             a |> mapById (Annotation.setLabelText text) id
+
         | LabelMoved (id, pos) ->
             a |> mapById (Annotation.setLabelPosition (autoPosition viewProj V2i.Zero) pos) id
+
         | LabelResized (id, w) ->
             a |> mapById (Annotation.setLabelWidth w) id
+
         | LabelClicked id ->
-            if a.selected |> Option.contains id then
+            if a.selection |> Selection.contains id then
                 a
             else
-                { a with selected = Some id; targeting = false }
-        | ChangeLabelFontSize ->
-            a |> mapById Annotation.changeLabelFontSize a.selected.Value
+                { a with selection = Some <| Selection.create id }
+
+        | ToggleFontSizeSelection ->
+            a |> Lens.update Annotations.Lens.selection Selection.toggleFontControls
+
+        | SetFontSize size ->
+            match a.selection with
+            | Some sel ->
+                a |> mapById (Annotation.setLabelFontSize size) sel.id
+            | _ ->
+                a
+
         | Add s ->
             let r = rnd.UniformV2d (Box2d (0.25, 0.25, 0.75, 0.75))
             let pos = V2i (r * V2d (baseSize))
             let x = pos |> Label.create s |> Annotation.create (Points [])
 
             { a with list = a.list |> PList.append x
-                     selected = Some x.id
-                     targeting = false }
+                     selection = Some <| Selection.create x.id }
         | Remove id ->
-            if a.selected |> Option.contains id then
-                { a with selected = None; targeting = false }
+            if a.selection |> Selection.contains id then
+                { a with selection = None }
             else
                 a
             |> deleteById id
+
         | StartTargeting f ->
-            match a.selected with
-            | Some id ->
-                a |> mapById f id
+            match a.selection with
+            | Some sel ->
+                a |> mapById f sel.id
+                  |> Lens.update Annotations.Lens.selection (Selection.setTargeting true)
             | _ ->
                 a
-            |> Lens.set Annotations.Lens.targeting true
+
         | StopTargeting ->
-            { a with targeting = false }
+            { a with selection = a.selection |> Selection.setTargeting false  }
+
         | SaveTarget p ->
             let n =
-                match a.targeting, a.selected with
-                | true, Some id ->
-                    a |> mapById (Annotation.saveTarget p) id
+                match a.selection with
+                | Some sel when sel.targeting ->
+                    a |> mapById (Annotation.saveTarget p) sel.id
+                | Some sel when sel.fontControls ->
+                    a
                 | _ ->
-                    { a with selected = None }
+                    { a with selection = None }
 
-            n |> Lens.set Annotations.Lens.targeting (pendingTarget n)
+            n |> Lens.update Annotations.Lens.selection (Selection.setTargeting <| pendingTarget n)
+
+let viewMenu (a : MAnnotations) =
+
+    let selected = a.selection |> Mod.map Option.isSome
+
+    let selectionId = a.selection |> Mod.unwrapOption (fun s -> s.id)
+
+    let targeting = a.selection |> Mod.unwrapOption (fun s -> s.targeting)
+                                |> Mod.map (Option.defaultValue false)
+
+    let fontControls = a.selection |> Mod.unwrapOption (fun s -> s.fontControls)
+                                   |> Mod.map (Option.defaultValue false)
+
+    let fontSize =
+        adaptive {
+            let! id = selectionId
+    
+            match id with
+            | Some id ->
+                let! list =
+                    a.list
+                    |> AList.filterM (fun x -> Mod.map ((=) id) x.id) 
+                    |> AList.toMod
+
+                match PList.toList list with
+                | x::[] -> return! x.label.fontSize
+                | _ -> return 0
+
+            | None -> return 0
+        }
+        |> Mod.map float
+
+    let currentTarget = adaptive {
+        let! targeting = targeting
+        let! selectionId = selectionId
+
+        if not targeting then
+            return None
+        else
+            let! result =
+                a.list
+                |> AList.filterM (fun x ->
+                    x.id |> Mod.map (fun id -> Option.contains id selectionId)
+                )
+                |> AList.map (fun x ->
+                    x.target |> Mod.map (fun target ->
+                        match target with
+                        | MPoints _ -> Some PointsType
+                        | MScale _ -> Some ScaleType
+                    )
+                )
+                |> AList.toMod
+                |> Mod.map PList.tryHead
+
+            match result with
+            | None -> return None
+            | Some x -> return! x
+    }
+
+    let nextTarget = currentTarget |> Mod.map (fun t ->
+        match t with
+        | None ->
+            Some Annotation.startPointTargeting
+        | Some PointsType ->
+            Some Annotation.startScaleTargeting
+        | Some ScaleType ->
+            None
+    )
+
+    let targetIcon = currentTarget |> Mod.map (fun t ->
+        match t with
+        | None -> "flag"
+        | Some PointsType -> "crosshairs"
+        | Some ScaleType -> "vertical resize"
+    )
+
+    alist {
+        let! fontControls = fontControls
+
+        if fontControls then
+            let cfg = { min = 16.0; max = 64.0; step = 4.0 }
+
+            yield disableClickPropagation (
+                slider cfg [
+                    clazz "ui inverted blue reversed vertical ticked slider"
+                ] fontSize (fun s -> s |> round |> int |> SetFontSize)
+            )
+
+        yield div [ clazz "ui vertical buttons" ] [
+            disableClickPropagation (
+                Incremental.div (AttributeMap.ofAMap <| amap {
+                    let! selected = selected
+             
+                    yield clazz <| "ui icon button"
+                                        + if selected then "" else " disabled"
+                                        + if fontControls then " active" else ""
+                    yield onClick (fun _ -> ToggleFontSizeSelection)
+                }) <| AList.ofList [
+                    i [clazz "text height icon"] []
+                ]
+            )
+
+            disableClickPropagation (
+                Incremental.div (AttributeMap.ofAMap <| amap {
+                    let! selected = selected
+                    let! targeting = targeting
+                    let! next = nextTarget
+
+                    yield clazz <| "ui icon button" +
+                                (if selected then "" else " disabled") +
+                                (if targeting then " active" else "")
+
+                    match next with
+                    | None ->
+                        yield onClick (fun _ -> StopTargeting)
+                    | Some n ->
+                        yield onClick (fun _ -> StartTargeting n)
+
+                }) <| AList.ofList [
+                    Incremental.i (AttributeMap.ofAMap <| amap {
+                        let! icon = targetIcon
+                        yield clazz <| "icon " + icon
+                    }) AList.empty
+                ]
+            )
+
+            disableClickPropagation (
+                div [
+                    clazz "ui icon button"
+                    onClick (fun _ -> Add "")
+                ] [
+                    i [clazz "add icon"] []
+                ]
+            )
+        ]
+    }
 
 let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod<V3d>) (presentation : bool) (annotations : MAnnotations) =
-
-    let preventBlurAndPropagation =
-        let blur = "$('#__ID__').on('mousedown', function (e) { e.preventDefault(); });"
-        let propagation = "$('#__ID__').on('click', function(e) { e.stopPropagation(); } );"
-
-        onBoot (blur + propagation)
     
     let setBaseSize =
         onBoot (sprintf "setBaseSize(%s);" <| Pickler.jsonToString baseSize)
@@ -121,7 +270,12 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
         onBootInitial "viewportData" viewport "setViewport(__DATA__)"
 
     let isSelected (a : MAnnotation) =
-        annotations.selected |> Mod.map2 Option.contains a.id
+        adaptive {
+            let! selection = annotations.selection
+            match selection with
+            | Some sel -> return! Mod.map2 (=) a.id sel.id
+            | None -> return false
+        }
 
     let getPosition (a : MAnnotation) =
         adaptive {
@@ -146,12 +300,12 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
     // focused and targeting
     let isTargeting (a : MAnnotation) =
         adaptive {
-            let! targeting = annotations.targeting
+            let! id = a.id
+            let! selection = annotations.selection
 
-            if targeting then
-                return! annotations.selected |> Mod.map2 (Option.contains) a.id
-            else
-                return false
+            match selection with
+            | Some sel -> return! Mod.map2 (fun t i -> t && i = id) sel.targeting sel.id
+            | None -> return false
         }
 
     // Returns the annotation type
@@ -283,17 +437,17 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
 
                 }) <| AList.ofList [
                     if not presentation then
-                        yield preventBlurAndPropagation (
+                        yield disableBlurAndClickPropagation (
                             div [clazz "grabber"] []
                         )
 
-                        yield preventBlurAndPropagation (
+                        yield disableBlurAndClickPropagation (
                             div [clazz "ui icon move button"] [
                                 i [clazz "move icon"] []
                             ]
                         )
 
-                        yield preventBlurAndPropagation (
+                        yield disableBlurAndClickPropagation (
                             Incremental.div (AttributeMap.ofAMap <| amap {
                                 let! id = a.id
 

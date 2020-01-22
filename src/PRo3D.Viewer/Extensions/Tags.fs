@@ -33,3 +33,13 @@ module HigherOrderTagsExtensions =
         onBoot init (
             onBoot' [name, input |> Mod.channel] update node
         )
+
+    // We don't want buttons to trigger other click events
+    let disableClickPropagation (node : DomNode<'msg>) =
+        onBoot "$('#__ID__').on('click', function (event) { event.stopPropagation(); });" node
+
+    let disableBlurAndClickPropagation (node : DomNode<'msg>) =
+        let blur = "$('#__ID__').on('mousedown', function (e) { e.preventDefault(); });"
+        let propagation = "$('#__ID__').on('click', function(e) { e.stopPropagation(); } );"
+
+        onBoot (blur + propagation) node

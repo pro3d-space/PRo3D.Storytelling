@@ -58,12 +58,25 @@ type Annotation = {
     label : Label
 }
 
+// Annotations can be selected
+[<DomainType>]
+type Selection = {
+    // Id of the annotation
+    id : AnnotationId
+
+    // Is the annotation being targeted
+    targeting : bool
+
+    // Are the font controls showing for the user to
+    // adjust the font of the selected annotation
+    fontControls : bool
+}
+
 [<DomainType; CustomEquality; NoComparison>]
 type Annotations = 
     {
         list : Annotation plist
-        selected : AnnotationId option
-        targeting : bool
+        selection : Selection option
     }
 
     override x.GetHashCode () =
@@ -75,16 +88,18 @@ type Annotations =
             | _ -> false
 
 type AnnotationAction =
-    | LabelChanged          of AnnotationId * string
-    | LabelMoved            of AnnotationId * V2i
-    | LabelResized          of AnnotationId * int
-    | LabelClicked          of AnnotationId
-    | ChangeLabelFontSize
-    | Add                   of string
-    | Remove                of AnnotationId
-    | StartTargeting        of (Annotation -> Annotation)
+    | ResetSelection
+    | LabelChanged              of AnnotationId * string
+    | LabelMoved                of AnnotationId * V2i
+    | LabelResized              of AnnotationId * int
+    | LabelClicked              of AnnotationId
+    | ToggleFontSizeSelection
+    | SetFontSize               of int
+    | Add                       of string
+    | Remove                    of AnnotationId
+    | StartTargeting            of (Annotation -> Annotation)
     | StopTargeting
-    | SaveTarget            of V3d
+    | SaveTarget                of V3d
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Label =
@@ -142,12 +157,8 @@ module Annotation =
     let setLabelWidth (width : int) (a : Annotation) =
         { a with label = { a.label with width = width }}
 
-    let changeLabelFontSize (a : Annotation) =
-        let sizes = [|16 .. 4 .. 64|]
-        let current = sizes |> Array.tryFindIndex ((=) a.label.fontSize)
-                            |> Option.defaultValue 0
-
-        { a with label = { a.label with fontSize = sizes.[(current + 1) % sizes.Length] }}
+    let setLabelFontSize (size : int) (a : Annotation) =
+        { a with label = { a.label with fontSize = size }}
 
     let startPointTargeting (a : Annotation) =
         let target =
@@ -173,3 +184,38 @@ module Annotation =
                 Scale (x, Some target)
 
         { a with target = target }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Selection =
+    let create (id : AnnotationId) =
+        {
+            id = id
+            targeting = false
+            fontControls = false
+        }
+
+    let targeting (selection : Selection option) =
+        selection |> Option.exists (fun sel -> sel.targeting)
+
+    let contains (id : AnnotationId) (selection : Selection option) =
+        selection |> Option.exists (fun sel -> sel.id = id)
+
+    let setTargeting (targeting : bool) (selection : Selection option) =
+        selection |> Option.map (fun sel ->
+            { sel with targeting = targeting }
+        )
+
+    let toggleTargeting (selection : Selection option) =
+        selection |> Option.map (fun sel ->
+            { sel with targeting = not sel.targeting }
+        )
+
+    let setFontControls (fontControls : bool) (selection : Selection option) =
+        selection |> Option.map (fun sel ->
+            { sel with fontControls = fontControls }
+        )
+
+    let toggleFontControls (selection : Selection option) =
+        selection |> Option.map (fun sel ->
+            { sel with fontControls = not sel.fontControls }
+        )

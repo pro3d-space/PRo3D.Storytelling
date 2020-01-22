@@ -97,9 +97,6 @@ let update (msg : BookmarkAction) (model : Model) =
 
 let view (model : MModel) =
 
-    let disableClickPropagation =
-        onBoot "$('#__ID__').on('click', function(e) { e.stopPropagation(); } ); "
-
     let bookmark (b : MBookmark) =
 
         let selected = adaptive {

@@ -51,11 +51,28 @@ body:hover .render.overlay .frame > .confirm.buttons {
     position: absolute;
     bottom: 10px;
     right: 10px;
-    display: flex;
-    flex-direction: column-reverse;    
+    display: grid;
+    grid-row-gap: 10px;
+    grid-column-gap: 10px;
     pointer-events: auto;
 }
 
-.render.overlay .frame .annotation.menu .buttons {
-	margin-bottom: 10px;
+.render.overlay .frame .annotation.menu > .buttons {
+	grid-row: 1;
+	grid-column: 2;
+}
+
+.render.overlay .frame .annotation.menu > .toggle.button  {
+	grid-row: 2;
+	grid-column: 2;
+}
+
+.render.overlay .frame .annotation.menu > .slider {
+	grid-row: 1;
+	grid-column: 1;
+}
+
+.render.overlay .frame .annotation.menu > .slider .thumb {
+	left: auto;
+	right: auto;
 }

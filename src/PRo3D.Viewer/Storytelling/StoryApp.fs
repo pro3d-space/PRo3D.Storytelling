@@ -6,10 +6,10 @@ open Aardvark.UI
 
 open Abstraction.State
 open Abstraction.Camera
-open Story
 open Model
 open Provenance
 open Annotations
+open Story
 open Thumbnail
 open View
 
@@ -29,15 +29,19 @@ module private Helpers =
 
     module Annotations =
         // Updates the annotations
-        let update (msg : AnnotationAction) (model : Model) =
+        let update (direct : bool) (msg : AnnotationAction) (model : Model) =
             let updateContent = function
                 | FrameContent (n, v, a) ->
                     let vp = getViewProjTrafoFromModel' model
                     FrameContent (n, v, a |> AnnotationApp.update vp msg)
                 | x -> x
 
-            let sel = model.story |> Story.trySelected
-                                  |> Option.map (Lens.update (Selection.Lens.modified |. Slide.Lens.content) updateContent)
+            let sel =
+                let lens = if direct then Selection.Lens.current else Selection.Lens.modified
+
+                model.story
+                |> Story.trySelected
+                |> Option.map (Lens.update (lens |. Slide.Lens.content) updateContent)
 
             model |> Lens.set (Model.Lens.story |. Story.Lens.selected) sel
 
@@ -46,7 +50,7 @@ module private Helpers =
             model.story |> Story.trySelected
                         |> Option.map (fun s -> 
                             match s.modified.content with
-                                | FrameContent (_, _, a) -> a.targeting
+                                | FrameContent (_, _, a) -> a.selection |> Selection.targeting
                                 | _ -> false
                         ) 
                         |> Option.defaultValue false
@@ -172,7 +176,7 @@ let update (msg : StoryAction) (model : Model) =
             model |> updateFrame
 
         | AnnotationAction a ->
-            let m = model |> Annotations.update a
+            let m = model |> Annotations.update false a
             m |> Model.setTargeting (Annotations.isTargeting m)
 
         | Forward when not (isLast model) ->
@@ -230,7 +234,8 @@ let update (msg : StoryAction) (model : Model) =
                   |> restore true
 
         | DeselectSlide ->
-            model |> Lens.update Model.Lens.story (Story.select None)
+            model |> Annotations.update true ResetSelection
+                  |> Lens.update Model.Lens.story (Story.select None)        
 
         | MouseEnterSlide id ->
             let slide = model.story |> Story.findById id
@@ -258,57 +263,7 @@ let threads (model : Model) =
 
 let overlayView (model : MModel) =
 
-    // We don't want buttons to trigger other click events
-    let preventClickPropagation =
-        onBoot "$('#__ID__').on('click', function (event) { event.stopPropagation(); });"
-
     let overlay (a : MAnnotations) =
-        let selected = a.selected |> Mod.map Option.isSome
-
-        let currentTarget = adaptive {
-            let! selected = a.selected
-            let! targeting = a.targeting
-
-            if not targeting then
-                return None
-            else
-                let! result =
-                    a.list
-                    |> AList.filterM (fun x ->
-                        x.id |> Mod.map (fun id -> Option.contains id selected)
-                    )
-                    |> AList.map (fun x ->
-                        x.target |> Mod.map (fun target ->
-                            match target with
-                            | MPoints _ -> Some PointsType
-                            | MScale _ -> Some ScaleType
-                        )
-                    )
-                    |> AList.toMod
-                    |> Mod.map PList.tryHead
-
-                match result with
-                | None -> return None
-                | Some x -> return! x
-        }
-
-        let nextTarget = currentTarget |> Mod.map (fun t ->
-            match t with
-            | None ->
-                Some Annotation.startPointTargeting
-            | Some PointsType ->
-                Some Annotation.startScaleTargeting
-            | Some ScaleType ->
-                None
-        )
-
-        let targetIcon = currentTarget |> Mod.map (fun t ->
-            match t with
-            | None -> "flag"
-            | Some PointsType -> "crosshairs"
-            | Some ScaleType -> "vertical resize"
-        )
-
         div [clazz "frame"] [
             i [clazz "huge camera icon"] []
 
@@ -321,7 +276,7 @@ let overlayView (model : MModel) =
                     Mod.map2 (<>) s.current.Current s.modified.Current
                 )
 
-                yield preventClickPropagation (
+                yield disableClickPropagation (
                     i [
                         clazz "huge checkmark icon"
                         onClick' (fun _ -> if modified then [Commit; DeselectSlide] else [DeselectSlide])
@@ -329,7 +284,7 @@ let overlayView (model : MModel) =
                 )
 
                 if modified then
-                    yield preventClickPropagation (
+                    yield disableClickPropagation (
                         i [
                             clazz "huge remove icon"
                             onClick (fun _ -> DeselectSlide)
@@ -341,7 +296,7 @@ let overlayView (model : MModel) =
                 alist {
                     let! hidden = model.story.showAnnotations |> Mod.map not
 
-                    yield preventClickPropagation (
+                    yield disableClickPropagation (
                         div [
                             clazz ("ui icon toggle button" + if hidden then "" else " active")
                             onClick (fun _ -> ToggleAnnotations)
@@ -351,50 +306,7 @@ let overlayView (model : MModel) =
                     )
 
                     if not hidden then
-                        yield div [ clazz "ui vertical buttons" ] [
-                            preventClickPropagation (
-                                Incremental.div (AttributeMap.ofAMap <| amap {
-                                    let! selected = selected
-                                    yield clazz <| "ui icon button" + if selected then "" else " disabled"
-                                    yield onClick (fun _ -> ChangeLabelFontSize |> AnnotationAction)
-                                }) <| AList.ofList [
-                                    i [clazz "font icon"] []
-                                ]
-                            )
-
-                            preventClickPropagation (
-                                Incremental.div (AttributeMap.ofAMap <| amap {
-                                    let! selected = selected
-                                    let! targeting = a.targeting
-                                    let! next = nextTarget
-
-                                    yield clazz <| "ui icon button" +
-                                                   (if selected then "" else " disabled") +
-                                                   (if targeting then " active" else "")
-
-                                    match next with
-                                    | None ->
-                                        yield onClick (fun _ -> AnnotationAction StopTargeting)
-                                    | Some n ->
-                                        yield onClick (fun _ -> AnnotationAction (StartTargeting n))
-
-                                }) <| AList.ofList [
-                                    Incremental.i (AttributeMap.ofAMap <| amap {
-                                        let! icon = targetIcon
-                                        yield clazz <| "icon " + icon
-                                    }) AList.empty
-                                ]
-                            )
-
-                            preventClickPropagation (
-                                div [
-                                    clazz "ui icon button"
-                                    onClick (fun _ -> Add "" |> AnnotationAction)
-                                ] [
-                                    i [clazz "add icon"] []
-                                ]
-                            )
-                        ]
+                        yield! a |> AnnotationApp.viewMenu |> AList.map (UI.map AnnotationAction)
                 }
         ]
 
@@ -435,9 +347,6 @@ let storyboardView (model : MModel) =
         { kind = Stylesheet; name = "storyboardStyle"; url = "Storyboard.css" }
         { kind = Script; name = "storyboardScript"; url = "Storyboard.js" }
     ]
-
-    let disableClickPropagation x =
-        onBoot "disableClickPropagation($('#__ID__'))" x
 
     let addSlideButton (before : SlideId option) =
         div [clazz "add button"] [

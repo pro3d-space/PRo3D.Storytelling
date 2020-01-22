@@ -1,8 +1,4 @@
-﻿function disableClickPropagation(elem) {
-    elem.click( function(e) { e.stopPropagation(); } )   
-}
-
-// Collapsing preview frames
+﻿// Collapsing preview frames
 function isExpanded(frame) {
 	return frame.hasClass("expanded");
 }
