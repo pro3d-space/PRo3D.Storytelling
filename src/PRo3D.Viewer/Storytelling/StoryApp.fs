@@ -29,7 +29,7 @@ module private Helpers =
 
     module Annotations =
         // Updates the annotations
-        let update (direct : bool) (msg : AnnotationAction) (model : Model) =
+        let update (msg : AnnotationAction) (model : Model) =
             let updateContent = function
                 | FrameContent (n, v, a) ->
                     let vp = getViewProjTrafoFromModel' model
@@ -37,13 +37,29 @@ module private Helpers =
                 | x -> x
 
             let sel =
-                let lens = if direct then Selection.Lens.current else Selection.Lens.modified
-
                 model.story
                 |> Story.trySelected
-                |> Option.map (Lens.update (lens |. Slide.Lens.content) updateContent)
+                |> Option.map (Lens.update (Selection.Lens.modified |. Slide.Lens.content) updateContent)
 
             model |> Lens.set (Model.Lens.story |. Story.Lens.selected) sel
+
+        let resetSelection (model : Model) =
+            let resetContent = function
+                | FrameContent (n, v, a) ->
+                    FrameContent (n, v, a |> AnnotationApp.update Trafo3d.Identity ResetSelection)
+                | x -> x
+
+            let resetSlide (slide : Slide) =
+                { slide with content = resetContent slide.content }
+
+            let resetStory (story : Story) =
+                match story.selected with
+                | Some sel ->
+                    story |> Story.tryUpdateById sel.current.id resetSlide
+                | None ->
+                    story
+
+            model |> Lens.update Model.Lens.story resetStory
 
         // Are we targeting an annotations currently?
         let isTargeting (model : Model) =
@@ -176,16 +192,18 @@ let update (msg : StoryAction) (model : Model) =
             model |> updateFrame
 
         | AnnotationAction a ->
-            let m = model |> Annotations.update false a
+            let m = model |> Annotations.update a
             m |> Model.setTargeting (Annotations.isTargeting m)
 
         | Forward when not (isLast model) ->
             model |> commit
+                  |> Annotations.resetSelection
                   |> Lens.update Model.Lens.story Story.forward
                   |> restore true
 
         | Backward when not (isFirst model) ->
             model |> commit
+                  |> Annotations.resetSelection
                   |> Lens.update Model.Lens.story Story.backward
                   |> restore true
 
@@ -201,6 +219,7 @@ let update (msg : StoryAction) (model : Model) =
 
         | SelectSlide id -> 
             model |> commit
+                  |> Annotations.resetSelection
                   |> Lens.update Model.Lens.story (Story.selectById <| Some id)
                   |> restore true
 
@@ -234,7 +253,7 @@ let update (msg : StoryAction) (model : Model) =
                   |> restore true
 
         | DeselectSlide ->
-            model |> Annotations.update true ResetSelection
+            model |> Annotations.resetSelection
                   |> Lens.update Model.Lens.story (Story.select None)        
 
         | MouseEnterSlide id ->

@@ -491,10 +491,7 @@ let view (viewport : IMod<V2i>) (viewProjTrafo : IMod<Trafo3d>) (sceneHit : IMod
     let outlineFilter =
         Svg.filter [
             clazz "outlineFilter"
-            attribute "x" "-50%"
-            attribute "y" "-50%"
-            attribute "width" "500%"
-            attribute "height" "500%"
+            attribute "filterUnits" "userSpaceOnUse"
         ] [
             Svg.feColorMatrix [
                 attribute "type" "matrix"
