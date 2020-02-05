@@ -207,7 +207,9 @@ let threads (model : Model) =
 let renderView (model : MModel) =
     let showOverlays = model.story.selected |> Mod.map Option.isNone
 
-    onBoot "$(document).trigger('resize')" (
+    let resizeInterval = "window.setInterval(() => $(document).trigger('resize'), 100);"
+
+    onBoot resizeInterval (
         body [ 
             style "background: #1B1C1E"; 
             onKeyDown KeyDown; onKeyUp KeyUp
