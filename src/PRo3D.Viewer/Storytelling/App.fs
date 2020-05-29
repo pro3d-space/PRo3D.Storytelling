@@ -123,6 +123,7 @@ let update (runtime : IRuntime) (signature: IFramebufferSignature)
                                     |> fun t -> a :: t
                                     |> List.filter OMessage.isRelevant
 
+                let s = { s with drawing = { s.drawing with processedMessages = [] } }
 
                 let p =
                     match messages with

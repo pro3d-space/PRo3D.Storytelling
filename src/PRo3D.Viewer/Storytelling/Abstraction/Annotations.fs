@@ -24,37 +24,77 @@ type Segment = {
 
 type OAnnotation = Annotation'
 
-[<DomainType>]
-type Annotation = {
-    version     : int
+[<DomainType; CustomEquality; NoComparison>]
+type Annotation =
+    {
+        version     : int
 
-    [<PrimaryKey; NonIncremental>]
-    key         : Guid
+        [<PrimaryKey; NonIncremental>]
+        key         : Guid
 
-    modelTrafo  : Trafo3d
+        modelTrafo  : Trafo3d
 
-    geometry    : Geometry
-    projection  : Projection
-    semantic    : Semantic
+        geometry    : Geometry
+        projection  : Projection
+        semantic    : Semantic
 
-    points      : V3d rlist
-    segments    : Segment rlist 
-    color       : ColorInput
-    thickness   : NumericInput
-    results     : AnnotationResults' option
-    dnsResults  : DipAndStrikeResults' option
+        points      : V3d rlist
+        segments    : Segment rlist 
+        color       : ColorInput
+        thickness   : NumericInput
+        results     : AnnotationResults' option
+        dnsResults  : DipAndStrikeResults' option
 
-    visible     : bool
-    showDns     : bool
-    text        : string
-    textsize    : NumericInput
+        visible     : bool
+        showDns     : bool
+        text        : string
+        textsize    : NumericInput
 
-    surfaceName : string
-    view        : CameraView
+        surfaceName : string
+        view        : CameraView
 
-    semanticId   : SemanticId
-    semanticType : SemanticType
-}
+        semanticId   : SemanticId
+        semanticType : SemanticType
+    }
+
+    override x.Equals (y : obj) =
+        let cmp a b =
+            a.version      = b.version     &&
+            a.key          = b.key         &&
+            a.modelTrafo   = b.modelTrafo  &&
+            a.geometry     = b.geometry    &&
+            a.projection   = b.projection  &&
+            a.points       = b.points      &&
+            a.segments     = b.segments    &&
+            a.color        = b.color       &&
+            a.thickness    = b.thickness   &&
+            a.visible      = b.visible     &&
+            a.showDns      = b.showDns     &&
+            a.text         = b.text        &&
+            a.textsize     = b.textsize    &&
+            a.surfaceName  = b.surfaceName &&
+            a.view         = b.view
+
+        match y with
+        | :? Annotation as y -> cmp x y
+        | _ -> false
+
+    override x.GetHashCode() =
+        hash (x.version,
+              x.key,
+              x.modelTrafo,
+              x.geometry,
+              x.projection,
+              x.points,
+              x.segments,
+              x.color,
+              x.thickness,
+              x.visible,
+              x.showDns,
+              x.text,
+              x.textsize,
+              x.surfaceName,
+              x.view)
 
 type OAnnotationGroup = Node
 

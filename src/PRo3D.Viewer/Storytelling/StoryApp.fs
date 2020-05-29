@@ -196,13 +196,13 @@ let update (msg : StoryAction) (model : Model) =
             m |> Model.setTargeting (Annotations.isTargeting m)
 
         | Forward when not (isLast model) ->
-            model |> commit
+            model |> if model.story.presentation then id else commit
                   |> Annotations.resetSelection
                   |> Lens.update Model.Lens.story Story.forward
                   |> restore true
 
         | Backward when not (isFirst model) ->
-            model |> commit
+            model |> if model.story.presentation then id else commit
                   |> Annotations.resetSelection
                   |> Lens.update Model.Lens.story Story.backward
                   |> restore true
